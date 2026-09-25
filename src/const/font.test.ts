@@ -33,12 +33,12 @@ describe('genFontFamily', () => {
       userFontFamily: ' LXGW WenKai ',
     });
 
-    expect(stack.startsWith('"LXGW WenKai","Env Font",Geist')).toBe(true);
+    expect(stack.startsWith('"LXGW WenKai","Env Font",Inter')).toBe(true);
   });
 
   it('leaves an already composed font-family list untouched', () => {
     expect(
-      genFontFamily({ customFontFamily: 'Foo, "Bar Baz"' }).startsWith('Foo, "Bar Baz",Geist'),
+      genFontFamily({ customFontFamily: 'Foo, "Bar Baz"' }).startsWith('Foo, "Bar Baz",Inter'),
     ).toBe(true);
   });
 });

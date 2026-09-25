@@ -3842,7 +3842,8 @@ describe('TaskModel', () => {
       });
 
       expect(await alice.getDependencies(secret.id)).toHaveLength(1);
-      expect(await alice.getActivities(secret.id)).toHaveLength(1);
+      // The assignee row plus the relation row addDependency now writes.
+      expect(await alice.getActivities(secret.id)).toHaveLength(2);
       expect(await bob.getDependencies(secret.id)).toEqual([]);
       expect(await bob.getActivities(secret.id)).toEqual([]);
     });

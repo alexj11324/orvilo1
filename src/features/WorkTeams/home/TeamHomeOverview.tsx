@@ -1,30 +1,29 @@
 'use client';
 
 import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TeamItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
-import { InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
+import {
+  FolderPlusIcon,
+  InboxIcon,
+  LayoutListIcon,
+  ListChecksIcon,
+  PlusIcon,
+  SettingsIcon,
+} from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { useClientDataSWR } from '@/libs/swr';
-import { workAttentionService } from '@/services/workAttention';
 
 import { type TeamHomeDestination, teamHomeDestinations } from '../teamHomeDestinations';
 import TeamIdentity from '../TeamIdentity';
 import type { TeamHomeMember } from './teamHomeMembersModel';
-import { TEAM_HOME_RECENT_LIMIT, teamRecentIssuesQuery } from './teamHomeSection';
 
 const styles = createStaticStyles(({ css }) => ({
   description: css`
@@ -127,43 +126,6 @@ const styles = createStaticStyles(({ css }) => ({
     grid-area: rest;
     min-width: 0;
   `,
-  recentIdentifier: css`
-    flex: none;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: end;
-  `,
-  recentLink: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 5px;
-    padding-inline: 6px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  recentList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-inline: 6px;
-  `,
-  recentMeta: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
   resourcesCopy: css`
     padding-inline: 12px;
     font-size: 13px;
@@ -218,6 +180,7 @@ const styles = createStaticStyles(({ css }) => ({
 const destinationIcons = {
   issues: ListChecksIcon,
   projects: PROJECT_ENTITY_ICON,
+  settings: SettingsIcon,
   triage: InboxIcon,
   views: LayoutListIcon,
 } satisfies Record<TeamHomeDestination, typeof ListChecksIcon>;
@@ -225,6 +188,7 @@ const destinationIcons = {
 const destinationLabels = {
   issues: 'teams.navIssues',
   projects: 'teams.navProjects',
+  settings: 'teams.navSettings',
   triage: 'teams.navTriage',
   views: 'teams.navViews',
 } as const satisfies Record<TeamHomeDestination, string>;
@@ -260,17 +224,6 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
   }) => {
     const { t } = useTranslation('common');
     const { t: tProject } = useTranslation('project');
-    const workspaceId = useActiveWorkspaceId();
-    const recentQuery = useClientDataSWR(
-      teamId && workspaceId ? ['team-recent', workspaceId, teamId, triageCapable] : null,
-      () =>
-        workAttentionService.query({
-          limit: TEAM_HOME_RECENT_LIMIT,
-          query: teamRecentIssuesQuery(teamId, triageCapable),
-        }),
-    );
-    const recentTasks =
-      recentQuery.data?.data && 'tasks' in recentQuery.data.data ? recentQuery.data.data.tasks : [];
     const destinations = teamHomeDestinations(teamId, workspaceSlug, triageCapable);
 
     return (
@@ -323,58 +276,27 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
 
         <div className={styles.rest}>
           <section aria-label={t('teams.resources')} className={styles.section}>
-            <div className={styles.sectionTitle}>{t('teams.resources')}</div>
+            <Flexbox horizontal align="center" justify="space-between">
+              <div className={styles.sectionTitle}>{t('teams.resources')}</div>
+              <Flexbox horizontal align="center" gap={4} style={{ paddingInlineEnd: 12 }}>
+                <ActionIcon
+                  aria-label={t('teams.addResources')}
+                  icon={PlusIcon}
+                  size="small"
+                  title={t('teams.addResources')}
+                />
+                <ActionIcon
+                  aria-label={t('teams.addSection')}
+                  icon={FolderPlusIcon}
+                  size="small"
+                  title={t('teams.addSection')}
+                />
+              </Flexbox>
+            </Flexbox>
             <Text className={styles.resourcesCopy} type="secondary">
               {t('teams.resourcesEmpty')}
             </Text>
           </section>
-
-          {recentQuery.isLoading ? (
-            <section aria-label={t('teams.recentIssues')} className={styles.section}>
-              <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
-              <SkeletonList aria-label={t('teams.loading')} rows={3} />
-            </section>
-          ) : recentQuery.error ? (
-            <section aria-label={t('teams.recentIssues')} className={styles.section}>
-              <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
-              <AsyncError
-                error={recentQuery.error}
-                variant="inline"
-                onRetry={() => void recentQuery.mutate()}
-              />
-            </section>
-          ) : recentTasks.length > 0 ? (
-            <section aria-label={t('teams.recentIssues')} className={styles.section}>
-              <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
-              <div className={styles.recentList}>
-                {recentTasks.map((task) => (
-                  <WorkspaceLink
-                    className={styles.recentLink}
-                    key={task.id}
-                    to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-                  >
-                    <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
-                    <Flexbox flex={1} style={{ minWidth: 0 }}>
-                      <Text ellipsis weight={500}>
-                        {task.name ?? task.instruction}
-                      </Text>
-                    </Flexbox>
-                    {task.identifier ? (
-                      <Text className={styles.recentIdentifier}>{task.identifier}</Text>
-                    ) : null}
-                    {task.updatedAt ? (
-                      <Text
-                        className={styles.recentMeta}
-                        title={dayjs(task.updatedAt).format('YYYY-MM-DD HH:mm')}
-                      >
-                        {dayjs(task.updatedAt).fromNow()}
-                      </Text>
-                    ) : null}
-                  </WorkspaceLink>
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
       </div>
     );

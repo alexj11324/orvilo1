@@ -1,5 +1,5 @@
 const FONT_EN = [
-  'Geist',
+  'Inter',
   '-apple-system',
   'BlinkMacSystemFont',
   'Segoe UI Variable Display',
@@ -41,7 +41,7 @@ const FONT_JP = [
 const FONT_KR = ['Apple SD Gothic Neo', 'Malgun Gothic', 'Source Han Sans KR', 'Noto Sans CJK KR'];
 
 const FONT_CODE = [
-  'Geist Mono',
+  'Berkeley Mono',
   'ui-monospace',
   'SFMono-Regular',
   'SF Mono',

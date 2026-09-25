@@ -311,7 +311,7 @@ export default {
   'title': 'Resources',
   'toggleLeftPanel': 'Show/Hide Left Panel',
   'work.empty.desc':
-    'Works your agents produce — tasks, documents, Linear and GitHub items — will collect here.',
+    'Works your agents produce — issues, documents, Linear and GitHub items — will collect here.',
   'work.empty.title': 'No works yet',
   'work.agentEmpty.desc': 'Choose another agent to see their work.',
   'work.agentEmpty.title': 'No work from this agent',
@@ -333,7 +333,7 @@ export default {
   'work.type.githubPullRequest': 'GitHub PR',
   'work.type.linearDocument': 'Linear Document',
   'work.type.linearIssue': 'Linear Issue',
-  'work.type.task': 'Task',
+  'work.type.task': 'Issue',
   'work.updatedAt': 'Updated {{date}}',
   'work.topicGroup.other': 'Other',
   'work.totalCost': 'Total cost {{cost}}',

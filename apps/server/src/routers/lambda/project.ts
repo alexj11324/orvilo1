@@ -19,6 +19,7 @@ import {
 import { AgentModel } from '@/database/models/agent';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
+import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { UserModel } from '@/database/models/user';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -32,10 +33,12 @@ const projectProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
   const { ctx } = opts;
   return opts.next({
     ctx: {
+      agentModel: new AgentModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
       projectModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
       projectPolicyModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined, {
         canManageAll: isWorkspaceAdmin(ctx),
       }),
+      taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
     },
   });
 });
@@ -329,12 +332,52 @@ export const projectRouter = router({
           ctx.projectModel.getPlanning(project.id),
         ],
       );
+      // The rail's Progress card groups in-scope issues by assignee and by
+      // label (Linear's Assignees/Labels breakdown), so the detail payload
+      // needs the label join `listTasks` does not carry and the display names
+      // of the assignees its raw ids point at. Users resolve display-only
+      // (getDisplayInfoByIds never leaks more than name + avatar); agents
+      // resolve under the caller's agent read scope.
+      const taskRows = tasks ?? [];
+      const assigneeUserIds = [
+        ...new Set(
+          taskRows.map((task) => task.assigneeUserId).filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      const assigneeAgentIds = [
+        ...new Set(
+          taskRows.map((task) => task.assigneeAgentId).filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      const [taskLabelMap, assigneeUsers, assigneeAgents] = await Promise.all([
+        ctx.taskLabelModel.listForTasks(taskRows.map((task) => task.id)),
+        UserModel.getDisplayInfoByIds(ctx.serverDB, assigneeUserIds),
+        ctx.agentModel.getAgentAvatarsByIds(assigneeAgentIds),
+      ]);
       return {
         data: {
           agents,
+          assignees: [
+            ...assigneeUsers.map((user) => ({
+              avatar: user.avatar,
+              id: user.id,
+              kind: 'user' as const,
+              name: user.fullName || user.username || 'User',
+            })),
+            ...assigneeAgents.map((agent) => ({
+              avatar: agent.avatar,
+              backgroundColor: agent.backgroundColor,
+              id: agent.id,
+              kind: 'agent' as const,
+              name: agent.title || agent.name || 'Agent',
+            })),
+          ],
           completionReviews,
           knowledgeBases,
           project,
+          taskLabels: Object.fromEntries(
+            [...taskLabelMap].map(([taskId, labels]) => [taskId, labels.map(toTaskLabelSummary)]),
+          ),
           tasks,
           works,
           ...requireResult(planning),

@@ -6,9 +6,9 @@ import { ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import { useShallow } from 'zustand/react/shallow';
 
 import Avatar from '@/components/Avatar';
+import { projectAvatar } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
@@ -16,7 +16,6 @@ import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 
 import { styles } from './style';
-import { taskDetailPath } from './taskDetailPath';
 import { useAgentDisplayMeta } from './useAgentDisplayMeta';
 
 interface BreadcrumbProps {
@@ -46,26 +45,6 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
   );
   const project = useCurrentProjectDetail(taskProjectId ?? undefined)?.project;
   const team = needTeam ? teamsResponse?.data.find((row) => row.id === taskTeamId) : undefined;
-  const ancestors = useTaskStore(
-    useShallow((s) => {
-      if (!taskId) return [];
-      const chain: Array<{ agentId?: string | null; identifier: string; name?: string | null }> =
-        [];
-      const visited = new Set<string>([taskId]);
-      let cursor = s.taskDetailMap[taskId]?.parent;
-      while (cursor?.identifier && !visited.has(cursor.identifier)) {
-        const detail = s.taskDetailMap[cursor.identifier];
-        visited.add(cursor.identifier);
-        chain.push({
-          agentId: cursor.agentId === undefined ? detail?.agentId : cursor.agentId,
-          identifier: cursor.identifier,
-          name: cursor.name ?? detail?.name,
-        });
-        cursor = detail?.parent;
-      }
-      return chain.reverse();
-    }),
-  );
 
   const allTasksLabel = (
     <Text color={'inherit'} weight={500}>
@@ -89,7 +68,8 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
               }}
             >
               <Avatar
-                avatar={project.avatar || undefined}
+                avatar={projectAvatar(project.avatar, 14)}
+                background={project.avatar ? undefined : 'transparent'}
                 name={project.name}
                 shape={'square'}
                 size={14}
@@ -142,17 +122,6 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
         }
       : agentCrumb;
 
-  const ancestorCrumbs = ancestors.map(({ identifier, agentId, name }) => ({
-    key: identifier,
-    title: (
-      <WorkspaceLink to={taskDetailPath(identifier, agentId ?? undefined, name)}>
-        <Text color={'inherit'} weight={500}>
-          {identifier}
-        </Text>
-      </WorkspaceLink>
-    ),
-  }));
-
   const currentTaskCrumb = taskId
     ? {
         title: (
@@ -204,7 +173,6 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
             ),
         },
         ...(agentCrumbNode ? [agentCrumbNode] : []),
-        ...ancestorCrumbs,
         ...(currentTaskCrumb ? [currentTaskCrumb] : []),
       ]}
     />

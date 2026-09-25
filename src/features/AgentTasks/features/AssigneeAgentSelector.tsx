@@ -25,6 +25,7 @@ interface AssigneeAgentSelectorProps {
   children: ReactNode;
   currentAgentId?: string | null;
   disabled?: boolean;
+  fullWidth?: boolean;
   onChange?: (agentId: string | null) => void;
   taskIdentifier?: string;
   taskVisibility?: 'private' | 'public' | null;
@@ -71,14 +72,14 @@ const matchesSearch = (agent: SidebarAgentItem, query: string) =>
 const triggerStyle: CSSProperties = {
   alignItems: 'center',
   display: 'inline-flex',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   lineHeight: 1,
   maxWidth: '100%',
   minWidth: 0,
 };
 
 const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
-  ({ children, currentAgentId, disabled, onChange, taskIdentifier, taskVisibility }) => {
+  ({ children, currentAgentId, disabled, fullWidth, onChange, taskIdentifier, taskVisibility }) => {
     const { t } = useTranslation(['chat', 'common', 'topic']);
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [key, setKey] = useState(0);
@@ -277,17 +278,28 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     };
 
     const blocked = disabled || !canEditTask;
+    const currentTriggerStyle = fullWidth ? { ...triggerStyle, width: '100%' } : triggerStyle;
     const trigger = blocked ? (
       <Tooltip title={disabled ? t('taskDetail.reassignDisabled', { ns: 'chat' }) : reason}>
         <div
-          style={{ ...triggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
+          style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
           onClick={(event) => event.stopPropagation()}
         >
-          <span style={{ pointerEvents: 'none' }}>{children}</span>
+          <div
+            style={{
+              alignItems: 'center',
+              display: 'inline-flex',
+              minWidth: 0,
+              pointerEvents: 'none',
+              width: fullWidth ? '100%' : 'auto',
+            }}
+          >
+            {children}
+          </div>
         </div>
       </Tooltip>
     ) : (
-      <div style={triggerStyle} onClick={(event) => event.stopPropagation()}>
+      <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
         {children}
       </div>
     );

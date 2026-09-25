@@ -1,0 +1,153 @@
+{
+  "pitches": [88, 44, 44, 90],
+  "renderedRowsWithStatus": 5,
+  "rows": [
+    {
+      "task": "task:VYG-4",
+      "statusIndex": 2,
+      "rowTop": 189,
+      "rowH": 42,
+      "kids": [
+        {
+          "x": 275,
+          "w": 16,
+          "kind": "icon"
+        },
+        {
+          "x": 299,
+          "w": 43,
+          "kind": "VYG-4"
+        },
+        {
+          "x": 350,
+          "w": 16,
+          "kind": "status"
+        },
+        {
+          "x": 374,
+          "w": 216,
+          "kind": "Voyager: review readiness report"
+        }
+      ]
+    },
+    {
+      "task": "task:VYG-6",
+      "statusIndex": 2,
+      "rowTop": 277,
+      "rowH": 42,
+      "kids": [
+        {
+          "x": 275,
+          "w": 16,
+          "kind": "icon"
+        },
+        {
+          "x": 299,
+          "w": 43,
+          "kind": "VYG-6"
+        },
+        {
+          "x": 350,
+          "w": 16,
+          "kind": "status"
+        },
+        {
+          "x": 374,
+          "w": 295,
+          "kind": "Voyager: backlog — post-launch retro outli"
+        }
+      ]
+    },
+    {
+      "task": "task:VYG-3",
+      "statusIndex": 2,
+      "rowTop": 321,
+      "rowH": 42,
+      "kids": [
+        {
+          "x": 275,
+          "w": 16,
+          "kind": "icon"
+        },
+        {
+          "x": 299,
+          "w": 43,
+          "kind": "VYG-3"
+        },
+        {
+          "x": 350,
+          "w": 16,
+          "kind": "status"
+        },
+        {
+          "x": 374,
+          "w": 200,
+          "kind": "Voyager: comms plan skeleton"
+        }
+      ]
+    },
+    {
+      "task": "task:VYG-1",
+      "statusIndex": 2,
+      "rowTop": 365,
+      "rowH": 44,
+      "kids": [
+        {
+          "x": 275,
+          "w": 16,
+          "kind": "icon"
+        },
+        {
+          "x": 299,
+          "w": 43,
+          "kind": "VYG-1"
+        },
+        {
+          "x": 350,
+          "w": 16,
+          "kind": "status"
+        },
+        {
+          "x": 374,
+          "w": 233,
+          "kind": "Voyager: assemble launch checklist"
+        },
+        {
+          "x": 616,
+          "w": 53,
+          "kind": "icon"
+        }
+      ]
+    },
+    {
+      "task": "task:VYG-5",
+      "statusIndex": 2,
+      "rowTop": 455,
+      "rowH": 42,
+      "kids": [
+        {
+          "x": 275,
+          "w": 16,
+          "kind": "icon"
+        },
+        {
+          "x": 299,
+          "w": 43,
+          "kind": "VYG-5"
+        },
+        {
+          "x": 350,
+          "w": 16,
+          "kind": "status"
+        },
+        {
+          "x": 374,
+          "w": 207,
+          "kind": "Voyager: name the release train"
+        }
+      ]
+    }
+  ],
+  "url": "app://renderer/ws-useragenttes/project/parity-voyager-launch/tasks",
+  "workflowChipsOnPage": 0
+}

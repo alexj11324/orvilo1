@@ -1,7 +1,7 @@
 {
   "changelog.description": "随时了解 {{appName}} 的新功能与改进",
   "changelog.title": "更新日志",
-  "chat.description": "{{appName}} 是面向 Agent 团队的任务优先工作台：在看板上安排工作，按计划自动执行，每一步结果都可追溯。",
+  "chat.description": "{{appName}} 是面向 Agent 团队的问题优先工作台：在看板上安排工作，按计划自动执行，每一步结果都可追溯。",
   "chat.title": "{{appName}} · 同 Agent 团队一起无限进步",
   "discover.assistants.description": "内容、问答、图像、视频、语音、工作流——从社区中浏览并添加智能体。",
   "discover.assistants.title": "智能体社区",

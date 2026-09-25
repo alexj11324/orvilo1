@@ -8,6 +8,7 @@ import { formatProjectDate } from './projectPlanningDate';
  * `formatProjectDate` with the active locale's day patterns
  * (`time.formatThisYear` / `time.formatOtherYear`), so a day date reads
  * "Dec 1" / "12月1日" this year and carries the year otherwise.
+ * The formatter is memoized on the locale + patterns.
  */
 export const useProjectDateFormatter = () => {
   const { i18n, t } = useTranslation('common');

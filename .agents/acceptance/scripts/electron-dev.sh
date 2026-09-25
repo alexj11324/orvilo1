@@ -503,6 +503,7 @@ do_start() {
 
   local launch_cmd="
     cd '$PROJECT_ROOT/apps/desktop'
+    export NODE_OPTIONS=\"\${NODE_OPTIONS:---max-old-space-size=8192}\"
     exec env $env_assignments ORVILO_DESKTOP_CDP_PORT=$CDP_PORT pnpm dev
   "
   if command -v setsid >/dev/null 2>&1; then

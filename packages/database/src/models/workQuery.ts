@@ -581,13 +581,15 @@ const attentionBlockedTasks = alias(tasks, 'attention_blocked');
 
 /**
  * Linear's My issues grouping: urgent issues first, then issues that block
- * others, then the rest by status. Not a stored column — a CASE over
+ * others, then the rest by workflow state (Linear's status is the workflow
+ * state — Todo, In Progress… — not the agent run state, so the tail buckets
+ * match the one status mark each row draws). Not a stored column — a CASE over
  * `priority` and a live `blocks` edge, so the bucket always reflects the
  * current graph.
  *
  * Two guards keep the buckets honest:
  * - The grouped row itself must be open — a completed/canceled issue stays
- *   in its status bucket even when it is urgent or still blocks work.
+ *   in its workflow bucket even when it is urgent or still blocks work.
  * - The blocked downstream task must be readable by the caller — otherwise
  *   an invisible task could flip a visible one into the `blocking` group.
  */
@@ -616,7 +618,7 @@ const attentionGroupExpr = (ctx: {
       )}
       AND ${buildTaskTeamReadableWhere(ctx.db, ctx.userId, attentionBlockedTasks as unknown as typeof tasks)}
   ) THEN 'blocking'
-  ELSE ${tasks.status}
+  ELSE ${tasks.workflowCategory}
 END`;
 
 const groupExprFor = (
@@ -633,7 +635,7 @@ const stableBoardKeys = (
   groupBy: 'attention' | 'status' | 'workflowCategory',
 ): readonly string[] =>
   groupBy === 'attention'
-    ? ['urgent', 'blocking', ...WORK_QUERY_STATUS_COLUMNS]
+    ? ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS]
     : groupBy === 'status'
       ? WORK_QUERY_STATUS_COLUMNS
       : WORK_QUERY_WORKFLOW_COLUMNS;

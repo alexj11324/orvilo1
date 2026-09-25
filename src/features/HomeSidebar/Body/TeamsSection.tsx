@@ -23,6 +23,7 @@ import {
   ListChecksIcon,
   MoreHorizontalIcon,
   SlidersHorizontalIcon,
+  UserRoundPlusIcon,
 } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -294,6 +295,12 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
             <NavItem active={tab === 'teams'} icon={Layers} title={t('tab.teams')} />
           </WorkspaceLink>
         )}
+        {/* Linear's "Join a team" row closes the Your teams section — it
+            deep-links to the /teams directory, where unjoined public teams
+            are discoverable. */}
+        <WorkspaceLink to="/teams">
+          <NavItem icon={UserRoundPlusIcon} title={t('navPanel.joinTeam')} />
+        </WorkspaceLink>
       </AccordionPanel>
     </AccordionItem>
   );

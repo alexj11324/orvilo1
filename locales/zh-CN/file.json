@@ -302,7 +302,7 @@
   "work.createdAt": "创建于 {{date}}",
   "work.date.today": "今天",
   "work.date.yesterday": "昨天",
-  "work.empty.desc": "Agent 产出的交付物（任务、文档、Linear 与 GitHub 条目）都会汇聚在这里。",
+  "work.empty.desc": "Agent 产出的交付物（问题、文档、Linear 与 GitHub 条目）都会汇聚在这里。",
   "work.empty.title": "还没有产物",
   "work.fromTopic": "{{topic}}",
   "work.group": "产物",
@@ -318,6 +318,6 @@
   "work.type.githubPullRequest": "GitHub PR",
   "work.type.linearDocument": "Linear 文档",
   "work.type.linearIssue": "Linear Issue",
-  "work.type.task": "任务",
+  "work.type.task": "问题",
   "work.updatedAt": "更新于 {{date}}"
 }

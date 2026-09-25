@@ -99,7 +99,7 @@ export default {
   'typobar.redo': 'Redo',
   'typobar.strikethrough': 'Strikethrough',
   'typobar.table': 'Table',
-  'typobar.taskList': 'Task List',
+  'typobar.taskList': 'Issue List',
   'typobar.tex': 'TeX Formula',
   'typobar.underline': 'Underline',
   'typobar.undo': 'Undo',

@@ -134,7 +134,7 @@
   "transferRequest.manifestInitiator.hiddenMember": "此群组引用了接收者无法访问的私人代理——在其所有者共享前，接收者无法接受。",
   "transferRequest.manifestInitiator.knowledgeDetach": "{{count}} 个知识库/文件附件新所有者无法访问，将被分离。",
   "transferRequest.manifestInitiator.projectsLeave": "此私人代理将退出 {{count}} 个不属于接收者的项目。",
-  "transferRequest.manifestInitiator.tasksDetach": "此私人代理上的 {{count}} 个任务分配（属于您或其他成员）将被分离。",
+  "transferRequest.manifestInitiator.tasksDetach": "此私人代理上的 {{count}} 个问题分配（属于您或其他成员）将被分离。",
   "transferRequest.manifestInitiator.unavailable": "无法加载转移摘要。请重试以在发送请求前查看。",
   "transferRequest.manifestLoading": "正在检查此转移包含的内容…",
   "transferRequest.manifestRetry": "重试",

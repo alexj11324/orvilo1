@@ -179,10 +179,10 @@
   "sidebar.collapseAll": "折叠所有分组",
   "sidebar.expandAll": "展开所有分组",
   "sidebar.title": "话题",
-  "taskManager.agent": "任务助手",
+  "taskManager.agent": "问题管理",
   "taskManager.agentSelector.privateGroup": "私人",
   "taskManager.agentSelector.workspaceGroup": "工作区",
-  "taskManager.welcome": "问我关于你的任务",
+  "taskManager.welcome": "问我关于你的问题",
   "temp": "临时",
   "title": "话题"
 }

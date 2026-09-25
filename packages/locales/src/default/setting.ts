@@ -10,7 +10,7 @@ export default {
   'completionSound.builtin.xylophone': 'Xylophone',
   'completionSound.import': 'Import sound…',
   'completionSound.importHint':
-    'Choose WAV, MP3 or OGG (up to 1 MB), or openpeon.json from an extracted OpenPeon pack. Only task completion sounds are imported.',
+    'Choose WAV, MP3 or OGG (up to 1 MB), or openpeon.json from an extracted OpenPeon pack. Only issue completion sounds are imported.',
   'completionSound.preview': 'Preview',
   'completionSound.volume': 'Volume',
   'completionSound.error':
@@ -663,7 +663,7 @@ export default {
     'Access files and folders to enable document analysis, knowledge base creation, and file processing workflows',
   'devices.osPermissions.items.fileAccess.title': 'File Access',
   'devices.osPermissions.items.notifications.description':
-    'Receive notifications when tasks complete, Agents respond, or important updates arrive',
+    'Receive notifications when issues complete, Agents respond, or important updates arrive',
   'devices.osPermissions.items.notifications.title': 'Notifications',
   'devices.osPermissions.items.screenAudio.description':
     'Capture screen content and audio for voice interactions, screen analysis, and multimodal assistance',
@@ -853,11 +853,11 @@ export default {
   'notification.category.billing.title': 'Billing',
   'notification.category.generation.title': 'Generation',
   'notification.category.mention.title': 'Mentions',
-  'notification.category.schedule.title': 'Scheduled tasks',
+  'notification.category.schedule.title': 'Scheduled issues',
   'notification.category.workspace.title': 'Workspace',
   'notification.item.agent_cron_job_completed': 'Scheduled task completed',
   'notification.item.agent_cron_job_failed': 'Scheduled task failed',
-  'notification.item.agent_run_completed': 'Agent task completed',
+  'notification.item.agent_run_completed': 'Agent issue completed',
   'notification.item.agent_transfer_result': 'Transfer request result',
   'notification.item.credit_balance_low': 'Credit balance running low',
   'notification.item.image_generation_completed': 'Image generation completed',
@@ -865,9 +865,9 @@ export default {
   'notification.item.subscription_payment_failed': 'Subscription renewal payment failed',
   'notification.item.subscription_plan_changed': 'Subscription plan changed',
   'notification.item.subscription_renewed': 'Subscription renewed',
-  'notification.item.task_assigned': 'Task assigned to you',
-  'notification.item.task_comment_activity': 'Task comment activity',
-  'notification.item.task_comment_mentioned': 'Mentioned in a task comment',
+  'notification.item.task_assigned': 'Issue assigned to you',
+  'notification.item.task_comment_activity': 'Issue comment activity',
+  'notification.item.task_comment_mentioned': 'Mentioned in an issue comment',
   'notification.item.topic_comment_activity': 'Comment activity',
   'notification.item.topic_comment_mentioned': 'Mentioned in a comment',
   'notification.item.video_generation_completed': 'Video generation completed',
@@ -1215,7 +1215,7 @@ export default {
   'settingGroupMembers.groupHost': 'Orchestrator',
   'settingGroupMembers.groupMembers': 'Group Members',
   'settingGroupMembers.host.description':
-    'With an Orchestrator, the Group can run more automatically—great for open-ended tasks.',
+    'With an Orchestrator, the Group can run more automatically—great for open-ended issues.',
   'settingGroupMembers.host.title': 'Orchestrator',
   'settingGroupMembers.noAvailableAgents': 'No available agents',
   'settingGroupMembers.noDescription': 'No description',
@@ -1600,7 +1600,7 @@ export default {
   'systemAgent.thread.label': 'Model',
   'systemAgent.thread.modelDesc': 'Model used to rename subtopics',
   'systemAgent.thread.title': 'Subtopic Auto-Naming',
-  'systemAgent.title': 'System Tasks',
+  'systemAgent.title': 'System Issues',
   'systemAgent.topic.label': 'Model',
   'systemAgent.topic.modelDesc': 'Model used to rename topics',
   'systemAgent.topic.title': 'Topic Auto-Naming',
@@ -1616,7 +1616,7 @@ export default {
   'tab.advanced': 'Advanced',
   'tab.advanced.appUpdates.title': 'App updates',
   'tab.advanced.gatewayMode.desc':
-    'Run supported agent tasks through the cloud Gateway by default. Individual agents can override this from the chat menu.',
+    'Run supported agent issues through the cloud Gateway by default. Individual agents can override this from the chat menu.',
   'tab.advanced.gatewayMode.title': 'Gateway Mode',
   'tab.advanced.toolsAndDiagnostics.title': 'Tools and diagnostics',
   'tab.addAgentSkill': 'Add Agent Skill',
@@ -2522,7 +2522,8 @@ export default {
     'All agents, skills, and their configurations',
   'workspace.general.delete.confirm.warning.items.billing':
     'Subscription, budget settings, and auto top-up',
-  'workspace.general.delete.confirm.warning.items.conversations': 'All messages, topics, and tasks',
+  'workspace.general.delete.confirm.warning.items.conversations':
+    'All messages, topics, and issues',
   'workspace.general.delete.confirm.warning.items.files':
     'Uploaded files, generations, and knowledge base data',
   'workspace.general.delete.confirm.warning.items.members':
@@ -2586,7 +2587,7 @@ export default {
   'workspace.general.transferAgents.modal.memberGroup': 'Workspace members',
   'workspace.general.transferAgents.modal.moveAgent': 'Move Agent',
   'workspace.general.transferAgents.modal.moveAgentDesc':
-    'You can move to personal or workspaces that have permission to create an agent. All associated data moves with the agent: topics, documents, custom plugins, file and knowledge base links, scheduled jobs, and related tasks. Multi-agent group associations will be removed, and moved connectors may need to be reauthorized.',
+    'You can move to personal or workspaces that have permission to create an agent. All associated data moves with the agent: topics, documents, custom plugins, file and knowledge base links, scheduled jobs, and related issues. Multi-agent group associations will be removed, and moved connectors may need to be reauthorized.',
   'workspace.general.transferAgents.modal.moveTitle': 'Move',
   'workspace.general.transferAgents.modal.noAgents': 'No agents in this workspace',
   'workspace.general.transferAgents.modal.requestSent': 'Transfer request sent',
@@ -3312,7 +3313,7 @@ export default {
   'workspaceSetting.tab.linear': 'Linear sync',
   'workspaceSetting.linear.title': 'Linear workspace sync',
   'workspaceSetting.linear.description':
-    'Connect one Linear organization to this workspace, map projects, and coordinate task changes with durable sync and replanning.',
+    'Connect one Linear organization to this workspace, map projects, and coordinate issue changes with durable sync and replanning.',
   'workspaceSetting.linear.connectionTitle': 'Linear connection',
   'workspaceSetting.linear.connectionDescription': 'Authorize Linear through your Orvilo account.',
   'workspaceSetting.linear.connectedAs': 'Connected as {{name}}',
@@ -3474,7 +3475,7 @@ export default {
   'workspaceSetting.linear.wizard.completeScope': 'Choose a valid team and Linear project first.',
   'workspaceSetting.linear.wizard.mappingTitle': 'Status and assignee mappings',
   'workspaceSetting.linear.wizard.mappingDescription':
-    'Review explicit mappings before any issue is imported into the shared task view.',
+    'Review explicit mappings before any issue is imported into the shared issue view.',
   'workspaceSetting.linear.wizard.completeBinding': 'Save the local project binding first.',
   'workspaceSetting.linear.wizard.importTitle': 'Import preview and status',
   'workspaceSetting.linear.wizard.importDescription':
@@ -3490,9 +3491,9 @@ export default {
   'workspaceSetting.linear.wizard.complete': 'Complete',
   'workspaceSetting.linear.wizard.open': 'Available',
   'workspaceSetting.linear.wizard.locked': 'Locked',
-  'workspaceSetting.linear.wizard.scopeBoundaryTitle': 'One shared task view',
+  'workspaceSetting.linear.wizard.scopeBoundaryTitle': 'One shared issue view',
   'workspaceSetting.linear.wizard.scopeBoundary':
-    'Linear-linked issues continue to use the existing Workspace, Project, and Agent task views. This setup does not create a second task pool or route.',
+    'Linear-linked issues continue to use the existing Workspace, Project, and Agent issue views. This setup does not create a second issue pool or route.',
   'workspaceSetting.linear.conflicts.title': 'Synchronization conflicts',
   'workspaceSetting.linear.conflicts.description':
     'Review both values. Keep one side or choose a source for every field before merging.',
@@ -3621,7 +3622,7 @@ export default {
   'workspaceSetting.members.columnReviewing': 'Reviewing',
   'workspaceSetting.members.columnRole': 'Role',
   'workspaceSetting.members.columnStatus': 'Status',
-  'workspaceSetting.members.columnTasks': 'Tasks',
+  'workspaceSetting.members.columnTasks': 'Issues',
   'workspaceSetting.members.emailCount': '{{count}} recipient',
   'workspaceSetting.members.emailCount_other': '{{count}} recipients',
   'workspaceSetting.members.emailsLabel': 'Email addresses',
@@ -3639,7 +3640,7 @@ export default {
   'workspaceSetting.members.inviteTitle': 'Invite teammates',
   'workspaceSetting.members.leave': 'Leave workspace',
   'workspaceSetting.members.leaveConfirmContent':
-    'You will lose access to {{name}} and its projects. Tasks you were assigned or reviewing become unassigned. Rejoining requires a new invitation.',
+    'You will lose access to {{name}} and its projects. Issues you were assigned or reviewing become unassigned. Rejoining requires a new invitation.',
   'workspaceSetting.members.leaveConfirmTitle': 'Leave {{name}}?',
   'workspaceSetting.members.leaveOwnerHint': 'Transfer ownership before leaving this workspace.',
   'workspaceSetting.members.leaveSuccess': 'You have left the workspace.',
@@ -3654,8 +3655,8 @@ export default {
     "Couldn't load the impact preview. You can still remove.",
   'workspaceSetting.members.previewReviews': '{{count}} open review',
   'workspaceSetting.members.previewReviews_other': '{{count}} open reviews',
-  'workspaceSetting.members.previewTasks': '{{count}} assigned task',
-  'workspaceSetting.members.previewTasks_other': '{{count}} assigned tasks',
+  'workspaceSetting.members.previewTasks': '{{count}} assigned issue',
+  'workspaceSetting.members.previewTasks_other': '{{count}} assigned issues',
   'workspaceSetting.members.previewTitle': 'This member still owns:',
   'workspaceSetting.members.projectRole.commenter': 'Commenter',
   'workspaceSetting.members.projectRole.contributor': 'Contributor',
@@ -3806,8 +3807,8 @@ export default {
   'tools.builtins.orvilo-skills.description': 'Activate and use reusable skill packages',
   'tools.builtins.orvilo-skills.title': 'Skills',
   'tools.builtins.orvilo-task.description':
-    'Create, schedule, list, edit, and delete tasks with dependencies and review configuration',
-  'tools.builtins.orvilo-task.title': 'Task Tools',
+    'Create, schedule, list, edit, and delete issues with dependencies and review configuration',
+  'tools.builtins.orvilo-task.title': 'Issue Tools',
   'tools.builtins.orvilo-topic-reference.description':
     'Retrieve context from referenced topic conversations',
   'tools.builtins.orvilo-topic-reference.title': 'Topic Reference',
@@ -3830,14 +3831,14 @@ export default {
   'tools.builtins.orvilo-computer-use.description':
     'Use desktop applications, interact with controls, and capture the screen.',
   'tools.builtins.orvilo-agent-browser.description':
-    'Browser automation CLI for AI agents. Use when tasks involve website or Electron interaction such as navigation, form filling, clicking, screenshot capture, scraping data, login flows, and end-to-end app testing.',
+    'Browser automation CLI for AI agents. Use when issues involve website or Electron interaction such as navigation, form filling, clicking, screenshot capture, scraping data, login flows, and end-to-end app testing.',
   'tools.builtins.orvilo-agent-browser.title': 'Agent Browser',
   'tools.builtins.orvilo.description':
     'Manage the Orvilo platform via CLI — knowledge bases, memory, agents, files, search, generation, and more.',
   'tools.builtins.orvilo.title': 'Orvilo',
   'tools.builtins.task.description':
-    'Task management and execution — create, track, review, and complete tasks via CLI.',
-  'tools.builtins.task.title': 'Task',
+    'Issue management and execution — create, track, review, and complete issues via CLI.',
+  'tools.builtins.task.title': 'Issue',
   'tools.builtins.configure': 'Configure',
   'tools.builtins.notInstalled': 'Not Installed',
   'tools.builtins.uninstall': 'Uninstall',

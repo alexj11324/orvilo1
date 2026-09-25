@@ -178,7 +178,7 @@ export default {
   'transferRequest.manifestInitiator.hiddenMember':
     'This group references a private agent the recipient cannot access — they cannot accept until its owner shares it',
   'transferRequest.manifestInitiator.tasksDetach':
-    '{{count}} task assignment(s) on this private agent (yours or other members’) will be detached',
+    '{{count}} issue assignment(s) on this private agent (yours or other members’) will be detached',
   'transferRequest.manifest.unavailable':
     'The transfer summary could not be loaded. Retry to review it before accepting.',
   'transferRequest.manifestInitiator.unavailable':

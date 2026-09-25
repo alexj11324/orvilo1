@@ -629,7 +629,7 @@ describe('WorkQueryModel', () => {
     expect(runningPage?.tasks[0]!.id).not.toBe(byKey.get('running')!.tasks[0]!.id);
   });
 
-  it('groups an assigned list by attention — urgent, then blocking, then status', async () => {
+  it('groups an assigned list by attention — urgent, then blocking, then workflow state', async () => {
     const model = new WorkQueryModel(serverDB, userId, workspaceId);
     // An urgent blocker lands in 'urgent' only — Linear's first bucket wins.
     const urgentBlocker = await createTask(userId, {
@@ -647,16 +647,21 @@ describe('WorkQueryModel', () => {
       assigneeUserId: userId,
       name: 'Blocked backlog',
       status: 'backlog',
+      // Run state and workflow state disagree on purpose: the tail bucket
+      // must follow the workflow state, as Linear's status groups do.
+      workflowCategory: 'todo',
     });
     const doneBlocked = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Freed task',
       status: 'completed',
+      workflowCategory: 'done',
     });
     const normal = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Ordinary paused',
       status: 'paused',
+      workflowCategory: 'in_review',
     });
     // The urgent blocker also blocks an open task — it must stay in 'urgent'.
     // `blocker` blocks `blocked`; `urgentBlocker`'s finished dependent is done
@@ -706,28 +711,31 @@ describe('WorkQueryModel', () => {
     expect(populated.map((group) => group.key)).toEqual([
       'urgent',
       'blocking',
-      'backlog',
-      'paused',
-      'completed',
+      'todo',
+      'in_review',
+      'done',
     ]);
     const byKey = new Map(result.groups!.map((group) => [group.key, group]));
     expect(byKey.get('urgent')?.tasks.map((task) => task.id)).toEqual([urgentBlocker.id]);
     expect(byKey.get('blocking')?.tasks.map((task) => task.id)).toEqual([blocker.id]);
-    expect(byKey.get('backlog')?.tasks.map((task) => task.id)).toEqual([blocked.id]);
+    expect(byKey.get('todo')?.tasks.map((task) => task.id)).toEqual([blocked.id]);
     // `normal` blocks only a completed task — not a Linear "blocking issue".
-    expect(byKey.get('paused')?.tasks.map((task) => task.id)).toEqual([normal.id]);
-    expect(byKey.get('completed')?.tasks.map((task) => task.id)).toEqual([doneBlocked.id]);
+    expect(byKey.get('in_review')?.tasks.map((task) => task.id)).toEqual([normal.id]);
+    expect(byKey.get('done')?.tasks.map((task) => task.id)).toEqual([doneBlocked.id]);
+    // No execution-status key leaks into the tail buckets.
+    expect(result.groups!.map((group) => group.key)).not.toContain('paused');
   });
 
   it('keeps terminal rows and unreadable downstreams out of attention buckets', async () => {
     const model = new WorkQueryModel(serverDB, userId, workspaceId);
     // A completed urgent issue is not an "Urgent issue" — terminal rows stay
-    // in their status bucket.
+    // in their workflow bucket.
     const urgentDone = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Shipped urgent',
       priority: 1,
       status: 'completed',
+      workflowCategory: 'done',
     });
     // A completed blocker no longer holds the edge — finished work does not
     // surface as "Blocking issues".
@@ -735,6 +743,7 @@ describe('WorkQueryModel', () => {
       assigneeUserId: userId,
       name: 'Retired blocker',
       status: 'completed',
+      workflowCategory: 'done',
     });
     const open = await createTask(userId, {
       assigneeUserId: userId,
@@ -752,6 +761,7 @@ describe('WorkQueryModel', () => {
       assigneeUserId: userId,
       name: 'Blocks hidden task',
       status: 'running',
+      workflowCategory: 'in_progress',
     });
     await serverDB.insert(taskDependencies).values([
       {
@@ -780,11 +790,11 @@ describe('WorkQueryModel', () => {
     expect(byKey.get('blocking')?.total ?? 0).toBe(0);
     expect(
       byKey
-        .get('completed')
+        .get('done')
         ?.tasks.map((task) => task.id)
         .sort(),
     ).toEqual([doneBlocker.id, urgentDone.id].sort());
-    expect(byKey.get('running')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
+    expect(byKey.get('in_progress')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
     // The private downstream row itself never leaks into the caller's list.
     expect(result.groups!.flatMap((group) => group.tasks.map((task) => task.id))).not.toContain(
       hiddenDownstream.id,

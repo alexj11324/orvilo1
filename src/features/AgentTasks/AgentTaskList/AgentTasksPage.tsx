@@ -886,6 +886,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                   error={error}
                   isLoading={isLoading || (!isTaskListInit && !error)}
                   items={filteredIssueTasks}
+                  linearIssueRows={!!projectId && isOrdinaryCollection}
                   milestones={projectId ? projectMilestones : undefined}
                   options={viewOptions}
                   peekOnSelect={peekOnSelect}

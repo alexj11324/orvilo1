@@ -119,6 +119,7 @@
   "header.closeDetails": "关闭项目详情",
   "header.copyPageUrl": "复制页面链接",
   "header.projectActions": "项目操作",
+  "header.showDetails": "显示项目详情",
   "header.showUpdatesAndActivity": "显示更新与动态",
   "list.columnCompleted": "完成时间",
   "list.columnCreated": "创建时间",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  burnupTickIndices,
   projectIssueAssigneeBreakdown,
   projectIssueBurnupSeries,
   projectIssueLabelBreakdown,
@@ -120,5 +121,28 @@ describe('project issue breakdowns', () => {
     const dirty = [...issues, { id: 'z', workflowCategory: 'queued' as never }];
     expect(projectIssueAssigneeBreakdown(dirty)).toBeNull();
     expect(projectIssueLabelBreakdown(dirty, {})).toBeNull();
+  });
+});
+
+/**
+ * Regression coverage for duplicate axis ticks: the midpoint index used to
+ * collide with the first (or only) day on short series, printing one date
+ * twice. Ends are labelled, a midpoint only when it is a distinct day.
+ */
+describe('burnupTickIndices', () => {
+  it('labels a long series with both ends and the midpoint', () => {
+    expect(burnupTickIndices(30)).toEqual([0, 14, 29]);
+  });
+
+  it('labels a two-day series with only its endpoints', () => {
+    expect(burnupTickIndices(2)).toEqual([0, 1]);
+  });
+
+  it('labels a same-day series once, not three times', () => {
+    expect(burnupTickIndices(1)).toEqual([0]);
+  });
+
+  it('labels nothing when the series is empty', () => {
+    expect(burnupTickIndices(0)).toEqual([]);
   });
 });

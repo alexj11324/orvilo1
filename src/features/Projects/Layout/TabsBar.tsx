@@ -281,7 +281,8 @@ const ProjectTabsBar = memo<ProjectTabsBarProps>(({ onTogglePanel, panelOpen, to
               <ToggleRightPanelButton
                 expand={panelOpen}
                 id={null}
-                title={t('header.closeDetails')}
+                showHotkey={false}
+                title={t(panelOpen ? 'header.closeDetails' : 'header.showDetails')}
                 onToggle={onTogglePanel}
               />
             </Flexbox>

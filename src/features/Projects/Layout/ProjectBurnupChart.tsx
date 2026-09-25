@@ -2,10 +2,14 @@
 
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { memo, useMemo } from 'react';
+import { memo, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type BurnupIssue, projectIssueBurnupSeries } from '../projectIssueBurnup';
+import {
+  type BurnupIssue,
+  burnupTickIndices,
+  projectIssueBurnupSeries,
+} from '../projectIssueBurnup';
 
 /**
  * The rail Progress card's burnup chart, hand-rolled because the repo ships
@@ -33,6 +37,7 @@ const seriesOpacity = {
 
 export const ProjectBurnupChart = memo<{ issues: readonly BurnupIssue[] }>(({ issues }) => {
   const { t } = useTranslation('project');
+  const gradientId = useId();
   const series = useMemo(() => projectIssueBurnupSeries(issues), [issues]);
 
   if (!series || series.length === 0) return null;
@@ -48,17 +53,15 @@ export const ProjectBurnupChart = memo<{ issues: readonly BurnupIssue[] }>(({ is
     series.map((point, i) => `L${xOf(i).toFixed(1)},${yOf(point[key]).toFixed(1)}`).join(' ') +
     ` L${xOf(series.length - 1).toFixed(1)},${CHART_HEIGHT} Z`;
 
-  // First, midpoint and final days — the reference labels only the axis ends
-  // plus one interior date.
-  const ticks = [
-    { anchor: 'start' as const, date: series[0].date, x: 0 },
-    {
-      anchor: 'middle' as const,
-      date: series[Math.floor((series.length - 1) / 2)].date,
-      x: xOf(Math.floor((series.length - 1) / 2)),
-    },
-    { anchor: 'end' as const, date: series.at(-1)!.date, x: WIDTH },
-  ];
+  // Axis ends plus one interior date, deduped — a short series would label
+  // the same day twice.
+  const tickIndices = burnupTickIndices(series.length);
+  const ticks = tickIndices.map((index) => ({
+    anchor: (index === 0 ? 'start' : index === series.length - 1 ? 'end' : 'middle') as
+      'end' | 'middle' | 'start',
+    date: series[index].date,
+    x: xOf(index),
+  }));
 
   return (
     <svg
@@ -67,8 +70,16 @@ export const ProjectBurnupChart = memo<{ issues: readonly BurnupIssue[] }>(({ is
       style={{ display: 'block', height: 'auto', width: '100%' }}
       viewBox={`0 0 ${WIDTH} ${CHART_HEIGHT + LABEL_HEIGHT}`}
     >
+      <defs>
+        {LINE_KEYS.map((key) => (
+          <linearGradient id={`${gradientId}-${key}`} key={key} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={seriesColor[key]} stopOpacity={seriesOpacity[key]} />
+            <stop offset="100%" stopColor={seriesColor[key]} stopOpacity={0} />
+          </linearGradient>
+        ))}
+      </defs>
       {LINE_KEYS.map((key) => (
-        <path d={areaPath(key)} fill={seriesColor[key]} key={key} opacity={seriesOpacity[key]} />
+        <path d={areaPath(key)} fill={`url(#${gradientId}-${key})`} key={key} />
       ))}
       {LINE_KEYS.map((key) => (
         <polyline

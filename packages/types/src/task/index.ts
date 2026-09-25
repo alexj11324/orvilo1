@@ -14,6 +14,41 @@ export type TaskStatus =
 export type TaskWorkflowCategory =
   'triage' | 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled';
 
+/**
+ * How one task counts toward a progress readout: `canceled` leaves scope
+ * entirely, `done` completes, a started state is in-flight work, and every
+ * other recognised category is scope that has not started. An unrecognised
+ * category is `null` — an unavailable readout beats a wrong number.
+ *
+ * The Progress card, burnup/breakdown helpers and
+ * `ProjectModel.listMilestoneProgress` share this one classifier, so a new
+ * `TaskWorkflowCategory` member is triaged here once.
+ */
+export type WorkflowBucket = 'completed' | 'excluded' | 'scoped' | 'started';
+
+export const workflowBucket = (category: TaskWorkflowCategory): WorkflowBucket | null => {
+  switch (category) {
+    case 'canceled': {
+      return 'excluded';
+    }
+    case 'done': {
+      return 'completed';
+    }
+    case 'in_progress':
+    case 'in_review': {
+      return 'started';
+    }
+    case 'triage':
+    case 'backlog':
+    case 'todo': {
+      return 'scoped';
+    }
+    default: {
+      return null;
+    }
+  }
+};
+
 /** Team intake state. NULL means the task is not in triage. */
 export type TaskTriageStatus = 'accepted' | 'declined' | 'duplicate' | 'untriaged';
 

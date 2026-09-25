@@ -342,6 +342,7 @@ export default {
   'header.closeDetails': 'Close project details',
   'header.copyPageUrl': 'Copy page URL',
   'header.projectActions': 'Project actions',
+  'header.showDetails': 'Show project details',
   'header.showUpdatesAndActivity': 'Show updates and activity',
   'overview.descriptionCancel': 'Cancel',
   'overview.descriptionEmpty': 'Add a description…',

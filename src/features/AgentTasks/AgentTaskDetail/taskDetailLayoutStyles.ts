@@ -92,6 +92,18 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
       display: block;
     }
   `,
+  /**
+   * A rail section's heading row — the label plus its trailing "+" add
+   * affordance (Linear's hover-plus). The label itself hides in the pill
+   * layout (railSectionLabel), but the row stays: the "+" must remain
+   * reachable when the sections collapse, otherwise there is no way to add a
+   * relation outside the wide sidebar.
+   */
+  railSectionHeader: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  `,
   /** A stacked row inside a rail section — same hit area as a property cell. */
   railRow: css`
     width: 100%;

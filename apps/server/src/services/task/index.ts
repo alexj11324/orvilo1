@@ -1312,6 +1312,7 @@ export class TaskService {
     const [
       allDescendants,
       dependencies,
+      dependents,
       directTopics,
       comments,
       activityLogs,
@@ -1321,6 +1322,7 @@ export class TaskService {
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
       this.taskModel.getDependencies(task.id),
+      this.taskModel.getDependents(task.id).catch(() => []),
       this.taskTopicModel.findWithHandoff(task.id, TASK_DETAIL_DIRECT_TOPIC_LIMIT).catch(() => []),
       this.taskModel.getComments(task.id).catch(() => []),
       this.taskModel.getActivities(task.id, TASK_DETAIL_ACTIVITY_LIMIT).catch(() => []),
@@ -1471,8 +1473,12 @@ export class TaskService {
     // Root level: always return array (empty [] when no subtasks) for consistent API shape
     const subtasks = buildSubtaskTree(task.id) ?? [];
 
-    // Resolve dependency task identifiers
-    const depTaskIds = [...new Set(dependencies.map((d) => d.dependsOnId))];
+    // Resolve edge-task identifiers in both directions: `dependencies` are the
+    // tasks this one points at (Blocked by / Related), `dependents` are the
+    // tasks pointing back (Blocking, and symmetric relates).
+    const depTaskIds = [
+      ...new Set([...dependencies.map((d) => d.dependsOnId), ...dependents.map((d) => d.taskId)]),
+    ];
     const depTasks = await this.taskModel.findByIds(depTaskIds);
     const depIdToInfo = new Map(
       depTasks
@@ -1726,6 +1732,16 @@ export class TaskService {
         return {
           dependsOn: info?.identifier ?? 'Unavailable prerequisite',
           ...(info ? { id: d.dependsOnId } : {}),
+          name: info?.name,
+          status: info?.status ?? null,
+          type: d.type,
+        };
+      }),
+      dependents: dependents.map((d) => {
+        const info = depIdToInfo.get(d.taskId);
+        return {
+          dependsBy: info?.identifier ?? 'Unavailable task',
+          ...(info ? { id: d.taskId } : {}),
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,

@@ -86,6 +86,9 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
           {t('teams.markDuplicateHint')}
         </Text>
         <AutoComplete
+          // Server-side search: antd's default filter matches typed text against
+          // `value` (the task id) and would drop every fetched option.
+          filterOption={false}
           options={options}
           placeholder={t('teams.markDuplicatePlaceholder')}
           style={{ width: '100%' }}
@@ -96,8 +99,10 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
                 : t('teams.markDuplicateEmpty')
               : t('teams.markDuplicatePrompt')
           }
-          onChange={(value) => setSelected(value)}
           onSearch={setNeedle}
+          onChange={(value) =>
+            setSelected(options.some((option) => option.value === value) ? value : undefined)
+          }
         />
       </Flexbox>
     </Modal>

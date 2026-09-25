@@ -16,7 +16,7 @@ export const useProjectDateFormatter = () => {
   const locale = i18n.language;
 
   return useCallback(
-    (date: string | null | undefined, precision: ProjectDatePrecision = 'day') =>
+    (date: Date | string | null | undefined, precision: ProjectDatePrecision = 'day') =>
       formatProjectDate(date, precision, { formatOtherYear, formatThisYear, locale }),
     [formatOtherYear, formatThisYear, locale],
   );

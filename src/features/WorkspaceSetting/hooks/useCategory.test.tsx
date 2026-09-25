@@ -214,6 +214,20 @@ describe('workspace settings useCategory', () => {
     }
   });
 
+  // The audit-log viewer ships with the business overlay; on builds without it
+  // the Admin group must not offer a page that renders nothing.
+  it('hides Audit logs when business features are off', () => {
+    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+    const adminGroup = result.current.find(
+      (group) => group.key === WorkspaceSettingsGroupKey.Admin,
+    );
+
+    expect(adminGroup?.items.map((item) => item.key)).toEqual([WorkspaceSettingsTabs.Storage]);
+
+    const businessItemKeys = getItemKeys(businessWrapper);
+    expect(businessItemKeys).toContain(WorkspaceSettingsTabs.AuditLog);
+  });
+
   // Admin-or-higher reads the billing numbers; the pages keep the
   // money-moving controls behind the narrower manage_subscription gate.
   it('shows Credits and Billing to roles that may view billing', () => {

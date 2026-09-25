@@ -24,7 +24,7 @@ const require_main_app = require('./main-app-<hash>.js'); // 这里已执行 con
 两条缺一不可（`apps/desktop/scripts/preAppInitChunk.mjs`）：
 
 1. **独立 chunk**：`vite.main.config.ts` 的 `manualChunks` 把 `pre-app-init.ts` 单独输出为 `pre-app-init` chunk，入口先 `require` 它，再 `require` `main-app`。
-2. **自包含**：`pre-app-init.ts` 只能 import Node 内置模块（用具名导入，避免引入 Rolldown 的 interop runtime）和 `electron`。一旦 import 任何与 `main-app` 共享的一方模块（哪怕是 `@/utils/platform`），这个 chunk 自己就会先 `require` `main-app`，问题复现。因此它内联了一份与 `@/utils/platform` 的 `dev()` 等价的判断。
+2. **自包含**：`pre-app-init.ts` 只能 import 或 `require` Node 内置模块（用具名导入，避免引入 Rolldown 的 interop runtime）和 `electron`；其它外部依赖可能在 `setPath` 之前就读取 `userData`。一旦 import 任何与 `main-app` 共享的一方模块（哪怕是 `@/utils/platform`），这个 chunk 自己就会先 `require` `main-app`，问题复现。因此它内联了一份与 `@/utils/platform` 的 `dev()` 等价的判断。
 
 `preAppInitOrderGuard()` 在 `generateBundle` 阶段检查这两条，违反时**构建失败**。回归测试见 `apps/desktop/scripts/__tests__/preAppInitChunk.test.mjs`。
 

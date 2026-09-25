@@ -73,7 +73,7 @@ const buildFixture = () =>
       minify: false,
       outDir: path.join(root, 'apps/desktop/dist/main'),
       rolldownOptions: {
-        external: ['electron', /^node:/],
+        external: ['electron', /^node:/, 'side-effect-pkg'],
         output: {
           // Same chunk boundaries as vite.main.config.ts.
           manualChunks(id) {
@@ -152,13 +152,27 @@ if (dev()) app.setPath('userData', process.env.ORVILO_DESKTOP_USER_DATA_DIR!);
 
     await expect(buildFixture()).rejects.toThrow(/pre-app-init must run before/);
   });
+
+  it('fails the build when pre-app-init requires a non-builtin external', async () => {
+    await put(
+      'apps/desktop/src/main/pre-app-init.ts',
+      `
+import { app } from 'electron';
+require('side-effect-pkg');
+app.setPath('userData', process.env.ORVILO_DESKTOP_USER_DATA_DIR!);
+`,
+    );
+
+    await expect(buildFixture()).rejects.toThrow(/imports side-effect-pkg/);
+  });
 });
 
 describe('pre-app-init source', () => {
-  it('imports only node builtins and electron', async () => {
+  it('imports or requires only node builtins and electron', async () => {
     const source = await readFile(realPreAppInit, 'utf8');
     const specifiers = [
       ...source.matchAll(/^\s*import\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/gm),
+      ...source.matchAll(/\b(?:require|import)\(\s*['"]([^'"]+)['"]\s*\)/g),
     ].map((match) => match[1]);
 
     expect(specifiers.length).toBeGreaterThan(0);

@@ -7,12 +7,15 @@
  *
  * Two things together keep it first:
  * - pre-app-init lives in its own chunk, which the entry requires before `main-app`;
- * - that chunk imports nothing but externals (node builtins, `electron`) and Rolldown's
- *   interop runtime. Any shared first-party import would make it require `main-app`
- *   itself, re-breaking the order.
+ * - that chunk loads nothing but node builtins, `electron` and Rolldown's interop
+ *   runtime (checked for both imports and bare `require()` calls). A shared first-party
+ *   import would make it require `main-app` itself; any other external could read
+ *   `userData` before it is set. Either re-breaks the order.
  *
  * `preAppInitOrderGuard` fails the build if either invariant is broken.
  */
+
+import { builtinModules } from 'node:module';
 
 export const PRE_APP_INIT_CHUNK = 'pre-app-init';
 
@@ -21,6 +24,7 @@ export const isPreAppInitModule = (id) =>
   /apps\/desktop\/src\/main\/pre-app-init\.ts$/.test(id.replaceAll('\\', '/').split('?')[0]);
 
 const LOCAL_REQUIRE = /\brequire\(\s*(["'`])\.\/([^"'`]+)\1\s*\)/g;
+const ANY_REQUIRE = /\brequire\(\s*(["'`])([^"'`]+)\1\s*\)/g;
 
 // Rolldown's interop helpers (`__toESM` & co.) carry no app code, so requiring them
 // first is harmless. (pre-app-init avoids needing them by using named node imports.)
@@ -28,6 +32,10 @@ const isRuntimeOnlyChunk = (chunk) =>
   chunk?.type === 'chunk' &&
   chunk.moduleIds.length > 0 &&
   chunk.moduleIds.every((id) => id.startsWith('\0rolldown/runtime'));
+
+// Externals pre-app-init may load: they cannot read `userData` before it is set.
+const isAllowedExternal = (specifier) =>
+  specifier === 'electron' || specifier.startsWith('node:') || builtinModules.includes(specifier);
 
 /**
  * @param {Record<string, any>} bundle
@@ -43,12 +51,17 @@ export const findPreAppInitOrderViolations = (bundle) => {
 
   const violations = [];
 
-  const localImports = preAppInit.imports.filter(
-    (fileName) => fileName in bundle && !isRuntimeOnlyChunk(bundle[fileName]),
+  // `chunk.imports` misses bare `require()` calls in the source, so scan the code too.
+  const requiredInCode = [...preAppInit.code.matchAll(ANY_REQUIRE)].map(([, , specifier]) =>
+    specifier.startsWith('./') ? specifier.slice(2) : specifier,
   );
-  if (localImports.length > 0) {
+  const disallowedImports = [...new Set([...preAppInit.imports, ...requiredInCode])].filter(
+    (specifier) =>
+      specifier in bundle ? !isRuntimeOnlyChunk(bundle[specifier]) : !isAllowedExternal(specifier),
+  );
+  if (disallowedImports.length > 0) {
     violations.push(
-      `"${preAppInit.fileName}" imports bundled chunks (${localImports.join(', ')}); ` +
+      `"${preAppInit.fileName}" imports ${disallowedImports.join(', ')}; ` +
         'pre-app-init may only import node builtins and electron',
     );
   }

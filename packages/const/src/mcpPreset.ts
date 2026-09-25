@@ -22,7 +22,7 @@ import {
  */
 export interface McpPresetConnector {
   /** Auth method preselected in the connector form (oauth2 → DCR/pre-registration). */
-  authType: 'none' | 'oauth2';
+  authType: 'bearer' | 'none' | 'oauth2';
   /** Short description pre-filled into the connector form. */
   description: string;
   /** Icon — a simple-icons component or an image URL. */
@@ -62,7 +62,9 @@ export const matchMcpPresetByConnector = (
 
 export const MCP_PRESET_CONNECTORS: McpPresetConnector[] = [
   {
-    authType: 'oauth2',
+    // GitHub's hosted MCP has no dynamic-registration endpoint — a PAT is the
+    // one-click default; OAuth with a self-registered client stays selectable.
+    authType: 'bearer',
     description:
       'GitHub is a platform for version control and collaboration, enabling developers to host, review, and manage code repositories.',
     icon: SiGithub,

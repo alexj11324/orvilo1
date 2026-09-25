@@ -38,9 +38,10 @@ const McpPresetItem = memo<McpPresetItemProps>(
     const { allowed: canEdit, reason: editReason } = usePermission('edit_own_content');
 
     const isAdded = Boolean(connector);
+    const isConnected = connector?.status === 'connected';
 
     const renderNavExtra = () => {
-      if (isAdded) {
+      if (isConnected) {
         return (
           <Tooltip title={t('tools.orviloSkill.connected', { defaultValue: 'Connected' })}>
             <Center width={20}>
@@ -76,7 +77,7 @@ const McpPresetItem = memo<McpPresetItemProps>(
         extra={renderNavExtra()}
         icon={renderNavIcon}
         title={preset.label}
-        titleColor={!isAdded ? cssVar.colorTextDescription : undefined}
+        titleColor={!isConnected ? cssVar.colorTextDescription : undefined}
         // Same contract as OrviloSkillItem: only added connectors open the
         // detail panel; otherwise the inline Connect button is the affordance.
         onClick={isAdded ? onSelect : undefined}

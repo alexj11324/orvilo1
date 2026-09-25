@@ -60,7 +60,19 @@ export const ConnectorSettings = memo(() => {
   // connector (a preset resolves to one of these), community plugin, legacy
   // custom plugin, then agent-owned connector.
   useEffect(() => {
-    if (selected) return;
+    if (selected) {
+      // The connector list is scope-bound and can refill when the workspace
+      // context resolves — drop a selection whose row no longer exists so the
+      // picker below re-runs instead of showing a phantom detail.
+      const stillResolvable =
+        allOrviloSkillServers.some((s) => s.identifier === selected.identifier) ||
+        allComposioServers.some((s) => s.identifier === selected.identifier) ||
+        customConnectors.some((c) => c.identifier === selected.identifier) ||
+        installedPluginList.some((p) => p.identifier === selected.identifier) ||
+        agentBoundConnectors.some((c) => c.id === selected.identifier);
+      if (stillResolvable) return;
+      setSelected(null);
+    }
 
     const orviloConnected = allOrviloSkillServers.find(
       (server) => server.status === OrviloSkillStatus.CONNECTED,

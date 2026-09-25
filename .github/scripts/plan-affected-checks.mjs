@@ -33,7 +33,7 @@ const SHARED_PACKAGE_NAMES = new Set([
   '@orvilo/utils',
 ]);
 
-const TYPED_SOURCE_PATH = /\.(?:[cm]?tsx?)$/;
+const TYPED_SOURCE_PATH = /\.[cm]?tsx?$/;
 
 const packageNameForPath = (file, packages) => {
   // Some workspaces are nested (for example packages/achaos/core); resolving
@@ -184,7 +184,10 @@ const affectedPackageTests = (changedPackages, packages) => {
  * Produce the quality plan for a list of repository-relative changed files.
  * `packages` is injectable so the policy is unit-testable without a checkout.
  */
-export const planAffectedChecks = (files, { forceE2E = false, forceFull = false, packages } = {}) => {
+export const planAffectedChecks = (
+  files,
+  { forceE2E = false, forceFull = false, packages } = {},
+) => {
   const plan = newPlan();
   const graph = packages ?? {
     byDirectory: new Map(),
@@ -319,7 +322,11 @@ const main = async () => {
   console.log(JSON.stringify(plan, null, 2));
 };
 
-if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === new URL(`file://${process.argv[1]}`).href)
+if (
+  process.argv[1] &&
+  existsSync(process.argv[1]) &&
+  import.meta.url === new URL(`file://${process.argv[1]}`).href
+)
   main().catch((error) => {
     console.error(error);
     process.exit(1);

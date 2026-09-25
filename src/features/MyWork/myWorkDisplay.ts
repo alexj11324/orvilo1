@@ -360,7 +360,7 @@ export const filterMyWorkTaskRows = <T extends WorkQueryResultTask>(
 /* ------------------------- activity-date grouping ------------------------- */
 
 export interface MyWorkDaySection<T> {
-  /** `YYYY-MM-DD` local day — stable React key and label source. */
+  /** Recency bucket (`day:3`, `week:2`, `unknown`…) — stable React key and label source. */
   key: string;
   tasks: T[];
   total: number;
@@ -375,55 +375,67 @@ const toDate = (value: Date | number | string | null | undefined): Date | null =
   return Number.isFinite(date.getTime()) ? date : null;
 };
 
-/** Local-day bucket key (`YYYY-MM-DD`) — `null` input lands in `unknown`. */
-export const activityDayKey = (value: Date | number | string | null | undefined): string => {
+type RecencyUnit = 'day' | 'month' | 'week' | 'year';
+
+/**
+ * Linear's activity recency buckets: one per day for the last week (Today,
+ * Yesterday, 2–6 days ago), then whole weeks (1–4 weeks ago), months and
+ * years — so an older feed collapses into a few headers instead of a date
+ * per row. `null` input lands in `unknown`.
+ */
+export const activityBucketKey = (
+  value: Date | number | string | null | undefined,
+  now: Date = new Date(),
+): string => {
   const date = toDate(value);
   if (!date) return 'unknown';
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
+  const days = Math.max(
+    0,
+    Math.round((startOfLocalDay(now).getTime() - startOfLocalDay(date).getTime()) / DAY_MS),
+  );
+  if (days < 7) return `day:${days}`;
+  if (days < 30) return `week:${Math.floor(days / 7)}`;
+  if (days < 365) return `month:${Math.floor(days / 30)}`;
+  return `year:${Math.floor(days / 365)}`;
 };
 
 /**
- * Human label for a day bucket: Today / Yesterday / a localized short date.
- * `labels` carries the translated words so the helper stays i18n-free.
+ * Human label for a recency bucket: Today / Yesterday, then the locale's own
+ * "2 days ago" / "3 weeks ago" phrasing. `labels` carries the translated
+ * words so the helper stays i18n-free.
  */
-export const activityDayTitle = (
+export const activityBucketTitle = (
   key: string,
   options: {
     labels: { today: string; unknown: string; yesterday: string };
     locale?: string;
-    now?: Date;
   },
 ): string => {
-  if (key === 'unknown') return options.labels.unknown;
-  const now = options.now ?? new Date();
-  if (key === activityDayKey(now)) return options.labels.today;
-  if (key === activityDayKey(new Date(startOfLocalDay(now).getTime() - DAY_MS))) {
-    return options.labels.yesterday;
-  }
-  const [year, month, day] = key.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  const sameYear = date.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat(options.locale, {
-    day: 'numeric',
-    month: 'short',
-    ...(sameYear ? {} : { year: 'numeric' }),
-  }).format(date);
+  const [unit, raw] = key.split(':') as [RecencyUnit | 'unknown', string | undefined];
+  const count = Number(raw);
+  if (unit === 'unknown' || !Number.isFinite(count)) return options.labels.unknown;
+  if (unit === 'day' && count === 0) return options.labels.today;
+  if (unit === 'day' && count === 1) return options.labels.yesterday;
+  return new Intl.RelativeTimeFormat(options.locale, { numeric: 'always' }).format(-count, unit);
 };
 
 /**
- * Bucket a flat activity-ordered list into day sections. Rows arrive ordered
- * by real activity (the server's `taskActivityAt`); bucketing preserves that
- * arrival order — the first row of a day opens its section.
+ * Bucket a flat activity-ordered list into recency sections. Rows arrive
+ * ordered by real activity (the server's `taskActivityAt`, echoed as
+ * `activityAt`); bucketing by that same clock keeps each bucket contiguous
+ * and preserves the arrival order — the first row of a bucket opens its
+ * section. `updatedAt` is only the fallback for rows read outside activity
+ * mode.
  */
 export const workQueryActivitySections = <T extends WorkQueryResultTask>(
   tasks: readonly T[],
-  activityAtOf: (task: T) => Date | number | string | null | undefined = (task) => task.updatedAt,
+  activityAtOf: (task: T) => Date | number | string | null | undefined = (task) =>
+    task.activityAt ?? task.updatedAt,
+  now: Date = new Date(),
 ): MyWorkDaySection<T>[] => {
   const buckets = new Map<string, T[]>();
   for (const task of tasks) {
-    const key = activityDayKey(activityAtOf(task));
+    const key = activityBucketKey(activityAtOf(task), now);
     const bucket = buckets.get(key);
     if (bucket) bucket.push(task);
     else buckets.set(key, [task]);

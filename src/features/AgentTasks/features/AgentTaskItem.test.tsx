@@ -10,6 +10,7 @@ import AgentTaskItem from './AgentTaskItem';
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
   fetchTaskDetail: vi.fn(),
+  formatTaskItemDate: vi.fn((_time?: unknown) => 'today'),
   navigate: vi.fn(),
   taskDetailMap: {} as Record<string, unknown>,
 }));
@@ -66,7 +67,7 @@ vi.mock('../shared/useUserDisplayMeta', () => ({
 }));
 
 vi.mock('./formatTaskItemDate', () => ({
-  formatTaskItemDate: () => 'today',
+  formatTaskItemDate: (time?: unknown) => mocks.formatTaskItemDate(time),
 }));
 
 vi.mock('./TaskPriorityTag', () => ({
@@ -297,5 +298,53 @@ describe('AgentTaskItem', () => {
     expect(assignee).not.toBeNull();
     expect(chip.compareDocumentPosition(assignee) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(assignee.compareDocumentPosition(date) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('draws labels in the right cluster, after the title and before caller chips', () => {
+    render(
+      <AgentTaskItem
+        routeScope={'global'}
+        task={{ ...createTask('agent-1'), labels: [{ id: 'l1', name: 'Feature' }] }}
+        trailingChips={<span data-testid="project-chip">Apollo</span>}
+      />,
+    );
+
+    const label = screen.getByText('Feature');
+    const title = screen.getByText('Hourly trend update');
+    expect(title.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      label.compareDocumentPosition(screen.getByTestId('project-chip')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Not in the title row: Linear keeps the title row to id, status, title.
+    expect(title.parentElement!.contains(label)).toBe(false);
+  });
+
+  it('draws the parent breadcrumb only when the list asks for it', () => {
+    const task = {
+      ...createTask('agent-1'),
+      parent: { identifier: 'ORV-117', name: 'Handoff parent' },
+    };
+    const { rerender } = render(<AgentTaskItem routeScope={'global'} task={task} />);
+    expect(screen.queryByText('Handoff parent')).toBeNull();
+
+    rerender(<AgentTaskItem showParent routeScope={'global'} task={task} />);
+    const parent = screen.getByText('Handoff parent');
+    expect(screen.getByText('›')).toBeInTheDocument();
+    expect(
+      screen.getByText('Hourly trend update').compareDocumentPosition(parent) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('dates an activity-feed row by its activity, not its last update', () => {
+    const activityAt = new Date('2026-09-24T08:00:00.000Z');
+    render(<AgentTaskItem routeScope={'global'} task={{ ...createTask('agent-1'), activityAt }} />);
+    expect(mocks.formatTaskItemDate).toHaveBeenLastCalledWith(activityAt);
+
+    cleanup();
+    const plain = createTask('agent-1');
+    render(<AgentTaskItem routeScope={'global'} task={plain} />);
+    expect(mocks.formatTaskItemDate).toHaveBeenLastCalledWith(plain.updatedAt);
   });
 });

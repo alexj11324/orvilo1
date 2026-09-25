@@ -157,7 +157,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 
     min-height: 120px;
     padding-block: 4px 12px;
@@ -176,10 +176,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     width: ${COLUMN_WIDTH}px;
     max-height: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
 
-    background: ${cssVar.colorBgContainer};
+    /* Linear columns are frameless — cards sit straight on the panel. The
+       transparent border keeps the drop-target highlight's footprint. */
+    border: 1px solid transparent;
+    border-radius: ${cssVar.borderRadiusLG};
 
     transition:
       box-shadow 0.2s,
@@ -203,19 +204,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   count: css`
     flex: none;
 
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 450;
     font-variant-numeric: tabular-nums;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-
-    /* Same subtle chip as Cordy's column count — bg slightly off the column
-       card so the numeral reads as metadata, not a button. */
-    background: ${cssVar.colorFillQuaternary};
+    color: ${cssVar.colorTextDescription};
   `,
   header: css`
     display: flex;

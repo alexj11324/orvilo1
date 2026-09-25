@@ -1,4 +1,4 @@
-import { Block, Flexbox } from '@lobehub/ui';
+import { Flexbox } from '@lobehub/ui';
 import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
 import { DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
@@ -7,6 +7,8 @@ import { cssVar } from 'antd-style';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import IssueRowChip from '@/components/IssueRowChip';
 
 import TaskStatusIcon from './TaskStatusIcon';
 
@@ -198,36 +200,27 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
 
     if (!data) return null;
 
+    const interactive = hasDropdown || Boolean(onRequestSubtasks);
+    // Rows with a peek-capture click handler (My issues detail pane) treat
+    // this as interactive chrome — otherwise the first click would be
+    // swallowed by row selection instead of lazy-loading subtasks.
     const tag = (
-      <Block
-        horizontal
-        align={'center'}
-        data-row-interactive={hasDropdown || onRequestSubtasks ? true : undefined}
-        gap={4}
-        height={24}
-        variant={'outlined'}
-        // Rows with a peek-capture click handler (My issues detail pane)
-        // treat this as interactive chrome — otherwise the first click would
-        // be swallowed by row selection instead of lazy-loading subtasks.
-        paddingInline={'4px 8px'}
-        style={{
-          borderRadius: 24,
-          cursor: hasDropdown || onRequestSubtasks ? 'pointer' : undefined,
-        }}
-        onClick={hasDropdown || onRequestSubtasks ? handleTagClick : undefined}
+      <IssueRowChip
+        data-row-interactive={interactive || undefined}
+        icon={
+          <Progress
+            percent={data.percent}
+            showInfo={false}
+            size={14}
+            strokeColor={cssVar.colorSuccess}
+            type={'circle'}
+          />
+        }
+        onClick={interactive ? handleTagClick : undefined}
         onContextMenu={onRequestSubtasks ? handleTagClick : undefined}
       >
-        <Progress
-          percent={data.percent}
-          showInfo={false}
-          size={16}
-          strokeColor={cssVar.colorSuccess}
-          type={'circle'}
-        />
-        <Text fontSize={12} type={'secondary'}>
-          {data.text}
-        </Text>
-      </Block>
+        {data.text}
+      </IssueRowChip>
     );
 
     if (!hasDropdown) return tag;

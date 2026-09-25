@@ -2,7 +2,7 @@
 
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import type { TeamItem } from '@orvilo/types';
+import type { TaskListItem, TeamItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
@@ -15,6 +15,7 @@ import Avatar from '@/components/Avatar';
 import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { useTaskWorkflowGlyph } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -80,7 +81,7 @@ const styles = createStaticStyles(({ css }) => ({
   navGroup: css`
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 
     @container work-surface (max-width: 1000px) {
       flex-flow: row wrap;
@@ -95,8 +96,8 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     width: fit-content;
-    min-height: 28px;
-    padding-block: 5px;
+    min-height: 32px;
+    padding-block: 0;
     padding-inline: 6px;
     border-radius: ${cssVar.borderRadius};
 
@@ -130,9 +131,10 @@ const styles = createStaticStyles(({ css }) => ({
   recentIdentifier: css`
     flex: none;
 
-    font-family: ${cssVar.fontFamilyCode};
     font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
+    font-weight: 450;
+    font-variant-numeric: tabular-nums;
+    color: ${cssVar.colorTextDescription};
     text-align: end;
   `,
   recentLink: css`
@@ -191,9 +193,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   railTitle: css`
     padding-inline: 12px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
+    color: ${cssVar.colorTextDescription};
 
     @container work-surface (max-width: 1000px) {
       display: none;
@@ -207,11 +209,32 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   sectionTitle: css`
     padding-inline: 12px;
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
+    color: ${cssVar.colorText};
   `,
 }));
+
+/**
+ * One status mark per row, the same one the board and list draw: the
+ * workflow state when the task has one, else the execution-status glyph.
+ */
+const RecentTaskStatus = ({
+  task,
+}: {
+  task: Pick<TaskListItem, 'status' | 'workflowCategory' | 'workflowStateId'>;
+}) => {
+  const glyph = useTaskWorkflowGlyph({
+    executionStatus: task.status,
+    workflowCategory: task.workflowCategory,
+    workflowStateId: task.workflowStateId,
+  });
+  return glyph ? (
+    <Icon color={glyph.color} icon={glyph.icon} size={14} />
+  ) : (
+    <TaskStatusIcon size={14} status={resolveTaskStatus(task.status)} />
+  );
+};
 
 // The rail destinations draw the same entity marks the sidebar's team
 // sub-navigation uses — triage is the inbox tray, not a generic arrow.
@@ -315,7 +338,9 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
             {destinations.map(({ key, to }) => (
               <WorkspaceLink className={styles.navLink} key={key} to={to}>
                 <Icon icon={destinationIcons[key]} size={16} />
-                <Text fontSize={14}>{t(destinationLabels[key])}</Text>
+                <Text fontSize={13} weight={500}>
+                  {t(destinationLabels[key])}
+                </Text>
               </WorkspaceLink>
             ))}
           </nav>
@@ -353,7 +378,7 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
                     key={task.id}
                     to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
                   >
-                    <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
+                    <RecentTaskStatus task={task} />
                     <Flexbox flex={1} style={{ minWidth: 0 }}>
                       <Text ellipsis weight={500}>
                         {task.name ?? task.instruction}

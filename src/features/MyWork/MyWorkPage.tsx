@@ -22,6 +22,7 @@ import useSWR from 'swr';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
+import IssueRowChip from '@/components/IssueRowChip';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import {
   COLUMN_I18N_KEYS,
@@ -59,7 +60,7 @@ import BulkActionsBar from './BulkActionsBar';
 import type { BulkSelectGesture } from './bulkSelection';
 import MyWorkControls from './MyWorkControls';
 import {
-  activityDayTitle,
+  activityBucketTitle,
   filterMyWorkTaskRows,
   isMyWorkClientGrouping,
   MY_WORK_PRIORITY_LABEL_KEYS,
@@ -122,7 +123,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block-end: 12px;
     border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
 
-    background: ${cssVar.colorBgLayout};
+    background: ${cssVar.colorBgContainer};
 
     @container work-surface (max-width: 900px) {
       position: absolute;
@@ -718,7 +719,7 @@ const MyWorkPage = memo(() => {
         };
         return workQueryActivitySections(rows).map((section) => ({
           ...section,
-          title: activityDayTitle(section.key, { labels, locale: i18n.language }),
+          title: activityBucketTitle(section.key, { labels, locale: i18n.language }),
         }));
       }
       if (field === 'priority') {
@@ -834,11 +835,7 @@ const MyWorkPage = memo(() => {
       const name = task.projectId ? projectNameById.get(task.projectId) : undefined;
       if (!name) return null;
       return (
-        <Flexbox flex="none">
-          <Tag icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />} size="small" variant="outlined">
-            {name}
-          </Tag>
-        </Flexbox>
+        <IssueRowChip icon={<Icon icon={PROJECT_ENTITY_ICON} size={14} />}>{name}</IssueRowChip>
       );
     },
     [display.properties.project, projectNameById],

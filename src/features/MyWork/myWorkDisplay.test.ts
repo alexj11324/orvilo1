@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  activityDayKey,
-  activityDayTitle,
+  activityBucketKey,
+  activityBucketTitle,
   compareTasksByImportance,
   defaultMyWorkDisplay,
   filterMyWorkTaskRows,
@@ -224,21 +224,49 @@ describe('workQueryActivitySections', () => {
     const c = task({ id: 'c', updatedAt: today });
     const sections = workQueryActivitySections([a, b, c]);
     expect(sections.map((section) => section.key)).toEqual([
-      activityDayKey(today),
-      activityDayKey(yesterday),
+      activityBucketKey(today),
+      activityBucketKey(yesterday),
     ]);
     expect(sections[0].tasks.map((row) => row.id)).toEqual(['a', 'c']);
     expect(sections[0].total).toBe(2);
   });
 
+  it('buckets by the activity clock the feed is ordered by, not updatedAt', () => {
+    const today = new Date();
+    const lastWeek = new Date(startOfDay(today).getTime() - 6 * 86_400_000);
+    // Feed order is activity-desc; updatedAt disagrees with it on purpose.
+    const a = task({ activityAt: today, id: 'a', updatedAt: lastWeek });
+    const b = task({ activityAt: today, id: 'b', updatedAt: today });
+    const c = task({ activityAt: lastWeek, id: 'c', updatedAt: today });
+    const sections = workQueryActivitySections([a, b, c]);
+    expect(sections.map((section) => section.tasks.map((row) => row.id))).toEqual([
+      ['a', 'b'],
+      ['c'],
+    ]);
+  });
+
   it('labels today, yesterday and unknown rows', () => {
     const labels = { today: 'Today', unknown: 'Unknown date', yesterday: 'Yesterday' };
     const now = new Date(2026, 8, 23, 15);
-    expect(activityDayTitle(activityDayKey(now), { labels, now })).toBe('Today');
-    expect(activityDayTitle(activityDayKey(new Date(2026, 8, 22, 9)), { labels, now })).toBe(
+    expect(activityBucketTitle(activityBucketKey(now, now), { labels })).toBe('Today');
+    expect(activityBucketTitle(activityBucketKey(new Date(2026, 8, 22, 9), now), { labels })).toBe(
       'Yesterday',
     );
-    expect(activityDayTitle('unknown', { labels, now })).toBe('Unknown date');
+    expect(activityBucketTitle('unknown', { labels })).toBe('Unknown date');
+  });
+
+  it("follows Linear's recency ladder: days for a week, then weeks, months", () => {
+    const labels = { today: 'Today', unknown: 'Unknown date', yesterday: 'Yesterday' };
+    const now = new Date(2026, 8, 23, 15);
+    const ago = (days: number) => new Date(2026, 8, 23 - days, 10);
+    const title = (days: number) =>
+      activityBucketTitle(activityBucketKey(ago(days), now), { labels, locale: 'en-US' });
+    expect(title(2)).toBe('2 days ago');
+    expect(title(6)).toBe('6 days ago');
+    expect(title(14)).toBe('2 weeks ago');
+    // Several days share one week bucket.
+    expect(activityBucketKey(ago(15), now)).toBe(activityBucketKey(ago(20), now));
+    expect(title(62)).toBe('2 months ago');
   });
 });
 

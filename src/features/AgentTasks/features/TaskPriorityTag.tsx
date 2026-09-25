@@ -198,6 +198,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
         <Tooltip title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}>
           <span
             className={isUrgent ? styles.triggerUrgent : styles.trigger}
+            data-row-control={'priority'}
             onClick={(e) => e.stopPropagation()}
           >
             <IconRender color={getPriorityIconColor(currentLevel)} size={size} />

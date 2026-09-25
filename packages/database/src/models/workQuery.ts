@@ -32,6 +32,7 @@ import {
   asc,
   desc,
   eq,
+  getTableColumns,
   gt,
   inArray,
   isNotNull,
@@ -879,6 +880,45 @@ export class WorkQueryModel {
     );
   };
 
+  /**
+   * Batch-hydrate the parent breadcrumb for a page of task rows. The parent
+   * read reuses the list's own ownership + team-readability predicates, so a
+   * parent the caller cannot read hydrates to `null` instead of leaking its
+   * title.
+   */
+  private taskParentsByIds = async (
+    parentIds: (null | string)[],
+  ): Promise<Map<string, { identifier: string; name: null | string }>> => {
+    const ids = [...new Set(parentIds.filter((id): id is string => Boolean(id)))];
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: tasks.id, identifier: tasks.identifier, name: tasks.name })
+      .from(tasks)
+      .where(
+        and(
+          inArray(tasks.id, ids),
+          this.ownership(),
+          buildTaskTeamReadableWhere(this.db, this.userId),
+        ),
+      );
+    return new Map(rows.map((row) => [row.id, { identifier: row.identifier, name: row.name }]));
+  };
+
+  /** Labels + parent breadcrumb for a page of rows, in two batched reads. */
+  private hydrateTaskRows = async <T extends { id: string; parentTaskId: null | string }>(
+    rows: T[],
+  ) => {
+    const [labelsByTask, parentsById] = await Promise.all([
+      this.taskLabelsByTaskIds(rows.map((row) => row.id)),
+      this.taskParentsByIds(rows.map((row) => row.parentTaskId)),
+    ]);
+    return rows.map((row) => ({
+      ...row,
+      labels: labelsByTask.get(row.id) ?? [],
+      parent: row.parentTaskId ? (parentsById.get(row.parentTaskId) ?? null) : null,
+    }));
+  };
+
   private compileCtx = (
     entityType: WorkQueryEntityType,
     readableTeamIds: ReadonlySet<string>,
@@ -1005,21 +1045,29 @@ export class WorkQueryModel {
       .from(tasks)
       .where(and(...conditions));
 
+    // Activity rows carry the timestamp they are ordered by, so the client's
+    // day buckets use the same clock as the order (not the row's updatedAt).
     const rows = await this.db
-      .select()
+      .select({
+        ...getTableColumns(tasks),
+        // mapWith: a raw SQL timestamp arrives as a driver string otherwise.
+        activityAt: activityOrdered
+          ? sql<Date | null>`${activityExpr}`.mapWith(tasks.updatedAt)
+          : sql<Date | null>`null`,
+      })
       .from(tasks)
       .where(and(...listConditions))
       .orderBy(...orderBy)
       .limit(limit);
 
-    const labelsByTask = await this.taskLabelsByTaskIds(rows.map((row) => row.id));
+    const hydrated = await this.hydrateTaskRows(rows);
 
     return {
       groupBy: 'none' as const,
       groups: undefined,
       layout: 'list' as const,
       queryHash,
-      tasks: rows.map((row) => ({ ...row, labels: labelsByTask.get(row.id) ?? [] })),
+      tasks: hydrated,
       total: Number(countRow?.count ?? 0),
     };
   };
@@ -1139,12 +1187,12 @@ export class WorkQueryModel {
       }),
     );
 
-    const labelsByTask = await this.taskLabelsByTaskIds(
-      groups.flatMap((group) => group.tasks.map((task) => task.id)),
-    );
+    // One hydration pass over every group's page, then split back per group.
+    const hydrated = await this.hydrateTaskRows(groups.flatMap((group) => group.tasks));
+    const byId = new Map(hydrated.map((row) => [row.id, row]));
     const groupsWithLabels = groups.map((group) => ({
       ...group,
-      tasks: group.tasks.map((row) => ({ ...row, labels: labelsByTask.get(row.id) ?? [] })),
+      tasks: group.tasks.map((row) => byId.get(row.id)!),
     }));
 
     return {

@@ -95,16 +95,16 @@ feat/xxx ──PR──▶ canary ───────────────�
 
 诚实记录：以下通道**代码已就绪，但依凭据与基础设施才能运行**。
 
-| 通道           | 触发                                                   | 更新源 / 目标                         | 状态      |
-| -------------- | ------------------------------------------------------ | ------------------------------------- | --------- |
-| Web 生产       | `push canary`                                          | GHCR → Oracle（`deploy-orvilo1.yml`） | ✅ 运行中 |
-| Vercel Preview | PR                                                     | Vercel（`vercel-preview.yml`）        | ✅ 运行中 |
+| 通道            | 触发                                                   | 更新源 / 目标                         | 状态      |
+| --------------- | ------------------------------------------------------ | ------------------------------------- | --------- |
+| Web 生产        | `push canary`                                          | GHCR → Oracle（`deploy-orvilo1.yml`） | ✅ 运行中 |
+| Vercel Preview  | PR                                                     | Vercel（`vercel-preview.yml`）        | ✅ 运行中 |
 | Vercel 分支部署 | `push canary` / `push main`，全部 CI 门禁通过后        | Vercel（`vercel-branch-deploy.yml`）  | ✅ 运行中 |
-| Test / E2E CI  | push + PR                                              | —                                     | ✅ 运行中 |
-| Desktop Canary | `push canary`                                          | GitHub Release（prerelease）          | ⚠️ 待打通 |
-| Desktop Stable | GitHub Release published                               | GitHub Release                        | ⚠️ 待打通 |
-| Docker 镜像    | GitHub Release published                               | Docker Hub                            | ⚠️ 待打通 |
-| npm 包         | `push canary`（`packages/sdk`、`packages/model-bank`） | npm                                   | ⚠️ 待打通 |
+| Test / E2E CI   | push + PR                                              | —                                     | ✅ 运行中 |
+| Desktop Canary  | `push canary`                                          | GitHub Release（prerelease）          | ⚠️ 待打通 |
+| Desktop Stable  | GitHub Release published                               | GitHub Release                        | ⚠️ 待打通 |
+| Docker 镜像     | GitHub Release published                               | Docker Hub                            | ⚠️ 待打通 |
+| npm 包          | `push canary`（`packages/sdk`、`packages/model-bank`） | npm                                   | ⚠️ 待打通 |
 
 ## Vercel 部署门禁
 

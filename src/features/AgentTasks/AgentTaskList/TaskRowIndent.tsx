@@ -2,8 +2,13 @@ import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 
-/** Indent added per nesting level, in px. */
-const INDENT_STEP = 20;
+/**
+ * Indent added per nesting level, in px — Linear's measured 24px: a child's
+ * priority mark sits 24px right of its parent's. The elbow connector (12px +
+ * 4px gap) is part of the first step.
+ */
+const INDENT_STEP = 24;
+const CONNECTOR_SPAN = 16;
 
 const styles = createStaticStyles(({ css, cssVar }) => {
   return {
@@ -56,7 +61,7 @@ const TaskRowIndent = ({ children, depth, muted }: TaskRowIndentProps) => {
       horizontal
       align={'stretch'}
       className={muted ? styles.muted : undefined}
-      style={depth > 0 ? { paddingInlineStart: depth * INDENT_STEP } : undefined}
+      style={depth > 0 ? { paddingInlineStart: depth * INDENT_STEP - CONNECTOR_SPAN } : undefined}
     >
       {depth > 0 && <div className={styles.connector} />}
       <Flexbox flex={1} style={{ minWidth: 0 }}>

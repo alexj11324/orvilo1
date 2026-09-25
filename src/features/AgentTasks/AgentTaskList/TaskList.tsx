@@ -25,6 +25,7 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import AgentTaskItem from '../features/AgentTaskItem';
+import { issueIdColumnStyle } from '../shared/issueIdColumn';
 import type { TaskGroupBy, TaskGroupMeta, TaskListViewOptions } from './listViewOptions';
 import {
   buildTaskRows,
@@ -82,7 +83,7 @@ interface TaskListProps {
 const HIDDEN_COMPLETED_STATUS_SET = new Set<string>(HIDDEN_WHEN_COMPLETED_STATUSES);
 
 /** Row height the window sizes itself by before it has measured real rows. */
-const DEFAULT_ROW_HEIGHT = 40;
+const DEFAULT_ROW_HEIGHT = 44;
 
 const TASK_GROUP_BY_VALUES = new Set<TaskGroupBy>([
   'assignee',
@@ -416,7 +417,10 @@ const TaskList = memo<TaskListProps>((props) => {
       loading={skeleton}
       onRetry={onRetry}
     >
-      <div ref={anchorRef} style={{ width: '100%' }}>
+      <div
+        ref={anchorRef}
+        style={{ width: '100%', ...issueIdColumnStyle(tasks.map((task) => task.identifier)) }}
+      >
         {scrollParent && (
           <Virtuoso
             // Footer belongs to the window so it follows the last rendered row

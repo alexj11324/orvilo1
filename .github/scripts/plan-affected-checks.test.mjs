@@ -139,13 +139,17 @@ test('fails closed for CI configuration and unknown paths', () => {
     const plan = planAffectedChecks([file], { packages });
     assert.equal(plan.run_typecheck, true, file);
     assert.equal(plan.run_e2e, true, file);
-    assert.deepEqual(plan.test_packages, [
-      '@orvilo/agent-manager-runtime',
-      '@orvilo/agent-runtime',
-      '@orvilo/agent-signal',
-      '@orvilo/local-file-shell',
-      '@orvilo/types',
-    ], file);
+    assert.deepEqual(
+      plan.test_packages,
+      [
+        '@orvilo/agent-manager-runtime',
+        '@orvilo/agent-runtime',
+        '@orvilo/agent-signal',
+        '@orvilo/local-file-shell',
+        '@orvilo/types',
+      ],
+      file,
+    );
   }
 });
 

@@ -1,5 +1,9 @@
 # 本地运行 E2E 测试
 
+> 本文档只覆盖 **Docker e2e 路径**（`e2e/scripts/setup.ts` + `postgres-e2e` 容器 `:5433` + app `:3006`）。
+> 本地开发的权威文档是 [docs/development/local-setup.md](../../docs/development/local-setup.md)——
+> 无 Docker 的机器走其中的 dockerless（brew）路径（app `:3010` + Postgres `:5432` db `orvilo`）。
+
 ## 前置要求
 
 - Docker Desktop 已安装并**正在运行**

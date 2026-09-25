@@ -30,7 +30,7 @@ export const getProjectDatePickerMode = (
  * validated without losing the selected period.
  */
 export const formatProjectDate = (
-  date: string | null | undefined,
+  date: Date | string | null | undefined,
   precision: ProjectDatePrecision = 'day',
   dayOptions: TaskItemDateFormatOptions = {},
 ) => {

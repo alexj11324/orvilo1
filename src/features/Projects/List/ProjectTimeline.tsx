@@ -20,6 +20,7 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useProjectStore } from '@/store/project';
 import type { ProjectListItem } from '@/store/project/store';
 
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 import type { ProjectListDisplayOptions, ProjectListGroup } from './displayOptions';
 import {
   buildTimelineAxis,
@@ -333,6 +334,7 @@ interface TimelineRowProps {
 const TimelineRow = memo<TimelineRowProps>(
   ({ leadAvatar, leadName, now, project, range, showLead, showMilestones }) => {
     const { t } = useTranslation('project');
+    const formatDate = useProjectDateFormatter();
     const detailSWR = useProjectStore((s) => s.useFetchProjectDetail)(
       showMilestones ? project.id : undefined,
     );
@@ -358,8 +360,8 @@ const TimelineRow = memo<TimelineRowProps>(
         : null;
 
     const rangeLabel = [
-      project.startDate ? dayjs(project.startDate).format('MMM D, YYYY') : null,
-      project.targetDate ? dayjs(project.targetDate).format('MMM D, YYYY') : null,
+      project.startDate ? formatDate(project.startDate) : null,
+      project.targetDate ? formatDate(project.targetDate) : null,
     ]
       .filter(Boolean)
       .join(' → ');

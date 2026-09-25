@@ -76,6 +76,32 @@ export const inboxBulkFingerprint = (
   bucket?: NotificationFeedBucket,
 ): string => notificationBulkFingerprint(action, chip, bucket);
 
+/**
+ * Which quick actions a feed card may show. Linear reveals these on row hover
+ * (envelope = mark read/unread, clock = snooze, tray = archive) and pins the
+ * same set on the detail pane header; the flags here are the single gate so
+ * both places stay honest about what the card offers.
+ *
+ * `markRead`/`markUnread` are implicit lifecycle actions (they exist on every
+ * card via `read`), while `snooze`/`archive` come from `availableActions` —
+ * a card that cannot be archived never renders the control.
+ */
+export interface InboxCardActionFlags {
+  archive: boolean;
+  markRead: boolean;
+  markUnread: boolean;
+  snooze: boolean;
+}
+
+export const inboxCardActionFlags = (
+  card: Pick<NotificationFeedCard, 'availableActions' | 'read'>,
+): InboxCardActionFlags => ({
+  archive: card.availableActions.includes('archive'),
+  markRead: !card.read,
+  markUnread: card.read,
+  snooze: card.availableActions.includes('snooze'),
+});
+
 /** Same-app relative paths navigate in-app; allowlisted https opens a new tab. */
 export const inboxUrlOpenMode = (url: string): 'external' | 'internal' | 'reject' =>
   classifyWorkAttentionActionUrl(url).mode;

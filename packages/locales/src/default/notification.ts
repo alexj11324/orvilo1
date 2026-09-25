@@ -104,6 +104,7 @@ export default {
   'inbox.loadedCount_one': '{{count}} loaded notification',
   'inbox.loadedCount_other': '{{count}} loaded notifications',
   'inbox.markAllRead': 'Mark all as read',
+  'inbox.markRead': 'Mark read',
   'inbox.markUnread': 'Mark unread',
   'inbox.moreActions': 'More actions',
   'inbox.noActions': 'No actions available',

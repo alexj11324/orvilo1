@@ -1640,6 +1640,7 @@
   "taskDetail.activities.status.changed": "<actor/> 将状态从 <from/> 改为 <to/>",
   "taskDetail.activitiesEmpty": "暂无活动记录",
   "taskDetail.addSubtask": "添加子问题",
+  "taskDetail.agent": "执行 Agent",
   "taskDetail.artifactInaccessible": "无权访问的文稿",
   "taskDetail.artifactMenu.delete": "从问题中移除",
   "taskDetail.artifactMenu.deleteConfirm.content": "该产物将不再出现在此问题工作区中。",

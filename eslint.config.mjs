@@ -163,6 +163,8 @@ export default eslint(
       '.cache',
       // AI coding tools directories
       '.claude',
+      // vendored skill packages (npx skills add) — reference docs/examples, not product code
+      '.agents/skills',
       '.serena',
       '**/.i18nrc.js',
       // vendored code (copied from @microsoft/fetch-event-source)

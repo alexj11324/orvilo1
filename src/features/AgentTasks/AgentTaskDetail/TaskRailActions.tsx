@@ -29,6 +29,7 @@ const TaskRailActions = memo(() => {
   return (
     <div className={styles.railActions}>
       <ActionIcon
+        aria-label={t('taskList.contextMenu.copyLink')}
         icon={LinkIcon}
         size={RAIL_BUTTON_SIZE}
         title={t('taskList.contextMenu.copyLink')}
@@ -37,6 +38,7 @@ const TaskRailActions = memo(() => {
         onClick={copyLink}
       />
       <ActionIcon
+        aria-label={t('taskList.contextMenu.copyId')}
         icon={CopyIcon}
         size={RAIL_BUTTON_SIZE}
         title={t('taskList.contextMenu.copyId')}
@@ -46,6 +48,7 @@ const TaskRailActions = memo(() => {
       />
       {hasBranch && (
         <ActionIcon
+          aria-label={t('taskDetail.copyBranch')}
           icon={GitBranchIcon}
           size={RAIL_BUTTON_SIZE}
           title={t('taskDetail.copyBranch')}

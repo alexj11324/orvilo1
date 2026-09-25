@@ -11,6 +11,8 @@ import LabelChips from '@/features/Labels/LabelChips';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
+import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import TaskLabelSelector from '../features/TaskLabelSelector';
@@ -20,6 +22,7 @@ import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
+import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
@@ -61,6 +64,7 @@ const TaskProperties = memo(() => {
   const priority = useTaskStore(taskDetailSelectors.activeTaskPriority);
   const labels = useTaskStore(taskDetailSelectors.activeTaskLabels);
   const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
+  const assigneeAgentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
   const reviewerUserId = useTaskStore(taskDetailSelectors.activeTaskReviewerUserId);
   const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
   const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
@@ -70,6 +74,7 @@ const TaskProperties = memo(() => {
   const scheduleTimezone = useTaskStore(taskDetailSelectors.activeTaskScheduleTimezone);
   const memberMeta = useUserDisplayMeta(assigneeUserId);
   const reviewerMeta = useUserDisplayMeta(reviewerUserId);
+  const assigneeAgentMeta = useAgentDisplayMeta(assigneeAgentId);
   const updateTask = useTaskStore((s) => s.updateTask);
   const activeWorkspaceId = useActiveWorkspaceId();
 
@@ -153,6 +158,43 @@ const TaskProperties = memo(() => {
             </Block>
           </AssigneeMemberSelector>
         )}
+
+        {/* Agent executor — Orvilo-only cell (Linear has no counterpart):
+            which agent runs the task. Lives in the rail with Assignee so the
+            under-title row stays a single primary-CTA cluster. */}
+        <AssigneeAgentSelector
+          currentAgentId={assigneeAgentId}
+          disabled={status === 'running'}
+          taskIdentifier={taskId}
+          taskVisibility={visibility}
+        >
+          <Tooltip title={assigneeAgentId ? undefined : t('taskList.unassignedAgentHint')}>
+            <Block
+              clickable
+              horizontal
+              align="center"
+              className={styles.propertyItem}
+              gap={8}
+              variant={'borderless'}
+            >
+              {assigneeAgentId ? (
+                <>
+                  <AssigneeAvatar agentId={assigneeAgentId} size={16} />
+                  <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+                    {assigneeAgentMeta?.title}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <UnassignedAssigneeIcon kind={'agent'} size={16} />
+                  <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                    {t('taskDetail.agent')}
+                  </Text>
+                </>
+              )}
+            </Block>
+          </Tooltip>
+        </AssigneeAgentSelector>
 
         {/* Review-phase owner: visible once the task has someone accountable for
           review (auto-stamped on the paused transition) or while it sits in

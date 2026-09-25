@@ -59,6 +59,8 @@ describe('aiAgentRouter operation read guard', () => {
   let visitorId: string;
   let operationId: string;
 
+  // Test-DB provisioning occasionally exceeds the 10s default hook budget
+  // when the shared CI Postgres is under load.
   beforeEach(async () => {
     serverDB = await getTestDB();
     testDB = serverDB;
@@ -76,7 +78,7 @@ describe('aiAgentRouter operation read guard', () => {
 
     mockGetOperationStatus.mockReset().mockResolvedValue({ metadata: { agentConfig: {} } });
     mockGetPendingInterventions.mockReset().mockResolvedValue({ pendingInterventions: [] });
-  });
+  }, 60_000);
 
   afterEach(async () => {
     await serverDB.delete(agentOperations).where(eq(agentOperations.id, operationId));

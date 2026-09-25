@@ -1463,7 +1463,11 @@ describe('project status glyph', () => {
     mocks.projectList = [{ ...detail.project, status } as ProjectListItem];
     render(<ProjectListPage />);
     const visual = PROJECT_STATUS_VISUALS[resolveProjectStatus(status)];
-    return mocks.iconProps.find((props) => props.color === visual.color)?.icon;
+    // Identify the cell by the glyph+colour pair — quiet statuses share
+    // tertiary with unrelated row icons, so colour alone is ambiguous.
+    return mocks.iconProps.find(
+      (props) => props.color === visual.color && props.icon === visual.icon,
+    )?.icon;
   };
 
   it.each(STATUSES)('draws %s the same way on the project list and in the rail', (status) => {

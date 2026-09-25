@@ -285,19 +285,20 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                   <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
                     {milestone.name}
                   </Text>
-                  {milestone.date && (
-                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-                      {formatDate(milestone.date)}
-                    </Text>
-                  )}
                   {/* A `null` readout could not be computed honestly — omit it
-                      rather than render it as 0%. */}
+                      rather than render it as 0%. The reference row reads
+                      name → progress → date. */}
                   {milestone.progress && (
                     <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
                       {t('overview.milestoneProgressOf', {
                         count: milestone.progress.issues,
                         percent: milestone.progress.percent,
                       })}
+                    </Text>
+                  )}
+                  {milestone.date && (
+                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+                      {formatDate(milestone.date)}
                     </Text>
                   )}
                   <WorkspaceLink

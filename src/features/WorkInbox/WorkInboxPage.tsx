@@ -17,7 +17,6 @@ import {
 } from '@lobehub/ui/base-ui';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
 import {
   ArchiveIcon,
   ArrowUpRightIcon,
@@ -56,6 +55,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
+import { compactInboxTime } from '@/utils/compactRelativeTime';
 
 import { inboxCardTitleKey } from './inboxCardCopy';
 import {
@@ -1061,7 +1061,7 @@ const WorkInboxPage = memo(() => {
                       {card.content}
                     </Text>
                     <Text className={styles.time} fontSize={12}>
-                      {dayjs(card.lastActivityAt).fromNow()}
+                      {compactInboxTime(card.lastActivityAt)}
                     </Text>
                   </Flexbox>
                 </Flexbox>
@@ -1082,6 +1082,18 @@ const WorkInboxPage = memo(() => {
               ) : null}
             </Center>
           ) : null}
+          {!hasMore && summary ? (
+            <Center padding={12}>
+              <Text fontSize={12} type={'secondary'}>
+                {t('inbox.unreadCount', {
+                  count:
+                    priorityEnabled && tab === 'other'
+                      ? summary.unreadOtherCount
+                      : summary.unreadBadgeCount,
+                })}
+              </Text>
+            </Center>
+          ) : null}
         </>
       )}
     </div>
@@ -1092,9 +1104,7 @@ const WorkInboxPage = memo(() => {
       // Task-linked card — the pane IS the issue detail (Linear's inbox detail
       // surface), not a bare notification card. The sticky header carries the
       // issue identifier plus pin/open/overflow (the reference's `ORV-115` ·
-      // ★ · ⋯ row); the notification's own context and decision row stay above
-      // the shared issue body so the request remains first-class for
-      // approval-type cards. IssueContent mounts directly in the pane's scroll
+      // ★ · ⋯ row). IssueContent mounts directly in the pane's scroll
       // owner — no nested scroll host, no page chrome.
       <>
         <div className={styles.paneHeader}>
@@ -1135,67 +1145,6 @@ const WorkInboxPage = memo(() => {
           </Flexbox>
         </div>
         <div className={styles.detail}>
-          <Flexbox gap={4}>
-            <Text fontSize={16} weight={600}>
-              {titleFor(selected)}
-            </Text>
-            <Text className={styles.paneMeta} fontSize={12}>
-              {dayjs(selected.lastActivityAt).fromNow()}
-              {!selected.read ? ` · ${t('inbox.unread')}` : ''}
-            </Text>
-          </Flexbox>
-          <Text type={'secondary'}>{selected.content}</Text>
-          <div className={styles.divider} />
-          {decisionVerbs.length > 0 ? (
-            <Flexbox gap={8}>
-              {decisionVerbs.includes('submit_input') ? (
-                <Input
-                  placeholder={t('inbox.inputPlaceholder')}
-                  value={inputDraft}
-                  onChange={(event) => setInputDraft(event.target.value)}
-                />
-              ) : null}
-              <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
-                {decisionVerbs.includes('approve') ? (
-                  <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
-                    type="primary"
-                    onClick={() => void decide(selected, 'approve')}
-                  >
-                    {t('inbox.approve')}
-                  </Button>
-                ) : null}
-                {decisionVerbs.includes('decline') ? (
-                  <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
-                    onClick={() => void decide(selected, 'decline')}
-                  >
-                    {t('inbox.decline')}
-                  </Button>
-                ) : null}
-                {decisionVerbs.includes('cancel') ? (
-                  <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
-                    onClick={() => void decide(selected, 'cancel')}
-                  >
-                    {t('inbox.cancel')}
-                  </Button>
-                ) : null}
-                {decisionVerbs.includes('submit_input') ? (
-                  <Button
-                    disabled={!inputDraft.trim()}
-                    loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
-                    type="primary"
-                    onClick={() =>
-                      void decide(selected, 'submit_input', { text: inputDraft.trim() })
-                    }
-                  >
-                    {t('inbox.submitInput')}
-                  </Button>
-                ) : null}
-              </Flexbox>
-            </Flexbox>
-          ) : null}
           <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
             <LazyIssueContent taskId={selectedIssueTaskId} />
           </Suspense>
@@ -1219,7 +1168,7 @@ const WorkInboxPage = memo(() => {
             {titleFor(selected)}
           </Text>
           <Text className={styles.paneMeta} fontSize={12}>
-            {dayjs(selected.lastActivityAt).fromNow()}
+            {compactInboxTime(selected.lastActivityAt)}
             {!selected.read ? ` · ${t('inbox.unread')}` : ''}
           </Text>
         </Flexbox>

@@ -272,21 +272,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       opacity: 1;
     }
   `,
-  progressFill: css`
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorTextSecondary};
-  `,
-  progressTrack: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 20px;
-    height: 3px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
+  sparkline: css`
+    flex: none;
   `,
   screenReaderOnly: css`
     position: absolute;
@@ -373,6 +360,49 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
 });
 
 ProjectHealthCell.displayName = 'ProjectHealthCell';
+
+const SPARKLINE_WIDTH = 32;
+const SPARKLINE_HEIGHT = 16;
+
+/**
+ * Linear's Status cell trails the percent with a 32×16 two-stroke
+ * sparkline: a straight segment from the origin to (time elapsed,
+ * completion) and a scope curve that eases to the top edge at the same x
+ * then runs flat. The now-point's x is the fraction of the project's own
+ * start→target schedule elapsed; without dates it sits at 70% so the
+ * curve still reads as a trend, not a fill.
+ */
+const ProjectProgressSparkline = memo<{
+  percent: number;
+  start?: Date | string | null;
+  target?: Date | string | null;
+}>(({ percent, start, target }) => {
+  const startMs = start ? new Date(start).getTime() : Number.NaN;
+  const targetMs = target ? new Date(target).getTime() : Number.NaN;
+  const timeFrac =
+    Number.isFinite(startMs) && Number.isFinite(targetMs) && targetMs > startMs
+      ? Math.min(1, Math.max(0.1, (Date.now() - startMs) / (targetMs - startMs)))
+      : 0.7;
+  const px = Math.max(3, timeFrac * SPARKLINE_WIDTH);
+  const py = SPARKLINE_HEIGHT - (percent / 100) * SPARKLINE_HEIGHT;
+  const flat1 = px + (SPARKLINE_WIDTH - px) / 3;
+  const flat2 = SPARKLINE_WIDTH - (SPARKLINE_WIDTH - px) / 3;
+  const scopeD = `M0,${SPARKLINE_HEIGHT}C${(px / 3).toFixed(2)},${SPARKLINE_HEIGHT / 2 + 0.5},${((px * 2) / 3).toFixed(2)},1,${px.toFixed(2)},1C${flat1.toFixed(2)},1,${flat2.toFixed(2)},1,${SPARKLINE_WIDTH},1`;
+  return (
+    <svg aria-hidden className={styles.sparkline} height={SPARKLINE_HEIGHT} width={SPARKLINE_WIDTH}>
+      <rect fill={'transparent'} height={SPARKLINE_HEIGHT} width={SPARKLINE_WIDTH} />
+      <path
+        d={`M0,${SPARKLINE_HEIGHT}L${px.toFixed(2)},${py.toFixed(2)}`}
+        fill={'none'}
+        stroke={cssVar.purple}
+        strokeWidth={1.25}
+      />
+      <path d={scopeD} fill={'none'} stroke={cssVar.colorTextQuaternary} strokeWidth={1.25} />
+    </svg>
+  );
+});
+
+ProjectProgressSparkline.displayName = 'ProjectProgressSparkline';
 
 export type MembersQuery = ReturnType<typeof useWorkspaceMembersQuery>;
 
@@ -500,18 +530,13 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
           }}
         >
           {project.leadUserId ? (
-            <>
-              <Avatar
-                avatar={lead?.user?.avatar ?? undefined}
-                name={leadName}
-                shape="circle"
-                size={20}
-                title={leadName}
-              />
-              <Text ellipsis fontSize={12}>
-                {leadName}
-              </Text>
-            </>
+            <Avatar
+              avatar={lead?.user?.avatar ?? undefined}
+              name={leadName}
+              shape="circle"
+              size={20}
+              title={leadName}
+            />
           ) : (
             <NoLeadIcon />
           )}
@@ -634,7 +659,8 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
         return <DateCell value={project.completedAt} />;
       }
       case 'status': {
-        // Reference §5: status icon + percentage + a thin progress bar.
+        // Reference §5: status icon + percentage + the trailing-30-day
+        // progress sparkline Linear draws beside it.
         const percent =
           typeof project.progressPercent === 'number'
             ? Math.min(100, Math.max(0, project.progressPercent))
@@ -645,9 +671,11 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
             <ProjectStatusIcon percent={percent ?? 0} size={14} status={status} />
             <Text fontSize={12}>{percent == null ? '—' : `${percent}%`}</Text>
             {percent == null ? null : (
-              <span aria-hidden className={styles.progressTrack}>
-                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
-              </span>
+              <ProjectProgressSparkline
+                percent={percent}
+                start={project.startDate}
+                target={project.targetDate}
+              />
             )}
           </Flexbox>
         );

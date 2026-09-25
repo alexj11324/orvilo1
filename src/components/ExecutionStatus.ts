@@ -11,6 +11,7 @@ import {
   Archive,
   Circle,
   CircleCheck,
+  CircleDashed,
   CircleDot,
   CirclePause,
   CircleX,
@@ -110,14 +111,23 @@ export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, StatusVisua
  */
 export const STATUS_PROPERTY_ICON: StatusIconComponent = StatusPropertyIcon;
 
+/**
+ * Project lifecycle marks follow Linear's project-status set, not the task
+ * workflow set: dashed ring for backlog, hollow ring for planned, the traced
+ * progress ring for in-progress, a filled check for completed and an X ring
+ * for canceled — gray for everything not started, indigo only on done.
+ * `paused`/`reviewing`/`archived` are Orvilo extensions with no Linear
+ * counterpart; they keep quiet gray marks so the column still reads as one
+ * axis.
+ */
 export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual> = {
   active: VISUALS.running,
   archived: VISUALS.archived,
-  backlog: VISUALS.backlog,
-  canceled: VISUALS.canceled,
-  completed: VISUALS.completed,
+  backlog: { color: cssVar.colorTextTertiary, icon: CircleDashed },
+  canceled: { color: cssVar.colorTextDescription, icon: CircleX },
+  completed: { color: cssVar.purple, icon: CircleCheck },
   paused: { color: cssVar.colorTextSecondary, icon: PauseCircle },
-  planned: { color: cssVar.purple, icon: CircleDot },
+  planned: { color: cssVar.colorTextTertiary, icon: Circle },
   reviewing: VISUALS.waitingForHuman,
 };
 

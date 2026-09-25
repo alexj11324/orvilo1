@@ -1,7 +1,7 @@
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Flexbox } from '@lobehub/ui';
-import { Popover } from 'antd';
+import { Popover } from '@lobehub/ui/base-ui';
 import { createStaticStyles, useTheme } from 'antd-style';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { memo, useState } from 'react';

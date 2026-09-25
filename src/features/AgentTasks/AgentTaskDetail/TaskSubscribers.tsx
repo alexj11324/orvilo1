@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
 import Avatar from '@/components/Avatar';
+import { useSingleton } from '@/hooks/useSingleton';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -81,6 +82,9 @@ const TaskSubscribers = memo<{ taskId: string }>(({ taskId }) => {
   const members = useWorkspaceMembers();
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [manageOpen, setManageOpen] = useState(false);
+  // One in-flight mutation per user — overlapping toggles can commit out of
+  // order and leave the durable state opposite to what the row shows.
+  const pending = useSingleton(() => new Set<string>());
 
   const refresh = useCallback(async () => {
     try {
@@ -102,6 +106,8 @@ const TaskSubscribers = memo<{ taskId: string }>(({ taskId }) => {
 
   const setSubscribed = useCallback(
     async (userId: string, subscribed: boolean) => {
+      if (pending.has(userId)) return;
+      pending.add(userId);
       setSubscribers((prev) =>
         subscribed
           ? [...prev.filter((s) => s.userId !== userId), { userId }]
@@ -110,10 +116,14 @@ const TaskSubscribers = memo<{ taskId: string }>(({ taskId }) => {
       try {
         await lambdaClient.workAttention.setSubscriber.mutate({ subscribed, taskId, userId });
       } catch {
-        await refresh();
+        // Fall through to the reconcile below.
       }
+      pending.delete(userId);
+      // The server roster is the truth after the mutation settles — refresh on
+      // success too so an optimistic snapshot can never outlive a stale write.
+      await refresh();
     },
-    [refresh, taskId],
+    [pending, refresh, taskId],
   );
 
   const memberName = (userId: string) => {

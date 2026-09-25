@@ -380,4 +380,50 @@ describe('dependency activity feed', () => {
       expect(row.payload?.relationDirection).toBeUndefined();
     }
   });
+
+  it('records the old link removal on both issues when relates upgrades to blocks', async () => {
+    const a = await create('First');
+    const b = await create('Second');
+
+    await model.addDependency(a.id, b.id, 'relates');
+    await model.addDependency(a.id, b.id, 'blocks');
+
+    const rows = await relationRows(a.id, b.id);
+    // relates-add pair + relates-remove pair + blocks-add pair.
+    expect(rows).toHaveLength(6);
+    const removed = rows.filter((r) => r.payload?.relationAction === 'removed');
+    expect(removed).toHaveLength(2);
+    for (const row of removed) {
+      expect(row.payload).toMatchObject({ relationKind: 'relates' });
+      expect(row.payload?.relationDirection).toBeUndefined();
+    }
+    expect(removed.map((r) => r.taskId).sort()).toEqual([a.id, b.id].sort());
+    const added = rows.filter(
+      (r) => r.payload?.relationAction === 'added' && r.payload?.relationKind === 'blocks',
+    );
+    expect(added).toHaveLength(2);
+    expect(added.map((r) => r.payload?.relationDirection).sort()).toEqual([
+      'blockedBy',
+      'blocking',
+    ]);
+  });
+
+  it('keeps a private target identifier off the counterpart issue feed', async () => {
+    const hidden = await model.create({ instruction: 'Secret', visibility: 'private' });
+    const open = await create('Public');
+
+    await model.addDependency(open.id, hidden.id, 'blocks');
+
+    const rows = await relationRows(open.id, hidden.id);
+    expect(rows).toHaveLength(2);
+    // The public issue's feed must not name the private issue it points at.
+    expect(rows.find((r) => r.taskId === open.id)?.payload).toMatchObject({
+      relationTargetIdentifier: null,
+      relationTargetTaskId: hidden.id,
+    });
+    // The private issue's own feed can still name the public counterpart.
+    expect(rows.find((r) => r.taskId === hidden.id)?.payload).toMatchObject({
+      relationTargetIdentifier: open.identifier,
+    });
+  });
 });

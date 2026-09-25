@@ -2972,34 +2972,72 @@ export class TaskModel {
         ...actorColumns,
         type: 'relation' as const,
       };
-      await this.addActivities([
-        {
-          ...shared,
-          payload: {
-            actorKind,
-            relationAction: 'added',
-            relationDirection: type === 'blocks' ? ('blockedBy' as const) : undefined,
-            relationKind: type as 'blocks' | 'relates',
-            relationTargetIdentifier: dependsOn.identifier,
-            relationTargetTaskId: dependsOn.id,
-          },
+      // A private issue's identifier stays off every feed its members can't
+      // already see — the target's own row keeps it, the counterpart's doesn't.
+      const targetIdentifierFor = (target: { identifier: string; visibility: string }) =>
+        target.visibility === 'private' ? null : target.identifier;
+      const relationRow = (
+        feedTaskId: string,
+        feedVisibility: 'private' | 'public',
+        action: 'added' | 'removed',
+        direction: 'blockedBy' | 'blocking' | undefined,
+        kind: 'blocks' | 'relates',
+        target: { id: string; identifier: string; visibility: 'private' | 'public' },
+      ) => ({
+        ...shared,
+        payload: {
+          actorKind,
+          relationAction: action,
+          relationDirection: direction,
+          relationKind: kind,
+          relationTargetIdentifier: targetIdentifierFor(target),
+          relationTargetTaskId: target.id,
+        },
+        taskId: feedTaskId,
+        visibility: feedVisibility,
+      });
+      const activities = [
+        relationRow(
           taskId,
-          visibility: task.visibility,
-        },
-        {
-          ...shared,
-          payload: {
-            actorKind,
-            relationAction: 'added',
-            relationDirection: type === 'blocks' ? ('blocking' as const) : undefined,
-            relationKind: type as 'blocks' | 'relates',
-            relationTargetIdentifier: task.identifier,
-            relationTargetTaskId: task.id,
-          },
-          taskId: dependsOn.id,
-          visibility: dependsOn.visibility,
-        },
-      ]);
+          task.visibility,
+          'added',
+          type === 'blocks' ? 'blockedBy' : undefined,
+          type as 'blocks' | 'relates',
+          dependsOn,
+        ),
+        relationRow(
+          dependsOn.id,
+          dependsOn.visibility,
+          'added',
+          type === 'blocks' ? 'blocking' : undefined,
+          type as 'blocks' | 'relates',
+          task,
+        ),
+      ];
+      if (existing) {
+        // An existing edge in a different type is an upgrade (relates→blocks):
+        // the old link ended, so both feeds record its removal alongside the
+        // new relation instead of reading as two overlapping links.
+        activities.unshift(
+          relationRow(
+            taskId,
+            task.visibility,
+            'removed',
+            existing.type === 'blocks' ? 'blockedBy' : undefined,
+            existing.type as 'blocks' | 'relates',
+            dependsOn,
+          ),
+          relationRow(
+            dependsOn.id,
+            dependsOn.visibility,
+            'removed',
+            existing.type === 'blocks' ? 'blocking' : undefined,
+            existing.type as 'blocks' | 'relates',
+            task,
+          ),
+        );
+      }
+      await this.addActivities(activities);
     }
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
@@ -3083,7 +3121,8 @@ export class TaskModel {
             relationAction: 'removed',
             relationDirection: edgeType === 'blocks' ? ('blockedBy' as const) : undefined,
             relationKind: edgeType,
-            relationTargetIdentifier: dependsOn?.identifier ?? null,
+            relationTargetIdentifier:
+              dependsOn?.visibility === 'private' ? null : (dependsOn?.identifier ?? null),
             relationTargetTaskId: dependsOnId,
           },
           taskId,
@@ -3096,7 +3135,7 @@ export class TaskModel {
             relationAction: 'removed',
             relationDirection: edgeType === 'blocks' ? ('blocking' as const) : undefined,
             relationKind: edgeType,
-            relationTargetIdentifier: task.identifier,
+            relationTargetIdentifier: task.visibility === 'private' ? null : task.identifier,
             relationTargetTaskId: task.id,
           },
           taskId: dependsOnId,

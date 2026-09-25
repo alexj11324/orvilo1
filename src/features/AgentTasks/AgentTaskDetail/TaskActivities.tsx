@@ -449,7 +449,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   // Linear keeps the notification row under the comment composer on every
   // issue feed: subscribe state for oneself plus the members manager.
   const subscribersRow = activeTaskDatabaseId ? (
-    <TaskSubscribers taskId={activeTaskDatabaseId} />
+    <TaskSubscribers key={activeTaskDatabaseId} taskId={activeTaskDatabaseId} />
   ) : null;
 
   // A goal loop can produce many rounds; only the newest run opens by default so

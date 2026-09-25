@@ -48,13 +48,11 @@ try {
     const cands = [...document.querySelectorAll('div, main')].filter(
       (e) => e.scrollHeight > e.clientHeight + 200 && e.clientHeight > 300,
     );
-    return cands
-      .slice(0, 8)
-      .map((e) => ({
-        cls: (e.className || '').toString().slice(0, 80),
-        sh: e.scrollHeight,
-        ch: e.clientHeight,
-      }));
+    return cands.slice(0, 8).map((e) => ({
+      cls: (e.className || '').toString().slice(0, 80),
+      sh: e.scrollHeight,
+      ch: e.clientHeight,
+    }));
   });
   fs.writeFileSync(`${OUT}/linear-scrollers.json`, JSON.stringify(scrollInfo, null, 1));
 

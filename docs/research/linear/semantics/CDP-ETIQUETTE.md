@@ -1,0 +1,3 @@
+# CDP-ETIQUETTE — 共享参考浏览器公约
+
+本工作区共享同一台已登录的 Linear 参考浏览器（CDP `http://127.0.0.1:9222`，`linear.app/bdiverifier`），8 个 surface owner 与 semantics 同时挂在上面，因此所有 CDP 使用必须遵循一条规则：**只读 + 只碰自己的 tab**。具体来说：所有 DOM/JS 求值走 `.agents/acceptance/scripts/cdp-inspect.cjs`（或等价的自写只读脚本），表达式只读取 `document`/`location` 状态；`--match` 必须精确到 URL 片段，同一 URL 存在多个 target 时改用 `/json/list` 里的 **target id** 精确寻址（同一 URL 被多个 sibling 复用时绝不能按 URL 匹配第一个）；打开新页面时先自建带唯一标识的 URL/tab 并记录其 target id，结束时只关闭自己创建的 target，**永不** `Target.close` 不属于自己的 tab；禁止在参考端执行任何有副作用的操作 —— 不点 Accept/Decline/Snooze/Duplicate/Archive/Delete、不提交表单、不改 display options、不 dismiss banner、不发邀请、不确认对话框 —— 需要「点一下看看」时先在候选端复现或改用文档证据，确实需要在参考端验证的交互先征得任务协调方同意；最后，每条运行时证据都要记下 target URL、采集时间与被测 commit / 环境，让 reviewer 能判断它覆盖的是哪个版本。

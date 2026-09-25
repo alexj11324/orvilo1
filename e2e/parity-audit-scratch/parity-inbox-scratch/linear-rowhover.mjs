@@ -17,13 +17,11 @@ const rowInfo = await page.evaluate(() => {
   });
   return {
     count: rows.length,
-    sample: rows
-      .slice(0, 3)
-      .map((el) => ({
-        tag: el.tagName,
-        href: el.getAttribute('href'),
-        y: Math.round(el.getBoundingClientRect().y),
-      })),
+    sample: rows.slice(0, 3).map((el) => ({
+      tag: el.tagName,
+      href: el.getAttribute('href'),
+      y: Math.round(el.getBoundingClientRect().y),
+    })),
   };
 });
 console.log('ROWINFO:', JSON.stringify(rowInfo));

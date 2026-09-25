@@ -188,6 +188,7 @@ describe('TaskService', () => {
     getComments: vi.fn(),
     getCommentFileIdsMap: vi.fn().mockResolvedValue({}),
     getDependencies: vi.fn(),
+    getIssueRelations: vi.fn(),
     getDependenciesByTaskIds: vi.fn().mockResolvedValue([]),
     getReviewConfig: vi.fn(),
     getVerifyConfig: vi.fn(),
@@ -239,6 +240,9 @@ describe('TaskService', () => {
     taskWorktreeCleanupMock.mockResolvedValue(true);
     mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([]);
     mockTaskModel.getActivities.mockResolvedValue([]);
+    mockTaskModel.getIssueRelations.mockImplementation((id: string) =>
+      mockTaskModel.getDependencies(id),
+    );
     (AgentModel as any).mockImplementation(function () {
       return mockAgentModel;
     });
@@ -803,6 +807,45 @@ describe('TaskService', () => {
       ]);
     });
 
+    it('projects an incoming ordinary relation into the related issue detail', async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        createdAt: null,
+        heartbeatInterval: null,
+        heartbeatTimeout: null,
+        id: 'task_b',
+        identifier: 'TASK-B',
+        instruction: null,
+        lastHeartbeatAt: null,
+        parentTaskId: null,
+        priority: 'normal',
+        status: 'backlog',
+      });
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getIssueRelations.mockResolvedValue([
+        { dependsOnId: 'task_a', taskId: 'task_b', type: 'relates' },
+      ]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+      mockTaskModel.getComments.mockResolvedValue([]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([
+        { id: 'task_a', identifier: 'TASK-A', name: 'Issue A', status: 'backlog' },
+      ]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-B');
+      expect(result?.dependencies).toEqual([
+        {
+          dependsOn: 'TASK-A',
+          id: 'task_a',
+          name: 'Issue A',
+          status: 'backlog',
+          type: 'relates',
+        },
+      ]);
+      expect(mockTaskModel.getIssueRelations).toHaveBeenCalledWith('task_b');
+    });
+
     it('should redact an unavailable dependency instead of exposing its id', async () => {
       const task = {
         assigneeAgentId: null,
@@ -845,6 +888,41 @@ describe('TaskService', () => {
           name: undefined,
           status: null,
           type: 'blocks',
+        },
+      ]);
+    });
+
+    it('redacts the target of an outgoing related issue after access is lost', async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        createdAt: null,
+        heartbeatInterval: null,
+        heartbeatTimeout: null,
+        id: 'task_003',
+        identifier: 'TASK-3',
+        instruction: null,
+        lastHeartbeatAt: null,
+        parentTaskId: null,
+        priority: 'normal',
+        status: 'backlog',
+      });
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getIssueRelations.mockResolvedValue([
+        { dependsOnId: 'task_hidden', taskId: 'task_003', type: 'relates' },
+      ]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+      mockTaskModel.getComments.mockResolvedValue([]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-3');
+      expect(result?.dependencies).toEqual([
+        {
+          dependsOn: 'Unavailable related issue',
+          name: undefined,
+          status: null,
+          type: 'relates',
         },
       ]);
     });

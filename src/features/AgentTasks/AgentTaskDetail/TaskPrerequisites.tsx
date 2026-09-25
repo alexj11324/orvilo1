@@ -30,13 +30,7 @@ const TASK_STATUS_SET = new Set<string>([
 const toTaskStatus = (status?: string | null): TaskStatus =>
   status && TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
 
-/**
- * The rail's "Related" group — Linear lists every issue relation under one
- * label, so both `blocks` edges (this task's prerequisites, which also gate the
- * run button) and `relates` edges render here. The blocking hint keeps the
- * prerequisite semantics: it only counts `blocks` edges, since `relates` is a
- * plain link and never holds a run back.
- */
+/** The Related rail lists ordinary links and explicit blocking prerequisites. */
 const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
@@ -44,6 +38,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   const detail = useTaskStore(taskDetailSelectors.activeTaskDetail);
   const addDependency = useTaskStore((s) => s.addDependency);
   const removeDependency = useTaskStore((s) => s.removeDependency);
+  const removeIssueRelation = useTaskStore((s) => s.removeIssueRelation);
   const [identifier, setIdentifier] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -57,6 +52,22 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
     ],
     [dependencies],
   );
+  const removalTotals = new Map<string, number>();
+  for (const dep of orderedDeps) {
+    const key = `${dep.type}:${dep.dependsOn}`;
+    removalTotals.set(key, (removalTotals.get(key) ?? 0) + 1);
+  }
+  const removalSeen = new Map<string, number>();
+  const removalIdentifiers = orderedDeps.map((dep) => {
+    const key = `${dep.type}:${dep.dependsOn}`;
+    if (removalTotals.get(key) === 1) return dep.dependsOn;
+    const position = (removalSeen.get(key) ?? 0) + 1;
+    removalSeen.set(key, position);
+    return t('taskDetail.prerequisites.relationPosition', {
+      identifier: dep.dependsOn,
+      position,
+    });
+  });
   const prerequisites = dependencies.filter((dep) => dep.type === 'blocks');
   const blocked = prerequisites.some((dep) => dep.status !== 'completed');
 
@@ -69,17 +80,19 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
       if (adding) setIdentifier('');
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
-      const key = message.includes('cycle')
-        ? 'cycle'
-        : message.includes('itself')
-          ? 'self'
-          : message.includes('project boundaries')
-            ? 'project'
-            : message.includes('Pause or reopen')
-              ? 'active'
-              : /not found|unavailable/i.test(message)
-                ? 'unavailable'
-                : 'error';
+      const key = message.includes('blocking relationship')
+        ? 'relationConflict'
+        : message.includes('cycle')
+          ? 'cycle'
+          : message.includes('itself')
+            ? 'self'
+            : message.includes('project boundaries')
+              ? 'project'
+              : message.includes('Pause or reopen')
+                ? 'active'
+                : /not found|unavailable/i.test(message)
+                  ? 'unavailable'
+                  : 'error';
       setError(t(`taskDetail.prerequisites.${key}`));
     } finally {
       setPending(false);
@@ -89,23 +102,30 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   return (
     <Flexbox className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.related')}</span>
-      <Text fontSize={12} role={'status'} style={{ paddingInline: 8 }} type={'secondary'}>
-        {t(
-          blocked
-            ? 'taskDetail.prerequisites.blocked'
-            : prerequisites.length
-              ? 'taskDetail.prerequisites.ready'
-              : 'taskDetail.prerequisites.empty',
-        )}
-      </Text>
-      {orderedDeps.map((dep) => {
+      {(blocked || prerequisites.length > 0 || dependencies.length === 0) && (
+        <Text fontSize={12} role={'status'} style={{ paddingInline: 8 }} type={'secondary'}>
+          {t(
+            blocked
+              ? 'taskDetail.prerequisites.blocked'
+              : prerequisites.length
+                ? 'taskDetail.prerequisites.ready'
+                : 'taskDetail.prerequisites.empty',
+          )}
+        </Text>
+      )}
+      {orderedDeps.map((dep, index) => {
         const unavailable = !dep.status;
         const workflowVisual =
           dep.workflowStateId && dep.workflowCategory
             ? WORKFLOW_CATEGORY_VISUALS[dep.workflowCategory]
             : undefined;
         return (
-          <Flexbox horizontal align={'center'} gap={2} key={dep.id ?? dep.dependsOn}>
+          <Flexbox
+            horizontal
+            align={'center'}
+            gap={2}
+            key={dep.relationId ?? `${dep.type}:${dep.id ?? dep.dependsOn}`}
+          >
             <Button
               disabled={unavailable}
               size={'small'}
@@ -125,20 +145,42 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
             >
               <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }}>
                 <Text as={'span'} fontSize={RAIL_VALUE_FONT_SIZE} type={'secondary'}>
+                  {t(
+                    dep.type === 'blocks'
+                      ? 'taskDetail.prerequisites.blockedBy'
+                      : 'taskDetail.prerequisites.related',
+                  )}{' '}
+                </Text>
+                <Text as={'span'} fontSize={RAIL_VALUE_FONT_SIZE} type={'secondary'}>
                   {dep.dependsOn}
                 </Text>
                 {dep.name ? ` · ${dep.name}` : ''}
                 {unavailable ? ` · ${t('taskDetail.prerequisites.unavailable')}` : ''}
               </Text>
             </Button>
-            {allowed && (
+            {allowed && (dep.relationId || dep.id) && (
               <Button
-                aria-label={t('taskDetail.prerequisites.remove', { identifier: dep.dependsOn })}
                 disabled={pending}
                 icon={XIcon}
                 size={'small'}
                 type={'text'}
-                onClick={() => change(() => removeDependency(taskId, dep.id ?? dep.dependsOn))}
+                aria-label={t(
+                  dep.type === 'blocks'
+                    ? 'taskDetail.prerequisites.removeBlocker'
+                    : 'taskDetail.prerequisites.removeRelated',
+                  { identifier: removalIdentifiers[index] },
+                )}
+                onClick={() =>
+                  change(() =>
+                    dep.relationId
+                      ? removeIssueRelation(taskId, dep.relationId)
+                      : removeDependency(
+                          taskId,
+                          dep.id!,
+                          dep.type === 'relates' ? 'relates' : 'blocks',
+                        ),
+                  )
+                }
               />
             )}
           </Flexbox>
@@ -150,7 +192,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           onSubmit={(event) => {
             event.preventDefault();
             const value = identifier.trim();
-            if (value) void change(() => addDependency(taskId, value, 'blocks'), true);
+            if (value) void change(() => addDependency(taskId, value, 'relates'), true);
           }}
         >
           <Flexbox horizontal gap={4}>

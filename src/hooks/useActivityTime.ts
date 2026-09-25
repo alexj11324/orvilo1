@@ -18,7 +18,7 @@ export type UseActivityTimeOptions = Omit<
   compact?: boolean;
 };
 
-const compactRelative = (t: TFunction<'common'>) => (date: Dayjs, now: Dayjs) => {
+export const compactRelative = (t: TFunction<'common'>) => (date: Dayjs, now: Dayjs) => {
   const seconds = Math.abs(now.diff(date, 'second'));
   if (seconds < 60) return t('time.compactNow');
   const minutes = Math.abs(now.diff(date, 'minute'));
@@ -28,8 +28,8 @@ const compactRelative = (t: TFunction<'common'>) => (date: Dayjs, now: Dayjs) =>
   const days = Math.abs(now.diff(date, 'day'));
   if (days < 7) return t('time.compactDaysAgo', { count: days });
   const weeks = Math.abs(now.diff(date, 'week'));
-  if (weeks < 4) return t('time.compactWeeksAgo', { count: weeks });
   const months = Math.abs(now.diff(date, 'month'));
+  if (months < 1) return t('time.compactWeeksAgo', { count: weeks });
   if (months < 12) return t('time.compactMonthsAgo', { count: months });
   return t('time.compactYearsAgo', { count: Math.abs(now.diff(date, 'year')) });
 };

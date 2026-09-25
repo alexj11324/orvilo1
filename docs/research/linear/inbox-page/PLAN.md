@@ -46,4 +46,8 @@ ORVILO_PARITY_SEED_TARGET=local bun scripts/seedLinearParity/seedInboxNotificati
 
 The helper refuses every database except the verified local parity target at
 `localhost:5432/orvilo_linear_parity_20260922`, and it deletes only the
-synthetic user's `linear-parity-inbox:*` rows before recreating five stable IDs.
+synthetic user's `linear-parity-inbox:*` rows before recreating six stable IDs.
+The sixth row (`linear-parity-inbox:task-link`) is an unread mention whose
+`resourceType: 'task'` / `resourceId: 'taskpv0011'` open target resolves to a
+seeded APX-11 issue, exercising the task-linked detail pane and — because a
+read mention leaves the Priority bucket — the read-receipt retention path.

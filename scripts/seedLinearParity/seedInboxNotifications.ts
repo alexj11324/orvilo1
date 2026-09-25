@@ -63,11 +63,13 @@ const main = async () => {
     { LINEAR_PARITY_USER, seedLinearParity },
     { NotificationModel },
     { notifications },
+    { tasks },
     { serverDB },
   ] = await Promise.all([
     import('../../packages/database/src/fixtures/linearParitySeed'),
     import('../../packages/database/src/models/notification'),
     import('../../packages/database/src/schemas/notification'),
+    import('../../packages/database/src/schemas/task'),
     import('../../packages/database/src/server'),
   ]);
 
@@ -89,6 +91,16 @@ const main = async () => {
           like(notifications.dedupeKey, `${FIXTURE_DEDUPE_PREFIX}%`),
         ),
       );
+
+    // The task-linked row needs a task that actually resolves: prefer the
+    // volume seed's APX-11, else any task already in the workspace, else the
+    // row is dropped — a standalone seed must not seed a link to nothing.
+    const taskLinkTargets = await serverDB
+      .select({ id: tasks.id, identifier: tasks.identifier })
+      .from(tasks)
+      .where(eq(tasks.workspaceId, seeded.workspaceId));
+    const taskLinkTarget =
+      taskLinkTargets.find((t) => t.id === 'task_pv0011') ?? taskLinkTargets[0];
 
     const now = Date.now();
     const rows = [
@@ -159,6 +171,27 @@ const main = async () => {
         title: 'Synthetic fixture refreshed',
         type: 'task_assigned',
       },
+      ...(taskLinkTarget
+        ? [
+            {
+              // Task-linked row: selecting it mounts the shared issue surface
+              // in the detail pane, which resolves the task by primary key.
+              // Unread + mention keeps it in the Priority bucket, so the click
+              // also exercises the read-receipt retention path.
+              category: 'mention',
+              content: `A teammate mentioned you on the ${taskLinkTarget.identifier} issue.`,
+              dedupeKey: `${FIXTURE_DEDUPE_PREFIX}task-link`,
+              id: '10000000-0000-4000-8000-000000000006',
+              isRead: false,
+              kind: 'update' as const,
+              metadata: { actor: { name: 'Fixture Teammate', userId: 'fixture-teammate' } },
+              resourceId: taskLinkTarget.id,
+              resourceType: 'task',
+              title: `Mentioned you on ${taskLinkTarget.identifier}`,
+              type: 'mention',
+            },
+          ]
+        : []),
     ];
 
     for (const [index, row] of rows.entries()) {

@@ -38,7 +38,9 @@ Then capture:
 
 The replay proves only this bounded transition.
 
-The five-row fixture does not prove Linear's count semantics. Orvilo's default Priority placeholder intentionally uses its authoritative global unread/pending badge contract, while Linear's observed Priority placeholder matched that bucket's unread count. This remains a product-semantic difference, not a visual completion claim.
+The six-row fixture does not prove Linear's count semantics. Orvilo's default Priority placeholder intentionally uses its authoritative global unread/pending badge contract, while Linear's observed Priority placeholder matched that bucket's unread count. This remains a product-semantic difference, not a visual completion claim.
+
+The `linear-parity-inbox:task-link` row is an unread mention linked to seeded task `taskpv0011` (APX-11, deliberately without the `task_` id prefix). Selecting it mounts the shared issue surface via `task.detail`, so it also proves `TaskModel.resolve` reaches non-`task_` primary keys.
 
 ## Runtime finding resolved during this slice
 

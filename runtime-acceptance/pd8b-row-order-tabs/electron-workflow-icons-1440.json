@@ -1,0 +1,35 @@
+{
+  "url": "app://renderer/ws-useragenttes/project/parity-voyager-launch/tasks",
+  "workflowIcons": [
+    {
+      "task": "task:VYG-4:status",
+      "category": "in_review",
+      "executionMenuTrigger": false,
+      "svgClass": "lucide lucide-clock"
+    },
+    {
+      "task": "task:VYG-6:status",
+      "category": "backlog",
+      "executionMenuTrigger": false,
+      "svgClass": "lucide lucide-circle-dashed"
+    },
+    {
+      "task": "task:VYG-3:status",
+      "category": "backlog",
+      "executionMenuTrigger": false,
+      "svgClass": "lucide lucide-circle-dashed"
+    },
+    {
+      "task": "task:VYG-1:status",
+      "category": "todo",
+      "executionMenuTrigger": false,
+      "svgClass": "lucide lucide-circle"
+    },
+    {
+      "task": "task:VYG-5:status",
+      "category": "done",
+      "executionMenuTrigger": false,
+      "svgClass": "lucide lucide-circle-check"
+    }
+  ]
+}

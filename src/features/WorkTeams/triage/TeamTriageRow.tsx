@@ -99,6 +99,8 @@ interface TeamTriageRowProps {
   onPickDuplicate: (taskId: string) => void;
   onReassign: (taskId: string, assigneeUserId: string) => void;
   onTransferred: () => void;
+  /** Display property — Linear's `ID` chip toggle hides the identifier. */
+  showId: boolean;
   task: TeamTriageTask;
 }
 
@@ -117,6 +119,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
     onPickDuplicate,
     onReassign,
     onTransferred,
+    showId,
     task,
   }) => {
     const { t, i18n } = useTranslation('common');
@@ -196,7 +199,9 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
         >
           <PriorityIcon priority={task.priority} size={16} />
           <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
-          {task.identifier ? <Text className={styles.identifier}>{task.identifier}</Text> : null}
+          {task.identifier && showId ? (
+            <Text className={styles.identifier}>{task.identifier}</Text>
+          ) : null}
           <Text ellipsis style={{ minWidth: 0 }} weight={500}>
             {task.name ?? task.instruction}
           </Text>

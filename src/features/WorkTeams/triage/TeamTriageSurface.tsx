@@ -37,6 +37,8 @@ interface TeamTriageSurfaceProps {
   /** Post-write refresh — the shell revalidates triage and issues surfaces. */
   onChanged: () => void;
   onRetry: () => void;
+  /** Display property (Linear's `ID` toggle) — hides the identifier chip. */
+  showId: boolean;
   tasks: TeamTriageTask[];
   teamId: string;
 }
@@ -48,7 +50,7 @@ interface TeamTriageSurfaceProps {
  * (`triageCapable`, tab routing, page header) stays in the team page shell.
  */
 const TeamTriageSurface = memo<TeamTriageSurfaceProps>(
-  ({ destinations, error, isLoading, members, onChanged, onRetry, tasks, teamId }) => {
+  ({ destinations, error, isLoading, members, onChanged, onRetry, showId, tasks, teamId }) => {
     const { t } = useTranslation('common');
     const [duplicateTaskId, setDuplicateTaskId] = useState<string | null>(null);
     const membersQuery = useWorkspaceMembersQuery({ enabled: true });
@@ -107,7 +109,12 @@ const TeamTriageSurface = memo<TeamTriageSurfaceProps>(
           <SkeletonList aria-label={t('teams.loading')} rows={4} />
         ) : state === 'empty' ? (
           <Center flex={1} gap={12} padding={48}>
-            <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
+            {/* Reference copy + typography: "Nothing to triage" 13px/500. */}
+            <Empty
+              description={t('teams.triageEmpty')}
+              descriptionProps={{ fontSize: 13, weight: 500 }}
+              icon={ListChecksIcon}
+            />
             <Button icon={PlusIcon} size={'small'} onClick={openComposer}>
               {t('teams.triageCreate')}
             </Button>
@@ -120,6 +127,7 @@ const TeamTriageSurface = memo<TeamTriageSurfaceProps>(
                 destinations={destinations}
                 key={task.id}
                 memberOptions={triageAssigneeOptions(members, profiles, task.assigneeUserId)}
+                showId={showId}
                 task={task}
                 onAction={(action) => void act(task, action)}
                 onPickDuplicate={setDuplicateTaskId}

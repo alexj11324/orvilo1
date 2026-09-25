@@ -28,6 +28,9 @@ const WorkFavoriteButton = memo<WorkFavoriteButtonProps>(
     const label = pinned ? t('savedViews.unfavorite') : t('savedViews.favorite');
     if (variant === 'icon') {
       const glyph = pinned ? FAVORITE_MARK_OFF[icon] : FAVORITE_MARK[icon];
+      // Linear names the header favourite ("Add to favorites"); base-ui strips
+      // `title` onto its tooltip trigger, so the accessible name needs the
+      // explicit aria-label.
       return (
         <ActionIcon
           aria-label={label}

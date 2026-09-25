@@ -90,6 +90,31 @@ describe('teamWorkQuery', () => {
     expect(query.filter?.all).toEqual([{ field: 'teamId', op: 'eq', value: 'team-1' }, userFilter]);
   });
 
+  it('threads filter and ordering options through the triage query', () => {
+    const userFilter = {
+      all: [{ field: 'priority' as const, op: 'eq' as const, value: 1 }],
+    };
+    const sort = [
+      { direction: 'desc' as const, field: 'priority' as const },
+      { direction: 'asc' as const, field: 'id' as const },
+    ];
+    const query = teamTriageQuery('team-1', ALL_TEAM_CYCLES, false, {
+      filter: userFilter,
+      sort,
+    });
+    // The team + untriaged predicates stay first; the builder filter nests whole.
+    expect(query.filter?.all).toEqual([
+      { field: 'teamId', op: 'eq', value: 'team-1' },
+      { field: 'triageStatus', op: 'eq', value: 'untriaged' },
+      userFilter,
+    ]);
+    expect(query.sort).toEqual(sort);
+    // Defaults keep the queue untouched — no sort key, no extra predicates.
+    const plain = teamTriageQuery('team-1');
+    expect(plain.sort).toBeUndefined();
+    expect(plain.filter?.all).toHaveLength(2);
+  });
+
   it('lets display options override grouping, sort and board sort mode', () => {
     // Client-bucketed list groupings fetch the flat feed.
     expect(

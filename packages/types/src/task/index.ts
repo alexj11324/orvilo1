@@ -1231,8 +1231,10 @@ export interface TaskDetailData {
   createdByUserId?: string | null;
   dependencies?: Array<{
     dependsOn: string;
-    /** Raw edge target, retained so an unavailable prerequisite can be removed. */
+    /** Raw target ID is exposed only when the issue is readable. */
     id?: string;
+    /** Opaque relation row ID; allows unlinking without exposing an unreadable target ID. */
+    relationId?: string;
     name?: string | null;
     /** Null/omitted means unavailable, never implicitly completed. */
     status?: string | null;

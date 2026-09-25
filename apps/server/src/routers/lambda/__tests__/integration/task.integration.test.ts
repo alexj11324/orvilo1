@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
@@ -8,6 +9,7 @@ import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { tasks } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
@@ -128,6 +130,47 @@ describe('Task Router Integration', () => {
   });
 
   describe('create + find + detail', () => {
+    it('removes a related issue whose stored id predates the task_ prefix', async () => {
+      const source = await caller.create({ instruction: 'Source' });
+      const peer = await caller.create({ instruction: 'Peer' });
+      const legacyId = 'legacytaskrelation001';
+      await serverDB.update(tasks).set({ id: legacyId }).where(eq(tasks.id, source.data.id));
+
+      await caller.addDependency({
+        dependsOnId: peer.data.identifier,
+        taskId: source.data.identifier,
+        type: 'relates',
+      });
+      expect((await caller.detail({ id: peer.data.identifier })).data.dependencies).toMatchObject([
+        { dependsOn: source.data.identifier, type: 'relates' },
+      ]);
+      await caller.removeDependency({
+        dependsOnId: legacyId,
+        taskId: peer.data.identifier,
+        type: 'relates',
+      });
+      expect((await caller.detail({ id: peer.data.identifier })).data.dependencies).toEqual([]);
+    });
+
+    it('removes a symmetric relation by opaque edge id from the other issue', async () => {
+      const source = await caller.create({ instruction: 'Source' });
+      const peer = await caller.create({ instruction: 'Peer' });
+      await caller.addDependency({
+        dependsOnId: peer.data.identifier,
+        taskId: source.data.identifier,
+        type: 'relates',
+      });
+      const related = (await caller.detail({ id: peer.data.identifier })).data.dependencies?.[0];
+      expect(related).toMatchObject({ dependsOn: source.data.identifier, type: 'relates' });
+      expect(related?.relationId).toBeTruthy();
+      await caller.removeDependency({
+        relationId: related!.relationId!,
+        taskId: peer.data.identifier,
+      });
+      expect((await caller.detail({ id: source.data.identifier })).data.dependencies).toEqual([]);
+      expect((await caller.detail({ id: peer.data.identifier })).data.dependencies).toEqual([]);
+    });
+
     it('should create a task and retrieve it', async () => {
       const result = await caller.create({
         instruction: 'Write a book',

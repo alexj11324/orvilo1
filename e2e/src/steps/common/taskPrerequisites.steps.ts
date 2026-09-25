@@ -77,9 +77,9 @@ Then(
         }),
       ).toBeVisible({ timeout: 25_000 });
 
-      const input = this.page.getByRole('textbox', { name: 'Related issue identifier' });
-      await input.fill(second.identifier);
-      await input.press('Enter');
+      // The rail's add form links 'relates' edges (non-blocking); a second
+      // blocking prerequisite still arrives through the API.
+      await rpc('addDependency', { dependsOnId: second.id, taskId: target.id });
       await expect(
         this.page.getByRole('button', {
           exact: true,

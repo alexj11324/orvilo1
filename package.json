@@ -78,6 +78,7 @@
     "dev:docker": "docker compose -f docker-compose/dev/docker-compose.yml up -d --wait postgresql redis rustfs searxng",
     "dev:docker:down": "docker compose -f docker-compose/dev/docker-compose.yml down",
     "dev:docker:reset": "docker compose -f docker-compose/dev/docker-compose.yml down -v && rm -rf docker-compose/dev/data && npm run dev:docker && pnpm db:migrate",
+    "dev:env": "bun run .agents/scripts/dev/cli.ts",
     "dev:hatchet": "tsx apps/server/src/hatchet/worker.ts",
     "dev:next": "next dev -p 3010",
     "dev:spa": "vite",

@@ -54,6 +54,19 @@ Debug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-ho
 
 Open this URL to develop locally against the production backend (orvilo.aspectlylabs.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
 
+#### Worktrees and the shared desktop app (`dev:env`)
+
+Use `bun run dev:env` to work across several worktrees with one Electron app. It keeps a single app process and its sign-in, and swaps only the renderer, which is a cheap Vite server per worktree.
+
+```bash
+bun run dev:env status       # which worktree each port, Electron and database belongs to
+bun run dev:env up [dir]     # deps, env files, backend, then show <dir> in the shared Electron
+bun run dev:env switch [dir] # show another worktree's renderer (--reset: the app's own)
+bun run dev:env down [dir]   # stop <dir>'s renderer server
+```
+
+Run `status` before you trust a running server: it shows which worktree and commit each port serves. `up` never migrates the shared database unless you pass `--migrate`. It warns when the database was migrated by a newer line than the target code. Main and preload code stay those of the Electron host. When they differ from the shown worktree, `switch` says so.
+
 ### Git Workflow
 
 - **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md); deploy targets: [docs/environments.md](./docs/environments.md)

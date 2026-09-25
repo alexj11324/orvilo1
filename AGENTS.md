@@ -65,7 +65,7 @@ bun run dev:env switch [dir] # show another worktree's renderer (--reset: the ap
 bun run dev:env down [dir]   # stop <dir>'s renderer server
 ```
 
-Run `status` before you trust a running server: it shows which worktree and commit each port serves. `up` never migrates the shared database unless you pass `--migrate`. It warns when the database was migrated by a newer line than the target code. Main and preload code stay those of the Electron host. When they differ from the shown worktree, `switch` says so.
+Run `status` before you trust a running server: it shows which worktree and commit each port serves. `up` never migrates the shared database unless you pass `--migrate`. It warns when the database was migrated by a newer line than the target code. Main and preload code stay those of the Electron host. When they differ from the shown worktree, `switch` says so. Do not run two `dev:env` commands against the same worktree at once; the port checks are not atomic.
 
 ### Git Workflow
 

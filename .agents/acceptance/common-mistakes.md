@@ -356,7 +356,9 @@ owned by a different debugger — `wrangler`/`workerd` defaults to 9229, which i
 pool id 7, and `electron-dev.sh start <id>` skips the launch with
 `CDP already reachable`.
 
-**Rule:** before collecting evidence, require all three: an Electron `Browser`
+**Rule:** start with `bun run dev:env status` — it maps every listening port,
+the Electron host, and its current renderer to a worktree and commit. Then,
+before collecting evidence, require all three: an Electron `Browser`
 string on `/json/version` (a `wrangler/*` or `node` answer → pick another id),
 a Orvilo renderer marker, and _your_ worktree's absolute source path plus a
 marker unique to the change:
@@ -365,8 +367,10 @@ marker unique to the change:
 agent-browser --cdp 9222 eval "(async()=>{const t=await (await fetch('app://renderer/<repo-relative>.tsx')).text();return t.match(/_jsxFileName = \"[^\"]*\"/)[0]+' '+t.includes('<CHANGE_MARKER>')})()"
 ```
 
-A wrong-worktree hit is someone else's session: never restart or reuse it —
-start a pool instance (`electron-dev.sh start <id>`) or switch surface.
+A wrong-worktree hit is someone else's session: never restart or reuse it.
+For renderer changes, point your own switchable Electron at your worktree
+(`bun run dev:env switch <worktree>`); for main-process changes start a pool
+instance (`electron-dev.sh start <id>`) or switch surface.
 
 ### L-S7 — Capturing evidence through a Vite that predates the code
 

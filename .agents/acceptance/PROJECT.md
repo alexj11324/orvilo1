@@ -247,11 +247,21 @@ stale standalone install: a recently added workspace package fails to resolve �
   browser, against a per-instance localhost origin that usually can't even
   complete. If no injectable state exists, report auth as blocked and ask for
   one manual sign-in instead.
-- Concurrent instances (N worktrees / parallel runs): `electron-dev.sh` drives a
-  pool — `start <id>` gives each its own CDP port, userData dir (with copied
-  login), Vite port, and IPC id. Drive each with a distinct
-  `agent-browser --session s<port> --cdp <port>`. Pool design, the collision
-  matrix, and the login-copy recipe: `.agents/acceptance/references/multi-instance.md`.
+- Several worktrees, renderer changes (the common case): keep **one** Electron
+  and swap its renderer with `bun run dev:env up <worktree>` /
+  `bun run dev:env switch <worktree>` (see AGENTS.md). Only a cheap Vite server
+  runs per worktree; the app process and its sign-in stay. `bun run dev:env status`
+  tells which worktree and commit each port, the Electron renderer, and the
+  database belong to. Main and preload code stay the host's — `switch` warns when
+  they differ.
+- Concurrent instances (main-process changes, parallel runs that must not share
+  state): `electron-dev.sh` drives a pool — `start <id>` gives each its own CDP
+  port, userData dir (with copied login), Vite port, and IPC id. Drive each with a
+  distinct `agent-browser --session s<port> --cdp <port>`. Known gap: the app's
+  own `orvilo-storage` (local SQLite) is still resolved before the per-instance
+  userData applies, so pool instances share the golden profile's store until that
+  startup-order bug is fixed. Pool design, the collision matrix, and the
+  login-copy recipe: `.agents/acceptance/references/multi-instance.md`.
 
 ### Heterogeneous-agent compatibility (project skill)
 

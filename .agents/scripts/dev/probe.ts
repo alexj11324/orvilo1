@@ -8,6 +8,8 @@ import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+// Single source of truth for the file the desktop main process reads.
+import { DEV_RENDERER_URL_FILE } from '../../../apps/desktop/src/main/core/infrastructure/devRendererOrigin';
 import {
   compareMigrations,
   databaseNameOf,
@@ -19,8 +21,6 @@ import {
   readDotenvValue,
 } from './model';
 
-/** Must match DEV_RENDERER_URL_FILE in apps/desktop/.../devRendererOrigin.ts. */
-export const DEV_RENDERER_URL_FILE = 'dev-renderer-url';
 const DEFAULT_DESKTOP_USER_DATA = path.join(
   os.homedir(),
   'Library/Application Support/orvilo-desktop-dev',

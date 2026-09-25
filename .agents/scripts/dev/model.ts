@@ -73,6 +73,8 @@ const RENDERER_PORT_SPAN = 600;
 /**
  * Stable renderer Vite port per worktree (5300–5899), so the same checkout
  * always lands on the same port and never collides with pool ports (5173+id).
+ * Two paths can hash to the same port; `switch` then fails loudly on the taken
+ * port instead of routing to the other worktree's server.
  */
 export const rendererPortFor = (worktreePath: string): number => {
   let hash = 0x81_1c_9d_c5;

@@ -7,6 +7,11 @@ renderer state. Three env-gated product knobs (`ORVILO_DESKTOP_USER_DATA_DIR`,
 `ORVILO_IPC_ID`, `ORVILO_DESKTOP_VITE_PORT`) plus an `electron-dev.sh` instance pool.
 Details, collision matrix, and two validation transcripts below.
 
+> **Renderer-only work across worktrees no longer needs one instance each.**
+> `bun run dev:env up|switch <worktree>` (AGENTS.md) keeps one Electron and swaps
+> its renderer, and `up` also performs the per-worktree installs described below.
+> Use this pool when main-process code differs or instances must not share state.
+
 Use case driving this: **N git worktrees under one project, each doing different
 work, each running its own Electron dev instance** — so each needs its own Vite
 dev server + its own userData, while reusing the developer's existing login.

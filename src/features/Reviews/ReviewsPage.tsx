@@ -32,6 +32,7 @@ import {
   reviewQueueGroups,
   type ReviewQueueItem,
 } from './reviewQueueGroups';
+import { reviewRelativeTime } from './reviewRelativeTime';
 import {
   reviewsDetailPath,
   reviewsIsNarrow,
@@ -208,7 +209,7 @@ const PullRequestRow = memo<{
       ) : null}
       {item.updatedAt ? (
         <Text className={styles.meta} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
-          {dayjs(item.updatedAt).fromNow()}
+          {reviewRelativeTime(item.updatedAt)}
         </Text>
       ) : null}
     </Flexbox>
@@ -480,6 +481,11 @@ const ReviewsPage = memo(() => {
                     collapsed={collapsedGroups.has(group.key)}
                     key={group.key}
                     label={t(REVIEW_QUEUE_GROUP_LABEL_KEYS[group.key])}
+                    count={
+                      group.key === 'ready-to-merge' && !queueHasMore
+                        ? group.items.length
+                        : undefined
+                    }
                     onToggle={() => toggleQueueGroup(group.key)}
                   >
                     <Flexbox>

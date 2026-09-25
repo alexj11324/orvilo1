@@ -377,6 +377,7 @@ const pullRequestCoreSchema = z.object({
   id: z.string(),
   isDraft: z.boolean().optional(),
   mergeable: z.string().nullable().optional(),
+  mergeStateStatus: z.string().nullable().optional(),
   number: z.number(),
   pendingReviews: z.object({ nodes: z.array(pendingReviewSchema) }).optional(),
   reviewDecision: z
@@ -1044,6 +1045,7 @@ export class PullRequestReviewService {
       id: pullRequest.id,
       isDraft: pullRequest.isDraft ?? false,
       mergeable: pullRequest.mergeable ?? null,
+      mergeStateStatus: pullRequest.mergeStateStatus ?? null,
       number: pullRequest.number,
       rateLimit: toRateLimit(parsed.rateLimit),
       repositoryPermission: parsed.repository?.viewerPermission ?? null,

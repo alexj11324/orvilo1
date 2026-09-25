@@ -54,6 +54,7 @@ query PullRequestDetail($owner: String!, $repo: String!, $number: Int!) {
       deletions
       changedFiles
       mergeable
+      mergeStateStatus
       reviewDecision
       baseRefName
       headRefName

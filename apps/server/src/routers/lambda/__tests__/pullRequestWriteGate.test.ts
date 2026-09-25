@@ -10,12 +10,14 @@ vi.mock('@/database/core/db-adaptor', () => ({
 const mockAddFileComment = vi.fn(async () => ({}));
 const mockReplyToThread = vi.fn(async () => ({}));
 const mockSubmitReview = vi.fn(async () => ({}));
+const mockPullRequest = vi.fn(async () => ({ title: 'Example PR' }));
 
 vi.mock('@/server/services/pullRequestReview', async (importOriginal) => ({
   ...(await importOriginal),
   PullRequestReviewService: vi.fn(function () {
     return {
       addFileComment: mockAddFileComment,
+      pullRequest: mockPullRequest,
       replyToThread: mockReplyToThread,
       submitReview: mockSubmitReview,
     };
@@ -106,6 +108,16 @@ describe('pullRequestRouter write gate', () => {
       operationId: 'op-gate-2',
       reviewSessionId: undefined,
       snapshotId: undefined,
+    });
+  });
+
+  it('reports the same write capability that the mutation gate enforces', async () => {
+    expect((await createCaller().detail({ id: REVIEW_ID })).data).toMatchObject({
+      reviewWritesEnabled: false,
+    });
+    process.env.ORVILO_PR_REVIEW_WRITE = '1';
+    expect((await createCaller().detail({ id: REVIEW_ID })).data).toMatchObject({
+      reviewWritesEnabled: true,
     });
   });
 });

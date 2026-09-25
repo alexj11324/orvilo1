@@ -53,6 +53,11 @@ Popup/Item`) instead of the `items` array API, so the popup carries
   `teamId` and `domainRevision` so the detail surface can pass the triage
   context; selectors `activeTaskTeamId`/`activeTaskDomainRevision` were
   added alongside.
+- **Detail payload exposes `domainRevision`**: the task-detail service
+  response carries the row's `domainRevision` verbatim, so detail-pane
+  writes (status moves, retriage, transfers) can guard on the same CAS
+  token as list-row and rail actions instead of issuing revision-less
+  writes.
 - **Out of scope here**: the priority menu still renders through the
   `items` API (`role=menu`, 14px items). Linear's own priority menu was not
   separately audited in the issue list — refactor it the same way when that

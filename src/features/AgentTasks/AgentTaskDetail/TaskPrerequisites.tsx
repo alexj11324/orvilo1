@@ -71,7 +71,7 @@ const RelationRowItem = ({
   const navigate = useWorkspaceAwareNavigate();
   const unavailable = !row.status;
   return (
-    <Flexbox horizontal align={'center'} gap={2}>
+    <Flexbox horizontal align={'center'} className={styles.relatedRow} gap={2}>
       <Button
         disabled={unavailable}
         size={'small'}
@@ -153,7 +153,7 @@ const RelationSection = memo(
     };
 
     return (
-      <Flexbox className={styles.railSection}>
+      <div className={styles.railSection}>
         <div className={styles.railSectionHeader}>
           <span aria-level={3} className={styles.railSectionLabel} role={'heading'}>
             {title}
@@ -169,7 +169,7 @@ const RelationSection = memo(
           )}
         </div>
         {hint && (
-          <Text fontSize={12} role={'status'} style={{ paddingInline: 8 }} type={'secondary'}>
+          <Text className={styles.railSectionHint} fontSize={12} role={'status'} type={'secondary'}>
             {hint}
           </Text>
         )}
@@ -215,7 +215,7 @@ const RelationSection = memo(
             {error}
           </Text>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

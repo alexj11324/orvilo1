@@ -63,6 +63,7 @@ export default {
   'create.status.inProgress': 'In progress',
   'create.status.paused': 'Paused',
   'create.status.planned': 'Planned',
+  'create.clearDate': 'Clear date',
   'create.datePrecision.day': 'Day',
   'create.datePrecision.month': 'Month',
   'create.datePrecision.quarter': 'Quarter',

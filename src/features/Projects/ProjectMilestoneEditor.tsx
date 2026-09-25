@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { type CreateProjectMilestone } from './createProjectForm';
 import MilestoneIcon from './MilestoneIcon';
-import { formatProjectDate } from './projectPlanningDate';
+import { useProjectDateFormatter } from './useProjectDateFormatter';
 
 interface ProjectMilestoneEditorProps {
   milestones: CreateProjectMilestone[];
@@ -46,6 +46,7 @@ const createEmptyMilestone = (): CreateProjectMilestone => ({ name: '' });
 
 const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, onChange }) => {
   const { t } = useTranslation('project');
+  const formatDate = useProjectDateFormatter();
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState<CreateProjectMilestone>(createEmptyMilestone);
 
@@ -87,7 +88,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             </Text>
             {milestone.date && (
               <Text fontSize={12} type="secondary">
-                {formatProjectDate(milestone.date)}
+                {formatDate(milestone.date)}
               </Text>
             )}
             <Flexbox flex={1} />
@@ -118,7 +119,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
           />
           <DatePicker
             aria-label={t('create.milestone.date')}
-            format="MMM D"
+            format={(value) => formatDate(value.format('YYYY-MM-DD'))}
             placeholder={t('create.milestone.date')}
             prefix={<Icon icon={CalendarIcon} size={13} />}
             size="small"

@@ -50,6 +50,7 @@
   "create.action": "创建项目",
   "create.addMilestone": "添加里程碑",
   "create.advanced": "标识符与链接",
+  "create.clearDate": "清除日期",
   "create.dateOrderInvalid": "目标日期不能早于开始日期。",
   "create.datePrecision.day": "日",
   "create.datePrecision.halfYear": "半年",

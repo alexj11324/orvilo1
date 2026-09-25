@@ -42,12 +42,9 @@ import {
 } from './createProjectForm';
 import { ProjectIcon } from './ProjectIcon';
 import ProjectMilestoneEditor from './ProjectMilestoneEditor';
-import {
-  formatProjectDate,
-  PROJECT_DATE_PRECISIONS,
-  type ProjectDatePrecision,
-} from './projectPlanningDate';
+import { PROJECT_DATE_PRECISIONS, type ProjectDatePrecision } from './projectPlanningDate';
 import { ProjectStatusIcon } from './ProjectStatusIcon';
+import { useProjectDateFormatter } from './useProjectDateFormatter';
 
 export interface CreateProjectOptions {
   /**
@@ -313,6 +310,7 @@ ProjectDatePrecisionTabs.displayName = 'ProjectDatePrecisionTabs';
 const CreateProjectContent = memo<CreateProjectOptions>(
   ({ onCreated, projectLabels: suppliedLabels, teamId }) => {
     const { t } = useTranslation(['project', 'common']);
+    const formatDate = useProjectDateFormatter();
     const { close } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
     const workspaceId = useActiveWorkspaceId();
@@ -586,7 +584,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               suffixIcon={null}
               value={form.startDate ? dayjs(form.startDate) : null}
               format={(date) =>
-                formatProjectDate(date.format('YYYY-MM-DD'), form.startDatePrecision ?? 'day')
+                formatDate(date.format('YYYY-MM-DD'), form.startDatePrecision ?? 'day')
               }
               panelRender={(panel) => (
                 <>
@@ -627,7 +625,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               suffixIcon={null}
               value={form.targetDate ? dayjs(form.targetDate) : null}
               format={(date) =>
-                formatProjectDate(date.format('YYYY-MM-DD'), form.targetDatePrecision ?? 'day')
+                formatDate(date.format('YYYY-MM-DD'), form.targetDatePrecision ?? 'day')
               }
               panelRender={(panel) => (
                 <>

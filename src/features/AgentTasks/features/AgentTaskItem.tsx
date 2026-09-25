@@ -2,7 +2,6 @@ import { Block, ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import dayjs from 'dayjs';
 import { MessageSquareTextIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 import { memo, useCallback } from 'react';
@@ -102,11 +101,12 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceId = useActiveWorkspaceId();
 
-  const time = formatTaskItemDate(task.updatedAt || task.createdAt, {
+  const dateFormat = {
     formatOtherYear: t('time.formatOtherYear'),
     formatThisYear: t('time.formatThisYear'),
     locale: i18n.language,
-  });
+  };
+  const time = formatTaskItemDate(task.updatedAt || task.createdAt, dateFormat);
   const status = toTaskStatus(task.status);
   const hasName = Boolean(task.name?.trim());
   const workflowGlyph = useTaskWorkflowGlyph({
@@ -189,7 +189,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       </Text>
       {milestone.date ? (
         <Text fontSize={12} style={{ whiteSpace: 'nowrap' }} type={'secondary'}>
-          {dayjs(milestone.date).format('MMM D')}
+          {formatTaskItemDate(milestone.date, dateFormat)}
         </Text>
       ) : null}
     </Block>

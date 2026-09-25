@@ -8,6 +8,8 @@ import { CalendarIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
+
 export interface MilestoneDraft {
   date?: string;
   description: string;
@@ -48,6 +50,7 @@ interface MilestoneComposerProps {
 export const MilestoneComposer = memo<MilestoneComposerProps>(
   ({ initial, onCancel, onSubmit, saving }) => {
     const { t } = useTranslation(['project', 'common']);
+    const formatDate = useProjectDateFormatter();
     const [name, setName] = useState(initial?.name ?? '');
     const [description, setDescription] = useState(initial?.description ?? '');
     const [date, setDate] = useState<string | undefined>(initial?.date ?? undefined);
@@ -75,7 +78,7 @@ export const MilestoneComposer = memo<MilestoneComposerProps>(
           allowClear
           aria-label={t('create.milestone.date')}
           className={styles.datePicker}
-          format="MMM D, YYYY"
+          format={(value) => formatDate(value.format('YYYY-MM-DD'))}
           placeholder={t('create.milestone.date')}
           prefix={<Icon icon={CalendarIcon} size={13} />}
           size="small"

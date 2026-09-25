@@ -10,6 +10,18 @@ import {
 import { formatProjectDate, getProjectDatePickerMode } from './projectPlanningDate';
 
 describe('createProjectForm', () => {
+  it('drops the current year from day dates, like Linear, in each locale', () => {
+    const now = '2026-09-24';
+    expect(formatProjectDate('2026-12-01', 'day', { now })).toBe('Dec 1');
+    expect(formatProjectDate('2027-02-28', 'day', { now })).toBe('Feb 28, 2027');
+
+    // The Chinese labels come from `time.formatThisYear` / `time.formatOtherYear`;
+    // the old English pattern rendered "12月 1, 2026" — no 日, year always shown.
+    const zh = { formatOtherYear: 'YYYY年M月D日', formatThisYear: 'M月D日', locale: 'zh-CN', now };
+    expect(formatProjectDate('2026-12-01', 'day', zh)).toBe('12月1日');
+    expect(formatProjectDate('2027-02-28', 'day', zh)).toBe('2027年2月28日');
+  });
+
   it.each(['2026 Roadmap', '2026'])('suggests a submittable identifier for %s', (name) => {
     const suggestions = getProjectFieldSuggestions(name);
     expect(isProjectIdentifierValid(suggestions.identifier)).toBe(true);
@@ -83,7 +95,7 @@ describe('createProjectForm', () => {
   });
 
   it('formats planning dates according to their selected precision', () => {
-    expect(formatProjectDate('2026-02-14', 'day')).toBe('Feb 14, 2026');
+    expect(formatProjectDate('2026-02-14', 'day', { now: '2025-06-01' })).toBe('Feb 14, 2026');
     expect(formatProjectDate('2026-02-14', 'month')).toBe('Feb 2026');
     expect(formatProjectDate('2026-02-14', 'quarter')).toBe('2026 Q1');
     expect(formatProjectDate('2026-09-14', 'halfYear')).toBe('2026 H2');

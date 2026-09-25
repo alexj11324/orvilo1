@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useProjectStore } from '@/store/project';
 
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 import type { MilestoneRow } from './milestonePageData';
 
 interface MilestoneFormContentProps {
@@ -31,6 +32,7 @@ interface MilestoneFormContentProps {
  */
 const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProps) => {
   const { t } = useTranslation(['project', 'common']);
+  const formatDate = useProjectDateFormatter();
   const { close } = useModalContext();
   const createMilestone = useProjectStore((s) => s.createMilestone);
   const updateMilestone = useProjectStore((s) => s.updateMilestone);
@@ -89,7 +91,7 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
           <DatePicker
             allowClear
             aria-label={t('milestones.form.targetDate')}
-            format="MMM D, YYYY"
+            format={(value) => formatDate(value.format('YYYY-MM-DD'))}
             placeholder={t('create.milestone.date')}
             prefix={<Icon icon={CalendarIcon} size={13} />}
             value={date ? dayjs(date) : null}

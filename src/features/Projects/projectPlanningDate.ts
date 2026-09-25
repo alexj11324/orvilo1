@@ -1,6 +1,11 @@
 import type { ProjectDatePrecision } from '@orvilo/types';
 import dayjs from 'dayjs';
 
+import {
+  formatTaskItemDate,
+  type TaskItemDateFormatOptions,
+} from '@/features/AgentTasks/features/formatTaskItemDate';
+
 export const PROJECT_DATE_PRECISIONS = ['day', 'month', 'quarter', 'halfYear', 'year'] as const;
 export type { ProjectDatePrecision };
 
@@ -27,6 +32,7 @@ export const getProjectDatePickerMode = (
 export const formatProjectDate = (
   date: string | null | undefined,
   precision: ProjectDatePrecision = 'day',
+  dayOptions: TaskItemDateFormatOptions = {},
 ) => {
   if (!date) return '';
 
@@ -47,7 +53,9 @@ export const formatProjectDate = (
       return value.format('YYYY');
     }
     default: {
-      return value.format('MMM D, YYYY');
+      // Day dates read like Linear's: the year only when it is not this one.
+      // Callers pass the locale's patterns via `useProjectDateFormatter`.
+      return formatTaskItemDate(date, dayOptions);
     }
   }
 };

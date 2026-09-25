@@ -10,8 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
-import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { useProjectDateFormatter } from '@/features/Projects/useProjectDateFormatter';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
@@ -156,6 +156,7 @@ interface ProjectMilestonesPageProps {
  */
 const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
   const { t } = useTranslation(['project', 'common']);
+  const formatDate = useProjectDateFormatter();
   const project = detail.project;
   const projectRef = project.slug || project.id;
   const milestones = useMemo(
@@ -219,7 +220,7 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
           {milestone.name}
         </Text>
         <span className={cx(styles.date, !milestone.date && styles.dateEmpty)}>
-          {milestone.date ? formatProjectDate(milestone.date) : t('milestones.noTargetDate')}
+          {milestone.date ? formatDate(milestone.date) : t('milestones.noTargetDate')}
         </span>
         {progress ? (
           <WorkspaceLink

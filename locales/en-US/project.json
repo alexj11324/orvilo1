@@ -50,6 +50,7 @@
   "create.action": "Create project",
   "create.addMilestone": "Add milestone",
   "create.advanced": "Identifier and URL",
+  "create.clearDate": "Clear date",
   "create.dateOrderInvalid": "Target date must be on or after the start date.",
   "create.datePrecision.day": "Day",
   "create.datePrecision.halfYear": "Half-year",

@@ -18,8 +18,8 @@ import {
   scrollToMilestoneAnchor,
 } from '@/features/Projects/milestoneRow';
 import { projectIssueProgress } from '@/features/Projects/projectIssueProgress';
-import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { BODY_TEXT_COLOR, SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { useProjectDateFormatter } from '@/features/Projects/useProjectDateFormatter';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
@@ -256,6 +256,7 @@ interface MilestoneComposerProps {
 const MilestoneComposer = memo<MilestoneComposerProps>(
   ({ initial, onCancel, onSubmit, saving }) => {
     const { t } = useTranslation(['project', 'common']);
+    const formatDate = useProjectDateFormatter();
     const [name, setName] = useState(initial?.name ?? '');
     const [description, setDescription] = useState(initial?.description ?? '');
     const [date, setDate] = useState<string | undefined>(initial?.date ?? undefined);
@@ -282,7 +283,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
         <DatePicker
           allowClear
           aria-label={t('create.milestone.date')}
-          format="MMM D, YYYY"
+          format={(value) => formatDate(value.format('YYYY-MM-DD'))}
           placeholder={t('create.milestone.date')}
           prefix={<Icon icon={CalendarIcon} size={13} />}
           size="small"
@@ -333,6 +334,7 @@ interface ProjectMilestonesProps {
  */
 const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
   const { t } = useTranslation(['project', 'common']);
+  const formatDate = useProjectDateFormatter();
   const project = detail.project;
   const projectRef = project.slug || project.id;
   const milestones = useMemo(() => detail.milestones ?? [], [detail.milestones]);
@@ -502,7 +504,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                     allowClear
                     aria-label={t('overview.milestoneChooseDate')}
                     disabled={saving}
-                    format="MMM D"
+                    format={(value) => formatDate(value.format('YYYY-MM-DD'))}
                     placeholder={t('overview.milestoneSetDate')}
                     prefix={<Icon icon={CalendarIcon} size={13} />}
                     size="small"
@@ -539,7 +541,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               ) : (
                 milestone.date && (
                   <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-                    {formatProjectDate(milestone.date)}
+                    {formatDate(milestone.date)}
                   </Text>
                 )
               )}

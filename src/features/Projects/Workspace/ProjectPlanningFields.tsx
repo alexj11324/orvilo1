@@ -1,5 +1,5 @@
 import { DatePicker, Flexbox, Icon } from '@lobehub/ui';
-import { Select, Tabs, toast } from '@lobehub/ui/base-ui';
+import { ActionIcon, Select, Tabs, toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -9,6 +9,7 @@ import {
   CalendarIcon,
   TagIcon,
   UserRoundIcon,
+  XIcon,
 } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,11 +20,8 @@ import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
-import {
-  formatProjectDate,
-  getProjectDatePickerMode,
-  PROJECT_DATE_PRECISIONS,
-} from '../projectPlanningDate';
+import { getProjectDatePickerMode, PROJECT_DATE_PRECISIONS } from '../projectPlanningDate';
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 
 const styles = createStaticStyles(({ css }) => ({
   accessibleLabel: css`
@@ -99,6 +97,15 @@ const styles = createStaticStyles(({ css }) => ({
      chip and the rail's `Dates` row — the reference puts a 16px icon inside
      each of those buttons (text offset +30px = the icon's lane) rather than
      antd's trailing suffix. */
+  panelValue: css`
+    margin-block-end: 8px;
+    padding-block: 4px;
+    padding-inline: 10px 4px;
+    border: 1px solid ${cssVar.colorBorder};
+    border-radius: 8px;
+
+    font-size: 13px;
+  `,
   leadingIconDate: css`
     border-radius: 8px;
 
@@ -310,20 +317,26 @@ export function ProjectDateField({
   project: ProjectDetail['project'];
 }) {
   const { t } = useTranslation('project');
+  const formatDate = useProjectDateFormatter();
   const { save, saving } = usePlanningMutation(project.id);
   const precisionField = kind === 'startDate' ? 'startDatePrecision' : 'targetDatePrecision';
   const storedPrecision = project[precisionField] ?? 'day';
   const [precision, setPrecision] = useState<ProjectDatePrecision>(storedPrecision);
+  const [open, setOpen] = useState(false);
+  const value = project[kind];
   return (
+    // No clear button on the chip: Linear keeps the calendar glyph on hover and
+    // puts the clear control in the popover, beside the current date.
     <DatePicker
-      allowClear
+      allowClear={false}
       aria-label={t(`create.${kind}`)}
       disabled={saving}
-      format={(date) => formatProjectDate(date.format('YYYY-MM-DD'), storedPrecision)}
+      format={(date) => formatDate(date.format('YYYY-MM-DD'), storedPrecision)}
+      open={open}
       picker={getProjectDatePickerMode(precision)}
       placeholder={t(kind === 'startDate' ? 'create.start' : 'create.target')}
       size="small"
-      value={project[kind] ? dayjs(project[kind]) : null}
+      value={value ? dayjs(value) : null}
       className={
         inline
           ? `${styles.field} ${styles.inline} ${styles.leadingIconDate}`
@@ -333,6 +346,25 @@ export function ProjectDateField({
       }
       panelRender={(panel) => (
         <>
+          {value ? (
+            <Flexbox
+              horizontal
+              align="center"
+              className={styles.panelValue}
+              justify="space-between"
+            >
+              <span>{formatDate(value, storedPrecision)}</span>
+              <ActionIcon
+                icon={XIcon}
+                size="small"
+                title={t('create.clearDate')}
+                onClick={() => {
+                  setOpen(false);
+                  void save({ [kind]: null, [precisionField]: null });
+                }}
+              />
+            </Flexbox>
+          ) : null}
           <Tabs
             activeKey={precision}
             size="small"
@@ -371,8 +403,9 @@ export function ProjectDateField({
           [precisionField]: date ? precision : null,
         });
       }}
-      onOpenChange={(open) => {
-        if (open) setPrecision(storedPrecision);
+      onOpenChange={(next) => {
+        if (next) setPrecision(storedPrecision);
+        setOpen(next);
       }}
     />
   );

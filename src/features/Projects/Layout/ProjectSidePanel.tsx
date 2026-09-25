@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 import AccordionArrowIcon from '@/features/AgentTasks/shared/AccordionArrowIcon';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
-import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { useProjectDateFormatter } from '@/features/Projects/useProjectDateFormatter';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
@@ -191,6 +191,7 @@ export function ProjectPanelSection({
 const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
   ({ projectId, showActivity }) => {
     const { t } = useTranslation('project');
+    const formatDate = useProjectDateFormatter();
     const detail = useCurrentProjectDetail(projectId);
     useProjectStore((s) => s.useFetchProjectDetail)(projectId);
     const databaseId = detail?.project.id;
@@ -233,7 +234,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                   </Text>
                   {milestone.date && (
                     <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-                      {formatProjectDate(milestone.date)}
+                      {formatDate(milestone.date)}
                     </Text>
                   )}
                   {/* A `null` readout could not be computed honestly — omit it

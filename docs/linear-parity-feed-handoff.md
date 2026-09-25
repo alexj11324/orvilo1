@@ -55,6 +55,14 @@ feed buttons, `EMPTY_REACTIONS` constant on the selector (no per-render array),
 state, and "Change subscribers" hides when the workspace roster is empty
 (personal mode would 403 anyway).
 
+9. E2E fix (f6a3f3f7): the `task-prerequisites` scenario had been failing on
+   the base branch since #256 — the step clicked
+   `Add relation to Prerequisite issues`, but #250 renamed the rail group to
+   `Blocked by`. The locator now expects `Add relation to Blocked by`
+   (verified against the failure screenshot in the #256 run's e2e-artifacts).
+   Note `Test Web App` is path-filtered: pushes that only touch e2e/docs skip
+   it, so the scenario re-runs on the next content-bearing push.
+
 ## Still open for the next agent
 
 - **Visual verification on Electron** (the user requires Electron, not the

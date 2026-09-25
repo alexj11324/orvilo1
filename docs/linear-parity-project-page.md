@@ -93,3 +93,27 @@ cards' edit path and the rail create path.
   tooltip only). Added explicit `aria-label` to the header copy/star
   buttons, the rail `+`, and `ToggleRightPanelButton` (derived from its
   title, so every existing callsite gains a name too).
+
+## Review follow-ups (post-#253)
+
+- **One workflow classifier.** `workflowBucket` moved to
+  `packages/types/src/task` and is now shared by the Progress card
+  (`projectIssueProgress`), the burnup/breakdown helpers
+  (`projectIssueBurnup`), and `ProjectModel.listMilestoneProgress` — a new
+  `TaskWorkflowCategory` member is triaged in one place instead of three.
+- **Burnup loop hoisting.** Per-day counts reuse a hoisted `createdTimes`
+  array instead of re-mapping every issue every day.
+- **Axis tick dedupe.** A short series no longer prints the same date twice
+  (midpoint index collided with day 0); labels are axis ends plus at most
+  one distinct interior day.
+- **Gradient area fills.** The burnup under-line areas use `linearGradient`
+  defs fading to transparent, matching the reference's fill treatment
+  (per-instance `useId` keeps the ids unique).
+- **`See issues` keyboard access.** The breakdown-row deep links no longer
+  carry `tabIndex={-1}`; reveal switched from `display:none` to
+  `opacity`/`pointer-events`, so a focused link surfaces via
+  `:focus-within` and stays a real tab stop.
+- **Rail collapse toggle.** The header button now switches its label
+  between "Close/Show project details" with the panel state and no longer
+  advertises the global ToggleRightPanel hotkey, which drives the global
+  right panel, not this local one (`showHotkey` prop).

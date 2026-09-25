@@ -1,4 +1,7 @@
-import type { TaskWorkflowCategory } from '@orvilo/types';
+import { type TaskWorkflowCategory, type WorkflowBucket, workflowBucket } from '@orvilo/types';
+
+export type { WorkflowBucket };
+export { workflowBucket };
 
 /**
  * Pure data behind the rail Progress card's burnup chart and its
@@ -8,7 +11,8 @@ import type { TaskWorkflowCategory } from '@orvilo/types';
  * Scope semantics deliberately match `projectIssueProgress`: `canceled`
  * leaves scope entirely and an unrecognised `workflowCategory` makes the
  * whole readout unavailable rather than a number (the classifier is shared —
- * {@link workflowBucket} — so a new category is triaged in one place).
+ * the exported {@link workflowBucket} — so a new category is triaged in one
+ * place).
  */
 
 export interface BurnupIssue {
@@ -21,32 +25,6 @@ export interface BurnupIssue {
   updatedAt?: Date | string | null;
   workflowCategory: TaskWorkflowCategory;
 }
-
-/** How one issue counts toward progress. `null` = unclassifiable state. */
-export type WorkflowBucket = 'completed' | 'excluded' | 'scoped' | 'started';
-
-export const workflowBucket = (category: TaskWorkflowCategory): WorkflowBucket | null => {
-  switch (category) {
-    case 'canceled': {
-      return 'excluded';
-    }
-    case 'done': {
-      return 'completed';
-    }
-    case 'in_progress':
-    case 'in_review': {
-      return 'started';
-    }
-    case 'triage':
-    case 'backlog':
-    case 'todo': {
-      return 'scoped';
-    }
-    default: {
-      return null;
-    }
-  }
-};
 
 /* --------------------------------- Burnup ---------------------------------- */
 
@@ -104,6 +82,7 @@ export const projectIssueBurnupSeries = (
     .filter((t) => !Number.isNaN(t));
   if (createdTimes.length === 0) return [];
 
+  const issueCreatedTimes = issues.map((issue) => timeOf(issue.createdAt));
   const startedTimes = issues.map(startedTimeOf);
   const completedTimes = issues.map(completedTimeOf);
   const buckets = issues.map((issue) => workflowBucket(issue.workflowCategory));
@@ -118,7 +97,7 @@ export const projectIssueBurnupSeries = (
     let scope = 0;
     let started = 0;
     let completed = 0;
-    for (const [i, createdAt] of issues.map((issue) => timeOf(issue.createdAt)).entries()) {
+    for (const [i, createdAt] of issueCreatedTimes.entries()) {
       if (buckets[i] === 'excluded' || Number.isNaN(createdAt) || createdAt >= dayEnd) continue;
       scope++;
       if (startedTimes[i] < dayEnd) started++;
@@ -128,6 +107,13 @@ export const projectIssueBurnupSeries = (
   }
   return points;
 };
+
+/**
+ * Indices the axis labels sit on: both ends plus at most one interior
+ * midpoint, deduped so a short series never prints the same day twice.
+ */
+export const burnupTickIndices = (length: number): number[] =>
+  length <= 0 ? [] : [...new Set([0, Math.floor((length - 1) / 2), length - 1])];
 
 /* -------------------------------- Breakdown --------------------------------- */
 

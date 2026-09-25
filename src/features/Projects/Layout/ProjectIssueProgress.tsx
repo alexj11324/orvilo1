@@ -38,8 +38,10 @@ const styles = createStaticStyles(({ css }) => ({
       background: ${cssVar.colorFillTertiary};
     }
 
-    &:hover > a {
-      display: flex;
+    &:hover > a,
+    &:focus-within > a {
+      pointer-events: auto;
+      opacity: 1;
     }
   `,
   labelDot: css`
@@ -75,10 +77,12 @@ const styles = createStaticStyles(({ css }) => ({
     border-radius: 1px;
   `,
   seeIssues: css`
+    pointer-events: none;
+
     position: absolute;
     inset-inline-end: 10px;
 
-    display: none;
+    display: flex;
     align-items: center;
 
     height: 24px;
@@ -89,6 +93,10 @@ const styles = createStaticStyles(({ css }) => ({
     font-weight: 450;
     color: ${cssVar.colorText};
 
+    /* Hover-reveal without leaving the tab order: pointer-events stays off
+       until the row is hovered or the link itself is focused, which also
+       makes the link keyboard-operable. */
+    opacity: 0;
     background:
       linear-gradient(${cssVar.colorFillTertiary}, ${cssVar.colorFillTertiary}),
       ${cssVar.colorBgContainer};
@@ -200,7 +208,7 @@ export function ProjectIssueProgress({
         <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
           {t('overview.milestoneProgressOf', { count: group.scope, percent: group.percent })}
         </Text>
-        <WorkspaceLink className={styles.seeIssues} tabIndex={-1} to={seeIssuesTo(group)}>
+        <WorkspaceLink className={styles.seeIssues} to={seeIssuesTo(group)}>
           {t('overview.milestoneSeeIssues')}
         </WorkspaceLink>
       </div>
@@ -223,7 +231,7 @@ export function ProjectIssueProgress({
         <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
           {t('overview.milestoneProgressOf', { count: group.scope, percent: group.percent })}
         </Text>
-        <WorkspaceLink className={styles.seeIssues} tabIndex={-1} to={seeIssuesTo(group)}>
+        <WorkspaceLink className={styles.seeIssues} to={seeIssuesTo(group)}>
           {t('overview.milestoneSeeIssues')}
         </WorkspaceLink>
       </div>

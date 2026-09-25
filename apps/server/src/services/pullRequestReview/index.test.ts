@@ -490,6 +490,7 @@ describe('reviewQueue (RV05)', () => {
                   changedFiles: 1,
                   deletions: 0,
                   isDraft: true,
+                  mergeStateStatus: 'DRAFT',
                   number: 7,
                   repository: { databaseId: 9, nameWithOwner: 'octo-org/octo-repo' },
                   reviewDecision: null,
@@ -511,7 +512,11 @@ describe('reviewQueue (RV05)', () => {
         db: {} as OrviloDatabase,
       });
       const result = await probe.reviewQueue({ tab: 'created' });
-      expect(result.items[0]).toMatchObject({ isDraft: true, number: 7 });
+      expect(result.items[0]).toMatchObject({
+        isDraft: true,
+        mergeStateStatus: 'DRAFT',
+        number: 7,
+      });
       expect(result.viewer).toBe(VIEWER);
       expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {

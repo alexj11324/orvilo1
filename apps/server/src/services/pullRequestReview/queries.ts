@@ -26,6 +26,7 @@ query PullRequestReviewQueue($query: String!, $type: SearchType!, $first: Int!, 
         additions
         deletions
         changedFiles
+        mergeStateStatus
         reviewDecision
         updatedAt
         author { login avatarUrl }

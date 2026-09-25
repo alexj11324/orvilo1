@@ -244,6 +244,10 @@ const queueItemSchema = z.object({
   changedFiles: z.number().optional(),
   deletions: z.number().optional(),
   isDraft: z.boolean().optional(),
+  mergeStateStatus: z
+    .enum(['BEHIND', 'BLOCKED', 'CLEAN', 'DIRTY', 'DRAFT', 'HAS_HOOKS', 'UNKNOWN', 'UNSTABLE'])
+    .nullable()
+    .optional(),
   number: z.number(),
   repository: z.object({
     databaseId: z.number().optional(),
@@ -903,6 +907,7 @@ export class PullRequestReviewService {
         repo: node.repository.nameWithOwner.split('/')[1] ?? node.repository.nameWithOwner,
       }),
       isDraft: node.isDraft ?? false,
+      mergeStateStatus: node.mergeStateStatus ?? null,
       number: node.number,
       remoteRepositoryId: node.repository.databaseId ?? null,
       repository: node.repository.nameWithOwner,

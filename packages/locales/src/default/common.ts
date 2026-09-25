@@ -825,6 +825,7 @@ export default {
   'reviews.filesChangedTitle_other': 'Files changed ({{count}})',
   'reviews.groups.approved': 'Approved',
   'reviews.groups.createdByYou': 'Created by you',
+  'reviews.groups.readyToMerge': 'Ready to merge',
   'reviews.headDrifted': 'This pull request was updated — review the new head before submitting',
   'reviews.inProductReviews': 'In-product approvals',
   'reviews.loadedCount': 'Showing {{loaded}} of {{total}}',

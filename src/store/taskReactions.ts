@@ -49,7 +49,9 @@ export const useTaskReactionStore = create<TaskReactionsState>()(
   ),
 );
 
+const EMPTY_REACTIONS: EmojiReaction[] = [];
+
 export const taskReactionSelectors = {
   reactionsForTask: (taskId: string) => (state: TaskReactionsState) =>
-    state.reactions[taskId] ?? [],
+    state.reactions[taskId] ?? EMPTY_REACTIONS,
 };

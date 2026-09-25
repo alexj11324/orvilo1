@@ -1,7 +1,7 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Popover, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { BellOff, Check, Users } from 'lucide-react';
+import { Bell, BellOff, Check, Users } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,27 +12,9 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { actionLinkStyles } from './actionLinkStyles';
+
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  actionLink: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    width: fit-content;
-    padding-block: 2px;
-    border: none;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
   avatarStack: css`
     display: flex;
     align-items: center;
@@ -159,11 +141,11 @@ const TaskSubscribers = memo<{ taskId: string }>(({ taskId }) => {
   return (
     <Flexbox horizontal align="center" gap={12}>
       <button
-        className={styles.actionLink}
+        className={actionLinkStyles.actionLink}
         type="button"
         onClick={() => selfUserId && void setSubscribed(selfUserId, !selfSubscribed)}
       >
-        <BellOff size={13} />
+        {selfSubscribed ? <Bell size={13} /> : <BellOff size={13} />}
         {selfSubscribed
           ? t('taskDetail.subscribers.unsubscribe', { defaultValue: 'Unsubscribe' })
           : t('taskDetail.subscribers.subscribe', { defaultValue: 'Subscribe' })}
@@ -181,19 +163,21 @@ const TaskSubscribers = memo<{ taskId: string }>(({ taskId }) => {
             />
           ))}
         </div>
-        <Popover
-          arrow={false}
-          content={manageContent}
-          open={manageOpen}
-          placement="bottomRight"
-          trigger="click"
-          onOpenChange={setManageOpen}
-        >
-          <button className={styles.actionLink} type="button">
-            <Users size={13} />
-            {t('taskDetail.subscribers.change', { defaultValue: 'Change subscribers' })}
-          </button>
-        </Popover>
+        {members.length > 0 && (
+          <Popover
+            arrow={false}
+            content={manageContent}
+            open={manageOpen}
+            placement="bottomRight"
+            trigger="click"
+            onOpenChange={setManageOpen}
+          >
+            <button className={actionLinkStyles.actionLink} type="button">
+              <Users size={13} />
+              {t('taskDetail.subscribers.change', { defaultValue: 'Change subscribers' })}
+            </button>
+          </Popover>
+        )}
       </Flexbox>
     </Flexbox>
   );

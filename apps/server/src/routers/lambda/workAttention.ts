@@ -761,11 +761,13 @@ export const workAttentionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const task = await ctx.taskModel.findById(input.taskId);
       if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-      // Managing somebody else's row is a workspace-issues affordance; it needs
-      // a workspace context and an active membership row for the target.
+      // Managing somebody else's row is a workspace-issues affordance: the
+      // task must itself live in the caller's workspace (caller-scoped
+      // findById also returns the caller's personal/private tasks, which the
+      // target cannot read) and the target must be an active member.
       if (input.userId !== ctx.userId) {
-        if (!ctx.workspaceId) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace context required' });
+        if (!ctx.workspaceId || task.workspaceId !== ctx.workspaceId) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace task required' });
         }
         const [member] = await ctx.serverDB
           .select({ userId: workspaceMembers.userId })

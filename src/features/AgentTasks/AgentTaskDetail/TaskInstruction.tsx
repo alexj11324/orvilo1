@@ -1,6 +1,5 @@
 import { useEditor } from '@lobehub/editor/react';
 import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import { Paperclip } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,31 +14,9 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { actionLinkStyles } from './actionLinkStyles';
 import TaskReactions from './TaskReactions';
 import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  actionLink: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    width: fit-content;
-    padding-block: 2px;
-    border: none;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-}));
 
 // Stable lock RPC binding for the task resource.
 const taskLockClient: EditLockClient = {
@@ -179,7 +156,7 @@ const TaskInstruction = memo(() => {
       <Flexbox gap={6}>
         {taskDatabaseId && <TaskReactions taskId={taskDatabaseId} />}
         {showAttach && (
-          <button className={styles.actionLink} type="button" onClick={handleAttach}>
+          <button className={actionLinkStyles.actionLink} type="button" onClick={handleAttach}>
             <Paperclip size={13} />
             {t('taskDetail.attachImagesFiles', {
               defaultValue: 'Attach images, files, or videos',

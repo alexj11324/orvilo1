@@ -13,29 +13,11 @@ import { taskReactionSelectors, useTaskReactionStore } from '@/store/taskReactio
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { actionLinkStyles } from './actionLinkStyles';
+
 const QUICK_REACTIONS = ['👍', '👎', '❤️', '😄', '😂', '😅', '🎉', '😢', '🤔', '🚀'];
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  actionLink: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    width: fit-content;
-    padding-block: 2px;
-    border: none;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
   active: css`
     background: ${cssVar.colorFillTertiary};
   `,
@@ -123,18 +105,6 @@ const TaskReactions = memo<{ taskId: string }>(({ taskId }) => {
   const [open, setOpen] = useState(false);
   const [showFullPicker, setShowFullPicker] = useState(false);
 
-  const handleSelect = (emoji: string) => {
-    if (!userId) return;
-    const mine = reactions.find((r) => r.emoji === emoji)?.users.includes(userId);
-    if (mine) {
-      removeReaction(taskId, emoji, userId);
-    } else {
-      addReaction(taskId, emoji, userId);
-    }
-    setOpen(false);
-    setShowFullPicker(false);
-  };
-
   const handleToggleChip = (emoji: string) => {
     if (!userId) return;
     const mine = reactions.find((r) => r.emoji === emoji)?.users.includes(userId);
@@ -143,6 +113,12 @@ const TaskReactions = memo<{ taskId: string }>(({ taskId }) => {
     } else {
       addReaction(taskId, emoji, userId);
     }
+  };
+
+  const handleSelect = (emoji: string) => {
+    handleToggleChip(emoji);
+    setOpen(false);
+    setShowFullPicker(false);
   };
 
   const picker = showFullPicker ? (
@@ -199,7 +175,7 @@ const TaskReactions = memo<{ taskId: string }>(({ taskId }) => {
           if (!visible) setShowFullPicker(false);
         }}
       >
-        <button className={styles.actionLink} type="button">
+        <button className={actionLinkStyles.actionLink} type="button">
           <SmilePlus size={14} />
           {t('taskDetail.reactions.add', { defaultValue: 'Add reaction' })}
         </button>

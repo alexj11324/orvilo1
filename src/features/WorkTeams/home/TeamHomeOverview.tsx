@@ -14,7 +14,6 @@ import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -24,6 +23,7 @@ import { workAttentionService } from '@/services/workAttention';
 
 import { type TeamHomeDestination, teamHomeDestinations } from '../teamHomeDestinations';
 import TeamIdentity from '../TeamIdentity';
+import { teamTaskDetailPath } from '../teamTaskDetailPath';
 import type { TeamHomeMember } from './teamHomeMembersModel';
 import { TEAM_HOME_RECENT_LIMIT, teamRecentIssuesQuery } from './teamHomeSection';
 
@@ -92,7 +92,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   navLink: css`
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
 
     width: fit-content;
@@ -376,7 +376,7 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
                   <WorkspaceLink
                     className={styles.recentLink}
                     key={task.id}
-                    to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
+                    to={teamTaskDetailPath(task)}
                   >
                     <RecentTaskStatus task={task} />
                     <Flexbox flex={1} style={{ minWidth: 0 }}>

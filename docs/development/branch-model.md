@@ -95,15 +95,27 @@ feat/xxx ──PR──▶ canary ───────────────�
 
 诚实记录：以下通道**代码已就绪，但依凭据与基础设施才能运行**。
 
-| 通道           | 触发                                                   | 更新源 / 目标                         | 状态      |
-| -------------- | ------------------------------------------------------ | ------------------------------------- | --------- |
-| Web 生产       | `push canary`                                          | GHCR → Oracle（`deploy-orvilo1.yml`） | ✅ 运行中 |
-| Vercel Preview | PR                                                     | Vercel（`vercel-preview.yml`）        | ✅ 运行中 |
-| Test / E2E CI  | push + PR                                              | —                                     | ✅ 运行中 |
-| Desktop Canary | `push canary`                                          | GitHub Release（prerelease）          | ⚠️ 待打通 |
-| Desktop Stable | GitHub Release published                               | GitHub Release                        | ⚠️ 待打通 |
-| Docker 镜像    | GitHub Release published                               | Docker Hub                            | ⚠️ 待打通 |
-| npm 包         | `push canary`（`packages/sdk`、`packages/model-bank`） | npm                                   | ⚠️ 待打通 |
+| 通道            | 触发                                                   | 更新源 / 目标                         | 状态      |
+| --------------- | ------------------------------------------------------ | ------------------------------------- | --------- |
+| Web 生产        | `push canary`                                          | GHCR → Oracle（`deploy-orvilo1.yml`） | ✅ 运行中 |
+| Vercel Preview  | PR                                                     | Vercel（`vercel-preview.yml`）        | ✅ 运行中 |
+| Vercel 分支部署 | `push canary` / `push main`，全部 CI 门禁通过后        | Vercel（`vercel-branch-deploy.yml`）  | ✅ 运行中 |
+| Test / E2E CI   | push + PR                                              | —                                     | ✅ 运行中 |
+| Desktop Canary  | `push canary`                                          | GitHub Release（prerelease）          | ⚠️ 待打通 |
+| Desktop Stable  | GitHub Release published                               | GitHub Release                        | ⚠️ 待打通 |
+| Docker 镜像     | GitHub Release published                               | Docker Hub                            | ⚠️ 待打通 |
+| npm 包          | `push canary`（`packages/sdk`、`packages/model-bank`） | npm                                   | ⚠️ 待打通 |
+
+## Vercel 部署门禁
+
+Vercel 的 Git 自动部署在 `vercel.json` 中已关闭，推送不会直接消耗一次 Vercel
+构建额度。`vercel-preview.yml` 继续为 PR 创建 preview；`vercel-branch-deploy.yml`
+只处理 `canary` 和 `main` 的推送，且只会在同一个 SHA 的 `Test CI`、`E2E CI`、
+GitGuardian 及其他未忽略检查全部成功后创建部署。
+
+创建部署前，workflow 会再次查询分支引用；若 CI 等待期间分支已推进，则拒绝部署旧
+SHA。`canary` 创建 preview 部署，`main` 创建 Vercel production 部署。Vercel 的
+production target 只描述该 Vercel 项目的别名，不改变上面的 Oracle 云端生产代码线。
 
 桌面端的更新源已确定为 **GitHub Release**，不走自建对象存储。理由与代价
 见下节。

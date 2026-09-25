@@ -167,6 +167,11 @@ interface UseSpacerHeightArgs {
   getViewportSize: (() => number) | undefined;
   isAIGeneratingRef: RefObject<boolean>;
   latestAssistantSignature: string;
+  /**
+   * Called when an idle measure finds nothing to hold while the spacer never
+   * mounted — the turn finished before the pin window ever opened.
+   */
+  onRetiredWithoutMountRef: RefObject<(() => void) | null>;
   userMessageIndex: number | null;
 }
 
@@ -177,6 +182,7 @@ const useSpacerHeight = ({
   getViewportSize,
   isAIGeneratingRef,
   latestAssistantSignature,
+  onRetiredWithoutMountRef,
   userMessageIndex,
   assistantMessageIndex,
 }: UseSpacerHeightArgs) => {
@@ -219,16 +225,20 @@ const useSpacerHeight = ({
   }, []);
 
   const scheduleSpacerUnmount = useCallback(() => {
-    clearRemoveTimer();
+    // Keep an unmount that is already pending. Layout keeps settling after the
+    // reply ends (the ResizeObserver fires repeatedly under a slow renderer),
+    // and restarting the timer on each of those idle zero-height measures
+    // starved the unmount — the pin never closed and the viewport stayed at
+    // the user row instead of settling at the bottom.
+    if (removeTimerRef.current) return;
 
     removeTimerRef.current = setTimeout(() => {
       setMounted(false);
       removeTimerRef.current = null;
     }, CONVERSATION_SPACER_TRANSITION_MS);
-  }, [clearRemoveTimer]);
+  }, []);
 
   const updateSpacerHeight = useCallback(() => {
-    clearRemoveTimer();
     const { assistantId, assistantIndex, userId, userIndex } = getTrackedMessages();
     const viewportHeight = getViewportSize?.() || window.innerHeight;
 
@@ -251,6 +261,9 @@ const useSpacerHeight = ({
     if (nextHeight === 0) {
       setNaturalHeight(0);
       if (!isAIGeneratingRef.current) {
+        // A reply that lands in full before the first measure never mounts
+        // the spacer, so no mount→unmount transition will close the pin.
+        if (!mountedRef.current) onRetiredWithoutMountRef.current?.();
         scheduleSpacerUnmount();
         return;
       }
@@ -262,10 +275,13 @@ const useSpacerHeight = ({
       // the tail and strand the user message far above. Keep the row mounted
       // at height 0; the unmount is deferred to the first recompute after
       // generation ends.
+      clearRemoveTimer();
       setMounted(true);
       return;
     }
 
+    // The spacer is needed again: cancel any pending unmount.
+    clearRemoveTimer();
     setMounted(true);
     setNaturalHeight(nextHeight);
   }, [
@@ -275,6 +291,7 @@ const useSpacerHeight = ({
     getItemSize,
     getViewportSize,
     isAIGeneratingRef,
+    onRetiredWithoutMountRef,
     scheduleSpacerUnmount,
   ]);
 
@@ -542,6 +559,7 @@ export const useConversationScroll = ({
   const switchPinArmedRef = useRef(true);
 
   const { registerSpacerNode, spacerLayoutVersion } = useSpacerLayoutSignal();
+  const onRetiredWithoutMountRef = useRef<(() => void) | null>(null);
 
   const latestAssistantSignature = useMemo(() => {
     const assistantId =
@@ -569,10 +587,22 @@ export const useConversationScroll = ({
     getViewportSize,
     isAIGeneratingRef,
     latestAssistantSignature,
+    onRetiredWithoutMountRef,
     userMessageIndex,
   });
 
   const { clearPin, pinRef, scrollToPinned } = usePinController({ headerOffset, virtuaRef });
+
+  // Same settle as the mount→unmount path below, for a turn that finished
+  // before the spacer ever mounted (e.g. the whole reply arrives at once).
+  // Without it the pin never closes and keeps re-anchoring the user row.
+  // With auto-scroll off the pin *is* the resting position, so leave it.
+  onRetiredWithoutMountRef.current = () => {
+    const pin = pinRef.current;
+    if (!pin || pin.seenActive || !autoScrollEnabled) return;
+    clearPin('reply finished before spacer mounted');
+    scrollToBottom(false);
+  };
 
   const { onScrollOffset, prevScrollOffsetRef } = useScrollShrink({
     clearPin,

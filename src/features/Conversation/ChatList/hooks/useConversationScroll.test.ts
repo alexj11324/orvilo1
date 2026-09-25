@@ -618,6 +618,124 @@ describe('useConversationScroll — pin behavior', () => {
     expect(scrollToBottom).toHaveBeenCalledWith(false);
   });
 
+  // Regression (AGENT-SCROLL-001 on CI): when the reply lands in full before
+  // the spacer ever mounts — the E2E LLM mock fulfils the body at once — the
+  // first spacer measure is zero with generation already over, so the spacer
+  // never mounts, `seenActive` never flips and the pin kept re-anchoring the
+  // viewport to the user row forever. The finished turn must still settle.
+  it('settles at the bottom when the reply finished before the spacer ever mounted', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: false,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          // Reply already outgrew the viewport: userTop=200, assistantBottom=300+2000.
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(result.current.spacerActive).toBe(false);
+    expect(scrollToBottom).toHaveBeenCalledWith(false);
+
+    // The pin must be released: later layout settles no longer re-anchor.
+    scrollToIndex.mockClear();
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(scrollToIndex).not.toHaveBeenCalled();
+  });
+
+  it('keeps the pin when the reply finished before the spacer mounted and auto-scroll is off', async () => {
+    autoScrollFlag.enabled = false;
+    renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: false,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    }).rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(scrollToBottom).not.toHaveBeenCalled();
+    expect(scrollToIndex).toHaveBeenCalledWith(2, expect.objectContaining({ align: 'start' }));
+  });
+
+  // Regression (AGENT-SCROLL-001 on CI): layout keeps settling after the
+  // reply ends, so the ResizeObserver re-measures more often than the spacer
+  // transition. Each idle zero measure used to restart the unmount timer,
+  // starving it: the pin never closed and the viewport stayed at the user row.
+  it('still settles at the bottom while idle re-measures keep arriving after the stream ends', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(true);
+
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+
+    // Re-measure every 100 ms — faster than the 200 ms spacer transition.
+    const observer = MockResizeObserver.latest as MockResizeObserver | null;
+    expect(observer, 'no ResizeObserver was created for messages').not.toBeNull();
+    for (let i = 0; i < 10; i += 1) {
+      await act(async () => {
+        observer!.trigger();
+        await vi.advanceTimersByTimeAsync(100);
+      });
+    }
+
+    expect(result.current.spacerActive).toBe(false);
+    expect(scrollToBottom).toHaveBeenCalledWith(false);
+  });
+
   it('stays at the pinned row when the stream ends and auto-scroll is off', async () => {
     autoScrollFlag.enabled = false;
     const { result, rerender } = renderScrollHook({

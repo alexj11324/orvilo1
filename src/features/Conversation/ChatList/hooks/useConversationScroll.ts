@@ -222,8 +222,8 @@ const useSpacerHeight = ({
     // Keep an unmount that is already pending. Layout keeps settling after the
     // reply ends (the ResizeObserver fires repeatedly under a slow renderer),
     // and restarting the timer on each of those idle zero-height measures
-    // starved the unmount — the pin never closed and the viewport stayed at
-    // the user row instead of settling at the bottom.
+    // postponed the unmount until layout went quiet — until then the pin held
+    // the viewport at the user row instead of settling at the bottom.
     if (removeTimerRef.current) return;
 
     removeTimerRef.current = setTimeout(() => {

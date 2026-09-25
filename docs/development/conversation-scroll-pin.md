@@ -22,7 +22,7 @@ pin 期间视口停在用户消息上，`atBottom` 为 false，AutoScroll 的流
 
 ## 不能破坏的约束
 
-- **已安排的卸载不能被后续测量重置。** 回复结束后布局还会继续变化，ResizeObserver 会反复触发测量；慢机器上间隔可能小于 200 ms。如果每次测量都重新计时，卸载会被无限推迟，pin 永不释放，视口停在列表顶部（E2E `AGENT-SCROLL-001` 的 `distanceToBottom 4467` 就是这个现象）。只有 spacer 重新需要高度（高度 > 0，或重新开始生成）时才取消待执行的卸载。
+- **已安排的卸载不能被后续测量重置。** 回复结束后布局还会继续变化，ResizeObserver 会反复触发测量；慢机器上间隔可能小于 200 ms。如果每次测量都重新计时，卸载会一直被推迟到布局完全静止为止，这段时间 pin 不释放，视口停在用户消息处而不是回到底部（慢机器上可达数秒；E2E `AGENT-SCROLL-001` 在只采样一次时读到的 `distanceToBottom 4467` 就是这个窗口）。只有 spacer 重新需要高度（高度 > 0，或重新开始生成）时才取消待执行的卸载。
 - 用户在 pin 期间向上滚动会先通过 `user scrolled up` 释放 pin，因此走到「卸载后回到底部」的一定是自然结束的回复。
 
 回归测试见 `useConversationScroll.test.ts`（「idle re-measures keep arriving after the stream ends」）以及 `e2e/src/features/journeys/agent/agent-scroll.feature`。

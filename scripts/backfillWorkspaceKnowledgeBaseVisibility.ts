@@ -1,3 +1,20 @@
+/**
+ * backfillWorkspaceKnowledgeBaseVisibility — reconcile file/document visibility
+ * flags against each workspace's knowledge-base visibility setting.
+ *
+ * Usage:
+ *   tsx scripts/backfillWorkspaceKnowledgeBaseVisibility.ts                # dry-run report
+ *   tsx scripts/backfillWorkspaceKnowledgeBaseVisibility.ts --apply        # write changes
+ *   tsx scripts/backfillWorkspaceKnowledgeBaseVisibility.ts --apply --batch-size=200
+ *
+ * Env:
+ *   DATABASE_URL   (required) target Postgres connection string; throws when unset
+ *
+ * Guard rail: dry-run by default — nothing is written without the explicit
+ * `--apply` flag (see scripts/README.md → Guard rails).
+ *
+ * Exit behavior: 0 on success; throws (non-zero) on invalid flags or missing DATABASE_URL.
+ */
 import pg from 'pg';
 
 const { Pool } = pg;

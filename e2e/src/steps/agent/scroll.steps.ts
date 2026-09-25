@@ -571,6 +571,20 @@ When('等待流式响应结束', { timeout: 200_000 }, async function (this: Cus
 // ---------------------------------------------------------------------------
 
 Then('视口应贴近聊天列表底部', { timeout: 60_000 }, async function (this: CustomWorld) {
+  // The settle is asynchronous by design: once the client applies the end of
+  // the stream, the spacer unmounts after its transition and only then does the
+  // viewport snap to the bottom. On a slow client the run can already be 'done'
+  // server-side while the UI is still rendering the tail, so poll instead of
+  // sampling once. A pin that never releases still fails here.
+  await expect
+    .poll(
+      async () => (await getScrollSnapshot(this))?.distanceToBottom ?? Number.POSITIVE_INFINITY,
+      {
+        timeout: 15_000,
+      },
+    )
+    .toBeLessThanOrEqual(AT_BOTTOM_EPSILON)
+    .catch(() => {});
   const snap = await getScrollSnapshot(this);
   expect(snap, 'failed to locate scroll container').not.toBeNull();
   expect(snap!.distanceToBottom).toBeLessThanOrEqual(AT_BOTTOM_EPSILON);

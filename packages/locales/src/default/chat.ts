@@ -1587,8 +1587,7 @@ export default {
   'taskDetail.comment.edit': 'Edit',
   'taskDetail.comment.save': 'Save',
   'taskDetail.commentDraftSaveFailed': 'Could not save comment draft',
-  'taskDetail.commentPlaceholder':
-    'Leave a comment, or @ a teammate — comments also guide the next run...',
+  'taskDetail.commentPlaceholder': 'Leave a comment...',
   'taskDetail.runCollapse': 'Collapse run',
   'taskDetail.runVerify.checklist': 'Acceptance checks',
   'taskDetail.runVerify.errored': 'Verification errored',

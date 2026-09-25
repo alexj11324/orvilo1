@@ -361,17 +361,6 @@ const TaskSubtasks = memo(() => {
           </Flexbox>
           <Collapsible open={isExpanded}>
             <Flexbox gap={8}>
-              {isCreating && (
-                <CreateTaskInlineEntry
-                  autoFocus
-                  agentId={agentId ?? undefined}
-                  defaultVisibility={parentVisibility}
-                  parentTaskId={taskId}
-                  placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
-                  onCollapse={() => setIsCreating(false)}
-                  onCreated={() => setIsCreating(false)}
-                />
-              )}
               <Tree
                 blockNode
                 defaultExpandAll
@@ -384,6 +373,46 @@ const TaskSubtasks = memo(() => {
                   if (keys[0]) handleNavigate(keys[0]);
                 }}
               />
+              {/* Linear keeps an "Add sub-issue" row under the list — the new
+                  row opens inline beneath the tree, not above it. */}
+              {isCreating ? (
+                <CreateTaskInlineEntry
+                  autoFocus
+                  agentId={agentId ?? undefined}
+                  defaultVisibility={parentVisibility}
+                  parentTaskId={taskId}
+                  placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
+                  onCollapse={() => setIsCreating(false)}
+                  onCreated={() => setIsCreating(false)}
+                />
+              ) : (
+                <Block
+                  clickable
+                  horizontal
+                  align="center"
+                  aria-label={t('taskDetail.addSubtask')}
+                  gap={8}
+                  paddingBlock={4}
+                  paddingInline={8}
+                  role="button"
+                  style={{ width: 'fit-content' }}
+                  tabIndex={0}
+                  title={canEditTask ? undefined : reason}
+                  variant="borderless"
+                  onClick={toggleCreating}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleCreating();
+                    }
+                  }}
+                >
+                  <Icon color={cssVar.colorTextDescription} icon={Plus} size={16} />
+                  <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+                    {t('taskDetail.addSubtask')}
+                  </Text>
+                </Block>
+              )}
             </Flexbox>
           </Collapsible>
         </>

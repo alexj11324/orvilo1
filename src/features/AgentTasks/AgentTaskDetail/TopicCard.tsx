@@ -209,7 +209,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
     });
   }, [activity.id, canEditTask, deleteTopic, t]);
 
-  const { text: startedAt, title: startedAtTitle } = useActivityTime(activity.time);
+  const { text: startedAt, title: startedAtTitle } = useActivityTime(activity.time, {
+    compact: true,
+  });
   const durationText = isRunning
     ? formatDuration(elapsed)
     : finalDuration != null && finalDuration >= 0

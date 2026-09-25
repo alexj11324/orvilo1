@@ -1663,7 +1663,7 @@
   "taskDetail.comment.edit": "编辑",
   "taskDetail.comment.save": "保存",
   "taskDetail.commentDraftSaveFailed": "无法保存评论草稿",
-  "taskDetail.commentPlaceholder": "留下评论，输入 @ 可提及成员，评论也会引导下次运行...",
+  "taskDetail.commentPlaceholder": "发表评论...",
   "taskDetail.copyBranch": "复制分支名",
   "taskDetail.copyBranchSuccess": "已复制分支名",
   "taskDetail.deleteConfirm.content": "此操作不可撤销。",

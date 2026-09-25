@@ -81,7 +81,7 @@ const styles = createStaticStyles(({ css }) => ({
   navGroup: css`
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 
     @container work-surface (max-width: 1000px) {
       flex-flow: row wrap;
@@ -96,8 +96,8 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     width: fit-content;
-    height: 28px;
-    padding-block: 5px;
+    min-height: 32px;
+    padding-block: 0;
     padding-inline: 6px;
     border-radius: ${cssVar.borderRadius};
 
@@ -131,9 +131,10 @@ const styles = createStaticStyles(({ css }) => ({
   recentIdentifier: css`
     flex: none;
 
-    font-family: ${cssVar.fontFamilyCode};
     font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
+    font-weight: 450;
+    font-variant-numeric: tabular-nums;
+    color: ${cssVar.colorTextDescription};
     text-align: end;
   `,
   recentLink: css`
@@ -194,7 +195,7 @@ const styles = createStaticStyles(({ css }) => ({
     padding-inline: 12px;
     font-size: 13px;
     font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
+    color: ${cssVar.colorTextDescription};
 
     @container work-surface (max-width: 1000px) {
       display: none;
@@ -208,9 +209,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   sectionTitle: css`
     padding-inline: 12px;
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
+    color: ${cssVar.colorText};
   `,
 }));
 

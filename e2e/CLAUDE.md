@@ -106,6 +106,11 @@ e2e/
 ## 本地环境启动
 
 > 详细流程参考 [e2e/docs/local-setup.md](./docs/local-setup.md)
+>
+> 两条本地路径，端口不要混用：
+>
+> - **Docker 路径**（本文档）：`e2e/scripts/setup.ts` + `postgres-e2e` 容器 —— app `:3006`，Postgres `:5433`
+> - **Dockerless（brew）路径**：`init-dev-env.sh` + brew Postgres/Redis —— app `:3010`，Postgres `:5432` db `orvilo`，权威文档见 [docs/development/local-setup.md](../docs/development/local-setup.md)
 
 ### 一键启动（推荐）
 
@@ -300,14 +305,18 @@ HEADLESS=false pnpm exec cucumber-js --config cucumber.config.js --tags "@smoke"
 
 ## 环境变量
 
-运行测试需要以下环境变量：
+运行测试需要以下环境变量（Docker 路径取值；dockerless 取值见注释行）：
 
 ```bash
-BASE_URL=http://localhost:3010 # 测试服务器地址
-DATABASE_URL=postgresql://...  # 数据库连接
-DATABASE_DRIVER=node           # 数据库驱动
-KEY_VAULTS_SECRET=...          # 密钥
-AUTH_SECRET=...                # Auth 密钥
+BASE_URL=http://localhost:3006                                      # 测试服务器地址
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres # 数据库连接
+DATABASE_DRIVER=node                                                # 数据库驱动
+KEY_VAULTS_SECRET=...                                               # 密钥
+AUTH_SECRET=...                                                     # Auth 密钥
+
+# Dockerless（brew）路径：
+# BASE_URL=http://localhost:3010
+# DATABASE_URL=postgresql://<user>@localhost:5432/orvilo
 
 # 可选：S3 相关（如果测试涉及文件上传）
 S3_ACCESS_KEY_ID=e2e-mock-access-key
@@ -325,7 +334,7 @@ S3_ENDPOINT=https://e2e-mock-s3.localhost
 bun e2e/scripts/setup.ts --clean
 ```
 
-或手动清理：
+或手动清理（Docker 路径）：
 
 ```bash
 # 停止并删除 PostgreSQL 容器

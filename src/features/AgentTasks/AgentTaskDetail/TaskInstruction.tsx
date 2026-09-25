@@ -135,7 +135,10 @@ const TaskInstruction = memo(() => {
       >
         <div onFocus={handleFocus}>
           <EditorCanvas
+            // Linear's issue description runs at 15px/450 — the app's default
+            // body text is bigger and lighter.
             contentRevision={instructionRevision}
+            contentStyle={{ fontSize: 15, fontWeight: 450 }}
             disabled={!canEditTask}
             editable={!lock.lockedByOther && !lock.pending}
             editor={editor}

@@ -49,7 +49,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   const editor = useEditor();
   const mentionOption = useWorkspaceCommentMentionOption();
 
-  const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time);
+  const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time, { compact: true });
   const content = activity.content || t('taskDetail.activities.fallback.comment');
   const commentId = activity.id;
 

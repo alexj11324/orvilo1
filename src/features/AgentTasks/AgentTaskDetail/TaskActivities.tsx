@@ -139,7 +139,7 @@ const ActivityAuthor = memo<{
 });
 
 const RelativeTime = memo<{ time?: string }>(({ time }) => {
-  const { text, title } = useActivityTime(time);
+  const { text, title } = useActivityTime(time, { compact: true });
   if (!text) return null;
   return (
     <span style={{ color: cssVar.colorTextQuaternary, marginInlineStart: 4 }} title={title}>

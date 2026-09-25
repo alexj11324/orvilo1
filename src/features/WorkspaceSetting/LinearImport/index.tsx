@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@lobehub/ui/base-ui';
+import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -29,6 +30,7 @@ import LinearIcon from '@/features/Work/icons/LinearIcon';
 import { waitForLinearOAuthPopup } from '@/features/WorkspaceSetting/Linear/oauthPopup';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
+import { electronSystemService } from '@/services/electron/system';
 
 type Installation = { id: string; name?: string; status: string };
 type LocalProject = { id: string; identifier: string; name: string };
@@ -559,8 +561,10 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
   }, [job?.id, job?.status, pollJob]);
 
   const connect = async () => {
-    const popup = window.open('about:blank', 'orvilo-linear-oauth', 'width=600,height=720');
-    if (!popup) {
+    const popup = isDesktop
+      ? null
+      : window.open('about:blank', 'orvilo-linear-oauth', 'width=600,height=720');
+    if (!isDesktop && !popup) {
       setError(t('workspaceSetting.linear.popupBlocked'));
       return;
     }
@@ -571,6 +575,10 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
         returnTo: window.location.pathname,
       });
       if (!response?.authorizationUrl) throw new Error(t('workspaceSetting.linear.connectFailed'));
+      if (!popup) {
+        await electronSystemService.openExternalLink(response.authorizationUrl);
+        return;
+      }
       popup.location.href = response.authorizationUrl;
       const result = await waitForLinearOAuthPopup(
         popup,
@@ -586,7 +594,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
       setMappings({});
       await refresh(result.installationId);
     } catch (cause) {
-      popup.close();
+      popup?.close();
       setError(cause instanceof Error ? cause.message : t('workspaceSetting.linear.connectFailed'));
     } finally {
       setBusy(false);
@@ -821,6 +829,16 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                         ? t('workspaceSetting.linear.reconnect')
                         : t('workspaceSetting.linear.connect')}
                     </Button>
+                    {isDesktop && (
+                      <div>
+                        <p className={styles.description}>
+                          {t('workspaceSetting.import.desktopOAuthHelp')}
+                        </p>
+                        <Button disabled={busy || loading} onClick={() => void refresh()}>
+                          {t('workspaceSetting.import.refreshConnections')}
+                        </Button>
+                      </div>
+                    )}
                     {installationId && (
                       <>
                         <label className={styles.label} htmlFor="import-team">

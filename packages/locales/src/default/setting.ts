@@ -4101,6 +4101,8 @@ export default {
   'workspaceSetting.import.projectPlaceholder': 'Search projects',
   'workspaceSetting.import.selectConnection': 'Linear connection',
   'workspaceSetting.import.connectionPlaceholder': 'Search connections',
+  'workspaceSetting.import.desktopOAuthHelp':
+    'Complete authorization in your browser, then refresh the connections here.',
   'workspaceSetting.import.selectTeam': 'Select Linear team',
   'workspaceSetting.import.teamPlaceholder': 'Search teams',
   'workspaceSetting.import.linearState': 'Linear state',
@@ -4138,6 +4140,7 @@ export default {
   'workspaceSetting.import.failed': 'Failed',
   'workspaceSetting.import.resume': 'Resume import',
   'workspaceSetting.import.refresh': 'Refresh status',
+  'workspaceSetting.import.refreshConnections': 'Refresh connections',
   'workspaceSetting.import.newImport': 'New import',
   'workspaceSetting.import.loadMore': 'Load more projects',
 };

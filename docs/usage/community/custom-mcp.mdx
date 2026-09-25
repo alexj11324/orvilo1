@@ -26,6 +26,12 @@ You can open the "Add custom skill" dialog from several places:
 
 All three paths open the same configuration dialog.
 
+### Preset connectors on the Connectors page
+
+**Workspace settings → Connectors** keeps only two kinds of entries: OAuth connectors and a curated **MCP** catalog (GitHub, Linear, Notion, Vercel, Figma, Sentry, PostHog, Supabase, Atlassian, Hugging Face). Click **Connect** on a preset and the same configuration dialog opens pre-filled with the server's identifier, Streamable HTTP endpoint, and the authentication method the provider supports — OAuth 2.0 where the provider allows dynamic client registration, API Key where it does not (GitHub). Adding a preset stores it as a regular custom MCP connector, so it also appears in every other place custom MCPs are managed.
+
+Builtin tools no longer appear on the Connectors page: they are managed in the backend with all permissions granted, and are not user-configurable.
+
 ## Quick Import from JSON
 
 The fastest way to add a custom MCP is to paste a JSON config from the MCP server's documentation.

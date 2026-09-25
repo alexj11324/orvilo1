@@ -1,8 +1,8 @@
 import { Avatar } from '@lobehub/ui/base-ui';
+import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
-  Blocks,
   Building2,
   ChartColumnBigIcon,
   Coins,
@@ -202,7 +202,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               label: t('workspaceSetting.tab.labels'),
             },
             {
-              icon: Blocks,
+              icon: McpIcon,
               key: WorkspaceSettingsTabs.Connector,
               label: t('workspaceSetting.tab.connector'),
             },

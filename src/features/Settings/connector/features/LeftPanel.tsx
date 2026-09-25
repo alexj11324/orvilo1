@@ -2,6 +2,8 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
+import { getMcpPresetConnectorIdentifier, type McpPresetConnector } from '@orvilo/const';
+import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Grid2x2Plus } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -41,6 +43,23 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+/**
+ * Seed the connector form from a hosted-MCP preset: identifier, endpoint and
+ * auth method pre-filled, everything still user-editable before save.
+ */
+const presetToPluginValue = (preset: McpPresetConnector): OrviloToolCustomPlugin => ({
+  customParams: {
+    description: preset.description,
+    mcp: {
+      auth: { type: preset.authType },
+      type: 'http',
+      url: preset.url,
+    },
+  },
+  identifier: getMcpPresetConnectorIdentifier(preset),
+  type: 'customPlugin',
+});
+
 interface LeftPanelProps {
   onSelect: (identifier: string, type: ConnectorDetailType) => void;
   selectedIdentifier?: string;
@@ -48,7 +67,13 @@ interface LeftPanelProps {
 
 const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
   const { t } = useTranslation('setting');
+  const [presetPlugin, setPresetPlugin] = useState<OrviloToolCustomPlugin | undefined>(undefined);
   const [showAddConnector, setShowAddConnector] = useState(false);
+
+  const closeModal = () => {
+    setShowAddConnector(false);
+    setPresetPlugin(undefined);
+  };
 
   return (
     <>
@@ -73,10 +98,21 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
         </div>
 
         <div className={styles.body}>
-          <ConnectorList selectedIdentifier={selectedIdentifier} onSelect={onSelect} />
+          <ConnectorList
+            selectedIdentifier={selectedIdentifier}
+            onSelect={onSelect}
+            onAddPreset={(preset) => {
+              setPresetPlugin(presetToPluginValue(preset));
+              setShowAddConnector(true);
+            }}
+          />
         </div>
       </div>
-      <CustomConnectorModal open={showAddConnector} onClose={() => setShowAddConnector(false)} />
+      <CustomConnectorModal
+        open={showAddConnector}
+        presetPlugin={presetPlugin}
+        onClose={closeModal}
+      />
     </>
   );
 });

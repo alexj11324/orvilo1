@@ -43,14 +43,23 @@ const ProjectLayout = memo(() => {
   const { pathname } = useLocation();
   const panelViewport = usePanelViewport();
   const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
-  const showPanel = panelViewport && PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
+  // Linear's header-right rail-collapse button toggles the properties panel.
+  // Local to this layout: the global right-panel store drives the app shell's
+  // own rail, not the project one.
+  const [panelOpen, setPanelOpen] = useState(true);
+  const showPanel =
+    panelViewport && panelOpen && PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
 
   if (!enabled) return <ProjectDisabled />;
 
   return (
     <ProjectToolbarContext value={toolbar}>
       <Flexbox height="100%" style={{ minWidth: 0 }}>
-        <ProjectTabsBar toolbarRef={setToolbar} />
+        <ProjectTabsBar
+          panelOpen={panelOpen}
+          toolbarRef={setToolbar}
+          onTogglePanel={() => setPanelOpen((open) => !open)}
+        />
         <Flexbox horizontal flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
           <Flexbox flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
             <Outlet />

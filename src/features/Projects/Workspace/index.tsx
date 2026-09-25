@@ -85,6 +85,19 @@ const styles = createStaticStyles(({ css }) => ({
     flex: 1;
     gap: 2px 4px;
     min-width: 0;
+    color: ${BODY_TEXT_COLOR};
+
+    /* Overview-only body ink. The planning fields and member select are shared
+       with the rail, where Linear keeps values at full ink, so the step lives
+       on this row rather than in the shared controls. Each control re-declares
+       its own text colour (antd nodes, the base-ui Select trigger, the member
+       chip), hence the direct targets. */
+    [aria-haspopup],
+    .ant-select-selection-item,
+    .ant-picker-input > input,
+    [data-member-label] {
+      color: ${BODY_TEXT_COLOR} !important;
+    }
   `,
   status: css`
     cursor: pointer;

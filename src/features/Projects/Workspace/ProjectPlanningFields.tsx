@@ -16,7 +16,6 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
-import { BODY_TEXT_COLOR } from '@/features/Projects/sectionLabel';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
@@ -69,7 +68,6 @@ const styles = createStaticStyles(({ css }) => ({
 
     font-size: 13px;
     font-weight: 500;
-    color: ${BODY_TEXT_COLOR};
 
     background: transparent;
 
@@ -90,13 +88,10 @@ const styles = createStaticStyles(({ css }) => ({
       background: transparent !important;
     }
 
-    /* antd re-declares its text colour on each control, so the body ink is
-       set on the text nodes themselves rather than inherited. */
     .ant-select-selection-item,
     .ant-picker-input > input {
       font-size: 13px !important;
       font-weight: 500 !important;
-      color: ${BODY_TEXT_COLOR} !important;
     }
   `,
   /* A date control whose calendar glyph leads the text instead of trailing

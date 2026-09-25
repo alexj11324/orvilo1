@@ -4,12 +4,11 @@ import type { TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { MessageSquareTextIcon } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import LabelChips from '@/features/Labels/LabelChips';
 import {
   getProjectMilestoneIssuesPath,
@@ -23,7 +22,7 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
-import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
+import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 import AssigneeAgentSelector from './AssigneeAgentSelector';
 import AssigneeAvatar from './AssigneeAvatar';
 import AssigneeMemberSelector from './AssigneeMemberSelector';
@@ -59,6 +58,12 @@ interface TaskItemProps {
   onStatusChange?: (status: TaskStatus) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
+  /**
+   * Caller-owned chips (e.g. the project) placed in the trailing cluster
+   * before the assignee — Linear's order is labels, project, assignee, date,
+   * so they cannot trail the row after the date.
+   */
+  trailingChips?: ReactNode;
 }
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
@@ -75,7 +80,14 @@ const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
 const AgentTaskItem = memo<TaskItemProps>((props) => {
-  const { linearIssueRow, milestone, onStatusChange, task, routeScope = 'agent' } = props;
+  const {
+    linearIssueRow,
+    milestone,
+    onStatusChange,
+    task,
+    trailingChips,
+    routeScope = 'agent',
+  } = props;
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -97,10 +109,11 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   });
   const status = toTaskStatus(task.status);
   const hasName = Boolean(task.name?.trim());
-  const workflowGlyph =
-    linearIssueRow && task.workflowStateId && task.workflowCategory
-      ? WORKFLOW_CATEGORY_VISUALS[task.workflowCategory]
-      : null;
+  const workflowGlyph = useTaskWorkflowGlyph({
+    executionStatus: task.status,
+    workflowCategory: task.workflowCategory,
+    workflowStateId: task.workflowStateId,
+  });
 
   const handleClick = useCallback(() => {
     navigate(
@@ -189,68 +202,41 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     </Tooltip>
   ) : null;
 
-  // The leading cells differ by surface. Linear's issue row is fixed as
-  // `[priority][ID][status][title]` (audit-2026-09-24.md — measured on the
-  // live reference); the shared/task scopes keep their original chrome of
-  // `[priority][status][workflow chip][ID][title]`.
-  const identifierNode = (
-    <Text style={{ flex: 'none' }} type={'secondary'}>
-      {task.identifier}
-    </Text>
-  );
-  const titleTextNode = (
-    <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-      {hasName ? task.name : task.identifier}
-    </Text>
-  );
-
+  // Linear's row grammar: priority, identifier, one status mark, title. The
+  // status mark is the workflow state when the task has one — never a second
+  // badge beside the execution glyph. A nameless task has no separate title,
+  // so its identifier renders as the row text instead.
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
-      {linearIssueRow && hasName && identifierNode}
+      {hasName ? (
+        <Text style={{ flex: 'none' }} type={'secondary'}>
+          {task.identifier}
+        </Text>
+      ) : null}
       <span
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
+        style={{ display: 'inline-flex', flex: 'none' }}
       >
-        {workflowGlyph ? (
-          <Tooltip title={tChat(`taskDetail.workflow.category.${task.workflowCategory}` as never)}>
-            <span data-task-workflow-icon={task.workflowCategory}>
-              <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={16} />
-            </span>
-          </Tooltip>
-        ) : (
-          <TaskStatusTag
-            status={status}
-            taskIdentifier={task.identifier}
-            triageTarget={
-              task.teamId
-                ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
-                : undefined
-            }
-            onChange={onStatusChange}
-          />
-        )}
+        <TaskStatusTag
+          glyph={workflowGlyph}
+          size={14}
+          status={status}
+          taskIdentifier={task.identifier}
+          triageTarget={
+            task.teamId
+              ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
+              : undefined
+          }
+          onChange={onStatusChange}
+        />
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
-      {!linearIssueRow && (
-        <TaskWorkflowBadge
-          executionStatus={task.status}
-          workflowCategory={task.workflowCategory}
-          workflowStateId={task.workflowStateId}
-        />
-      )}
       {privacyBadge}
-      {/* Linear rows render the identifier ahead of the status icon (above);
-          shared rows keep it beside the title. A nameless task falls back to
-          the identifier as its title text either way. */}
-      {hasName && !linearIssueRow ? (
-        <>
-          {identifierNode}
-          {titleTextNode}
-        </>
-      ) : (
-        titleTextNode
-      )}
+      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+        {hasName ? task.name : task.identifier}
+      </Text>
       {scheduledBadge}
       {/* Linear draws issue labels inline after the title. The wrapper's
           data attribute is the display-properties toggle's hide hook
@@ -399,6 +385,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
             {titleRow}
             <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
               {milestoneBadge}
+              {trailingChips}
               {openRunNode}
               {scheduleNode}
               {assigneeNode}

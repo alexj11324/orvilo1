@@ -21,6 +21,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import type { StatusVisual } from '@/components/ExecutionStatus';
 import MarkDuplicateModal from '@/features/WorkTeams/MarkDuplicateModal';
 import { buildTriageMutationInput } from '@/features/WorkTeams/triage/teamTriageRowModel';
 import { usePermission } from '@/hooks/usePermission';
@@ -70,6 +71,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface TaskStatusTagProps {
   children?: ReactNode;
   disableDropdown?: boolean;
+  /**
+   * The mark the trigger draws in place of the execution-status glyph — a
+   * task with a workflow state shows that state, Linear-style, while the
+   * menu keeps editing the execution status.
+   */
+  glyph?: StatusVisual & { label: ReactNode };
   onChange?: (status: TaskStatus) => void | Promise<void>;
   size?: number;
   status?: TaskStatus;
@@ -82,7 +89,16 @@ interface TaskStatusTagProps {
 }
 
 const TaskStatusTag = memo<TaskStatusTagProps>(
-  ({ children, disableDropdown, onChange, size = 16, status, taskIdentifier, triageTarget }) => {
+  ({
+    children,
+    disableDropdown,
+    glyph,
+    onChange,
+    size = 16,
+    status,
+    taskIdentifier,
+    triageTarget,
+  }) => {
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
@@ -187,9 +203,11 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       (loading ? (
         <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
       ) : (
-        <Tooltip title={t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}>
+        <Tooltip
+          title={glyph?.label ?? t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}
+        >
           <span className={styles.trigger} onClick={(e) => e.stopPropagation()}>
-            <Icon color={meta.color} icon={meta.icon} size={size} />
+            <Icon color={(glyph ?? meta).color} icon={(glyph ?? meta).icon} size={size} />
           </span>
         </Tooltip>
       ));

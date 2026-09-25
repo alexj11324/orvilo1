@@ -10,9 +10,9 @@ import {
   Archive,
   ArrowLeftRight,
   BadgeCheck,
-  CircleDot,
   CirclePlay,
   CirclePlus,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- review-rejected event kind, not a status mark
   CircleX,
   DiamondIcon,
   Link2,
@@ -25,6 +25,7 @@ import { useLocation } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -166,14 +167,14 @@ const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent
   4: 'low',
 };
 
-const TYPE_ICON: Record<TaskActivityLogType, typeof ArrowLeftRight> = {
+const TYPE_ICON: Record<TaskActivityLogType, StatusVisual['icon']> = {
   assignee_agent: UserRoundCog,
   assignee_user: UserRoundCog,
   automation: Timer,
   priority: ArrowLeftRight,
   relation: Link2,
   reviewer: UserRoundCog,
-  status: CircleDot,
+  status: STATUS_PROPERTY_ICON,
 };
 
 const RELATION_COPY = {

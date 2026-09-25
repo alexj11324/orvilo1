@@ -5,6 +5,7 @@ import { Button, confirmModal, DropdownMenu, Tabs, Tag, Text, toast } from '@lob
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';

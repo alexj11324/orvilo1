@@ -18,6 +18,7 @@ import {
 } from '@/features/NavPanel/SidebarHeaderSelect';
 import type { SwitcherItem } from '@/features/NavPanel/switcher/switcherItems';
 import SwitcherMenu from '@/features/NavPanel/switcher/SwitcherMenu';
+import { projectAvatar } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
@@ -170,7 +171,8 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
             }
           >
             <SidebarHeaderSelectTrigger
-              avatar={detail?.project.avatar || detail?.project.name || t('sidebar.title')}
+              avatar={projectAvatar(detail?.project.avatar, 16)}
+              background={detail?.project.avatar ? undefined : 'transparent'}
               name={detail?.project.name || t('sidebar.title')}
               title={detail?.project.name || t('sidebar.title')}
             />
@@ -181,9 +183,9 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
             <Flexbox horizontal align={'center'} gap={10}>
               <Tag
                 color={headerStatusVisual.color}
+                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
                 shape={'round'}
                 size={'small'}
-                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
               >
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,

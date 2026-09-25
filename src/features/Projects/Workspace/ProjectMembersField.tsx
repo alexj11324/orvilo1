@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { BODY_TEXT_COLOR } from '@/features/Projects/sectionLabel';
 import {
   type useProjectMembersQuery,
   useTeammateActions,
@@ -38,6 +39,7 @@ const styles = createStaticStyles(({ css }) => ({
     border-color: transparent;
 
     font-size: 13px;
+    color: ${BODY_TEXT_COLOR};
 
     background: transparent;
   `,
@@ -115,7 +117,9 @@ export function ProjectMembersField({
             return {
               disabled: member.disabled,
               label: (
-                <Flexbox horizontal align="center" gap={6}>
+                // The Select's chip paints full-ink text with no class hook,
+                // so the body ink rides on the label itself.
+                <Flexbox horizontal align="center" gap={6} style={{ color: BODY_TEXT_COLOR }}>
                   <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
                   {name}
                 </Flexbox>

@@ -3,7 +3,7 @@
 import { Icon, type IconProps } from '@lobehub/ui';
 import type { LucideIcon } from 'lucide-react';
 import { BoxIcon } from 'lucide-react';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
 /**
  * The single project-entity mark — Linear's isometric box outline (the glyph
@@ -31,3 +31,12 @@ export const ProjectIcon = memo<ProjectIconProps>(({ className, color, size }) =
 ));
 
 ProjectIcon.displayName = 'ProjectIcon';
+
+/**
+ * What a project's avatar slot shows: its custom avatar (emoji or image URL),
+ * otherwise the entity mark. Never the project name — `Avatar` renders a
+ * non-emoji string verbatim, so a name squeezed into a 28px tile wrapped into
+ * clipped fragments ("Voya / ger / Laun"). Linear draws the box glyph there.
+ */
+export const projectAvatar = (avatar: string | null | undefined, iconSize: number): ReactNode =>
+  avatar || <ProjectIcon size={iconSize} />;

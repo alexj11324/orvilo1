@@ -14,10 +14,11 @@ import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { projectAvatar } from '@/features/Projects/ProjectIcon';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { BODY_TEXT_COLOR, SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -101,7 +102,7 @@ const styles = createStaticStyles(({ css }) => ({
     font: inherit;
     font-size: 13px;
     font-weight: 500;
-    color: ${cssVar.colorText};
+    color: ${BODY_TEXT_COLOR};
 
     background: transparent;
 
@@ -133,7 +134,7 @@ const styles = createStaticStyles(({ css }) => ({
 
     font-size: 13px;
     font-weight: 500;
-    color: ${cssVar.colorText};
+    color: ${BODY_TEXT_COLOR};
     text-decoration: none;
 
     &:hover {
@@ -223,10 +224,10 @@ const ProjectWorkspace = memo(() => {
           <Flexbox gap={20}>
             <Flexbox gap={10}>
               <Avatar
-                avatar={project.avatar || undefined}
+                avatar={projectAvatar(project.avatar, 24)}
                 name={project.name}
                 shape={'square'}
-                size={44}
+                size={36}
                 title={project.name}
               />
               <Flexbox gap={2}>

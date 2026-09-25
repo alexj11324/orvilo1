@@ -3,6 +3,8 @@ import { createStaticStyles } from 'antd-style';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { BODY_TEXT_COLOR } from '@/features/Projects/sectionLabel';
+
 const styles = createStaticStyles(({ css, cssVar }) => ({
   input: css`
     width: 100%;
@@ -75,6 +77,7 @@ export function ProjectOverviewField({ kind, onSave, value }: ProjectOverviewFie
         readOnly={saving}
         value={draft ?? value}
         style={{
+          color: kind === 'name' ? undefined : BODY_TEXT_COLOR,
           fontSize: kind === 'name' ? 24 : 15,
           fontWeight: kind === 'name' ? 600 : 450,
           height: kind === 'name' ? 32 : 24,

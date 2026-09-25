@@ -164,6 +164,12 @@ const TASK_POLICY_COLUMNS = [
 ] as const satisfies readonly (keyof NewTask)[];
 
 export interface TaskMutationContext {
+  /**
+   * Who performed the change, when the caller knows it. Activity-feed rows
+   * written by the mutation (e.g. `addDependency`'s relation events) attribute
+   * to this actor; omitted means the model's scope user.
+   */
+  actor?: { agentId?: string | null; userId?: string | null };
   /** External event/delivery id carried into planner diagnostics. */
   eventId?: string;
   /**
@@ -2958,6 +2964,43 @@ export class TaskModel {
       .where(and(eq(tasks.id, taskId), this.ownership()))
       .returning();
     if (!updated) throw new TaskDependencyError('Task not found or unavailable.');
+    if (!mutation.suppressDomainEvent) {
+      const { actorKind, ...actorColumns } = taskActivityActor(
+        mutation.actor ?? { userId: this.userId },
+      );
+      const shared = {
+        ...actorColumns,
+        type: 'relation' as const,
+      };
+      await this.addActivities([
+        {
+          ...shared,
+          payload: {
+            actorKind,
+            relationAction: 'added',
+            relationDirection: type === 'blocks' ? ('blockedBy' as const) : undefined,
+            relationKind: type as 'blocks' | 'relates',
+            relationTargetIdentifier: dependsOn.identifier,
+            relationTargetTaskId: dependsOn.id,
+          },
+          taskId,
+          visibility: task.visibility,
+        },
+        {
+          ...shared,
+          payload: {
+            actorKind,
+            relationAction: 'added',
+            relationDirection: type === 'blocks' ? ('blocking' as const) : undefined,
+            relationKind: type as 'blocks' | 'relates',
+            relationTargetIdentifier: task.identifier,
+            relationTargetTaskId: task.id,
+          },
+          taskId: dependsOn.id,
+          visibility: dependsOn.visibility,
+        },
+      ]);
+    }
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
@@ -2996,7 +3039,11 @@ export class TaskModel {
         model.removeDependency(taskId, dependsOnId, mutation),
       );
     }
-    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
+    const task = await this.findById(taskId);
+    if (!task) throw new TaskDependencyError('Task not found.');
+    // The removed edge's other end may be a deleted task already — the feed
+    // row keeps a best-effort denormalized snapshot rather than skipping it.
+    const dependsOn = await this.findById(dependsOnId);
     const deleted = await this.db
       .delete(taskDependencies)
       .where(
@@ -3019,6 +3066,44 @@ export class TaskModel {
       .where(and(eq(tasks.id, taskId), this.ownership()))
       .returning();
     if (!updated) throw new TaskDependencyError('Task not found.');
+    if (!mutation.suppressDomainEvent) {
+      const edgeType = deleted[0].type === 'relates' ? ('relates' as const) : ('blocks' as const);
+      const { actorKind, ...actorColumns } = taskActivityActor(
+        mutation.actor ?? { userId: this.userId },
+      );
+      const shared = {
+        ...actorColumns,
+        type: 'relation' as const,
+      };
+      await this.addActivities([
+        {
+          ...shared,
+          payload: {
+            actorKind,
+            relationAction: 'removed',
+            relationDirection: edgeType === 'blocks' ? ('blockedBy' as const) : undefined,
+            relationKind: edgeType,
+            relationTargetIdentifier: dependsOn?.identifier ?? null,
+            relationTargetTaskId: dependsOnId,
+          },
+          taskId,
+          visibility: task.visibility,
+        },
+        {
+          ...shared,
+          payload: {
+            actorKind,
+            relationAction: 'removed',
+            relationDirection: edgeType === 'blocks' ? ('blocking' as const) : undefined,
+            relationKind: edgeType,
+            relationTargetIdentifier: task.identifier,
+            relationTargetTaskId: task.id,
+          },
+          taskId: dependsOnId,
+          visibility: dependsOn?.visibility ?? task.visibility,
+        },
+      ]);
+    }
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],

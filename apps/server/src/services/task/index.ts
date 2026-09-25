@@ -1668,6 +1668,28 @@ export class TaskService {
               : // Genuinely nobody: the runner's system fallback.
                 undefined;
 
+        if (log.type === 'relation') {
+          return {
+            author,
+            id: log.id,
+            propertyChange: {
+              action: log.payload?.relationAction === 'removed' ? 'removed' : 'added',
+              direction:
+                log.payload?.relationDirection === 'blocking'
+                  ? 'blocking'
+                  : log.payload?.relationDirection === 'blockedBy'
+                    ? 'blockedBy'
+                    : undefined,
+              field: 'relation',
+              kind: log.payload?.relationKind === 'relates' ? 'relates' : 'blocks',
+              targetTaskId: log.payload?.relationTargetTaskId ?? '',
+              targetTaskIdentifier: log.payload?.relationTargetIdentifier ?? null,
+            },
+            time: toISO(log.createdAt),
+            type: 'property',
+          };
+        }
+
         if (log.type === 'status' || log.type === 'priority' || log.type === 'automation') {
           const from = log.payload?.from ?? null;
           const to = log.payload?.to ?? null;

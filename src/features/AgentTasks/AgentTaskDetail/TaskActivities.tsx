@@ -11,9 +11,11 @@ import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeftRight,
+  Ban,
   BotMessageSquare,
   CircleDot,
   CirclePlus,
+  Link2,
   MessageCircle,
   Timer,
   UserRoundCog,
@@ -40,6 +42,7 @@ import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
 import TaskBriefCard from './TaskBriefCard';
 import TaskRunReport from './TaskRunReport';
+import TaskSubscribers from './TaskSubscribers';
 import TopicCard from './TopicCard';
 
 const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent'> = {
@@ -256,6 +259,23 @@ const PROPERTY_ICON: Record<'automation' | 'status', LucideIcon> = {
   status: CircleDot,
 };
 
+// The feed sentence for each (direction, action) pair — relates edges are
+// symmetric so they don't take a direction.
+const RELATION_COPY = {
+  blockedBy: {
+    added: 'taskDetail.activities.relation.blockedBy.added',
+    removed: 'taskDetail.activities.relation.blockedBy.removed',
+  },
+  blocking: {
+    added: 'taskDetail.activities.relation.blocking.added',
+    removed: 'taskDetail.activities.relation.blocking.removed',
+  },
+  relates: {
+    added: 'taskDetail.activities.relation.relates.added',
+    removed: 'taskDetail.activities.relation.relates.removed',
+  },
+} as const;
+
 const PriorityMark = ({ level }: { level: number | null }) => {
   const meta = PRIORITY_META[level ?? 0] ?? PRIORITY_META[0];
   const IconRender = meta.icon;
@@ -362,6 +382,18 @@ const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
         );
       break;
     }
+    case 'relation': {
+      // The target's identifier + title were denormalized when the row was
+      // written — the feed stays readable after the other issue is renamed
+      // or deleted.
+      const target = value(change.targetTaskIdentifier ?? change.targetTaskId);
+      const copyKey =
+        change.kind === 'relates'
+          ? RELATION_COPY.relates[change.action]
+          : RELATION_COPY[change.direction ?? 'blockedBy'][change.action];
+      sentence = <Trans components={{ actor, target }} i18nKey={copyKey} ns={'chat'} />;
+      break;
+    }
   }
 
   return (
@@ -373,6 +405,8 @@ const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
       mark={
         change.field === 'priority' ? (
           <PriorityMark level={change.to} />
+        ) : change.field === 'relation' ? (
+          <RowMark icon={change.kind === 'relates' ? Link2 : Ban} />
         ) : (
           <RowMark icon={PROPERTY_ICON[change.field]} />
         )
@@ -410,6 +444,12 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
 
   const commentInput = activeTaskId ? (
     <CommentInput key={commentComposerKey(activeTaskId, workspaceId)} taskId={activeTaskId} />
+  ) : null;
+
+  // Linear keeps the notification row under the comment composer on every
+  // issue feed: subscribe state for oneself plus the members manager.
+  const subscribersRow = activeTaskDatabaseId ? (
+    <TaskSubscribers taskId={activeTaskDatabaseId} />
   ) : null;
 
   // A goal loop can produce many rounds; only the newest run opens by default so
@@ -532,6 +572,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
       <Collapsible open={isExpanded}>
         <Flexbox gap={12} paddingBlock={4} paddingInline={12}>
           {commentInput}
+          {subscribersRow}
           {rows}
         </Flexbox>
       </Collapsible>

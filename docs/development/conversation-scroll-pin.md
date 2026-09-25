@@ -15,13 +15,14 @@ pin 期间视口停在用户消息上，`atBottom` 为 false，AutoScroll 的流
 
 1. 生成结束后的一次测量得到高度 0（且不在生成中）→ 安排 `CONVERSATION_SPACER_TRANSITION_MS`（200 ms）后卸载 spacer。
 2. spacer 从「挂载过」变为「已卸载」→ 释放 pin；若开启了「AI 回复时自动滚动」，调用 `scrollToBottom(false)` 回到底部。
-3. 若回复在 spacer 挂载前就已完整到达（第一次测量就是空闲的 0），不会出现挂载→卸载的转换，此时直接释放 pin 并按同样规则回到底部。
 
-关闭自动滚动时，pin 的位置就是最终停留位置，不做第 2、3 步的滚动。
+关闭自动滚动时，pin 的位置就是最终停留位置，不做第 2 步的滚动。
+
+注意：`isAIGenerating === false` 不等于「回复已结束」。发送后到生成操作真正开始之前（例如回复首包有延迟）它同样为 false，而新行尚未测量时 virtua 会用估算尺寸，测得的 spacer 高度可能为 0。不要把「未挂载 + 空闲 + 高度 0」当作回复结束的信号。
 
 ## 不能破坏的约束
 
 - **已安排的卸载不能被后续测量重置。** 回复结束后布局还会继续变化，ResizeObserver 会反复触发测量；慢机器上间隔可能小于 200 ms。如果每次测量都重新计时，卸载会被无限推迟，pin 永不释放，视口停在列表顶部（E2E `AGENT-SCROLL-001` 的 `distanceToBottom 4467` 就是这个现象）。只有 spacer 重新需要高度（高度 > 0，或重新开始生成）时才取消待执行的卸载。
-- 用户在 pin 期间（包括 spacer 首次挂载之前）向上滚动会先通过 `user scrolled up` 释放 pin，因此走到「卸载后回到底部」的一定是自然结束的回复。
+- 用户在 pin 期间向上滚动会先通过 `user scrolled up` 释放 pin，因此走到「卸载后回到底部」的一定是自然结束的回复。
 
-回归测试见 `useConversationScroll.test.ts`（「idle re-measures keep arriving after the stream ends」「reply finished before the spacer ever mounted」）以及 `e2e/src/features/journeys/agent/agent-scroll.feature`。
+回归测试见 `useConversationScroll.test.ts`（「idle re-measures keep arriving after the stream ends」）以及 `e2e/src/features/journeys/agent/agent-scroll.feature`。

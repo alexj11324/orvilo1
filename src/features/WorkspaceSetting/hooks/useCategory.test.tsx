@@ -214,6 +214,20 @@ describe('workspace settings useCategory', () => {
     }
   });
 
+  // The audit-log surface was deleted — no page, route or nav entry. The nav
+  // must never offer it again on any build.
+  it('never lists Audit logs', () => {
+    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+    const adminGroup = result.current.find(
+      (group) => group.key === WorkspaceSettingsGroupKey.Admin,
+    );
+
+    expect(adminGroup?.items.map((item) => item.key)).toEqual([WorkspaceSettingsTabs.Storage]);
+
+    const businessItemKeys = getItemKeys(businessWrapper);
+    expect(businessItemKeys).not.toContain(WorkspaceSettingsTabs.AuditLog);
+  });
+
   // Admin-or-higher reads the billing numbers; the pages keep the
   // money-moving controls behind the narrower manage_subscription gate.
   it('shows Credits and Billing to roles that may view billing', () => {

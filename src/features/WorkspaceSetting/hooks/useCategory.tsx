@@ -19,7 +19,6 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
-  ScrollText,
   TagIcon,
   Users,
 } from 'lucide-react';
@@ -228,11 +227,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: Database,
               key: WorkspaceSettingsTabs.Storage,
               label: t('tab.storage'),
-            },
-            {
-              icon: ScrollText,
-              key: WorkspaceSettingsTabs.AuditLog,
-              label: t('workspaceSetting.tab.auditLog'),
             },
           ].filter(Boolean) as WorkspaceSettingCategoryItem[],
           key: WorkspaceSettingsGroupKey.Admin,

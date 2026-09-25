@@ -98,13 +98,31 @@ describe('filterProjectList', () => {
     ).toEqual(['gamma']);
   });
 
-  it('matches health including the no-updates choice', () => {
-    expect(
-      filterProjectList(rows, [{ type: 'health', values: [null] }], now).map((row) => row.name),
-    ).toEqual(['gamma']);
+  it('matches health; the no-updates choice skips closed projects', () => {
     expect(
       filterProjectList(rows, [{ type: 'health', values: ['atRisk'] }], now).map((row) => row.name),
     ).toEqual(['beta']);
+    // gamma is completed + health-less: "No updates" means an open project
+    // still awaiting an update — closed rows belong to the sidebar's
+    // "No update expected" callout, so the bucket count matches the click.
+    expect(filterProjectList(rows, [{ type: 'health', values: [null] }], now)).toEqual([]);
+    expect(
+      filterProjectList(
+        [{ health: null, id: 'p9', name: 'delta', status: 'active' }],
+        [{ type: 'health', values: [null] }],
+        now,
+      ).map((row) => row.name),
+    ).toEqual(['delta']);
+    expect(
+      filterProjectList(
+        [
+          { health: 'onTrack', id: 'p10', name: 'open', status: 'active' },
+          { health: 'onTrack', id: 'p11', name: 'archived', status: 'archived' },
+        ],
+        [{ type: 'health', values: ['onTrack'] }],
+        now,
+      ).map((row) => row.name),
+    ).toEqual(['open']);
   });
 
   it('windows dates relative to now', () => {

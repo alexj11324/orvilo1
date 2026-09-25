@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const b = await chromium.connectOverCDP('http://localhost:9222');
+const ctx = b.contexts()[0];
+const p = await ctx.newPage();
+await p.goto('http://localhost:3010/agent-testing/tasks', { waitUntil: 'domcontentloaded' });
+await p.waitForTimeout(5000);
+console.log('URL:', p.url());
+const cookies = await ctx.cookies('http://localhost:3010');
+console.log('cookies:', cookies.map((c) => c.name).join(', ') || 'NONE');
+await p.close();
+process.exit(0);

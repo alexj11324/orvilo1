@@ -450,6 +450,10 @@ it('exposes project sections as destination links with one current page, not tab
     'href',
     '/project/apollo/tasks',
   );
+  // The reference header is exactly Overview | Activity | Issues — milestones
+  // live as an overview section and rail card, never a tab (the /milestones
+  // route still resolves for deep links). audit-2026-09-24.
+  expect(screen.queryByRole('link', { name: 'sections.milestones' })).not.toBeInTheDocument();
   expect(
     screen.getAllByRole('link').filter((link) => link.getAttribute('aria-current') === 'page'),
   ).toHaveLength(1);

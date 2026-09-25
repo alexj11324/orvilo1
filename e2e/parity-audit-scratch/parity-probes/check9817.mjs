@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+import fs from 'fs';
+const browser = await chromium.connectOverCDP('http://127.0.0.1:9817', { timeout: 30000 });
+const ctx = browser.contexts()[0];
+const page = await ctx.newPage();
+await page.goto('https://linear.app/bdiverifier/projects/all', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(9000);
+const url = page.url();
+const text = (await page.evaluate(() => document.body.innerText)).slice(0, 500);
+fs.writeFileSync('/tmp/parity-project-detail/check9817.json', JSON.stringify({ url, text }));
+process.exit(0);

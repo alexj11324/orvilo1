@@ -1,6 +1,8 @@
 import type { ProjectHealth, ProjectStatus } from '@orvilo/types';
 import { PROJECT_HEALTH_STATES, PROJECT_STATUSES } from '@orvilo/types';
 
+import { CLOSED_PROJECT_STATUSES } from './displayOptions';
+
 /**
  * Applied-filter model for the `/projects` list — the Linear "Add filter"
  * surface (ref-projects-filter-menu.png, NEW-FINDINGS §6): AI filter +
@@ -157,6 +159,8 @@ const matchesUserFilter = (
   values: readonly (string | null)[],
 ): boolean => values.some((value) => (value === null ? !rowValue : rowValue === value));
 
+const CLOSED_STATUS_SET: ReadonlySet<string> = new Set(CLOSED_PROJECT_STATUSES);
+
 const matchesFilter = (
   project: ProjectListFilterRow,
   filter: ProjectListFilter,
@@ -182,6 +186,9 @@ const matchesFilter = (
       return matchesUserFilter(project.userId, filter.values);
     }
     case 'health': {
+      // The sidebar's health buckets count open projects only. Closed rows
+      // remain reachable through the status filter instead.
+      if (project.status && CLOSED_STATUS_SET.has(project.status)) return false;
       return filter.values.some((value) =>
         value === null ? !project.health : project.health === value,
       );

@@ -14,6 +14,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 
 const TASK_STATUS_SET = new Set<string>([
@@ -122,8 +123,8 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
               }
               onClick={() => navigate(taskDetailPath(dep.dependsOn, undefined, dep.name))}
             >
-              <Text ellipsis style={{ minWidth: 0 }}>
-                <Text as={'span'} type={'secondary'}>
+              <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }}>
+                <Text as={'span'} fontSize={RAIL_VALUE_FONT_SIZE} type={'secondary'}>
                   {dep.dependsOn}
                 </Text>
                 {dep.name ? ` · ${dep.name}` : ''}

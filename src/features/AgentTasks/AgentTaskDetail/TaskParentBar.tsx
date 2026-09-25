@@ -13,6 +13,7 @@ import TaskStatusIcon from '../features/TaskStatusIcon';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
+import { RAIL_VALUE_FONT_SIZE } from './railText';
 
 const TASK_STATUS_SET = new Set([
   'backlog',
@@ -88,7 +89,7 @@ const TaskParentBar = memo(() => {
 
   return (
     <Flexbox horizontal align="center" gap={8} style={{ maxWidth: '100%', minWidth: 0 }}>
-      <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+      <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
         {t('taskDetail.subIssueOf')}
       </Text>
       <Button
@@ -110,11 +111,17 @@ const TaskParentBar = memo(() => {
       >
         {/* Reference form: `◐ ORV-117 Handoff: …` — the identifier stays
             visible even when the name truncates. */}
-        <Text ellipsis style={{ minWidth: 0 }}>
-          <Text as={'span'} type={'secondary'}>
+        <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }}>
+          <Text as={'span'} fontSize={RAIL_VALUE_FONT_SIZE} type={'secondary'}>
             {parent.identifier}
           </Text>
-          {parent.name ? <Text as={'span'} weight={500}>{` ${parent.name}`}</Text> : undefined}
+          {parent.name ? (
+            <Text
+              as={'span'}
+              fontSize={RAIL_VALUE_FONT_SIZE}
+              weight={500}
+            >{` ${parent.name}`}</Text>
+          ) : undefined}
         </Text>
       </Button>
       {parentSubtasks.length > 0 && (

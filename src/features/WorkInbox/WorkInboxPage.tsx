@@ -719,18 +719,29 @@ const WorkInboxPage = memo(() => {
           selectedId,
         });
         if (suppression) readReceiptAttemptRef.current = suppression;
-        pager.updateCard(card.notificationId, (current) => ({
-          ...current,
-          read: true,
-          readVersion: current.readVersion + 1,
-        }));
+        // Whether the row still satisfies the current view after the read:
+        // the Unread filter drops read rows outright, and in the Priority tab
+        // only unresolved actions keep their seat — a read mention moves to
+        // Other. Page-one refresh alone cannot re-rank paginated tails, so
+        // evict the card client-side.
+        const stillVisible =
+          filterChip !== 'unread' && !(kind === 'priority' && card.kind !== 'action');
+        if (stillVisible) {
+          pager.updateCard(card.notificationId, (current) => ({
+            ...current,
+            read: true,
+            readVersion: current.readVersion + 1,
+          }));
+        } else {
+          pager.removeCard(card.notificationId);
+        }
         void mutate(inboxKeys.feedCard(workspaceId, card.notificationId));
         await refresh();
       } catch {
         organizeFailed();
       }
     },
-    [feedScope, organizeFailed, pager, refresh, selectedId, workspaceId],
+    [feedScope, filterChip, kind, organizeFailed, pager, refresh, selectedId, workspaceId],
   );
 
   const decide = useCallback(

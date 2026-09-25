@@ -106,7 +106,7 @@
   "template_categories.incidents_triage": "Incidents & triage",
   "template_categories.popular": "Popular",
   "template_categories.security": "Security",
-  "templates.add_test_coverage.summary": "Find coverage gaps and open test-writing tasks",
+  "templates.add_test_coverage.summary": "Find coverage gaps and open test-writing issues",
   "templates.add_test_coverage.title": "Add test coverage",
   "templates.customer_health_monitoring.summary": "Monitor customer health signals and flag risks",
   "templates.customer_health_monitoring.title": "Customer health monitoring",

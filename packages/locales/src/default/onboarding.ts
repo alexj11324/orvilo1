@@ -39,7 +39,7 @@ export default {
   'flow.steps.chiefAgent.personas.latte.intro':
     "Take it slow — that's how things come out just right.",
   'flow.steps.chiefAgent.personas.orvilo.intro':
-    "Whatever the task, I'm happy to start from scratch with you.",
+    "Whatever the issue, I'm happy to start from scratch with you.",
   'flow.steps.chiefAgent.personas.maestro.intro':
     'Whatever lands on my desk, I want to give it grace and rhythm.',
   'flow.steps.chiefAgent.personas.moss.intro':
@@ -103,15 +103,15 @@ export default {
   'flow.steps.profile.tagline': 'Tagline',
   'flow.steps.profile.tellUsMore': 'Tell us more about you',
   'flow.steps.profile.title': 'Your profile',
-  'flow.steps.starterTasks.addTasks_one': 'Add {{count}} task',
-  'flow.steps.starterTasks.addTasks_other': 'Add {{count}} tasks',
-  'flow.steps.starterTasks.createError': 'Could not add these tasks. Please try again.',
+  'flow.steps.starterTasks.addTasks_one': 'Add {{count}} issue',
+  'flow.steps.starterTasks.addTasks_other': 'Add {{count}} issues',
+  'flow.steps.starterTasks.createError': 'Could not add these issues. Please try again.',
   'flow.steps.starterTasks.play': 'Play',
   'flow.steps.starterTasks.quote': "I'll suggest automations that might ",
   'flow.steps.starterTasks.quoteHighlight': 'save you time.',
-  'flow.steps.starterTasks.sectionLabel': 'Suggested starter tasks',
+  'flow.steps.starterTasks.sectionLabel': 'Suggested starter issues',
   'flow.steps.starterTasks.subline':
-    'Assign clear tasks to your CAO, then track its progress as it completes each one.',
+    'Assign clear issues to your CAO, then track its progress as it completes each one.',
   'flow.steps.starterTasks.title': 'See exactly how we get things done.',
   'interests.area.business': 'Business & Strategy',
   'interests.area.coding': 'Programming & Development',

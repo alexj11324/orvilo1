@@ -34,7 +34,7 @@ export default {
   'screen3.description':
     'Grant permissions to unlock the full potential of Agents and Groups. You can manage these anytime in settings.',
   'screen3.permissions.1.description':
-    'Receive notifications when tasks complete, Agents respond, or important updates arrive',
+    'Receive notifications when issues complete, Agents respond, or important updates arrive',
   'screen3.permissions.1.title': 'Notifications',
   'screen3.permissions.2.description':
     'Access files and folders to enable document analysis, knowledge base creation, and file processing workflows',
@@ -87,7 +87,7 @@ export default {
   'screen5.description':
     'Sign in to sync Agents, Groups, settings, and Context across all devices.',
   'screen5.entry.title': 'Back to building.',
-  'screen5.entry.description': 'Sign in to bring your workspace, Agents, and tasks together.',
+  'screen5.entry.description': 'Sign in to bring your workspace, Agents, and issues together.',
   'screen5.entry.serverTitle': 'Connect your Orvilo server',
   'screen5.entry.browserHint':
     'Continue in your browser to securely sign in, then return to Orvilo.',

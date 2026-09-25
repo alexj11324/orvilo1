@@ -127,7 +127,7 @@ export default {
   'templates.section': 'Start from a template',
   'templates.start_blank': 'Start blank',
 
-  'templates.add_test_coverage.summary': 'Find coverage gaps and open test-writing tasks',
+  'templates.add_test_coverage.summary': 'Find coverage gaps and open test-writing issues',
   'templates.add_test_coverage.title': 'Add test coverage',
   'templates.customer_health_monitoring.summary': 'Monitor customer health signals and flag risks',
   'templates.customer_health_monitoring.title': 'Customer health monitoring',

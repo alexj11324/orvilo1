@@ -775,6 +775,24 @@ jobs:
                   exit 1
                   ;;
               esac
+              # The owner's gate check run stays 'cancelled' forever when the
+              # push run itself was cancelled — fail-fast sibling cancel, a
+              # racing push on the same branch, or a manual cancel. No verdict
+              # can ever land for this SHA, so fail fast and point at the
+              # owner instead of hanging for the whole mirror timeout. A rerun
+              # resets the newest run's conclusion to null, which keeps waiting.
+              if owner=$(gh api \
+                "repos/${{ github.repository }}/actions/workflows/test.yml/runs?event=push&head_sha=${HEAD_SHA}&per_page=5" \
+                --jq '.workflow_runs[0] | {conclusion, html_url} | @json' 2>&1); then
+                owner_conclusion=$(echo "$owner" | jq -r '.conclusion // ""')
+                if [ "$owner_conclusion" = "cancelled" ]; then
+                  owner_url=$(echo "$owner" | jq -r '.html_url // ""')
+                  echo "::error::Owning push run was cancelled — no gate verdict can land for this SHA. The real failure (or cancel) lives in the owning run: ${owner_url}"
+                  exit 1
+                fi
+              else
+                echo "Owning-run lookup failed; continuing to wait: $owner"
+              fi
               if [ "$(date +%s)" -ge "$deadline" ]; then
                 echo "::error::Timed out waiting for the owning run's Required Quality Gate verdict — failing closed."
                 exit 1

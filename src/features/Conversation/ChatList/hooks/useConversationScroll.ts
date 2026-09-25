@@ -219,16 +219,20 @@ const useSpacerHeight = ({
   }, []);
 
   const scheduleSpacerUnmount = useCallback(() => {
-    clearRemoveTimer();
+    // Keep an unmount that is already pending. Layout keeps settling after the
+    // reply ends (the ResizeObserver fires repeatedly under a slow renderer),
+    // and restarting the timer on each of those idle zero-height measures
+    // postponed the unmount until layout went quiet — until then the pin held
+    // the viewport at the user row instead of settling at the bottom.
+    if (removeTimerRef.current) return;
 
     removeTimerRef.current = setTimeout(() => {
       setMounted(false);
       removeTimerRef.current = null;
     }, CONVERSATION_SPACER_TRANSITION_MS);
-  }, [clearRemoveTimer]);
+  }, []);
 
   const updateSpacerHeight = useCallback(() => {
-    clearRemoveTimer();
     const { assistantId, assistantIndex, userId, userIndex } = getTrackedMessages();
     const viewportHeight = getViewportSize?.() || window.innerHeight;
 
@@ -262,10 +266,13 @@ const useSpacerHeight = ({
       // the tail and strand the user message far above. Keep the row mounted
       // at height 0; the unmount is deferred to the first recompute after
       // generation ends.
+      clearRemoveTimer();
       setMounted(true);
       return;
     }
 
+    // The spacer is needed again: cancel any pending unmount.
+    clearRemoveTimer();
     setMounted(true);
     setNaturalHeight(nextHeight);
   }, [

@@ -6,7 +6,14 @@ import { memo, useEffect, useState } from 'react';
 
 import NavHeader from '@/features/NavHeader';
 import { useToolStore } from '@/store/tool';
-import { builtinToolSelectors } from '@/store/tool/selectors';
+import {
+  composioStoreSelectors,
+  orviloSkillStoreSelectors,
+  pluginSelectors,
+} from '@/store/tool/selectors';
+import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
+import { connectorSelectors } from '@/store/tool/slices/connector';
+import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import ConnectorDetailPanel, { type ConnectorDetailType } from './features/ConnectorDetail';
 import LeftPanel from './features/LeftPanel';
@@ -36,27 +43,69 @@ const styles = createStaticStyles(({ css }) => ({
  * shared with the platform skill-management page. That page is retired, so this
  * component no longer reads the skill stores (builtin / market / user skills),
  * no longer honours the `?skill=` deep link, and its detail panel only knows
- * connector kinds.
+ * connector kinds. Builtin tools are not listed here at all — they run with
+ * allow-all permissions and carry no user-facing configuration.
  */
 export const ConnectorSettings = memo(() => {
   const [selected, setSelected] = useState<SelectedConnector | null>(null);
 
-  const builtinTools = useToolStore((s) => s.builtinTools, isEqual);
-  const installedBuiltinIds = useToolStore(
-    (s) => builtinToolSelectors.installedAllMetaList(s).map((tool) => tool.identifier),
-    isEqual,
-  );
+  const allOrviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
+  const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
+  const customConnectors = useToolStore(connectorSelectors.customConnectors, isEqual);
+  const installedPluginList = useToolStore(pluginSelectors.installedPluginMetaList, isEqual);
+  const agentBoundConnectors = useToolStore(connectorSelectors.agentBoundConnectors, isEqual);
 
+  // Auto-select the first row the list can actually show a detail for, in the
+  // list's own section order: connected OAuth connector, then custom MCP
+  // connector (a preset resolves to one of these), community plugin, legacy
+  // custom plugin, then agent-owned connector.
   useEffect(() => {
     if (selected) return;
 
-    const firstTool = builtinTools.find(
-      (tool) => !tool.hidden && installedBuiltinIds.includes(tool.identifier),
+    const orviloConnected = allOrviloSkillServers.find(
+      (server) => server.status === OrviloSkillStatus.CONNECTED,
     );
-    if (firstTool) {
-      setSelected({ identifier: firstTool.identifier, type: 'builtin' });
+    if (orviloConnected) {
+      setSelected({ identifier: orviloConnected.identifier, type: 'orvilo-connector' });
+      return;
     }
-  }, [builtinTools, installedBuiltinIds, selected]);
+
+    const composioActive = allComposioServers.find(
+      (server) => server.status === ComposioServerStatus.ACTIVE,
+    );
+    if (composioActive) {
+      setSelected({ identifier: composioActive.identifier, type: 'plugin' });
+      return;
+    }
+
+    if (customConnectors[0]) {
+      setSelected({ identifier: customConnectors[0].identifier, type: 'mcp-connector' });
+      return;
+    }
+
+    const communityPlugin = installedPluginList.find((plugin) => plugin.type === 'plugin');
+    if (communityPlugin) {
+      setSelected({ identifier: communityPlugin.identifier, type: 'plugin' });
+      return;
+    }
+
+    const customPlugin = installedPluginList.find((plugin) => plugin.type === 'customPlugin');
+    if (customPlugin) {
+      setSelected({ identifier: customPlugin.identifier, type: 'mcp-connector' });
+      return;
+    }
+
+    if (agentBoundConnectors[0]) {
+      setSelected({ identifier: agentBoundConnectors[0].id, type: 'agent-connector' });
+    }
+  }, [
+    selected,
+    allOrviloSkillServers,
+    allComposioServers,
+    customConnectors,
+    installedPluginList,
+    agentBoundConnectors,
+  ]);
 
   return (
     <>

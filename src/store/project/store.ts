@@ -106,10 +106,20 @@ const refreshLinksAfterWrite = async (scope: string, id: string) => {
  * A milestone write commits before the detail refresh runs, so a scope switch
  * mid-flight must not revalidate — and overwrite — a retained view keyed to a
  * different workspace. Same reasoning as `refreshLinksAfterWrite`.
+ *
+ * Views fetch detail under the route param (a slug or id), while writes carry
+ * the project row id — revalidate every alias the retained views use, not only
+ * the write's id, or a slug-keyed view would keep its stale milestones.
  */
 const refreshDetailAfterWrite = async (scope: string, id: string) => {
   if (scope !== getCacheScope()) return;
-  await mutate(detailKey(scope, id));
+  const fetchKeys = new Set([id]);
+  for (const [alias, detail] of Object.entries(
+    useProjectStore.getState().projectDetails[scope] ?? {},
+  )) {
+    if (detail?.project.id === id) fetchKeys.add(alias);
+  }
+  await Promise.all([...fetchKeys].map((fetchKey) => mutate(detailKey(scope, fetchKey))));
 };
 
 export const useProjectStore = createWithEqualityFn<ProjectStore>()(

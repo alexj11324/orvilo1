@@ -534,12 +534,22 @@ const TaskVerifyConfig = memo(() => {
         clickable
         horizontal
         align={'center'}
+        aria-expanded={false}
+        aria-label={t('verifyConfig.empty.title')}
         gap={8}
         paddingBlock={4}
         paddingInline={8}
+        role={'button'}
         style={{ width: 'fit-content' }}
+        tabIndex={0}
         variant={'borderless'}
         onClick={handleCollapsedClick}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleCollapsedClick();
+          }
+        }}
       >
         <Icon
           color={cssVar.colorTextDescription}

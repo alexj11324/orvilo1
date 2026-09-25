@@ -114,10 +114,10 @@ export default {
     "Let's start a fitness challenge! Can you help us set goals and stay motivated to stay healthy?",
   'guide.groupActivities.planning.fitnessChallenge.title': 'Fitness Challenge',
   'guide.groupActivities.planning.planningPoker.description':
-    'Agile estimation technique using cards to estimate project tasks and workload',
+    'Agile estimation technique using cards to estimate project issues and workload',
   'guide.groupActivities.planning.planningPoker.emoji': '🃏',
   'guide.groupActivities.planning.planningPoker.prompt':
-    "We're doing planning poker for the project. Can you help us estimate tasks using agile techniques?",
+    "We're doing planning poker for the project. Can you help us estimate issues using agile techniques?",
   'guide.groupActivities.planning.planningPoker.title': 'Planning Poker',
   'guide.groupActivities.planning.travelPlanning.description':
     'Plan trips, share travel experiences, and discover new destinations',
@@ -138,10 +138,10 @@ export default {
     'We need to review some designs. Can you help us provide constructive feedback on concepts and prototypes?',
   'guide.groupActivities.product.designReview.title': 'Design Review',
   'guide.groupActivities.product.sprintPlanning.description':
-    'Agile estimation technique using cards to estimate project tasks and workload',
+    'Agile estimation technique using cards to estimate project issues and workload',
   'guide.groupActivities.product.sprintPlanning.emoji': '🃏',
   'guide.groupActivities.product.sprintPlanning.prompt':
-    "We're doing planning poker for the project. Can you help us estimate tasks using agile techniques?",
+    "We're doing planning poker for the project. Can you help us estimate issues using agile techniques?",
   'guide.groupActivities.product.sprintPlanning.title': 'Planning Poker',
   'guide.groupActivities.product.techExchange.description':
     'Discuss emerging technologies, innovations, and industry trends',
@@ -175,7 +175,7 @@ export default {
     "Let's form a study group. Can you help us understand these concepts and solve problems together?",
   'guide.groupActivities.writing.studyGroup.title': 'Study Group',
   'guide.groupMessage':
-    'Welcome to Groups. In one shared conversation, let Agents move the task forward together.',
+    'Welcome to Groups. In one shared conversation, let Agents move the issue forward together.',
   'guide.groupTemplates.analysis.description':
     'Data-driven insights and in-depth research analysis',
   'guide.groupTemplates.analysis.members': [
@@ -358,7 +358,7 @@ export default {
     '3': 'All set!',
     '4': 'Great to see you',
     '5': 'Ready to begin?',
-    '6': 'Let me help with today’s tasks',
+    '6': 'Let me help with today’s issues',
     '7': 'Keep moving forward!',
     '8': 'Let’s do this 💪',
     '9': 'Let’s get to work 🏃‍♂️',
@@ -385,7 +385,7 @@ export default {
     '30': 'Boosting efficiency …',
     '31': 'Today’s goals, on track 🎯',
     '32': 'Let your ideas shine ✨',
-    '33': 'Task update complete',
+    '33': 'Issue update complete',
     '34': 'Everything’s ready',
     '35': 'Acceleration mode: ON',
     '36': 'Alright! Let’s begin 😎',

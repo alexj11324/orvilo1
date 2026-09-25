@@ -130,4 +130,36 @@ describe('collapseActivityLog', () => {
     ]);
     expect(out).toEqual([]);
   });
+
+  it('keeps every relation event — no from/to chain and no net-noop drop', () => {
+    const relation = (
+      id: string,
+      minutes: number,
+      action: 'added' | 'removed',
+      direction: 'blockedBy' | 'blocking',
+      target: string,
+    ) =>
+      ({
+        actorAgentId: null,
+        actorUserId: 'user_a',
+        createdAt: t(minutes),
+        id,
+        payload: {
+          relationAction: action,
+          relationDirection: direction,
+          relationKind: 'blocks',
+          relationTargetIdentifier: target,
+          relationTargetTaskId: `task_${target}`,
+        },
+        type: 'relation',
+      }) as any;
+
+    const out = collapseActivityLog([
+      relation('a', 0, 'added', 'blockedBy', 'VYG-1'),
+      relation('b', 1, 'removed', 'blockedBy', 'VYG-1'),
+      relation('c', 2, 'added', 'blocking', 'VYG-3'),
+      row('d', 3, { from: 3, to: 2 }),
+    ]);
+    expect(out.map((r) => r.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
 });

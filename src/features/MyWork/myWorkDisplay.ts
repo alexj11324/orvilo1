@@ -40,19 +40,12 @@ export type MyWorkCompletedWindow = 'all' | 'none' | 'pastDay';
  * Per-row property visibility — Linear's display-options panel lists ID,
  * status, assignee, priority, project, due date, milestone, labels, links,
  * time in status, created, updated and pull requests. The task row model
- * only backs the entries below (`updated` covers the trailing date chip;
- * `workflowBadge` is the Orvilo-native state badge); the rest stay omitted
- * rather than rendered as dead toggles.
+ * only backs the entries below (`updated` covers the trailing date chip);
+ * the rest stay omitted rather than rendered as dead toggles. The workflow
+ * state is not a separate property: it is what the `status` mark draws.
  */
 export type MyWorkRowProperty =
-  | 'assignee'
-  | 'labels'
-  | 'milestone'
-  | 'priority'
-  | 'project'
-  | 'status'
-  | 'updated'
-  | 'workflowBadge';
+  'assignee' | 'labels' | 'milestone' | 'priority' | 'project' | 'status' | 'updated';
 
 /** Panel order follows Linear's display-properties list. */
 export const MY_WORK_ROW_PROPERTIES: readonly MyWorkRowProperty[] = [
@@ -63,7 +56,6 @@ export const MY_WORK_ROW_PROPERTIES: readonly MyWorkRowProperty[] = [
   'milestone',
   'labels',
   'updated',
-  'workflowBadge',
 ];
 
 export type MyWorkRowProperties = Record<MyWorkRowProperty, boolean>;
@@ -76,7 +68,6 @@ export const MY_WORK_DEFAULT_ROW_PROPERTIES: MyWorkRowProperties = {
   project: true,
   status: true,
   updated: true,
-  workflowBadge: true,
 };
 
 export interface MyWorkDisplay {

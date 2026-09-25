@@ -15,6 +15,7 @@
 #   init-dev-env.sh setup-db         # start local Postgres/Redis and run migrations
 #   init-dev-env.sh migrate          # run DB migrations against the configured DB
 #   init-dev-env.sh seed-user        # seed the baseline test user + CLI API key
+#   init-dev-env.sh seed-parity      # seed the Linear-parity fixture (projects, issues, views, inbox)
 #   init-dev-env.sh hatchet          # run the Hatchet worker against configured Hatchet
 #   init-dev-env.sh s3               # run local s3rver object storage
 #   init-dev-env.sh preflight        # check agent-runtime prerequisites (Hatchet + S3)
@@ -605,6 +606,17 @@ const client = new pg.Client({ connectionString: databaseUrl });
 NODE
 }
 
+seed_parity() {
+  apply_env
+  cd "$REPO_ROOT"
+  # The Linear-parity fixture (scripts/seedLinearParity/) fills the seeded
+  # workspace with the teams, projects, milestones, issues, triage rows, saved
+  # views and inbox notifications used by the Linear↔Orvilo UI parity audit.
+  # Deterministic ids make it re-runnable; it re-asserts the local DB target
+  # itself before writing.
+  ORVILO_PARITY_SEED_TARGET=local bunx tsx ./scripts/seedLinearParity/index.ts
+}
+
 cmd_status() {
   apply_env
   echo "agent-testing local dev env:"
@@ -896,6 +908,7 @@ case "$COMMAND" in
     ;;
   migrate) migrate_db ;;
   seed-user) seed_user ;;
+  seed-parity) seed_parity ;;
   hatchet) cmd_hatchet ;;
   s3) cmd_s3 ;;
   preflight) cmd_preflight ;;

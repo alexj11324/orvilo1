@@ -39,7 +39,10 @@ if (JSON.stringify(scValues) !== JSON.stringify(originalScStack)) {
 }
 
 const originalDefault = [
-  'Geist',
+  // The head tracks FONT_EN's first entry; the guard's invariant is the
+  // untouched FONT_SC fallback order, not the latin face. Inter is the
+  // Linear-parity latin face ahead of the CJK stack.
+  'Inter',
   '-apple-system',
   'BlinkMacSystemFont',
   'Segoe UI Variable Display',

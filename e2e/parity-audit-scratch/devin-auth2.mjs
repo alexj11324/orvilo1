@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const browser = await chromium.connectOverCDP('http://localhost:9222');
+const page = browser.contexts()[0].pages()[0];
+const inp = page.locator('input[type="email"], input[placeholder*="Email" i]').first();
+await inp.fill('alexjiang20232024@gmail.com');
+await page.getByRole('button', { name: 'Log in' }).click();
+await page.waitForTimeout(4000);
+await page.screenshot({ path: '/tmp/devin-auth-2.png' });
+console.log('URL:', page.url());
+process.exit(0);

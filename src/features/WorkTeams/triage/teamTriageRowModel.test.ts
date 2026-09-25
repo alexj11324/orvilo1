@@ -21,6 +21,15 @@ describe('buildTriageMutationInput', () => {
     expect(buildTriageMutationInput(task, 'team-1', 'decline')?.action).toBe('decline');
   });
 
+  it('passes retriage through with the revision guard and no extras', () => {
+    expect(buildTriageMutationInput(task, 'team-1', 'retriage')).toEqual({
+      action: 'retriage',
+      expectedDomainRevision: 7,
+      taskId: 'task-1',
+      teamId: 'team-1',
+    });
+  });
+
   it('refuses rows without a domainRevision — a write there would skip CAS', () => {
     expect(buildTriageMutationInput({ id: 'task-1' }, 'team-1', 'accept')).toBeNull();
   });

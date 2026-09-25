@@ -6,12 +6,10 @@ import type { WorkQueryField } from '@orvilo/types';
 import { workQueryFieldSpec } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { ParseKeys } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
 import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CircleDashedIcon,
   CircleUserRoundIcon,
   FilterIcon,
   InboxIcon,
@@ -29,7 +27,12 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { TASK_STATUS_VISUALS, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import {
+  STATUS_PROPERTY_ICON,
+  type StatusVisual,
+  TASK_STATUS_VISUALS,
+  WORKFLOW_CATEGORY_VISUALS,
+} from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { resolveLabelColor } from '@/features/Labels/labelColor';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -131,7 +134,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 /** Field glyphs for the directory rows — mirrors Linear's per-field icons. */
-const DIRECTORY_FIELD_ICONS: Partial<Record<WorkQueryField, LucideIcon>> = {
+const DIRECTORY_FIELD_ICONS: Partial<Record<WorkQueryField, StatusVisual['icon']>> = {
   assigneeUserId: CircleUserRoundIcon,
   createdByUserId: SquarePenIcon,
   cycleId: RepeatIcon,
@@ -139,7 +142,7 @@ const DIRECTORY_FIELD_ICONS: Partial<Record<WorkQueryField, LucideIcon>> = {
   priority: SignalIcon,
   projectId: PROJECT_ENTITY_ICON,
   reviewerUserId: UserRoundCheckIcon,
-  status: CircleDashedIcon,
+  status: STATUS_PROPERTY_ICON,
   teamId: UsersIcon,
   triageStatus: InboxIcon,
   workflowCategory: WorkflowIcon,

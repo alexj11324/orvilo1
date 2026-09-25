@@ -33,7 +33,7 @@
   "experience.steps.action": "Action",
   "experience.steps.result": "Result",
   "experience.steps.situation": "Context",
-  "experience.steps.task": "Task",
+  "experience.steps.task": "Issue",
   "filter.search": "Search memory keywords or descriptions...",
   "filter.sort.createdAt": "Creation Time",
   "filter.sort.scoreConfidence": "Confidence",

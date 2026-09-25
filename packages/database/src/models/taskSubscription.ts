@@ -11,13 +11,25 @@ export class TaskSubscriptionModel {
     private readonly workspaceId?: string,
   ) {}
 
-  subscribe = async (taskId: string, reason = 'manual'): Promise<TaskSubscriptionItem> => {
+  /**
+   * The user's own subscribe/unsubscribe ride on the bound userId; the
+   * `*ForUser` variants are for the issue-level subscribers manager, which
+   * any workspace member may run on anyone's row.
+   */
+  subscribe = async (taskId: string, reason = 'manual'): Promise<TaskSubscriptionItem> =>
+    this.subscribeForUser(taskId, this.userId, reason);
+
+  subscribeForUser = async (
+    taskId: string,
+    userId: string,
+    reason = 'manual',
+  ): Promise<TaskSubscriptionItem> => {
     const [row] = await this.db
       .insert(taskSubscriptions)
       .values({
         reason,
         taskId,
-        userId: this.userId,
+        userId,
         workspaceId: this.workspaceId ?? null,
       })
       .onConflictDoUpdate({
@@ -28,20 +40,30 @@ export class TaskSubscriptionModel {
     return row;
   };
 
-  unsubscribe = async (taskId: string): Promise<boolean> => {
+  unsubscribe = async (taskId: string): Promise<boolean> =>
+    this.unsubscribeForUser(taskId, this.userId);
+
+  unsubscribeForUser = async (taskId: string, userId: string): Promise<boolean> => {
     const updated = await this.db
       .update(taskSubscriptions)
       .set({ unsubscribedAt: new Date(), updatedAt: new Date() })
       .where(
         and(
           eq(taskSubscriptions.taskId, taskId),
-          eq(taskSubscriptions.userId, this.userId),
+          eq(taskSubscriptions.userId, userId),
           isNull(taskSubscriptions.unsubscribedAt),
         ),
       )
       .returning({ id: taskSubscriptions.id });
     return updated.length > 0;
   };
+
+  /** Everyone currently subscribed to one task — the issue's subscribers row. */
+  listByTask = async (taskId: string): Promise<TaskSubscriptionItem[]> =>
+    this.db
+      .select()
+      .from(taskSubscriptions)
+      .where(and(eq(taskSubscriptions.taskId, taskId), isNull(taskSubscriptions.unsubscribedAt)));
 
   listActiveTaskIds = async (): Promise<string[]> => {
     const rows = await this.db

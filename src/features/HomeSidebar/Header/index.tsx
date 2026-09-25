@@ -30,6 +30,7 @@ const HeaderActions = memo(() => {
   return (
     <>
       <ActionIcon
+        aria-label={t('tab.search')}
         icon={SearchIcon}
         size={'small'}
         style={roundActionStyle}
@@ -38,6 +39,7 @@ const HeaderActions = memo(() => {
         onClick={() => toggleCommandMenu(true)}
       />
       <ActionIcon
+        aria-label={t('navPanel.newTask')}
         icon={SquarePenIcon}
         size={'small'}
         style={roundActionStyle}

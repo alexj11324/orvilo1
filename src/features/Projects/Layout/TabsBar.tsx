@@ -1,15 +1,20 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
+import { Flexbox, Icon } from '@lobehub/ui';
+import {
+  ActionIcon,
+  confirmModal,
+  type DropdownItem,
+  DropdownMenu,
+  toast,
+} from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { ActivityIcon, EllipsisIcon, LinkIcon, StarIcon, TrashIcon } from 'lucide-react';
 import { memo, type Ref, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import Avatar from '@/components/Avatar';
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import {
@@ -19,37 +24,22 @@ import {
 import type { SwitcherItem } from '@/features/NavPanel/switcher/switcherItems';
 import SwitcherMenu from '@/features/NavPanel/switcher/SwitcherMenu';
 import { projectAvatar } from '@/features/Projects/ProjectIcon';
-import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
-import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
-import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
+import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from '@/store/project';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import {
   getProjectActivityPath,
-  getProjectMilestonesPath,
   getProjectOverviewPath,
   getProjectTasksPath,
   projectPathSection,
 } from './navigation';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  headerMembers: css`
-    display: flex;
-    align-items: center;
-
-    > * {
-      margin-inline-start: -6px;
-      border: 2px solid ${cssVar.colorBgContainer};
-      border-radius: 50%;
-
-      &:first-child {
-        margin-inline-start: 0;
-      }
-    }
-  `,
   tabsRow: css`
     flex: none;
     min-height: 40px;
@@ -88,9 +78,15 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+interface ProjectTabsBarProps {
+  onTogglePanel?: () => void;
+  panelOpen?: boolean;
+  toolbarRef?: Ref<HTMLDivElement>;
+}
+
 // Linear shape: project navigation is a tab strip in the content header, not a
 // second left rail — the workspace nav panel is the only rail on /project/*.
-const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> }) => {
+const ProjectTabsBar = memo<ProjectTabsBarProps>(({ onTogglePanel, panelOpen, toolbarRef }) => {
   const { t } = useTranslation(['project', 'common']);
   const { projectId } = useActiveRouteParams<{ projectId: string }>();
   const navigate = useWorkspaceAwareNavigate();
@@ -98,18 +94,19 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
   const detail = useCurrentProjectDetail(projectId);
   const projects = useCurrentProjectList();
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectList)(true);
-  const workspaceId = useActiveWorkspaceId();
-  const membersEnabled = useTeammatesEnabled() && !!workspaceId;
-  const membersSWR = useProjectMembersQuery(detail?.project.id, membersEnabled);
+
+  const currentUserId = useUserStore(userProfileSelectors.userId);
+  const deleteProject = useProjectStore((s) => s.deleteProject);
+  const { pinned, toggle: toggleFavorite } = useWorkFavoriteToggle('project', detail?.project.id);
 
   const projectReference = detail?.project.slug ?? projectId ?? '';
-  // Same glyph and colour the project list and the rail draw for this status.
-  const headerStatusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(detail?.project.status)];
+  // Deletion stays owner-only — the same gate the projects list applies.
+  const canDelete = !!detail?.project.userId && currentUserId === detail?.project.userId;
 
   const items = useMemo<SwitcherItem[]>(
     () =>
       projects.map((item) => ({
-        avatar: item.avatar || item.name,
+        avatar: item.avatar || undefined,
         id: item.slug ?? item.id,
         private: item.visibility === 'private',
         title: item.name,
@@ -122,8 +119,85 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
     [navigate],
   );
 
-  // Linear's project header is Overview | Activity | Issues | Milestones —
-  // goals and resources live as sections on the Overview body instead of tabs.
+  const copyPageUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success(t('savedViews.linkCopied', { ns: 'common' }));
+    } catch {
+      toast.error(t('savedViews.linkCopyFailed', { ns: 'common' }));
+    }
+  }, [t]);
+
+  const confirmDelete = useCallback(() => {
+    if (!detail) return;
+    confirmModal({
+      cancelText: t('cancel', { ns: 'common' }),
+      content: t('list.deleteConfirmDescription', { name: detail.project.name }),
+      okButtonProps: { danger: true },
+      okText: t('delete', { ns: 'common' }),
+      title: t('list.deleteConfirmTitle'),
+      onOk: async () => {
+        try {
+          await deleteProject(detail.project.id);
+          toast.success(t('list.deleteSuccess', { name: detail.project.name }));
+          navigate('/projects');
+        } catch (error) {
+          console.error('Failed to delete project', error);
+          toast.error(t('list.deleteError'));
+        }
+      },
+    });
+  }, [deleteProject, detail, navigate, t]);
+
+  // Linear's "Project actions" ⋯ menu: Copy ▸, Favorite, Subscribe ▸, Remind
+  // me ▸, Change update schedule…, Configure Slack notifications…, Show
+  // description history, Show updates and activity, Delete. The honest subset
+  // is every item Orvilo can back today — favorites, the page URL, the
+  // activity surface and owner-gated delete; the rest aren't modeled.
+  const menuItems = useMemo<DropdownItem[]>(
+    () => [
+      {
+        icon: <Icon icon={StarIcon} />,
+        key: 'favorite',
+        label: pinned
+          ? t('savedViews.unfavorite', { ns: 'common' })
+          : t('savedViews.favorite', { ns: 'common' }),
+        onClick: () => void toggleFavorite(),
+      },
+      {
+        icon: <Icon icon={LinkIcon} />,
+        key: 'copyUrl',
+        label: t('header.copyPageUrl'),
+        onClick: () => void copyPageUrl(),
+      },
+      {
+        icon: <Icon icon={ActivityIcon} />,
+        key: 'activity',
+        label: t('header.showUpdatesAndActivity'),
+        onClick: () => navigate(getProjectActivityPath(projectReference)),
+      },
+      ...(canDelete
+        ? [
+            { type: 'divider' as const },
+            {
+              danger: true,
+              icon: <Icon icon={TrashIcon} />,
+              key: 'delete',
+              label: t('delete', { ns: 'common' }),
+              onClick: confirmDelete,
+            },
+          ]
+        : []),
+    ],
+    [pinned, toggleFavorite, copyPageUrl, t, navigate, projectReference, canDelete, confirmDelete],
+  );
+
+  // Linear's project header is exactly Overview | Activity | Issues — verified
+  // 2026-09-24 on the live reference, including on a project that HAS a
+  // milestone (Daymark): milestones live as an overview body section and a
+  // rail card, never a tab. The /milestones route still resolves for deep
+  // links; it just isn't a tab. Goals and resources likewise live as sections
+  // on the Overview body.
   const tabs = useMemo(
     () => [
       {
@@ -141,72 +215,77 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
         path: getProjectTasksPath(projectReference),
         section: 'tasks',
       },
-      {
-        label: t('sections.milestones'),
-        path: getProjectMilestonesPath(projectReference),
-        section: 'milestones',
-      },
     ],
     [projectReference, t],
   );
 
   const activeTab = tabs.find((tab) => projectPathSection(pathname) === tab.section)?.path ?? '';
 
+  // Linear's header-left is [project switcher, ☆ Add to favorites, ⋯ Project
+  // actions]; header-right is [🔗 Copy page URL, 🔔 notifications, panel
+  // collapse]. The status pill and member stack Orvilo carried live in the
+  // rail's Properties card instead — the reference header has neither.
   return (
     <>
       <NavHeader
         left={
-          <SidebarHeaderSelectPopover
-            content={
-              <SwitcherMenu
-                activeId={detail?.project.slug ?? detail?.project.id}
-                error={error}
-                isLoading={isLoading && items.length === 0}
-                items={items}
-                kind={'project'}
-                searchPlaceholder={t('navPanel.searchProject', { ns: 'common' })}
-                onRetry={() => mutate()}
-                onSelect={handleSelect}
+          <Flexbox horizontal align={'center'} gap={4}>
+            <SidebarHeaderSelectPopover
+              content={
+                <SwitcherMenu
+                  activeId={detail?.project.slug ?? detail?.project.id}
+                  error={error}
+                  isLoading={isLoading && items.length === 0}
+                  items={items}
+                  kind={'project'}
+                  searchPlaceholder={t('navPanel.searchProject', { ns: 'common' })}
+                  onRetry={() => mutate()}
+                  onSelect={handleSelect}
+                />
+              }
+            >
+              <SidebarHeaderSelectTrigger
+                avatar={projectAvatar(detail?.project.avatar, 16)}
+                background={detail?.project.avatar ? undefined : 'transparent'}
+                name={detail?.project.name || t('sidebar.title')}
+                title={detail?.project.name || t('sidebar.title')}
               />
-            }
-          >
-            <SidebarHeaderSelectTrigger
-              avatar={projectAvatar(detail?.project.avatar, 16)}
-              background={detail?.project.avatar ? undefined : 'transparent'}
-              name={detail?.project.name || t('sidebar.title')}
-              title={detail?.project.name || t('sidebar.title')}
-            />
-          </SidebarHeaderSelectPopover>
+            </SidebarHeaderSelectPopover>
+            {detail?.project.id && (
+              <>
+                <WorkFavoriteButton
+                  icon={'star'}
+                  targetId={detail.project.id}
+                  targetType="project"
+                  variant="icon"
+                />
+                <DropdownMenu items={menuItems} placement={'bottomRight'}>
+                  <ActionIcon
+                    icon={EllipsisIcon}
+                    size={'small'}
+                    title={t('header.projectActions')}
+                  />
+                </DropdownMenu>
+              </>
+            )}
+          </Flexbox>
         }
         right={
           detail?.project.id ? (
-            <Flexbox horizontal align={'center'} gap={10}>
-              <Tag
-                color={headerStatusVisual.color}
-                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
-                shape={'round'}
+            <Flexbox horizontal align={'center'} gap={8}>
+              <ActionIcon
+                aria-label={t('header.copyPageUrl')}
+                icon={LinkIcon}
                 size={'small'}
-              >
-                {t(`status.${detail.project.status}`, {
-                  defaultValue: detail.project.status,
-                })}
-              </Tag>
-              {membersEnabled && (membersSWR.data?.length ?? 0) > 0 && (
-                <div className={styles.headerMembers}>
-                  {membersSWR.data!.slice(0, 4).map((member) => (
-                    <Avatar
-                      avatar={member.user?.avatar ?? undefined}
-                      key={member.userId}
-                      size={20}
-                      title={member.user?.fullName || member.user?.username || undefined}
-                    />
-                  ))}
-                </div>
-              )}
-              <WorkFavoriteButton
-                targetId={detail.project.id}
-                targetType="project"
-                variant="icon"
+                title={t('header.copyPageUrl')}
+                onClick={() => void copyPageUrl()}
+              />
+              <ToggleRightPanelButton
+                expand={panelOpen}
+                id={null}
+                showHotkey={false}
+                title={t(panelOpen ? 'header.closeDetails' : 'header.showDetails')}
+                onToggle={onTogglePanel}
               />
             </Flexbox>
           ) : undefined

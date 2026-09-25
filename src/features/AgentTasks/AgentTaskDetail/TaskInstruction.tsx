@@ -1,6 +1,5 @@
 import { useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
+import { Flexbox, Tooltip } from '@lobehub/ui';
 import { Paperclip } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +14,8 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { actionLinkStyles } from './actionLinkStyles';
+import TaskReactions from './TaskReactions';
 import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
 
 // Stable lock RPC binding for the task resource.
@@ -37,6 +38,7 @@ const TaskInstruction = memo(() => {
   const instructionRevision = useTaskStore(taskDetailSelectors.activeTaskInstructionRevision);
   const persistedEditorData = useTaskStore(taskDetailSelectors.activeTaskEditorData);
   const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const taskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
   const taskWorkspaceId = useTaskStore(taskDetailSelectors.activeTaskWorkspaceId);
   const persistedFiles = useTaskStore(taskDetailSelectors.activeTaskFiles);
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -135,7 +137,10 @@ const TaskInstruction = memo(() => {
       >
         <div onFocus={handleFocus}>
           <EditorCanvas
+            // Linear's issue description runs at 15px/450 — the app's default
+            // body text is bigger and lighter.
             contentRevision={instructionRevision}
+            contentStyle={{ fontSize: 15, fontWeight: 450 }}
             disabled={!canEditTask}
             editable={!lock.lockedByOther && !lock.pending}
             editor={editor}
@@ -146,12 +151,31 @@ const TaskInstruction = memo(() => {
           />
         </div>
       </CollapsibleContent>
-      {showAttach && (
-        <ActionIcon
-          icon={Paperclip}
-          size={'small'}
-          title={t('upload.action.tooltip')}
-          onClick={handleAttach}
+      {/* Linear's description footer: reaction chips + compact icon buttons
+          for adding reactions and attaching files directly under body text. */}
+      {taskDatabaseId && (
+        <TaskReactions
+          taskId={taskDatabaseId}
+          extraAction={
+            showAttach ? (
+              <Tooltip
+                title={t('taskDetail.attachImagesFiles', {
+                  defaultValue: 'Attach images, files, or videos',
+                })}
+              >
+                <button
+                  className={actionLinkStyles.iconActionBtn}
+                  type="button"
+                  aria-label={t('taskDetail.attachImagesFiles', {
+                    defaultValue: 'Attach images, files, or videos',
+                  })}
+                  onClick={handleAttach}
+                >
+                  <Paperclip size={15} />
+                </button>
+              </Tooltip>
+            ) : undefined
+          }
         />
       )}
     </Flexbox>

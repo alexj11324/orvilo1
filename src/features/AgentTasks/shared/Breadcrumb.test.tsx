@@ -68,35 +68,34 @@ describe('Breadcrumb', () => {
     cleanup();
   });
 
-  it('uses the ancestor owner agent when building breadcrumb links', () => {
+  it('shows only the owner and the current issue, never ancestor crumbs', () => {
+    // Linear renders `project > ISSUE-ID`: the parent lives in the "Sub-issue
+    // of" row, not in the trail, so T-parent/T-root must not appear here.
     render(<Breadcrumb taskId="T-child" />);
 
-    expect(screen.getByRole('link', { name: 'T-parent' })).toHaveAttribute(
-      'href',
-      '/agent/agt_parent/task/T-parent/parent-task',
-    );
-    expect(screen.getByRole('link', { name: 'T-root' })).toHaveAttribute(
-      'href',
-      '/task/T-root/root-task',
-    );
+    expect(screen.getByRole('link', { name: 'taskList.all' })).toHaveAttribute('href', '/tasks');
+    expect(screen.getByText('T-child')).toBeTruthy();
+    expect(screen.getByText('Child task')).toBeTruthy();
+    expect(screen.queryByText('T-parent')).toBeNull();
+    expect(screen.queryByText('T-root')).toBeNull();
   });
 
-  it('falls back to the global route when an ancestor owner is unknown', () => {
+  it('links the owner crumb when a project is attached to the issue', () => {
     mocks.taskState = createState({
       'T-child': {
         identifier: 'T-child',
-        instruction: 'Child instruction',
         name: 'Child task',
-        parent: { identifier: 'T-parent', name: 'Parent task' },
+        parent: { agentId: 'agt_parent', identifier: 'T-parent', name: 'Parent task' },
+        projectId: 'proj_1',
         status: 'running',
       },
     });
 
     render(<Breadcrumb taskId="T-child" />);
 
-    expect(screen.getByRole('link', { name: 'T-parent' })).toHaveAttribute(
-      'href',
-      '/task/T-parent/parent-task',
-    );
+    // The owner crumb falls back to "Tasks" while the project resolves; the
+    // parent still stays out of the trail.
+    expect(screen.getByRole('link', { name: 'taskList.all' })).toHaveAttribute('href', '/tasks');
+    expect(screen.queryByText('T-parent')).toBeNull();
   });
 });

@@ -1,13 +1,13 @@
 import './globals.css';
 
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { Geist } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import { type ReactNode, Suspense } from 'react';
 
 import Analytics from '@/components/Analytics';
 import { cn } from '@/lib/utils';
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 const inVercel = process.env.VERCEL === '1';
 
@@ -15,7 +15,7 @@ const RootLayout = ({ children }: { children: ReactNode }) => {
   return (
     <html
       suppressHydrationWarning
-      className={cn('font-sans', geist.variable)}
+      className={cn('font-sans', inter.variable)}
       lang={'en'}
       style={{ height: '100%' }}
     >

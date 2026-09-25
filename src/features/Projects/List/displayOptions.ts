@@ -268,7 +268,7 @@ const CLOSED_WINDOW_DAYS: Partial<Record<ProjectListClosedWindow, number>> = {
   pastYear: 365,
 };
 
-interface ClosedWindowRow {
+export interface ClosedWindowRow {
   archivedAt?: Date | null | string;
   completedAt?: Date | null | string;
   status?: null | string;
@@ -531,7 +531,7 @@ export interface ProjectListColumn {
 export const PROJECT_LIST_COLUMNS: readonly ProjectListColumn[] = [
   { key: 'health', minWidth: 96, property: 'health', sortBy: 'health', width: '96px' },
   { key: 'priority', minWidth: 64, property: 'priority', sortBy: 'priority', width: '64px' },
-  { key: 'lead', minWidth: 84, property: 'lead', width: '84px' },
+  { key: 'lead', minWidth: 140, property: 'lead', width: '140px' },
   { key: 'summary', minWidth: 140, property: 'summary', width: 'minmax(140px, 1fr)' },
   { key: 'startDate', minWidth: 96, property: 'startDate', width: '96px' },
   { key: 'targetDate', minWidth: 96, property: 'targetDate', sortBy: 'targetDate', width: '96px' },

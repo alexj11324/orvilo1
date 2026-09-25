@@ -4,14 +4,16 @@ import { CheckIcon } from 'lucide-react';
 
 const renderCheck = () => <Icon color={cssVar.colorTextSecondary} icon={CheckIcon} size={14} />;
 
+const shortcutStyle = { fontSize: 12, fontWeight: 500 } as const;
+
 export const renderMenuCheck = (isCurrent: boolean) => (isCurrent ? renderCheck() : undefined);
 
 export const renderMenuExtra = (shortcut: string, isCurrent: boolean) =>
   isCurrent ? (
     <Flexbox horizontal align={'center'} gap={6}>
       {renderCheck()}
-      {shortcut}
+      <span style={shortcutStyle}>{shortcut}</span>
     </Flexbox>
   ) : (
-    shortcut
+    <span style={shortcutStyle}>{shortcut}</span>
   );

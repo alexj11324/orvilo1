@@ -14,6 +14,41 @@ export type TaskStatus =
 export type TaskWorkflowCategory =
   'triage' | 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled';
 
+/**
+ * How one task counts toward a progress readout: `canceled` leaves scope
+ * entirely, `done` completes, a started state is in-flight work, and every
+ * other recognised category is scope that has not started. An unrecognised
+ * category is `null` — an unavailable readout beats a wrong number.
+ *
+ * The Progress card, burnup/breakdown helpers and
+ * `ProjectModel.listMilestoneProgress` share this one classifier, so a new
+ * `TaskWorkflowCategory` member is triaged here once.
+ */
+export type WorkflowBucket = 'completed' | 'excluded' | 'scoped' | 'started';
+
+export const workflowBucket = (category: TaskWorkflowCategory): WorkflowBucket | null => {
+  switch (category) {
+    case 'canceled': {
+      return 'excluded';
+    }
+    case 'done': {
+      return 'completed';
+    }
+    case 'in_progress':
+    case 'in_review': {
+      return 'started';
+    }
+    case 'triage':
+    case 'backlog':
+    case 'todo': {
+      return 'scoped';
+    }
+    default: {
+      return null;
+    }
+  }
+};
+
 /** Team intake state. NULL means the task is not in triage. */
 export type TaskTriageStatus = 'accepted' | 'declined' | 'duplicate' | 'untriaged';
 
@@ -282,7 +317,13 @@ export type TaskActivityType =
  * change with no migration.
  */
 export type TaskActivityLogType =
-  'assignee_agent' | 'assignee_user' | 'automation' | 'priority' | 'reviewer' | 'status';
+  | 'assignee_agent'
+  | 'assignee_user'
+  | 'automation'
+  | 'priority'
+  | 'relation'
+  | 'reviewer'
+  | 'status';
 
 /**
  * Payload of a `task_activities` row: what the slot moved between.
@@ -299,6 +340,18 @@ export interface TaskActivityLogPayload {
   actorKind?: 'agent' | 'system' | 'user';
   from?: TaskActivityValue;
   fromId?: string | null;
+  /**
+   * `relation` events: whether the edge appeared or disappeared. Denormalized
+   * target fields keep the row readable after the other task is deleted or
+   * renamed — the feed must not turn a historical "blocked by T-3" into a
+   * dangling id.
+   */
+  relationAction?: 'added' | 'removed';
+  /** 'blockedBy' on the task that became blocked, 'blocking' on the one doing the blocking; relates edges are symmetric and leave it unset. */
+  relationDirection?: 'blockedBy' | 'blocking';
+  relationKind?: 'blocks' | 'relates';
+  relationTargetIdentifier?: string | null;
+  relationTargetTaskId?: string;
   to?: TaskActivityValue;
   toId?: string | null;
 }
@@ -1020,7 +1073,11 @@ export interface TaskDetailSubtask {
   children?: TaskDetailSubtask[];
   /** Creator of the subtask; with `visibility`, gates who it can be assigned to. */
   createdByUserId?: string;
+  /** Optimistic-concurrency token for guarded domain writes (e.g. triage actions). */
+  domainRevision?: number;
   heartbeat?: { interval?: number | null };
+  /** Internal database id; required by mutation-backed menu actions. */
+  id?: string;
   identifier: string;
   name?: string | null;
   priority?: number | null;
@@ -1029,6 +1086,8 @@ export interface TaskDetailSubtask {
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
   status: string;
+  /** Owning team (shared mode); null for personal tasks and legacy rows. */
+  teamId?: string | null;
   updatedAt?: string;
   visibility?: 'private' | 'public';
 }
@@ -1139,6 +1198,14 @@ export interface TaskDetailActivity {
         to: TaskAutomationSnapshot | null;
       }
     | { field: 'priority'; from: number | null; to: number | null }
+    | {
+        action: 'added' | 'removed';
+        direction?: 'blockedBy' | 'blocking';
+        field: 'relation';
+        kind: 'blocks' | 'relates';
+        targetTaskId: string;
+        targetTaskIdentifier?: string | null;
+      }
     | { field: 'status'; from: TaskStatus | null; to: TaskStatus };
   readAt?: string | null;
   resolvedAction?: string | null;
@@ -1223,7 +1290,20 @@ export interface TaskDetailData {
     status?: string | null;
     type: string;
   }>;
+  /** Tasks that declare an edge on this one — the rail's "Blocking" (type
+   * `blocks`) and symmetric "Related" (type `relates`) groups. */
+  dependents?: Array<{
+    dependsBy: string;
+    /** Raw edge target (the other task), retained for relation removal. */
+    id?: string;
+    name?: string | null;
+    /** Null/omitted means unavailable, never implicitly completed. */
+    status?: string | null;
+    type: string;
+  }>;
   description?: string | null;
+  /** Optimistic-concurrency token for guarded domain writes (e.g. triage actions). */
+  domainRevision?: number;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;
   error?: string | null;

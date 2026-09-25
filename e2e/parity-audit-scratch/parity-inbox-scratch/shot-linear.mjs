@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const browser = await chromium.connectOverCDP('http://localhost:9222');
+const ctx = browser.contexts()[0];
+const page = await ctx.newPage();
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto('https://linear.app/bdiverifier/inbox', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(8000);
+console.log('URL:', page.url());
+await page.screenshot({ path: '/tmp/parity-inbox-evidence/linear-inbox-initial.png' });
+await page.close();
+await browser.close();

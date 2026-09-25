@@ -6,7 +6,6 @@ import type { TaskStatus } from '@orvilo/types';
 import { agentDisplayName, TASK_STATUS_VALUES, TASK_TRIAGE_STATUS_VALUES } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { ParseKeys } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
 import {
   ALargeSmallIcon,
   ArrowLeftIcon,
@@ -14,7 +13,6 @@ import {
   CalendarDaysIcon,
   CheckIcon,
   ChevronRightIcon,
-  CircleDotIcon,
   CircleUserIcon,
   DiamondIcon,
   FilterIcon,
@@ -34,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
+import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import type { SidebarAgentItem } from '@/database/repositories/home';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
@@ -190,7 +189,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const GROUP_ICONS: Record<ProjectIssueFilterGroupId, LucideIcon> = {
+const GROUP_ICONS: Record<ProjectIssueFilterGroupId, StatusVisual['icon']> = {
   agent: BotIcon,
   assignee: UserRoundIcon,
   creator: CircleUserIcon,
@@ -201,7 +200,7 @@ const GROUP_ICONS: Record<ProjectIssueFilterGroupId, LucideIcon> = {
   milestone: DiamondIcon,
   priority: SignalHighIcon,
   relations: LinkIcon,
-  status: CircleDotIcon,
+  status: STATUS_PROPERTY_ICON,
   subscribers: UsersRoundIcon,
   template: LayoutTemplateIcon,
   text: ALargeSmallIcon,

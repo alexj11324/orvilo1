@@ -446,6 +446,27 @@ describe('Task Router Integration', () => {
       expect(ch2Sub?.blockedBy).toBeTruthy();
     });
 
+    it('rejects a relates edge that would downgrade an existing blocks edge', async () => {
+      const blocker = await caller.create({ instruction: 'Blocker', name: 'Blocker' });
+      const dependent = await caller.create({ instruction: 'Dependent', name: 'Dependent' });
+
+      await caller.addDependency({ dependsOnId: blocker.data.id, taskId: dependent.data.id });
+
+      await expect(
+        caller.addDependency({
+          dependsOnId: blocker.data.id,
+          taskId: dependent.data.id,
+          type: 'relates',
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+      // The blocks edge survives the rejected downgrade attempt.
+      const detail = await caller.detail({ id: dependent.data.identifier });
+      expect(detail.data.dependencies).toEqual([
+        expect.objectContaining({ dependsOn: blocker.data.identifier, type: 'blocks' }),
+      ]);
+    });
+
     it('should reparent tasks and allow moving them back to top level', async () => {
       const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
       const newParent = await caller.create({ instruction: 'New parent', name: 'New Parent' });

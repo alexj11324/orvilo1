@@ -19,7 +19,7 @@ import {
 } from '@/features/Projects/milestoneRow';
 import { projectIssueProgress } from '@/features/Projects/projectIssueProgress';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { BODY_TEXT_COLOR, SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
@@ -375,7 +375,12 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               >
                 <MilestoneIcon size={MILESTONE_ICON_SIZE} />
               </a>
-              <Text fontSize={15} style={{ flex: '0 1 auto', minWidth: 0 }} weight={450}>
+              <Text
+                color={BODY_TEXT_COLOR}
+                fontSize={15}
+                style={{ flex: '0 1 auto', minWidth: 0 }}
+                weight={600}
+              >
                 {milestone.name}
               </Text>
               <button
@@ -508,7 +513,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
           renderOverlay={(milestone) => (
             <Flexbox horizontal align={'center'} className={styles.card} gap={8}>
               <MilestoneIcon size={MILESTONE_ICON_SIZE} />
-              <Text fontSize={15} weight={450}>
+              <Text color={BODY_TEXT_COLOR} fontSize={15} weight={600}>
                 {milestone.name}
               </Text>
             </Flexbox>

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import Avatar from '@/components/Avatar';
+import { projectAvatar } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
@@ -67,7 +68,8 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
               }}
             >
               <Avatar
-                avatar={project.avatar || undefined}
+                avatar={projectAvatar(project.avatar, 14)}
+                background={project.avatar ? undefined : 'transparent'}
                 name={project.name}
                 shape={'square'}
                 size={14}

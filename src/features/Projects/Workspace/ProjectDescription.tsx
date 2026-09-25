@@ -4,21 +4,29 @@ import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { BODY_TEXT_COLOR, SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { projectService } from '@/services/project';
 
 const styles = createStaticStyles(({ css }) => ({
   editor: css`
     [contenteditable] {
       min-height: 32px;
+
       font-size: 15px !important;
       font-weight: 450;
       line-height: 24px;
+      color: ${BODY_TEXT_COLOR};
+
+      /* Headings keep full ink — the step between them and the prose is the
+         description's hierarchy. */
+      :is(h1, h2, h3, h4) {
+        color: ${cssVar.colorText};
+      }
     }
   `,
   header: css`

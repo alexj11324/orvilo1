@@ -115,7 +115,9 @@ export function ProjectMembersField({
             return {
               disabled: member.disabled,
               label: (
-                <Flexbox horizontal align="center" gap={6}>
+                // Hook for the host's ink: the Select's chip paints full-ink
+                // text and offers no class for it.
+                <Flexbox data-member-label horizontal align="center" gap={6}>
                   <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
                   {name}
                 </Flexbox>

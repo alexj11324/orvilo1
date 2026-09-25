@@ -42,6 +42,21 @@ import { cssVar } from 'antd-style';
 export const MUTED_LABEL_COLOR = cssVar.colorTextSecondary;
 
 /**
+ * Body ink for the project overview: one step below the title.
+ *
+ * Linear paints only the title and description headings at full ink
+ * (`lch(100)` in dark mode); the summary, property values, resource links,
+ * milestone names and description prose sit one step down at `lch(90.45)`
+ * (measured 2026-09-24, dark mode). The candidate drew all of them at
+ * `colorText` (#fff), so nothing below the title read as secondary.
+ *
+ * 88% of `colorText` over the panel lands on ≈ rgb(226, 227, 230) in dark mode
+ * — lch 90.4 — and keeps the same one-step drop in light mode, where a frozen
+ * hex would not.
+ */
+export const BODY_TEXT_COLOR = `color-mix(in srgb, ${cssVar.colorText} 88%, transparent)`;
+
+/**
  * Full spec for a section label at the reference's third text step:
  * 13px / 500 in the muted tone above. Every project section label spreads this
  * object, so none of them can drift to a private grey again.

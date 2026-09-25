@@ -23,6 +23,7 @@ import {
 } from '@/features/NavPanel/SidebarHeaderSelect';
 import type { SwitcherItem } from '@/features/NavPanel/switcher/switcherItems';
 import SwitcherMenu from '@/features/NavPanel/switcher/SwitcherMenu';
+import { projectAvatar } from '@/features/Projects/ProjectIcon';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -244,7 +245,8 @@ const ProjectTabsBar = memo<ProjectTabsBarProps>(({ onTogglePanel, panelOpen, to
               }
             >
               <SidebarHeaderSelectTrigger
-                avatar={detail?.project.avatar || undefined}
+                avatar={projectAvatar(detail?.project.avatar, 16)}
+                background={detail?.project.avatar ? undefined : 'transparent'}
                 name={detail?.project.name || t('sidebar.title')}
                 title={detail?.project.name || t('sidebar.title')}
               />

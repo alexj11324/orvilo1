@@ -953,10 +953,12 @@ describe('project milestone rows', () => {
     render(<ProjectSidePanel projectId="apollo" />);
     const railName = mocks.textProps.find((props) => props.children === milestone.name) ?? {};
 
-    // Measured on the reference: 15px/450 in the overview card, 12px/450 in the
-    // rail. Reading the name, not editing it — the reference's overview name is
-    // a ProseMirror editor, and we deliberately do not copy that.
-    expect(overviewName).toMatchObject({ fontSize: 15, weight: 450 });
+    // Measured on the reference: 15px/600 in the overview card, 12px/450 in the
+    // rail. The overview name is a ProseMirror `<p>` at 600 inside an editor
+    // container at 450 — an earlier reading took the container's 450
+    // (re-measured 2026-09-24 on the `<p>` itself). Reading the name, not
+    // editing it — we deliberately do not copy that editor.
+    expect(overviewName).toMatchObject({ fontSize: 15, weight: 600 });
     expect(railName).toMatchObject({ fontSize: 12, weight: 450 });
   });
 

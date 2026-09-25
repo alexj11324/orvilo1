@@ -5,6 +5,7 @@ import { EllipsisIcon, Link2Icon, PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { BODY_TEXT_COLOR } from '@/features/Projects/sectionLabel';
 import { useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -23,7 +24,8 @@ const styles = createStaticStyles(({ css }) => ({
     border-radius: 6px;
 
     font-size: 13px;
-    color: ${cssVar.colorText};
+    font-weight: 500;
+    color: ${BODY_TEXT_COLOR};
     text-decoration: none;
 
     &:hover {

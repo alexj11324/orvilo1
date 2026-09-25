@@ -7,6 +7,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { projectAvatar } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
@@ -48,7 +49,8 @@ const TaskProjectSection = memo(() => {
           onClick={() => navigate(`/project/${projectRef}`)}
         >
           <Avatar
-            avatar={project.avatar || undefined}
+            avatar={projectAvatar(project.avatar, 16)}
+            background={project.avatar ? undefined : 'transparent'}
             name={project.name}
             shape={'square'}
             size={16}

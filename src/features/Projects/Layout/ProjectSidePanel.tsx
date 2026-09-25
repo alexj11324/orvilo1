@@ -241,6 +241,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
           action={
             canEdit ? (
               <ActionIcon
+                aria-label={t('overview.milestoneAdd')}
                 icon={PlusIcon}
                 size={'small'}
                 title={t('overview.milestoneAdd')}

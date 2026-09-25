@@ -272,6 +272,7 @@ const ProjectTabsBar = memo<ProjectTabsBarProps>(({ onTogglePanel, panelOpen, to
           detail?.project.id ? (
             <Flexbox horizontal align={'center'} gap={8}>
               <ActionIcon
+                aria-label={t('header.copyPageUrl')}
                 icon={LinkIcon}
                 size={'small'}
                 title={t('header.copyPageUrl')}

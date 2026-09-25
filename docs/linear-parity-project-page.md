@@ -79,3 +79,17 @@ cards' edit path and the rail create path.
   backend): not modeled; deferred pending product decision.
 - The 🔔 notification bell between Copy page URL and rail-collapse is a
   J4 surface and stays out with it.
+
+## Bugs found during runtime verification
+
+- **Detail refresh dropped slug-keyed views**: `refreshDetailAfterWrite`
+  revalidated only `project/detail/<scope>/<write-id>`, while views fetch
+  under the route param (slug). Milestone create/update/delete left the
+  rail and body lists stale until reload. The helper now revalidates every
+  retained alias whose `detail.project.id` matches the write — verified
+  live: rail `+` create and row-menu delete refresh instantly.
+- **Icon buttons rendered without accessible names**: `@lobehub/ui`
+  `ActionIcon` only emits `aria-label` for popup triggers (`title` feeds a
+  tooltip only). Added explicit `aria-label` to the header copy/star
+  buttons, the rail `+`, and `ToggleRightPanelButton` (derived from its
+  title, so every existing callsite gains a name too).

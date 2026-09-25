@@ -28,7 +28,15 @@ const WorkFavoriteButton = memo<WorkFavoriteButtonProps>(
     const label = pinned ? t('savedViews.unfavorite') : t('savedViews.favorite');
     if (variant === 'icon') {
       const glyph = pinned ? FAVORITE_MARK_OFF[icon] : FAVORITE_MARK[icon];
-      return <ActionIcon icon={glyph} size="small" title={label} onClick={() => void toggle()} />;
+      return (
+        <ActionIcon
+          aria-label={label}
+          icon={glyph}
+          size="small"
+          title={label}
+          onClick={() => void toggle()}
+        />
+      );
     }
     return (
       <Button size="small" onClick={() => void toggle()}>

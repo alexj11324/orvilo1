@@ -25,8 +25,9 @@ export interface TeamTriageTask {
  * Linear's triage row carries a dedicated Snooze control. Ours renders
  * disabled: `tasks` has no snoozed column, `TaskTriageStatus` has no `snoozed`
  * value, and `workAttention.triage` accepts only
- * accept/decline/duplicate/reassign — there is nothing a snooze write could
- * land on. Flip this only together with the schema and the mutation enum.
+ * accept/decline/duplicate/reassign/retriage — there is nothing a snooze
+ * write could land on. Flip this only together with the schema and the
+ * mutation enum.
  */
 export const TEAM_TRIAGE_SNOOZE_ENABLED = false;
 

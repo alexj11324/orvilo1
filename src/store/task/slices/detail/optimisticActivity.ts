@@ -194,17 +194,22 @@ export const appendOptimisticPropertyActivity = (
 ): TaskDetailActivity[] => {
   const next = row?.propertyChange;
   if (!row || !next) return activities;
+  // Relation rows have no from/to value — nothing to collapse into.
+  if (next.field === 'relation') return [...activities, row];
   const last = activities.at(-1);
   const prev = last?.propertyChange;
-  const mergeable =
-    !!last &&
-    !!prev &&
-    isOptimisticActivityId(last.id) &&
-    prev.field === next.field &&
-    last.author?.id === row.author?.id &&
-    at(row.time) - at(last.time) <= windowMs &&
-    sameValue(prev.to, next.from);
-  if (!mergeable) return [...activities, row];
+  if (
+    !last ||
+    !prev ||
+    prev.field === 'relation' ||
+    !isOptimisticActivityId(last.id) ||
+    prev.field !== next.field ||
+    last.author?.id !== row.author?.id ||
+    at(row.time) - at(last.time) > windowMs ||
+    !sameValue(prev.to, next.from)
+  ) {
+    return [...activities, row];
+  }
 
   const head = activities.slice(0, -1);
   if (sameValue(prev.from, next.to)) return head;

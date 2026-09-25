@@ -450,6 +450,10 @@ it('exposes project sections as destination links with one current page, not tab
     'href',
     '/project/apollo/tasks',
   );
+  // The reference header is exactly Overview | Activity | Issues — milestones
+  // live as an overview section and rail card, never a tab (the /milestones
+  // route still resolves for deep links). audit-2026-09-24.
+  expect(screen.queryByRole('link', { name: 'sections.milestones' })).not.toBeInTheDocument();
   expect(
     screen.getAllByRole('link').filter((link) => link.getAttribute('aria-current') === 'page'),
   ).toHaveLength(1);
@@ -614,7 +618,7 @@ describe('project sidebar sections', () => {
   });
 
   it('reports missing issue data as unavailable rather than zero progress', () => {
-    render(<ProjectIssueProgress issues={null} />);
+    render(<ProjectIssueProgress issues={null} projectRef="apollo" />);
     expect(screen.getByRole('status')).toHaveTextContent('overview.progressUnavailable');
     expect(screen.queryByText('overview.progress.scope')).not.toBeInTheDocument();
   });
@@ -814,9 +818,13 @@ describe('project dashboard milestones', () => {
     expect(screen.queryByText('overview.milestonesEmpty')).not.toBeInTheDocument();
   });
 
-  it('shows the empty state when the project has no milestones', () => {
+  // Linear's overview body renders no Milestones section at all on a
+  // 0-milestone project (verified live 2026-09-25 on ACP Harness) — not an
+  // empty state; creation starts from the rail card's "+" instead.
+  it('renders no milestones section when the project has no milestones', () => {
     renderCharts();
-    expect(screen.getByText('overview.milestonesEmpty')).toBeInTheDocument();
+    expect(screen.queryByText('overview.milestones')).not.toBeInTheDocument();
+    expect(screen.queryByText('overview.milestonesEmpty')).not.toBeInTheDocument();
   });
 });
 

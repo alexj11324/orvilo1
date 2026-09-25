@@ -12,6 +12,7 @@ import { cssVar } from 'antd-style';
 import {
   ChevronDown,
   ChevronRight,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- authorless activity avatar placeholder
   CircleDot,
   CircleStop,
   Copy,
@@ -209,7 +210,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
     });
   }, [activity.id, canEditTask, deleteTopic, t]);
 
-  const { text: startedAt, title: startedAtTitle } = useActivityTime(activity.time);
+  const { text: startedAt, title: startedAtTitle } = useActivityTime(activity.time, {
+    compact: true,
+  });
   const durationText = isRunning
     ? formatDuration(elapsed)
     : finalDuration != null && finalDuration >= 0

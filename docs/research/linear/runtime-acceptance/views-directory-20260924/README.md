@@ -1,0 +1,19 @@
+# Views directory chrome — runtime acceptance (2026-09-24)
+
+Candidate source: `409e7a92471d4d41fd4e3861b77eaa78c4aefe14` in `fix/linear-parity-views`. The SPA ran from this worktree at `http://localhost:9893`, using the existing local backend at `localhost:3010` (a different worktree). Reference: authenticated Linear `https://linear.app/bdiverifier/views/issues`. Both captures used en-US, dark appearance, 1440 × 900 CSS px and DPR 2 in the isolated Brave CDP session on port 9222. Linear's original screenshot stays local.
+
+| Checked behavior      | Linear reference                                           | Orvilo at `409e7a924`                                                                                              | Evidence                                          |
+| --------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| Directory toolbar     | Issues/Projects tabs and Display options; no input element | Same visible controls; no input element                                                                            | [Issues page](./orvilo-views-409e-issues.png)     |
+| Header `New view`     | Low-emphasis plus/text button                              | Plus/text button in the title row                                                                                  | [Issues page](./orvilo-views-409e-issues.png)     |
+| Name header start     | `(262.5, 104.75)`                                          | `(263, 104.5)`                                                                                                     | CDP text-range bounds at 1440 × 900               |
+| Personal group bounds | `(252.5, 128, 1171 × 36)`                                  | `(253, 128.4, 1170 × 36)`                                                                                          | CDP element bounds                                |
+| First row title start | `(289.5, 184)`                                             | `(289, 184.4)`                                                                                                     | CDP text bounds; titles differ                    |
+| Personal group `+`    | At the right of the group heading                          | Hit-tested click opened `New view` with `Sharing: Only me`; Cancel closed it without creating a view               | [Open dialog](./orvilo-views-409e-create.png)     |
+| Projects tab          | Separate Projects directory route                          | Hit-tested tab click reached `/ws-useragenttes/views?entity=project`, marked Projects active, with no search input | [Projects page](./orvilo-views-409e-projects.png) |
+
+The reference Issues directory had one personal view, “All issues.” The candidate had one personal and one shared view with different names. These captures prove the listed chrome and geometry, not row-content or grouping equivalence. Project tab data also differs: the reference Projects directory was empty while Orvilo had shared project views.
+
+The narrow-window spot check at 390 × 844 found the candidate WorkSurface `clientWidth == scrollWidth == 380`; the document's larger scroll width came from the development debug bar. Linear's desktop sidebar remained expanded at that emulated width, so its capture does not establish a comparable responsive state.
+
+Remaining Views work includes matched-data empty/personal/shared comparisons, the full new-view editor flow (Linear uses a route while Orvilo opens a modal), Display options persistence, row navigation, keyboard/focus, light appearance, and error/permission states. This slice is not full Views parity.

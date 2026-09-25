@@ -83,7 +83,7 @@ const matchesSearch = (member: WorkspaceMemberRow, query: string) =>
 const triggerStyle: CSSProperties = {
   alignItems: 'center',
   display: 'inline-flex',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   lineHeight: 1,
   maxWidth: '100%',
   minWidth: 0,
@@ -266,7 +266,17 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
           style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
           onClick={(event) => event.stopPropagation()}
         >
-          <span style={{ pointerEvents: 'none' }}>{children}</span>
+          <div
+            style={{
+              alignItems: 'center',
+              display: 'inline-flex',
+              minWidth: 0,
+              pointerEvents: 'none',
+              width: fullWidth ? '100%' : 'auto',
+            }}
+          >
+            {children}
+          </div>
         </div>
       </Tooltip>
     ) : (

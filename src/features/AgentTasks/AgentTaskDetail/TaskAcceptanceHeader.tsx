@@ -27,12 +27,22 @@ export const TaskAcceptanceHeader = memo<TaskAcceptanceHeaderProps>(
         clickable
         horizontal
         align={'center'}
+        aria-expanded={isOpen}
+        aria-label={t('taskDetail.acceptance.title')}
         gap={8}
         paddingBlock={4}
         paddingInline={8}
+        role={'button'}
         style={{ cursor: 'pointer', width: 'fit-content' }}
+        tabIndex={0}
         variant={'borderless'}
         onClick={onToggle}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onToggle();
+          }
+        }}
       >
         <Icon color={cssVar.colorTextDescription} icon={ShieldCheck} size={16} />
         <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>

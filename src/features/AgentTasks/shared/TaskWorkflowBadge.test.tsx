@@ -3,11 +3,10 @@ import { Icon } from '@lobehub/ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import { cssVar } from 'antd-style';
-import type { LucideIcon } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 
 import TaskWorkflowBadge from './TaskWorkflowBadge';
 
@@ -29,7 +28,10 @@ afterEach(cleanup);
  * the shape: lucide's CircleDot is two `<circle>`s, CircleCheck a path, and so
  * on, all deterministic.
  */
-const glyphShape = (root: HTMLElement) => root.querySelector('svg')?.innerHTML ?? null;
+// Mask ids are per-instance (`useId`) by design, so two renders of the same
+// glyph differ only there; normalise them so the comparison stays on shape.
+const glyphShape = (root: HTMLElement) =>
+  root.querySelector('svg')?.innerHTML.replaceAll(/wf-knockout-[\w-]+/g, 'wf-knockout') ?? null;
 
 const badgeShape = (category: TaskWorkflowCategory) => {
   const { container } = render(
@@ -42,7 +44,7 @@ const badgeShape = (category: TaskWorkflowCategory) => {
   return glyphShape(container);
 };
 
-const referenceShape = (icon: LucideIcon, color: string) => {
+const referenceShape = (icon: StatusVisual['icon'], color: string) => {
   const { container } = render(<Icon color={color} icon={icon} size={12} />);
   return glyphShape(container);
 };
@@ -108,6 +110,44 @@ describe('TaskWorkflowBadge', () => {
 
       expect(loader).not.toBeNull();
       expect(badgeShape('in_progress')).not.toBe(loader);
+    });
+  });
+
+  /**
+   * Terminal marks knock their check / cross out with a mask rather than a
+   * path painted in a surface token — the glyph sits on rows, elevated board
+   * cards and translucent hover fills, and only a real hole reads on all.
+   */
+  describe('terminal knockouts', () => {
+    it('cuts the done check out with a per-instance mask', () => {
+      const { icon: Done } = WORKFLOW_CATEGORY_VISUALS.done;
+      const { container } = render(
+        <>
+          <Icon color={'#5e6ad2'} icon={Done} size={14} />
+          <Icon color={'#5e6ad2'} icon={Done} size={14} />
+        </>,
+      );
+
+      const masks = [...container.querySelectorAll('mask')];
+      expect(masks).toHaveLength(2);
+      expect(new Set(masks.map((mask) => mask.id)).size).toBe(2);
+      expect(container.querySelector(`[mask="url(#${masks[0].id})"]`)).not.toBeNull();
+      // Every painted stroke is the icon color; nothing guesses a background.
+      const strokes = [...container.querySelectorAll('circle')].map((node) =>
+        node.getAttribute('stroke'),
+      );
+      expect(new Set(strokes)).toEqual(new Set(['#5e6ad2']));
+    });
+
+    it('draws the progress states without a mask', () => {
+      for (const category of ['backlog', 'todo', 'in_progress', 'in_review'] as const) {
+        const { container, unmount } = render(
+          <Icon icon={WORKFLOW_CATEGORY_VISUALS[category].icon} size={14} />,
+        );
+        expect(container.querySelector('mask')).toBeNull();
+        expect(container.querySelector('svg')).toHaveAttribute('data-workflow-icon', category);
+        unmount();
+      }
     });
   });
 });

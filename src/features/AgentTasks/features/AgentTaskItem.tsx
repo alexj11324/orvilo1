@@ -4,7 +4,7 @@ import type { TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { MessageSquareTextIcon } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,7 +22,7 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
-import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
+import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 import AssigneeAgentSelector from './AssigneeAgentSelector';
 import AssigneeAvatar from './AssigneeAvatar';
 import AssigneeMemberSelector from './AssigneeMemberSelector';
@@ -40,6 +40,16 @@ export type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemProps {
   /**
+   * Project-issues parity row: Linear's issue list leads with the priority
+   * icon, then the identifier, then the status icon —
+   * `[priority][ID][status][title]` — and drops the workflow text chip. Linked
+   * workflow state gets the canonical display-only glyph; tasks without a
+   * linked state keep the execution-status selector. Measured
+   * against the live reference 2026-09-24 on the project issues and my-issues
+   * surfaces: priority svg @x=287, ID @311, status icon @380, title @403.
+   */
+  linearIssueRow?: boolean;
+  /**
    * The resolved milestone this row links, supplied by the list when the
    * "Milestones" display property is on and the scope's catalog names the
    * link. `undefined` renders no badge — rows never invent one from a raw id.
@@ -48,6 +58,12 @@ interface TaskItemProps {
   onStatusChange?: (status: TaskStatus) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
+  /**
+   * Caller-owned chips (e.g. the project) placed in the trailing cluster
+   * before the assignee — Linear's order is labels, project, assignee, date,
+   * so they cannot trail the row after the date.
+   */
+  trailingChips?: ReactNode;
 }
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
@@ -64,18 +80,25 @@ const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
 const AgentTaskItem = memo<TaskItemProps>((props) => {
-  const { milestone, onStatusChange, task, routeScope = 'agent' } = props;
+  const {
+    linearIssueRow,
+    milestone,
+    onStatusChange,
+    task,
+    trailingChips,
+    routeScope = 'agent',
+  } = props;
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
   const updateTask = useTaskStore((s) => s.updateTask);
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const taskDetail = useTaskStore((s) => s.taskDetailMap[task.identifier]);
-  const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } = useTaskItemContextMenu(
-    task,
-    routeScope,
-    onStatusChange,
-  );
+  const {
+    duplicateModal,
+    items: contextMenuItems,
+    onContextMenu: handleContextMenuOpen,
+  } = useTaskItemContextMenu(task, routeScope, onStatusChange);
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceId = useActiveWorkspaceId();
 
@@ -86,6 +109,11 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   });
   const status = toTaskStatus(task.status);
   const hasName = Boolean(task.name?.trim());
+  const workflowGlyph = useTaskWorkflowGlyph({
+    executionStatus: task.status,
+    workflowCategory: task.workflowCategory,
+    workflowStateId: task.workflowStateId,
+  });
 
   const handleClick = useCallback(() => {
     navigate(
@@ -174,36 +202,41 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     </Tooltip>
   ) : null;
 
+  // Linear's row grammar: priority, identifier, one status mark, title. The
+  // status mark is the workflow state when the task has one — never a second
+  // badge beside the execution glyph. A nameless task has no separate title,
+  // so its identifier renders as the row text instead.
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+      {hasName ? (
+        <Text style={{ flex: 'none' }} type={'secondary'}>
+          {task.identifier}
+        </Text>
+      ) : null}
       <span
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
+        style={{ display: 'inline-flex', flex: 'none' }}
       >
-        <TaskStatusTag status={status} taskIdentifier={task.identifier} onChange={onStatusChange} />
+        <TaskStatusTag
+          glyph={workflowGlyph}
+          size={14}
+          status={status}
+          taskIdentifier={task.identifier}
+          triageTarget={
+            task.teamId
+              ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
+              : undefined
+          }
+          onChange={onStatusChange}
+        />
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
-      <TaskWorkflowBadge
-        executionStatus={task.status}
-        workflowCategory={task.workflowCategory}
-        workflowStateId={task.workflowStateId}
-      />
       {privacyBadge}
-      {hasName ? (
-        <>
-          <Text style={{ flex: 'none' }} type={'secondary'}>
-            {task.identifier}
-          </Text>
-          <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-            {task.name}
-          </Text>
-        </>
-      ) : (
-        <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-          {task.identifier}
-        </Text>
-      )}
+      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+        {hasName ? task.name : task.identifier}
+      </Text>
       {scheduledBadge}
       {/* Linear draws issue labels inline after the title. The wrapper's
           data attribute is the display-properties toggle's hide hook
@@ -332,30 +365,36 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   ) : null;
 
   return (
-    <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-      <Block
-        clickable
-        data-collab-id={`task:${task.id}`}
-        data-collab-id-alt={`task:${task.identifier}`}
-        data-collab-private={isPrivate || undefined}
-        gap={4}
-        paddingBlock={8}
-        paddingInline={12}
-        variant={'borderless'}
-        onClick={handleClick}
-      >
-        <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
-          {titleRow}
-          <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
-            {milestoneBadge}
-            {openRunNode}
-            {scheduleNode}
-            {assigneeNode}
-            {timeNode}
+    <>
+      {duplicateModal}
+      <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
+        <Block
+          clickable
+          data-collab-id={`task:${task.id}`}
+          data-collab-id-alt={`task:${task.identifier}`}
+          data-collab-private={isPrivate || undefined}
+          gap={4}
+          // Linear's issue rows sit on a 44px pitch (measured): the list wrapper
+          // adds 2px, so this block needs 42 — 22px content + 10px block padding.
+          paddingBlock={linearIssueRow ? 10 : 8}
+          paddingInline={12}
+          variant={'borderless'}
+          onClick={handleClick}
+        >
+          <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
+            {titleRow}
+            <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+              {milestoneBadge}
+              {trailingChips}
+              {openRunNode}
+              {scheduleNode}
+              {assigneeNode}
+              {timeNode}
+            </Flexbox>
           </Flexbox>
-        </Flexbox>
-      </Block>
-    </ContextMenuTrigger>
+        </Block>
+      </ContextMenuTrigger>
+    </>
   );
 });
 

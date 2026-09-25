@@ -1,6 +1,6 @@
 'use client';
 
-import { DatePicker, Flexbox, Icon, Input, SortableList, TextArea } from '@lobehub/ui';
+import { DatePicker, Flexbox, Icon, SortableList } from '@lobehub/ui';
 import { Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
@@ -25,14 +25,10 @@ import { type ProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import MilestoneComposer from './MilestoneComposer';
+
 type Milestone = NonNullable<ProjectDetail['milestones']>[number];
 type ProjectTask = NonNullable<ProjectDetail['tasks']>[number];
-
-interface MilestoneDraft {
-  date?: string;
-  description: string;
-  name: string;
-}
 
 /**
  * The reference keeps each card's secondary controls invisible until the
@@ -119,12 +115,6 @@ const styles = createStaticStyles(({ css }) => ({
     &:hover {
       color: ${cssVar.colorText};
     }
-  `,
-  composer: css`
-    padding-block: 12px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
   `,
   datePicker: css`
     width: 118px;
@@ -244,82 +234,6 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
 }));
-
-interface MilestoneComposerProps {
-  initial?: Milestone;
-  onCancel: () => void;
-  onSubmit: (draft: MilestoneDraft) => Promise<void>;
-  saving: boolean;
-}
-
-/** Inline name/date/description editor shared by the create and edit flows. */
-const MilestoneComposer = memo<MilestoneComposerProps>(
-  ({ initial, onCancel, onSubmit, saving }) => {
-    const { t } = useTranslation(['project', 'common']);
-    const [name, setName] = useState(initial?.name ?? '');
-    const [description, setDescription] = useState(initial?.description ?? '');
-    const [date, setDate] = useState<string | undefined>(initial?.date ?? undefined);
-
-    const submit = () => {
-      const trimmed = name.trim();
-      if (!trimmed || saving) return;
-      void onSubmit({ date, description: description.trim(), name: trimmed });
-    };
-
-    return (
-      <Flexbox className={styles.composer} gap={8}>
-        <Input
-          autoFocus
-          aria-label={t('create.milestone.name')}
-          placeholder={t('create.milestone.name')}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') submit();
-            if (event.key === 'Escape') onCancel();
-          }}
-        />
-        <DatePicker
-          allowClear
-          aria-label={t('create.milestone.date')}
-          format="MMM D, YYYY"
-          placeholder={t('create.milestone.date')}
-          prefix={<Icon icon={CalendarIcon} size={13} />}
-          size="small"
-          suffixIcon={null}
-          value={date ? dayjs(date) : null}
-          onChange={(value) => {
-            const picked = Array.isArray(value) ? value[0] : value;
-            setDate(picked ? picked.format('YYYY-MM-DD') : undefined);
-          }}
-        />
-        <TextArea
-          aria-label={t('create.milestone.description')}
-          placeholder={t('create.milestone.description')}
-          rows={2}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-        <Flexbox horizontal gap={8} justify={'end'}>
-          <Button size={'small'} onClick={onCancel}>
-            {t('common:cancel')}
-          </Button>
-          <Button
-            disabled={!name.trim()}
-            loading={saving}
-            size={'small'}
-            type={'primary'}
-            onClick={submit}
-          >
-            {initial ? t('common:save') : t('create.milestone.create')}
-          </Button>
-        </Flexbox>
-      </Flexbox>
-    );
-  },
-);
-
-MilestoneComposer.displayName = 'MilestoneComposer';
 
 interface ProjectMilestonesProps {
   detail: ProjectDetail;
@@ -576,131 +490,129 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
     );
   };
 
+  // Linear's overview body carries no Milestones section at all on a project
+  // with zero milestones (verified live 2026-09-25 on ACP Harness): not an
+  // empty state, no heading, no add button — creation starts from the rail
+  // card's "+" instead. The whole section bows out, including for editors.
+  if (milestones.length === 0) return null;
+
   return (
     <Flexbox as={'section'} className={styles.section} gap={8} id={'milestone-list'}>
       <Flexbox horizontal align={'center'} gap={7}>
         <Text {...SECTION_LABEL_PROPS}>{t('overview.milestones')}</Text>
       </Flexbox>
-      {milestones.length === 0 ? (
-        <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>
-          {t('overview.milestonesEmpty')}
-        </Text>
-      ) : (
-        <>
-          <SortableList
-            gap={4}
-            items={milestones}
-            renderItem={(milestone) => (
-              <SortableList.Item id={milestone.id} key={milestone.id} variant={'borderless'}>
-                {renderCard(milestone)}
-              </SortableList.Item>
-            )}
-            renderOverlay={(milestone) => (
-              <Flexbox horizontal align={'center'} className={styles.card} gap={8}>
-                <MilestoneIcon size={MILESTONE_ICON_SIZE} />
-                <Text color={BODY_TEXT_COLOR} fontSize={15} weight={600}>
-                  {milestone.name}
-                </Text>
-              </Flexbox>
-            )}
-            onChange={(items) => {
-              const ids = items.map((item) => item.id);
-              if (ids.join('') === milestones.map((milestone) => milestone.id).join('')) return;
-              void runMutation(
-                () => reorderMilestones(project.id, ids),
-                'overview.milestoneSaveError',
-              );
-            }}
-          />
-          {/* The rail's fifth row in the reference: the unassigned bucket. The
+      <>
+        <SortableList
+          gap={4}
+          items={milestones}
+          renderItem={(milestone) => (
+            <SortableList.Item id={milestone.id} key={milestone.id} variant={'borderless'}>
+              {renderCard(milestone)}
+            </SortableList.Item>
+          )}
+          renderOverlay={(milestone) => (
+            <Flexbox horizontal align={'center'} className={styles.card} gap={8}>
+              <MilestoneIcon size={MILESTONE_ICON_SIZE} />
+              <Text color={BODY_TEXT_COLOR} fontSize={15} weight={600}>
+                {milestone.name}
+              </Text>
+            </Flexbox>
+          )}
+          onChange={(items) => {
+            const ids = items.map((item) => item.id);
+            if (ids.join('') === milestones.map((milestone) => milestone.id).join('')) return;
+            void runMutation(
+              () => reorderMilestones(project.id, ids),
+              'overview.milestoneSaveError',
+            );
+          }}
+        />
+        {/* The rail's fifth row in the reference: the unassigned bucket. The
               label links to the unfiltered issues page (the measured
               destination); expanding it lists the issues so one can be filed
               under a milestone — the only UI path onto `setTaskMilestone`. */}
-          <div className={styles.noMilestoneRow}>
-            <Flexbox horizontal align={'center'} gap={10}>
-              <MilestoneIcon muted size={MILESTONE_ICON_SIZE} />
-              {unassignedTasks.length > 0 ? (
-                <button
-                  aria-expanded={unassignedOpen}
-                  aria-label={t('overview.noMilestone')}
-                  className={styles.collapseButton}
-                  style={{ height: 'auto', width: 'auto' }}
-                  type="button"
-                  onClick={() => setUnassignedOpen((open) => !open)}
-                >
-                  <Text fontSize={13} type={'secondary'} weight={450}>
-                    {t('overview.noMilestone')}
-                  </Text>
-                  <AccordionArrowIcon isOpen={unassignedOpen} size={14} />
-                </button>
-              ) : (
+        <div className={styles.noMilestoneRow}>
+          <Flexbox horizontal align={'center'} gap={10}>
+            <MilestoneIcon muted size={MILESTONE_ICON_SIZE} />
+            {unassignedTasks.length > 0 ? (
+              <button
+                aria-expanded={unassignedOpen}
+                aria-label={t('overview.noMilestone')}
+                className={styles.collapseButton}
+                style={{ height: 'auto', width: 'auto' }}
+                type="button"
+                onClick={() => setUnassignedOpen((open) => !open)}
+              >
                 <Text fontSize={13} type={'secondary'} weight={450}>
                   {t('overview.noMilestone')}
                 </Text>
-              )}
-              <Flexbox flex={1} />
-              {unassignedProgress && (
-                <WorkspaceLink
-                  className={styles.milestoneProgress}
-                  to={getProjectTasksPath(projectRef)}
-                >
-                  {t('overview.milestoneIssues', {
-                    count: unassignedProgress.scope,
-                    percent:
-                      unassignedProgress.scope === 0
-                        ? 0
-                        : Math.round(
-                            (unassignedProgress.completed / unassignedProgress.scope) * 100,
-                          ),
-                  })}
-                </WorkspaceLink>
-              )}
-            </Flexbox>
-            {unassignedOpen &&
-              unassignedTasks.map((task: ProjectTask) => (
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={cx(styles.unassignedBody, styles.unassignedRow)}
-                  gap={8}
-                  key={task.id}
-                >
-                  <Text fontSize={12} type={'secondary'}>
-                    {task.identifier}
-                  </Text>
-                  <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }}>
-                    {task.name ?? task.identifier}
-                  </Text>
-                  {canEdit && (
-                    <DropdownMenu
-                      items={milestones.map((milestone) => ({
-                        icon: <MilestoneIcon size={14} />,
-                        key: milestone.id,
-                        label: milestone.name,
-                        onClick: () =>
-                          void runMutation(
-                            () => setTaskMilestone(project.id, task.id, milestone.id),
-                            'overview.milestoneSaveError',
-                          ),
-                      }))}
+                <AccordionArrowIcon isOpen={unassignedOpen} size={14} />
+              </button>
+            ) : (
+              <Text fontSize={13} type={'secondary'} weight={450}>
+                {t('overview.noMilestone')}
+              </Text>
+            )}
+            <Flexbox flex={1} />
+            {unassignedProgress && (
+              <WorkspaceLink
+                className={styles.milestoneProgress}
+                to={getProjectTasksPath(projectRef)}
+              >
+                {t('overview.milestoneIssues', {
+                  count: unassignedProgress.scope,
+                  percent:
+                    unassignedProgress.scope === 0
+                      ? 0
+                      : Math.round((unassignedProgress.completed / unassignedProgress.scope) * 100),
+                })}
+              </WorkspaceLink>
+            )}
+          </Flexbox>
+          {unassignedOpen &&
+            unassignedTasks.map((task: ProjectTask) => (
+              <Flexbox
+                horizontal
+                align={'center'}
+                className={cx(styles.unassignedBody, styles.unassignedRow)}
+                gap={8}
+                key={task.id}
+              >
+                <Text fontSize={12} type={'secondary'}>
+                  {task.identifier}
+                </Text>
+                <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }}>
+                  {task.name ?? task.identifier}
+                </Text>
+                {canEdit && (
+                  <DropdownMenu
+                    items={milestones.map((milestone) => ({
+                      icon: <MilestoneIcon size={14} />,
+                      key: milestone.id,
+                      label: milestone.name,
+                      onClick: () =>
+                        void runMutation(
+                          () => setTaskMilestone(project.id, task.id, milestone.id),
+                          'overview.milestoneSaveError',
+                        ),
+                    }))}
+                  >
+                    <button
+                      className={styles.assignButton}
+                      type="button"
+                      aria-label={t('overview.milestoneAssign', {
+                        name: task.name ?? task.identifier,
+                      })}
                     >
-                      <button
-                        className={styles.assignButton}
-                        type="button"
-                        aria-label={t('overview.milestoneAssign', {
-                          name: task.name ?? task.identifier,
-                        })}
-                      >
-                        <MilestoneIcon muted size={12} />
-                        {t('overview.milestoneSet')}
-                      </button>
-                    </DropdownMenu>
-                  )}
-                </Flexbox>
-              ))}
-          </div>
-        </>
-      )}
+                      <MilestoneIcon muted size={12} />
+                      {t('overview.milestoneSet')}
+                    </button>
+                  </DropdownMenu>
+                )}
+              </Flexbox>
+            ))}
+        </div>
+      </>
       {canEdit &&
         (creating ? (
           <MilestoneComposer

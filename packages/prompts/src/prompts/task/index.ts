@@ -344,9 +344,17 @@ export const formatTaskDetail = (t: TaskDetailData): string => {
       } else if (act.type === 'property') {
         const actor = assignmentParticipantLabel(act.author, 'system');
         const change = act.propertyChange;
-        lines.push(
-          `  🔁 ${act.time || ''} ${actor} changed ${change?.field}: ${formatPropertyValue(change?.field, change?.from)} → ${formatPropertyValue(change?.field, change?.to)}${idSuffix}`,
-        );
+        if (change?.field === 'relation') {
+          const direction = change.direction ? ` (${change.direction})` : '';
+          const target = change.targetTaskIdentifier ?? change.targetTaskId;
+          lines.push(
+            `  🔗 ${act.time || ''} ${actor} ${change.action} ${change.kind} relation${direction} with ${target}${idSuffix}`,
+          );
+        } else {
+          lines.push(
+            `  🔁 ${act.time || ''} ${actor} changed ${change?.field}: ${formatPropertyValue(change?.field, change?.from)} → ${formatPropertyValue(change?.field, change?.to)}${idSuffix}`,
+          );
+        }
       } else if (act.type === 'assignment') {
         // Who owns the task changed hands; a formatter that drops the event
         // shows a reader an assignee they cannot account for.

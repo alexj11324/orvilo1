@@ -868,6 +868,18 @@ export const taskRouter = router({
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
         const dep = await resolveOrThrow(model, input.dependsOnId);
+        // One edge per pair: a 'relates' write must not silently downgrade an
+        // existing 'blocks' edge (that would unblock the task without notice).
+        // The relates→blocks upgrade stays allowed — it matches intent.
+        const existing = (await model.getDependencies(task.id)).find(
+          (edge) => edge.dependsOnId === dep.id,
+        );
+        if (existing?.type === 'blocks' && input.type === 'relates') {
+          throw new TaskDependencyError(
+            'These issues already have a blocking relation — remove it first.',
+            'PRECONDITION_FAILED',
+          );
+        }
         await model.addDependency(task.id, dep.id, input.type, { source: 'user' });
         return { message: 'Dependency added', success: true };
       } catch (error) {

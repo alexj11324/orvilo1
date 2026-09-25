@@ -690,4 +690,4 @@ export interface NavigationFavorite {
   version: number;
 }
 
-export type TeamTriageAction = 'accept' | 'decline' | 'duplicate' | 'reassign';
+export type TeamTriageAction = 'accept' | 'decline' | 'duplicate' | 'reassign' | 'retriage';

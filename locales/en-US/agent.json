@@ -134,7 +134,7 @@
   "transferRequest.manifestInitiator.hiddenMember": "This group references a private agent the recipient cannot access — they cannot accept until its owner shares it",
   "transferRequest.manifestInitiator.knowledgeDetach": "{{count}} knowledge base / file attachment(s) the new owner cannot access will be detached",
   "transferRequest.manifestInitiator.projectsLeave": "This private agent will leave {{count}} project(s) not owned by the recipient",
-  "transferRequest.manifestInitiator.tasksDetach": "{{count}} task assignment(s) on this private agent (yours or other members’) will be detached",
+  "transferRequest.manifestInitiator.tasksDetach": "{{count}} issue assignment(s) on this private agent (yours or other members’) will be detached",
   "transferRequest.manifestInitiator.unavailable": "The transfer summary could not be loaded. Retry to review it before sending the request.",
   "transferRequest.manifestLoading": "Checking what this transfer includes…",
   "transferRequest.manifestRetry": "Retry",

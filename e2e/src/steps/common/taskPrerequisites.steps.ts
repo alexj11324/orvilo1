@@ -51,7 +51,7 @@ Then(
       exact: true,
     });
     const ready = this.page.getByText('All prerequisites completed.', { exact: true });
-    const empty = this.page.getByText('No prerequisite tasks.', { exact: true });
+    const empty = this.page.getByText('No prerequisite issues.', { exact: true });
 
     try {
       for (const role of ['first', 'second', 'dependent']) {
@@ -77,7 +77,8 @@ Then(
         }),
       ).toBeVisible({ timeout: 25_000 });
 
-      const input = this.page.getByRole('textbox', { name: 'Prerequisite task identifier' });
+      await this.page.getByRole('button', { name: 'Add relation to Blocked by' }).click();
+      const input = this.page.getByRole('textbox', { name: 'Prerequisite issue identifier' });
       await input.fill(second.identifier);
       await input.press('Enter');
       await expect(

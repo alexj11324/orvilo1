@@ -84,7 +84,16 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <TaskStatusTag size={14} status={status} taskIdentifier={task.identifier}>
+        <TaskStatusTag
+          size={14}
+          status={status}
+          taskIdentifier={task.identifier}
+          triageTarget={
+            task.id && task.teamId && task.domainRevision
+              ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
+              : undefined
+          }
+        >
           {hasRunningTopic ? <TopicStatusIcon size={14} status="running" /> : undefined}
         </TaskStatusTag>
       </span>
@@ -307,12 +316,22 @@ const TaskSubtasks = memo(() => {
                 clickable
                 horizontal
                 align="center"
+                aria-expanded={isExpanded}
+                aria-label={t('taskDetail.subtasks')}
                 gap={8}
                 paddingBlock={4}
                 paddingInline={8}
+                role="button"
                 style={{ cursor: 'pointer', width: 'fit-content' }}
+                tabIndex={0}
                 variant="borderless"
                 onClick={() => setIsExpanded((prev) => !prev)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsExpanded((prev) => !prev);
+                  }
+                }}
               >
                 <Icon color={cssVar.colorTextDescription} icon={ListTodoIcon} size={16} />
                 <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
@@ -331,6 +350,7 @@ const TaskSubtasks = memo(() => {
             </Flexbox>
             <Flexbox horizontal align="center" gap={4}>
               <ActionIcon
+                aria-label={canEditTask ? t('taskDetail.runAll') : reason}
                 disabled={!canEditTask || isPlanning}
                 icon={PlayCircle}
                 loading={isPlanning}
@@ -339,6 +359,7 @@ const TaskSubtasks = memo(() => {
                 onClick={handleRunAll}
               />
               <ActionIcon
+                aria-label={canEditTask ? t('taskDetail.addSubtask') : reason}
                 disabled={!canEditTask}
                 icon={Plus}
                 size="small"
@@ -349,17 +370,6 @@ const TaskSubtasks = memo(() => {
           </Flexbox>
           <Collapsible open={isExpanded}>
             <Flexbox gap={8}>
-              {isCreating && (
-                <CreateTaskInlineEntry
-                  autoFocus
-                  agentId={agentId ?? undefined}
-                  defaultVisibility={parentVisibility}
-                  parentTaskId={taskId}
-                  placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
-                  onCollapse={() => setIsCreating(false)}
-                  onCreated={() => setIsCreating(false)}
-                />
-              )}
               <Tree
                 blockNode
                 defaultExpandAll
@@ -372,6 +382,46 @@ const TaskSubtasks = memo(() => {
                   if (keys[0]) handleNavigate(keys[0]);
                 }}
               />
+              {/* Linear keeps an "Add sub-issue" row under the list — the new
+                  row opens inline beneath the tree, not above it. */}
+              {isCreating ? (
+                <CreateTaskInlineEntry
+                  autoFocus
+                  agentId={agentId ?? undefined}
+                  defaultVisibility={parentVisibility}
+                  parentTaskId={taskId}
+                  placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
+                  onCollapse={() => setIsCreating(false)}
+                  onCreated={() => setIsCreating(false)}
+                />
+              ) : (
+                <Block
+                  clickable
+                  horizontal
+                  align="center"
+                  aria-label={t('taskDetail.addSubtask')}
+                  gap={8}
+                  paddingBlock={4}
+                  paddingInline={8}
+                  role="button"
+                  style={{ width: 'fit-content' }}
+                  tabIndex={0}
+                  title={canEditTask ? undefined : reason}
+                  variant="borderless"
+                  onClick={toggleCreating}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleCreating();
+                    }
+                  }}
+                >
+                  <Icon color={cssVar.colorTextDescription} icon={Plus} size={16} />
+                  <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+                    {t('taskDetail.addSubtask')}
+                  </Text>
+                </Block>
+              )}
             </Flexbox>
           </Collapsible>
         </>
@@ -381,13 +431,22 @@ const TaskSubtasks = memo(() => {
             clickable
             horizontal
             align="center"
+            aria-label={t('taskDetail.addSubtask')}
             gap={8}
             paddingBlock={4}
             paddingInline={8}
+            role="button"
             style={{ width: 'fit-content' }}
+            tabIndex={0}
             title={canEditTask ? undefined : reason}
             variant="borderless"
             onClick={toggleCreating}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleCreating();
+              }
+            }}
           >
             <Icon color={cssVar.colorTextDescription} icon={Plus} size={16} />
             <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>

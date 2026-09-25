@@ -202,7 +202,12 @@ const TaskDetailHeaderActions = memo(() => {
 
   return (
     <DropdownMenu items={menuItems}>
-      <ActionIcon icon={MoreHorizontal} size={'small'} />
+      <ActionIcon
+        aria-label={t('taskDetail.moreActions')}
+        icon={MoreHorizontal}
+        size={'small'}
+        title={t('taskDetail.moreActions')}
+      />
     </DropdownMenu>
   );
 });

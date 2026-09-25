@@ -372,6 +372,23 @@ export class TaskDetailSliceActionImpl {
     await this.internal_refreshTaskDetail(taskId);
   };
 
+  // The rail's "Blocking" group edits the *other* task's edge row, so the
+  // service call is inverted — but the detail worth refreshing is still the
+  // task on screen (`taskId`, the blocker).
+  addBlocking = async (
+    taskId: string,
+    blockedTaskId: string,
+    type?: 'blocks' | 'relates',
+  ): Promise<void> => {
+    await taskService.addDependency(blockedTaskId, taskId, type);
+    await this.internal_refreshTaskDetail(taskId);
+  };
+
+  removeBlocking = async (taskId: string, blockedTaskId: string): Promise<void> => {
+    await taskService.removeDependency(blockedTaskId, taskId);
+    await this.internal_refreshTaskDetail(taskId);
+  };
+
   reorderSubtasks = async (taskId: string, order: string[]): Promise<void> => {
     await taskService.reorderSubtasks(taskId, order);
     await this.internal_refreshTaskDetail(taskId);

@@ -2,9 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockPathExistsSync = vi.fn();
 const mockProtocolHandle = vi.fn();
+const mockGetPath = vi.fn((_name: string) => '/instance/ud-10');
+const mockStatSync = vi.fn((_file: string): { mtimeMs: number } => {
+  throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+});
+const mockReadFileSync = vi.fn();
 
 vi.mock('electron', () => ({
   app: {
+    getPath: (name: string) => mockGetPath(name),
     isReady: vi.fn(() => true),
     whenReady: vi.fn(() => Promise.resolve()),
   },
@@ -18,10 +24,15 @@ vi.mock('electron', () => ({
 
 vi.mock('node:fs', () => ({
   existsSync: (...args: any[]) => mockPathExistsSync(...args),
+  readFileSync: (...args: any[]) => mockReadFileSync(...args),
+  // No dev renderer override file unless a test provides one.
+  statSync: (file: string) => mockStatSync(file),
 }));
 
 vi.mock('@/const/dir', () => ({
   rendererDir: '/mock/export/out',
+  // Captured before pre-app-init applies the per-instance path — must not be used.
+  userDataDir: '/stale/default-user-data',
 }));
 
 let mockIsDev = false;
@@ -117,6 +128,27 @@ describe('RendererUrlManager', () => {
 
       expect(mockProtocolHandle).toHaveBeenCalledTimes(1);
       expect(mockProtocolHandle.mock.calls[0][0]).toBe('app');
+    });
+
+    it('reads the dev renderer override from the live userData path', async () => {
+      mockIsDev = true;
+      process.env['ELECTRON_RENDERER_URL'] = 'http://127.0.0.1:5183';
+      mockStatSync.mockImplementation((file: string) => {
+        if (file === '/instance/ud-10/dev-renderer-url') return { mtimeMs: 1 };
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+      mockReadFileSync.mockReturnValue('http://127.0.0.1:5554\n');
+      const fetchMock = vi.fn(async () => new Response('ok'));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { RendererUrlManager } = await import('../RendererUrlManager');
+      const manager = new RendererUrlManager();
+      manager.configureRendererLoader();
+      const handler = mockProtocolHandle.mock.calls[0][1];
+      await handler({ headers: new Headers(), method: 'GET', url: 'app://renderer/src/x.ts' });
+
+      expect(fetchMock.mock.calls[0]![0]).toBe('http://127.0.0.1:5554/src/x.ts');
+      vi.unstubAllGlobals();
     });
 
     it('still registers in dev when ELECTRON_RENDERER_URL is missing (static fallback)', async () => {

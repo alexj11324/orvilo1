@@ -268,6 +268,26 @@ describe('ViteRendererFallback', () => {
     expect((init as any).body).toBe('payload');
   });
 
+  it('resolves the origin per request when given a resolver', async () => {
+    mockFetch.mockImplementation(async () => new Response('ok', { status: 200 }));
+    let origin = 'http://127.0.0.1:5180';
+
+    const fallback = new ViteRendererFallback(() => origin);
+    const manager = new RendererProtocolManager({ fallback });
+    manager.registerHandler();
+    const handler = protocolHandlerRef.current;
+    const request = { headers: new Headers(), method: 'GET', url: 'app://renderer/src/main.tsx' };
+
+    await handler(request as any);
+    origin = 'http://127.0.0.1:5312/';
+    await handler(request as any);
+
+    expect(mockFetch.mock.calls.map(([target]) => target)).toEqual([
+      'http://127.0.0.1:5180/src/main.tsx',
+      'http://127.0.0.1:5312/src/main.tsx',
+    ]);
+  });
+
   it('returns 502 when fetch throws', async () => {
     mockFetch.mockRejectedValue(new Error('ECONNREFUSED'));
 

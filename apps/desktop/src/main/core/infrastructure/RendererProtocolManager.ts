@@ -310,16 +310,18 @@ class Semaphore {
 const VITE_FETCH_CONCURRENCY = 64;
 
 export class ViteRendererFallback implements RendererFallbackStrategy {
-  private readonly viteOrigin: string;
+  private readonly resolveOrigin: () => string;
   private readonly logger = createLogger('core:ViteRendererFallback');
   private readonly gate = new Semaphore(VITE_FETCH_CONCURRENCY);
 
-  constructor(viteOrigin: string) {
-    this.viteOrigin = viteOrigin.replace(/\/+$/, '');
+  /** `viteOrigin` may be a resolver so a dev instance can be repointed per request. */
+  constructor(viteOrigin: string | (() => string)) {
+    this.resolveOrigin = typeof viteOrigin === 'string' ? () => viteOrigin : viteOrigin;
   }
 
   async handle(request: Request, url: URL): Promise<Response> {
-    const target = `${this.viteOrigin}${url.pathname}${url.search}`;
+    const origin = this.resolveOrigin().replace(/\/+$/, '');
+    const target = `${origin}${url.pathname}${url.search}`;
 
     // Strip Host so fetch derives it from the target URL (otherwise Vite
     // sees `Host: renderer` and middleware that keys off Host can misbehave).

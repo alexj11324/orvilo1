@@ -1,11 +1,14 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+import { app } from 'electron';
+
 import { rendererDir } from '@/const/dir';
 import { isDev } from '@/const/env';
 import { getDesktopEnv } from '@/env';
 import { createLogger } from '@/utils/logger';
 
+import { createDevRendererOriginResolver, DEV_RENDERER_URL_FILE } from './devRendererOrigin';
 import {
   RendererProtocolManager,
   type RendererRequestInterceptor,
@@ -119,10 +122,17 @@ export class RendererUrlManager {
     const electronRendererUrl = process.env['ELECTRON_RENDERER_URL'];
 
     if (isDev && !this.rendererStaticOverride && electronRendererUrl) {
+      // Read userData now, not from `@/const/dir`: that constant is captured when
+      // the main chunk loads, before pre-app-init applies a per-instance path.
+      const overrideFile = path.join(app.getPath('userData'), DEV_RENDERER_URL_FILE);
       logger.info(
-        `Development mode: app:// requests proxied to Vite dev server at ${electronRendererUrl}`,
+        `Development mode: app:// requests proxied to Vite dev server at ${electronRendererUrl} (override: ${overrideFile})`,
       );
-      return new ViteRendererFallback(electronRendererUrl);
+      return new ViteRendererFallback(
+        createDevRendererOriginResolver(electronRendererUrl, overrideFile, undefined, (value) =>
+          logger.warn(`Ignoring non-loopback renderer override: ${value}`),
+        ),
+      );
     }
 
     if (isDev && !this.rendererStaticOverride && !electronRendererUrl) {

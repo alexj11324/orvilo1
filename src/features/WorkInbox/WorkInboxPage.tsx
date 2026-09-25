@@ -17,7 +17,6 @@ import {
 } from '@lobehub/ui/base-ui';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
 import {
   ArchiveIcon,
   ArrowUpRightIcon,
@@ -56,6 +55,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
+import { compactInboxTime } from '@/utils/compactRelativeTime';
 
 import { inboxCardTitleKey } from './inboxCardCopy';
 import {
@@ -1061,7 +1061,7 @@ const WorkInboxPage = memo(() => {
                       {card.content}
                     </Text>
                     <Text className={styles.time} fontSize={12}>
-                      {dayjs(card.lastActivityAt).fromNow()}
+                      {compactInboxTime(card.lastActivityAt)}
                     </Text>
                   </Flexbox>
                 </Flexbox>
@@ -1080,6 +1080,18 @@ const WorkInboxPage = memo(() => {
                   {t('inbox.loadMore')}
                 </Button>
               ) : null}
+            </Center>
+          ) : null}
+          {!hasMore && summary ? (
+            <Center padding={12}>
+              <Text fontSize={12} type={'secondary'}>
+                {t('inbox.unreadCount', {
+                  count:
+                    priorityEnabled && tab === 'other'
+                      ? summary.unreadOtherCount
+                      : summary.unreadBadgeCount,
+                })}
+              </Text>
             </Center>
           ) : null}
         </>
@@ -1140,7 +1152,7 @@ const WorkInboxPage = memo(() => {
               {titleFor(selected)}
             </Text>
             <Text className={styles.paneMeta} fontSize={12}>
-              {dayjs(selected.lastActivityAt).fromNow()}
+              {compactInboxTime(selected.lastActivityAt)}
               {!selected.read ? ` · ${t('inbox.unread')}` : ''}
             </Text>
           </Flexbox>
@@ -1219,7 +1231,7 @@ const WorkInboxPage = memo(() => {
             {titleFor(selected)}
           </Text>
           <Text className={styles.paneMeta} fontSize={12}>
-            {dayjs(selected.lastActivityAt).fromNow()}
+            {compactInboxTime(selected.lastActivityAt)}
             {!selected.read ? ` · ${t('inbox.unread')}` : ''}
           </Text>
         </Flexbox>

@@ -22,6 +22,7 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { compactInboxTime } from '@/utils/compactRelativeTime';
 
 import { draftCardTitle, issueDraftCardTitle } from './draftCardTitle';
 import DraftContentPreview from './DraftContentPreview';
@@ -359,7 +360,7 @@ const TaskDraftsPage = () => {
                             title={dayjs(draft.updatedAt).toString()}
                             type="secondary"
                           >
-                            {dayjs(draft.updatedAt).fromNow()}
+                            {compactInboxTime(draft.updatedAt)}
                           </Text>
                         </div>
                         <div className={styles.preview}>
@@ -416,7 +417,7 @@ const TaskDraftsPage = () => {
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
                           <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
-                            {dayjs(draft.updatedAt).fromNow()}
+                            {compactInboxTime(draft.updatedAt)}
                           </Text>
                         </div>
                         <div className={styles.preview}>

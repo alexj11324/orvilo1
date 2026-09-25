@@ -395,24 +395,12 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                 <AccordionArrowIcon isOpen={!collapsed} size={16} />
               </button>
               <Flexbox flex={1} />
-              {/* A `null` readout could not be computed honestly; the link and
-                  its number land together or not at all. */}
-              {milestone.progress && (
-                <WorkspaceLink
-                  className={styles.milestoneProgress}
-                  to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
-                >
-                  {t('overview.milestoneIssues', {
-                    count: milestone.progress.issues,
-                    percent: milestone.progress.percent,
-                  })}
-                </WorkspaceLink>
-              )}
               {canEdit ? (
                 <>
                   {/* A set date stays on the card; only the empty "Set target
                       date" affordance waits for hover, matching the reference's
-                      hover-only `Choose date` button. */}
+                      hover-only `Choose date` button. The reference row reads
+                      date → issues · %. */}
                   <DatePicker
                     allowClear
                     aria-label={t('overview.milestoneChooseDate')}
@@ -437,6 +425,19 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                       );
                     }}
                   />
+                  {/* A `null` readout could not be computed honestly; the link
+                      and its number land together or not at all. */}
+                  {milestone.progress && (
+                    <WorkspaceLink
+                      className={styles.milestoneProgress}
+                      to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
+                    >
+                      {t('overview.milestoneIssues', {
+                        count: milestone.progress.issues,
+                        percent: milestone.progress.percent,
+                      })}
+                    </WorkspaceLink>
+                  )}
                   <div className={cx(HOVER_CONTROLS_CLASS, styles.hoverControls)}>
                     <DropdownMenu
                       items={milestoneMenu(milestone)}
@@ -452,11 +453,24 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                   </div>
                 </>
               ) : (
-                milestone.date && (
-                  <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-                    {formatDate(milestone.date)}
-                  </Text>
-                )
+                <>
+                  {milestone.date && (
+                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+                      {formatDate(milestone.date)}
+                    </Text>
+                  )}
+                  {milestone.progress && (
+                    <WorkspaceLink
+                      className={styles.milestoneProgress}
+                      to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
+                    >
+                      {t('overview.milestoneIssues', {
+                        count: milestone.progress.issues,
+                        percent: milestone.progress.percent,
+                      })}
+                    </WorkspaceLink>
+                  )}
+                </>
               )}
             </Flexbox>
             {!collapsed &&

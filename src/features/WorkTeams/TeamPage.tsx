@@ -3,7 +3,7 @@
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { InboxIcon, UsersIcon } from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
@@ -11,10 +11,20 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import {
+  EMPTY_FILTER_BUILDER,
+  myWorkActiveFilterCount,
+  workQueryFilterHasPredicates,
+} from '@/features/MyWork/myWorkFilters';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
+import {
+  type BuilderState,
+  builderToFilter,
+  stableStringify,
+} from '@/features/SavedViews/workQueryBuilder';
 import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -29,6 +39,13 @@ import TeamIssuesSurface from './TeamIssuesSurface';
 import TeamProjectsSurface from './TeamProjectsSurface';
 import TeamViewsSurface from './TeamViewsSurface';
 import { ALL_TEAM_CYCLES, teamTriageQuery } from './teamWorkQuery';
+import TeamTriageControls from './triage/TeamTriageControls';
+import {
+  patchTeamTriageParams,
+  readTeamTriageUrlState,
+  resetTeamTriageDisplayParams,
+  teamTriageSort,
+} from './triage/teamTriageDisplay';
 import TeamTriageSurface from './triage/TeamTriageSurface';
 
 const TeamPage = memo(() => {
@@ -36,7 +53,7 @@ const TeamPage = memo(() => {
   const { teamId } = useParams<{ teamId: string }>();
   const workspaceId = useActiveWorkspaceId();
   const workspaceSlug = useActiveWorkspaceSlug();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   // Linear's per-team sub-navigation lands here: home is the team context
   // surface; triage, issues, projects and views each get their own tab.
   const teamTab = searchParams.get('tab') ?? 'home';
@@ -55,19 +72,40 @@ const TeamPage = memo(() => {
   // no triage surface, and a `?tab=triage` deep link falls back to home.
   const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
   const wantsTriage = triageCapable && teamTab === 'triage';
+
+  /* --------------------- triage filter + display --------------------- */
+
+  // Display options are URL-backed like the issues surface (reload and
+  // Back/forward restore the exact view); the Add-filter builder stays
+  // component-local — its durable form is a saved view, same contract as
+  // My issues and team issues.
+  const triageDisplay = readTeamTriageUrlState(searchParams);
+  const [triageBuilder, setTriageBuilder] = useState<BuilderState>(EMPTY_FILTER_BUILDER);
+  const triageBuilderFilter = builderToFilter('task', triageBuilder);
+  const triageHasFilters = workQueryFilterHasPredicates(triageBuilderFilter);
+  const triageActiveFilterCount = myWorkActiveFilterCount(triageBuilder);
+  const triageSort = teamTriageSort(triageDisplay);
+  const triageQuery = useMemo(
+    () =>
+      teamId
+        ? teamTriageQuery(teamId, ALL_TEAM_CYCLES, false, {
+            filter: triageHasFilters ? triageBuilderFilter : undefined,
+            sort: triageSort,
+          })
+        : null,
+    [teamId, triageBuilderFilter, triageHasFilters, triageSort],
+  );
+  const triageQueryKey = stableStringify(triageQuery);
   const {
     data: triageData,
     error: triageError,
     isLoading,
     mutate: revalidateTriage,
   } = useClientDataSWR(
-    wantsTriage && teamId && workspaceId
-      ? ['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]
+    wantsTriage && teamId && workspaceId && triageQuery
+      ? ['team-triage', workspaceId, teamId, triageQueryKey]
       : null,
-    () =>
-      workAttentionService.query({
-        query: teamTriageQuery(teamId!, ALL_TEAM_CYCLES, false),
-      }),
+    () => workAttentionService.query({ query: triageQuery! }),
   );
   const {
     data: teamProjectsData,
@@ -109,7 +147,15 @@ const TeamPage = memo(() => {
 
   const refreshTriage = useCallback(() => {
     void Promise.all([
-      mutate(['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]),
+      // The triage key now carries the query hash — prefix-match it so a
+      // mutation revalidates whichever filter/ordering is on screen.
+      mutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'team-triage' &&
+          key[1] === workspaceId &&
+          key[2] === teamId,
+      ),
       // The issues surface owns its own query shape — prefix-match the key so
       // a triage accept/decline still revalidates whatever it is showing.
       mutate(
@@ -201,7 +247,33 @@ const TeamPage = memo(() => {
         }
         right={
           <Flexbox horizontal align={'center'} gap={8}>
-            <WorkFavoriteButton targetId={teamId} targetType="team" />
+            {/* Reference header order: star favourite, Add filter, Display
+                options (AUDIT G1). The icon-only star is opt-in — other tabs
+                keep the labelled button. */}
+            <WorkFavoriteButton
+              icon={wantsTriage ? 'star' : 'pin'}
+              targetId={teamId}
+              targetType="team"
+              variant={wantsTriage ? 'icon' : 'button'}
+            />
+            {/* Linear keeps triage's Add filter / Display options in the
+                header — additive opt-in, the other tabs' chrome is
+                untouched. */}
+            {wantsTriage ? (
+              <TeamTriageControls
+                activeFilterCount={triageActiveFilterCount}
+                builder={triageBuilder}
+                display={triageDisplay}
+                onBuilderChange={setTriageBuilder}
+                onResetFilters={() => setTriageBuilder(EMPTY_FILTER_BUILDER)}
+                onDisplayChange={(patch) =>
+                  setSearchParams(patchTeamTriageParams(searchParams, patch), { replace: true })
+                }
+                onResetDisplay={() =>
+                  setSearchParams(resetTeamTriageDisplayParams(searchParams), { replace: true })
+                }
+              />
+            ) : null}
           </Flexbox>
         }
       />
@@ -236,6 +308,7 @@ const TeamPage = memo(() => {
                   error={triageError}
                   isLoading={isLoading}
                   members={teamData?.data.members ?? []}
+                  showId={triageDisplay.showId}
                   tasks={tasks}
                   teamId={teamId}
                   onChanged={refreshTriage}

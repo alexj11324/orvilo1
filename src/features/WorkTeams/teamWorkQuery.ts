@@ -116,14 +116,29 @@ export const teamTaskQuery = (
   };
 };
 
+/**
+ * The triage queue: team-scoped `untriaged` rows. `options.filter` nests the
+ * Add-filter builder output under `filter.all` verbatim (an `any` subtree
+ * survives like it does on the issues surface); `options.sort` carries the
+ * Display-options ordering — absent keeps the server's queue order.
+ */
 export const teamTriageQuery = (
   teamId: string,
   cycleId?: string | null,
   noProject = false,
-): WorkQuery =>
-  withTeamScope(
+  options?: Pick<TeamTaskQueryOptions, 'filter' | 'sort'>,
+): WorkQuery => {
+  const query = withTeamScope(
     teamId,
     [{ field: 'triageStatus', op: 'eq', value: 'untriaged' }],
     cycleId,
     noProject,
   );
+  const filtered = options?.filter
+    ? {
+        ...query,
+        filter: { ...query.filter, all: [...(query.filter?.all ?? []), options.filter] },
+      }
+    : query;
+  return options?.sort ? { ...filtered, sort: options.sort } : filtered;
+};

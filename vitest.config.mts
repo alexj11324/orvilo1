@@ -107,7 +107,10 @@ export default defineConfig({
       enforce: 'pre',
       name: 'stub-orvilo-ui-motion-provider',
       resolveId(id, importer) {
-        if (!importer || !importer.includes('/@lobehub/ui/')) return null;
+        // `importer` is a native path — on Windows it arrives with backslashes,
+        // so normalize before matching or the stub never applies there.
+        const from = importer?.replaceAll('\\', '/');
+        if (!from || !from.includes('/@lobehub/ui/')) return null;
         if (id.endsWith('/MotionProvider/index.mjs') || id.endsWith('/MotionProvider/index.js'))
           return resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
         return null;
@@ -118,17 +121,19 @@ export default defineConfig({
       name: 'fix-orvilo-fluent-emoji-style-import',
       resolveId(id, importer) {
         if (!importer) return null;
+        const from = importer.replaceAll('\\', '/');
 
         const isFluentEmojiEntry =
-          importer.endsWith('/@lobehub/fluent-emoji/es/FluentEmoji/index.js') ||
-          importer.includes('/@lobehub/fluent-emoji/es/FluentEmoji/index.js?');
+          from.endsWith('/@lobehub/fluent-emoji/es/FluentEmoji/index.js') ||
+          from.includes('/@lobehub/fluent-emoji/es/FluentEmoji/index.js?');
 
+        const spec = id.replaceAll('\\', '/');
         const isMissingStyleIndex =
-          id === './style/index.js' ||
-          id.endsWith('/@lobehub/fluent-emoji/es/FluentEmoji/style/index.js') ||
-          id.endsWith('/@lobehub/fluent-emoji/es/FluentEmoji/style/index.js?') ||
-          id.endsWith('/FluentEmoji/style/index.js') ||
-          id.endsWith('/FluentEmoji/style/index.js?');
+          spec === './style/index.js' ||
+          spec.endsWith('/@lobehub/fluent-emoji/es/FluentEmoji/style/index.js') ||
+          spec.endsWith('/@lobehub/fluent-emoji/es/FluentEmoji/style/index.js?') ||
+          spec.endsWith('/FluentEmoji/style/index.js') ||
+          spec.endsWith('/FluentEmoji/style/index.js?');
 
         if (isFluentEmojiEntry && isMissingStyleIndex)
           return resolve(dirname(importer), 'style.js');
@@ -215,17 +220,15 @@ export default defineConfig({
               {
                 name: 'stub-orvilo-ui-motion-provider',
                 resolveId(source: string, importer: string | undefined) {
+                  const from = importer?.replaceAll('\\', '/');
                   if (
                     /MotionProvider\/index\.m?js$/.test(source) &&
-                    importer?.includes('/@lobehub/ui/')
+                    from?.includes('/@lobehub/ui/')
                   ) {
                     return resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
                   }
-                  if (
-                    source === './style/index.js' &&
-                    importer?.endsWith('/FluentEmoji/index.js')
-                  ) {
-                    return resolve(dirname(importer), 'style.js');
+                  if (source === './style/index.js' && from?.endsWith('/FluentEmoji/index.js')) {
+                    return resolve(dirname(importer!), 'style.js');
                   }
                   return null;
                 },

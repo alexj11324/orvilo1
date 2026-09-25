@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { useTaskStore } from '@/store/task';
 
+import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { WORKFLOW_STATUS_CHOICES } from './taskStatusRow';
 
@@ -67,7 +68,9 @@ const TaskWorkflowStatusRow = memo<TaskWorkflowStatusRowProps>(
           variant={'borderless'}
         >
           <Icon color={visual.color} icon={visual.icon} size={16} />
-          <Text weight={500}>{t(`taskDetail.workflow.category.${category}` as never)}</Text>
+          <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+            {t(`taskDetail.workflow.category.${category}` as never)}
+          </Text>
         </Block>
       </Tooltip>
     );

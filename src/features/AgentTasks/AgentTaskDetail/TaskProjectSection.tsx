@@ -15,7 +15,9 @@ import { useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { formatTaskItemDate } from '../features/formatTaskItemDate';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
+import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 
 /**
@@ -26,6 +28,7 @@ import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
  */
 const TaskProjectSection = memo(() => {
   const { t } = useTranslation(['chat', 'project']);
+  const { i18n, t: tCommon } = useTranslation('common');
   const navigate = useWorkspaceAwareNavigate();
   const { milestone, milestones, project, projectRef, taskDatabaseId } = useActiveTaskProject();
   const setTaskMilestone = useProjectStore((s) => s.setTaskMilestone);
@@ -62,7 +65,11 @@ const TaskProjectSection = memo(() => {
             <span>{row.name}</span>
             {row.date && (
               <Text fontSize={12} type={'secondary'}>
-                {row.date}
+                {formatTaskItemDate(row.date, {
+                  formatOtherYear: tCommon('time.formatOtherYear'),
+                  formatThisYear: tCommon('time.formatThisYear'),
+                  locale: i18n.language,
+                })}
               </Text>
             )}
           </Flexbox>
@@ -77,13 +84,17 @@ const TaskProjectSection = memo(() => {
         onClick: () => void change(null),
       },
     ];
-  }, [project, milestones, milestone, taskDatabaseId, pending, setTaskMilestone, t]);
+  }, [project, milestones, milestone, taskDatabaseId, pending, setTaskMilestone, t, i18n, tCommon]);
 
   if (!project || !projectRef) return null;
 
-  const milestoneLabel = milestone
-    ? `${milestone.name}${milestone.date ? ` · ${milestone.date}` : ''}`
-    : t('taskList.noMilestone');
+  const milestoneDate = milestone?.date
+    ? formatTaskItemDate(milestone.date, {
+        formatOtherYear: tCommon('time.formatOtherYear'),
+        formatThisYear: tCommon('time.formatThisYear'),
+        locale: i18n.language,
+      })
+    : null;
 
   // Editable → the row is Linear's milestone picker (a dropdown trigger);
   // read-only → the same row links to the milestone-filtered issues list.
@@ -101,12 +112,18 @@ const TaskProjectSection = memo(() => {
         <MilestoneIcon size={14} style={{ flex: 'none' }} />
         <Text
           ellipsis
+          fontSize={RAIL_VALUE_FONT_SIZE}
           style={{ minWidth: 0 }}
           type={milestone ? undefined : 'secondary'}
           weight={500}
         >
-          {milestoneLabel}
+          {milestone ? milestone.name : t('taskList.noMilestone')}
         </Text>
+        {milestoneDate && (
+          <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
+            {`· ${milestoneDate}`}
+          </Text>
+        )}
       </Block>
     </DropdownMenu>
   ) : (
@@ -121,9 +138,14 @@ const TaskProjectSection = memo(() => {
       onClick={() => milestone && navigate(getProjectMilestoneIssuesPath(projectRef, milestone.id))}
     >
       <MilestoneIcon size={14} style={{ flex: 'none' }} />
-      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-        {milestoneLabel}
+      <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
+        {milestone ? milestone.name : t('taskList.noMilestone')}
       </Text>
+      {milestoneDate && (
+        <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
+          {`· ${milestoneDate}`}
+        </Text>
+      )}
     </Block>
   );
 
@@ -147,7 +169,7 @@ const TaskProjectSection = memo(() => {
           size={16}
           style={{ flex: 'none' }}
         />
-        <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+        <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
           {project.name}
         </Text>
       </Block>

@@ -20,6 +20,7 @@ import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
+import { RAIL_VALUE_FONT_SIZE } from './railText';
 import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import TaskScheduleConfig from './TaskScheduleConfig';
@@ -104,7 +105,9 @@ const TaskProperties = memo(() => {
               variant={'borderless'}
             >
               <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
-              <Text weight={500}>{t(`taskDetail.${statusMeta.labelKey}` as never)}</Text>
+              <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+                {t(`taskDetail.${statusMeta.labelKey}` as never)}
+              </Text>
             </Block>
           </TaskStatusTag>
         )}
@@ -124,7 +127,9 @@ const TaskProperties = memo(() => {
               size={16}
               taskIdentifier={taskId}
             />
-            <Text weight={500}>{t(`taskDetail.${priorityMeta.labelKey}` as never)}</Text>
+            <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+              {t(`taskDetail.${priorityMeta.labelKey}` as never)}
+            </Text>
           </Block>
         </TaskPriorityTag>
 
@@ -147,14 +152,23 @@ const TaskProperties = memo(() => {
               {assigneeUserId ? (
                 <>
                   <AssigneeUserAvatar size={16} userId={assigneeUserId} />
-                  <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+                  <Text
+                    ellipsis
+                    fontSize={RAIL_VALUE_FONT_SIZE}
+                    style={{ minWidth: 0 }}
+                    weight={500}
+                  >
                     {memberMeta?.title}
                   </Text>
                 </>
               ) : (
                 <>
                   <UnassignedAssigneeIcon kind={'human'} size={16} />
-                  <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                  <Text
+                    fontSize={RAIL_VALUE_FONT_SIZE}
+                    style={{ color: cssVar.colorTextDescription }}
+                    weight={500}
+                  >
                     {t('taskDetail.assignee')}
                   </Text>
                 </>
@@ -203,14 +217,23 @@ const TaskProperties = memo(() => {
                   {reviewerUserId ? (
                     <>
                       <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+                      <Text
+                        ellipsis
+                        fontSize={RAIL_VALUE_FONT_SIZE}
+                        style={{ minWidth: 0 }}
+                        weight={500}
+                      >
                         {reviewerMeta?.title}
                       </Text>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={16} />
-                      <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                      <Text
+                        fontSize={RAIL_VALUE_FONT_SIZE}
+                        style={{ color: cssVar.colorTextDescription }}
+                        weight={500}
+                      >
                         {t('taskDetail.reviewer')}
                       </Text>
                     </>
@@ -239,7 +262,11 @@ const TaskProperties = memo(() => {
             {labels.length > 0 ? (
               <LabelChips labels={labels} max={3} />
             ) : (
-              <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+              <Text
+                fontSize={RAIL_VALUE_FONT_SIZE}
+                style={{ color: cssVar.colorTextDescription }}
+                weight={500}
+              >
                 {t('taskDetail.labels.title')}
               </Text>
             )}

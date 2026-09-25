@@ -77,16 +77,16 @@ Then(
         }),
       ).toBeVisible({ timeout: 25_000 });
 
-      const input = this.page.getByRole('textbox', { name: 'Related issue identifier' });
-      await input.fill(second.identifier);
-      await input.press('Enter');
+      // The rail's add form links 'relates' edges (non-blocking); a second
+      // blocking prerequisite still arrives through the API.
+      await rpc('addDependency', { dependsOnId: second.id, taskId: target.id });
       await expect(
         this.page.getByRole('button', {
           exact: true,
           name: `Remove blocking dependency on ${second.identifier}`,
         }),
-      ).toBeVisible();
-      await expect(blocked).toBeVisible();
+      ).toBeVisible({ timeout: 25_000 });
+      await expect(blocked).toBeVisible({ timeout: 25_000 });
       await rejected('run', { id: target.id });
       await rejected('updateStatus', { id: target.id, status: 'completed' });
       expect((await rpc<TaskFixture>('find', { id: target.id }, true)).status).toBe('backlog');

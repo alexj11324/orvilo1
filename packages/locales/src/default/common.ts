@@ -525,6 +525,7 @@ export default {
   'navPanel.displayItems': 'Display Items',
   'navPanel.resetDefault': 'Reset to Default',
   'navPanel.hidden': 'Hidden',
+  'navPanel.joinTeam': 'Join a team',
   'navPanel.hideSection': 'Hide Section',
   'navPanel.library': 'Library',
   'navPanel.members': 'Members',

@@ -18,7 +18,6 @@ export const FIXED_PRIMARY_KEYS = [
   'reviews',
   'agent',
   'drafts',
-  'create',
   'workspace',
   'favorites',
   'teams',
@@ -39,10 +38,10 @@ export const LEGACY_PRIMARY_KEYS = new Set([
   'private',
   'project',
   'views',
+  // `create` rendered an action row, not a destination — retired after the
+  // live-product audit confirmed Linear's sidebar carries no `+` entry.
+  'create',
 ]);
-
-/** `create` is the standalone quick-create row (Linear's `+`) — it renders an
- * action, not a destination, so it has no route and no nav item. */
 
 /** Optional sections a user may hide — everything else is structural. */
 export const OPTIONAL_SECTION_KEYS = new Set(['workspace', 'favorites', 'teams']);

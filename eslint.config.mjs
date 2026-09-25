@@ -151,6 +151,8 @@ export default eslint(
       'logs',
       // misc
       '.next',
+      // scratch parity-audit probes (not source code)
+      'e2e/parity-audit-scratch',
       // temporary directories
       'tmp',
       'temp',

@@ -34,7 +34,9 @@ interface RelationRow {
   /** Identifier rendered as the row's target, e.g. `T-1`. */
   identifier: string;
   name?: string | null;
-  /** Task id/identifier the remove call is keyed on (the edge's owner). */
+  /** Identifier the remove call is keyed on — `TaskModel.resolve` treats
+   * non-`task_` strings as identifiers, so the identifier resolves under any
+   * raw id convention (seeded `taskpvNNNN` ids, real `task_` ids alike). */
   removeTarget: string;
   status?: string | null;
 }
@@ -174,7 +176,7 @@ const RelationSection = memo(
         {rows.map((row) => (
           <RelationRowItem
             allowed={allowed}
-            key={`${row.removeTarget}-${row.identifier}`}
+            key={`${row.direction}-${row.identifier}`}
             pending={pending}
             row={row}
             onRemove={onRemove}
@@ -240,7 +242,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           direction: 'out' as const,
           identifier: dep.dependsOn,
           name: dep.name,
-          removeTarget: dep.id ?? dep.dependsOn,
+          removeTarget: dep.dependsOn,
           status: dep.status,
         })),
     [dependencies],
@@ -253,7 +255,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           direction: 'in' as const,
           identifier: dep.dependsBy,
           name: dep.name,
-          removeTarget: dep.id ?? dep.dependsBy,
+          removeTarget: dep.dependsBy,
           status: dep.status,
         })),
     [dependents],
@@ -268,7 +270,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           direction: 'out' as const,
           identifier: dep.dependsOn,
           name: dep.name,
-          removeTarget: dep.id ?? dep.dependsOn,
+          removeTarget: dep.dependsOn,
           status: dep.status,
         })),
       ...dependents
@@ -277,7 +279,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           direction: 'in' as const,
           identifier: dep.dependsBy,
           name: dep.name,
-          removeTarget: dep.id ?? dep.dependsBy,
+          removeTarget: dep.dependsBy,
           status: dep.status,
         })),
     ],

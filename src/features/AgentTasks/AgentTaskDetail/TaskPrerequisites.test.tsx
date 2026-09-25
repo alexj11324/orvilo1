@@ -97,8 +97,10 @@ describe('TaskPrerequisites', () => {
     expect(screen.getByText('T-3')).toBeTruthy();
   });
 
-  it('keeps unavailable prerequisites blocking but removable by their raw id', async () => {
-    setTask([{ dependsOn: 'task_hidden', id: 'task_hidden', status: null, type: 'blocks' }]);
+  it('removes a prerequisite by its identifier, not its raw id', async () => {
+    // resolve() treats non-task_ strings as identifiers, so the row must send
+    // the identifier: raw ids follow other conventions (e.g. seeded taskpvNN).
+    setTask([{ dependsOn: 'T-5', id: 'taskpv05', status: null, type: 'blocks' }]);
     render(<TaskPrerequisites />);
     expect(screen.getByRole('status').textContent).toBe(key('blocked'));
     // The row composes `identifier · unavailable` — match the composed text,
@@ -106,7 +108,7 @@ describe('TaskPrerequisites', () => {
     const unavailableText = screen.getByText(new RegExp(key('unavailable')));
     expect(unavailableText.closest('button')?.disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: key('remove') }));
-    await waitFor(() => expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'task_hidden'));
+    await waitFor(() => expect(mocks.removeDependency).toHaveBeenCalledWith('T-4', 'T-5'));
   });
 
   it('adds a Blocking relation by inverting the edge onto the other task', async () => {
@@ -123,7 +125,7 @@ describe('TaskPrerequisites', () => {
     render(<TaskPrerequisites />);
     expect(screen.getByText('T-2')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: key('remove') }));
-    await waitFor(() => expect(mocks.removeBlocking).toHaveBeenCalledWith('T-4', 'task_2'));
+    await waitFor(() => expect(mocks.removeBlocking).toHaveBeenCalledWith('T-4', 'T-2'));
   });
 
   it('adds a Related relation with the relates type', async () => {

@@ -183,7 +183,7 @@ const NavItem = memo<NavItemProps>(
         className={cx(styles.container, className)}
         clickable={!disabled}
         gap={8}
-        height={description ? undefined : 36}
+        height={description ? undefined : 28}
         paddingBlock={description ? 8 : undefined}
         paddingInline={4}
         style={mergedStyle}
@@ -232,7 +232,12 @@ const NavItem = memo<NavItemProps>(
           {titlePrefix}
           {description ? (
             <Flexbox flex={1} gap={3} style={{ overflow: 'hidden' }}>
-              <Text color={textColor} ellipsis={{ tooltipWhenOverflow: true }}>
+              <Text
+                color={textColor}
+                ellipsis={{ tooltipWhenOverflow: true }}
+                fontSize={13}
+                weight={500}
+              >
                 {title}
               </Text>
               {description}
@@ -240,7 +245,9 @@ const NavItem = memo<NavItemProps>(
           ) : (
             <Text
               color={textColor}
+              fontSize={13}
               style={{ flex: 1 }}
+              weight={500}
               ellipsis={{
                 tooltipWhenOverflow: true,
               }}

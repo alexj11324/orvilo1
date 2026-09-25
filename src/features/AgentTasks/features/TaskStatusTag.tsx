@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { StatusVisual } from '@/components/ExecutionStatus';
 import { usePermission } from '@/hooks/usePermission';
 
 import { renderMenuExtra } from './menuExtra';
@@ -15,6 +16,29 @@ import { useTaskStatusChange } from './useTaskStatusChange';
 export { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
+  searchInput: css`
+    width: 100%;
+    padding-block: 4px;
+    padding-inline: 10px;
+    border: none;
+
+    font-family: inherit;
+    font-size: 13px;
+    color: ${cssVar.colorText};
+
+    background: transparent;
+    outline: none;
+
+    &::placeholder {
+      color: ${cssVar.colorTextPlaceholder};
+    }
+  `,
+  showingCaption: css`
+    padding-block: 2px;
+    padding-inline: 10px;
+    font-size: 12px;
+    color: ${cssVar.colorTextTertiary};
+  `,
   trigger: css`
     cursor: pointer;
     display: inline-flex;
@@ -39,6 +63,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface TaskStatusTagProps {
   children?: ReactNode;
   disableDropdown?: boolean;
+  /**
+   * The mark the trigger draws in place of the execution-status glyph — a
+   * task with a workflow state shows that state, Linear-style, while the
+   * menu keeps editing the execution status.
+   */
+  glyph?: StatusVisual & { label: ReactNode };
   onChange?: (status: TaskStatus) => void | Promise<void>;
   size?: number;
   status?: TaskStatus;
@@ -46,15 +76,36 @@ interface TaskStatusTagProps {
 }
 
 const TaskStatusTag = memo<TaskStatusTagProps>(
-  ({ children, disableDropdown, onChange, size = 16, status, taskIdentifier }) => {
+  ({ children, disableDropdown, glyph, onChange, size = 16, status, taskIdentifier }) => {
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const changeTaskStatus = useTaskStatusChange();
 
     const displayStatus = status ?? 'backlog';
     const meta = STATUS_META[displayStatus];
+
+    // Linear's status menu carries a search field on top; letters filter the
+    // list while digits keep working as accelerators (the document handler
+    // captures them before they reach the input).
+    const statusLabel = useCallback(
+      (key: TaskStatus) =>
+        t(`taskDetail.${STATUS_META[key].labelKey}`, { defaultValue: STATUS_META[key].label }),
+      [t],
+    );
+    const filteredStatuses = useMemo(() => {
+      const needle = query.trim().toLowerCase();
+      if (!needle) return USER_SELECTABLE_STATUSES;
+      return USER_SELECTABLE_STATUSES.filter((key) =>
+        statusLabel(key).toLowerCase().includes(needle),
+      );
+    }, [query, statusLabel]);
+
+    useEffect(() => {
+      if (!open) setQuery('');
+    }, [open]);
 
     const handleStatusChange = useCallback(
       async (nextStatus: TaskStatus) => {
@@ -83,17 +134,20 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
 
     const handleStatusChangeRef = useRef(handleStatusChange);
     handleStatusChangeRef.current = handleStatusChange;
+    const filteredStatusesRef = useRef(filteredStatuses);
+    filteredStatusesRef.current = filteredStatuses;
 
     useEffect(() => {
       if (!open) return;
       const onKeyDown = (event: KeyboardEvent) => {
         const num = Number.parseInt(event.key, 10);
         if (Number.isNaN(num)) return;
+        const statuses = filteredStatusesRef.current;
         const idx = num - 1;
-        if (idx < 0 || idx >= USER_SELECTABLE_STATUSES.length) return;
+        if (idx < 0 || idx >= statuses.length) return;
         event.preventDefault();
         event.stopPropagation();
-        void handleStatusChangeRef.current(USER_SELECTABLE_STATUSES[idx]);
+        void handleStatusChangeRef.current(statuses[idx]);
         setOpen(false);
       };
       document.addEventListener('keydown', onKeyDown, true);
@@ -102,21 +156,21 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
 
     const menuItems = useMemo<DropdownItem[]>(
       () =>
-        USER_SELECTABLE_STATUSES.map((key, index) => {
+        filteredStatuses.map((key, index) => {
           const statusMeta = STATUS_META[key];
           const isCurrent = key === displayStatus;
           return {
             extra: renderMenuExtra(String(index + 1), isCurrent),
             icon: <Icon color={statusMeta.color} icon={statusMeta.icon} size={16} />,
             key,
-            label: t(`taskDetail.${statusMeta.labelKey}`, { defaultValue: statusMeta.label }),
+            label: statusLabel(key),
             onClick: ({ domEvent }: MenuInfo) => {
               domEvent.stopPropagation();
               void handleStatusChange(key);
             },
           };
         }),
-      [displayStatus, handleStatusChange, t],
+      [displayStatus, filteredStatuses, handleStatusChange, statusLabel],
     );
 
     const triggerNode =
@@ -124,9 +178,11 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       (loading ? (
         <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
       ) : (
-        <Tooltip title={t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}>
+        <Tooltip
+          title={glyph?.label ?? t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}
+        >
           <span className={styles.trigger} onClick={(e) => e.stopPropagation()}>
-            <Icon color={meta.color} icon={meta.icon} size={size} />
+            <Icon color={(glyph ?? meta).color} icon={(glyph ?? meta).icon} size={size} />
           </span>
         </Tooltip>
       ));
@@ -143,7 +199,36 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       );
 
     return (
-      <DropdownMenu items={menuItems} open={open} onOpenChange={setOpen}>
+      <DropdownMenu
+        items={menuItems}
+        open={open}
+        header={
+          <>
+            <input
+              autoFocus
+              className={styles.searchInput}
+              value={query}
+              aria-label={t('taskDetail.changeStatusPlaceholder', {
+                defaultValue: 'Change status…',
+              })}
+              placeholder={t('taskDetail.changeStatusPlaceholder', {
+                defaultValue: 'Change status…',
+              })}
+              onChange={(event) => setQuery(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+            />
+            <div className={styles.showingCaption}>
+              {query.trim()
+                ? t('taskDetail.showingItems', {
+                    count: filteredStatuses.length,
+                    defaultValue: 'Showing {{count}} items',
+                  })
+                : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
+            </div>
+          </>
+        }
+        onOpenChange={setOpen}
+      >
         {triggerNode}
       </DropdownMenu>
     );

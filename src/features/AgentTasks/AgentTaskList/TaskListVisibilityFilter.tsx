@@ -3,7 +3,6 @@
 import { type DropdownItem, DropdownMenu, Icon, type MenuInfo } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
-import { Globe, LockIcon, UsersIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,20 +13,18 @@ import { taskListSelectors } from '@/store/task/selectors';
 import type { TaskListVisibilityFilter as Filter } from '@/store/task/slices/list/initialState';
 
 import { renderMenuCheck } from '../features/menuExtra';
+import { TASK_VISIBILITY_ICONS } from '../features/taskVisibilityLabel';
 
-const FILTER_OPTIONS: Array<{ icon: typeof Globe; key: Filter; labelKey: string }> = [
+const FILTER_OPTIONS: Array<{ key: Filter; labelKey: string }> = [
   {
-    icon: LockIcon,
     key: 'private',
     labelKey: 'createTask.visibility.private',
   },
   {
-    icon: UsersIcon,
     key: 'workspace',
     labelKey: 'createTask.visibility.workspace',
   },
   {
-    icon: Globe,
     key: 'all',
     labelKey: 'taskList.visibility.all',
   },
@@ -47,12 +44,12 @@ const TaskListVisibilityFilter = memo(() => {
   const [open, setOpen] = useState(false);
 
   const currentOption = FILTER_OPTIONS.find((opt) => opt.key === visibility) ?? FILTER_OPTIONS[0];
-  const CurrentIcon = currentOption.icon;
+  const CurrentIcon = TASK_VISIBILITY_ICONS[currentOption.key];
 
   const menuItems = useMemo<DropdownItem[]>(
     () =>
       FILTER_OPTIONS.map((option) => {
-        const OptionIcon = option.icon;
+        const OptionIcon = TASK_VISIBILITY_ICONS[option.key];
         return {
           extra: renderMenuCheck(option.key === visibility),
           icon: <Icon color={cssVar.colorTextSecondary} icon={OptionIcon} size={16} />,
@@ -76,6 +73,7 @@ const TaskListVisibilityFilter = memo(() => {
       <ActionIcon
         icon={CurrentIcon}
         size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+        style={{ borderRadius: 9999 }}
         title={`${t('taskList.visibility.label', { defaultValue: 'Visibility' })}: ${currentLabel}`}
       />
     </DropdownMenu>

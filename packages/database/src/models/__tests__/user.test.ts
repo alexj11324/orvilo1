@@ -114,6 +114,15 @@ describe('UserModel', () => {
   });
 
   describe('getUserState', () => {
+    it('persists and clears a job title without changing another user', async () => {
+      await userModel.updateUser({ jobTitle: 'Software engineer' });
+      expect((await userModel.getUserState(mockDecryptor)).jobTitle).toBe('Software engineer');
+      const otherModel = new UserModel(serverDB, otherUserId);
+      expect((await otherModel.getUserState(mockDecryptor)).jobTitle).toBeNull();
+      await userModel.updateUser({ jobTitle: null });
+      expect((await userModel.getUserState(mockDecryptor)).jobTitle).toBeNull();
+    });
+
     it('should return user state with settings', async () => {
       // Create user settings
       await serverDB.insert(userSettings).values({

@@ -220,6 +220,45 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-inline: 16px;
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
   `,
+  itemActionsButton: css`
+    cursor: pointer;
+
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+
+    padding-block: 2px;
+    padding-inline: 6px;
+    border: none;
+    border-radius: ${cssVar.borderRadiusSM};
+
+    font-family: inherit;
+    font-size: 11px;
+    color: ${cssVar.colorTextTertiary};
+
+    opacity: 0;
+    background: transparent;
+
+    transition: opacity ${cssVar.motionDurationMid};
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillSecondary};
+    }
+
+    &:focus-visible {
+      opacity: 1;
+    }
+
+    /* Reveal only for the highlighted/hovered row so quiet rows stay clean. */
+    [cmdk-item][aria-selected='true'] &,
+    [cmdk-item]:hover & {
+      opacity: 1;
+    }
+  `,
+  itemActionsKey: css`
+    font-family: inherit;
+  `,
   itemContent: css`
     display: flex;
     flex: 1;

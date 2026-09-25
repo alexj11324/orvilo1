@@ -5,6 +5,7 @@ class NotificationService {
     params: {
       category?: string;
       cursor?: string;
+      includeSnoozed?: boolean;
       isRead?: boolean;
       limit?: number;
       unreadOnly?: boolean;
@@ -41,6 +42,7 @@ class NotificationService {
     params: {
       cursor?: string;
       filter?: 'all' | 'archived' | 'mentions' | 'snoozed' | 'unread';
+      includeSnoozed?: boolean;
       kind?: 'action' | 'other' | 'priority' | 'update';
       limit?: number;
     } = {},

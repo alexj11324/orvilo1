@@ -3,6 +3,7 @@ import type {
   WorkspaceInvitationSummary,
   WorkspaceMemberSummary,
 } from '../Teammates/api/contract';
+import { memberStatus } from '../Teammates/api/roleCapabilities';
 
 export type DirectoryRow =
   | { id: string; kind: 'agent'; sortName: string; value: WorkspaceAgentSummary }
@@ -70,4 +71,27 @@ export const filterDirectoryRows = (
         : '';
     return row.sortName.includes(needle) || haystack.includes(needle);
   });
+};
+
+/**
+ * Band the directory renders each row under. The reference groups by member
+ * lifecycle state — Active / Invited / Application — not by data source, so
+ * people split by `memberStatus` while invitations and agents keep their own
+ * bands. `removed` is unreachable today (`includeDeleted: false`) but keeps a
+ * real band at the end instead of silently re-bucketing a deleted member.
+ */
+export type DirectorySection = 'active' | 'agent' | 'invited' | 'removed' | 'suspended';
+
+export const DIRECTORY_SECTION_ORDER: readonly DirectorySection[] = [
+  'active',
+  'suspended',
+  'invited',
+  'agent',
+  'removed',
+];
+
+export const directorySectionKey = (row: DirectoryRow): DirectorySection => {
+  if (row.kind === 'person') return memberStatus(row.value);
+  if (row.kind === 'invitation') return 'invited';
+  return 'agent';
 };

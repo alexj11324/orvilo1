@@ -1,0 +1,1688 @@
+{
+  "landmarks": {
+    "sidebar-nav": {
+      "name": "sidebar-nav",
+      "strategy": "css:nav",
+      "tag": "NAV",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "BDBDI_VerifierInbox2727My issuesReviews1717AgentDrafts22WorkspaceProjectsViewsMo",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 244,
+        "h": 900
+      },
+      "style": {
+        "fontFamily": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "lch(100 0 272)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "lch(100 0 272)",
+        "borderTopColor": "lch(100 0 272)",
+        "borderRightColor": "lch(100 0 272)",
+        "borderBottomColor": "lch(100 0 272)",
+        "borderLeftColor": "lch(100 0 272)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "relative"
+      }
+    },
+    "sidebar-nav-item": {
+      "name": "sidebar-nav-item",
+      "strategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]",
+      "tag": "DIV",
+      "id": null,
+      "role": "button",
+      "testId": null,
+      "ariaLabel": null,
+      "text": "Inbox2727",
+      "rect": {
+        "x": 12,
+        "y": 61,
+        "w": 220,
+        "h": 28
+      },
+      "style": {
+        "fontFamily": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "lch(100 0 272)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "lch(100 0 272)",
+        "borderTopColor": "lch(100 0 272)",
+        "borderRightColor": "lch(100 0 272)",
+        "borderBottomColor": "lch(100 0 272)",
+        "borderLeftColor": "lch(100 0 272)",
+        "boxShadow": "none",
+        "display": "block",
+        "position": "relative"
+      }
+    },
+    "header": {
+      "name": "header",
+      "strategy": "css:main header, [role=\"main\"] header",
+      "tag": "HEADER",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "ReviewsFor youCreated",
+      "rect": {
+        "x": 245,
+        "y": 9,
+        "w": 482,
+        "h": 88
+      },
+      "style": {
+        "fontFamily": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "lch(100 0 272)",
+        "background": "lch(5.52 0.4 272) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "lch(5.52 0.4 272)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "12px",
+        "rowGap": "12px",
+        "columnGap": "12px",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "lch(100 0 272)",
+        "borderTopColor": "lch(100 0 272)",
+        "borderRightColor": "lch(100 0 272)",
+        "borderBottomColor": "lch(100 0 272)",
+        "borderLeftColor": "lch(100 0 272)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "static"
+      }
+    },
+    "tabs": {
+      "name": "tabs",
+      "strategy": "layout:tabStrip",
+      "tag": "DIV",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "For youCreated",
+      "rect": {
+        "x": 253,
+        "y": 53,
+        "w": 463,
+        "h": 44
+      },
+      "style": {
+        "fontFamily": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "lch(100 0 272)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "6px",
+        "rowGap": "6px",
+        "columnGap": "6px",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "lch(100 0 272)",
+        "borderTopColor": "lch(100 0 272)",
+        "borderRightColor": "lch(100 0 272)",
+        "borderBottomColor": "lch(100 0 272)",
+        "borderLeftColor": "lch(100 0 272)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "static"
+      }
+    },
+    "list-row": {
+      "name": "list-row",
+      "strategy": "layout:firstRow",
+      "tag": "A",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "fix(ci): name the GitHub secret in the deploy pre-flight error9d",
+      "rect": {
+        "x": 245,
+        "y": 126,
+        "w": 471,
+        "h": 40
+      },
+      "style": {
+        "fontFamily": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "lch(100 0 272)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "8px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "lch(100 0 272)",
+        "borderTopColor": "lch(100 0 272)",
+        "borderRightColor": "lch(100 0 272)",
+        "borderBottomColor": "lch(100 0 272)",
+        "borderLeftColor": "lch(100 0 272)",
+        "boxShadow": "none",
+        "display": "block",
+        "position": "relative"
+      }
+    },
+    "primary-button": {
+      "name": "primary-button",
+      "strategy": "layout:primaryButton",
+      "tag": "BUTTON",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": "Add filter",
+      "text": "",
+      "rect": {
+        "x": 655,
+        "y": 16,
+        "w": 28,
+        "h": 28
+      },
+      "style": {
+        "fontFamily": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "lineHeight": "normal",
+        "color": "lch(90.451 1.2 272)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "9999px",
+        "padding": "0px 2px",
+        "paddingTop": "0px",
+        "paddingRight": "2px",
+        "paddingBottom": "0px",
+        "paddingLeft": "2px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0.5px",
+        "borderTopWidth": "0.5px",
+        "borderRightWidth": "0.5px",
+        "borderBottomWidth": "0.5px",
+        "borderLeftWidth": "0.5px",
+        "borderColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgba(0, 0, 0, 0)",
+        "borderRightColor": "rgba(0, 0, 0, 0)",
+        "borderBottomColor": "rgba(0, 0, 0, 0)",
+        "borderLeftColor": "rgba(0, 0, 0, 0)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "relative"
+      }
+    },
+    "detail-pane": {
+      "name": "detail-pane",
+      "strategy": "layout:detailPane",
+      "tag": "DIV",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "39 reviews",
+      "rect": {
+        "x": 727,
+        "y": 9,
+        "w": 705,
+        "h": 855
+      },
+      "style": {
+        "fontFamily": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "color": "lch(100 0 272)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "lch(100 0 272)",
+        "borderTopColor": "lch(100 0 272)",
+        "borderRightColor": "lch(100 0 272)",
+        "borderBottomColor": "lch(100 0 272)",
+        "borderLeftColor": "lch(100 0 272)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "relative"
+      }
+    },
+    "empty-state": null
+  },
+  "meta": {
+    "url": "https://linear.app/bdiverifier/reviews",
+    "title": "Reviews (17)",
+    "capturedAt": "2026-09-23T05:47:05.916Z",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 2
+    },
+    "tag": "reviews",
+    "navigatedVia": "url",
+    "navHref": null,
+    "clicks": [],
+    "settle": {
+      "ms": 3681,
+      "polls": 8,
+      "inflightLeft": 0
+    }
+  },
+  "probeLog": [
+    {
+      "name": "sidebar-nav",
+      "strategy": "css:nav"
+    },
+    {
+      "name": "sidebar-nav-item",
+      "strategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]"
+    },
+    {
+      "name": "header",
+      "strategy": "css:main header, [role=\"main\"] header"
+    },
+    {
+      "name": "tabs",
+      "strategy": "layout:tabStrip"
+    },
+    {
+      "name": "list-row",
+      "strategy": "layout:firstRow"
+    },
+    {
+      "name": "primary-button",
+      "strategy": "layout:primaryButton"
+    },
+    {
+      "name": "detail-pane",
+      "strategy": "layout:detailPane"
+    },
+    {
+      "name": "empty-state",
+      "strategy": null
+    }
+  ],
+  "text": [
+    "Skip to content",
+    "BDI_Verifier Workspace Menu",
+    "BD",
+    "BDI_Verifier",
+    "Search workspace",
+    "Create new issue",
+    "Inbox",
+    "2",
+    "7",
+    "My issues",
+    "Reviews",
+    "1",
+    "Agent",
+    "Drafts",
+    "Workspace",
+    "Projects",
+    "Views",
+    "Show more links",
+    "More",
+    "Favorites",
+    "Your teams",
+    "Join a team",
+    "orvilo",
+    "Team menu",
+    "Home",
+    "Triage",
+    "Issues",
+    "Try",
+    "Initiatives",
+    "Cycles",
+    "Open Help menu",
+    "Add filter",
+    "Display options",
+    "For you",
+    "Created",
+    "Ready to merge",
+    "fix(ci): name the GitHub secret in the deploy pre-flight error",
+    "9d",
+    "Make 纸白 and 米黄 look like different papers",
+    "5w",
+    "Fix leftover import P2s: session trust, S3 resign, auth match",
+    "codex/daymark stack 01 trellis removal",
+    "7w",
+    "test: add UI automation and smoke flows",
+    "Optimize notebook for local setup and disable cloud platform sections",
+    "6mo",
+    "Add drug sales backtesting analysis with visualization",
+    "Habits: fix heatmap gutters and floating month day",
+    "fix: use native Liquid Glass for the detail date",
+    "docs: align product and interaction guidance",
+    "feat: update localization for redesigned flows",
+    "feat: redesign the event creation and detail experience",
+    "feat: expand the event background picker",
+    "feat: refine widgets and Live Activity layouts",
+    "feat: refine subscriptions and premium paywall",
+    "refactor: harden local-first integration services",
+    "feat: add event style foundations and display fonts",
+    "Created by you",
+    "🔒 ci(vercel): gate branch deployments on green CI",
+    "3d",
+    "🔥 chore(retire): drop the skill-store prompt wiring and its dead locale keys",
+    "4d",
+    "🔧 ci(release): prepare protected releases and standalone desktop publishing",
+    "5d",
+    "🐛 fix(tasks): close prerequisite recovery and private cascade gaps",
+    "6d",
+    "39 reviews",
+    "Chat history"
+  ],
+  "tree": {
+    "t": "body",
+    "c": "content-loaded layoutScrollbarObtrusive ",
+    "k": 15,
+    "b": [0, 0, 1440, 900],
+    "ch": [
+      {
+        "t": "div",
+        "k": 5,
+        "b": [0, 0, 1440, 900],
+        "ch": [
+          {
+            "t": "div",
+            "c": "theme-provider-30df9d5b4e5bf09fbc0b518b7",
+            "k": 6,
+            "b": [0, 0, 0, 0],
+            "ch": [
+              {
+                "t": "a",
+                "x": "Skip to content",
+                "c": "sx-c342km sx-eh89do sx-1jxxt1b sx-jm9jq1",
+                "k": 0,
+                "b": [-1, -1, 1, 1]
+              },
+              {
+                "t": "div",
+                "c": "sx-78zum5 sx-131h156 sx-1q0g3np sx-1qjc9",
+                "k": 2,
+                "b": [0, 0, 1440, 900],
+                "ch": [
+                  {
+                    "t": "div",
+                    "c": "sx-10l6tqk sx-13vifvy sx-1ey2m1c sx-u96u",
+                    "k": 2,
+                    "b": [0, 0, 244, 900],
+                    "ch": [
+                      {
+                        "t": "div",
+                        "c": "sx-1n2onr6 sx-98rzlu sx-2lwn1j",
+                        "k": 2,
+                        "b": [0, 0, 244, 900],
+                        "ch": [
+                          {
+                            "t": "div",
+                            "k": 2,
+                            "b": [0, 0, 0, 0],
+                            "ch": [
+                              {
+                                "t": "div",
+                                "c": "sx-78zum5 sx-6s0dn4 sx-193iq5w sx-1n2onr",
+                                "k": 3,
+                                "b": [12, 8, 220, 44],
+                                "ch": [
+                                  {
+                                    "t": "button",
+                                    "a": "BDI_Verifier Workspace Menu",
+                                    "c": "sx-78zum5 sx-6s0dn4 sx-17d4w8g sx-t970qd",
+                                    "k": 3,
+                                    "b": [12, 16, 121, 28],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "x": "BD",
+                                        "c": "sx-78zum5 sx-h8yej3 sx-5yr21d sx-fungia ",
+                                        "k": 0,
+                                        "b": [17, 20, 20, 20]
+                                      },
+                                      {
+                                        "t": "span",
+                                        "x": "BDI_Verifier",
+                                        "c": "sx-1j61x8r sx-gu00eq sx-ek0tjz sx-13jp3w",
+                                        "k": 0,
+                                        "b": [43, 19, 67, 23]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "div",
+                                    "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                    "k": 2,
+                                    "b": [172, 16, 60, 28],
+                                    "ch": [
+                                      {
+                                        "t": "button",
+                                        "a": "Search workspace",
+                                        "c": "sx-16dsc37 sx-uxw1ft sx-2lah0s sx-1ghz6d",
+                                        "k": 1,
+                                        "b": [172, 16, 28, 28]
+                                      },
+                                      {
+                                        "t": "button",
+                                        "a": "Create new issue",
+                                        "c": "sx-3nfvp2 sx-16dsc37 sx-6s0dn4 sx-l56j7k",
+                                        "k": 1,
+                                        "b": [204, 16, 28, 28]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "t": "div",
+                                "c": "sx-78zum5 sx-vx4679 sx-dt5ytf sx-6ikm8r ",
+                                "k": 4,
+                                "b": [0, 47, 244, 852],
+                                "ch": [
+                                  {
+                                    "t": "div",
+                                    "k": 2,
+                                    "b": [12, 60, 220, 288],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "k": 7,
+                                        "b": [12, 61, 220, 144],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "r": "button",
+                                            "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                            "k": 1,
+                                            "b": [12, 61, 220, 28]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "r": "button",
+                                            "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                            "k": 1,
+                                            "b": [12, 90, 220, 28],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "My issues",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 1,
+                                                "b": [12, 90, 220, 28]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "r": "button",
+                                            "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                            "k": 1,
+                                            "b": [12, 119, 220, 28],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 2,
+                                                "b": [12, 119, 220, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Reviews",
+                                                    "c": "sx-78zum5 sx-1q0g3np sx-12lumcd sx-6s0dn",
+                                                    "k": 1,
+                                                    "b": [40, 125, 183, 16]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "r": "button",
+                                            "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                            "k": 1,
+                                            "b": [12, 148, 220, 28],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 2,
+                                                "b": [12, 148, 220, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "x": "Agent",
+                                                    "k": 0,
+                                                    "b": [40, 154, 37, 16]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "r": "button",
+                                            "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                            "k": 2,
+                                            "b": [12, 177, 220, 28],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 2,
+                                                "b": [12, 177, 220, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Drafts",
+                                                    "c": "sx-78zum5 sx-1q0g3np sx-12lumcd sx-6s0dn",
+                                                    "k": 1,
+                                                    "b": [40, 183, 183, 16]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "r": "status",
+                                            "k": 0,
+                                            "b": [-1, -1, 1, 1]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "div",
+                                        "c": "sx-1bawvfr sx-1xmf6yo sx-b3r6kr _wrapper",
+                                        "k": 2,
+                                        "b": [4, 222, 228, 126],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "Workspace",
+                                            "c": "sx-1j61x8r sx-ggjnk3 sx-84vug0 sx-11mg1s",
+                                            "k": 0,
+                                            "b": [21, 228, 65, 15]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-2lah0s sx-wib8y2 sx-1kp6hsx sx-b1bcm5",
+                                            "k": 2,
+                                            "b": [12, 251, 220, 97],
+                                            "ch": [
+                                              {
+                                                "t": "div",
+                                                "k": 6,
+                                                "b": [12, 252, 220, 57],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "r": "button",
+                                                    "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                                    "k": 1,
+                                                    "b": [12, 252, 220, 28]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "r": "button",
+                                                    "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                                    "k": 1,
+                                                    "b": [12, 281, 220, 28]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "r": "button",
+                                                    "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                                    "k": 1,
+                                                    "b": [12, 310, 220, 0]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "r": "button",
+                                                    "c": "sx-1n2onr6 sx-2u8bby sx-5rfsx9 sx-rh77ze",
+                                                    "k": 1,
+                                                    "b": [12, 310, 220, 0]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "r": "status",
+                                                    "k": 0,
+                                                    "b": [-1, -1, 1, 1]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "r": "button",
+                                                "a": "Show more links",
+                                                "c": "sx-6s0dn4 sx-1i9j6mr sx-vijh9v sx-1ty9z6",
+                                                "k": 1,
+                                                "b": [12, 311, 220, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "x": "More",
+                                                    "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                    "k": 1,
+                                                    "b": [12, 311, 220, 28]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "div",
+                                    "c": "sx-78zum5 sx-vx4679 sx-dt5ytf sc2sx-Flex",
+                                    "k": 3,
+                                    "b": [12, 348, 220, 326],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "c": "sx-1bawvfr sx-1xmf6yo sx-b3r6kr _wrapper",
+                                        "k": 2,
+                                        "b": [4, 346, 228, 41],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "Favorites",
+                                            "c": "sx-1j61x8r sx-ggjnk3 sx-84vug0 sx-11mg1s",
+                                            "k": 0,
+                                            "b": [21, 352, 53, 15]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-1kgmq87",
+                                            "k": 3,
+                                            "b": [12, 373, 220, 6],
+                                            "ch": [
+                                              {
+                                                "t": "div",
+                                                "r": "status",
+                                                "k": 0,
+                                                "b": [11, 337, 1, 1]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "div",
+                                        "c": "sx-1bawvfr sx-1xmf6yo sx-b3r6kr _wrapper",
+                                        "k": 2,
+                                        "b": [4, 356, 228, 213],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-1q0g3np sx-6s0dn4 sx-1qughi",
+                                            "k": 2,
+                                            "b": [12, 356, 220, 28],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "Your teams",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-84vug0 sx-11mg1s",
+                                                "k": 0,
+                                                "b": [21, 362, 65, 15]
+                                              },
+                                              {
+                                                "t": "button",
+                                                "a": "Join a team",
+                                                "c": "sx-3nfvp2 sx-16dsc37 sx-6s0dn4 sx-l56j7k",
+                                                "k": 1,
+                                                "b": [206, 358, 24, 24]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "ul",
+                                            "c": "sx-1ghz6dp sx-1n2onr6 sx-1s73dr8",
+                                            "k": 3,
+                                            "b": [12, 386, 220, 174],
+                                            "ch": [
+                                              {
+                                                "t": "li",
+                                                "r": "button",
+                                                "c": "sx-e8uvvx sx-vijh9v sx-1ty9z65 sx-j3b58b",
+                                                "k": 2,
+                                                "b": [12, 386, 220, 174]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "r": "status",
+                                                "k": 0,
+                                                "b": [-1, -1, 1, 1]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "div",
+                                        "c": "sx-1bawvfr sx-1xmf6yo sx-b3r6kr _wrapper",
+                                        "k": 2,
+                                        "b": [4, 577, 228, 97],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "Try",
+                                            "c": "sx-1j61x8r sx-ggjnk3 sx-84vug0 sx-11mg1s",
+                                            "k": 0,
+                                            "b": [21, 583, 19, 15]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-2lah0s sx-wib8y2 sx-1kp6hsx sx-b1bcm5",
+                                            "k": 2,
+                                            "b": [12, 606, 220, 68],
+                                            "ch": [
+                                              {
+                                                "t": "div",
+                                                "c": "sx-ufnvkl sx-1n2onr6 sx-1i9j6mr sx-1j12v",
+                                                "k": 2,
+                                                "b": [12, 606, 220, 30],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "x": "Initiatives",
+                                                    "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                    "k": 1,
+                                                    "b": [12, 607, 220, 28]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "r": "button",
+                                                    "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-2lah0s",
+                                                    "k": 1,
+                                                    "b": [214, 616, 10, 10]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "c": "sx-ufnvkl sx-1n2onr6 sx-1i9j6mr sx-1j12v",
+                                                "k": 2,
+                                                "b": [12, 636, 220, 30],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "a": "Enable cycles for team…",
+                                                    "x": "Cycles",
+                                                    "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                    "k": 1,
+                                                    "b": [12, 637, 220, 28]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "r": "button",
+                                                    "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-2lah0s",
+                                                    "k": 1,
+                                                    "b": [214, 646, 10, 10]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "button",
+                            "a": "Open Help menu",
+                            "c": "sx-16dsc37 sx-l56j7k sx-uxw1ft sx-2lah0s",
+                            "k": 1,
+                            "b": [10, 866, 24, 24]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "t": "div",
+                    "c": "sx-78zum5 sx-dt5ytf sx-98rzlu sx-euugli ",
+                    "k": 2,
+                    "b": [244, 0, 1196, 900],
+                    "ch": [
+                      {
+                        "t": "main",
+                        "c": "sx-78zum5 sx-131h156 sx-dt5ytf sx-1isitw",
+                        "k": 4,
+                        "b": [244, 8, 1188, 856],
+                        "ch": [
+                          {
+                            "t": "div",
+                            "c": "sx-78zum5 sx-b3r6kr sx-1qjc9v5 sx-1szn6h",
+                            "k": 3,
+                            "b": [245, 9, 1187, 855],
+                            "ch": [
+                              {
+                                "t": "div",
+                                "c": "sx-78zum5 sx-vx4679 sx-dt5ytf sc2sx-Flex",
+                                "k": 2,
+                                "b": [245, 9, 482, 855],
+                                "ch": [
+                                  {
+                                    "t": "div",
+                                    "c": "sx-78zum5 sx-vx4679 sx-dt5ytf sc2sx-Flex",
+                                    "k": 2,
+                                    "b": [245, 9, 482, 88],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                        "k": 2,
+                                        "b": [253, 9, 463, 44],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-6s0dn4 sx-1iyjqo2 sx-h2ziz4",
+                                            "k": 2,
+                                            "b": [253, 9, 397, 44],
+                                            "ch": [
+                                              {
+                                                "t": "button",
+                                                "a": "Menu",
+                                                "c": "sx-3nfvp2 sx-16dsc37 sx-6s0dn4 sx-l56j7k",
+                                                "k": 1,
+                                                "b": [253, 16, 28, 28]
+                                              },
+                                              {
+                                                "t": "h2",
+                                                "x": "Reviews",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [263, 23, 52, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-6s0dn4 sx-2lah0s sx-1jnr06f",
+                                            "k": 2,
+                                            "b": [655, 16, 60, 28],
+                                            "ch": [
+                                              {
+                                                "t": "button",
+                                                "a": "Add filter",
+                                                "c": "sx-3nfvp2 sx-16dsc37 sx-6s0dn4 sx-l56j7k",
+                                                "k": 1,
+                                                "b": [655, 16, 28, 28]
+                                              },
+                                              {
+                                                "t": "button",
+                                                "a": "Display options",
+                                                "c": "sx-3nfvp2 sx-16dsc37 sx-6s0dn4 sx-l56j7k",
+                                                "k": 1,
+                                                "b": [687, 16, 28, 28]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "div",
+                                        "c": "sx-18n5i07 sx-6s0dn4 sx-78zum5 sx-1iyjqo",
+                                        "k": 2,
+                                        "b": [253, 53, 463, 44],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "x": "For you",
+                                            "c": "sx-uxw1ft sx-b3r6kr sx-lyipyv",
+                                            "k": 0,
+                                            "b": [263, 67, 43, 15]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "Created",
+                                            "c": "sx-uxw1ft sx-b3r6kr sx-lyipyv",
+                                            "k": 0,
+                                            "b": [333, 67, 46, 15]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "div",
+                                    "c": "sx-6ikm8r sx-1odjw0f sx-1o5wbz4 sx-1llii",
+                                    "k": 2,
+                                    "b": [245, 96, 482, 768],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "k": 19,
+                                        "b": [245, 96, 471, 710],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "r": "heading",
+                                            "c": "sx-jp7ctv",
+                                            "k": 1,
+                                            "b": [0, 0, 0, 0],
+                                            "ch": [
+                                              {
+                                                "t": "div",
+                                                "r": "button",
+                                                "c": "sx-5yr21d sx-h8yej3 sx-1i9j6mr sx-1lqa7c",
+                                                "k": 1,
+                                                "b": [256, 96, 460, 28]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 138, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "fix(ci): name the GitHub secret in the deploy pre-flight err",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 138, 362, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "9d",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 138, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 177, 444, 19],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "Make 纸白 and 米黄 look like different papers",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 177, 384, 19]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "5w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 178, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 218, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "Fix leftover import P2s: session trust, S3 resign, auth matc",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 218, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "5w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 218, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 258, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "codex/daymark stack 01 trellis removal",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 258, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 258, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 298, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "test: add UI automation and smoke flows",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 298, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 298, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 338, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "Optimize notebook for local setup and disable cloud platform",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 338, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "6mo",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 338, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 378, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "Add drug sales backtesting analysis with visualization",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 378, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "6mo",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 378, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 418, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "Habits: fix heatmap gutters and floating month day",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 418, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 418, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 458, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "fix: use native Liquid Glass for the detail date",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 458, 362, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 458, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 498, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "docs: align product and interaction guidance",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 498, 362, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 498, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 538, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "feat: update localization for redesigned flows",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 538, 362, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 538, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 578, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "feat: redesign the event creation and detail experience",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 578, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 578, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 618, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "feat: expand the event background picker",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 618, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 618, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 658, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "feat: refine widgets and Live Activity layouts",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 658, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 658, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 698, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "feat: refine subscriptions and premium paywall",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 698, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 698, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 738, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "refactor: harden local-first integration services",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 738, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 738, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 3,
+                                            "b": [264, 778, 444, 16],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "feat: add event style foundations and display fonts",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 778, 384, 16]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "7w",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 778, 30, 16]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "div",
+                                        "k": 7,
+                                        "b": [245, 808, 471, 910],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "r": "heading",
+                                            "c": "sx-jp7ctv",
+                                            "k": 1,
+                                            "b": [0, 0, 0, 0],
+                                            "ch": [
+                                              {
+                                                "t": "div",
+                                                "r": "button",
+                                                "c": "sx-5yr21d sx-h8yej3 sx-1i9j6mr sx-1lqa7c",
+                                                "k": 1,
+                                                "b": [256, 808, 460, 28]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 850, 444, 17],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "🔒 ci(vercel): gate branch deployments on green CI",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 850, 360, 17]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "3d",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 850, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 890, 444, 17],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "🔥 chore(retire): drop the skill-store prompt wiring and its",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 890, 360, 17]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "4d",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 890, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 930, 444, 17],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "🔧 ci(release): prepare protected releases and standalone de",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 930, 360, 17]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "5d",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 930, 30, 16]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                                            "k": 4,
+                                            "b": [264, 970, 444, 17],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "🐛 fix(tasks): close prerequisite recovery and private casca",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                                "k": 0,
+                                                "b": [286, 970, 360, 17]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "x": "6d",
+                                                "c": "sx-1j61x8r sx-ggjnk3 sx-oxd7ts sx-1nzvdv",
+                                                "k": 0,
+                                                "b": [677, 970, 30, 16]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "t": "div",
+                                "c": "sx-78zum5 sx-dt5ytf sx-12lumcd sx-b3r6kr",
+                                "k": 3,
+                                "b": [727, 9, 705, 855],
+                                "ch": [
+                                  {
+                                    "t": "div",
+                                    "c": "sx-78zum5 sx-dt5ytf sx-12lumcd sx-6s0dn4",
+                                    "k": 2,
+                                    "b": [727, 9, 705, 855],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "x": "39 reviews",
+                                        "c": "sx-1j61x8r sx-ggjnk3 sx-1srpx65 sx-11mg1",
+                                        "k": 0,
+                                        "b": [1045, 515, 68, 16]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "t": "div",
+                        "c": "sx-78zum5 sx-vx4679 sx-1q0g3np sx-6s0dn4",
+                        "k": 3,
+                        "b": [248, 868, 1182, 28],
+                        "ch": [
+                          {
+                            "t": "div",
+                            "c": "sx-1n2onr6",
+                            "k": 2,
+                            "b": [1323, 868, 77, 28],
+                            "ch": [
+                              {
+                                "t": "button",
+                                "a": "Agent",
+                                "c": "sx-3nfvp2 sx-16dsc37 sx-6s0dn4 sx-l56j7k",
+                                "k": 2,
+                                "b": [1323, 868, 77, 28],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "x": "Agent",
+                                    "c": "sx-1j61x8r sx-ggjnk3 sx-167xe44 sx-1nzvd",
+                                    "k": 0,
+                                    "b": [1354, 875, 34, 15]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "button",
+                            "a": "Chat history",
+                            "c": "sx-3nfvp2 sx-16dsc37 sx-6s0dn4 sx-l56j7k",
+                            "k": 1,
+                            "b": [1402, 868, 28, 28]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "t": "section",
+                "a": "Notifications alt+T",
+                "k": 0,
+                "b": [0, 900, 1440, 0]
+              }
+            ]
+          },
+          {
+            "t": "span",
+            "r": "status",
+            "c": "sx-c342km sx-1hyvwdk sx-jm9jq1 sx-kdpibf",
+            "k": 0,
+            "b": [-1, 899, 1, 1]
+          }
+        ]
+      },
+      {
+        "t": "div",
+        "x": "Loading…",
+        "k": 0,
+        "b": [0, 0, 0, 0]
+      }
+    ]
+  },
+  "treeMeta": {
+    "maxDepth": 12,
+    "nodes": 160,
+    "truncated": true
+  }
+}

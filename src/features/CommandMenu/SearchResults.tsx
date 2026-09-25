@@ -10,15 +10,14 @@ import { Command } from 'cmdk';
 import dayjs from 'dayjs';
 import {
   Brain,
-  ChevronRight,
   FileText,
   Filter,
   Folder,
-  FolderKanban,
   Library,
   ListTodo,
   MessageCircle,
   MessageSquare,
+  MoreHorizontalIcon,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -26,8 +25,8 @@ import { memo, type ReactNode, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { markdownToTxt } from '@/utils/markdownToTxt';
@@ -35,24 +34,19 @@ import { markdownToTxt } from '@/utils/markdownToTxt';
 import type { CommandMenuResultClick } from './analytics';
 import { CommandItem } from './components';
 import { styles } from './styles';
-import { type CommandMenuWorkType, type ValidSearchType } from './utils/queryParser';
+import type { CommandMenuSearchResult, CommandMenuWorkResult } from './types';
+import { groupSearchResults } from './utils/groupResults';
+import { isValidSearchType, type ValidSearchType } from './utils/queryParser';
+import { isActionableResult } from './utils/resultActions';
 import { createVisibleResultPositionMap } from './utils/visibleResultPosition';
 
-export interface CommandMenuWorkResult {
-  createdAt: Date;
-  description?: string | null;
-  id: string;
-  relevance: number;
-  title: string;
-  type: CommandMenuWorkType;
-  updatedAt: Date;
-}
-
-export type CommandMenuSearchResult = FtsSearchResult | CommandMenuWorkResult;
+export type { CommandMenuSearchResult, CommandMenuWorkResult } from './types';
 
 interface SearchResultsProps {
   isLoading: boolean;
   onClose: () => void;
+  /** Open the result-action submenu for a task/project row (⋯ or →). */
+  onOpenResultActions: (result: CommandMenuWorkResult) => void;
   onResultClick: (input: CommandMenuResultClick) => void;
   onSetTypeFilter: (typeFilter: ValidSearchType | undefined) => void;
   onTypeFilterChange: () => void;
@@ -69,6 +63,7 @@ const SearchResults = memo<SearchResultsProps>(
   ({
     isLoading,
     onClose,
+    onOpenResultActions,
     onResultClick,
     onSetTypeFilter,
     onTypeFilterChange,
@@ -181,7 +176,7 @@ const SearchResults = memo<SearchResultsProps>(
           return <Users size={16} />;
         }
         case 'project': {
-          return <FolderKanban size={16} />;
+          return <PROJECT_ENTITY_ICON size={16} />;
         }
         case 'savedView': {
           return <Filter size={16} />;
@@ -227,6 +222,12 @@ const SearchResults = memo<SearchResultsProps>(
         }
       }
     };
+
+    // Group headings are plural ("Tasks", "Projects"…) — Linear-style labeled
+    // sections. Every renderable type has a `cmdk.search.<type>s` key; the
+    // singular label is the fallback for any type that slips through.
+    const getGroupHeading = (type: string) =>
+      t(`cmdk.search.${type}s` as any, { defaultValue: getTypeLabel(type as any) });
 
     const resultTitle = (result: CommandMenuSearchResult) =>
       result.type === 'savedView' ? savedViewTitle(result.id, result.title, t) : result.title;
@@ -296,41 +297,10 @@ const SearchResults = memo<SearchResultsProps>(
       onSetTypeFilter(type);
     };
 
-    const availableResults = results.filter(
-      (result) => !['mcp', 'plugin', 'communityAgent'].includes(result.type),
-    );
-    const hasResults = availableResults.length > 0;
-
-    // Group results by type
-    const taskResults = availableResults.filter((r) => r.type === 'task');
-    const teamResults = availableResults.filter((r) => r.type === 'team');
-    const projectResults = availableResults.filter((r) => r.type === 'project');
-    const savedViewResults = availableResults.filter((r) => r.type === 'savedView');
-    const messageResults = availableResults.filter((r) => r.type === 'message');
-    const chatGroupResults = availableResults.filter((r) => r.type === 'chatGroup');
-    const agentResults = availableResults.filter((r) => r.type === 'agent');
-    const topicResults = availableResults.filter((r) => r.type === 'topic');
-    const fileResults = availableResults.filter((r) => r.type === 'file');
-    const pageResults = availableResults.filter((r) => r.type === 'page');
-    const folderResults = availableResults.filter((r) => r.type === 'folder');
-    const memoryResults = availableResults.filter((r) => r.type === 'memory');
-    const knowledgeBaseResults = availableResults.filter((r) => r.type === 'knowledgeBase');
+    const groups = groupSearchResults(results);
+    const hasResults = groups.length > 0;
     const visibleResultPositions = createVisibleResultPositionMap<CommandMenuSearchResult>(
-      [
-        taskResults,
-        teamResults,
-        projectResults,
-        savedViewResults,
-        messageResults,
-        agentResults,
-        chatGroupResults,
-        topicResults,
-        memoryResults,
-        fileResults,
-        pageResults,
-        folderResults,
-        knowledgeBaseResults,
-      ],
+      groups.map((group) => group.items),
       0,
     );
     const visibleResultCount = visibleResultPositions.size;
@@ -344,33 +314,35 @@ const SearchResults = memo<SearchResultsProps>(
       return null;
     }
 
-    // Render a single result item with type prefix (like "Message > content")
+    const renderActionsAffordance = (target: CommandMenuWorkResult) => (
+      <button
+        aria-label={t('cmdk.resultActions.label')}
+        className={styles.itemActionsButton}
+        tabIndex={-1}
+        title={`${t('cmdk.resultActions.label')} →`}
+        type="button"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenResultActions(target);
+        }}
+      >
+        <span className={styles.itemActionsKey}>→</span>
+        <MoreHorizontalIcon size={14} />
+      </button>
+    );
+
+    // Render a single result item. The group heading already names the type,
+    // so the title needs no inline "Type ›" prefix.
     const renderResultItem = (result: CommandMenuSearchResult) => {
-      const typeLabel = getTypeLabel(result.type);
       const subtitle = getSubtitle(result);
-      const title = resultTitle(result);
 
-      // Hide type prefix when filtering by specific type
-      const showTypePrefix = !typeFilter;
-
-      // Create title with or without type prefix
-      const titleWithPrefix = showTypePrefix ? (
-        <>
-          <span style={{ opacity: 0.5 }}>{typeLabel}</span>
-          <ChevronRight
-            size={14}
-            style={{
-              display: 'inline',
-              marginInline: '6px',
-              opacity: 0.5,
-              verticalAlign: 'middle',
-            }}
-          />
-          {title}
-        </>
-      ) : (
-        title
-      );
+      // Task/project rows get a Linear-style actions affordance (⋯ button or
+      // → on the highlighted row) that drills into the result-action submenu
+      // without leaving the palette.
+      const trailingLabel = isActionableResult(result)
+        ? renderActionsAffordance(result)
+        : undefined;
 
       return (
         <CommandItem
@@ -378,7 +350,8 @@ const SearchResults = memo<SearchResultsProps>(
           description={subtitle}
           icon={getIcon(result.type)}
           key={result.id}
-          title={titleWithPrefix}
+          title={resultTitle(result)}
+          trailingLabel={trailingLabel}
           value={getItemValue(result)}
           variant="detailed"
           onSelect={() => handleNavigate(result, visibleResultPositions.get(result) ?? 1)}
@@ -416,96 +389,16 @@ const SearchResults = memo<SearchResultsProps>(
 
     return (
       <>
-        {/* Render search results grouped by type without headers */}
-        {taskResults.length > 0 && (
-          <Command.Group forceMount>
-            {taskResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('task', taskResults.length)}
+        {/* Search results grouped under labeled section headings (Linear-style):
+            the heading names the result type, items keep server rank order. */}
+        {groups.map(({ items, type }) => (
+          <Command.Group forceMount heading={getGroupHeading(type)} key={type}>
+            {items.map((result) => renderResultItem(result))}
+            {/* `page` renders as a group but is not a `type:` filter target,
+                so it gets no "search more" drill-in. */}
+            {isValidSearchType(type) && renderSearchMore(type, items.length)}
           </Command.Group>
-        )}
-
-        {teamResults.length > 0 && (
-          <Command.Group forceMount>
-            {teamResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('team', teamResults.length)}
-          </Command.Group>
-        )}
-
-        {projectResults.length > 0 && (
-          <Command.Group forceMount>
-            {projectResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('project', projectResults.length)}
-          </Command.Group>
-        )}
-
-        {savedViewResults.length > 0 && (
-          <Command.Group forceMount>
-            {savedViewResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('savedView', savedViewResults.length)}
-          </Command.Group>
-        )}
-
-        {messageResults.length > 0 && (
-          <Command.Group forceMount>
-            {messageResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('message', messageResults.length)}
-          </Command.Group>
-        )}
-
-        {agentResults.length > 0 && (
-          <Command.Group forceMount>
-            {agentResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('agent', agentResults.length)}
-          </Command.Group>
-        )}
-
-        {chatGroupResults.length > 0 && (
-          <Command.Group forceMount>
-            {chatGroupResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('chatGroup', chatGroupResults.length)}
-          </Command.Group>
-        )}
-
-        {topicResults.length > 0 && (
-          <Command.Group forceMount>
-            {topicResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('topic', topicResults.length)}
-          </Command.Group>
-        )}
-
-        {memoryResults.length > 0 && (
-          <Command.Group forceMount>
-            {memoryResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('memory', memoryResults.length)}
-          </Command.Group>
-        )}
-
-        {fileResults.length > 0 && (
-          <Command.Group forceMount>
-            {fileResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('file', fileResults.length)}
-          </Command.Group>
-        )}
-
-        {pageResults.length > 0 && (
-          <Command.Group forceMount>
-            {pageResults.map((result) => renderResultItem(result))}
-          </Command.Group>
-        )}
-
-        {folderResults.length > 0 && (
-          <Command.Group forceMount>
-            {folderResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('folder', folderResults.length)}
-          </Command.Group>
-        )}
-
-        {knowledgeBaseResults.length > 0 && (
-          <Command.Group forceMount>
-            {knowledgeBaseResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('knowledgeBase', knowledgeBaseResults.length)}
-          </Command.Group>
-        )}
+        ))}
 
         {/* Show loading skeleton below existing results */}
         {isLoading && (

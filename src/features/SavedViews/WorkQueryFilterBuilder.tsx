@@ -11,9 +11,12 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
-import { workAttentionKeys } from '@/libs/swr/keys';
+import { taskLabelKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
+import { taskLabelService } from '@/services/taskLabel';
 import { workAttentionService } from '@/services/workAttention';
+import { useUserStore } from '@/store/user';
+import { authSelectors } from '@/store/user/slices/auth/selectors';
 
 import type { BuilderState, FilterRow } from './workQueryBuilder';
 import { defaultRowValue, newFilterRow } from './workQueryBuilder';
@@ -185,6 +188,7 @@ const FilterRowEditor = memo<{
 }>(({ cycleTeamId, entityType, onChange, onRemove, row }) => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
+  const isLogin = useUserStore(authSelectors.isLogin);
   const spec = workQueryFieldSpec(entityType, row.field);
 
   const memberOptions = useWorkspaceMembersQuery({
@@ -193,6 +197,10 @@ const FilterRowEditor = memo<{
   const { data: teamsData } = useClientDataSWR(
     workspaceId ? workAttentionKeys.teams(workspaceId) : null,
     () => lambdaClient.team.teams.query(),
+  );
+  const { data: labelsData } = useClientDataSWR(
+    spec?.valueKind === 'label' && isLogin ? taskLabelKeys.list(isLogin, workspaceId) : null,
+    () => taskLabelService.getLabels(),
   );
 
   const userOptions = useMemo(() => {
@@ -212,6 +220,11 @@ const FilterRowEditor = memo<{
   const teamOptions = useMemo(
     () => (teamsData?.data ?? []).map((team) => ({ label: team.name, value: team.id })),
     [teamsData?.data],
+  );
+
+  const labelOptions = useMemo(
+    () => (labelsData ?? []).map((label) => ({ label: label.name, value: label.id })),
+    [labelsData],
   );
 
   const cycleOptions = useCycleOptions(
@@ -313,6 +326,20 @@ const FilterRowEditor = memo<{
             onChange={(next) =>
               onChange({ ...row, value: typeof next === 'string' ? next : undefined })
             }
+          />
+        );
+      }
+      case 'label': {
+        const multi = isMultiOp(row.op);
+        return (
+          <Select
+            mode={multi ? 'multiple' : undefined}
+            options={labelOptions}
+            placeholder={t('savedViews.filters.labelPlaceholder')}
+            size="small"
+            style={{ minWidth: 160 }}
+            value={row.value as never}
+            onChange={(next) => onChange({ ...row, value: next as WorkQueryValue })}
           />
         );
       }

@@ -2,11 +2,19 @@ import { Block, ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { LockIcon, MessageSquareTextIcon } from 'lucide-react';
+import dayjs from 'dayjs';
+import { MessageSquareTextIcon } from 'lucide-react';
+import type { MouseEvent, ReactNode } from 'react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import LabelChips from '@/features/Labels/LabelChips';
+import {
+  getProjectMilestoneIssuesPath,
+  type TaskMilestoneRef,
+} from '@/features/Projects/milestoneFilter';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
@@ -14,7 +22,7 @@ import type { TaskListItem } from '@/store/task/slices/list/initialState';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
-import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
+import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 import AssigneeAgentSelector from './AssigneeAgentSelector';
 import AssigneeAvatar from './AssigneeAvatar';
 import AssigneeMemberSelector from './AssigneeMemberSelector';
@@ -24,15 +32,28 @@ import TaskPriorityTag from './TaskPriorityTag';
 import TaskStatusTag from './TaskStatusTag';
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
 import TaskTriggerTag from './TaskTriggerTag';
+import { TASK_VISIBILITY_ICONS } from './taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 
 export type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemProps {
+  /**
+   * The resolved milestone this row links, supplied by the list when the
+   * "Milestones" display property is on and the scope's catalog names the
+   * link. `undefined` renders no badge — rows never invent one from a raw id.
+   */
+  milestone?: TaskMilestoneRef;
   onStatusChange?: (status: TaskStatus) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
+  /**
+   * Caller-owned chips (e.g. the project) placed in the trailing cluster
+   * before the assignee — Linear's order is labels, project, assignee, date,
+   * so they cannot trail the row after the date.
+   */
+  trailingChips?: ReactNode;
 }
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
@@ -48,7 +69,8 @@ const TASK_STATUS_SET = new Set<TaskStatus>([
 const toTaskStatus = (status: string): TaskStatus =>
   TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
-const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 'agent' }) => {
+const AgentTaskItem = memo<TaskItemProps>((props) => {
+  const { milestone, onStatusChange, task, trailingChips, routeScope = 'agent' } = props;
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -70,6 +92,11 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
   });
   const status = toTaskStatus(task.status);
   const hasName = Boolean(task.name?.trim());
+  const workflowGlyph = useTaskWorkflowGlyph({
+    executionStatus: task.status,
+    workflowCategory: task.workflowCategory,
+    workflowStateId: task.workflowStateId,
+  });
 
   const handleClick = useCallback(() => {
     navigate(
@@ -95,6 +122,18 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
     [navigate, routeScope],
   );
 
+  // The chip opens the project's milestone-filtered issues — the same door the
+  // overview's progress link uses — without tripping the row's own detail
+  // navigation.
+  const handleMilestoneClick = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      if (!milestone || !task.projectId) return;
+      event.stopPropagation();
+      navigate(getProjectMilestoneIssuesPath(task.projectId, milestone.id));
+    },
+    [milestone, navigate, task.projectId],
+  );
+
   const scheduledBadge =
     status === 'scheduled' ? (
       <Block
@@ -112,44 +151,80 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
       </Block>
     ) : null;
 
+  // Linear's issue-row milestone marker: `◆ name · Sep 30`, drawn with the
+  // shared brand-indigo paint so it matches the overview/rail milestones.
+  const milestoneBadge = milestone ? (
+    <Block
+      horizontal
+      align={'center'}
+      flex={'none'}
+      gap={4}
+      height={20}
+      paddingInline={6}
+      style={{ borderRadius: 4, cursor: task.projectId ? 'pointer' : undefined }}
+      title={milestone.name}
+      variant={'outlined'}
+      onClick={handleMilestoneClick}
+    >
+      <MilestoneIcon size={10} />
+      <Text ellipsis fontSize={12} style={{ maxWidth: 140 }} type={'secondary'}>
+        {milestone.name}
+      </Text>
+      {milestone.date ? (
+        <Text fontSize={12} style={{ whiteSpace: 'nowrap' }} type={'secondary'}>
+          {dayjs(milestone.date).format('MMM D')}
+        </Text>
+      ) : null}
+    </Block>
+  ) : null;
+
   const isPrivate = task.visibility === 'private';
   const privacyBadge = isPrivate ? (
     <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-      <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
+      <Icon color={cssVar.colorTextDescription} icon={TASK_VISIBILITY_ICONS.private} size={14} />
     </Tooltip>
   ) : null;
 
+  // Linear's row grammar: priority, identifier, one status mark, title. The
+  // status mark is the workflow state when the task has one — never a second
+  // badge beside the execution glyph. A nameless task has no separate title,
+  // so its identifier renders as the row text instead.
   const titleRow = (
     <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+      {hasName ? (
+        <Text style={{ flex: 'none' }} type={'secondary'}>
+          {task.identifier}
+        </Text>
+      ) : null}
       <span
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
+        style={{ display: 'inline-flex', flex: 'none' }}
       >
-        <TaskStatusTag status={status} taskIdentifier={task.identifier} onChange={onStatusChange} />
+        <TaskStatusTag
+          glyph={workflowGlyph}
+          size={14}
+          status={status}
+          taskIdentifier={task.identifier}
+          onChange={onStatusChange}
+        />
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
-      <TaskWorkflowBadge
-        executionStatus={task.status}
-        workflowCategory={task.workflowCategory}
-        workflowStateId={task.workflowStateId}
-      />
       {privacyBadge}
-      {hasName ? (
-        <>
-          <Text style={{ flex: 'none' }} type={'secondary'}>
-            {task.identifier}
-          </Text>
-          <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-            {task.name}
-          </Text>
-        </>
-      ) : (
-        <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-          {task.identifier}
-        </Text>
-      )}
+      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+        {hasName ? task.name : task.identifier}
+      </Text>
       {scheduledBadge}
+      {/* Linear draws issue labels inline after the title. The wrapper's
+          data attribute is the display-properties toggle's hide hook
+          (`rowHideLabels`) — the chips themselves never render a toggled-off
+          row. */}
+      {task.labels?.length ? (
+        <Flexbox data-task-labels flex={'none'} style={{ minWidth: 0 }}>
+          <LabelChips labels={task.labels} max={2} />
+        </Flexbox>
+      ) : null}
       <TaskSubtaskProgressTag
         currentIdentifier={task.identifier}
         progress={task.subtaskProgress}
@@ -275,13 +350,16 @@ const AgentTaskItem = memo<TaskItemProps>(({ onStatusChange, task, routeScope = 
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
         gap={4}
-        padding={12}
+        paddingBlock={8}
+        paddingInline={12}
         variant={'borderless'}
         onClick={handleClick}
       >
         <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
           {titleRow}
           <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+            {milestoneBadge}
+            {trailingChips}
             {openRunNode}
             {scheduleNode}
             {assigneeNode}

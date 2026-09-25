@@ -515,6 +515,43 @@ describe('reviewQueue (RV05)', () => {
     expect(page.total).toBe(40);
     expect(page.viewer).toBe(VIEWER);
   });
+
+  const emptySearch = () => ({
+    rateLimit,
+    search: {
+      issueCount: 0,
+      nodes: [],
+      pageInfo: { endCursor: null, hasNextPage: false },
+    },
+  });
+
+  it('queries for-me as author ∪ review-requested on the advanced search type', async () => {
+    // F2: the classic ISSUE search cannot OR qualifiers — the for-you union
+    // (authored PRs without a pending request included) needs ISSUE_ADVANCED.
+    const transport = createTransport({
+      PullRequestReviewQueue: () => emptySearch(),
+    });
+    const market = createMarket();
+    await service({ market, transport }).reviewQueue({ tab: 'for-me' });
+    const call = transport.calls.find((c) => c.operation === 'PullRequestReviewQueue');
+    expect(call?.variables).toMatchObject({
+      query: `is:pr is:open -is:draft AND (author:${VIEWER} OR review-requested:${VIEWER})`,
+      type: 'ISSUE_ADVANCED',
+    });
+  });
+
+  it('keeps the created lane on the classic ISSUE search type', async () => {
+    const transport = createTransport({
+      PullRequestReviewQueue: () => emptySearch(),
+    });
+    const market = createMarket();
+    await service({ market, transport }).reviewQueue({ tab: 'created' });
+    const call = transport.calls.find((c) => c.operation === 'PullRequestReviewQueue');
+    expect(call?.variables).toMatchObject({
+      query: `is:pr is:open author:${VIEWER}`,
+      type: 'ISSUE',
+    });
+  });
 });
 
 describe('submitReview (RV02/RV03)', () => {

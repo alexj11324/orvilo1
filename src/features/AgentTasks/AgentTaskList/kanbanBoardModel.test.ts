@@ -9,6 +9,7 @@ import {
   canDropTaskIntoKanbanColumn,
   computeKanbanPosition,
   effectiveTaskPosition,
+  externalVisibleKanbanColumns,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanColumnHeaderVariant,
@@ -17,6 +18,8 @@ import {
   KANBAN_STATUS_COLUMN_KEY,
   KANBAN_WORKFLOW_COLUMN_KEY,
   kanbanBoardCapabilities,
+  kanbanColumnAllowsCreate,
+  kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -77,6 +80,9 @@ describe('kanbanBoardModel', () => {
     expect(normalizeKanbanGroupBy('member')).toBe('member');
     expect(normalizeKanbanGroupBy('priority')).toBe('priority');
     expect(normalizeKanbanGroupBy('none')).toBe('status');
+    // A stored 'milestone' pick travels here too — the board has no milestone
+    // columns, so it lands on the same status fallback as 'none'.
+    expect(normalizeKanbanGroupBy('milestone')).toBe('status');
   });
 
   it('keeps the column header in skeleton mode for every loading group shape', () => {
@@ -600,5 +606,95 @@ describe('kanbanBoardCapabilities', () => {
         canReorderWithinGroup: false,
       });
     }
+  });
+});
+
+describe('kanbanColumnAllowsCreate', () => {
+  const base = { groupBy: 'status', myTaskScope: false };
+
+  it('offers create on the backlog column of store and work-query boards', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog' })).toBe(true);
+    // Team boards render `wf:`-prefixed columns — matching only the raw
+    // 'backlog' key silently removed their create entry.
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:backlog',
+        createContext: { teamId: 'team-1' },
+        external: true,
+      }),
+    ).toBe(true);
+  });
+
+  it('offers create on every column of a status-grouped board (Linear per-column +)', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'in_progress' })).toBe(true);
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:in_progress',
+        createContext: { teamId: 'team-1' },
+        external: true,
+      }),
+    ).toBe(true);
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog', groupBy: 'assignee' })).toBe(
+      false,
+    );
+  });
+
+  it('presets the clicked column dimension on the created issue', () => {
+    expect(kanbanColumnCreatePreset('backlog')).toEqual({ status: 'backlog' });
+    expect(kanbanColumnCreatePreset('wf:in_progress')).toEqual({
+      workflowCategory: 'in_progress',
+    });
+    expect(kanbanColumnCreatePreset('st:paused')).toEqual({ status: 'paused' });
+  });
+
+  it('refuses create in my-task scope and on external boards without a team context', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog', myTaskScope: true })).toBe(
+      false,
+    );
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'wf:backlog', external: true })).toBe(
+      false,
+    );
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:backlog',
+        createContext: { teamOptions: [{ id: 'team-1', name: 'Team' }] },
+        external: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe('externalVisibleKanbanColumns', () => {
+  const columns: KanbanColumnDefinition[] = ['wf:todo', 'wf:in_progress', 'wf:done'].map((key) => ({
+    droppable: true,
+    key,
+    targetStatus: null,
+  }));
+
+  it('keeps only columns whose group carries tasks — empty and unreturned groups hide', () => {
+    const visible = externalVisibleKanbanColumns(columns, [
+      group('wf:todo', [task('1')]),
+      group('wf:done', []),
+    ]);
+    expect(visible.map((column) => column.key)).toEqual(['wf:todo']);
+  });
+
+  it('counts paged groups by total, not by the loaded page length', () => {
+    const paged = group('wf:todo', [task('1')]);
+    paged.total = 40;
+    const visible = externalVisibleKanbanColumns(columns, [paged]);
+    expect(visible.map((column) => column.key)).toEqual(['wf:todo']);
+  });
+
+  it('keeps every column when the whole board is empty', () => {
+    const visible = externalVisibleKanbanColumns(columns, [
+      group('wf:todo', []),
+      group('wf:done', []),
+    ]);
+    expect(visible.map((column) => column.key)).toEqual(columns.map((column) => column.key));
+    expect(externalVisibleKanbanColumns(columns, [])).toEqual(columns);
   });
 });

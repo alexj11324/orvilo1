@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { useTaskCreateDrafts } from '@/features/TaskDrafts/taskCreateDrafts';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
@@ -19,6 +20,7 @@ import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
+import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
@@ -44,7 +46,7 @@ const ACCORDION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, 
 
 /** Core entries can never be hidden — the fixed IA keeps them always mounted.
  * `create` is the standalone quick-create row (Linear's `+`). */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'create']);
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'drafts', 'create']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
@@ -56,8 +58,10 @@ const accordionComponents: Record<string, (key: string) => ReactElement> = {
   [GroupKey.Workspace]: (key) => <WorkspaceSection itemKey={key} key={key} />,
 };
 
-/** Exported for TeamsSection — each expanded `team:<id>` accordion shares
- * the same persisted `sidebarExpandedKeys` bucket. */
+/** Rewrite the group keys of `sidebarExpandedKeys` to exactly the accordions the
+ * user left open. Keys outside `accordionKeys` pass through untouched — the
+ * team sub-accordions keep their own bucket (`sidebarCollapsedKeys`, which
+ * defaults to open) instead of sharing this one. */
 export const mergeSidebarExpandedKeys = (
   currentKeys: string[],
   accordionKeys: string[],
@@ -104,6 +108,18 @@ const Body = memo(() => {
     { revalidateOnFocus: false },
   );
   const reviewsPendingCount = reviewsQueue.data?.data.items?.length ?? 0;
+  // Drafts badge = server-side comment drafts + local issue drafts (Linear
+  // counts both kinds on the Drafts nav item).
+  const commentDraftCount =
+    useClientDataSWR(
+      taskDraftKeys.count(activeWorkspaceId),
+      () => taskDraftService.count(activeWorkspaceId),
+      {
+        revalidateOnFocus: true,
+      },
+    ).data?.data ?? 0;
+  const issueDraftCount = useTaskCreateDrafts(activeWorkspaceId).length;
+  const draftCount = commentDraftCount + issueDraftCount;
 
   const hideSection = useCallback(
     (key: string) => {
@@ -203,13 +219,25 @@ const Body = memo(() => {
                 <Text fontSize={12} type={'secondary'}>
                   {reviewsPendingCount}
                 </Text>
+              ) : key === 'drafts' && draftCount > 0 ? (
+                <Text fontSize={12} type={'secondary'}>
+                  {draftCount}
+                </Text>
               ) : undefined
             }
           />
         </WorkspaceLink>
       );
     },
-    [navLinkItems, tab, getContextMenuItems, navigate, inboxUnreadCount, reviewsPendingCount],
+    [
+      navLinkItems,
+      tab,
+      getContextMenuItems,
+      navigate,
+      inboxUnreadCount,
+      reviewsPendingCount,
+      draftCount,
+    ],
   );
 
   const handleAccordionExpandedChange = useCallback(

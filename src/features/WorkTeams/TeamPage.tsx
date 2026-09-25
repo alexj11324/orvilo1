@@ -1,261 +1,45 @@
 'use client';
 
 import { Center, Empty, Flexbox } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  type DropdownItem,
-  DropdownMenu,
-  Segmented,
-  Select,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
-import type { WorkQueryLayout } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { FolderXIcon, ListChecksIcon, MoreHorizontalIcon, PlusIcon, UsersIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Text } from '@lobehub/ui/base-ui';
+import { InboxIcon, UsersIcon } from 'lucide-react';
+import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
-import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
-import { mergeWorkQueryGroups, mergeWorkQueryPage } from '@/features/MyWork/workQueryPaging';
-import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import NewViewModal from '@/features/SavedViews/NewViewModal';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
-import { savedViewVisibilityKey } from '@/features/SavedViews/savedViewVisibility';
-import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
-import { isTrpcErrorCode } from '@/utils/trpcError';
 
-import MarkDuplicateModal from './MarkDuplicateModal';
 import { otherTeamOptions } from './otherTeamOptions';
-import { reassignMemberOptions } from './reassignMemberOptions';
 import TeamHome from './TeamHome';
-import { teamSurfaceState } from './teamSurfaceState';
-import {
-  TEAM_TRIAGE_OVERFLOW_I18N,
-  type TeamTriageOverflowItem,
-  teamTriageOverflowItems,
-} from './teamTriageOverflow';
-import {
-  ALL_TEAM_CYCLES,
-  type TeamIssueScope,
-  teamTaskQuery,
-  teamTriageQuery,
-} from './teamWorkQuery';
-
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    flex: none;
-  `,
-  identifier: css`
-    flex: none;
-
-    min-width: 64px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorTextTertiary};
-    text-align: end;
-  `,
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-
-    color: inherit;
-    text-decoration: none;
-  `,
-  row: css`
-    padding-block: 7px;
-    padding-inline: 4px 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    color: inherit;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
-
-type TeamTriageTask = {
-  assigneeAgentId?: string | null;
-  assigneeUserId?: string | null;
-  domainRevision?: number;
-  id: string;
-  identifier?: string | null;
-  instruction?: string | null;
-  name?: string | null;
-  status?: string | null;
-};
-
-const TeamTriageRow = memo<{
-  destinations: Array<{ label: string; value: string }>;
-  members: Array<{ userId: string }>;
-  onAccept: (taskId: string) => void;
-  onDecline: (taskId: string) => void;
-  onPickDuplicate: (taskId: string) => void;
-  onReassign: (taskId: string, assigneeUserId: string) => void;
-  onTransferred: () => void;
-  task: TeamTriageTask;
-}>(
-  ({
-    destinations,
-    members,
-    onAccept,
-    onDecline,
-    onPickDuplicate,
-    onReassign,
-    onTransferred,
-    task,
-  }) => {
-    const { t } = useTranslation('common');
-    const memberOptions = reassignMemberOptions(members, task.assigneeUserId);
-    const overflowItems = teamTriageOverflowItems({
-      destinations,
-      members: memberOptions,
-    });
-
-    const transfer = useCallback(
-      async (teamId: string) => {
-        if (!teamId || task.domainRevision === undefined) return;
-        try {
-          await lambdaClient.team.moveTaskToTeam.mutate({
-            expectedDomainRevision: task.domainRevision,
-            taskId: task.id,
-            teamId,
-          });
-          onTransferred();
-          toast.success(t('teams.transferUpdated'));
-        } catch (error) {
-          toast.error(
-            isTrpcErrorCode(error, 'CONFLICT')
-              ? t('teams.transferConflict')
-              : isTrpcErrorCode(error, 'PRECONDITION_FAILED')
-                ? t('teams.transferLinear')
-                : t('teams.transferFailed'),
-          );
-        }
-      },
-      [onTransferred, t, task.domainRevision, task.id],
-    );
-
-    const runOverflow = useCallback(
-      (kind: TeamTriageOverflowItem['kind'], value: string) => {
-        if (kind === 'duplicate') onPickDuplicate(task.id);
-        else if (kind === 'reassign') onReassign(task.id, value);
-        else void transfer(value);
-      },
-      [onPickDuplicate, onReassign, task.id, transfer],
-    );
-
-    const overflowMenuItems = useMemo<DropdownItem[]>(
-      () =>
-        overflowItems.map((item) =>
-          item.type === 'leaf'
-            ? {
-                key: item.kind,
-                label: t(TEAM_TRIAGE_OVERFLOW_I18N[item.kind]),
-                onClick: () => runOverflow(item.kind, item.value),
-              }
-            : {
-                children: item.options.map((option) => ({
-                  key: `${item.kind}-${option.value}`,
-                  label: option.label,
-                  onClick: () => runOverflow(item.kind, option.value),
-                })),
-                key: item.kind,
-                label: t(TEAM_TRIAGE_OVERFLOW_I18N[item.kind]),
-                type: 'submenu',
-              },
-        ),
-      [overflowItems, runOverflow, t],
-    );
-
-    return (
-      <Flexbox horizontal align="center" className={styles.row} gap={8}>
-        <WorkspaceLink
-          className={styles.link}
-          to={taskDetailPath(task.id, task.assigneeAgentId ?? undefined, task.name)}
-        >
-          <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
-          <Flexbox flex={1} style={{ minWidth: 0 }}>
-            <Text ellipsis weight={500}>
-              {task.name ?? task.instruction}
-            </Text>
-          </Flexbox>
-          {task.identifier ? (
-            <Text className={styles.identifier} fontSize={12}>
-              {task.identifier}
-            </Text>
-          ) : null}
-        </WorkspaceLink>
-        <Flexbox horizontal align="center" className={styles.actions} gap={4}>
-          <Button size="small" onClick={() => onAccept(task.id)}>
-            {t('teams.accept')}
-          </Button>
-          <Button size="small" onClick={() => onDecline(task.id)}>
-            {t('teams.decline')}
-          </Button>
-          {overflowMenuItems.length > 0 ? (
-            <DropdownMenu items={overflowMenuItems} placement="bottomRight">
-              <ActionIcon icon={MoreHorizontalIcon} size="small" title={t('teams.moreActions')} />
-            </DropdownMenu>
-          ) : null}
-        </Flexbox>
-      </Flexbox>
-    );
-  },
-);
-
-TeamTriageRow.displayName = 'TeamTriageRow';
-
-const ISSUE_SCOPES: TeamIssueScope[] = ['all', 'active', 'backlog'];
-
-// Board mode bounds the collection body to the scrollport so the kanban's own
-// column scrollers engage; list mode lets the body grow and the scroll host
-// stays the single scroll owner.
-const boardBodyStyle = {
-  boxSizing: 'border-box',
-  display: 'flex',
-  flexDirection: 'column',
-  height: '100%',
-} as const;
-
-const resolveIssueScope = (value: string | null): TeamIssueScope =>
-  ISSUE_SCOPES.includes(value as TeamIssueScope) ? (value as TeamIssueScope) : 'all';
+import TeamIdentity from './TeamIdentity';
+import TeamIssuesSurface from './TeamIssuesSurface';
+import TeamProjectsSurface from './TeamProjectsSurface';
+import TeamViewsSurface from './TeamViewsSurface';
+import { ALL_TEAM_CYCLES, teamTriageQuery } from './teamWorkQuery';
+import TeamTriageSurface from './triage/TeamTriageSurface';
 
 const TeamPage = memo(() => {
   const { t } = useTranslation('common');
   const { teamId } = useParams<{ teamId: string }>();
   const workspaceId = useActiveWorkspaceId();
   const workspaceSlug = useActiveWorkspaceSlug();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   // Linear's per-team sub-navigation lands here: home is the team context
   // surface; triage, issues, projects and views each get their own tab.
   const teamTab = searchParams.get('tab') ?? 'home';
-  const issueScope = resolveIssueScope(searchParams.get('scope'));
-  const [cycleId, setCycleId] = useState(ALL_TEAM_CYCLES);
-  const [noProject, setNoProject] = useState(false);
-  const [layout, setLayout] = useState<WorkQueryLayout>('list');
-  const [duplicateTaskId, setDuplicateTaskId] = useState<string | null>(null);
-  const [creatingView, setCreatingView] = useState(false);
   const {
     data: teamData,
     error: teamError,
@@ -271,9 +55,6 @@ const TeamPage = memo(() => {
   // no triage surface, and a `?tab=triage` deep link falls back to home.
   const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
   const wantsTriage = triageCapable && teamTab === 'triage';
-  const wantsTasks = teamTab === 'issues';
-  // Board mode escapes the centered column — same WorkSurface frame as My issues.
-  const boardActive = wantsTasks && layout === 'board';
   const {
     data: triageData,
     error: triageError,
@@ -281,25 +62,11 @@ const TeamPage = memo(() => {
     mutate: revalidateTriage,
   } = useClientDataSWR(
     wantsTriage && teamId && workspaceId
-      ? ['team-triage', workspaceId, teamId, cycleId, noProject]
+      ? ['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]
       : null,
     () =>
       workAttentionService.query({
-        query: teamTriageQuery(teamId!, cycleId, noProject),
-      }),
-  );
-  const {
-    data: teamTasksData,
-    error: teamTasksError,
-    isLoading: isTeamTasksLoading,
-    mutate: revalidateTeamTasks,
-  } = useClientDataSWR(
-    wantsTasks && teamId && workspaceId
-      ? ['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope, triageCapable]
-      : null,
-    () =>
-      workAttentionService.query({
-        query: teamTaskQuery(teamId!, cycleId, noProject, layout, issueScope),
+        query: teamTriageQuery(teamId!, ALL_TEAM_CYCLES, false),
       }),
   );
   const {
@@ -337,131 +104,103 @@ const TeamPage = memo(() => {
     (view) =>
       (view.visibility === 'team' && view.teamId === teamId) || view.visibility === 'workspace',
   );
-  const firstTeamTasks =
-    teamTasksData?.data && 'tasks' in teamTasksData.data ? teamTasksData.data.tasks : [];
-  const firstTeamGroups =
-    teamTasksData?.data && 'groups' in teamTasksData.data ? (teamTasksData.data.groups ?? []) : [];
-  const teamQueryHash =
-    teamTasksData?.data && 'queryHash' in teamTasksData.data
-      ? teamTasksData.data.queryHash
-      : undefined;
-  const [teamTail, setTeamTail] = useState<typeof firstTeamTasks>([]);
-  const [teamGroupTail, setTeamGroupTail] = useState<typeof firstTeamGroups>([]);
-  useEffect(() => {
-    setTeamTail([]);
-    setTeamGroupTail([]);
-  }, [cycleId, issueScope, layout, noProject, teamId, teamQueryHash, workspaceId]);
-  const teamTasks = mergeWorkQueryPage(firstTeamTasks, teamTail);
-  const teamGroups = mergeWorkQueryGroups(firstTeamGroups, teamGroupTail);
   const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
   const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
-  const triageState = teamSurfaceState({
-    error: triageError,
-    isLoading,
-    itemCount: tasks.length,
-  });
-  const workState = teamSurfaceState({
-    error: teamTasksError,
-    isLoading: isTeamTasksLoading,
-    itemCount: teamTasks.length + teamGroups.reduce((sum, group) => sum + group.tasks.length, 0),
-  });
-
-  const act = useCallback(
-    async (
-      task: TeamTriageTask,
-      action: 'accept' | 'decline' | 'duplicate' | 'reassign',
-      extra?: { assigneeUserId?: string; canonicalTaskId?: string },
-    ) => {
-      if (task.domainRevision === undefined) return;
-      try {
-        await workAttentionService.triage({
-          action,
-          expectedDomainRevision: task.domainRevision,
-          taskId: task.id,
-          teamId: teamId!,
-          ...(extra?.assigneeUserId ? { assigneeUserId: extra.assigneeUserId } : {}),
-          ...(extra?.canonicalTaskId ? { canonicalTaskId: extra.canonicalTaskId } : {}),
-        });
-        await Promise.all([
-          mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-          mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope]),
-        ]);
-        toast.success(t('teams.triageUpdated'));
-      } catch (error) {
-        toast.error(
-          isTrpcErrorCode(error, 'CONFLICT')
-            ? t('teams.transferConflict')
-            : t('teams.triageFailed'),
-        );
-      }
-    },
-    [cycleId, issueScope, layout, noProject, t, teamId, workspaceId],
-  );
 
   const refreshTriage = useCallback(() => {
-    setTeamTail([]);
-    setTeamGroupTail([]);
     void Promise.all([
-      mutate(['team-triage', workspaceId, teamId, cycleId, noProject]),
-      mutate(['team-tasks', workspaceId, teamId, cycleId, noProject, layout, issueScope]),
+      mutate(['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]),
+      // The issues surface owns its own query shape — prefix-match the key so
+      // a triage accept/decline still revalidates whatever it is showing.
+      mutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'team-tasks' &&
+          key[1] === workspaceId &&
+          key[2] === teamId,
+      ),
     ]);
-  }, [cycleId, issueScope, layout, noProject, teamId, workspaceId]);
+  }, [teamId, workspaceId]);
 
-  const loadMoreTeam = useCallback(async () => {
-    const last = teamTasks.at(-1);
-    if (!last || !teamId || !teamQueryHash) return;
-    const next = await workAttentionService.query({
-      afterId: last.id,
-      query: teamTaskQuery(teamId, cycleId, noProject, 'list', issueScope),
-      queryHash: teamQueryHash,
-    });
-    const incoming = next.data && 'tasks' in next.data ? next.data.tasks : [];
-    setTeamTail((current) => mergeWorkQueryPage(current, incoming));
-  }, [cycleId, issueScope, noProject, teamId, teamQueryHash, teamTasks]);
+  // The views tab is a routed surface of its own — a team-scoped directory
+  // plus the `?new=1` draft editor — so it returns before the shared team
+  // chrome. The team fetch still gates it: the editor header and save-to
+  // copy need the real team name, and a failed team response must never
+  // leave the tab blank.
+  if (teamTab === 'views' && teamId) {
+    if (!workspaceId)
+      return (
+        <WorkSurface>
+          <NavHeader
+            left={
+              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+                {t('tab.views')}
+              </Text>
+            }
+          />
+          <Center flex={1}>
+            <Empty description={t('teams.personal')} icon={UsersIcon} />
+          </Center>
+        </WorkSurface>
+      );
+    if (teamError || !teamData)
+      return (
+        <WorkSurface>
+          <NavHeader
+            left={
+              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+                {t('tab.views')}
+              </Text>
+            }
+          />
+          <WorkSurfaceCollection>
+            {teamError ? (
+              <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
+            ) : (
+              <SkeletonList aria-label={t('teams.loading')} rows={4} />
+            )}
+          </WorkSurfaceCollection>
+        </WorkSurface>
+      );
+    return (
+      <TeamViewsSurface
+        error={teamViewsError}
+        isLoading={isTeamViewsLoading}
+        teamId={teamId}
+        teamName={teamData.data.team.name}
+        views={teamViews}
+        onRetry={() => revalidateTeamViews()}
+      />
+    );
+  }
 
-  const loadMoreTeamGroup = useCallback(
-    async (groupKey: string) => {
-      const column = teamGroups.find((group) => group.key === groupKey);
-      const last = column?.tasks.at(-1);
-      if (!last || !teamId || !teamQueryHash) return;
-      const next = await workAttentionService.query({
-        afterId: last.id,
-        groupKey,
-        query: teamTaskQuery(teamId, cycleId, noProject, layout, issueScope),
-        queryHash: teamQueryHash,
-      });
-      const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
-      setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
-    },
-    [cycleId, issueScope, layout, noProject, teamGroups, teamId, teamQueryHash],
-  );
+  if (teamTab === 'projects' && teamId) return <TeamProjectsSurface teamId={teamId} />;
 
-  const cycleOptions = useMemo(
-    () => [
-      { label: t('teams.cycleAll'), value: ALL_TEAM_CYCLES },
-      ...(teamData?.data.cycles ?? []).map((cycle) => ({
-        label: cycle.name || cycle.id,
-        value: cycle.id,
-      })),
-    ],
-    [t, teamData?.data.cycles],
-  );
+  // The issues tab owns its full chrome — scope switch, filter/display/detail
+  // controls, paging and the peek pane — in a dedicated surface.
+  if (teamTab === 'issues' && teamId) return <TeamIssuesSurface teamId={teamId} />;
 
   return (
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {teamData?.data.team.name ?? t('tab.teams')}
-          </Text>
+          wantsTriage && teamData ? (
+            <Flexbox horizontal align={'center'} gap={8} style={{ paddingInlineStart: 4 }}>
+              <TeamIdentity
+                color={teamData.data.team.color}
+                id={teamData.data.team.id}
+                letter={(teamData.data.team.key || teamData.data.team.name).slice(0, 1)}
+              />
+              <Text weight={500}>{t('teams.triage')}</Text>
+            </Flexbox>
+          ) : (
+            <Text style={{ paddingInlineStart: 4 }} weight={500}>
+              {teamData?.data.team.name ?? t('tab.teams')}
+            </Text>
+          )
         }
         right={
           <Flexbox horizontal align={'center'} gap={8}>
-            {teamTab === 'views' ? (
-              <Button icon={PlusIcon} size={'small'} onClick={() => setCreatingView(true)}>
-                {t('savedViews.newView')}
-              </Button>
-            ) : null}
             <WorkFavoriteButton targetId={teamId} targetType="team" />
           </Flexbox>
         }
@@ -471,74 +210,7 @@ const TeamPage = memo(() => {
           <Empty description={t('teams.personal')} icon={UsersIcon} />
         </Center>
       ) : (
-        <WorkSurfaceCollection
-          style={boardActive ? boardBodyStyle : undefined}
-          toolbar={
-            /* Issues toolbar: the All–Active–Backlog scope stays primary;
-               cycle / no-project filters and the list/board switch ride the
-               aside so they overflow into the popover instead of wrapping.
-               Triage never shows the layout toggle — it renders its own row
-               surface. */
-            teamTab === 'issues' && !teamError ? (
-              <WorkSurfaceToolbar
-                asideLabel={t('members.filter')}
-                aside={
-                  <>
-                    {cycleOptions.length > 1 ? (
-                      <Select
-                        aria-label={t('teams.cycle')}
-                        options={cycleOptions}
-                        size="small"
-                        style={{ maxWidth: 280 }}
-                        value={cycleId}
-                        onChange={(next) => {
-                          if (typeof next === 'string') setCycleId(next);
-                        }}
-                      />
-                    ) : null}
-                    <Button
-                      icon={FolderXIcon}
-                      size="small"
-                      type={noProject ? 'primary' : 'default'}
-                      onClick={() => setNoProject((current) => !current)}
-                    >
-                      {t('teams.noProject')}
-                    </Button>
-                    <Segmented
-                      size="small"
-                      value={layout}
-                      options={[
-                        { label: t('teams.layoutList'), value: 'list' },
-                        { label: t('teams.layoutBoard'), value: 'board' },
-                      ]}
-                      onChange={(value) => setLayout(value as WorkQueryLayout)}
-                    />
-                  </>
-                }
-              >
-                <Segmented
-                  size="small"
-                  value={issueScope}
-                  options={ISSUE_SCOPES.map((scope) => ({
-                    label: t(`teams.scope.${scope}`),
-                    value: scope,
-                  }))}
-                  onChange={(value) =>
-                    setSearchParams(
-                      (current) => {
-                        const next = new URLSearchParams(current);
-                        if (value === 'all') next.delete('scope');
-                        else next.set('scope', String(value));
-                        return next;
-                      },
-                      { replace: true },
-                    )
-                  }
-                />
-              </WorkSurfaceToolbar>
-            ) : undefined
-          }
-        >
+        <WorkSurfaceCollection>
           {/* The team fetch gates every tab — a failed team response never
               renders a half-populated tab surface underneath the error. */}
           {teamError ? (
@@ -555,40 +227,20 @@ const TeamPage = memo(() => {
               ) : null}
               {teamTab === 'triage' && !triageCapable ? (
                 <Center flex={1} padding={48}>
-                  <Empty description={t('teams.triageDisabled')} icon={ListChecksIcon} />
+                  <Empty description={t('teams.triageDisabled')} icon={InboxIcon} />
                 </Center>
               ) : null}
-              {wantsTriage ? (
-                <>
-                  <Text weight={500}>{t('teams.triage')}</Text>
-                  {triageState === 'error' ? (
-                    <AsyncError error={triageError} onRetry={() => revalidateTriage()} />
-                  ) : triageState === 'loading' ? (
-                    <SkeletonList aria-label={t('teams.loading')} rows={4} />
-                  ) : triageState === 'empty' ? (
-                    <Center flex={1} padding={48}>
-                      <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
-                    </Center>
-                  ) : (
-                    <Flexbox gap={2}>
-                      {tasks.map((task) => (
-                        <TeamTriageRow
-                          destinations={destinations}
-                          key={task.id}
-                          members={teamData?.data.members ?? []}
-                          task={task}
-                          onAccept={() => void act(task, 'accept')}
-                          onDecline={() => void act(task, 'decline')}
-                          onPickDuplicate={(id) => setDuplicateTaskId(id)}
-                          onTransferred={refreshTriage}
-                          onReassign={(_id, assigneeUserId) =>
-                            void act(task, 'reassign', { assigneeUserId })
-                          }
-                        />
-                      ))}
-                    </Flexbox>
-                  )}
-                </>
+              {wantsTriage && teamId ? (
+                <TeamTriageSurface
+                  destinations={destinations}
+                  error={triageError}
+                  isLoading={isLoading}
+                  members={teamData?.data.members ?? []}
+                  tasks={tasks}
+                  teamId={teamId}
+                  onChanged={refreshTriage}
+                  onRetry={() => void revalidateTriage()}
+                />
               ) : null}
 
               {teamTab === 'projects' ? (
@@ -598,7 +250,7 @@ const TeamPage = memo(() => {
                   <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
                 ) : teamProjects.length === 0 ? (
                   <Center flex={1} padding={48}>
-                    <Empty description={t('teams.projectsEmpty')} icon={FolderXIcon} />
+                    <Empty description={t('teams.projectsEmpty')} icon={PROJECT_ENTITY_ICON} />
                   </Center>
                 ) : (
                   <Flexbox gap={2}>
@@ -615,98 +267,10 @@ const TeamPage = memo(() => {
                   </Flexbox>
                 )
               ) : null}
-              {teamTab === 'views' ? (
-                isTeamViewsLoading ? (
-                  <SkeletonList aria-label={t('teams.loading')} rows={4} />
-                ) : teamViewsError && teamViews.length === 0 ? (
-                  <AsyncError error={teamViewsError} onRetry={() => revalidateTeamViews()} />
-                ) : (
-                  <Flexbox gap={2}>
-                    {teamViewsError ? (
-                      <AsyncError
-                        error={teamViewsError}
-                        variant={'inline'}
-                        onRetry={() => revalidateTeamViews()}
-                      />
-                    ) : null}
-                    {teamViews.length === 0 ? (
-                      <Center flex={1} padding={48}>
-                        <Empty description={t('teams.viewsEmpty')} icon={ListChecksIcon} />
-                      </Center>
-                    ) : (
-                      teamViews.map((view) => (
-                        <WorkspaceLink
-                          className={styles.link}
-                          key={view.id}
-                          to={`/views/${view.id}`}
-                        >
-                          <Flexbox horizontal align="center" className={styles.row} gap={8}>
-                            <Flexbox flex={1} style={{ minWidth: 0 }}>
-                              <Text ellipsis weight={500}>
-                                {view.name}
-                              </Text>
-                            </Flexbox>
-                            <Text fontSize={12} type={'secondary'}>
-                              {t(savedViewVisibilityKey(view.visibility))}
-                            </Text>
-                            <Text fontSize={12} type={'secondary'}>
-                              {view.layout}
-                            </Text>
-                          </Flexbox>
-                        </WorkspaceLink>
-                      ))
-                    )}
-                  </Flexbox>
-                )
-              ) : null}
-              {wantsTasks ? (
-                workState === 'error' ? (
-                  <AsyncError error={teamTasksError} onRetry={() => revalidateTeamTasks()} />
-                ) : (
-                  <WorkQueryResults
-                    createContext={{ teamId }}
-                    emptyLabel={t('teams.workEmpty')}
-                    groups={teamGroups}
-                    layout={layout}
-                    loadMoreLabel={t('myWork.loadMore')}
-                    loading={workState === 'loading'}
-                    loadingLabel={t('teams.loading')}
-                    movable={layout === 'board'}
-                    tasks={teamTasks}
-                    groupBy={
-                      teamTasksData?.data && 'groupBy' in teamTasksData.data
-                        ? teamTasksData.data.groupBy
-                        : undefined
-                    }
-                    total={
-                      teamTasksData?.data && 'total' in teamTasksData.data
-                        ? teamTasksData.data.total
-                        : undefined
-                    }
-                    onLoadMore={layout === 'list' ? () => void loadMoreTeam() : undefined}
-                    onLoadMoreGroup={(key) => void loadMoreTeamGroup(key)}
-                    onMoved={refreshTriage}
-                  />
-                )
-              ) : null}
             </>
           )}
         </WorkSurfaceCollection>
       )}
-      <NewViewModal
-        defaultTeamId={teamId}
-        open={creatingView}
-        onClose={() => setCreatingView(false)}
-      />
-      <MarkDuplicateModal
-        open={duplicateTaskId !== null}
-        taskId={duplicateTaskId}
-        onClose={() => setDuplicateTaskId(null)}
-        onConfirm={(id, canonicalTaskId) => {
-          const task = tasks.find((row) => row.id === id);
-          if (task) void act(task, 'duplicate', { canonicalTaskId });
-        }}
-      />
     </WorkSurface>
   );
 });

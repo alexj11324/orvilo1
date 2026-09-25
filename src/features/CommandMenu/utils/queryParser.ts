@@ -39,6 +39,10 @@ export const isCommandMenuFtsType = (
 ): type is (typeof COMMAND_MENU_FTS_TYPES)[number] =>
   Boolean(type && (COMMAND_MENU_FTS_TYPES as readonly string[]).includes(type));
 
+/** True for every type a `type:`/`is:` query filter can target. */
+export const isValidSearchType = (type: string): type is ValidSearchType =>
+  (VALID_TYPES as readonly string[]).includes(type);
+
 /**
  * Parse search query to extract type filters and clean query
  *

@@ -58,6 +58,7 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.strictObject({
     'cycleId',
     'delegatedByUserId',
     'id',
+    'labelId',
     'ownerUserId',
     'priority',
     'projectId',
@@ -100,7 +101,7 @@ const workQueryNodeSchema: z.ZodType<WorkQueryFilter | WorkQueryPredicate> = z.l
 export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
   entityType: z.enum(['project', 'task']),
   filter: workQueryFilterSchema.optional(),
-  groupBy: z.enum(['none', 'status', 'workflowCategory']).optional(),
+  groupBy: z.enum(['attention', 'none', 'status', 'workflowCategory']).optional(),
   layout: z.enum(['board', 'list']).optional(),
   schemaVersion: z.literal(1),
   sort: z
@@ -284,6 +285,7 @@ export const workAttentionRouter = router({
       z.object({
         cursor: z.string().optional(),
         filter: z.enum(['all', 'archived', 'mentions', 'snoozed', 'unread']).optional(),
+        includeSnoozed: z.boolean().optional(),
         kind: z.enum(['action', 'update', 'priority', 'other']).optional(),
         limit: z.number().min(1).max(50).default(20),
       }),
@@ -309,7 +311,7 @@ export const workAttentionRouter = router({
     .input(
       z.object({
         afterId: z.string().min(1).optional(),
-        groupBy: z.enum(['none', 'status', 'workflowCategory']).optional(),
+        groupBy: z.enum(['attention', 'none', 'status', 'workflowCategory']).optional(),
         groupKey: z.string().min(1).optional(),
         layout: z.enum(['board', 'list']).optional(),
         limit: z.number().min(1).max(100).default(50),

@@ -36,6 +36,7 @@ describe('buildWorkspaceAwarePath', () => {
 
   it('prefixes the nav-attention surfaces mirrored under /:workspaceSlug', () => {
     expect(buildWorkspaceAwarePath('/inbox', 'acme')).toBe('/acme/inbox');
+    expect(buildWorkspaceAwarePath('/drafts', 'acme')).toBe('/acme/drafts');
     expect(buildWorkspaceAwarePath('/my-work', 'acme')).toBe('/acme/my-work');
     expect(buildWorkspaceAwarePath('/views', 'acme')).toBe('/acme/views');
     expect(buildWorkspaceAwarePath('/views/view-1', 'acme')).toBe('/acme/views/view-1');

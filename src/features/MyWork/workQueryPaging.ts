@@ -26,6 +26,19 @@ export interface WorkQueryGroupPage<T extends { id: string }> {
   total: number;
 }
 
+/**
+ * Work-query responses are a discriminated union (flat task page, grouped task
+ * page, project page). The task surfaces read only the task members; a project
+ * response yields empty rows instead of a shape error.
+ */
+export const workQueryResponseTasks = <T extends { id: string }>(
+  data: { tasks?: T[] | undefined } | { projects?: unknown } | undefined,
+): T[] => (data && 'tasks' in data ? (data.tasks ?? []) : []);
+
+export const workQueryResponseGroups = <T extends { id: string }>(
+  data: { groups?: WorkQueryGroupPage<T>[] | undefined } | { projects?: unknown } | undefined,
+): WorkQueryGroupPage<T>[] => (data && 'groups' in data ? (data.groups ?? []) : []);
+
 export const mergeWorkQueryGroups = <T extends { id: string }>(
   current: WorkQueryGroupPage<T>[],
   incoming: WorkQueryGroupPage<T>[],

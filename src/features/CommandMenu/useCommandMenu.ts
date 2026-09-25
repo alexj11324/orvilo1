@@ -7,6 +7,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { isDesktop } from '@/const/version';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useCreateNewModal } from '@/features/LibraryModal';
+import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
@@ -23,8 +24,7 @@ import { globalHelpers } from '@/store/global/helpers';
 import { useHomeStore } from '@/store/home';
 
 import { useCommandMenuContext } from './CommandMenuContext';
-import type { CommandMenuSearchResult } from './SearchResults';
-import { type ThemeMode } from './types';
+import { type CommandMenuSearchResult, type ThemeMode } from './types';
 import { isCommandMenuFtsType, isCommandMenuWorkType } from './utils/queryParser';
 
 /** Mixed palette stays small; a typed filter may request up to 50 of that type. */
@@ -43,7 +43,7 @@ export const useCommandMenu = () => {
     search,
     setSearch,
     pages,
-    setPages,
+    popPage,
     typeFilter,
     setTypeFilter,
     page,
@@ -175,8 +175,8 @@ export const useCommandMenu = () => {
   }, [inboxAgentId, search, navigate, onClose]);
 
   const handleBack = useCallback(() => {
-    setPages((prev) => prev.slice(0, -1));
-  }, [setPages]);
+    popPage();
+  }, [popPage]);
 
   const handleSendToSelectedAgent = useCallback(() => {
     if (selectedAgent && search.trim()) {
@@ -236,6 +236,15 @@ export const useCommandMenu = () => {
     onClose();
   }, [canCreate, navigate, onClose, updateSystemStatus]);
 
+  const handleCreateProject = useCallback(() => {
+    if (!canCreate) return;
+
+    // Close the palette first — same pattern as the feedback entry in MainMenu:
+    // the modal mounts outside the palette and the overlay must not linger.
+    onClose();
+    openCreateProjectModal();
+  }, [canCreate, onClose]);
+
   const handleCreateAgentTeam = useCallback(() => {
     if (!canCreate) return;
 
@@ -256,6 +265,7 @@ export const useCommandMenu = () => {
     handleBack,
     handleCreateAgentTeam,
     handleCreateLibrary,
+    handleCreateProject,
     handleCreateSession,
     handleCreateTask,
     handleCreateTopic,

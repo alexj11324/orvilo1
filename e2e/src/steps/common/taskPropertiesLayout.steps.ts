@@ -16,11 +16,12 @@ import type { CustomWorld } from '../../support/world';
 /**
  * Layout-rule probe over the issue rail (`[data-testid="task-properties"]`).
  *
- * The rail went wrong only in one state: while the task ran, the assignee
- * picker was blocked, its wrapper shrank the full-width row to its content,
- * and the trigger's `justify-content: center` parked it mid-rail. So the
- * fixture is a running task with the rows that make up a real rail (status,
- * workflow state, priority, assignee, schedule), plus a not-running control.
+ * The rail went wrong only in one state: while the task ran, the assignee and
+ * label pickers were blocked, their wrapper shrank the full-width row to its
+ * content, and the trigger's `justify-content: center` parked it mid-rail. So
+ * the fixture is a running task with the rows that make up a real rail
+ * (status, priority, assignee, labels, workflow state, schedule), plus a
+ * not-running control.
  */
 
 const PROPERTIES = '[data-testid="task-properties"]';
@@ -37,19 +38,28 @@ interface TaskFixture {
   status: string;
 }
 
-interface RpcEnvelope<T> {
-  error?: { json?: { message?: string } };
-  result?: { data?: { json?: { data?: T; success?: boolean } } };
+interface LabelFixture {
+  id: string;
+  name: string;
 }
 
-const rpc = async <T>(api: APIRequestContext, method: string, input: Record<string, unknown>) => {
-  const response = await api.post(`/trpc/lambda/task.${method}`, {
-    data: { json: input },
-  });
+interface RpcEnvelope<T> {
+  error?: { json?: { message?: string } };
+  result?: { data?: { json?: T } };
+}
+
+const mutate = async <T>(api: APIRequestContext, path: string, input: Record<string, unknown>) => {
+  const response = await api.post(`/trpc/lambda/${path}`, { data: { json: input } });
   const body = (await response.json()) as RpcEnvelope<T>;
-  expect(response.ok(), `task.${method}: ${JSON.stringify(body)}`).toBe(true);
-  expect(body.result?.data?.json?.success, `task.${method} must succeed`).toBe(true);
-  return body.result!.data!.json!.data as T;
+  expect(response.ok(), `${path}: ${JSON.stringify(body)}`).toBe(true);
+  return body.result!.data!.json as T;
+};
+
+/** `task.*` procedures wrap their payload in `{ success, data }`. */
+const rpc = async <T>(api: APIRequestContext, method: string, input: Record<string, unknown>) => {
+  const body = await mutate<{ data?: T; success?: boolean }>(api, `task.${method}`, input);
+  expect(body.success, `task.${method} must succeed`).toBe(true);
+  return body.data as T;
 };
 
 /**
@@ -76,7 +86,7 @@ const setWorkflowState = async (taskId: string, category: string) => {
 };
 
 Given(
-  '存在一个状态为 {string}、带 workflow 状态并指派给我的任务',
+  '存在一个状态为 {string}、带 workflow 状态和标签并指派给我的任务',
   { timeout: 60_000 },
   async function (this: CustomWorld, status: string) {
     console.log(`   📍 Step: 创建 ${status} 任务...`);
@@ -90,6 +100,18 @@ Given(
     // Cleanup runs after the shared After hook has closed the browser context,
     // so it signs its own request context in with this session.
     this.testContext.layoutProbeStorage = await this.browserContext.storageState();
+
+    // Label names are unique per owner, and the router has no delete: a
+    // per-run suffix keeps reruns from colliding.
+    const label = await mutate<LabelFixture>(this.browserContext.request, 'taskLabel.createLabel', {
+      color: '#5e6ad2',
+      name: `probe-${status}-${randomUUID().slice(0, 8)}`,
+    });
+    await mutate(this.browserContext.request, 'taskLabel.assignLabel', {
+      labelId: label.id,
+      taskId: task.id,
+    });
+    this.testContext.layoutProbeLabel = label;
 
     await setWorkflowState(task.id, status === 'running' ? 'in_progress' : 'todo');
     // Stamps the status without dispatching model work: the fixture has no topic.
@@ -112,6 +134,8 @@ When('我在 1440×900 视口打开该任务详情', async function (this: Custo
   await expect(properties.getByText(TEST_USER.fullName, { exact: true })).toBeVisible({
     timeout: 25_000,
   });
+  const label = this.testContext.layoutProbeLabel as LabelFixture;
+  await expect(properties.getByText(label.name, { exact: true })).toBeVisible({ timeout: 25_000 });
   await this.page.evaluate(() => document.fonts.ready);
 });
 

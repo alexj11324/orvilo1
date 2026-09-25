@@ -86,7 +86,7 @@ const styles = createStaticStyles(({ css }) => ({
     min-height: 0;
   `,
   scrollHost: css`
-    overflow-y: auto;
+    overflow: auto;
     overscroll-behavior: contain;
     flex: 1;
     min-height: 0;
@@ -147,6 +147,10 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   toolbarPrimary: css`
+    scrollbar-width: none;
+
+    overflow-x: auto;
+    overscroll-behavior: contain;
     display: flex;
     flex: 1;
     gap: 8px;

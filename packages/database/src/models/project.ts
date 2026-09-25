@@ -1,10 +1,17 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
 import type {
+  ProjectDatePrecision,
+  ProjectHealth,
+  ProjectMilestoneProgress,
   ProjectOrchestrationPolicy,
+  ProjectPriority,
   ProjectStatus,
+  ProjectUpdateKind,
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
+import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import {
   and,
   asc,
@@ -13,6 +20,7 @@ import {
   getTableColumns,
   getTableName,
   inArray,
+  isNotNull,
   isNull,
   max,
   or,
@@ -24,19 +32,42 @@ import { knowledgeBases } from '../schemas/file';
 import {
   projectAgents,
   projectCompletionReviews,
+  projectDependencies,
   projectKnowledgeBases,
+  projectLabelBindings,
+  projectLabels,
+  projectMilestones,
   projects,
 } from '../schemas/project';
+import { projectLinks } from '../schemas/projectLink';
+import { projectMembers } from '../schemas/projectMember';
+import { projectUpdates } from '../schemas/projectUpdate';
 import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
+import { users } from '../schemas/user';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
+import { ProjectMemberModel } from './projectMember';
+import { TeamModel } from './team';
+import { hasActiveWorkspaceMembership } from './workspace';
 
-export interface CreateProjectInput {
+export interface ProjectPlanningInput {
+  dependencies?: { projectId: string; type: 'blockedBy' | 'blocking' }[];
+  labelIds?: string[];
+  memberIds?: string[];
+  milestones?: { name: string; description?: string; date?: string }[];
+  newLabelNames?: string[];
+  priority?: ProjectPriority;
+  startDatePrecision?: ProjectDatePrecision;
+  status?: ProjectStatus;
+  targetDatePrecision?: ProjectDatePrecision;
+}
+
+export interface CreateProjectInput extends ProjectPlanningInput {
   avatar?: string;
   /** Managed creation audit for import/integration-created projects. */
   creationSubject?: {
@@ -46,16 +77,29 @@ export interface CreateProjectInput {
   };
   description?: string;
   identifier: string;
+  leadUserId?: string;
   name: string;
   slug?: string;
+  startDate?: string;
+  summary?: string;
+  targetDate?: string;
+  teamId?: string;
   visibility?: ProjectVisibility;
 }
 
 export interface UpdateProjectInput {
   avatar?: string | null;
   description?: string | null;
+  labelIds?: string[];
+  leadUserId?: string | null;
   name?: string;
+  priority?: ProjectPriority;
   slug?: string | null;
+  startDate?: string | null;
+  startDatePrecision?: ProjectDatePrecision | null;
+  summary?: string;
+  targetDate?: string | null;
+  targetDatePrecision?: ProjectDatePrecision | null;
   visibility?: ProjectVisibility;
 }
 
@@ -192,6 +236,71 @@ const toOrchestrationPolicyView = (project: ProjectPolicyRow): ProjectOrchestrat
   requireHumanReviewRequired: projectRequiresHumanReview(project),
 });
 
+/** How one task's workflow category counts toward its milestone's readout. */
+type MilestoneProgressBucket = 'canceled' | 'completed' | 'open' | 'unknown';
+
+/**
+ * Classify a task's workflow category for milestone progress.
+ *
+ * This restates `src/features/Projects/projectIssueProgress.ts` rather than
+ * sharing it: that module lives in the app and cannot be imported from this
+ * package. The two must agree — the project rail renders both readouts at
+ * once, and a milestone that reads 50% next to a Progress card that reads
+ * 40% is a bug in one of them. **A new `TaskWorkflowCategory` member has to be
+ * classified in both places.**
+ */
+const milestoneProgressBucket = (category: TaskWorkflowCategory): MilestoneProgressBucket => {
+  switch (category) {
+    case 'done': {
+      return 'completed';
+    }
+    case 'canceled': {
+      return 'canceled';
+    }
+    case 'in_progress':
+    case 'in_review':
+    case 'triage':
+    case 'backlog':
+    case 'todo': {
+      return 'open';
+    }
+    default: {
+      // Unreachable through the type, reachable through the database. An
+      // unrecognised state must not be counted as open work (that reports a
+      // smaller, prettier percentage than the truth) nor as done.
+      return 'unknown';
+    }
+  }
+};
+
+interface MilestoneTally {
+  completed: number;
+  /** In scope: linked tasks that are neither canceled nor unclassifiable. */
+  issues: number;
+  unknown: number;
+}
+
+const EMPTY_MILESTONE_TALLY: MilestoneTally = { completed: 0, issues: 0, unknown: 0 };
+
+const tallyMilestoneCategory = (tally: MilestoneTally, category: TaskWorkflowCategory) => {
+  switch (milestoneProgressBucket(category)) {
+    case 'canceled': {
+      // Out of scope, exactly as the project-level Progress card treats it:
+      // canceled work neither counts as done nor dilutes the percentage.
+      return tally;
+    }
+    case 'completed': {
+      return { ...tally, completed: tally.completed + 1, issues: tally.issues + 1 };
+    }
+    case 'open': {
+      return { ...tally, issues: tally.issues + 1 };
+    }
+    default: {
+      return { ...tally, unknown: tally.unknown + 1 };
+    }
+  }
+};
+
 export class ProjectModel {
   private readonly canManageAll: boolean;
 
@@ -246,9 +355,123 @@ export class ProjectModel {
     if (identifier.length < 3 || identifier.length > 6) {
       throw new Error('Project identifier must be between 3 and 6 characters');
     }
-    const { creationSubject, ...projectInput } = input;
+    const {
+      creationSubject,
+      teamId,
+      dependencies = [],
+      labelIds = [],
+      memberIds = [],
+      milestones = [],
+      newLabelNames = [],
+      ...projectInput
+    } = input;
+    if (input.status && !(PROJECT_CREATABLE_STATUSES as readonly string[]).includes(input.status)) {
+      throw new Error('Project completion requires a human review');
+    }
+    if (
+      input.priority !== undefined &&
+      (!Number.isInteger(input.priority) || input.priority < 0 || input.priority > 4)
+    ) {
+      throw new Error('Invalid project priority');
+    }
+    if (milestones.some(({ name }) => !name.trim())) throw new Error('Milestone name is required');
+    const dependencyDirections = new Map<string, string>();
+    for (const dependency of dependencies) {
+      if (
+        dependencyDirections.has(dependency.projectId) &&
+        dependencyDirections.get(dependency.projectId) !== dependency.type
+      ) {
+        throw new Error('Project dependencies cannot form a cycle');
+      }
+      dependencyDirections.set(dependency.projectId, dependency.type);
+    }
 
     return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      if (input.startDate && input.targetDate && input.targetDate < input.startDate) {
+        throw new Error('Target date must not precede start date');
+      }
+      if (input.leadUserId) {
+        const validLead = this.workspaceId
+          ? await hasActiveWorkspaceMembership(db, {
+              userId: input.leadUserId,
+              workspaceId: this.workspaceId,
+            })
+          : input.leadUserId === this.userId;
+        if (!validLead) throw new Error('Project lead must be an active workspace member');
+      }
+      const teamModel = this.workspaceId ? new TeamModel(db, this.userId, this.workspaceId) : null;
+      if (
+        teamId &&
+        !(await teamModel?.listReadable())?.some(
+          (team) => team.id === teamId && team.status === 'active',
+        )
+      ) {
+        throw new Error('Project team is not available in this workspace');
+      }
+      if ((memberIds.length || labelIds.length || newLabelNames.length) && !this.workspaceId) {
+        throw new Error('Project members and labels require a workspace');
+      }
+      for (const memberId of new Set(memberIds)) {
+        if (
+          !this.workspaceId ||
+          !(await hasActiveWorkspaceMembership(db, {
+            userId: memberId,
+            workspaceId: this.workspaceId,
+          }))
+        ) {
+          throw new Error('Project member must be an active workspace member');
+        }
+      }
+      const planningModel = new ProjectModel(db, this.userId, this.workspaceId);
+      for (const dependencyId of dependencyDirections.keys()) {
+        if (!(await planningModel.findById(dependencyId)))
+          throw new Error('Dependent project is not available');
+      }
+      // Lock the dependency endpoints first so concurrent creates referencing
+      // the same projects serialize: a second transaction waits here, then
+      // re-reads the dependency graph committed by the first.
+      if (dependencyDirections.size) {
+        await tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(inArray(projects.id, [...dependencyDirections.keys()]))
+          .for('update');
+      }
+      // A new project can close an existing path even without a direct reverse edge.
+      const predecessors = new Set(
+        [...dependencyDirections].filter(([, type]) => type === 'blockedBy').map(([id]) => id),
+      );
+      let frontier = [...dependencyDirections]
+        .filter(([, type]) => type === 'blocking')
+        .map(([id]) => id);
+      const visited = new Set<string>();
+      while (predecessors.size && frontier.length) {
+        if (frontier.some((id) => predecessors.has(id)))
+          throw new Error('Project dependencies cannot form a cycle');
+        frontier.forEach((id) => visited.add(id));
+        const edges = await db
+          .select({ id: projectDependencies.successorId })
+          .from(projectDependencies)
+          .where(inArray(projectDependencies.predecessorId, frontier));
+        frontier = [...new Set(edges.map(({ id }) => id).filter((id) => !visited.has(id)))];
+      }
+      const selectedLabels =
+        labelIds.length && this.workspaceId
+          ? await db
+              .select()
+              .from(projectLabels)
+              .where(
+                and(
+                  inArray(projectLabels.id, [...new Set(labelIds)]),
+                  eq(projectLabels.workspaceId, this.workspaceId),
+                ),
+              )
+          : [];
+      if (selectedLabels.length !== new Set(labelIds).size)
+        throw new Error('Project label is not available in this workspace');
+      if (newLabelNames.some((name) => !name.trim() || name.trim().length > 100))
+        throw new Error('Invalid project label');
       const coordinatorConfig = createProjectCoordinatorAgentConfig({
         avatar: input.avatar,
         description: input.description,
@@ -292,8 +515,144 @@ export class ProjectModel {
         workspaceId: this.workspaceId ?? null,
       });
 
+      if (teamId && teamModel) await teamModel.linkProject(project.id, teamId);
+
+      if (this.workspaceId) {
+        for (const memberId of new Set(memberIds)) {
+          await new ProjectMemberModel(db, this.userId).add({
+            projectId: project.id,
+            userId: memberId,
+            workspaceId: this.workspaceId,
+          });
+        }
+        for (const name of new Set(newLabelNames.map((value) => value.trim()))) {
+          const [label] = await db
+            .insert(projectLabels)
+            .values({ workspaceId: this.workspaceId, name })
+            .onConflictDoUpdate({
+              target: [projectLabels.workspaceId, projectLabels.name],
+              set: { name },
+            })
+            .returning();
+          selectedLabels.push(label);
+        }
+      }
+      const boundLabelIds = [...new Set(selectedLabels.map(({ id }) => id))];
+      if (boundLabelIds.length)
+        await db
+          .insert(projectLabelBindings)
+          .values(boundLabelIds.map((labelId) => ({ projectId: project.id, labelId })));
+      if (milestones.length)
+        await db.insert(projectMilestones).values(
+          milestones.map((milestone, sortOrder) => ({
+            ...milestone,
+            name: milestone.name.trim(),
+            projectId: project.id,
+            sortOrder,
+          })),
+        );
+      if (dependencyDirections.size)
+        await db.insert(projectDependencies).values(
+          [...dependencyDirections].map(([dependencyId, direction]) => ({
+            predecessorId: direction === 'blockedBy' ? dependencyId : project.id,
+            successorId: direction === 'blockedBy' ? project.id : dependencyId,
+          })),
+        );
       return project;
     });
+  }
+
+  async listLabels() {
+    if (
+      !this.workspaceId ||
+      !(await hasActiveWorkspaceMembership(this.db, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }))
+    )
+      return [];
+    return this.db
+      .select()
+      .from(projectLabels)
+      .where(eq(projectLabels.workspaceId, this.workspaceId))
+      .orderBy(asc(projectLabels.name));
+  }
+
+  async getPlanning(id: string) {
+    if (!(await this.findById(id))) return null;
+    const [milestones, milestoneProgress, labelRows, memberRows, edges, teamIdRows] =
+      await Promise.all([
+        this.db
+          .select()
+          .from(projectMilestones)
+          .where(eq(projectMilestones.projectId, id))
+          .orderBy(asc(projectMilestones.sortOrder)),
+        this.listMilestoneProgress(id),
+        this.db
+          .select({ label: projectLabels })
+          .from(projectLabelBindings)
+          .innerJoin(projectLabels, eq(projectLabels.id, projectLabelBindings.labelId))
+          .where(eq(projectLabelBindings.projectId, id)),
+        this.db
+          .select({ userId: projectMembers.userId, name: users.fullName, avatar: users.avatar })
+          .from(projectMembers)
+          .innerJoin(users, eq(users.id, projectMembers.userId))
+          .where(
+            and(
+              eq(projectMembers.projectId, id),
+              isNull(projectMembers.deletedAt),
+              isNull(projectMembers.suspendedAt),
+            ),
+          ),
+        this.db
+          .select()
+          .from(projectDependencies)
+          .where(
+            or(eq(projectDependencies.predecessorId, id), eq(projectDependencies.successorId, id)),
+          ),
+        this.workspaceId
+          ? new TeamModel(this.db, this.userId, this.workspaceId).listTeamIdsForProject(id)
+          : Promise.resolve([] as string[]),
+      ]);
+    const teamModel = this.workspaceId
+      ? new TeamModel(this.db, this.userId, this.workspaceId)
+      : null;
+    const teamRows = teamModel
+      ? (await Promise.all(teamIdRows.map((teamId) => teamModel.findById(teamId)))).filter(
+          (team): team is NonNullable<typeof team> => team !== null,
+        )
+      : [];
+    const relatedProjects = await this.findByIds(
+      edges.map((edge) => (edge.predecessorId === id ? edge.successorId : edge.predecessorId)),
+    );
+    const dependencies = edges.flatMap((edge) => {
+      const projectId = edge.predecessorId === id ? edge.successorId : edge.predecessorId;
+      const project = relatedProjects.find((row) => row.id === projectId);
+      return project
+        ? [
+            {
+              project,
+              type: edge.predecessorId === id ? ('blocking' as const) : ('blockedBy' as const),
+            },
+          ]
+        : [];
+    });
+    return {
+      dependencies,
+      labels: labelRows.map(({ label }) => label),
+      members: memberRows,
+      milestones: milestones.map((milestone) => {
+        // Three states, and `??` cannot tell the first two apart: the map only
+        // holds milestones that have linked tasks, so a missing key is a real
+        // zero while a present-but-`null` value means the readout could not be
+        // computed. Collapsing them would print 0% over unknown work.
+        if (!milestoneProgress?.has(milestone.id)) {
+          return { ...milestone, progress: { completed: 0, issues: 0, percent: 0 } };
+        }
+        return { ...milestone, progress: milestoneProgress.get(milestone.id) ?? null };
+      }),
+      teams: teamRows,
+    };
   }
 
   async delete(id: string) {
@@ -353,6 +712,19 @@ export class ProjectModel {
         // Column refs lose their table qualifier inside `sql` templates, so the
         // outer correlation is spelled out — a bare "id" would bind to tasks.id.
         taskCount: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${sql.raw(`"${getTableName(projects)}"."id"`)} and ${this.taskReadable()})`,
+        progressPercent: sql<number | null>`(
+          select case
+            when count(*) filter (where ${tasks.workflowCategory} not in ('triage', 'backlog', 'todo', 'in_progress', 'in_review', 'done', 'canceled')) > 0 then null
+            when count(*) filter (where ${tasks.workflowCategory} <> 'canceled') = 0 then 0
+            else round(
+              100.0 * count(*) filter (where ${tasks.workflowCategory} = 'done') /
+              count(*) filter (where ${tasks.workflowCategory} <> 'canceled')
+            )::int
+          end
+          from ${tasks}
+          where ${tasks.projectId} = ${sql.raw(`"${getTableName(projects)}"."id"`)}
+            and ${this.taskReadable()}
+        )`,
       })
       .from(projects)
       .where(and(this.readable(), statusWhere))
@@ -362,12 +734,59 @@ export class ProjectModel {
   }
 
   async update(id: string, input: UpdateProjectInput) {
-    const [project] = await this.db
-      .update(projects)
-      .set({ ...input, updatedAt: new Date() })
-      .where(and(eq(projects.id, id), this.manageable()))
-      .returning();
-    return project ?? null;
+    const { labelIds, ...fields } = input;
+    return this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(projects)
+        .where(and(eq(projects.id, id), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!current) return null;
+      if (input.leadUserId) {
+        const validLead = this.workspaceId
+          ? await hasActiveWorkspaceMembership(tx as OrviloDatabase, {
+              userId: input.leadUserId,
+              workspaceId: this.workspaceId,
+            })
+          : input.leadUserId === this.userId;
+        if (!validLead) throw new Error('Project lead must be an active workspace member');
+      }
+      // Validate the merged range under a row lock: partial/concurrent edits must
+      // not validate against an obsolete opposite endpoint.
+      const startDate = input.startDate === undefined ? current.startDate : input.startDate;
+      const targetDate = input.targetDate === undefined ? current.targetDate : input.targetDate;
+      if (startDate && targetDate && targetDate < startDate)
+        throw new Error('Target date must not precede start date');
+      if (labelIds !== undefined) {
+        const selectedIds = [...new Set(labelIds)];
+        const labels =
+          selectedIds.length && this.workspaceId
+            ? await tx
+                .select({ id: projectLabels.id })
+                .from(projectLabels)
+                .where(
+                  and(
+                    inArray(projectLabels.id, selectedIds),
+                    eq(projectLabels.workspaceId, this.workspaceId),
+                  ),
+                )
+            : [];
+        if (labels.length !== selectedIds.length)
+          throw new Error('Project label is not available in this workspace');
+        await tx.delete(projectLabelBindings).where(eq(projectLabelBindings.projectId, current.id));
+        if (selectedIds.length)
+          await tx
+            .insert(projectLabelBindings)
+            .values(selectedIds.map((labelId) => ({ projectId: current.id, labelId })));
+      }
+      const [project] = await tx
+        .update(projects)
+        .set({ ...fields, updatedAt: new Date() })
+        .where(and(eq(projects.id, id), this.manageable()))
+        .returning();
+      return project ?? null;
+    });
   }
 
   async getOrchestrationPolicy(id: string) {
@@ -689,27 +1108,309 @@ export class ProjectModel {
     return deleted.length > 0;
   }
 
+  /**
+   * The project's tasks as this reader may see them. Every project task read
+   * shares this scope, so a milestone readout can never count work the reader
+   * is not allowed to see.
+   */
+  private projectTaskScope(projectId: string) {
+    return and(
+      eq(tasks.projectId, projectId),
+      buildWorkspaceWhere(
+        { userId: this.userId, workspaceId: this.workspaceId },
+        {
+          userId: tasks.createdByUserId,
+          visibility: tasks.visibility,
+          workspaceId: tasks.workspaceId,
+        },
+      ),
+    );
+  }
+
   async listTasks(projectId: string) {
     if (!(await this.findById(projectId))) return null;
     const rows = await this.db
       .select()
       .from(tasks)
-      .where(
-        and(
-          eq(tasks.projectId, projectId),
-          buildWorkspaceWhere(
-            { userId: this.userId, workspaceId: this.workspaceId },
-            {
-              userId: tasks.createdByUserId,
-              visibility: tasks.visibility,
-              workspaceId: tasks.workspaceId,
-            },
-          ),
-        ),
-      )
+      .where(this.projectTaskScope(projectId))
       .orderBy(asc(tasks.sortOrder), asc(tasks.seq));
 
     return rows;
+  }
+
+  /**
+   * Completion readout for each milestone of a project, keyed by milestone id.
+   *
+   * ⚠️ **The denominator convention below is an unverified choice.** On the
+   * reference (2026-09-22) every milestone reachable in the workspace read
+   * `100%` because all 16 of its issues were Done — so whether Linear divides
+   * by *all* linked issues or only by completed ones **cannot be observed
+   * there**; both conventions produce 100% on that data. Do not read the
+   * choice below as a verified parity claim.
+   *
+   * Chosen: divide by every linked issue that is in scope, `completed / issues`
+   * — the convention that can produce a number other than 0% or 100%. The
+   * alternatives were rejected for cause: "completed only" is degenerate
+   * (always 100%, so it can never disagree with the reference or with itself),
+   * and it would make the readout indistinguishable from a milestone with one
+   * done issue and twenty open ones. Canceled issues leave the denominator
+   * entirely, which is how the project-level Progress card on the same rail
+   * already counts scope (`src/features/Projects/projectIssueProgress.ts`).
+   *
+   * The map holds one entry per milestone that has linked tasks; a milestone
+   * with none is absent (callers rendering a fixed milestone list read that as
+   * `{ completed: 0, issues: 0, percent: 0 }` — an honest zero, not a
+   * placeholder). A linked task whose workflow category this build cannot
+   * classify makes its milestone read `null`: unavailable beats a number that
+   * silently drops the row.
+   *
+   * No surface renders this yet — deliberately: the readout belongs with the
+   * `<a>` that points at the milestone-filtered issue list, so both land in
+   * that page's task. `ProjectMilestoneProgress` carries the full reasoning.
+   */
+  async listMilestoneProgress(projectId: string) {
+    if (!(await this.findById(projectId))) return null;
+    const rows = await this.db
+      .select({ category: tasks.workflowCategory, milestoneId: tasks.projectMilestoneId })
+      .from(tasks)
+      .where(and(this.projectTaskScope(projectId), isNotNull(tasks.projectMilestoneId)));
+
+    const tallies = rows.reduce((acc, row) => {
+      if (!row.milestoneId) return acc;
+      const tally = tallyMilestoneCategory(
+        acc.get(row.milestoneId) ?? EMPTY_MILESTONE_TALLY,
+        row.category,
+      );
+      return acc.set(row.milestoneId, tally);
+    }, new Map<string, MilestoneTally>());
+
+    return new Map<string, ProjectMilestoneProgress | null>(
+      [...tallies].map(([milestoneId, tally]) => [
+        milestoneId,
+        tally.unknown > 0
+          ? null
+          : {
+              completed: tally.completed,
+              issues: tally.issues,
+              percent: tally.issues === 0 ? 0 : Math.round((tally.completed / tally.issues) * 100),
+            },
+      ]),
+    );
+  }
+
+  /**
+   * Attach a task to one of its project's milestones, or clear the link with
+   * `milestoneId: null`. A task belongs to at most one milestone, so this
+   * replaces whatever was there.
+   *
+   * Returns `null` when the project is not the caller's to manage, matching
+   * `moveTaskTree`. Cross-project links are rejected rather than stored: the
+   * milestone has to belong to the same project as the task, or a project's
+   * readout would count work filed elsewhere.
+   *
+   * ⚠️ **Known inconsistency:** this writes `tasks` directly and so skips the
+   * domain accounting `TaskModel.update` performs — no `domainRevision` bump,
+   * no `task.*` domain event, no Linear-sync outbox row, and
+   * `projectMilestoneId` is absent from `TASK_DOMAIN_COLUMNS`. That matches
+   * `moveTaskTree`, which moves a task between projects the same way, and it
+   * is recorded rather than fixed because the fix belongs in `models/task.ts`
+   * (planning/Linear-sync territory) and should land once for both callers.
+   */
+  async setTaskMilestone(input: { milestoneId: string | null; projectId: string; taskId: string }) {
+    const { milestoneId, projectId, taskId } = input;
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const [task] = await tx
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), this.projectTaskScope(projectId)))
+        .limit(1);
+      if (!task) throw new Error('Task not found');
+
+      if (milestoneId) {
+        const [milestone] = await tx
+          .select({ id: projectMilestones.id })
+          .from(projectMilestones)
+          .where(
+            and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.projectId, projectId)),
+          )
+          .limit(1);
+        if (!milestone) throw new Error('Milestone is not available in this project');
+      }
+
+      const [updated] = await tx
+        .update(tasks)
+        .set({ projectMilestoneId: milestoneId, updatedAt: new Date() })
+        .where(and(eq(tasks.id, taskId), this.projectTaskScope(projectId)))
+        .returning();
+      return updated ?? null;
+    });
+  }
+
+  /**
+   * Create a milestone inside one of the caller's manageable projects.
+   *
+   * Returns `null` when the project is not the caller's to manage, matching
+   * `setTaskMilestone`. `sortOrder` defaults to one past the current last
+   * milestone so a created row lands at the bottom of the overview list —
+   * the same place Linear's `+ Milestone` button appends.
+   */
+  async createMilestone(
+    projectId: string,
+    input: { date?: string | null; description?: string | null; name: string; sortOrder?: number },
+  ) {
+    const name = input.name.trim();
+    if (!name) throw new Error('Milestone name is required');
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      let sortOrder = input.sortOrder;
+      if (sortOrder === undefined) {
+        const [row] = await tx
+          .select({ value: max(projectMilestones.sortOrder) })
+          .from(projectMilestones)
+          .where(eq(projectMilestones.projectId, projectId));
+        sortOrder = (row?.value ?? -1) + 1;
+      }
+
+      const [milestone] = await tx
+        .insert(projectMilestones)
+        .values({
+          date: input.date ?? null,
+          description: input.description?.trim() || null,
+          name,
+          projectId,
+          sortOrder,
+        })
+        .returning();
+      return milestone ?? null;
+    });
+  }
+
+  /**
+   * Update a milestone's name, description, or target date. `undefined`
+   * leaves a field untouched; `null` clears `description`/`date`.
+   *
+   * Returns `null` when the project is not manageable or the milestone does
+   * not belong to it — a milestone id taken from another project must not
+   * leak its existence, the same read `findManageableById` applies.
+   */
+  async updateMilestone(
+    projectId: string,
+    milestoneId: string,
+    input: { date?: string | null; description?: string | null; name?: string },
+  ) {
+    const name = input.name?.trim();
+    if (name !== undefined && !name) throw new Error('Milestone name is required');
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const [milestone] = await tx
+        .update(projectMilestones)
+        .set({
+          ...(input.date !== undefined ? { date: input.date } : {}),
+          ...(input.description !== undefined
+            ? { description: input.description?.trim() || null }
+            : {}),
+          ...(name !== undefined ? { name } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.projectId, projectId)),
+        )
+        .returning();
+      return milestone ?? null;
+    });
+  }
+
+  /**
+   * Delete a milestone. Tasks linked to it keep their place in the project —
+   * `tasks.projectMilestoneId` is `onDelete: 'set null'`, so they land in the
+   * "No milestone" bucket rather than being removed with the milestone.
+   */
+  async deleteMilestone(projectId: string, milestoneId: string) {
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const deleted = await tx
+        .delete(projectMilestones)
+        .where(
+          and(eq(projectMilestones.id, milestoneId), eq(projectMilestones.projectId, projectId)),
+        )
+        .returning({ id: projectMilestones.id });
+      return deleted.length > 0;
+    });
+  }
+
+  /**
+   * Persist the overview's milestone order. `milestoneIds` must be a full
+   * permutation of the project's milestones — a partial list would leave the
+   * omitted rows sharing stale sort keys, and a foreign id would silently
+   * reorder another project's card. Stale clients get an error, not a
+   * half-applied order.
+   */
+  async reorderMilestones(projectId: string, milestoneIds: string[]) {
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+
+      const existing = await tx
+        .select({ id: projectMilestones.id })
+        .from(projectMilestones)
+        .where(eq(projectMilestones.projectId, projectId));
+      const existingIds = new Set(existing.map(({ id }) => id));
+      if (
+        milestoneIds.length !== existingIds.size ||
+        milestoneIds.some((id) => !existingIds.has(id))
+      ) {
+        throw new Error('Milestone order does not match this project');
+      }
+
+      await Promise.all(
+        milestoneIds.map((id, sortOrder) =>
+          tx
+            .update(projectMilestones)
+            .set({ sortOrder, updatedAt: new Date() })
+            .where(and(eq(projectMilestones.id, id), eq(projectMilestones.projectId, projectId))),
+        ),
+      );
+
+      return tx
+        .select()
+        .from(projectMilestones)
+        .where(eq(projectMilestones.projectId, projectId))
+        .orderBy(asc(projectMilestones.sortOrder));
+    });
   }
 
   async getEnabledKnowledgeBaseIdsForTask(taskId: string) {
@@ -907,5 +1608,204 @@ export class ProjectModel {
       .where(and(eq(projects.id, id), this.manageable()))
       .limit(1);
     return project ?? null;
+  }
+
+  async listUpdates(projectId: string) {
+    if (!(await this.findById(projectId))) return null;
+    return this.db
+      .select({
+        authorAvatar: users.avatar,
+        authorId: projectUpdates.userId,
+        authorName: users.fullName,
+        body: projectUpdates.body,
+        createdAt: projectUpdates.createdAt,
+        health: projectUpdates.health,
+        id: projectUpdates.id,
+        kind: projectUpdates.kind,
+        projectId: projectUpdates.projectId,
+      })
+      .from(projectUpdates)
+      .innerJoin(users, eq(users.id, projectUpdates.userId))
+      .where(eq(projectUpdates.projectId, projectId))
+      .orderBy(desc(projectUpdates.createdAt));
+  }
+
+  async listLinks(projectId: string) {
+    if (!(await this.findById(projectId))) return null;
+    return this.db
+      .select()
+      .from(projectLinks)
+      .where(eq(projectLinks.projectId, projectId))
+      .orderBy(asc(projectLinks.createdAt), asc(projectLinks.id));
+  }
+
+  async saveLink(projectId: string, input: { id?: string; title?: string; url: string }) {
+    const title = input.title?.trim() ?? '';
+    if (title.length > 255) throw new Error('Project link title must not exceed 255 characters');
+    const url = new URL(input.url.trim());
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
+      throw new Error('Project links require an HTTP(S) URL without credentials');
+    if (url.href.length > 8192) throw new Error('Project link URL is too long');
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+      if (input.id) {
+        const [link] = await tx
+          .update(projectLinks)
+          .set({ title, url: url.href, updatedAt: new Date() })
+          .where(and(eq(projectLinks.id, input.id), eq(projectLinks.projectId, projectId)))
+          .returning();
+        return link ?? null;
+      }
+      const [link] = await tx
+        .insert(projectLinks)
+        .values({ projectId, title, url: url.href, addedByUserId: this.userId })
+        .returning();
+      return link;
+    });
+  }
+
+  async removeLink(projectId: string, linkId: string) {
+    return this.db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), this.manageable()))
+        .for('update')
+        .limit(1);
+      if (!project) return null;
+      const [link] = await tx
+        .delete(projectLinks)
+        .where(and(eq(projectLinks.projectId, projectId), eq(projectLinks.id, linkId)))
+        .returning();
+      return link ?? null;
+    });
+  }
+
+  async createUpdate(
+    projectId: string,
+    input: { body: string; health?: ProjectHealth; kind?: ProjectUpdateKind },
+  ) {
+    if (!(await this.findById(projectId))) return null;
+    const kind = input.kind ?? 'update';
+    const health = kind === 'update' ? (input.health ?? 'onTrack') : null;
+    return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      const [update] = await db
+        .insert(projectUpdates)
+        .values({
+          body: input.body,
+          health,
+          kind,
+          projectId,
+          userId: this.userId,
+        })
+        .returning();
+      // Only real status updates move the project's denormalized health.
+      if (health !== null) await this.syncProjectHealthFromUpdates(db, projectId);
+      return update;
+    });
+  }
+
+  /**
+   * Fetch one update row joined to its project under the moderation ACL —
+   * the author may edit/delete their own post; the project owner, the project
+   * lead, or a workspace admin (`canManageAll`) may moderate anyone's. The
+   * row-level lock serializes concurrent edit/delete against the denormalized
+   * `projects.health` recompute that follows.
+   */
+  private async findModeratableUpdate(db: OrviloDatabase, projectId: string, updateId: string) {
+    const [row] = await db
+      .select({
+        leadUserId: projects.leadUserId,
+        ownerUserId: projects.userId,
+        update: projectUpdates,
+      })
+      .from(projectUpdates)
+      .innerJoin(projects, eq(projects.id, projectUpdates.projectId))
+      .where(
+        and(
+          eq(projectUpdates.id, updateId),
+          eq(projectUpdates.projectId, projectId),
+          this.readable(),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    if (!row) return null;
+    const canModerate =
+      this.canManageAll ||
+      row.update.userId === this.userId ||
+      row.ownerUserId === this.userId ||
+      row.leadUserId === this.userId;
+    return canModerate ? row : null;
+  }
+
+  /**
+   * `projects.health` denormalizes the newest `kind = 'update'` row's health.
+   * Recomputed — never patched — after any mutation that could change which
+   * row is newest or what health it carries (create/edit/delete), so a stale
+   * value cannot survive the row it came from.
+   */
+  private async syncProjectHealthFromUpdates(db: OrviloDatabase, projectId: string) {
+    const [latest] = await db
+      .select({ health: projectUpdates.health })
+      .from(projectUpdates)
+      .where(and(eq(projectUpdates.projectId, projectId), eq(projectUpdates.kind, 'update')))
+      .orderBy(desc(projectUpdates.createdAt))
+      .limit(1);
+    await db
+      .update(projects)
+      .set({ health: latest?.health ?? null, updatedAt: new Date() })
+      .where(eq(projects.id, projectId));
+  }
+
+  /**
+   * Edit a published project update or comment. Status updates take `body`
+   * and optionally `health`; comments take `body` only — a comment can never
+   * gain a health pill (same rule as `createUpdate`).
+   */
+  async updateUpdate(
+    projectId: string,
+    updateId: string,
+    input: { body: string; health?: ProjectHealth },
+  ) {
+    return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      const current = await this.findModeratableUpdate(db, projectId, updateId);
+      if (!current) return null;
+      const isStatusUpdate = current.update.kind === 'update';
+      const [updated] = await db
+        .update(projectUpdates)
+        .set({
+          body: input.body,
+          ...(isStatusUpdate && input.health ? { health: input.health } : {}),
+        })
+        .where(eq(projectUpdates.id, updateId))
+        .returning();
+      if (!updated) return null;
+      if (isStatusUpdate) await this.syncProjectHealthFromUpdates(db, projectId);
+      return updated;
+    });
+  }
+
+  async deleteUpdate(projectId: string, updateId: string) {
+    return this.db.transaction(async (tx) => {
+      const db = tx as OrviloDatabase;
+      const current = await this.findModeratableUpdate(db, projectId, updateId);
+      if (!current) return null;
+      const [deleted] = await db
+        .delete(projectUpdates)
+        .where(eq(projectUpdates.id, updateId))
+        .returning();
+      if (!deleted) return null;
+      if (deleted.kind === 'update') await this.syncProjectHealthFromUpdates(db, projectId);
+      return deleted;
+    });
   }
 }

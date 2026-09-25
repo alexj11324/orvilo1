@@ -16,7 +16,7 @@ import {
   BotIcon,
   Eye,
   EyeOff,
-  FolderKanbanIcon,
+  FilePenLineIcon,
   GitPullRequestIcon,
   Inbox,
   PinIcon,
@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useGlobalStore } from '@/store/global';
 import { DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS } from '@/store/global/initialState';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -53,7 +54,8 @@ const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   { alwaysVisible: true, icon: SquareUser, id: 'my-work', labelKey: 'tab.myWork' },
   { alwaysVisible: true, icon: GitPullRequestIcon, id: 'reviews', labelKey: 'tab.reviews' },
   { alwaysVisible: true, icon: BotIcon, id: 'agent', labelKey: 'navPanel.agent' },
-  { icon: FolderKanbanIcon, id: 'workspace', labelKey: 'navPanel.workspace' },
+  { alwaysVisible: true, icon: FilePenLineIcon, id: 'drafts', labelKey: 'drafts.title' },
+  { icon: PROJECT_ENTITY_ICON, id: 'workspace', labelKey: 'navPanel.workspace' },
   { icon: Star, id: 'favorites', labelKey: 'tab.favorites' },
   { icon: Users, id: 'teams', labelKey: 'navPanel.yourTeams', workspaceOnly: true },
 ];
@@ -163,7 +165,11 @@ const CustomizeSidebarContent = memo(() => {
       {
         hiddenSidebarSections: hiddenSections,
         ...(shouldResetExpandedKeys
-          ? { sidebarExpandedKeys: DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS }
+          ? {
+              // Defaults: no group key added, no team sub-navigation folded.
+              sidebarCollapsedKeys: [],
+              sidebarExpandedKeys: DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
+            }
           : {}),
       },
       'customizeSidebar',

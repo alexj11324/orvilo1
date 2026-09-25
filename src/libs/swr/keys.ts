@@ -508,6 +508,29 @@ export const taskKeys = {
   sidebarGroups: def('task:sidebarGroups', (agentId: string) => ['task:sidebarGroups', agentId]),
 };
 
+// ---- task labels ----------------------------------------------------------
+export const taskLabelKeys = {
+  /**
+   * Task label registry (workspace-shared, or personal). Keyed by workspace:
+   * the registries are disjoint per scope, so a shared key would serve the
+   * previous workspace's labels across a switch.
+   */
+  list: def('taskLabel:list', (isLogin: boolean, workspaceId: string | null | undefined) => [
+    'taskLabel:list',
+    isLogin,
+    workspaceId ?? null,
+  ]),
+};
+
+// ---- project ------------------------------------------------------------
+export const projectKeys = {
+  links: def('project:links', (scope: string, projectId: string) => [
+    'project:links',
+    scope,
+    projectId,
+  ]),
+};
+
 // ---- work ---------------------------------------------------------------
 export const workKeys = {
   conversation: def('work:conversation', (topicId: string, threadId?: string | null) => [
@@ -906,8 +929,8 @@ export const inboxKeys = {
       workspaceId: string | null,
       kind: string | undefined,
       filter: string | undefined,
-      cursor: string | undefined,
-    ) => ['inbox:feed', workspaceId, kind, filter, cursor],
+      variant: string | undefined,
+    ) => ['inbox:feed', workspaceId, kind, filter, variant],
   ),
   feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
     'inbox:feedSummary',
@@ -971,6 +994,20 @@ export const workAttentionKeys = {
     workspaceId,
   ]),
 };
+
+/**
+ * Prefix matcher for every cached list whose task rows carry hydrated labels:
+ * My Issues pages, saved-view evaluations, the reviews queue and team issues
+ * all read `task.labels` through the work-query path, so a label toggle must
+ * revalidate each root — not just `myWork`. `task:list` rows are matched by
+ * {@link isTaskListKey} and invalidated alongside.
+ */
+export const isWorkQueryTaskRowsKey = (key: unknown): boolean =>
+  Array.isArray(key) &&
+  (key[0] === 'workAttention:myWork' ||
+    key[0] === 'workAttention:savedView' ||
+    key[0] === 'workAttention:reviews' ||
+    key[0] === 'team-tasks');
 
 // ---- pull request reviews (/reviews GitHub surface) -----------------------
 export const pullRequestKeys = {
@@ -1269,6 +1306,7 @@ export const swrKeys = {
   share: shareKeys,
   stats: statsKeys,
   task: taskKeys,
+  taskLabel: taskLabelKeys,
   taskTemplate: taskTemplateKeys,
   thread: threadKeys,
   tool: toolKeys,

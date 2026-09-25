@@ -169,7 +169,8 @@ export const pullRequestRouter = router({
 
   /**
    * `/reviews` PR queue — real GitHub pull requests addressed to the viewer.
-   * 'for-me' = open non-draft PRs with a pending review request; 'created' =
+   * 'for-me' = open non-draft PRs authored by the viewer OR carrying a
+   * pending review request for them (the Linear "For you" lane); 'created' =
    * the viewer's own open PRs. A disconnected GitHub account surfaces as a
    * PRECONDITION_FAILED error with the connect path, never an empty queue.
    * `cursor` pages the queue; `hasMore`/`completeness` tell the client the

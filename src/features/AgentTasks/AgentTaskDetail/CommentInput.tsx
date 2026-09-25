@@ -1,9 +1,10 @@
 import { SendButton, useEditor } from '@lobehub/editor/react';
 import { Flexbox } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
+import { Avatar, toast } from '@lobehub/ui/base-ui';
 import { $getRoot } from 'lexical';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router';
 
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import { mentionFilledClassName } from '@/features/ChatInput/InputEditor/mentionStyle';
@@ -19,9 +20,11 @@ import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { useTaskStore } from '@/store/task';
 
 import { styles } from '../shared/style';
+import { useTaskCommentDraft } from './useTaskCommentDraft';
 
 const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
   const { t } = useTranslation('chat');
+  const [searchParams] = useSearchParams();
   const { allowed: canEditTask } = usePermission('create_content');
   const editor = useEditor();
   const addComment = useTaskStore((s) => s.addComment);
@@ -33,6 +36,20 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
   // Same member source as document / topic comments, so `@` produces the
   // identical mention node the server resolves for notifications.
   const mentionOption = useWorkspaceCommentMentionOption();
+  const { clearAfterSend, onChange: saveDraft } = useTaskCommentDraft(
+    taskId,
+    editor,
+    canEditTask,
+    (content, hasFiles) => {
+      setHasContent(!!content.trim());
+      setHasAttachments(hasFiles);
+      if (searchParams.get('draft') === '1') {
+        document.getElementById('task-comment-composer')?.scrollIntoView({ block: 'center' });
+        editor?.focus();
+      }
+    },
+    () => toast.error(t('taskDetail.commentDraftSaveFailed')),
+  );
 
   const canSubmit = hasContent || hasAttachments;
 
@@ -44,7 +61,8 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
       setHasContent(text.length > 0);
     });
     setHasAttachments(getAttachmentFileIdsFromEditor(editor).length > 0);
-  }, [editor]);
+    saveDraft();
+  }, [editor, saveDraft]);
 
   const handleAttach = useCallback(
     (files: File[]) => {
@@ -66,13 +84,14 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
       editor?.cleanDocument?.();
       setHasContent(false);
       setHasAttachments(false);
+      await clearAfterSend();
     } finally {
       setSubmitting(false);
     }
-  }, [canEditTask, taskId, editor, addComment, submitting]);
+  }, [canEditTask, taskId, editor, addComment, clearAfterSend, submitting]);
 
   return (
-    <Flexbox className={styles.commentInputCard} gap={6}>
+    <Flexbox className={styles.commentInputCard} gap={6} id="task-comment-composer">
       <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0, width: '100%' }}>
         <Avatar avatar={userAvatar} size={24} style={{ flexShrink: 0 }} />
         <div

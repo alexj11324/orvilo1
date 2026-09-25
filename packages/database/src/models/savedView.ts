@@ -15,7 +15,7 @@ import { teamCycles, teamMembers, teams } from '../schemas/team';
 import type { NewSavedView, SavedViewItem } from '../schemas/workAttention';
 import { savedViews } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
-import { listVirtualBuiltinSavedViews, virtualBuiltinSavedView } from './builtinSavedViews';
+import { virtualBuiltinSavedView } from './builtinSavedViews';
 import { TeamModel } from './team';
 import {
   applyWorkQueryLayout,
@@ -211,13 +211,17 @@ export class SavedViewModel {
     return and(inWorkspace, or(owner, sharedWorkspace, sharedTeam))!;
   };
 
+  /**
+   * Directory listing = real rows only. Virtual built-ins (Linear parity R2)
+   * never appear here; `findById` still resolves `builtin:*` ids lazily so
+   * existing deep links and sidebar favorites keep working.
+   */
   list = async (): Promise<SavedViewItem[]> => {
-    const rows = await this.db
+    return this.db
       .select()
       .from(savedViews)
       .where(this.readable())
       .orderBy(desc(savedViews.updatedAt), desc(savedViews.id));
-    return [...listVirtualBuiltinSavedViews(this.workspaceId), ...rows];
   };
 
   findById = async (id: string): Promise<SavedViewItem | undefined> => {

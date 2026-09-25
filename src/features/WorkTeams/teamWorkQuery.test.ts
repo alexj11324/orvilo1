@@ -58,4 +58,63 @@ describe('teamWorkQuery', () => {
       teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'backlog').filter?.all,
     ).toContainEqual({ field: 'workflowCategory', op: 'eq', value: 'backlog' });
   });
+
+  it('keeps untriaged issues out of team scopes only while triage is enabled', () => {
+    // Triage-capable teams park new issues in `untriaged`; they must not leak
+    // into All/Active/Backlog lists or the `wf:backlog` board column.
+    for (const scope of ['all', 'active', 'backlog'] as const) {
+      for (const layout of ['list', 'board'] as const) {
+        expect(
+          teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, layout, scope, true).filter?.all,
+        ).toContainEqual({ field: 'triageStatus', op: 'neq', value: 'untriaged' });
+      }
+    }
+    // Non-triage teams never produce untriaged rows — no predicate is added.
+    expect(
+      teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'all', false).filter?.all,
+    ).toEqual([{ field: 'teamId', op: 'eq', value: 'team-1' }]);
+  });
+
+  it('nests the Add-filter builder output under filter.all without flattening', () => {
+    const userFilter = {
+      any: [
+        { field: 'priority' as const, op: 'eq' as const, value: 1 },
+        { field: 'priority' as const, op: 'eq' as const, value: 2 },
+      ],
+    };
+    const query = teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'all', false, {
+      filter: userFilter,
+    });
+    // The implicit team predicate stays first; the user's `any` subtree is
+    // preserved verbatim as a nested filter node.
+    expect(query.filter?.all).toEqual([{ field: 'teamId', op: 'eq', value: 'team-1' }, userFilter]);
+  });
+
+  it('lets display options override grouping, sort and board sort mode', () => {
+    // Client-bucketed list groupings fetch the flat feed.
+    expect(
+      teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'all', false, { groupBy: 'none' })
+        .groupBy,
+    ).toBe('none');
+    // Board grouping follows the display choice instead of the layout default.
+    expect(
+      teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'board', 'all', false, {
+        groupBy: 'status',
+      }).groupBy,
+    ).toBe('status');
+    const sort = [
+      { direction: 'desc' as const, field: 'updatedAt' as const },
+      { direction: 'asc' as const, field: 'id' as const },
+    ];
+    const board = teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'board', 'all', false, {
+      sort,
+      sortMode: 'field',
+    });
+    expect(board.sort).toEqual(sort);
+    expect(board.sortMode).toBe('field');
+    const list = teamTaskQuery('team-1', ALL_TEAM_CYCLES, false, 'list', 'all', false, { sort });
+    expect(list.sort).toEqual(sort);
+    // `sortMode` only applies to boards — a sorted list stays manual-free.
+    expect(list.sortMode).toBeUndefined();
+  });
 });

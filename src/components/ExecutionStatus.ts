@@ -1,4 +1,9 @@
-import type { ChatTopicStatus, ProjectStatus, TaskStatus } from '@orvilo/types';
+import type {
+  ChatTopicStatus,
+  ProjectStatus,
+  TaskStatus,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 import { PROJECT_STATUSES } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
@@ -16,9 +21,25 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 
+import {
+  type StatusIconComponent,
+  StatusPropertyIcon,
+  WORKFLOW_CATEGORY_ICONS,
+} from './WorkflowCategoryIcon';
+
 export interface ExecutionStatusVisual {
   color: string;
   icon: LucideIcon;
+}
+
+/**
+ * A status mark that may be a lucide glyph or one of the traced workflow
+ * icons — for surfaces that draw either axis. Rendered through `@lobehub/ui`'s
+ * `<Icon icon>`, which takes both kinds.
+ */
+export interface StatusVisual {
+  color: string;
+  icon: LucideIcon | StatusIconComponent;
 }
 
 /**
@@ -60,6 +81,35 @@ const TASK_STATUS_SET = new Set<string>(Object.keys(TASK_STATUS_VISUALS));
 export const resolveTaskStatus = (status: null | string | undefined): TaskStatus =>
   status && TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
 
+/**
+ * One glyph + color per Linear workflow category — the business-state axis a
+ * task's `workflowCategory` carries, kept deliberately distinct from the
+ * execution axis above (a card can be `status: 'backlog'` while its business
+ * state is `todo`). Glyphs are Linear's own ring-and-pie marks
+ * (`WORKFLOW_CATEGORY_ICONS`) and the colors are Linear's: grey backlog/todo,
+ * yellow in progress, green in review, indigo done, grey canceled, orange
+ * triage. Task rows, board cards, the `wf:` kanban columns, workflow-category
+ * group headers and the filter menu all read this map, so the same category
+ * never draws two marks — do not reach for a lucide circle instead.
+ */
+export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, StatusVisual> = {
+  backlog: { color: cssVar.colorTextQuaternary, icon: WORKFLOW_CATEGORY_ICONS.backlog },
+  canceled: { color: cssVar.colorTextDescription, icon: WORKFLOW_CATEGORY_ICONS.canceled },
+  // Linear's brand indigo — the same paint the milestone diamond uses.
+  done: { color: '#5e6ad2', icon: WORKFLOW_CATEGORY_ICONS.done },
+  in_progress: { color: cssVar.colorWarning, icon: WORKFLOW_CATEGORY_ICONS.in_progress },
+  in_review: { color: cssVar.colorSuccess, icon: WORKFLOW_CATEGORY_ICONS.in_review },
+  todo: { color: cssVar.colorTextTertiary, icon: WORKFLOW_CATEGORY_ICONS.todo },
+  triage: { color: cssVar.orange, icon: WORKFLOW_CATEGORY_ICONS.triage },
+};
+
+/**
+ * The icon for the Status *property* (filter rows, bulk "Status" button,
+ * context-menu "Status" submenu, "changed status" activity) — as opposed to
+ * the per-value marks above. One mark, so the same field never reads as two.
+ */
+export const STATUS_PROPERTY_ICON: StatusIconComponent = StatusPropertyIcon;
+
 export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual> = {
   active: VISUALS.running,
   archived: VISUALS.archived,
@@ -67,6 +117,7 @@ export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual
   canceled: VISUALS.canceled,
   completed: VISUALS.completed,
   paused: { color: cssVar.colorTextSecondary, icon: PauseCircle },
+  planned: { color: cssVar.purple, icon: CircleDot },
   reviewing: VISUALS.waitingForHuman,
 };
 

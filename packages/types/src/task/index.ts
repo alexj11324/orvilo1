@@ -858,6 +858,7 @@ export interface TaskItem {
   priority: number | null;
   priorityLocked: boolean;
   projectId: string | null;
+  projectMilestoneId?: string | null;
   requirementLocked: boolean;
   requirementRevision: number;
   /**
@@ -907,6 +908,12 @@ export interface TaskItem {
 }
 
 export type TaskListItem = TaskItem & {
+  /**
+   * Label chips hydrated by the list/work-query reads (`task.list`,
+   * `workAttention.*`). Optional — endpoints that never join labels leave it
+   * undefined rather than promising an empty set.
+   */
+  labels?: TaskLabelSummary[];
   participants: TaskParticipant[];
 };
 
@@ -1186,6 +1193,17 @@ export interface TaskRunVerifySummary {
   total: number;
 }
 
+/**
+ * Slim label shape on wire payloads (task detail, WorkQuery rows). The full
+ * `task_labels` row stays server-side; chips and pickers only need these
+ * three fields.
+ */
+export interface TaskLabelSummary {
+  color?: string | null;
+  id: string;
+  name: string;
+}
+
 export interface TaskDetailData {
   activities?: TaskDetailActivity[];
   agentId?: string | null;
@@ -1223,6 +1241,8 @@ export interface TaskDetailData {
   id?: string;
   identifier: string;
   instruction: string;
+  /** Labels assigned to the task (Linear-style issue labels). */
+  labels?: TaskLabelSummary[];
   name?: string | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
   priority?: number | null;

@@ -49,13 +49,16 @@ import {
 import { membersRouteMeta } from '@/features/Members/routeMeta';
 import { myWorkRouteMeta } from '@/features/MyWork/routeMeta';
 import {
+  projectActivityRouteMeta,
   projectLibraryRouteMeta,
+  projectMilestonesRouteMeta,
   projectResourcesRouteMeta,
   projectsRouteMeta,
 } from '@/features/Projects/routeMeta';
 import { reviewsRouteMeta } from '@/features/Reviews/routeMeta';
 import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
+import { taskDraftsRouteMeta } from '@/features/TaskDrafts/routeMeta';
 import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
 import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
@@ -622,11 +625,27 @@ export const sharedMainAreaChildren: RouteObject[] = [
       },
       {
         element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/activity'),
+          'Desktop > Project Activity',
+        ),
+        handle: { meta: projectActivityRouteMeta },
+        path: 'activity',
+      },
+      {
+        element: dynamicElement(
           () => import('@/routes/(main)/project/[projectId]/tasks'),
           'Desktop > Project Tasks',
         ),
         handle: { meta: tasksRouteMeta },
         path: 'tasks',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/milestones'),
+          'Desktop > Project Milestones',
+        ),
+        handle: { meta: projectMilestonesRouteMeta },
+        path: 'milestones',
       },
       {
         element: dynamicElement(
@@ -710,6 +729,19 @@ export const sharedMainAreaChildren: RouteObject[] = [
       {
         children: [
           {
+            element: dynamicElement(() => import('@/routes/(main)/drafts'), 'Desktop > Drafts', {
+              preloadId: 'tasks',
+            }),
+            handle: { meta: taskDraftsRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'drafts',
+      },
+      {
+        children: [
+          {
             element: dynamicElement(
               () => import('@/routes/(main)/my-issues'),
               'Desktop > My Issues',
@@ -740,26 +772,14 @@ export const sharedMainAreaChildren: RouteObject[] = [
         path: 'my-work',
       },
       {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Desktop > Reviews', {
-              preloadId: 'reviews',
-            }),
-            handle: { meta: reviewsRouteMeta },
-            index: true,
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/reviews/[reviewId]'),
-              'Desktop > Pull Request Review',
-              { preloadId: 'reviews' },
-            ),
-            handle: { meta: reviewsRouteMeta },
-            path: ':reviewId',
-          },
-        ],
+        element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Desktop > Reviews', {
+          preloadId: 'reviews',
+        }),
         errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'reviews',
+        handle: { meta: reviewsRouteMeta },
+        // One route identity owns list and detail. Changing `reviewId` must not
+        // remount ReviewsPage and discard queue tails or scroll position.
+        path: 'reviews/:reviewId?',
       },
       {
         children: [

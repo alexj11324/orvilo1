@@ -7,6 +7,7 @@ import {
   Clock3Icon,
   Copy,
   ExternalLink,
+  FileText,
   Hash,
   Maximize2,
   PencilLine,
@@ -34,9 +35,12 @@ import type {
 import { documentService } from '@/services/document';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
+import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useDocumentStore } from '@/store/document';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+
+import { buildChatMarkdownTranscript } from './copyChatAsMarkdown';
 
 interface TopicInfoHeaderProps {
   authorName: string;
@@ -275,6 +279,26 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
       }
 
       items.push(
+        {
+          icon: <Icon icon={FileText} />,
+          key: 'copyAsMarkdown',
+          label: t('copyAsMarkdown', { ns: 'common' }),
+          onClick: async () => {
+            // Chat-level form of the reference's `Copy as markdown` — the
+            // whole topic transcript, built from the same normalized markdown
+            // the per-message copyAsMarkdown action produces.
+            const key = messageMapKey({ agentId: activeAgentId, topicId });
+            const transcript = buildChatMarkdownTranscript(
+              useChatStore.getState().dbMessagesMap[key] ?? [],
+            );
+            if (!transcript) {
+              toast.info(t('noContent', { ns: 'common' }));
+              return;
+            }
+            await copyToClipboard(transcript);
+            toast.success(t('copySuccess', { ns: 'common' }));
+          },
+        },
         {
           icon: <Icon icon={Hash} />,
           key: 'copySessionId',

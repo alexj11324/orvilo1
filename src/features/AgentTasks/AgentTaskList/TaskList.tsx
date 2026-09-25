@@ -16,6 +16,8 @@ import type { Components } from 'react-virtuoso';
 import { Virtuoso } from 'react-virtuoso';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { isInteractiveRowClick } from '@/features/MyWork/myWorkDisplay';
+import { taskMilestoneById, type TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 import { COMPLETE_TASK_LIST_MAX_ITEMS } from '@/store/task/slices/list/action';
@@ -53,21 +55,40 @@ interface TaskListProps {
   isLoading?: boolean;
   /** Optional list source for alternate task collections such as scheduled tasks. */
   items?: TaskListItem[];
+  /**
+   * The scope's milestone catalog — resolves `projectMilestoneId` into a label
+   * for milestone grouping and the row badge. Absent on scopes that have no
+   * catalog; milestone grouping still buckets by id there, but nothing offers
+   * that dimension, and badges stay off.
+   */
+  milestones?: readonly TaskMilestoneRef[];
+  /** Double-click escape to the full task page while peek mode is armed. */
+  onOpenTask?: (task: TaskListItem) => void;
   onRetry?: () => void;
+  /**
+   * Peek mode (the issues surface's "Open details"): with `peekOnSelect`,
+   * plain row clicks select the row for the side pane instead of navigating —
+   * the row's own click is stopped in the capture phase.
+   */
+  onSelectTask?: (task: TaskListItem) => void;
   onShowHiddenCompleted?: () => void;
   options: TaskListViewOptions;
+  peekOnSelect?: boolean;
   routeScope?: TaskItemRouteScope;
+  /** Identifier of the peek-selected row — paints the selected background. */
+  selectedIdentifier?: string;
 }
 
 const HIDDEN_COMPLETED_STATUS_SET = new Set<string>(HIDDEN_WHEN_COMPLETED_STATUSES);
 
 /** Row height the window sizes itself by before it has measured real rows. */
-const DEFAULT_ROW_HEIGHT = 52;
+const DEFAULT_ROW_HEIGHT = 40;
 
 const TASK_GROUP_BY_VALUES = new Set<TaskGroupBy>([
   'assignee',
   'automationMode',
   'member',
+  'milestone',
   'none',
   'priority',
   'status',
@@ -103,16 +124,25 @@ const TaskGroupHeader = memo<{
 }>(({ item, onToggle }) => {
   const sub = item.kind === 'subGroup';
   return (
-    <div style={{ paddingTop: item.first ? 0 : sub ? 6 : 16 }}>
+    <div style={{ paddingTop: item.first ? 0 : 8 }}>
       <AccordionRoot
-        indicatorPlacement={'end'}
+        indicatorPlacement={'start'}
         value={item.collapsed ? [] : [item.key]}
-        variant={sub ? 'borderless' : 'outlined'}
+        variant={'borderless'}
         onValueChange={() => onToggle(item.key)}
       >
         <AccordionItem value={item.key}>
-          <AccordionHeader style={{ paddingBlock: sub ? 6 : 8, paddingInline: 14 }}>
-            <AccordionTrigger>{renderGroupTitle(item.meta, item.count, sub)}</AccordionTrigger>
+          <AccordionHeader
+            style={{
+              paddingBlock: 4,
+              paddingInline: 12,
+              background: cssVar.colorFillQuaternary,
+              borderRadius: 6,
+            }}
+          >
+            <AccordionTrigger style={{ padding: 0, minHeight: 28 }}>
+              {renderGroupTitle(item.meta, item.count, sub)}
+            </AccordionTrigger>
           </AccordionHeader>
         </AccordionItem>
       </AccordionRoot>
@@ -133,19 +163,44 @@ const VIRTUAL_LIST_COMPONENTS: Components<TaskListVirtualItem, TaskListVirtualCo
 };
 
 const TaskList = memo<TaskListProps>((props) => {
-  const { data, error, isLoading, items, onRetry, onShowHiddenCompleted, options, routeScope } =
-    props;
+  const {
+    data,
+    error,
+    isLoading,
+    items,
+    milestones,
+    onOpenTask,
+    onRetry,
+    onSelectTask,
+    onShowHiddenCompleted,
+    options,
+    peekOnSelect,
+    routeScope,
+    selectedIdentifier,
+  } = props;
   const { t } = useTranslation('chat');
   const storeTasks = useTaskStore(taskListSelectors.taskList);
   const storeTasksTotal = useTaskStore(taskListSelectors.taskListTotal);
   const tasks = items ?? storeTasks;
+  const milestoneById = useMemo(() => taskMilestoneById(milestones), [milestones]);
   // The store list is fetched in full up to a ceiling; past it the server's
   // `total` still counts every task, so say the list is a subset rather than
   // let the missing rows vanish silently. Alternate collections (`items`)
   // paginate on their own.
   const isTruncated = !items && storeTasksTotal > COMPLETE_TASK_LIST_MAX_ITEMS;
-  const groupBy = normalizeGroupBy(options.groupBy, 'status');
-  const subGroupBy = normalizeGroupBy(options.subGroupBy, 'none');
+  const groupBy = normalizeGroupBy(
+    // Milestone grouping needs a catalog to name its buckets; a stored pick
+    // traveling to a scope without one (the global/agent lists) degrades to
+    // status rather than grouping on raw ids.
+    options.groupBy === 'milestone' && !milestoneById ? 'status' : options.groupBy,
+    'status',
+  );
+  const subGroupBy = normalizeGroupBy(
+    // Same catalog check for the secondary dimension — without one a stored
+    // 'milestone' pick would subgroup on raw ids, so it simply drops.
+    options.subGroupBy === 'milestone' && !milestoneById ? 'none' : options.subGroupBy,
+    'none',
+  );
   const effectiveSubGroupBy = groupBy === 'none' ? 'none' : subGroupBy;
   const unfinishedTasks = useMemo(
     () =>
@@ -178,7 +233,12 @@ const TaskList = memo<TaskListProps>((props) => {
     const subGroupOrderDirection =
       options.orderBy === effectiveSubGroupBy ? options.orderDirection : undefined;
 
-    const primaryGroups = groupTaskItems(sortedTasks, groupBy, primaryGroupOrderDirection);
+    const primaryGroups = groupTaskItems(
+      sortedTasks,
+      groupBy,
+      primaryGroupOrderDirection,
+      milestoneById,
+    );
 
     return primaryGroups.map(([meta, groupedTasks]) => {
       if (effectiveSubGroupBy === 'none') {
@@ -189,16 +249,19 @@ const TaskList = memo<TaskListProps>((props) => {
         count: groupedTasks.length,
         meta,
         rows: toRows(groupedTasks),
-        subGroups: groupTaskItems(groupedTasks, effectiveSubGroupBy, subGroupOrderDirection).map(
-          ([subMeta, subItems]) => ({
-            count: subItems.length,
-            meta: subMeta,
-            rows: toRows(subItems),
-          }),
-        ),
+        subGroups: groupTaskItems(
+          groupedTasks,
+          effectiveSubGroupBy,
+          subGroupOrderDirection,
+          milestoneById,
+        ).map(([subMeta, subItems]) => ({
+          count: subItems.length,
+          meta: subMeta,
+          rows: toRows(subItems),
+        })),
       };
     });
-  }, [effectiveSubGroupBy, groupBy, nested, options, taskById, visibleTasks]);
+  }, [effectiveSubGroupBy, groupBy, milestoneById, nested, options, taskById, visibleTasks]);
 
   // Collapse state lives here (not in the Accordion) because headers and rows
   // are flattened into one virtual list; a collapsed key simply drops its rows
@@ -227,20 +290,67 @@ const TaskList = memo<TaskListProps>((props) => {
   // page layout intact instead of nesting a second scroller.
   const { ref: anchorRef, scrollParent } = useClosestScrollParent();
 
+  const peekArmed = Boolean(peekOnSelect && onSelectTask);
+
   const renderItem = useCallback(
     (_index: number, item: TaskListVirtualItem) => {
       if (item.kind !== 'row') return <TaskGroupHeader item={item} onToggle={toggleCollapsed} />;
+      // The chip only renders when the display property is on AND the catalog
+      // names the link — an unresolved id would paint a raw id, which is
+      // worse than no badge.
+      const milestone =
+        options.showMilestone && item.row.task.projectMilestoneId
+          ? milestoneById?.get(item.row.task.projectMilestoneId)
+          : undefined;
+      const selected = peekArmed && item.row.task.identifier === selectedIdentifier;
       return (
         // Matches the 2px row gap the former Block wrapper gave the list.
-        <div style={{ paddingBlock: 1, paddingInline: 2 }}>
+        <div
+          aria-current={selected ? 'true' : undefined}
+          style={{
+            borderRadius: 6,
+            paddingBlock: 1,
+            paddingInline: 2,
+            ...(selected ? { background: cssVar.colorFillTertiary } : undefined),
+          }}
+          onClickCapture={
+            // Peek mode intercepts plain clicks in the capture phase — before
+            // the row's own navigate — while interactive children (menus,
+            // popovers, links) keep theirs.
+            peekArmed
+              ? (event) => {
+                  if (isInteractiveRowClick(event.target)) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onSelectTask?.(item.row.task);
+                }
+              : undefined
+          }
+          onDoubleClick={
+            peekArmed && onOpenTask
+              ? (event) => {
+                  if (isInteractiveRowClick(event.target)) return;
+                  onOpenTask(item.row.task);
+                }
+              : undefined
+          }
+        >
           <TaskRowIndent depth={item.row.depth} muted={item.row.isParentContext}>
-            <AgentTaskItem routeScope={routeScope} task={item.row.task} />
+            <AgentTaskItem milestone={milestone} routeScope={routeScope} task={item.row.task} />
           </TaskRowIndent>
-          {item.showDivider && <Divider dashed style={{ margin: 0 }} />}
         </div>
       );
     },
-    [routeScope, toggleCollapsed],
+    [
+      milestoneById,
+      onOpenTask,
+      onSelectTask,
+      options.showMilestone,
+      peekArmed,
+      routeScope,
+      selectedIdentifier,
+      toggleCollapsed,
+    ],
   );
 
   const skeleton = (

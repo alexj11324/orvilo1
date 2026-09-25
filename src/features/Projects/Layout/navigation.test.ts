@@ -6,6 +6,7 @@ describe('projectPathSection', () => {
   it('reads the section segment after the project reference', () => {
     expect(projectPathSection('/project/abc/overview')).toBe('overview');
     expect(projectPathSection('/project/abc/tasks')).toBe('tasks');
+    expect(projectPathSection('/project/abc/milestones')).toBe('milestones');
     expect(projectPathSection('/project/abc/goals')).toBe('goals');
     expect(projectPathSection('/project/abc/resources')).toBe('resources');
   });

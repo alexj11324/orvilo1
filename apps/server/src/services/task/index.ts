@@ -15,6 +15,8 @@ import type {
   TaskSchedulerContext,
   TaskStatus,
   TaskTopicHandoff,
+  TaskTriageStatus,
+  TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -29,6 +31,7 @@ import {
   type TaskMutationContext,
 } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
@@ -107,15 +110,29 @@ export interface CreateTaskInput {
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
+  /** Execution-status preset — a status-grouped board column's `+`. */
+  status?: TaskStatus;
   /**
    * Owning team for workspace-mode tasks (linear-workspace-v3). TaskModel
    * allocates the identifier from the team's `next_issue_seq` counter.
    */
   teamId?: string;
+  /**
+   * Intake state override. Board-column creates resolve 'accepted' (the issue
+   * never passed through triage); absent → TaskModel's default (`untriaged`
+   * on team tasks, NULL otherwise).
+   */
+  triageStatus?: TaskTriageStatus;
   // Explicit visibility for the new task. When omitted, the service derives it
   // from `parentTaskId` (if present) or `assigneeAgentId`'s visibility, and
   // finally falls back to the schema default ('public').
   visibility?: 'private' | 'public';
+  /** Workflow-category preset — a work-query board column's `+`. */
+  workflowCategory?: TaskWorkflowCategory;
+  /** External provider state identity resolved from `workflowCategory`. */
+  workflowStateId?: string | null;
+  /** Local `team_workflow_states` row resolved from `workflowCategory`. */
+  workflowStateRefId?: string | null;
 }
 
 export interface UpdateStatusResult {
@@ -148,6 +165,7 @@ export interface RunReadySubtasksResult {
 export class TaskService {
   private agentModel: AgentModel;
   private db: OrviloDatabase;
+  private taskLabelModel: TaskLabelModel;
   private taskModel: TaskModel;
   private projectModel: ProjectModel;
   private taskTopicModel: TaskTopicModel;
@@ -162,6 +180,7 @@ export class TaskService {
     this.workspaceId = workspaceId;
     this.agentModel = new AgentModel(db, userId, workspaceId);
     this.projectModel = new ProjectModel(db, userId, workspaceId);
+    this.taskLabelModel = new TaskLabelModel(db, userId, workspaceId);
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.topicModel = new TopicModel(db, userId, workspaceId);
@@ -1298,6 +1317,7 @@ export class TaskService {
       activityLogs,
       workspace,
       acceptance,
+      taskLabels,
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
       this.taskModel.getDependencies(task.id),
@@ -1306,6 +1326,7 @@ export class TaskService {
       this.taskModel.getActivities(task.id, TASK_DETAIL_ACTIVITY_LIMIT).catch(() => []),
       this.taskModel.getTreePinnedDocuments(task.id).catch(() => emptyWorkspace),
       resolveTaskAcceptance(this.db, this.userId, task.id, this.workspaceId).catch(() => undefined),
+      this.taskLabelModel.listForTask(task.id).catch(() => []),
     ]);
 
     // What the reader is shown, not what was written: a burst of edits to one
@@ -1726,6 +1747,7 @@ export class TaskService {
       id: task.id,
       identifier: task.identifier,
       instruction: task.instruction,
+      labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
       priority: task.priority,

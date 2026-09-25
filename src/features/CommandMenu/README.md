@@ -32,12 +32,14 @@ CommandMenu/
 ├── MainMenu.tsx                 # Default menu (navigation, settings, etc.)
 ├── ContextCommands.tsx          # Context-specific commands
 ├── SearchResults.tsx            # Search result display
+├── ResultActionsMenu.tsx        # Result action submenu (status/assignee/priority/copy link)
 ├── ChatList.tsx                 # AI chat mode message list
 ├── ThemeMenu.tsx                # Theme selection submenu
 │
 └── utils/
     ├── context.ts               # Context detection logic
-    └── contextCommands.ts       # Context command definitions
+    ├── contextCommands.ts       # Context command definitions
+    └── resultActions.ts         # Result-action page names + selected-row resolution
 ```
 
 ## Core Concepts
@@ -259,14 +261,16 @@ CommandMenu unmounts
 
 ### Keyboard Shortcuts
 
-| Key            | Action                               |
-| -------------- | ------------------------------------ |
-| `Cmd/Ctrl + K` | Open/Close command menu (global)     |
-| `Escape`       | Go back or close                     |
-| `Backspace`    | Go back (when search empty)          |
-| `Tab`          | Enter AI mode (when search has text) |
-| `↑/↓`          | Navigate items                       |
-| `Enter`        | Select item                          |
+| Key            | Action                                             |
+| -------------- | -------------------------------------------------- |
+| `Cmd/Ctrl + K` | Open/Close command menu (global)                   |
+| `Escape`       | Go back or close                                   |
+| `Backspace`    | Go back (when search empty)                        |
+| `Tab`          | Enter AI mode (when search has text)               |
+| `↑/↓`          | Navigate items                                     |
+| `→`            | Open the highlighted task/project result's actions |
+| `Enter`        | Select item                                        |
+| `1-9`          | Pick an option inside a result action submenu      |
 
 ### Smart Filtering
 

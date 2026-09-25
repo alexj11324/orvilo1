@@ -17,6 +17,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { openFeedbackModal } from '@/components/FeedbackModal';
 import { getNavigableRoutes, getRouteById } from '@/config/routes';
 import { FEEDBACK } from '@/const/url';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -41,6 +42,7 @@ const MainMenu = memo(() => {
     handleCreateSession,
     handleCreateTopic,
     handleCreateLibrary,
+    handleCreateProject,
     handleCreateTask,
     handleNavigate,
     handleExternalLink,
@@ -54,7 +56,7 @@ const MainMenu = memo(() => {
     <>
       <ContextCommands />
 
-      <Command.Group>
+      <Command.Group heading={t('cmdk.actions')}>
         {/* Creating a task leads the list: the product's default working surface
             is the task board, so the palette's first command should be the one
             that puts work into it. */}
@@ -66,6 +68,16 @@ const MainMenu = memo(() => {
           onSelect={handleCreateTask}
         >
           {t('cmdk.newTask')}
+        </CommandItem>
+
+        <CommandItem
+          disabled={!canCreate}
+          icon={<PROJECT_ENTITY_ICON />}
+          keywords={['project', 'create', 'new', 'initiative', 'milestone']}
+          value="create new project"
+          onSelect={handleCreateProject}
+        >
+          {t('cmdk.newProject')}
         </CommandItem>
 
         <CommandItem

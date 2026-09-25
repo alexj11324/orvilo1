@@ -15,7 +15,7 @@
 - 分支 `feat/ui-layout-rule-probes`，起点 `5b985fc9a`：未测试、未审查的草稿（`e2e/src/probes/layoutRules.ts`、`ariaInventory.ts`，`TaskProperties` 加了 `data-testid="task-properties"`）。
 - 用户已在 app 里开了云端会话「UI 布局规则探针」接着做。**不要再开第二个**。它会开 PR 到 canary。
 - 规格：6 条布局规则（sibling-edge、centered-in-full-row、clipped-text、type-scale、date-format、hover-glyph）+ ARIA diff + E2E（running 任务的属性栏 0 违规，且采到 ≥ 4 行作为正对照）。E2E 依赖 #241 的修复。
-- 它交付后：审它的 PR；然后在本地用这些探针跑 issue 详情和项目详情的状态矩阵（default /hover/popover /empty/running / 窄屏 /dark），对 Linear 跑 ARIA 对比（Orvilo 切 en-US），**先出问题清单给用户，不修**。
+- 它交付后：审它的 PR；然后在本地用这些探针跑 issue 详情和项目详情的状态矩阵（default /hover/popover/empty/running/ 窄屏 /dark），对 Linear 跑 ARIA 对比（Orvilo 切 en-US），**先出问题清单给用户，不修**。
 
 ### B. CI 红灯
 
@@ -58,7 +58,7 @@
 ## 4. 硬约束速查
 
 - 与用户用简体中文；commit 英文 + gitmoji；PR 目标 canary 或所依赖的栈分支。
-- 共享 worktree：`git commit -- <paths>`；不 reset /clean/stash /broad-add。
+- 共享 worktree：`git commit -- <paths>`；不 reset /clean/stash/broad-add。
 - lint-staged 可能拒绝提交而 shell 继续跑：每次提交后读 `git log -1`，推送单独一步。worktree 没装依赖时 pre-commit 会报 `lint-staged: command not found`，把另一个已安装 worktree 的 `node_modules/.bin` 加进 PATH 再提交。
 - 每个 bug 修复配一个修前失败的回归测试；不新增组件级 `.test.tsx`。
 - 本地不跑全仓 type-check；用 `bun run check --lint --test <files>` 并读测试计数。

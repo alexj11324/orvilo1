@@ -39,7 +39,7 @@ import { createdAt, softDeleteColumns, timestamps, timestamptz, varchar255 } fro
 import { agents } from './agent';
 import { agentCronJobs } from './agentCronJob';
 import { documents } from './file';
-import { projects } from './project';
+import { projectMilestones, projects } from './project';
 import { teamCycles, teams, teamWorkflowStates } from './team';
 import { topics } from './topic';
 import { users } from './user';
@@ -129,6 +129,23 @@ export const tasks = pgTable(
     }),
     /** Local team-cycle pointer (`team_cycles`), when the task sits in a cycle. */
     cycleRefId: uuid('cycle_ref_id').references(() => teamCycles.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * Project milestone this task rolls up to, when the task belongs to a
+     * project that has one. The association lives here, on the task, rather
+     * than on `project_milestones` — a task belongs to at most one milestone,
+     * so a task-side FK is the whole relation, and this is the same side the
+     * reference puts it on (a Linear issue carries `projectMilestone`).
+     *
+     * Before this column existed the candidate had no milestone↔task link at
+     * all, which is why a milestone had no denominator to derive a completion
+     * readout from. See `ProjectModel.listMilestoneProgress` for the readout.
+     *
+     * `set null`, not `cascade`: deleting a milestone must not delete the work
+     * that was filed under it. Same reasoning as `projectId` above.
+     */
+    projectMilestoneId: uuid('project_milestone_id').references(() => projectMilestones.id, {
       onDelete: 'set null',
     }),
     workflowCategory: text('workflow_category')
@@ -237,6 +254,7 @@ export const tasks = pgTable(
     index('tasks_team_id_triage_idx').on(t.teamId, t.triageStatus),
     index('tasks_workflow_state_ref_idx').on(t.workflowStateRefId),
     index('tasks_cycle_ref_idx').on(t.cycleRefId),
+    index('tasks_project_milestone_id_idx').on(t.projectMilestoneId),
     index('tasks_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.createdByUserId),
     uniqueIndex('tasks_identifier_workspace_id_unique')
       .on(t.workspaceId, t.identifier)

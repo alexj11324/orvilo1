@@ -88,8 +88,13 @@ const TaskParentBar = memo(() => {
           navigate(taskDetailPath(parent.identifier, parentAgentId ?? undefined, parent.name))
         }
       >
-        <Text ellipsis style={{ minWidth: 0 }} weight={500}>
-          {parent.name}
+        {/* Reference form: `◐ ORV-117 Handoff: …` — the identifier stays
+            visible even when the name truncates. */}
+        <Text ellipsis style={{ minWidth: 0 }}>
+          <Text as={'span'} type={'secondary'}>
+            {parent.identifier}
+          </Text>
+          {parent.name ? <Text as={'span'} weight={500}>{` ${parent.name}`}</Text> : undefined}
         </Text>
       </Button>
       {parentSubtasks.length > 0 && (

@@ -352,6 +352,12 @@ jobs:
       - name: Install deps
         run: pnpm install
 
+      - name: Enforce original Chinese UI font
+        if: matrix.shard == 1
+        run: |
+          node --import tsx scripts/ci/checkChineseUiFont.mjs
+          node --test scripts/ci/checkChineseUiFont.test.mjs
+
       - name: Run tests
         run: bunx vitest --coverage --silent='passed-only' --reporter=default --reporter=blob --project app --shard=${{ matrix.shard }}/2
 

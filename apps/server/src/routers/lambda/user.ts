@@ -479,6 +479,7 @@ export const userRouter = router({
 
       agentOnboarding: state.agentOnboarding,
       interests: state.interests,
+      jobTitle: state.jobTitle,
 
       // always return true for community version
       isOnboard: state.isOnboarded ?? true,
@@ -605,6 +606,12 @@ export const userRouter = router({
   updateInterests: userProcedure.input(z.array(z.string())).mutation(async ({ ctx, input }) => {
     return ctx.userModel.updateUser({ interests: input });
   }),
+
+  updateJobTitle: userProcedure
+    .input(z.string().trim().max(128))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.userModel.updateUser({ jobTitle: input || null });
+    }),
 
   getOrCreateOnboardingState: userProcedure.query(async ({ ctx }) => {
     const onboardingService = new OnboardingService(ctx.serverDB, ctx.userId);

@@ -1,6 +1,14 @@
 import { type DropdownItem, DropdownMenu, Icon } from '@lobehub/ui';
 import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
-import { CopyIcon, EyeOffIcon, LinkIcon, MoreHorizontal, Trash, UsersIcon } from 'lucide-react';
+import {
+  CopyIcon,
+  EyeOffIcon,
+  GitBranchIcon,
+  LinkIcon,
+  MoreHorizontal,
+  Trash,
+  UsersIcon,
+} from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,7 +30,7 @@ const TaskDetailHeaderActions = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceId = useActiveWorkspaceId();
   const { allowed: canEditTask } = usePermission('create_content');
-  const { copyId, copyLink, taskId } = useTaskCopyActions();
+  const { copyBranch, copyId, copyLink, hasBranch, taskId } = useTaskCopyActions();
   const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
   const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
   const currentUserId = useUserStore(userProfileSelectors.userId);
@@ -95,7 +103,9 @@ const TaskDetailHeaderActions = memo(() => {
   const menuItems = useMemo<DropdownItem[]>(() => {
     if (!taskId) return [];
 
-    const baseItems: DropdownItem[] = [
+    // The clipboard group mirrors the rail's round buttons; "copy git branch"
+    // joins only for real workspace-bound tasks (see `useTaskCopyActions`).
+    const copyItems: DropdownItem[] = [
       {
         icon: <Icon icon={CopyIcon} />,
         key: 'copyId',
@@ -108,16 +118,25 @@ const TaskDetailHeaderActions = memo(() => {
         label: t('taskList.contextMenu.copyLink'),
         onClick: copyLink,
       },
-      { type: 'divider' },
-      {
-        danger: true,
-        disabled: !canEditTask,
-        icon: <Icon icon={Trash} />,
-        key: 'delete',
-        label: t('delete', { ns: 'common' }),
-        onClick: triggerDelete,
-      },
+      ...(hasBranch
+        ? [
+            {
+              icon: <Icon icon={GitBranchIcon} />,
+              key: 'copyBranch',
+              label: t('taskDetail.copyBranch'),
+              onClick: copyBranch,
+            },
+          ]
+        : []),
     ];
+    const deleteItem: DropdownItem = {
+      danger: true,
+      disabled: !canEditTask,
+      icon: <Icon icon={Trash} />,
+      key: 'delete',
+      label: t('delete', { ns: 'common' }),
+      onClick: triggerDelete,
+    };
 
     // Publish-to-workspace only surfaces on private tasks inside a workspace;
     // personal mode has no workspace to publish to.
@@ -158,13 +177,15 @@ const TaskDetailHeaderActions = memo(() => {
           ? [visibilityItem]
           : [];
 
-    if (transferGroup.length === 0) return baseItems;
+    if (transferGroup.length === 0) return [...copyItems, { type: 'divider' }, deleteItem];
 
-    return [...baseItems.slice(0, 3), ...transferGroup, { type: 'divider' }, ...baseItems.slice(3)];
+    return [...copyItems, { type: 'divider' }, ...transferGroup, { type: 'divider' }, deleteItem];
   }, [
     taskId,
     copyId,
     copyLink,
+    copyBranch,
+    hasBranch,
     activeWorkspaceId,
     visibility,
     createdByUserId,

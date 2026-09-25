@@ -83,6 +83,8 @@ import { sessionGroupRouter } from './sessionGroup';
 import { shareRouter } from './share';
 import { shareChatRouter } from './shareChat';
 import { taskRouter } from './task';
+import { taskDraftRouter } from './taskDraft';
+import { taskLabelRouter } from './taskLabel';
 import { teamRouter } from './team';
 import { threadRouter } from './thread';
 import { topicRouter } from './topic';
@@ -163,6 +165,8 @@ export const lambdaRouter = router({
   share: shareRouter,
   shareChat: shareChatRouter,
   task: taskRouter,
+  taskDraft: taskDraftRouter,
+  taskLabel: taskLabelRouter,
   team: teamRouter,
   thread: threadRouter,
   topic: topicRouter,

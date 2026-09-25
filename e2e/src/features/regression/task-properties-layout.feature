@@ -6,7 +6,7 @@ Feature: Issue 详情属性栏的布局规则
 
   Scenario Outline: <状态说明>任务的属性栏通过布局规则
     Given I am logged in with a session
-    And 存在一个状态为 "<status>"、带 workflow 状态并指派给我的任务
+    And 存在一个状态为 "<status>"、带 workflow 状态和标签并指派给我的任务
     When 我在 1440×900 视口打开该任务详情
     Then 属性栏通过 sibling-edge、centered-in-full-row、clipped-text、date-format 规则且至少采到 4 行
 

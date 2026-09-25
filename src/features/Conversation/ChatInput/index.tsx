@@ -75,6 +75,12 @@ export interface ChatInputProps {
    */
   compact?: boolean;
   /**
+   * Render the control bar (Local/Cloud/Approval row, or `controlBarSlot`) as
+   * the composer card's last footer row instead of a sibling below the card.
+   * Forwarded to `DesktopChatInput`; other surfaces keep the default off.
+   */
+  controlBarInCard?: boolean;
+  /**
    * Custom node to render in place of the default ControlBar
    * (Local/Cloud/Approval). When provided, replaces the default bar.
    */
@@ -96,6 +102,12 @@ export interface ChatInputProps {
    * another member holds the page edit lock).
    */
   disableSend?: boolean;
+  /**
+   * Initial editor height in text rows, forwarded to `InputEditor`'s
+   * `defaultRows`. Surfaces targeting a single-line composer pass 1; omitted
+   * keeps the shared 2-row default.
+   */
+  editorDefaultRows?: number;
   /**
    * Extra action items to append to the ActionBar
    */
@@ -163,9 +175,11 @@ const ChatInput = memo<ChatInputProps>(
     actionBarStyle,
     allowExpand,
     compact = false,
+    controlBarInCard,
     disableFollowUpVariant,
     disableQueue,
     disableSend,
+    editorDefaultRows,
     feature,
     leftActions = [],
     leftContent,
@@ -474,7 +488,9 @@ const ChatInput = memo<ChatInputProps>(
             actionBarStyle={actionBarStyle}
             borderRadius={12}
             compact={compact}
+            controlBarInCard={controlBarInCard}
             controlBarSlot={controlBarSlot}
+            editorDefaultRows={editorDefaultRows}
             hidden={hasPendingInterventions}
             isConfigLoading={isConfigLoading}
             leftContent={leftContent}

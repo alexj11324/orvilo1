@@ -8,10 +8,10 @@ import type {
 } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { TFunction } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
 import {
-  ArrowRightLeft,
+  ArrowLeftRight,
   BotMessageSquare,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- topic activity kind, not a status mark
   CircleDot,
   CirclePlus,
   MessageCircle,
@@ -22,6 +22,9 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
+import { getPriorityIconColor } from '@/components/PriorityIcon';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
@@ -34,6 +37,7 @@ import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
+import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
 import TaskBriefCard from './TaskBriefCard';
 import TaskRunReport from './TaskRunReport';
@@ -49,7 +53,7 @@ const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent
 
 const ROW_TYPE_ICON = {
   assignment: UserRoundCog,
-  property: ArrowRightLeft,
+  property: ArrowLeftRight,
   comment: MessageCircle,
   created: CirclePlus,
   topic: CircleDot,
@@ -171,7 +175,7 @@ const RowMark = ({
   icon,
 }: {
   author?: TaskDetailActivityAuthor | null;
-  icon: LucideIcon;
+  icon: StatusVisual['icon'];
 }) =>
   author?.avatar ? (
     <Avatar avatar={author.avatar} size={16} />
@@ -248,17 +252,15 @@ interface TaskActivitiesProps {
   variant?: 'activity' | 'result';
 }
 
-const PROPERTY_ICON: Record<'automation' | 'status', LucideIcon> = {
+const PROPERTY_ICON: Record<'automation' | 'status', StatusVisual['icon']> = {
   automation: Timer,
-  status: CircleDot,
+  status: STATUS_PROPERTY_ICON,
 };
 
 const PriorityMark = ({ level }: { level: number | null }) => {
   const meta = PRIORITY_META[level ?? 0] ?? PRIORITY_META[0];
   const IconRender = meta.icon;
-  return (
-    <IconRender color={meta.level === 1 ? cssVar.orange : cssVar.colorTextTertiary} size={14} />
-  );
+  return <IconRender color={getPriorityIconColor(meta.level)} size={14} />;
 };
 
 /**
@@ -386,6 +388,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const { t } = useTranslation('chat');
   const activities = useTaskStore(taskActivitySelectors.activeTaskActivities);
   const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const workspaceId = useActiveWorkspaceId();
   const activeTaskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -406,7 +409,9 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     [activities],
   );
 
-  const commentInput = activeTaskId ? <CommentInput taskId={activeTaskId} /> : null;
+  const commentInput = activeTaskId ? (
+    <CommentInput key={commentComposerKey(activeTaskId, workspaceId)} taskId={activeTaskId} />
+  ) : null;
 
   // A goal loop can produce many rounds; only the newest run opens by default so
   // the latest result is not buried under older ones.

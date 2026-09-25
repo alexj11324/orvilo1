@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
+import { FAVORITE_TARGET_ICONS } from './favoriteIcon';
 import { favoriteLabel } from './favoriteLabel';
 import { isFavoriteReorderDownDisabled, isFavoriteReorderUpDisabled } from './favoriteOverflow';
 import { workTargetPath } from './workTargetPath';
@@ -34,6 +35,7 @@ const FavoriteRow = ({
   return (
     <WorkspaceLink to={workTargetPath(item.targetType, item.targetId, item.title)}>
       <NavItem
+        icon={FAVORITE_TARGET_ICONS[item.targetType]}
         title={favoriteLabel(item.targetType, item.title, t, item.targetId)}
         actions={
           <ActionIcon

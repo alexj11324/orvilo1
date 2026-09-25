@@ -39,6 +39,26 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
     type: 'memory',
   },
   {
+    matcher: /^\/project\/[^/]+/,
+    name: 'Project',
+    type: 'project',
+  },
+  {
+    matcher: /^\/task\/[^/]+/,
+    name: 'Task',
+    type: 'task',
+  },
+  {
+    matcher: /^\/teams\/[^/]+/,
+    name: 'Team',
+    type: 'team',
+  },
+  {
+    matcher: /^\/inbox/,
+    name: 'Inbox',
+    type: 'inbox',
+  },
+  {
     captureSubPath: true,
     matcher: /^\/resource(?:\/([^/]+))?/,
     name: 'Resource',
@@ -51,9 +71,38 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
  * @param pathname - The current pathname from react-router
  * @returns Context object if detected, undefined otherwise
  */
+// Top-level route names that may appear directly at path root. A first segment
+// that is none of these is a workspace slug and gets stripped before matching.
+const TOP_LEVEL_SEGMENTS = new Set([
+  'agent',
+  'agents',
+  'automations',
+  'goal',
+  'group',
+  'inbox',
+  'invite',
+  'members',
+  'memory',
+  'my-issues',
+  'my-work',
+  'project',
+  'projects',
+  'resource',
+  'reviews',
+  'settings',
+  'task',
+  'tasks',
+  'teams',
+  'views',
+]);
+
 export const detectContext = (pathname: string): MenuContext => {
+  const segments = pathname.split('/').filter(Boolean);
+  const first = segments[0];
+  const rest =
+    first && !TOP_LEVEL_SEGMENTS.has(first) ? `/${segments.slice(1).join('/')}` : pathname;
   for (const config of CONTEXT_CONFIGS) {
-    const match = pathname.match(config.matcher);
+    const match = rest.match(config.matcher);
 
     if (match) {
       const context: Context = {

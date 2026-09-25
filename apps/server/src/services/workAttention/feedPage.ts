@@ -27,6 +27,7 @@ export interface InboxFeedDeps {
   input?: {
     cursor?: string;
     filter?: NotificationPresentationFilter;
+    includeSnoozed?: boolean;
     kind?: NotificationFeedBucket;
     limit?: number;
   };

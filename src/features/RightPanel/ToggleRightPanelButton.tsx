@@ -23,6 +23,12 @@ interface ToggleRightPanelButtonProps {
   expand?: boolean;
   hideWhenExpanded?: boolean;
   icon?: ActionIconProps['icon'];
+  /**
+   * DOM id for the button. Defaults to the shared {@link TOGGLE_BUTTON_ID}.
+   * Pass `null` for a secondary instance rendered alongside a page-header
+   * toggle so the two never share one id.
+   */
+  id?: string | null;
   onToggle?: () => void;
   showActive?: boolean;
   size?: ActionIconProps['size'];
@@ -30,7 +36,16 @@ interface ToggleRightPanelButtonProps {
 }
 
 const ToggleRightPanelButton = memo<ToggleRightPanelButtonProps>(
-  ({ title, showActive, icon, hideWhenExpanded, size, expand: expandProp, onToggle }) => {
+  ({
+    title,
+    showActive,
+    icon,
+    hideWhenExpanded,
+    size,
+    expand: expandProp,
+    onToggle,
+    id = TOGGLE_BUTTON_ID,
+  }) => {
     const [globalExpand, globalToggle, isStatusInit] = useGlobalStore((s) => [
       systemStatusSelectors.showRightPanel(s),
       s.toggleRightPanel,
@@ -53,7 +68,7 @@ const ToggleRightPanelButton = memo<ToggleRightPanelButtonProps>(
       <ActionIcon
         active={showActive ? expand : undefined}
         icon={icon || (expand ? PanelRightClose : PanelRightOpen)}
-        id={TOGGLE_BUTTON_ID}
+        id={id ?? undefined}
         size={size || DESKTOP_HEADER_ICON_SMALL_SIZE}
         title={title || t('toggleRightPanel.title', { ns: 'hotkey' })}
         tooltipProps={{

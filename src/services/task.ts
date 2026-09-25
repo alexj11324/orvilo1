@@ -137,8 +137,11 @@ class TaskService {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    status?: TaskStatus;
     teamId?: string;
     visibility?: 'private' | 'public';
+    /** Business-workflow board target; the server resolves its exact mapped Linear state. */
+    workflowCategory?: TaskWorkflowCategory;
   }) => lambdaClient.task.create.mutate(params);
 
   updateVisibility = async (id: string, visibility: 'private' | 'public') =>

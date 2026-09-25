@@ -1,0 +1,23 @@
+{
+  "category": "sans-serif",
+  "defSubset": "latin",
+  "family": "Inter",
+  "id": "inter",
+  "lastModified": "2025-09-10",
+  "license": {
+    "type": "OFL-1.1",
+    "url": "https://openfontlicense.org",
+    "attribution": "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter) Inter-Italic[opsz,wght].ttf: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)"
+  },
+  "source": "https://github.com/google/fonts",
+  "styles": ["italic", "normal"],
+  "subsets": ["cyrillic", "cyrillic-ext", "greek", "greek-ext", "latin", "latin-ext", "vietnamese"],
+  "type": "google",
+  "variable": {
+    "ital": { "default": "0", "min": "0", "max": "1", "step": "1" },
+    "opsz": { "default": "14", "min": "14", "max": "32", "step": "0.1" },
+    "wght": { "default": "400", "min": "100", "max": "900", "step": "1" }
+  },
+  "version": "v20",
+  "weights": [100, 200, 300, 400, 500, 600, 700, 800, 900]
+}

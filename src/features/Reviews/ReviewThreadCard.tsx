@@ -2,10 +2,11 @@ import { Flexbox, Markdown } from '@lobehub/ui';
 import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 
 import CollectionFooter from './CollectionFooter';
 import CommentComposer from './CommentComposer';
@@ -85,6 +86,15 @@ const ReviewThreadCard = memo<{
   const { t } = useTranslation('common');
   const [replyOpen, setReplyOpen] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Per-card instance — a failed comments page marks only this thread's
+  // footer, never a sibling's. A new cursor (page landed / refreshed
+  // snapshot) clears the marker — a failure leaves the cursor untouched, so
+  // it stays until retried.
+  const commentsMore = usePagedLoadMore();
+  const commentsEndCursor = thread.comments.endCursor;
+  useEffect(() => {
+    commentsMore.resetLoadMoreError();
+  }, [commentsEndCursor, commentsMore.resetLoadMoreError]);
   const anchor = thread.path ? `${thread.path}${thread.line ? `:${thread.line}` : ''}` : null;
   const comments = thread.comments;
 
@@ -101,20 +111,23 @@ const ReviewThreadCard = memo<{
         <ThreadComment comment={comment} key={comment.id ?? `${comment.createdAt}-${index}`} />
       ))}
       <CollectionFooter
+        error={commentsMore.loadMoreError}
         hasMore={comments.hasMore}
         loaded={comments.loaded}
         loading={loadingMore}
         total={comments.total}
+        onRetry={commentsMore.retryLoadMore}
         onLoadMore={
           comments.endCursor && onLoadMoreComments
-            ? async () => {
-                setLoadingMore(true);
-                try {
-                  await onLoadMoreComments(thread.id, comments.endCursor!);
-                } finally {
-                  setLoadingMore(false);
-                }
-              }
+            ? () =>
+                commentsMore.runLoadMore(async () => {
+                  setLoadingMore(true);
+                  try {
+                    await onLoadMoreComments(thread.id, comments.endCursor!);
+                  } finally {
+                    setLoadingMore(false);
+                  }
+                })
             : undefined
         }
       />

@@ -202,10 +202,14 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
       <Block
         horizontal
         align={'center'}
+        data-row-interactive={hasDropdown || onRequestSubtasks ? true : undefined}
         gap={4}
         height={24}
-        paddingInline={'4px 8px'}
         variant={'outlined'}
+        // Rows with a peek-capture click handler (My issues detail pane)
+        // treat this as interactive chrome — otherwise the first click would
+        // be swallowed by row selection instead of lazy-loading subtasks.
+        paddingInline={'4px 8px'}
         style={{
           borderRadius: 24,
           cursor: hasDropdown || onRequestSubtasks ? 'pointer' : undefined,

@@ -19,6 +19,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import AsyncError from '@/components/AsyncError';
 import {
   applyWorkQueryStatusChange,
   commitWorkQueryBoardMove,
@@ -51,11 +52,14 @@ import {
   externalKanbanColumnMoveScope,
   externalKanbanColumns,
   externalKanbanTaskPatch,
+  externalVisibleKanbanColumns,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
   kanbanBoardCapabilities,
+  kanbanColumnAllowsCreate,
+  kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
@@ -144,11 +148,25 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 export interface KanbanExternalGroups {
   error?: unknown;
   groups: TaskGroupItem[];
+  /**
+   * Linear parity: hide a column whose group is empty instead of rendering
+   * an empty drop area. Team-issues boards opt in; other callers keep every
+   * column visible.
+   */
+  hideEmptyColumns?: boolean;
   isLoading?: boolean;
+  /**
+   * Tail-page rejection for one column (work-query group key resolved by the
+   * caller) — the failed column's footer swaps its load-more button for an
+   * inline retry instead of lifting the error to the whole board.
+   */
+  loadMoreGroupError?: (columnKey: string) => unknown;
   /** Whether cards may be dragged (default true, still gated by permission). */
   movable?: boolean;
   onLoadMoreGroup?: (columnKey: string) => void;
   onRefresh?: () => Promise<unknown> | void;
+  /** Re-issues the failed page request shown by `loadMoreGroupError`. */
+  onRetryLoadMoreGroup?: (columnKey: string) => void;
   /**
    * Work-query grouping the supplied `groups` were fetched with. Selects
    * both the column set (`wf:` / `st:`) and the `moveBoard` `targetKey`.
@@ -732,32 +750,37 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [changeTaskStatus, external?.queryGroupBy, refreshGroups],
   );
 
-  const handleCreateTask = useCallback(() => {
-    if (!canEditTask) return;
-    createTaskModal({
-      agentId,
-      lockAssignee: !!agentId,
-      projectId: kanbanCreateTaskProjectId(projectId),
-      teamId: createContext?.teamId,
-      teamOptions: createContext?.teamOptions,
-      onCreated: (task) => {
-        navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
-      },
-      showInlineToggle: false,
-    });
-  }, [agentId, canEditTask, createContext, navigate, projectId]);
+  const handleCreateTask = useCallback(
+    (columnKey: string) => {
+      if (!canEditTask) return;
+      createTaskModal({
+        agentId,
+        lockAssignee: !!agentId,
+        projectId: kanbanCreateTaskProjectId(projectId),
+        teamId: createContext?.teamId,
+        teamOptions: createContext?.teamOptions,
+        ...kanbanColumnCreatePreset(columnKey),
+        onCreated: (task) => {
+          navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
+        },
+        showInlineToggle: false,
+      });
+    },
+    [agentId, canEditTask, createContext, navigate, projectId],
+  );
 
   // ── Derived layout ─────────────────────────────────────────────
 
   const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
 
-  const visibleColumns = useMemo(
-    () =>
-      groupBy === 'status'
-        ? allColumns.filter((column) => !hiddenColumnSet.has(column.key))
-        : allColumns,
-    [allColumns, groupBy, hiddenColumnSet],
-  );
+  const visibleColumns = useMemo(() => {
+    if (external?.hideEmptyColumns) {
+      return externalVisibleKanbanColumns(allColumns, currentTaskGroups);
+    }
+    return groupBy === 'status'
+      ? allColumns.filter((column) => !hiddenColumnSet.has(column.key))
+      : allColumns;
+  }, [allColumns, currentTaskGroups, external?.hideEmptyColumns, groupBy, hiddenColumnSet]);
 
   const hiddenColumnEntries = useMemo(
     () =>
@@ -847,6 +870,9 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
             canEditTask &&
             col.droppable &&
             (!activeTask || canDropTaskIntoKanbanColumn(activeTask, groupBy, col));
+          // A failed column page keeps its cards — the retry lives in that
+          // column's footer where the load-more button would sit.
+          const columnLoadError = external?.loadMoreGroupError?.(col.key);
           return (
             <KanbanColumn
               columnKey={col.key}
@@ -858,7 +884,17 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               tasks={columnTasks}
               total={group?.total ?? 0}
               footer={
-                group?.hasMore && (!external || external.onLoadMoreGroup) ? (
+                columnLoadError ? (
+                  <AsyncError
+                    error={columnLoadError}
+                    variant={'inline'}
+                    onRetry={
+                      external?.onRetryLoadMoreGroup
+                        ? () => external.onRetryLoadMoreGroup?.(col.key)
+                        : undefined
+                    }
+                  />
+                ) : group?.hasMore && (!external || external.onLoadMoreGroup) ? (
                   <button
                     data-no-board-pan
                     className={styles.loadMore}
@@ -880,18 +916,14 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               onHide={groupBy === 'status' ? () => handleHideColumn(col.key) : undefined}
               onStatusChange={handleCardStatusChange}
               onCreate={
-                // "My tasks" offers no create entry (its list view has none
-                // either): a task created here carries neither the member
-                // assignment nor — under `created` — any guarantee it lands
-                // in the column it was started from. An external board only
-                // shows it when the caller declared where the card belongs.
-                groupBy === 'status' &&
-                col.key === 'backlog' &&
-                !myTaskScope &&
-                (!external ||
-                  Boolean(createContext?.teamId) ||
-                  (createContext?.teamOptions?.length ?? 0) > 0)
-                  ? handleCreateTask
+                kanbanColumnAllowsCreate({
+                  columnKey: col.key,
+                  createContext,
+                  external: Boolean(external),
+                  groupBy,
+                  myTaskScope: Boolean(myTaskScope),
+                })
+                  ? () => handleCreateTask(col.key)
                   : undefined
               }
             />

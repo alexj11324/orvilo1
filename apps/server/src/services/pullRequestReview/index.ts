@@ -865,22 +865,36 @@ export class PullRequestReviewService {
   // Reads
   // -------------------------------------------------------------------------
 
-  /** For-me = open PRs with a pending review request; created = my own open PRs. */
+  /**
+   * For-me = the Linear "For you" lane: open non-draft PRs authored by the
+   * viewer OR carrying a pending review request for them (audit F2).
+   * created = the viewer's own open PRs.
+   *
+   * The classic `ISSUE` search cannot OR qualifiers, so the for-you union
+   * runs on the `ISSUE_ADVANCED` search type (boolean + grouped query
+   * syntax); the created lane needs no boolean and stays on `ISSUE`.
+   */
   reviewQueue = async (params: { cursor?: string | null; tab: 'created' | 'for-me' }) => {
     const { transport } = await this.clients();
     const viewer = await transport.getAuthenticatedUser();
-    const search =
-      params.tab === 'for-me'
-        ? `is:pr is:open -is:draft review-requested:${viewer.login}`
-        : `is:pr is:open author:${viewer.login}`;
+    const forYou = params.tab === 'for-me';
+    const search = forYou
+      ? `is:pr is:open -is:draft AND (author:${viewer.login} OR review-requested:${viewer.login})`
+      : `is:pr is:open author:${viewer.login}`;
     const response = await transport.request<{
       after: string | null;
       first: number;
       query: string;
+      type: 'ISSUE' | 'ISSUE_ADVANCED';
     }>({
       operation: 'PullRequestReviewQueue',
       query: QUEUE_QUERY,
-      variables: { after: params.cursor ?? null, first: QUEUE_PAGE_SIZE, query: search },
+      variables: {
+        after: params.cursor ?? null,
+        first: QUEUE_PAGE_SIZE,
+        query: search,
+        type: forYou ? 'ISSUE_ADVANCED' : 'ISSUE',
+      },
     });
     const parsed = requireParsed(
       queueResponseSchema.safeParse(response),

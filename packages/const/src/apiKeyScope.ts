@@ -283,6 +283,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   storageOverage: 'blocked',
   subscription: 'blocked',
   task: rw('agent:read', 'agent:write'),
+  // Unsent, caller-owned comment drafts stay outside restricted API keys.
+  taskDraft: 'blocked',
+  taskLabel: rw('agent:read', 'agent:write'),
   taskTemplate: rw('agent:read', 'agent:write'),
   team: rw('agent:read', 'agent:write'),
   thread: rw('chat:read', 'chat:write'),

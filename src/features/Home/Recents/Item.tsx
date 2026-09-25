@@ -2,20 +2,14 @@ import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import {
-  BookmarkIcon,
-  FileTextIcon,
-  FolderKanbanIcon,
-  HashIcon,
-  MoreHorizontalIcon,
-  UsersIcon,
-} from 'lucide-react';
+import { BookmarkIcon, FileTextIcon, HashIcon, MoreHorizontalIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 
 import InlineRename from '@/components/InlineRename';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { usePrefetchAgent } from '@/hooks/usePrefetchAgent';
 import { usePrefetchPage } from '@/hooks/usePrefetchPage';
 
@@ -23,7 +17,7 @@ import { useRecentItemDropdownMenu } from './useDropdownMenu';
 
 const TYPE_ICON_MAP: Partial<Record<RecentItem['type'], typeof FileTextIcon>> = {
   document: FileTextIcon,
-  project: FolderKanbanIcon,
+  project: PROJECT_ENTITY_ICON,
   savedView: BookmarkIcon,
   team: UsersIcon,
   topic: HashIcon,

@@ -60,6 +60,10 @@ const exclude = [
   '**/apps/cli/**',
   '**/packages/**',
   '**/e2e/**',
+  // `scripts/**/*.test.mjs` files are `node:test` suites run via `node --test`
+  // (e.g. scripts/ui-parity, scripts/ci/checkChineseUiFont), not Vitest suites —
+  // collecting them fails with "No test suite found in file".
+  'scripts/**/*.test.mjs',
 ];
 
 export default defineConfig({

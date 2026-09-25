@@ -2,13 +2,14 @@ import { type MenuProps } from '@lobehub/ui';
 import { Icon } from '@lobehub/ui';
 import { confirmModal } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
-import { PencilLineIcon, Pin, PinOff, Trash } from 'lucide-react';
+import { PencilLineIcon, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
+import { FAVORITE_MARK, FAVORITE_MARK_OFF } from '@/features/HomeSidebar/Body/favoriteIcons';
 import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';
 import { usePermission } from '@/hooks/usePermission';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
@@ -100,7 +101,7 @@ export const useRecentItemDropdownMenu = (
       ...(pinType
         ? ([
             {
-              icon: <Icon icon={pinned ? PinOff : Pin} />,
+              icon: <Icon icon={pinned ? FAVORITE_MARK_OFF.pin : FAVORITE_MARK.pin} />,
               key: 'pin',
               label: pinned ? t('pinOff') : t('pin'),
               onClick: () => void togglePin(),

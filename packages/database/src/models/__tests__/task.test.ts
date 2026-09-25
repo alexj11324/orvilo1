@@ -2421,16 +2421,18 @@ describe('TaskModel', () => {
       const model = new TaskModel(serverDB, userId);
       // Seeded/imported rows can carry a primary key without the task_ prefix;
       // resolve() must still reach them by id after the identifier lookup fails.
+      // The id must stay clear of the parity fixture range (`taskparityNNNN`)
+      // — this row shares the test database with the seed fixture's suite.
       await serverDB.insert(tasks).values({
         createdByUserId: userId,
-        id: 'taskparity0001',
+        id: 'imported-legacy-0001',
         identifier: 'PX-1',
         instruction: 'Fixture task',
         seq: 1,
       });
 
-      const resolved = await model.resolve('taskparity0001');
-      expect(resolved!.id).toBe('taskparity0001');
+      const resolved = await model.resolve('imported-legacy-0001');
+      expect(resolved!.id).toBe('imported-legacy-0001');
       expect(resolved!.identifier).toBe('PX-1');
     });
 

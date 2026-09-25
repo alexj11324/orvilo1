@@ -6,11 +6,20 @@ relation history events — plus fixes for the Devin Review round on it.
 
 ## What's in the PR
 
-| Area                  | What landed                                                                                                                                                                                                           | Where                                                                                                                                                                                                        |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| M3 reactions + attach | `TaskReactions` (quick emoji grid + emoji-mart Picker, base-ui Popover) and the "Attach images, files, or videos" link under the issue description footer                                                             | `src/features/AgentTasks/AgentTaskDetail/TaskReactions.tsx`, `TaskInstruction.tsx`                                                                                                                           |
-| M7 subscribers        | `TaskSubscribers` row under the comment composer: self Subscribe/Unsubscribe, avatar stack, "Change subscribers" member manager (real backend)                                                                        | `TaskSubscribers.tsx`, `apps/server/src/routers/lambda/workAttention.ts`, `packages/database/src/models/taskSubscription.ts`                                                                                 |
-| M9 relation events    | `relation` activity type: addDependency/removeDependency write a row on BOTH issues (`blockedBy`/`blocking` directions, `relates` without direction); rendered in issue feed, project activity feed, and agent prompt | `packages/types/src/task/index.ts`, `packages/database/src/models/task.ts`, `apps/server/src/services/task/index.ts`, `TaskActivities.tsx`, `ProjectActivityPage.tsx`, `packages/prompts/src/prompts/task/*` |
+| Area                  | What landed                                                                                                                                                                                                                      | Where                                                                                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M3 reactions + attach | `TaskReactions` (quick emoji grid + emoji-mart Picker, base-ui Popover) and the "Attach images, files, or videos" link under the issue description footer                                                                        | `src/features/AgentTasks/AgentTaskDetail/TaskReactions.tsx`, `TaskInstruction.tsx`                                                                                                                           |
+| M7 subscribers        | `TaskSubscribers` row under the comment composer: self Subscribe/Unsubscribe, avatar stack, "Change subscribers" member manager (real backend)                                                                                   | `TaskSubscribers.tsx`, `apps/server/src/routers/lambda/workAttention.ts`, `packages/database/src/models/taskSubscription.ts`                                                                                 |
+| M9 relation events    | `relation` activity type: addDependency/removeDependency write a row on BOTH issues (`blockedBy`/`blocking` directions, `relates` without direction); rendered in issue feed, project activity feed, and agent prompt            | `packages/types/src/task/index.ts`, `packages/database/src/models/task.ts`, `apps/server/src/services/task/index.ts`, `TaskActivities.tsx`, `ProjectActivityPage.tsx`, `packages/prompts/src/prompts/task/*` |
+| Issue Detail Align    | Left-align assignee & agent attributes along 232px rail, remove rogue `"0"` rendered under status (commit `ebcb26e08`)                                                                                                           | `TaskDetailSidebar.tsx`, `TaskDetailHeader.tsx`                                                                                                                                                              |
+| Electron 8GB Heap     | Persist 8GB max-old-space-size in electron dev startup scripts and vite renderer config (commit `c40b25f93`)                                                                                                                     | `vite.renderer.config.ts`, `desktopRouter.shared.tsx`                                                                                                                                                        |
+| Issue Row Status Mark | Exactly one canonical 14px status mark per issue row, redundant workflow badges removed from `/my-issues`, Team Kanban, etc. (commit `1d515a6e1`)                                                                                | `TaskItem.tsx`, `TaskContent.tsx`, `KanbanCard.tsx`                                                                                                                                                          |
+| Team Home 1:1 Parity  | 1:1 Linear parity for Team Home Overview, NavHeader, and destinations (commit `a7c8a6358`). Removed redundant "最近的问题" (recent issues) block, added resources action icons, added settings to Go to rail, aligned NavHeaders | `TeamHomeOverview.tsx`, `TeamPage.tsx`, `TeamIssuesSurface.tsx`, `TeamProjectsSurface.tsx`, `TeamViewsSurface.tsx`, `teamHomeDestinations.ts`                                                                |
+
+## User Policy Directive (STRICT)
+
+**"Linear 有的我们也要有，Linear 没有的我们也不能有"** (Strict 1:1 parity with Linear: what Linear has, we must have; what Linear does not have, we must NOT have).
+All upcoming page alignments must strictly follow this principle: do not keep Orvilo custom blocks if Linear does not have them; do not miss elements if Linear has them. Verification must be performed on headful Electron CDP (:9233) against Linear reference on Brave CDP (:9222).
 
 Reactions are the one piece backed by fabricated state: a persisted zustand
 store (`src/store/taskReactions.ts`, localStorage key `orvilo-task-reactions`,
@@ -90,31 +99,21 @@ state, and "Change subscribers" hides when the workspace roster is empty
   workspace `bdiverifier`, e.g. ORV-24), and attach the comparison to #257
   with the commit SHA.
 
-- **Endpoint test coverage** (review nit left open): `workAttention.subscribers` /
-  `setSubscriber` branches (FORBIDDEN without workspace task, NOT\_FOUND for
-  non-member target, self-toggle, manage-others) have no tests yet — precedents
-  in `apps/server/src/routers/lambda/__tests__/workAttention.*.test.ts`.
+- **Visual verification on Electron**: Already verified for Issue Detail, `/my-issues`, Team Kanban, and Team Home overview on headful Electron CDP (:9233).
 
-- **Avatar stack "+N" overflow** (review nit left open): the stack caps at 5
-  with no overflow count.
+- **Next Pages in Scope for Parity (/goal 完成所有页面对齐)**:
+  1. Project Detail (`/project/:id`) and Project List (`/projects`) — check against Linear `/project/:slug/overview` and `/projects/all`.
+  2. Saved Views (`/views/:id`) — check against Linear views.
+  3. Settings (`/settings`) — check against Linear workspace & team settings.
+  4. WorkInbox (`/inbox`) & Reviews (`/reviews`).
 
-- **CI**: watch `git_pr_checks` for #257; the dedup race is fixed (#256) so
-  failures now are real.
+- **Endpoint test coverage**: `workAttention.subscribers` / `setSubscriber` branches.
 
-- **Independent light review** session `7a5a4ed6e090439ab52c0a896eb17101`
-  was reviewing f4fd99d3 when this landed — its verdict predates the review
-  fixes; fold in anything it reports.
+- **Avatar stack "+N" overflow**: cap at 5 with overflow count.
 
-- Then mark #257 ready and merge (squash).
-
-## Decisions still pending with the user
-
-- J3: Linear's "Slack channel" row on the project rail — build or skip.
-- J4: project subscribe bell — deferred.
-- The user's screenshot complaint (faded Assignee/Agent rows + duplicate
-  "In progress" + Set schedule row) matched pre-#250 layout — i.e. a stale
-  leftover dev server on this machine, not the current branch. Confirm in the
-  Electron pass that the rail renders the current field set.
+- **Strict Requirement for All Subsequent Alignment**:
+  - **"Linear 有的我们也要有，Linear 没有的我们也不能有"** (Strict 1:1 parity with Linear).
+  - All visual verification must be captured and confirmed on headful Electron (:9233), not web SPA proxy.
 
 ## Local environment notes
 

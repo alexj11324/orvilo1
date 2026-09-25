@@ -1774,6 +1774,7 @@ export class TaskService {
         };
       }),
       description: task.description,
+      domainRevision: task.domainRevision,
       editorData: task.editorData ?? undefined,
       error: task.error,
       files: taskFiles.length > 0 ? taskFiles : undefined,

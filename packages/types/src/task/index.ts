@@ -1304,6 +1304,7 @@ export interface TaskDetailData {
   description?: string | null;
   /** Optimistic-concurrency token for guarded domain writes (e.g. triage actions). */
   domainRevision?: number;
+||||||| parent of 048daf2c (🚧 wip(workflow): expose task domain revision in detail)
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;
   error?: string | null;

@@ -3,7 +3,7 @@ import { Popover, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskLabelSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckIcon, PlusIcon } from 'lucide-react';
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +18,12 @@ import { taskLabelService } from '@/services/taskLabel';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
+
+import {
+  blockedPickerContentStyle,
+  blockedPickerTriggerStyle,
+  pickerTriggerStyle,
+} from './pickerTriggerStyles';
 
 interface TaskLabelSelectorProps {
   /**
@@ -62,15 +68,6 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
 }));
-
-const triggerStyle: CSSProperties = {
-  alignItems: 'center',
-  display: 'inline-flex',
-  justifyContent: 'center',
-  lineHeight: 1,
-  maxWidth: '100%',
-  minWidth: 0,
-};
 
 /** tRPC surfaces the router's CONFLICT as `error.data.code`. */
 const isConflictError = (error: unknown): boolean =>
@@ -230,15 +227,12 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
     const blocked = disabled || !canEditTask;
     const trigger = blocked ? (
       <Tooltip title={disabled ? t('taskDetail.labels.disabled') : reason}>
-        <div
-          style={{ ...triggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <span style={{ pointerEvents: 'none' }}>{children}</span>
+        <div style={blockedPickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
+          <span style={blockedPickerContentStyle}>{children}</span>
         </div>
       </Tooltip>
     ) : (
-      <div style={triggerStyle} onClick={(event) => event.stopPropagation()}>
+      <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
         {children}
       </div>
     );

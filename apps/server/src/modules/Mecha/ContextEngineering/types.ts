@@ -4,8 +4,6 @@ import type {
   AgentContextDocument,
   AgentGroupConfig,
   AgentManagementContext,
-  BotPlatformContext,
-  DiscordContext,
   EvalContext,
   FileContent,
   GroupAgentBuilderContext,
@@ -106,11 +104,8 @@ export interface ServerMessagesEngineParams {
   /** Model capability checkers */
   capabilities?: ServerModelCapabilities;
   /** Bot platform context for injecting platform capabilities (e.g. markdown support) */
-  botPlatformContext?: BotPlatformContext;
   /** App origin + workspace slug so the model writes links that resolve to the right scope */
   workspaceContext?: WorkspaceContext;
-  /** Discord context for injecting channel/guild info */
-  discordContext?: DiscordContext;
   // ========== Eval context ==========
   /** Eval context for injecting environment prompts into system message */
   /** Borrowed-connector attribution, injected into the system message. */
@@ -197,8 +192,6 @@ export {
   type AgentBuilderContext,
   type AgentContextDocument,
   type AgentManagementContext,
-  type BotPlatformContext,
-  type DiscordContext,
   type EvalContext,
   type FileContent,
   type KnowledgeBaseInfo,

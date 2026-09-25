@@ -25,7 +25,23 @@ const fixtureRoutes: RouteObject[] = [
   },
 ];
 
-const t = (key: string) => key;
+// Mirrors i18next: echoes the key when missing, honors explicit ns scoping —
+// `commonDict` keys resolve only when the caller's ns list includes 'common'.
+const dict: Record<string, string> = {
+  'navigation.chat': 'Chat',
+  'navigation.home': 'Home',
+  'navigation.orvilo': 'Orvilo',
+};
+const commonDict: Record<string, string> = {
+  'tab.myWork': 'My issues',
+};
+const t = (key: string, options?: { ns?: string | string[] }) => {
+  const ns = options?.ns;
+  const nsList = Array.isArray(ns) ? ns : ns ? [ns] : [];
+  if (key in dict) return dict[key];
+  if (nsList.includes('common') && key in commonDict) return commonDict[key];
+  return key;
+};
 
 const tab = (url: string, cached?: TabItem['cached']): TabItem => ({
   cached,
@@ -97,17 +113,39 @@ describe('resolveTab', () => {
 
   it('falls back to the static titleKey when no snapshot exists', () => {
     const resolved = resolveTab(fixtureRoutes, tab('/agent/abc'), false, t);
-    expect(resolved.meta.title).toBe('navigation.chat');
+    expect(resolved.meta.title).toBe('Chat');
+  });
+
+  it('resolves common-namespace titleKeys (tab.*/navPanel.*) via the ns fallback', () => {
+    const membersRoute: RouteObject[] = [
+      {
+        children: [{ handle: { meta: { titleKey: 'tab.myWork' } }, path: 'my-issues' }],
+        path: '/',
+      },
+    ];
+    const resolved = resolveTab(membersRoute, tab('/my-issues'), false, t);
+    expect(resolved.meta.title).toBe('My issues');
+  });
+
+  it('falls back to the brand title instead of showing a raw unresolved key', () => {
+    const missingKeyRoute: RouteObject[] = [
+      {
+        children: [{ handle: { meta: { titleKey: 'tab.nonexistent' } }, path: 'missing' }],
+        path: '/',
+      },
+    ];
+    const resolved = resolveTab(missingKeyRoute, tab('/missing'), false, t);
+    expect(resolved.meta.title).toBe('Orvilo');
   });
 
   it('uses Home as the Electron tab title for the Home route', () => {
     const resolved = resolveTab(fixtureRoutes, tab('/'), false, t);
-    expect(resolved.meta.title).toBe('navigation.home');
+    expect(resolved.meta.title).toBe('Home');
   });
 
   it('uses the generic fallback when neither snapshot nor static meta exists', () => {
     const resolved = resolveTab(fixtureRoutes, tab('/group/g1'), false, t);
-    expect(resolved.meta.title).toBe('navigation.orvilo');
+    expect(resolved.meta.title).toBe('Orvilo');
     expect(resolved.meta.icon).toBe(Circle);
   });
 
@@ -119,6 +157,6 @@ describe('resolveTab', () => {
   it('does not drop a tab with undefined store data (cold start)', () => {
     const resolved = resolveTab(fixtureRoutes, tab('/agent/abc'), true, t, undefined);
     expect(resolved.tab.url).toBe('/agent/abc');
-    expect(resolved.meta.title).toBe('navigation.chat');
+    expect(resolved.meta.title).toBe('Chat');
   });
 });

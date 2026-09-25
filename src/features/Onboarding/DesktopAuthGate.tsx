@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, type PropsWithChildren, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -55,19 +54,17 @@ const DesktopAuthGate = memo<PropsWithChildren>(({ children }) => {
   // `OnboardingContainer`: the frameless (`frame: false`) onboarding window
   // always needs its draggable title bar and Linux window controls.
   return (
-    <OnboardingContainer>
+    <OnboardingContainer showHeader={!isAuthenticated}>
       {!isInitRemoteServerConfig ? (
         <Loading debugId="DesktopAuthGate" />
       ) : isAuthenticated ? (
         children
       ) : (
-        <Flexbox style={{ maxWidth: 560, minHeight: '100%', width: '100%' }}>
-          <LoginStep
-            mode="onboarding"
-            onBack={() => navigate('/')}
-            onNext={() => window.location.reload()}
-          />
-        </Flexbox>
+        <LoginStep
+          mode="onboarding"
+          onBack={() => navigate('/')}
+          onNext={() => window.location.reload()}
+        />
       )}
     </OnboardingContainer>
   );

@@ -29,13 +29,7 @@ export const mainAreaMetaRoutes: RouteObject[] = [
 ];
 
 // `/share/*` is served by the standalone Share app (apps/share), not this router.
-const webOnlyRoutes: RouteObject[] = [
-  {
-    element: dynamicElement(() => import('@/routes/verify-im'), 'Desktop > VerifyIm'),
-    errorElement: <ErrorBoundary />,
-    path: '/verify-im',
-  },
-];
+const webOnlyRoutes: RouteObject[] = [];
 
 export const desktopRoutes: RouteObject[] = createSharedDesktopRoutes({
   mainAreaChildren: createMainAreaChildren(),

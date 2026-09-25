@@ -276,35 +276,17 @@ describe('TaskResultBridgeService.deliver', () => {
     }
   });
 
-  it('restores messenger routing and registers a proactive bot completion hook', async () => {
-    topicFindById.mockResolvedValue({
-      agentId: 'agent-creator',
-      metadata: {
-        bot: {
-          applicationId: 'messenger-discord',
-          isOwner: true,
-          messengerInstallationKey: 'discord:singleton',
-          platform: 'discord',
-          platformThreadId: 'discord:guild:channel:thread',
-          senderExternalUserId: 'discord-user',
-        },
-      },
-    });
-
+  it('registers the proactive creator completion hook', async () => {
     await new TaskResultBridgeService(db, TEST_USER).deliver(baseParams);
 
     const hooks = execAgent.mock.calls[0][0].hooks;
-    const botHook = hooks.find((hook: any) => hook.id === 'task-creator-completion');
-    expect(botHook.webhook).toMatchObject({
+    const hook = hooks.find((h: any) => h.id === 'task-creator-completion');
+    expect(hook.webhook).toMatchObject({
       delivery: 'hatchet',
       fallback: 'none',
       url: '/api/workflows/task/on-creator-complete',
     });
-    expect(botHook.webhook.body).toMatchObject({
-      messengerInstallationKey: 'discord:singleton',
-      platformThreadId: 'discord:guild:channel:thread',
-      type: 'completion',
-    });
+    expect(hook.webhook.body).toMatchObject({ type: 'completion' });
   });
 
   it('aggregates all pending callbacks into one creator wakeup', async () => {

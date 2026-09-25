@@ -1,4 +1,4 @@
-import { type AgentRuntimeContext, type AgentState } from '@orvilo/agent-runtime';
+import { type AgentRuntimeContext, type AgentState } from '@orvilo/agent-execution';
 
 // ==================== Step Lifecycle Callbacks ====================
 

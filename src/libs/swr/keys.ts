@@ -387,16 +387,19 @@ export const taskKeys = {
       visibility: 'all' | 'private' | 'workspace' = 'all',
       groupBy: 'assignee' | 'member' | 'priority' | 'status' = 'status',
       excludeStatuses?: string,
-      projectId?: string,
+      projectId?: string | null,
       automated?: boolean,
     ) => {
+      // `null` = the "No project" filter; it must key differently from an
+      // unfiltered board, so it collapses to a readable marker segment.
+      const projectKey = projectId === null ? 'no-project' : projectId;
       const hasBoardFilter = groupBy !== 'status' || excludeStatuses !== undefined;
       const key = hasBoardFilter
-        ? projectId
-          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectId]
+        ? projectKey
+          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectKey]
           : ['task:groupList', agentKey, visibility, groupBy, excludeStatuses]
-        : projectId
-          ? ['task:groupList', agentKey, visibility, projectId]
+        : projectKey
+          ? ['task:groupList', agentKey, visibility, projectKey]
           : ['task:groupList', agentKey, visibility];
 
       return automated === undefined ? key : [...key, { automated }];
@@ -562,9 +565,6 @@ export const agentConfigKeys = {
   available: def('agent:available', () => ['agent:available']),
   config: def('agent:config', (agentId: string) => ['agent:config', agentId]),
   search: def('agent:search', (keyword?: string) => ['agent:search', keyword]),
-  serverDefaultHeterogeneousCapability: def('agent:serverDefaultHeterogeneousCapability', () => [
-    'agent:serverDefaultHeterogeneousCapability',
-  ]),
 };
 
 // ---- aiModel ------------------------------------------------------------
@@ -576,34 +576,6 @@ export const aiModelKeys = {
   ]),
 };
 
-// ---- image generation ---------------------------------------------------
-export const imageKeys = {
-  generationBatches: def('image:generationBatches', (topicId: string) => [
-    'image:generationBatches',
-    topicId,
-  ]),
-  generationStatus: def('image:generationStatus', (generationId: string, asyncTaskId?: string) => [
-    'image:generationStatus',
-    generationId,
-    asyncTaskId,
-  ]),
-  generationTopics: def('image:generationTopics', () => ['image:generationTopics']),
-};
-
-// ---- video generation ---------------------------------------------------
-export const videoKeys = {
-  generationBatches: def('video:generationBatches', (topicId: string) => [
-    'video:generationBatches',
-    topicId,
-  ]),
-  generationStatus: def('video:generationStatus', (generationId: string, asyncTaskId?: string) => [
-    'video:generationStatus',
-    generationId,
-    asyncTaskId,
-  ]),
-  generationTopics: def('video:generationTopics', () => ['video:generationTopics']),
-};
-
 // ---- serverConfig -------------------------------------------------------
 export const serverConfigKeys = {
   get: 'serverConfig:get' as const,
@@ -611,86 +583,21 @@ export const serverConfigKeys = {
 
 // ---- discover (marketplace) ---------------------------------------------
 // NOTE: discover/ragEval/knowledgeBase/device/userMemory/agentKnowledge/
-// agentBot/file/chatTool prefixes are deliberately kept OUT of `CACHE_TIERS`
+// file/chatTool prefixes are deliberately kept OUT of `CACHE_TIERS`
 // (see localStorageProvider.ts) so this key-convergence introduces no new
 // persistence — they stay memory-only exactly as before.
 export const discoverKeys = {
-  assistantCategories: def('discover:assistantCategories', (locale: string, params: unknown) => [
-    'discover:assistantCategories',
-    locale,
-    params,
-  ]),
-  assistantDetail: def('discover:assistantDetail', (locale: string, params: unknown) => [
-    'discover:assistantDetail',
-    locale,
-    params,
-  ]),
-  assistantIdentifiers: def('discover:assistantIdentifiers', (source?: string) => [
-    'discover:assistantIdentifiers',
-    source,
-  ]),
-  assistantList: def('discover:assistantList', (locale: string, params: unknown) => [
-    'discover:assistantList',
-    locale,
-    params,
-  ]),
-  groupAgentCategories: def('discover:groupAgentCategories', (locale: string, params: unknown) => [
-    'discover:groupAgentCategories',
-    locale,
-    params,
-  ]),
-  groupAgentDetail: def(
-    'discover:groupAgentDetail',
-    (locale: string, identifier: string, version?: string) => [
-      'discover:groupAgentDetail',
-      locale,
-      identifier,
-      version,
-    ],
-  ),
-  groupAgentIdentifiers: def('discover:groupAgentIdentifiers', () => [
-    'discover:groupAgentIdentifiers',
-  ]),
-  groupAgentList: def('discover:groupAgentList', (locale: string, params: unknown) => [
-    'discover:groupAgentList',
-    locale,
-    params,
-  ]),
-  mcpCategories: def('discover:mcpCategories', (locale: string, params: unknown) => [
-    'discover:mcpCategories',
-    locale,
-    params,
+  // -- marketplace detail "related agents" lists (UI) --
+  mcpAgents: def('discover:mcpAgents', (identifier: string, page: number) => [
+    'discover:mcpAgents',
+    identifier,
+    page,
   ]),
   mcpDetail: def('discover:mcpDetail', (locale: string, identifier: string, version?: string) => [
     'discover:mcpDetail',
     locale,
     identifier,
     version,
-  ]),
-  mcpList: def('discover:mcpList', (locale: string, params: unknown) => [
-    'discover:mcpList',
-    locale,
-    params,
-  ]),
-  modelCategories: def('discover:modelCategories', (params: unknown) => [
-    'discover:modelCategories',
-    params,
-  ]),
-  modelDetail: def('discover:modelDetail', (locale: string, identifier: string) => [
-    'discover:modelDetail',
-    locale,
-    identifier,
-  ]),
-  modelIdentifiers: def('discover:modelIdentifiers', () => ['discover:modelIdentifiers']),
-  modelList: def('discover:modelList', (locale: string, params: unknown) => [
-    'discover:modelList',
-    locale,
-    params,
-  ]),
-  pluginCategories: def('discover:pluginCategories', (locale: string, params: unknown) => [
-    'discover:pluginCategories',
-    locale,
-    params,
   ]),
   pluginDetail: def(
     'discover:pluginDetail',
@@ -699,85 +606,6 @@ export const discoverKeys = {
       locale,
       identifier,
       withManifest,
-    ],
-  ),
-  pluginIdentifiers: def('discover:pluginIdentifiers', () => ['discover:pluginIdentifiers']),
-  pluginList: def('discover:pluginList', (locale: string, params: unknown) => [
-    'discover:pluginList',
-    locale,
-    params,
-  ]),
-  providerDetail: def('discover:providerDetail', (locale: string, identifier: string) => [
-    'discover:providerDetail',
-    locale,
-    identifier,
-  ]),
-  providerIdentifiers: def('discover:providerIdentifiers', () => ['discover:providerIdentifiers']),
-  providerList: def('discover:providerList', (locale: string, params: unknown) => [
-    'discover:providerList',
-    locale,
-    params,
-  ]),
-  skillCategories: def('discover:skillCategories', (locale: string, params: unknown) => [
-    'discover:skillCategories',
-    locale,
-    params,
-  ]),
-  skillComments: def('discover:skillComments', (identifier: string, params: unknown) => [
-    'discover:skillComments',
-    identifier,
-    params,
-  ]),
-  skillDetail: def(
-    'discover:skillDetail',
-    (locale: string, identifier: string, version?: string) => [
-      'discover:skillDetail',
-      locale,
-      identifier,
-      version,
-    ],
-  ),
-  skillList: def('discover:skillList', (locale: string, params: unknown) => [
-    'discover:skillList',
-    locale,
-    params,
-  ]),
-  skillRatingDistribution: def('discover:skillRatingDistribution', (identifier: string) => [
-    'discover:skillRatingDistribution',
-    identifier,
-  ]),
-  skillRelated: def(
-    'discover:skillRelated',
-    (locale: string, category: string, identifier: string) => [
-      'discover:skillRelated',
-      locale,
-      category,
-      identifier,
-    ],
-  ),
-  userProfile: def('discover:userProfile', (locale: string, username: string) => [
-    'discover:userProfile',
-    locale,
-    username,
-  ]),
-  // -- marketplace detail "related agents" lists (UI) --
-  mcpAgents: def('discover:mcpAgents', (identifier: string, page: number) => [
-    'discover:mcpAgents',
-    identifier,
-    page,
-  ]),
-  skillAgents: def('discover:skillAgents', (identifier: string, page: number) => [
-    'discover:skillAgents',
-    identifier,
-    page,
-  ]),
-  skillStoreMarketSkills: def(
-    'discover:skillStoreMarketSkills',
-    (locale: string, keywords: string, page: number) => [
-      'discover:skillStoreMarketSkills',
-      locale,
-      keywords,
-      page,
     ],
   ),
 };
@@ -922,11 +750,6 @@ export const toolKeys = {
     'tool:orviloSkillTools',
     provider,
   ]),
-  mcpPluginList: def('tool:mcpPluginList', (locale: string, params: unknown) => [
-    'tool:mcpPluginList',
-    locale,
-    params,
-  ]),
   uninstalledBuiltins: def('tool:uninstalledBuiltins', (workspaceId: string | null | undefined) => [
     'tool:uninstalledBuiltins',
     workspaceId,
@@ -952,10 +775,6 @@ export const agentKnowledgeKeys = {
 };
 
 // ---- agent bot ----------------------------------------------------------
-export const agentBotKeys = {
-  platformDefinitions: def('agentBot:platformDefinitions', () => ['agentBot:platformDefinitions']),
-  providers: def('agentBot:providers', (agentId: string) => ['agentBot:providers', agentId]),
-};
 
 // ---- file ---------------------------------------------------------------
 export const fileKeys = {
@@ -1005,31 +824,6 @@ export const statsKeys = {
   usageLogs: def('stats:usageLogs', () => ['stats:usageLogs']),
   usageStat: def('stats:usageStat', () => ['stats:usageStat']),
   welcome: def('stats:welcome', () => ['stats:welcome']),
-};
-
-// ---- messenger / platform integration -----------------------------------
-export const messengerKeys = {
-  agentsForBinding: def('messenger:agentsForBinding', (workspaceId: string | null | undefined) => [
-    'messenger:agentsForBinding',
-    workspaceId ?? null,
-  ]),
-  availablePlatforms: def('messenger:availablePlatforms', () => ['messenger:availablePlatforms']),
-  bindingScopes: def('messenger:bindingScopes', () => ['messenger:bindingScopes']),
-  listMyInstallations: def('messenger:listMyInstallations', () => [
-    'messenger:listMyInstallations',
-  ]),
-  listMyLinks: def('messenger:listMyLinks', () => ['messenger:listMyLinks']),
-  myLink: def('messenger:myLink', (platform: string, tokenScopeKey: string | undefined) => [
-    'messenger:myLink',
-    platform,
-    tokenScopeKey,
-  ]),
-  peek: def('messenger:peek', (randomId: string) => ['messenger:peek', randomId]),
-  pushWindow: def('messenger:pushWindow', (platform: string, tenantId?: string) => [
-    'messenger:pushWindow',
-    platform,
-    tenantId ?? null,
-  ]),
 };
 
 // ---- verify (deliverable judging) ---------------------------------------
@@ -1105,6 +899,90 @@ export const inboxKeys = {
   unreadCount: def('inbox:unreadCount', (workspaceId: string | null) => [
     'inbox:unreadCount',
     workspaceId,
+  ]),
+  feed: def(
+    'inbox:feed',
+    (
+      workspaceId: string | null,
+      kind: string | undefined,
+      filter: string | undefined,
+      cursor: string | undefined,
+    ) => ['inbox:feed', workspaceId, kind, filter, cursor],
+  ),
+  feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
+    'inbox:feedSummary',
+    workspaceId,
+  ]),
+  /**
+   * Deep-link card lookup — keyed by workspace so a card readable in one
+   * scope can never be served from another scope's cache entry.
+   */
+  feedCard: def('inbox:feedCard', (workspaceId: string | null, id: string) => [
+    'inbox:feedCard',
+    workspaceId,
+    id,
+  ]),
+};
+
+export const workAttentionKeys = {
+  favorites: def('workAttention:favorites', (workspaceId: string | null) => [
+    'workAttention:favorites',
+    workspaceId,
+  ]),
+  myWork: def(
+    'workAttention:myWork',
+    (
+      workspaceId: string | null,
+      mode: string,
+      layout = 'list',
+      noProject = false,
+      delegated = false,
+    ) => ['workAttention:myWork', workspaceId, mode, layout, noProject, delegated],
+  ),
+  reviews: def(
+    'workAttention:reviews',
+    (workspaceId: string | null, tab: 'created' | 'for-me', layout = 'list') => [
+      'workAttention:reviews',
+      workspaceId,
+      tab,
+      layout,
+    ],
+  ),
+  savedView: def('workAttention:savedView', (workspaceId: string | null, viewId: string) => [
+    'workAttention:savedView',
+    workspaceId,
+    viewId,
+  ]),
+  savedViews: def('workAttention:savedViews', (workspaceId: string | null) => [
+    'workAttention:savedViews',
+    workspaceId,
+  ]),
+  search: def(
+    'workAttention:search',
+    (workspaceId: string | null, query: string, type: string | undefined) => [
+      'workAttention:search',
+      workspaceId,
+      query,
+      type,
+    ],
+  ),
+  teams: def('workAttention:teams', (workspaceId: string | null) => [
+    'workAttention:teams',
+    workspaceId,
+  ]),
+};
+
+// ---- pull request reviews (/reviews GitHub surface) -----------------------
+export const pullRequestKeys = {
+  detail: def('pullRequest:detail', (workspaceId: string | null, id: string) => [
+    'pullRequest:detail',
+    workspaceId,
+    id,
+  ]),
+  queue: def('pullRequest:queue', (workspaceId: string | null, tab: 'created' | 'for-me') => [
+    'pullRequest:queue',
+    workspaceId,
+    tab,
   ]),
 };
 
@@ -1322,9 +1200,6 @@ export const builtinAgentKeys = {
     scope,
   ]),
 };
-export const imessageKeys = {
-  bridgeStatus: def('imessage:bridgeStatus', () => ['imessage:bridgeStatus']),
-};
 // Desktop/electron IPC fetches — roots keep their existing `electron:getXxx` value.
 export const electronKeys = {
   appTrayVisible: def('electron:getAppTrayVisible', () => ['electron:getAppTrayVisible']),
@@ -1351,7 +1226,6 @@ export const matchDomain =
  */
 export const swrKeys = {
   agent: { ...agentKeys, ...agentConfigKeys },
-  agentBot: agentBotKeys,
   agentBuilder: agentBuilderKeys,
   agentDocument: agentDocumentSWRKeys,
   agentHome: agentHomeKeys,
@@ -1378,13 +1252,10 @@ export const swrKeys = {
   global: globalKeys,
   group: groupKeys,
   home: homeKeys,
-  image: imageKeys,
-  imessage: imessageKeys,
   inbox: inboxKeys,
   knowledgeBase: knowledgeBaseKeys,
   localFile: localFileKeys,
   message: messageKeys,
-  messenger: messengerKeys,
   notebook: notebookSWRKeys,
   onboarding: onboardingKeys,
   openInApp: openInAppKeys,
@@ -1410,5 +1281,6 @@ export const swrKeys = {
   user: userKeys,
   userMemory: userMemoryKeys,
   verify: verifyKeys,
-  video: videoKeys,
+  pullRequest: pullRequestKeys,
+  workAttention: workAttentionKeys,
 };

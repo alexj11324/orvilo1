@@ -83,7 +83,6 @@ describe('workspace settings useCategory', () => {
       WorkspaceSettingsTabs.Profile,
       WorkspaceSettingsTabs.Appearance,
       WorkspaceSettingsTabs.Hotkey,
-      WorkspaceSettingsTabs.Messenger,
     ]);
     expect(generalGroup?.items.map((item) => item.key)).not.toContain(
       WorkspaceSettingsTabs.Profile,

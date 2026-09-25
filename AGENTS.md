@@ -15,7 +15,10 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 `AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in skills so they have one source of truth.
 
+- **Linear UI parity**: For page-by-page implementation or audit against the live Linear product, read the `linear-ui-parity` skill. It owns two-way comparison, comparable runtime evidence, and the independent final page review.
+
 - **React and TSX**: Before editing components, component state, render boundaries, or memoization, read the `react` skill. It owns component selection, styling, state locality, and render-performance rules.
+
 - **Heavy domain features**: When splitting a fat Viewer/Page into reusable pieces (page vs portal vs share vs micro-app), read the `compose-atoms` skill. Split on mountable capabilities, not visual sections, and do not hide unused work behind `readOnly` / `mode` flags.
 
 ## Code Ownership
@@ -34,6 +37,8 @@ Before changing SPA routes, read the `spa-routes` skill. Register common Web/Ele
 ## Development
 
 ### Starting the Dev Environment
+
+Full local setup — Postgres/Redis, migrations, seeds, troubleshooting — lives in [docs/development/local-setup.md](./docs/development/local-setup.md).
 
 ```bash
 # SPA dev mode (frontend only, proxies API to localhost:3010)
@@ -54,14 +59,24 @@ Debug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-ho
 
 Open this URL to develop locally against the production backend (orvilo.aspectlylabs.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
 
+### Browser CDP for Linear parity
+
+Use Brave with a copy of the currently used Brave profile when comparing Orvilo with Linear. Keep the original Brave process and profile untouched; a fresh Chrome profile does not carry the reference session.
+
+- Find the active profile under `~/Library/Application Support/BraveSoftware/Brave-Browser` (check `profile.last_used` in `Local State`). Copy the user-data directory to a private temporary directory outside the repository. Exclude `Singleton*` locks, `Crashpad/`, and `BrowserMetrics*`; set the copy's top directory to mode `700` after copying because `rsync -a` can restore its original mode. Never commit or upload the copy, which contains session data.
+- Start a separate Brave instance with `--user-data-dir=<copy> --profile-directory=<active-profile> --remote-debugging-address=127.0.0.1 --remote-debugging-port=<port> --no-first-run`. Do not restart the original Brave instance or point CDP at its live profile.
+- Verify the copied instance by reading `http://127.0.0.1:<port>/json/version` and `/json/list`, then navigate to the Linear workspace and confirm it is authenticated. Cookies in the copy alone do not prove login. Give agents the loopback endpoint only after these checks pass.
+- Run the Orvilo candidate against the intended local revision and populated fixture. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity.
+
 ### Git Workflow
 
-- **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md)
+- **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md); deploy targets: [docs/environments.md](./docs/environments.md)
 - New branches should be created from `canary`; PRs should target `canary`
 - Use rebase for `git pull`
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
 - Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
+- **GitHub API credentials (Devin sessions)**: `gh` is authenticated via `GH_TOKEN` read from `~/.devin/.devin-integration-gh-credentials` — this file is Devin's own token location, written by the platform for the Devin agent. Use `GH_TOKEN=$(awk '{print $2}' ~/.devin/.devin-integration-gh-credentials) gh <cmd> -R alexj11324/orvilo1`. Remotes point at the git proxy host, so always pass `-R alexj11324/orvilo1` (or run commands that don't derive the repo from the remote). The token is short-lived and refreshed by the platform — read it fresh per command, never copy it into files or logs.
 
 ### Cutting a Release
 

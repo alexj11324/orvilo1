@@ -1,28 +1,47 @@
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
-import { NotificationModel } from '@/database/models/notification';
+import { NotificationBulkError, NotificationModel } from '@/database/models/notification';
+import { ProjectModel } from '@/database/models/project';
 import { ResourceTransferRequestModel } from '@/database/models/resourceTransferRequest';
+import { TaskModel } from '@/database/models/task';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import {
+  ActionSourceRegistry,
+  buildInboxFeed,
+  buildInboxFeedCard,
+} from '@/server/services/workAttention';
 
 const notificationProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
 
   return opts.next({
     ctx: {
+      actionSources: new ActionSourceRegistry(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+        ctx.workspaceRole === 'owner' || ctx.workspaceRole === 'admin',
+      ),
       // Scope the inbox to the request context: workspace mode only sees that
       // workspace's notifications, personal mode only sees personal ones
       // (`workspace_id IS NULL`) — the two contexts never leak into each other.
       notificationModel: new NotificationModel(ctx.serverDB, ctx.userId, {
         workspaceId: ctx.workspaceId ?? null,
       }),
+      projectModel: new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
+      taskModel: new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
     },
   });
 });
+const notificationReadProcedure = notificationProcedure.use(
+  withScopedPermission('notification:read'),
+);
 const notificationWriteProcedure = notificationProcedure.use(
-  withScopedPermission('message:create'),
+  withScopedPermission('notification:organize'),
 );
 
 /**
@@ -46,16 +65,147 @@ const listLiveTransferCards = async (ctx: {
 
 export const notificationRouter = router({
   archive: notificationWriteProcedure
-    .input(z.object({ id: z.string() }))
+    .input(
+      z.object({
+        expectedVersion: z.number().int().min(0).optional(),
+        id: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      return ctx.notificationModel.archive(input.id);
+      if (input.expectedVersion === undefined) {
+        return ctx.notificationModel.archive(input.id);
+      }
+      return ctx.notificationModel.archiveObserved(input.id, input.expectedVersion);
     }),
 
   archiveAll: notificationWriteProcedure.mutation(async ({ ctx }) => {
     return ctx.notificationModel.archiveAll();
   }),
 
-  navigationCounts: notificationProcedure.query(async ({ ctx }) => {
+  prepareBulk: notificationWriteProcedure
+    .input(
+      z.object({
+        action: z.enum(['archive', 'mark_read']),
+        queryFingerprint: z.string().min(1).max(200),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await ctx.notificationModel.prepareBulk(input);
+        return { data, success: true };
+      } catch (error) {
+        if (error instanceof NotificationBulkError) {
+          throw new TRPCError({
+            code: error.code === 'RATE_LIMITED' ? 'TOO_MANY_REQUESTS' : 'BAD_REQUEST',
+            message: error.code,
+          });
+        }
+        throw error;
+      }
+    }),
+
+  applyBulk: notificationWriteProcedure
+    .input(z.object({ token: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const data = await ctx.notificationModel.applyBulk(input.token);
+        return { data, success: true };
+      } catch (error) {
+        if (error instanceof NotificationBulkError) {
+          throw new TRPCError({
+            code:
+              error.code === 'NOT_FOUND'
+                ? 'NOT_FOUND'
+                : error.code === 'FORBIDDEN_ACTION'
+                  ? 'BAD_REQUEST'
+                  : 'CONFLICT',
+            message: error.code,
+          });
+        }
+        throw error;
+      }
+    }),
+
+  feed: notificationReadProcedure
+    .input(
+      z.object({
+        cursor: z.string().optional(),
+        filter: z.enum(['all', 'archived', 'mentions', 'snoozed', 'unread']).optional(),
+        kind: z.enum(['action', 'other', 'priority', 'update']).optional(),
+        limit: z.number().min(1).max(50).default(20),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return buildInboxFeed({
+        actionSources: ctx.actionSources,
+        input,
+        notificationModel: ctx.notificationModel,
+        projectModel: ctx.projectModel,
+        taskModel: ctx.taskModel,
+      });
+    }),
+
+  /**
+   * Single feed card by id — resolves deep links (`?item=<id>`) that point
+   * beyond the loaded pages, and re-reads one card to reconcile an
+   * `outcome_unknown` decision before the client resends. Same scope/ACL as
+   * `feed`; `null` when the row is absent or no longer readable.
+   */
+  feedCard: notificationReadProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      return buildInboxFeedCard(
+        {
+          actionSources: ctx.actionSources,
+          notificationModel: ctx.notificationModel,
+          projectModel: ctx.projectModel,
+          taskModel: ctx.taskModel,
+        },
+        input.id,
+      );
+    }),
+
+  feedSummary: notificationReadProcedure.query(async ({ ctx }) => {
+    return ctx.actionSources.summarizeFeed(ctx.notificationModel);
+  }),
+
+  list: notificationReadProcedure
+    .input(
+      z.object({
+        category: z.string().optional(),
+        cursor: z.string().optional(),
+        isRead: z.boolean().optional(),
+        limit: z.number().min(1).max(50).default(20),
+        unreadOnly: z.boolean().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.notificationModel.list(input);
+    }),
+
+  markAllAsRead: notificationWriteProcedure.mutation(async ({ ctx }) => {
+    return ctx.notificationModel.markAllAsRead();
+  }),
+
+  markAsRead: notificationWriteProcedure
+    .input(z.object({ ids: z.array(z.string()).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.markAsRead(input.ids);
+    }),
+
+  markReadObserved: notificationWriteProcedure
+    .input(z.object({ id: z.string(), observedVersion: z.number().int().min(0) }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.markReadObserved(input.id, input.observedVersion);
+    }),
+
+  markUnread: notificationWriteProcedure
+    .input(z.object({ expectedVersion: z.number().int().min(0), id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.markUnreadObserved(input.id, input.expectedVersion);
+    }),
+
+  navigationCounts: notificationReadProcedure.query(async ({ ctx }) => {
     // The pending category is action-driven, not read-driven: while a
     // transfer request awaits the user, its count must keep prompting even
     // after the linked inbox row was read. Swap the linked rows out of the
@@ -94,42 +244,25 @@ export const notificationRouter = router({
     return counts;
   }),
 
-  list: notificationProcedure
+  snooze: notificationWriteProcedure
     .input(
       z.object({
-        category: z.string().optional(),
-        cursor: z.string().optional(),
-        isRead: z.boolean().optional(),
-        limit: z.number().min(1).max(50).default(20),
-        unreadOnly: z.boolean().optional(),
+        expectedVersion: z.number().int().min(0),
+        id: z.string(),
+        until: z.string().datetime(),
       }),
     )
-    .query(async ({ ctx, input }) => {
-      return ctx.notificationModel.list(input);
-    }),
-
-  markAllAsRead: notificationWriteProcedure.mutation(async ({ ctx }) => {
-    return ctx.notificationModel.markAllAsRead();
-  }),
-
-  markAsRead: notificationWriteProcedure
-    .input(z.object({ ids: z.array(z.string()).min(1) }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.notificationModel.markAsRead(input.ids);
+      return ctx.notificationModel.snooze(input.id, new Date(input.until), input.expectedVersion);
     }),
 
-  unreadCount: notificationProcedure.query(async ({ ctx }) => {
-    // The header bell must keep prompting while a transfer awaits the user —
-    // even if the linked row was read/archived or its delivery failed — so
-    // apply the same live-transfer reconciliation as `navigationCounts`.
-    const cards = await listLiveTransferCards(ctx);
-    const unread = await ctx.notificationModel.getUnreadCount();
-    if (cards.length === 0) return unread;
-
-    const linked = await ctx.notificationModel.countLinkedToTransfers(
-      cards.map((request) => request.id),
-    );
-    return Math.max(0, unread + cards.length - linked.unread);
+  unreadCount: notificationReadProcedure.query(async ({ ctx }) => {
+    // Same union as the sidebar badge / Inbox header after source repair:
+    // unread updates plus unresolved actions, including live transfers that
+    // never got a projection row.
+    await ctx.actionSources.ensurePendingSourceCards(ctx.notificationModel);
+    const summary = await ctx.notificationModel.getFeedSummary();
+    return summary.unreadBadgeCount;
   }),
 });
 

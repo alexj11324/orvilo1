@@ -107,8 +107,6 @@ describe('desktop router shared definition', () => {
     (_, createMainAreaChildren) => {
       for (const pathname of [
         '/agent/agent-1/profile',
-        '/agent/agent-1/channel',
-        '/agent/agent-1/channel/slack',
         '/agent/agent-1/statistics',
         '/agent/agent-1/share',
         '/group/group-1/profile',
@@ -212,11 +210,20 @@ describe('desktop router shared definition', () => {
       // under a task, and the project-level collection was a second, parentless
       // way to browse them. The assertion follows the behavior change rather
       // than being relaxed — the list is still compared exactly.
-      expect(projectPaths).toEqual(['tasks', 'goals', 'resources', 'library/:id']);
+      expect(projectPaths).toEqual([
+        'overview',
+        'tasks',
+        'goals',
+        'resources',
+        'library/:id',
+        'conversation/:topicId?',
+      ]);
+      // Linear shape: the project index redirects to its Overview tab (the real
+      // app's landing), so the index element must be a Navigate to 'overview'.
       expect(projectIndexRoute?.element).toBeTruthy();
       expect(
         (projectIndexRoute?.element as ReactElement<{ to?: string }> | undefined)?.props.to,
-      ).toBeUndefined();
+      ).toBe('overview');
     },
   );
 
@@ -305,6 +312,33 @@ describe('desktop router shared definition', () => {
     );
   });
 
+  it.each(mainAreaVariants)(
+    '%s matches work attention surfaces instead of a splat 404',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+
+      for (const [pathname, parent] of [
+        ['/inbox', 'inbox'],
+        ['/my-work', 'my-work'],
+        ['/views', 'views'],
+        ['/views/builtin:all', 'views'],
+        ['/teams', 'teams'],
+        ['/teams/team-1', 'teams'],
+        ['/acme/inbox', 'inbox'],
+        ['/acme/my-work', 'my-work'],
+        ['/acme/views/view-1', 'views'],
+        ['/acme/teams/team-1', 'teams'],
+      ] as const) {
+        const matches = matchRoutes(routes, pathname);
+        const paths = matches?.map((match) => match.route.path) ?? [];
+
+        expect(matches, pathname).toBeTruthy();
+        expect(paths, pathname).toContain(parent);
+        expect(paths, pathname).not.toContain('*');
+      }
+    },
+  );
+
   it('keeps all route modules behind lazy import boundaries', async () => {
     const sources = await readRouterSources();
     const combinedSource = sources.join('\n');
@@ -323,9 +357,10 @@ describe('desktop router shared definition', () => {
     );
     // The threshold guards against a refactor that pulls route modules back
     // into eager imports; it is not a route count. Retiring the standalone
-    // acceptance pages removed their lazy boundaries, so the floor follows the
-    // smaller tree instead of being pinned to the pre-retirement number.
-    expect(lazyRouteImports.length).toBeGreaterThan(90);
+    // acceptance and messenger pages removed their lazy boundaries, so the
+    // floor follows the smaller tree instead of being pinned to the
+    // pre-retirement number.
+    expect(lazyRouteImports.length).toBeGreaterThan(80);
   });
 
   it('owns prioritized preload registration only in the shared route definition', async () => {
@@ -356,7 +391,6 @@ describe('desktop router shared definition', () => {
       { element: null, index: true },
       { element: null, path: '*' },
     ]);
-    expect(webPaths).toContain('/verify-im');
     // `/share/*` moved to the standalone Share app (apps/share).
     expect(webPaths).not.toContain('/share/t');
     expect(webPaths).not.toContain('/share/page');
@@ -372,7 +406,6 @@ describe('desktop router shared definition', () => {
     expect(webPaths).not.toContain('/acceptance');
     expect(webPaths).toContain('/onboarding');
     expect(webPaths).not.toContain('/desktop-onboarding');
-    expect(electronPaths).not.toContain('/verify-im');
     expect(electronPaths).not.toContain('/share/t');
     expect(electronPaths).not.toContain('/share/page');
     expect(electronPaths).not.toContain('/verify');
@@ -546,9 +579,11 @@ describe('desktop router shared definition', () => {
       ['/resource/files', ResourceCategorySkeleton],
       ['/resource/images', ResourceCategorySkeleton],
       ['/resource/works', ResourceCategorySkeleton],
-      // The inbox is a thin route over the capability the old Home used to host;
-      // asserted here so it cannot be registered without a skeleton of its own.
+      // Work inbox / My Work / Views / Teams must keep their own list skeletons.
       ['/inbox', createSurfaceSkeleton('list')],
+      ['/my-work', createSurfaceSkeleton('list')],
+      ['/views', createSurfaceSkeleton('list')],
+      ['/teams', createSurfaceSkeleton('list')],
     ] as const) {
       const matches = matchRoutes(getRoutes(pathname), pathname);
       expect(

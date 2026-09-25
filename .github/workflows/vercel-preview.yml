@@ -58,6 +58,9 @@ jobs:
     name: Deploy Vercel Preview
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.deployment_url }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}

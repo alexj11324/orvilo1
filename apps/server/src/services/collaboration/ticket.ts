@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   COLLABORATION_TICKET_AUDIENCE,
   COLLABORATION_TICKET_ISSUER,
+  COLLABORATION_TICKET_ISSUERS,
   COLLABORATION_TICKET_PURPOSE,
   type RoomTicketClaims,
 } from '@orvilo/types';
@@ -107,7 +108,7 @@ export const verifyRoomTicket = async (token: string): Promise<VerifiedRoomTicke
     const { payload } = await jwtVerify(token, publicKey, {
       algorithms: ['RS256'],
       audience: COLLABORATION_TICKET_AUDIENCE,
-      issuer: COLLABORATION_TICKET_ISSUER,
+      issuer: [...COLLABORATION_TICKET_ISSUERS],
     });
 
     if (

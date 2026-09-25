@@ -47,7 +47,7 @@ afterEach(async () => {
 });
 
 describe('AgentSignalReviewContextModel workspace scope', () => {
-  it('isolates self-iteration checks and document activity by workspace', async () => {
+  it("adopts the owner's unfiled agents and document activity into workspace scope", async () => {
     const personalContext = new AgentSignalReviewContextModel(serverDB, userId);
     const workspaceContext = new AgentSignalReviewContextModel(serverDB, userId, workspaceId);
     const personalDocumentModel = new AgentDocumentModel(serverDB, userId);
@@ -70,8 +70,10 @@ describe('AgentSignalReviewContextModel workspace scope', () => {
     await expect(personalContext.canAgentRunSelfIteration('workspace-review-agent')).resolves.toBe(
       false,
     );
+    // The owner's unfiled agent remains theirs inside workspace scope, so the
+    // self-iteration guard answers true for it.
     await expect(workspaceContext.canAgentRunSelfIteration('personal-review-agent')).resolves.toBe(
-      false,
+      true,
     );
     await expect(workspaceContext.canAgentRunSelfIteration('workspace-review-agent')).resolves.toBe(
       true,
@@ -96,7 +98,12 @@ describe('AgentSignalReviewContextModel workspace scope', () => {
         ...window,
         agentId: 'personal-review-agent',
       }),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual([
+      expect.objectContaining({
+        agentDocumentId: personalDoc.id,
+        documentId: personalDoc.documentId,
+      }),
+    ]);
     await expect(personalDocumentModel.findById(personalDoc.id)).resolves.toBeDefined();
   });
 });

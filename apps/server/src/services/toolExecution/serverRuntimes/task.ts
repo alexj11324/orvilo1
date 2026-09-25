@@ -24,7 +24,6 @@ import { eq } from 'drizzle-orm';
 
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
 import { AgentModel } from '@/database/models/agent';
-import { MessengerAccountLinkModel } from '@/database/models/messengerAccountLink';
 import { TaskModel } from '@/database/models/task';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceModel } from '@/database/models/workspace';
@@ -569,33 +568,18 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         const total = page.total;
 
         const memberIds = memberRows.map((m) => m.userId);
-        // Linked IM identities (Discord/Slack/Telegram…) make handle-based
-        // requests ("assign this to @Neko") resolvable by exact platform id
-        // instead of name similarity. Scoped to this workspace: identities a
-        // member linked elsewhere are not exposed to coworkers here.
-        const [profiles, emails, imLinks] = await Promise.all([
+        const [profiles, emails] = await Promise.all([
           UserModel.getDisplayInfoByIds(db, memberIds),
           UserModel.getEmailsByIds(db, memberIds),
-          MessengerAccountLinkModel.findByUserIds(db, memberIds, {
-            workspaceId: workspaceId ?? null,
-          }),
         ]);
         const profileMap = new Map(profiles.map((u) => [u.id, u]));
         const emailMap = new Map(emails.map((u) => [u.id, u.email]));
-        const imMap = new Map<string, string[]>();
-        for (const link of imLinks) {
-          const alias = link.platformUsername
-            ? `${link.platform}:@${link.platformUsername}(${link.platformUserId})`
-            : `${link.platform}:${link.platformUserId}`;
-          imMap.set(link.userId, [...(imMap.get(link.userId) ?? []), alias]);
-        }
 
         const members: TaskAssignableMember[] = memberRows.map((m) => {
           const profile = profileMap.get(m.userId);
           return {
             email: emailMap.get(m.userId),
             id: m.userId,
-            imAccounts: imMap.get(m.userId),
             isSelf: m.userId === userId,
             name: profile?.fullName,
             role: m.role,
@@ -787,6 +771,8 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         const result = await taskCaller().run({
           continueTopicId: args.continueTopicId,
           id,
+          // A tool-initiated continuation declares its intent explicitly.
+          intent: args.continueTopicId ? 'continue' : undefined,
           prompt: args.prompt,
         });
 

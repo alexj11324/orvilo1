@@ -1,8 +1,10 @@
 #!/usr/bin/env bun
 /**
- * E2E Test Environment Setup Script
+ * setup.ts — one-click E2E test environment setup.
  *
- * One-click setup for E2E testing environment.
+ * Boots the disposable e2e stack: ParadeDB Postgres container (port 5433),
+ * migrations, optional app build + server start, and the mock Agent
+ * Gateway/LLM endpoints the server's agent runtime talks to.
  *
  * Usage:
  *   bun e2e/scripts/setup.ts [options]
@@ -15,6 +17,13 @@
  *   --start        Start the server after setup
  *   --port <port>  Server port (default: 3006)
  *   --help         Show help message
+ *
+ * Env:
+ *   E2E_MOCK_LLM_PORT      (default 3406)  mock OpenAI-compatible LLM port
+ *   E2E_MOCK_GATEWAY_PORT  (default 3407)  fake Agent Gateway port
+ *
+ * Exit behavior: 0 on success; 1 on setup failure; the started server keeps
+ * running in the background when --start is used.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -299,6 +308,10 @@ function getServerEnv(port: number): Record<string, string> {
     // browser client runtime is retired) — point it at the local stand-ins.
     AGENT_GATEWAY_SERVICE_TOKEN: 'e2e-mock-service-token',
     AGENT_GATEWAY_URL: 'http://localhost:3407',
+    // Device-bound runs (the only execution path web sends resolve) dispatch
+    // to the device gateway — the same fake process emulates a device.
+    DEVICE_GATEWAY_SERVICE_TOKEN: 'e2e-mock-service-token',
+    DEVICE_GATEWAY_URL: 'http://localhost:3407',
     DEEPSEEK_API_KEY: 'e2e-mock-key',
     DEEPSEEK_PROXY_URL: 'http://localhost:3406/v1',
     // Mini-model calls (topic titles, summaries) resolve to openai — same mock.

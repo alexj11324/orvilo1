@@ -22,16 +22,6 @@ import type {
   TextToSpeechPayload,
 } from '../types';
 import { AgentRuntimeErrorType } from '../types/error';
-import type {
-  AuthenticatedImageRuntime,
-  CreateImageMethodOptions,
-  CreateImagePayload,
-} from '../types/image';
-import type {
-  CreateVideoMethodOptions,
-  CreateVideoPayload,
-  HandleCreateVideoWebhookPayload,
-} from '../types/video';
 import { AgentRuntimeError } from '../utils/createError';
 import type { OrviloRuntimeAI } from './BaseAI';
 
@@ -67,14 +57,6 @@ export interface ModelRuntimeHooks {
    * Runs before the LLM call. Throw to abort (e.g., budget exceeded).
    */
   beforeChat?: (payload: ChatStreamPayload, options?: ChatMethodOptions) => Promise<void>;
-  beforeCreateImage?: (
-    payload: CreateImagePayload,
-    options?: CreateImageMethodOptions,
-  ) => Promise<void>;
-  beforeCreateVideo?: (
-    payload: CreateVideoPayload,
-    options?: CreateVideoMethodOptions,
-  ) => Promise<void>;
   beforeEmbeddings?: (payload: EmbeddingsPayload, options?: EmbeddingsOptions) => Promise<void>;
   beforeGenerateObject?: (
     payload: GenerateObjectPayload,
@@ -406,28 +388,6 @@ export class ModelRuntime {
     }
   }
 
-  async createImage(payload: CreateImagePayload, options?: CreateImageMethodOptions) {
-    const finalOptions = this._hooks?.beforeCreateImage && !options ? {} : options;
-    await this._hooks?.beforeCreateImage?.(payload, finalOptions);
-
-    return this._runtime.createImage?.(payload, finalOptions);
-  }
-
-  async createVideo(payload: CreateVideoPayload, options?: CreateVideoMethodOptions) {
-    const finalOptions = this._hooks?.beforeCreateVideo && !options ? {} : options;
-    await this._hooks?.beforeCreateVideo?.(payload, finalOptions);
-
-    return this._runtime.createVideo?.(payload, finalOptions);
-  }
-
-  async handleCreateVideoWebhook(payload: HandleCreateVideoWebhookPayload) {
-    return this._runtime.handleCreateVideoWebhook?.(payload);
-  }
-
-  async handlePollVideoStatus(inferenceId: string) {
-    return this._runtime.handlePollVideoStatus?.(inferenceId);
-  }
-
   async models() {
     return this._runtime.models?.();
   }
@@ -475,13 +435,6 @@ export class ModelRuntime {
 
   async pullModel(params: PullModelParams, options?: ModelRequestOptions) {
     return this._runtime.pullModel?.(params, options);
-  }
-
-  /**
-   * Get authentication headers if runtime supports it
-   */
-  getAuthHeaders(): Record<string, string> | undefined {
-    return (this._runtime as AuthenticatedImageRuntime).getAuthHeaders?.();
   }
 
   /**

@@ -611,4 +611,149 @@ describe('agentDelegation services (integration)', () => {
       });
     });
   });
+
+  describe('ActionApprovalService.consumeForDispatch (SC05)', () => {
+    const insertReplanApproval = async (overrides: Record<string, unknown> = {}) => {
+      const [approval] = await db
+        .insert(actionApprovals)
+        .values({
+          actionType: 'task.replan',
+          approverUserId: ownerId,
+          baseVersion: 3,
+          requestedBy: memberId,
+          status: 'approved',
+          targetId: taskId,
+          targetType: 'task',
+          workspaceId,
+          ...overrides,
+        })
+        .returning();
+      return approval;
+    };
+    const replanExpected = () => ({
+      actionType: 'task.replan',
+      baseVersion: 3,
+      targetId: taskId,
+      targetType: 'task',
+      workspaceId,
+    });
+    const readApproval = async (id: string) => {
+      const [row] = await db.select().from(actionApprovals).where(eq(actionApprovals.id, id));
+      return row;
+    };
+
+    it('consumes an approved grant bound to the dispatch and re-adopts it on a same-dispatch retry', async () => {
+      const approval = await insertReplanApproval();
+      const service = new ActionApprovalService(db, ownerId, workspaceId);
+
+      const first = await service.consumeForDispatch({
+        approvalId: approval.id,
+        dispatchId: 'dsp-1',
+        expected: replanExpected(),
+      });
+      expect(first).toMatchObject({ approval: { id: approval.id }, kind: 'consumed' });
+      expect(await readApproval(approval.id)).toMatchObject({
+        consumedByDispatchId: 'dsp-1',
+      });
+
+      // A retry of the SAME dispatch re-adopts the grant it already owns —
+      // a transient failure after the spend must not demand a fresh
+      // approval nor report the grant as unavailable.
+      const retry = await service.consumeForDispatch({
+        approvalId: approval.id,
+        dispatchId: 'dsp-1',
+        expected: replanExpected(),
+      });
+      expect(retry.kind).toBe('adopted');
+    });
+
+    it('refuses a different dispatch on an already-consumed grant', async () => {
+      const approval = await insertReplanApproval();
+      const service = new ActionApprovalService(db, ownerId, workspaceId);
+      await service.consumeForDispatch({
+        approvalId: approval.id,
+        dispatchId: 'dsp-1',
+        expected: replanExpected(),
+      });
+
+      const second = await service.consumeForDispatch({
+        approvalId: approval.id,
+        dispatchId: 'dsp-2',
+        expected: replanExpected(),
+      });
+      expect(second.kind).toBe('unavailable');
+      expect(await readApproval(approval.id)).toMatchObject({
+        consumedByDispatchId: 'dsp-1',
+      });
+    });
+
+    it('a wrong-target request cannot consume — the grant stays untouched', async () => {
+      // SC05 regression: the scope check runs INSIDE the consume
+      // transaction, so a mismatched request must not mark anything.
+      const approval = await insertReplanApproval();
+      const service = new ActionApprovalService(db, ownerId, workspaceId);
+
+      const outcome = await service.consumeForDispatch({
+        approvalId: approval.id,
+        dispatchId: 'dsp-1',
+        expected: { ...replanExpected(), targetId: 'task-OTHER' },
+      });
+      expect(outcome.kind).toBe('scope_mismatch');
+      expect(await readApproval(approval.id)).toMatchObject({
+        consumedAt: null,
+        consumedByDispatchId: null,
+        status: 'approved',
+      });
+    });
+
+    it('a stale baseVersion refusal leaves the grant untouched', async () => {
+      const approval = await insertReplanApproval();
+      const service = new ActionApprovalService(db, ownerId, workspaceId);
+
+      const outcome = await service.consumeForDispatch({
+        approvalId: approval.id,
+        dispatchId: 'dsp-1',
+        expected: { ...replanExpected(), baseVersion: 4 },
+      });
+      expect(outcome.kind).toBe('revision_mismatch');
+      expect(await readApproval(approval.id)).toMatchObject({
+        consumedAt: null,
+        status: 'approved',
+      });
+    });
+
+    it('reports expired and undecided grants without consuming them', async () => {
+      const expired = await insertReplanApproval({ expiresAt: new Date(Date.now() - 1000) });
+      const pending = await insertReplanApproval({ status: 'pending' });
+      const service = new ActionApprovalService(db, ownerId, workspaceId);
+
+      await expect(
+        service.consumeForDispatch({
+          approvalId: expired.id,
+          dispatchId: 'dsp-1',
+          expected: replanExpected(),
+        }),
+      ).resolves.toMatchObject({ kind: 'expired' });
+      await expect(
+        service.consumeForDispatch({
+          approvalId: pending.id,
+          dispatchId: 'dsp-1',
+          expected: replanExpected(),
+        }),
+      ).resolves.toMatchObject({ kind: 'unavailable' });
+      expect(await readApproval(expired.id)).toMatchObject({ consumedAt: null });
+      expect(await readApproval(pending.id)).toMatchObject({ consumedAt: null });
+    });
+
+    it('a missing approval reports missing', async () => {
+      const service = new ActionApprovalService(db, ownerId, workspaceId);
+      await expect(
+        service.consumeForDispatch({
+          approvalId: 'apv-nonexistent',
+          dispatchId: 'dsp-1',
+          expected: replanExpected(),
+        }),
+      ).resolves.toMatchObject({ kind: 'missing' });
+    });
+  });
 });

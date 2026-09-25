@@ -10,9 +10,11 @@ import {
   briefs,
   documents,
   tasks,
+  teamMembers,
   teams,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import { taskTopics } from '../../schemas/task';
@@ -3677,6 +3679,223 @@ describe('TaskModel', () => {
 
       expect(imported.identifier).toBe('ENG-4');
       expect(imported.seq).toBe(4);
+      expect(imported.triageStatus).toBe('untriaged');
+    });
+  });
+
+  describe('private team readability', () => {
+    const wsId = 'task-private-team-ws';
+    const privateTeamId = 'task-private-team';
+    const publicTeamId = 'task-public-team';
+
+    beforeEach(async () => {
+      await serverDB.insert(workspaces).values({
+        id: wsId,
+        name: 'Private Team WS',
+        primaryOwnerId: userId,
+        slug: wsId,
+      });
+      await serverDB.insert(teams).values([
+        {
+          createdByUserId: userId,
+          id: privateTeamId,
+          key: 'SEC',
+          name: 'Secret Squadron',
+          visibility: 'private',
+          workspaceId: wsId,
+        },
+        {
+          createdByUserId: userId,
+          id: publicTeamId,
+          key: 'PUB',
+          name: 'Public Fleet',
+          visibility: 'public',
+          workspaceId: wsId,
+        },
+      ]);
+      await serverDB.insert(teamMembers).values({
+        role: 'lead',
+        teamId: privateTeamId,
+        userId,
+        workspaceId: wsId,
+      });
+    });
+
+    it('does not expose a public-visibility private-team task to a non-member', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team work',
+        name: 'Private-team work',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+
+      expect(await bob.findById(secret.id)).toBeNull();
+      expect(await bob.findByIdentifier(secret.identifier)).toBeNull();
+      expect(await bob.resolve(secret.id)).toBeNull();
+      expect((await bob.findByIds([secret.id])).map((row) => row.id)).toEqual([]);
+      expect((await bob.list()).tasks.map((row) => row.id)).not.toContain(secret.id);
+
+      const updated = await bob.update(secret.id, { name: 'Hacked' });
+      expect(updated).toBeNull();
+      expect((await alice.findById(secret.id))?.name).toBe('Private-team work');
+    });
+
+    it('still lets assignees, reviewers, team members, and workspace admins find the task', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const assigned = await alice.create({
+        assigneeUserId: userId2,
+        instruction: 'Assigned on the private team',
+        name: 'Assigned on the private team',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const reviewed = await alice.create({
+        instruction: 'Review on the private team',
+        name: 'Review on the private team',
+        reviewerUserId: userId2,
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const memberOnly = await alice.create({
+        instruction: 'Member-only private-team work',
+        name: 'Member-only private-team work',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+
+      expect((await bob.findById(assigned.id))?.id).toBe(assigned.id);
+      expect((await bob.findById(reviewed.id))?.id).toBe(reviewed.id);
+      expect(await bob.findById(memberOnly.id)).toBeNull();
+      expect((await alice.findById(memberOnly.id))?.id).toBe(memberOnly.id);
+
+      await serverDB.insert(workspaceMembers).values({
+        role: 'admin',
+        userId: userId2,
+        workspaceId: wsId,
+      });
+      expect((await bob.findById(memberOnly.id))?.id).toBe(memberOnly.id);
+
+      const renamed = await bob.update(assigned.id, { name: 'Claimed' });
+      expect(renamed?.name).toBe('Claimed');
+    });
+
+    it('still lets another member find public tasks on a public team or with no team', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const unscoped = await alice.create({
+        instruction: 'Workspace public',
+        visibility: 'public',
+      });
+      const onPublicTeam = await alice.create({
+        instruction: 'Public-team work',
+        teamId: publicTeamId,
+        visibility: 'public',
+      });
+
+      expect((await bob.findById(unscoped.id))?.id).toBe(unscoped.id);
+      expect((await bob.findById(onPublicTeam.id))?.id).toBe(onPublicTeam.id);
+    });
+
+    it('does not list comments on a private-team task the viewer cannot find', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team discussion',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      await alice.addComment({
+        authorUserId: userId,
+        content: 'secret comment',
+        taskId: secret.id,
+        userId,
+      });
+
+      expect(await alice.getComments(secret.id)).toHaveLength(1);
+      expect(await bob.getComments(secret.id)).toEqual([]);
+    });
+
+    it('does not list dependencies or activities on a private-team task the viewer cannot find', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team graph',
+        name: 'Private-team graph',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const blocker = await alice.create({
+        instruction: 'Private-team blocker',
+        name: 'Private-team blocker',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      await alice.addDependency(secret.id, blocker.id);
+      await alice.addActivity({
+        actorUserId: userId,
+        payload: { fromId: null, toId: userId },
+        taskId: secret.id,
+        type: 'assignee_user',
+      });
+
+      expect(await alice.getDependencies(secret.id)).toHaveLength(1);
+      expect(await alice.getActivities(secret.id)).toHaveLength(1);
+      expect(await bob.getDependencies(secret.id)).toEqual([]);
+      expect(await bob.getActivities(secret.id)).toEqual([]);
+    });
+
+    it('does not list batch dependencies or dependents of a private-team task the viewer cannot find', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team dependent',
+        name: 'Private-team dependent',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const publicBlocker = await alice.create({
+        instruction: 'Public-team blocker',
+        name: 'Public-team blocker',
+        teamId: publicTeamId,
+        visibility: 'public',
+      });
+      await alice.addDependency(secret.id, publicBlocker.id);
+
+      expect(await alice.getDependenciesByTaskIds([secret.id])).toHaveLength(1);
+      expect((await alice.getDependents(publicBlocker.id)).map((row) => row.taskId)).toContain(
+        secret.id,
+      );
+
+      expect((await bob.findById(publicBlocker.id))?.id).toBe(publicBlocker.id);
+      expect(await bob.getDependenciesByTaskIds([secret.id])).toEqual([]);
+      expect((await bob.getDependents(publicBlocker.id)).map((row) => row.taskId)).not.toContain(
+        secret.id,
+      );
+    });
+
+    it('does not report a private-team task as blocked to a non-member', async () => {
+      const alice = new TaskModel(serverDB, userId, wsId);
+      const bob = new TaskModel(serverDB, userId2, wsId);
+      const secret = await alice.create({
+        instruction: 'Private-team blocked work',
+        name: 'Private-team blocked work',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      const blocker = await alice.create({
+        instruction: 'Still open',
+        name: 'Still open',
+        teamId: privateTeamId,
+        visibility: 'public',
+      });
+      await alice.addDependency(secret.id, blocker.id);
+
+      expect(await alice.findBlockedTaskIds([secret.id])).toEqual([secret.id]);
+      expect(await bob.findBlockedTaskIds([secret.id])).toEqual([]);
+      expect(await bob.areAllDependenciesCompleted(secret.id)).toBe(false);
     });
   });
 

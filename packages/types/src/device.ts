@@ -494,6 +494,51 @@ export interface DeviceGitWorktreeListItem {
 }
 
 /**
+ * A live agent run whose process working directory is the inspected worktree,
+ * reported by the device host's run registry.
+ */
+export interface DeviceGitWorktreeActiveWriter {
+  operationId?: string;
+  pid?: number;
+  topicId?: string;
+}
+
+/**
+ * Occupancy classification for a candidate worktree path, returned by the
+ * `inspectGitWorktreePath` device RPC. Mirrors the desktop
+ * `GitWorktreePathInspection`. `unknown` means the worktree listing itself
+ * failed — never treat it as an empty list.
+ *
+ * `activeWriter` is the device-side liveness signal: `null` means the host
+ * verified no run is writing inside the path, an object means a live run owns
+ * it, and `undefined` means the host cannot answer (older client / host with
+ * no run registry) — callers must treat it as "cannot prove safe", not "free".
+ */
+export interface DeviceGitWorktreePathInspection {
+  activeWriter?: DeviceGitWorktreeActiveWriter | null;
+  /**
+   * Canonical spelling of the inspected `worktreePath` — every alias of the
+   * same physical directory collapses to it. Present when the repo listing
+   * succeeded; absent means the host predates identity reporting.
+   */
+  canonicalWorktreePath?: string;
+  /**
+   * Host capabilities negotiated before writer admission. `worktreeClaims`
+   * true means the host binds a claim token to a created checkout inside the
+   * claims mutex (`addGitWorktree` carrying a `claimToken`). Absent = the host
+   * predates verified claims — refuse before creating, never delete blind.
+   */
+  capabilities?: { worktreeClaims?: boolean };
+  error?: string;
+  kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
+  listed?: DeviceGitWorktreeListItem;
+  /** Canonical git common-dir proving which physical repo owns the path. */
+  repoCommonDir?: string;
+  /** Canonical main-checkout root of the repo. */
+  repoRoot?: string;
+}
+
+/**
  * Commit divergence vs the upstream tracking ref, returned by the
  * `getGitAheadBehind` device RPC. Mirrors the desktop shape.
  */
@@ -529,11 +574,32 @@ export interface DeviceGitCheckoutResult {
  */
 export interface DeviceGitSyncResult {
   error?: string;
+  /**
+   * Capability negotiation: true when the server sent a lease `fence` and the
+   * device persisted/enforced it before pushing. Absent on pre-fence clients —
+   * callers must not treat a successful unflagged push as fenced.
+   */
+  fenceEnforced?: boolean;
   /** True when git reported the branch was already up-to-date. */
   noop?: boolean;
   /** Proves the device pushed the requested immutable source ref. */
   pushedSourceRef?: string;
+  /** Remote ref value observed while enforcing `expectedRemoteSha`. */
+  remoteSha?: string;
   success: boolean;
+}
+
+/**
+ * Result of the `probeGitRemoteRef` device RPC — the remote observation used
+ * to reconcile a fenced publish whose outcome was lost. `unknown` means the
+ * remote could not be read at all (not proof of anything), `missing` means the
+ * remote was reached and the ref is absent.
+ */
+export interface DeviceGitRemoteRefProbe {
+  ref?: string;
+  /** Live sha the remote advertises for the ref. */
+  sha?: string;
+  state: 'found' | 'missing' | 'unknown';
 }
 
 /**
@@ -611,6 +677,12 @@ export interface DeviceGitRemoteBranchListItem {
   isDefault: boolean;
   /** Short ref name, e.g. `origin/canary`. */
   name: string;
+  /**
+   * Commit SHA the ref currently points at (`%(objectname)`). Absent on older
+   * device clients — provisioning must treat a missing SHA as unresolvable,
+   * not as "checkout whatever the ref says at add time".
+   */
+  sha?: string;
 }
 
 /** Result of the `revertGitFile` device RPC. Mirrors the desktop `GitFileRevertResult`. */
@@ -633,6 +705,12 @@ export interface DeviceGitDeleteBranchResult {
 
 /** Result of the `removeGitWorktree` device RPC. Mirrors the desktop shape. */
 export interface DeviceGitRemoveWorktreeResult {
+  /**
+   * `true` when the request carried a `claimToken` and the host verified no
+   * live writer owns the path before removing. Absent on hosts that cannot
+   * answer writer presence — never treat as verified.
+   */
+  claimTokenVerified?: boolean;
   error?: string;
   success: boolean;
 }

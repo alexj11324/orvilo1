@@ -1,8 +1,8 @@
 ---
 title: Command Menu
 description: >-
-  The quick action center of Orvilo — search Agents, Topics, settings, and jump
-  anywhere with a few keystrokes.
+  The quick action center of Orvilo — search Agents, Topics, tasks, views,
+  settings, and jump anywhere with a few keystrokes.
 tags:
   - Orvilo
   - Command Menu
@@ -13,7 +13,7 @@ tags:
 
 # Command Menu
 
-The Command Menu is Orvilo's quick action center. Press `⌘ + K` (Mac) or `Ctrl + K` (Windows/Linux) and a search overlay appears. Type a few keywords to find Agents, Topics, settings, or actions — no need to click through menus or the sidebar. It's the fastest way to navigate Orvilo.
+The Command Menu is Orvilo's quick action center. Press `⌘ + K` (Mac) or `Ctrl + K` (Windows/Linux) and a search overlay appears. Type a few keywords to find Agents, Topics, tasks, projects, views, settings, or actions — no need to click through menus or the sidebar. It's the fastest way to navigate Orvilo.
 
 **Fuzzy search** — You don't need to type the full name. "programming" or "python" can match "Python Programming Agent." When switching between Agents frequently, the Command Menu is much faster than browsing the sidebar.
 
@@ -32,9 +32,14 @@ The menu appears as an overlay in the center of the screen.
 | ---------------- | ---------------------------------------------------------------------- |
 | **Agents**       | Type an Agent name to switch sessions or start a new conversation      |
 | **Topics**       | Enter topic keywords to jump to past conversations                     |
+| **Work**         | Tasks, projects, teams, and saved views you can read                   |
 | **Sections**     | "Settings", "Documents", "Resources" — jump directly to a section      |
 | **Skills & MCP** | Search for plugins and MCP servers                                     |
 | **Actions**      | "Create Agent", "Create Agent Team" — execute without navigating menus |
+
+Prefix a query with `type:task`, `type:project`, `type:team`, or `type:savedView` (or `is:` instead of `type:`) to search only that kind of work. Opening the menu also lists recent visits — pages you opened, not a "recently updated" feed. In personal mode, teams are omitted from recents and work search.
+
+See [Inbox and My issues](/docs/usage/getting-started/work) for the Inbox, My issues, Views, and Teams pages those results open.
 
 **Keyboard navigation:** Use `↑` and `↓` to move through results, `Enter` to execute, `Esc` to close. `Tab` switches between result categories when you're typing a message.
 
@@ -61,6 +66,7 @@ Enter keywords to search across:
 
 - **Past messages** — Find conversations by content
 - **Agents** — Switch by name or description
+- **Tasks, projects, teams, views** — Jump to work you can already read
 - **MCP plugins** — Find and access installed tools
 
 Results are categorized so you can quickly see what you're looking at and choose the right one.
@@ -83,6 +89,8 @@ Results are categorized so you can quickly see what you're looking at and choose
 
 <Cards>
   <Card href={'/docs/usage/user-interface/shortcuts'} title={'Keyboard Shortcuts'} />
+
+  <Card href={'/docs/usage/getting-started/work'} title={'Inbox and My issues'} />
 
   <Card href={'/docs/usage/agent/topic'} title={'Topics'} />
 </Cards>

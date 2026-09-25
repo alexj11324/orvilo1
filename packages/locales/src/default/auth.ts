@@ -1,4 +1,6 @@
 export default {
+  'betterAuth.signin.hidePassword': 'Hide password',
+  'betterAuth.signin.showPassword': 'Show password',
   'agreement.checkbox':
     'I have read and agree to the <terms>Terms and Conditions</terms> and <privacy>Privacy Policy</privacy>',
   'agreement.confirm.content':
@@ -61,7 +63,8 @@ export default {
   'apikey.list.columns.name': 'Name',
   'apikey.list.columns.scopes': 'Scope',
   'apikey.list.columns.status': 'Enabled',
-  'apikey.list.desc': 'API Keys let external tools and scripts call the Orvilo API as you.',
+  'apikey.list.desc':
+    'API Keys let external tools and scripts call the Orvilo API as you. They are signed Orvilo credentials, not model-provider keys.',
   'apikey.list.empty': 'No API Keys yet',
   'apikey.list.restrictedEmpty.desc':
     'Only workspace admins can create API Keys. Contact a workspace admin if you need one.',
@@ -129,6 +132,8 @@ export default {
     'Verification did not complete. Please try the challenge again.',
   'betterAuth.captcha.title': 'Security verification required',
   'betterAuth.signin.backToEmail': 'Back to change email',
+  'betterAuth.signin.description':
+    'Sign in to your {{appName}} account to continue where you left off.',
   'betterAuth.signin.continueWithApple': 'Continue with Apple',
   'betterAuth.signin.continueWithAuth0': 'Sign in with Auth0',
   'betterAuth.signin.continueWithAuthelia': 'Sign in with Authelia',
@@ -148,6 +153,7 @@ export default {
   'betterAuth.signin.continueWithWechat': 'Sign in with WeChat',
   'betterAuth.signin.continueWithZitadel': 'Sign in with Zitadel',
   'betterAuth.signin.emailPlaceholder': 'Enter your email or username',
+  'betterAuth.signin.emailLabel': 'Email or username',
   'betterAuth.signin.emailSent.changeEmail': 'Use a different email',
   'betterAuth.signin.emailSent.checkSpam':
     "Didn't get the email? Check your spam folder, or resend it.",
@@ -163,6 +169,7 @@ export default {
   'betterAuth.signin.forgotPassword': 'Forgot password?',
   'betterAuth.signin.forgotPasswordError': 'Failed to send password reset link',
   'betterAuth.signin.forgotPasswordSent': 'Password reset link sent, please check your email',
+  'betterAuth.signin.heading': 'Back to building.',
   'betterAuth.signin.invalidReferralCodeContent':
     'The referral code "{{code}}" you used is invalid or expired. Do you want to continue signing in?',
   'betterAuth.signin.invalidReferralCodeTitle': 'Invalid Referral Code',
@@ -174,6 +181,7 @@ export default {
   'betterAuth.signin.noAccount': "Don't have an account?",
   'betterAuth.signin.orContinueWith': 'OR',
   'betterAuth.signin.passwordPlaceholder': 'Enter your password',
+  'betterAuth.signin.passwordLabel': 'Password',
   'betterAuth.signin.passwordStep.subtitle': 'Enter your password to continue',
   'betterAuth.signin.passwordStep.title': 'Enter your password',
   'betterAuth.signin.setPassword': 'set a password',

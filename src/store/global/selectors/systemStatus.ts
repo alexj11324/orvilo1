@@ -1,15 +1,9 @@
 import { type TopicGroupMode } from '@/types/topic';
 
-import type {
-  GlobalState,
-  ModelDetailPanelExpandedKey,
-  SystemStatus,
-  WorkspaceOverridableField,
-} from '../initialState';
+import type { GlobalState, SystemStatus, WorkspaceOverridableField } from '../initialState';
 import {
   DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
   INITIAL_STATUS,
-  MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
   WORKSPACE_OVERRIDABLE_FIELDS,
 } from '../initialState';
 
@@ -101,6 +95,8 @@ const agentPageSize = (s: GlobalState): number => s.status.agentPageSize || 5;
 
 const privateAgentPageSize = (s: GlobalState): number => s.status.privateAgentPageSize || 5;
 
+const favoritePageSize = (s: GlobalState): number => s.status.favoritePageSize || 5;
+
 const recentPageSize = (s: GlobalState): number => s.status.recentPageSize || 5;
 
 const pagePageSize = (s: GlobalState): number => s.status.pagePageSize || 20;
@@ -140,7 +136,7 @@ export const DEFAULT_HIDDEN_SECTIONS: string[] = [];
  * sidebar visibility. `recents` lives in personal mode where the catch-all
  * stream is useful, but in a workspace the agent/project lists are the
  * primary entry points — surfacing recents on top adds noise. */
-export const WORKSPACE_DEFAULT_HIDDEN_SECTIONS: string[] = ['recents'];
+export const WORKSPACE_DEFAULT_HIDDEN_SECTIONS: string[] = [];
 
 /** Sections hidden by default for the given mode. The customize-sidebar
  * "Reset to default" path uses this so resetting in a workspace restores
@@ -157,7 +153,7 @@ const hiddenSidebarSections =
       // owns the list — including an explicit empty array meaning "show all".
       if (overlay !== undefined) return withoutRetiredItems(overlay);
       // Untouched workspace: inherit any personal-mode hides and layer the
-      // workspace defaults on top so `recents` starts collapsed.
+      // workspace defaults on top.
       const personal = s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
       const merged = [...personal];
       for (const k of WORKSPACE_DEFAULT_HIDDEN_SECTIONS) {
@@ -181,48 +177,56 @@ const sidebarExpandedKeys =
 export const SIDEBAR_SPACER_ID = '__spacer__';
 
 /**
- * The sidebar's default order, in one list split by the spacer sentinel into
- * two groups: the primary working set above it, and secondary entries below.
- *
- * `resource` sits below the spacer on purpose (S50). It is a shared library,
- * not a peer of Tasks and Automations, and in the top group it read as a third
- * first-class destination competing with them. The registry already carries the
- * same judgement — `resource` is the only `secondary` route in
- * `NAVIGATION_ROUTES` — this is where that tier reaches the sidebar.
- *
- * Moving the key here only changes the default: `withAllKnownKeys` backfills
- * missing defaults and never reorders, so a stored order keeps `resource` where
- * its owner put it. That is deliberate — `reorderSidebarItems` exists so users
- * can arrange this list, and a read-path re-anchor would silently undo their
- * arrangement on every render. The default, the reset action and the unsaved
- * baseline of the customizer all pick the new order up.
+ * The fixed primary IA (Linear convergence): `sidebarItems` is contract-owned.
+ * Core links (inbox / my-work / reviews) come first, then the optional
+ * accordion sections (agent / workspace / favorites / teams), then the spacer
+ * sentinel. Stored and workspace-synced preferences can only hide optional
+ * sections via `hiddenSidebarSections` — they can never reorder the core
+ * structure, so the selector returns this constant as-is.
  */
 export const DEFAULT_SIDEBAR_ITEMS: string[] = [
-  'tasks',
-  'automations',
-  'recents',
-  'project',
-  'private',
+  'inbox',
+  'my-work',
+  'reviews',
   'agent',
+  'create',
+  'workspace',
+  'favorites',
+  'teams',
   SIDEBAR_SPACER_ID,
-  'resource',
 ];
 
 /**
  * Sidebar keys whose product surface has been withdrawn by the task-first
- * convergence. See docs/development/product-scope.md.
+ * convergence and the Linear IA swap. See docs/development/product-scope.md
+ * and src/features/Navigation/sidebarContract.ts.
  *
- * This list exists because removing an entry from `DEFAULT_SIDEBAR_ITEMS` is not
- * sufficient on its own: `withAllKnownKeys` only *backfills* missing defaults, it
- * never strips anything. A user who already has `'image'` in their stored order
- * keeps it after the default changes, and the sidebar keeps rendering it. The
- * strip below runs on the read path so stored, overlaid, and re-synced state all
- * pass through it.
+ * Retired keys can never resurface: `sidebarItems` ignores stored order
+ * entirely, and `hiddenSidebarSections` / `sidebarExpandedKeys` strip these
+ * keys on the read path so stored, overlaid, and re-synced state all pass
+ * through it. The routes behind them stay reachable as deep links.
  *
  * Both spellings of the documents key are listed: the sidebar stores `pages`
  * (its `SidebarTabKey`), while the route registry uses `page`.
  */
-export const RETIRED_SIDEBAR_KEYS = new Set(['community', 'image', 'memory', 'page', 'pages']);
+export const RETIRED_SIDEBAR_KEYS = new Set([
+  'community',
+  'image',
+  'memory',
+  'page',
+  'pages',
+  // Linear IA convergence: retired from the PRIMARY sidebar. Routes stay
+  // reachable (/tasks, /automations, /resource, /projects) via Workspace → More,
+  // team pages, search and existing deep links — the keys just cannot resurface.
+  'home',
+  'tasks',
+  'automations',
+  'resource',
+  'recents',
+  'private',
+  'project',
+  'views',
+]);
 
 /**
  * Drop retired keys from a stored sidebar order.
@@ -233,11 +237,6 @@ export const RETIRED_SIDEBAR_KEYS = new Set(['community', 'image', 'memory', 'pa
  * `useSyncExternalStore`, which costs a re-render per subscriber and can trip
  * the "getSnapshot should be cached" warning. Keeping the same reference also
  * makes a second pass a provable no-op.
- *
- * Note this only reaches the store on paths that hand the value straight back.
- * `sidebarItems` additionally runs through `normalizeSpacerPosition`, which
- * always builds a new array, so it bails out only on the `DEFAULT_SIDEBAR_ITEMS`
- * fast path.
  */
 const withoutRetiredItems = (items: string[]): string[] => {
   let seen = false;
@@ -250,10 +249,9 @@ const withoutRetiredItems = (items: string[]): string[] => {
   return seen ? items.filter((item) => !RETIRED_SIDEBAR_KEYS.has(item)) : items;
 };
 
-/** Items that must stay contiguous in the sidebar list (accordion block).
- * `private` sits above `agent` so workspace users see their personal items
- * first, with the workspace-shared agents right below. */
-export const SIDEBAR_ACCORDION_KEYS = new Set(['recents', 'project', 'private', 'agent']);
+/** The accordion sections of the fixed IA — contiguous in the sidebar list
+ * and the only entries the user may hide via `hiddenSidebarSections`. */
+export const SIDEBAR_ACCORDION_KEYS = new Set(['workspace', 'favorites', 'teams']);
 
 const DEFAULT_BOTTOM_KEYS = new Set(
   DEFAULT_SIDEBAR_ITEMS.slice(DEFAULT_SIDEBAR_ITEMS.indexOf(SIDEBAR_SPACER_ID) + 1),
@@ -266,10 +264,10 @@ const arraysEqual = (a: string[], b: string[]): boolean => {
   return true;
 };
 
-// Invariant: spacer always sits immediately after the recents+agent block. Any
-// stored position is ignored — the spacer is re-anchored on every read so legacy
-// states (e.g. from the move-up/down dropdown that used to leave the spacer
-// floating above the accordion) self-heal.
+// Invariant: the spacer always sits immediately after the accordion block.
+// Any stored position is ignored — the spacer is re-anchored on every read so
+// legacy states (e.g. from the move-up/down dropdown that used to leave the
+// spacer floating above the accordion) self-heal.
 const normalizeSpacerPosition = (order: string[]): string[] => {
   const withoutSpacer = order.filter((k) => k !== SIDEBAR_SPACER_ID);
 
@@ -286,58 +284,6 @@ const normalizeSpacerPosition = (order: string[]): string[] => {
   }
 
   return [...withoutSpacer.slice(0, insertAt), SIDEBAR_SPACER_ID, ...withoutSpacer.slice(insertAt)];
-};
-
-// Backfill missing default keys into their canonical group — top-group defaults
-// slot in just before the accordion (keeping accordion flush with the spacer),
-// bottom-group defaults go after the spacer. Without this split a new top-group
-// default added in a future version would silently appear in the bottom group
-// for existing users.
-const withAllKnownKeys = (order: string[]): string[] => {
-  // Strip retired keys first. This function is the single choke point every
-  // stored order passes through — including the legacy `sidebarSectionOrder`
-  // migration path — so retiring here covers all of them at once.
-  const activeOrder = withoutRetiredItems(order);
-  let nextOrder = activeOrder;
-  if (!activeOrder.includes('project')) {
-    const recentsIndex = activeOrder.indexOf('recents');
-    const firstAgentIndex = activeOrder.findIndex((key) => key === 'private' || key === 'agent');
-    const insertAt =
-      recentsIndex >= 0 ? recentsIndex + 1 : firstAgentIndex >= 0 ? firstAgentIndex : 0;
-    nextOrder = [...activeOrder.slice(0, insertAt), 'project', ...activeOrder.slice(insertAt)];
-  }
-
-  const present = new Set(nextOrder);
-  const missingTop: string[] = [];
-  const missingBottom: string[] = [];
-  for (const k of DEFAULT_SIDEBAR_ITEMS) {
-    if (k === SIDEBAR_SPACER_ID || present.has(k)) continue;
-    // The split keeps a bottom-group default landing below the spacer for a
-    // user who stored an order without it, instead of silently appearing in the
-    // top group and reading as primary. `resource` is the entry that exercises
-    // this today (S50 demoted it to the bottom group).
-    (DEFAULT_BOTTOM_KEYS.has(k) ? missingBottom : missingTop).push(k);
-  }
-
-  const withSpacer = normalizeSpacerPosition(nextOrder);
-  if (missingTop.length === 0 && missingBottom.length === 0) return withSpacer;
-
-  const spacerIdx = withSpacer.indexOf(SIDEBAR_SPACER_ID);
-  let accordionStartIdx = spacerIdx;
-  for (let i = 0; i < spacerIdx; i++) {
-    if (SIDEBAR_ACCORDION_KEYS.has(withSpacer[i])) {
-      accordionStartIdx = i;
-      break;
-    }
-  }
-
-  return [
-    ...withSpacer.slice(0, accordionStartIdx),
-    ...missingTop,
-    ...withSpacer.slice(accordionStartIdx, spacerIdx + 1),
-    ...missingBottom,
-    ...withSpacer.slice(spacerIdx + 1),
-  ];
 };
 
 const accordionIndices = (items: string[]): number[] => {
@@ -411,38 +357,17 @@ export const reorderSidebarItems = (items: string[], from: number, to: number): 
   return arraysEqual(normalized, items) ? items : normalized;
 };
 
+/**
+ * The primary IA is a fixed contract (see `features/Navigation/sidebarContract`):
+ * stored or workspace-synced preferences may hide optional sections via
+ * `hiddenSidebarSections`, but they can never reorder the core structure or
+ * resurrect retired keys — the read path always yields the canonical order.
+ * Returning the constant keeps snapshot stability for zustand subscribers.
+ */
 const sidebarItems =
-  (workspaceId: string | null) =>
+  (_workspaceId: string | null) =>
   (s: GlobalState): string[] => {
-    const items = readOverridableField(s.status, 'sidebarItems', workspaceId);
-    if (items && items.length > 0) return withAllKnownKeys(items);
-
-    // Migrate from the legacy `sidebarSectionOrder` (canary) which only stored the
-    // accordion order (e.g. ['agent', 'recents']). Apply that order to the accordion
-    // slot inside the default list so users keep their custom accordion arrangement.
-    const legacy = s.status.sidebarSectionOrder;
-    if (legacy && legacy.length > 0) {
-      const legacyAcc = legacy.filter((k) => SIDEBAR_ACCORDION_KEYS.has(k));
-      if (legacyAcc.length > 0) {
-        const seen = new Set<string>();
-        const merged: string[] = [];
-        for (const k of DEFAULT_SIDEBAR_ITEMS) {
-          if (SIDEBAR_ACCORDION_KEYS.has(k)) {
-            for (const lk of legacyAcc) {
-              if (!seen.has(lk)) {
-                merged.push(lk);
-                seen.add(lk);
-              }
-            }
-          } else if (!seen.has(k)) {
-            merged.push(k);
-            seen.add(k);
-          }
-        }
-        return withAllKnownKeys(merged);
-      }
-    }
-
+    void s;
     return DEFAULT_SIDEBAR_ITEMS;
   };
 const showSystemRole = (s: GlobalState) => s.status.showSystemRole;
@@ -465,14 +390,6 @@ const showVerifyReportPanel = (s: GlobalState) => s.status.showVerifyReportPanel
 const hidePWAInstaller = (s: GlobalState) => s.status.hidePWAInstaller;
 const isShowCredit = (s: GlobalState) => s.status.isShowCredit;
 const language = (s: GlobalState) => s.status.language || 'auto';
-const modelDetailPanelExpandedKeys = (s: GlobalState): ModelDetailPanelExpandedKey[] => {
-  const collapsedKeys = s.status.modelDetailPanelCollapsedKeys ?? [];
-
-  return MODEL_DETAIL_PANEL_EXPANDABLE_KEYS.filter((key) => !collapsedKeys.includes(key));
-};
-const modelSwitchPanelGroupMode = (s: GlobalState) =>
-  s.status.modelSwitchPanelGroupMode || 'byProvider';
-const modelSwitchPanelWidth = (s: GlobalState) => s.status.modelSwitchPanelWidth || 460;
 const pageAgentPanelWidth = (s: GlobalState) => s.status.pageAgentPanelWidth || 360;
 const workingSidebarWidth = (s: GlobalState) => s.status.workingSidebarWidth || 360;
 
@@ -534,6 +451,7 @@ export const systemStatusSelectors = {
   disabledModelProvidersSortType,
   disabledModelsSortType,
   expandInputActionbar,
+  favoritePageSize,
   filePanelWidth,
   getAgentSystemRoleExpanded,
   groupAgentBuilderPanelWidth,
@@ -552,9 +470,6 @@ export const systemStatusSelectors = {
   leftPanelWidth,
   mobileShowPortal,
   mobileShowTopic,
-  modelDetailPanelExpandedKeys,
-  modelSwitchPanelGroupMode,
-  modelSwitchPanelWidth,
   pageAgentPanelWidth,
   pagePageSize,
   portalWidth,

@@ -34,6 +34,19 @@ describe('buildWorkspaceAwarePath', () => {
     );
   });
 
+  it('prefixes the nav-attention surfaces mirrored under /:workspaceSlug', () => {
+    expect(buildWorkspaceAwarePath('/inbox', 'acme')).toBe('/acme/inbox');
+    expect(buildWorkspaceAwarePath('/my-work', 'acme')).toBe('/acme/my-work');
+    expect(buildWorkspaceAwarePath('/views', 'acme')).toBe('/acme/views');
+    expect(buildWorkspaceAwarePath('/views/view-1', 'acme')).toBe('/acme/views/view-1');
+    expect(buildWorkspaceAwarePath('/teams', 'acme')).toBe('/acme/teams');
+    expect(buildWorkspaceAwarePath('/teams/team-1?tab=issues', 'acme')).toBe(
+      '/acme/teams/team-1?tab=issues',
+    );
+    expect(buildWorkspaceAwarePath('/automations', 'acme')).toBe('/acme/automations');
+    expect(buildWorkspaceAwarePath('/goal/goal-1', 'acme')).toBe('/acme/goal/goal-1');
+  });
+
   it('bypasses the prefix when `escape` is true', () => {
     expect(buildWorkspaceAwarePath('/settings/memory', 'acme', { escape: true })).toBe(
       '/settings/memory',
@@ -126,10 +139,6 @@ describe('buildWorkspaceAwarePath', () => {
       '/acme/settings/appearance',
     );
     expect(buildWorkspaceAwarePath('/settings/hotkey', 'acme')).toBe('/acme/settings/hotkey');
-    expect(buildWorkspaceAwarePath('/settings/messenger', 'acme')).toBe('/acme/settings/messenger');
-    expect(buildWorkspaceAwarePath('/settings/messenger/slack', 'acme')).toBe(
-      '/acme/settings/messenger/slack',
-    );
     expect(buildWorkspaceAwarePath('/settings/advanced', 'acme')).toBe('/acme/settings/advanced');
     expect(buildWorkspaceAwarePath('/settings/labs', 'acme')).toBe('/acme/settings/labs');
     expect(buildWorkspaceAwarePath('/settings/about', 'acme')).toBe('/acme/settings/about');

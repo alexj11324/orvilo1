@@ -14,7 +14,7 @@ interface ChatInvalidAPIKeyProps {
   provider?: string;
 }
 const ChatInvalidAPIKey = memo<ChatInvalidAPIKeyProps>(({ id, provider }) => {
-  const { t } = useTranslation(['modelProvider', 'error']);
+  const { t } = useTranslation(['error']);
   const [deleteMessage] = useConversationStore((s) => [s.deleteMessage]);
   const providerName = useProviderName(provider as GlobalLLMProviderKey);
 

@@ -1,10 +1,19 @@
 // Disable the auto sort key eslint rule to make the code more logic and readable
 import { toast } from '@lobehub/ui/base-ui';
 import { GoalIdentifier, isGoalPrompt } from '@orvilo/builtin-tool-goal';
-import { isDesktop, isHeterogeneousAgentModelId, LOADING_FLAT } from '@orvilo/const';
+import {
+  isDesktop,
+  isHeterogeneousAgentModelId,
+  LOADING_FLAT,
+  TRACING_SCENARIOS,
+} from '@orvilo/const';
 import { formatSelectedSkillsContext, formatSelectedToolsContext } from '@orvilo/context-engine';
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
-import { chainCompressContext } from '@orvilo/prompts';
+import {
+  chainCompressContext,
+  COMPRESS_CONTEXT_JSON_SCHEMA,
+  COMPRESS_CONTEXT_PROMPT_VERSION,
+} from '@orvilo/prompts';
 import type {
   ChatAudioItem,
   ChatImageItem,
@@ -46,7 +55,6 @@ import { getTopicAgencyConfig, getTopicWorkspaceScoped } from '@/helpers/topicEx
 import { agentService } from '@/services/agent';
 import { aiAgentService } from '@/services/aiAgent';
 import { aiChatService } from '@/services/aiChat';
-import { chatService } from '@/services/chat';
 import { resolveSelectedSkillsWithContent } from '@/services/chat/mecha/skillPreload';
 import { resolveSelectedToolsWithContent } from '@/services/chat/mecha/toolPreload';
 import { messageService } from '@/services/message';
@@ -1635,15 +1643,11 @@ export class ConversationLifecycleActionImpl {
           (heteroContext.topicId
             ? topicSelectors.getTopicById(heteroContext.topicId)(this.#get())
             : undefined) ?? existingTopic;
-        const providerBinding = heterogeneousProvider.authMode === 'api';
-        const { cwdChanged, reason, resumeBindingKey, resumeSessionId } = resolveHeteroResume(
+        const { cwdChanged, reason, resumeSessionId } = resolveHeteroResume(
           topic?.metadata,
           workingDirectory,
           {
-            currentBindingKey: providerBinding
-              ? undefined
-              : getHeteroProviderSessionBindingKey(heterogeneousProvider),
-            providerBinding,
+            currentBindingKey: getHeteroProviderSessionBindingKey(heterogeneousProvider),
           },
         );
         if (cwdChanged) {
@@ -1666,7 +1670,6 @@ export class ConversationLifecycleActionImpl {
           message,
           operationId: heteroOpId,
           pageSelections: effectivePageSelections,
-          resumeBindingKey,
           resumeSessionId,
           workingDirectory,
           workingDirectoryConfig,
@@ -2284,26 +2287,33 @@ export class ConversationLifecycleActionImpl {
       this.#get().replaceMessages(serverMessages, { context: context as any });
       this.#get().associateMessageWithOperation(messageGroupId, operationId);
 
-      // 2. Generate summary via LLM
-      const { model, provider } = agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
+      // 2. Generate summary via a bound judgment call — ACP-resolved runtime,
+      // no client-owned model/provider execution path.
+      const agentState = getAgentStoreState();
+      const model = agentByIdSelectors.getAgentModelById(agentId)(agentState);
+      const provider = agentByIdSelectors.getAgentModelProviderById(agentId)(agentState);
       const compressionPayload = chainCompressContext(messagesToSummarize);
-      let summaryContent = '';
 
-      await chatService.fetchPresetTaskResult({
-        abortController,
-        onMessageHandle: (chunk) => {
-          if (chunk.type === 'text') {
-            summaryContent += chunk.text || '';
-            this.#get().internal_dispatchMessage(
-              { id: messageGroupId, type: 'updateMessage', value: { content: summaryContent } },
-              { operationId },
-            );
-          }
+      const envelope = await aiChatService.generateJSON(
+        {
+          ...compressionPayload,
+          model,
+          provider,
+          schema: COMPRESS_CONTEXT_JSON_SCHEMA,
+          tracing: {
+            agentId,
+            promptVersion: COMPRESS_CONTEXT_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.ContextCompress,
+            schemaName: COMPRESS_CONTEXT_JSON_SCHEMA.name,
+            topicId,
+          },
         },
-        params: { ...compressionPayload, model, provider },
-      });
+        abortController,
+      );
 
       if (abortController.signal.aborted) throw createAbortError();
+
+      const summaryContent = (envelope?.data as { summary?: string } | undefined)?.summary ?? '';
 
       // 3. Finalize compression
       const finalResult = await messageService.finalizeCompression({

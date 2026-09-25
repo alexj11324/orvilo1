@@ -4,7 +4,6 @@ import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
   getNativeHeteroSessionBindingKey,
-  HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
   isLocalHeterogeneousType,
   isRemoteHeterogeneousType,
 } from '@orvilo/heterogeneous-agents';
@@ -17,6 +16,7 @@ import type {
   HeterogeneousTopicPin,
   OrviloAgentAgencyConfig,
   RequestTrigger,
+  UserInterventionConfig,
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
@@ -72,6 +72,7 @@ import {
 import { pruneRegeneratedBranch } from '../pruneRegeneratedBranch';
 import { resolveDeviceWorkingDirectoryConfig } from '../resolveDeviceWorkingDirectory';
 import type { ExecRunContext } from '../types';
+import type { ExternalToolSurfaceEntry, ToolSurfaceOutcome } from './runToolSurface';
 
 const log = debug('orvilo-server:ai-agent-service');
 
@@ -434,6 +435,14 @@ export interface HeteroDispatchInput {
   clientIp?: string;
   effectiveRequestedDeviceId?: string;
   /**
+   * External (connector / installed-plugin MCP) tools mounted on the same
+   * per-run MCP surface — persisted on the operation as
+   * `metadata.externalTools` (identifier → api names + source only) so the
+   * `execBuiltinTool` callback re-resolves credentials at call time and keeps
+   * them out of operation metadata entirely.
+   */
+  externalToolMounts?: Record<string, ExternalToolSurfaceEntry>;
+  /**
    * Extra caller-supplied context appended after the persona/provider system
    * context (e.g. eval `envPrompt`). Replaces the legacy `evalContext` channel
    * that the retired server-side loop consumed during operation prep.
@@ -455,9 +464,21 @@ export interface HeteroDispatchInput {
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
   skipTaskVerification?: boolean;
+  /**
+   * Per-tool mount outcomes from `resolveRunToolSurface` — persisted into the
+   * operation's metadata so a mounted/unsupported/unauthorized/failed record
+   * survives the debug log into traces.
+   */
+  toolSurfaceOutcomes?: ToolSurfaceOutcome[];
   topicStartOwnerOperationId?: string;
   /** Source attribution persisted onto the operation row's appContext. */
   userAgent?: string;
+  /**
+   * Caller-declared intervention mode (`ExecAgentParams.userInterventionConfig`).
+   * Persisted as `appContext.interventionApprovalMode` so the exec-time
+   * approval gate knows whether this run can reach a human.
+   */
+  userInterventionConfig?: UserInterventionConfig;
 }
 
 /**
@@ -482,7 +503,6 @@ export const dispatchHeteroAgent = async (
     appContext,
     assistantMessageId,
     canUseDevice,
-    deviceAccessReason,
     parentMessageId,
     persistAgentId,
     prompt,
@@ -495,6 +515,8 @@ export const dispatchHeteroAgent = async (
     beforeOperationStart,
     builtinToolSpecs,
     canManageAgent,
+    externalToolMounts,
+    toolSurfaceOutcomes,
     clientIp,
     effectiveRequestedDeviceId,
     extraSystemContext,
@@ -515,6 +537,7 @@ export const dispatchHeteroAgent = async (
     skipTaskVerification,
     topicStartOwnerOperationId,
     userAgent,
+    userInterventionConfig,
   } = input;
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
@@ -560,7 +583,16 @@ export const dispatchHeteroAgent = async (
     deps.workspaceId,
   ).recordStart({
     agentId: persistAgentId,
-    appContext: { ...appContext, clientIp, sourceMessageId: userMessageId, userAgent },
+    appContext: {
+      ...appContext,
+      clientIp,
+      // Headless runs cannot reach a human — `execAcpExternalTool` refuses
+      // `needs_approval` calls outright instead of treating the absence of an
+      // interaction surface as approval.
+      interventionApprovalMode: userInterventionConfig?.approvalMode,
+      sourceMessageId: userMessageId,
+      userAgent,
+    },
     chatGroupId: appContext?.groupId ?? null,
     // Engine provenance: the heterogeneous/ACP dispatch — never the in-process
     // runtime loop — owns this operation. `heteroAgentType` records the CLI
@@ -583,6 +615,33 @@ export const dispatchHeteroAgent = async (
           }
         : {}),
       heteroAgentType: heteroCliAgentType,
+      // Per-tool mount contract for this run — mounted/unsupported/
+      // unauthorized/failed with reasons, so a degraded surface is
+      // inspectable from the operation record instead of a lost debug log.
+      ...(toolSurfaceOutcomes?.length
+        ? {
+            toolSurface: Object.fromEntries(
+              toolSurfaceOutcomes.map((o) => [
+                o.identifier,
+                { kind: o.kind, reason: o.reason, status: o.status },
+              ]),
+            ),
+          }
+        : {}),
+      // External mounts share the builtin-tool callback wire but re-resolve
+      // their connection (fresh OAuth token / customParams.mcp) on each call.
+      // Persist api names + source + the identity pins the exec callback
+      // re-authorizes against — never transport params or secrets.
+      ...(externalToolMounts && Object.keys(externalToolMounts).length
+        ? {
+            externalTools: Object.fromEntries(
+              Object.entries(externalToolMounts).map(([identifier, entry]) => [
+                identifier,
+                { apis: entry.apis.map((api) => api.name), pins: entry.pins, source: entry.source },
+              ]),
+            ),
+          }
+        : {}),
     },
     operationId,
     parentOperationId,
@@ -929,45 +988,16 @@ export const dispatchHeteroAgent = async (
     }
   };
 
-  if (agentConfig.agencyConfig?.heterogeneousProvider?.authMode === 'api') {
-    await finalizeHeteroDispatchError(deps, {
-      agentId: resolvedAgentId,
-      assistantMessageId,
-      detail: HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-      message: 'Provider-bound heterogeneous agents do not support this execution target',
-      operationId,
-      topicId,
-    });
-    return {
-      agentId: resolvedAgentId,
-      assistantMessageId,
-      autoStarted: false,
-      createdAt: new Date().toISOString(),
-      error: HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-      message: 'Heterogeneous agent provider binding requires Desktop local execution',
-      operationId,
-      status: 'error',
-      success: false,
-      timestamp: new Date().toISOString(),
-      topicId,
-      userMessageId: userMessageId ?? parentMessageId ?? '',
-    };
-  }
-
   // Notify-based platform agents (openclaw / hermes) communicate back via
   // agentNotify.notify. A local run uses the requesting desktop's device ID;
   // a remote run uses agencyConfig.boundDeviceId. Both use the gateway transport,
   // so open the stream before the first notify arrives.
 
   if (isRemoteHetero) {
-    // Platform task agents require either this desktop or a connected device — there is no sandbox to
-    // degrade to, so a denied sender (external bot user) is refused
-    // outright instead of reaching the owner's machine.
+    // Platform task agents require either this desktop or a connected device —
+    // there is no sandbox to degrade to when device access is denied.
     if (!canUseDevice) {
-      log(
-        'execAgent: device access denied for remote hetero dispatch (reason=%s)',
-        deviceAccessReason,
-      );
+      log('execAgent: device access denied for remote hetero dispatch (reason=%s)');
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
@@ -1175,9 +1205,7 @@ export const dispatchHeteroAgent = async (
     // `onlineDeviceIds` is intentionally omitted: hetero dispatch trusts
     // the binding and fails loudly at the gateway if the device is offline.
     // `canUseDevice` degrades device-capable targets to the sandbox when
-    // available, or leaves device-only providers unrouted, for denied
-    // senders (e.g. external bot users). Without this a synced local/device
-    // binding would let them run on the owner's machine.
+    // available, or leaves device-only providers unrouted.
 
     // Register the op with the agent-gateway DO before dispatch, mirroring
     // the remote-hetero branch above. Local CLI hetero (claude-code / codex)

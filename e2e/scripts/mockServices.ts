@@ -12,6 +12,13 @@
  *   DEEPSEEK_PROXY_URL=http://localhost:<llmPort>/v1
  *
  * Usage: bun e2e/scripts/mockServices.ts
+ *
+ * Env:
+ *   E2E_ORVILO_BASE_URL    (default http://localhost:3006)  Orvilo server under test
+ *   E2E_MOCK_LLM_PORT      (default 3406)  mock OpenAI-compatible LLM port
+ *   E2E_MOCK_GATEWAY_PORT  (default 3407)  fake Agent Gateway port
+ *
+ * Exit behavior: keeps running until killed; exits non-zero if a mock fails to start.
  */
 import { MOCK_GATEWAY_PORT, startFakeGateway } from '../src/mocks/gateway/server';
 import { clearAllMockLLMState, MOCK_LLM_PORT } from '../src/mocks/llm/registry';

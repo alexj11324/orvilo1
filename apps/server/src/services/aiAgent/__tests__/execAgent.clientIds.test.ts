@@ -35,15 +35,6 @@ vi.mock('@/database/models/message', () => ({
   }),
 }));
 
-vi.mock('@/database/models/aiModel', () => ({
-  AiModelModel: vi.fn().mockImplementation(function () {
-    return {
-      findByIdAndProvider: vi.fn().mockResolvedValue(undefined),
-      getModelReasoningConfig: vi.fn().mockResolvedValue({ reasoningEffort: 'high' }),
-    };
-  }),
-}));
-
 // Mock AgentModel
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
@@ -129,7 +120,7 @@ vi.mock('@/database/models/chatGroup', () => ({
 }));
 
 // Mock AgentRuntimeService
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -193,7 +184,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 // Mock model-bank

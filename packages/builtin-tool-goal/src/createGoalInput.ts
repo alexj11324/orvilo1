@@ -24,6 +24,18 @@ export const resolveGoalAttemptBudget = (maxIterations?: number | null): number 
   typeof maxIterations === 'number' ? Math.min(10, Math.max(2, maxIterations)) : undefined;
 
 /**
+ * How many of the goal's Tasks may run at once (1–10).
+ *
+ * `null` is the cleared input field — distinct from a chosen number — and
+ * returns `undefined` so `maxConcurrentTasks` stays off the config and the
+ * coordinator's default applies. Bounds mirror the router's create input.
+ */
+export const resolveGoalConcurrency = (maxConcurrentTasks?: number | null): number | undefined =>
+  typeof maxConcurrentTasks === 'number'
+    ? Math.min(10, Math.max(1, Math.round(maxConcurrentTasks)))
+    : undefined;
+
+/**
  * The goal's calendar-time budget, as the schedule config the coordinator reads.
  *
  * `null` is the manifest's documented "no user-specified deadline" — the cleared

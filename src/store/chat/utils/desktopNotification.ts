@@ -64,6 +64,15 @@ export const resolveNotificationNavigate = (context: DesktopNotificationContext)
   return path ? { escape: true, path } : undefined;
 };
 
+/** Human-approval banners open the work inbox, not a second chat inbox. */
+export const resolveWorkInboxNavigatePath = (workspaceSlug?: string): string =>
+  applyWorkspaceSlug('/inbox', workspaceSlug);
+
+export const resolveWorkInboxNavigate = (workspaceSlug?: string) => ({
+  escape: true as const,
+  path: resolveWorkInboxNavigatePath(workspaceSlug),
+});
+
 /**
  * Resolve the notification title from the conversation context. Prefers the
  * topic title, then the agent name, and finally the caller-provided fallback.
@@ -145,7 +154,7 @@ export const notifyDesktopHumanApprovalRequired = async (
       t('desktopNotification.humanApprovalRequired.title', { ns: 'chat' }),
     );
 
-    const navigate = resolveNotificationNavigate(context);
+    const navigate = resolveWorkInboxNavigate(context.workspaceSlug);
     const sender = await buildNotificationSender(context);
 
     await Promise.allSettled([

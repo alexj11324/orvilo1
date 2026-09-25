@@ -7,13 +7,6 @@ const RECEIPT_TTL_SECONDS = 6 * 60 * 60;
 const PENDING_RETRY_DELAY_MS = 60_000;
 const PROCESSING_TIMEOUT_MS = 35 * 60_000;
 
-const MARK_DELIVERY_CHUNK_SCRIPT = `
-local current = tonumber(redis.call('GET', KEYS[1]) or '0')
-local next = tonumber(ARGV[1])
-if next > current then redis.call('SET', KEYS[1], next, 'EX', ARGV[2]) end
-return math.max(current, next)
-`;
-
 export interface TaskResultCallbackReceipt {
   attempts: number;
   callbackMessageId: string;
@@ -222,20 +215,6 @@ export class TaskResultCallbackRedisStore {
     );
   }
 
-  async getDeliveredChunkCount(operationId: string): Promise<number> {
-    return Number((await this.redis.get(this.deliveryKey(operationId))) || 0);
-  }
-
-  async markDeliveryChunk(operationId: string, deliveredChunkCount: number): Promise<void> {
-    await this.redis.eval(
-      MARK_DELIVERY_CHUNK_SCRIPT,
-      1,
-      this.deliveryKey(operationId),
-      deliveredChunkCount,
-      RECEIPT_TTL_SECONDS,
-    );
-  }
-
   async claimPending(): Promise<TaskResultCallbackReceipt[]> {
     const now = Date.now();
     const ids = (await this.redis.eval(
@@ -333,10 +312,6 @@ export class TaskResultCallbackRedisStore {
 
   private receiptKey(operationId: string) {
     return `${PREFIX}receipt:${operationId}`;
-  }
-
-  private deliveryKey(operationId: string) {
-    return `${PREFIX}delivery:${operationId}`;
   }
 
   private get scopeMetadataKey() {

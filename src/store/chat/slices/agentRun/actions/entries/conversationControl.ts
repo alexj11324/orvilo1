@@ -1262,8 +1262,14 @@ export class ConversationControlActionImpl {
     const originalContent = toolMessage.content;
     const interventionState = (
       toolMessage.pluginState as
-        { heterogeneousIntervention?: { interactionKind?: unknown } } | undefined
+        | { heterogeneousIntervention?: { interactionKind?: unknown; windowId?: unknown } }
+        | undefined
     )?.heterogeneousIntervention;
+    // The approval window this card was minted for — the submit CAS-matches
+    // it against the receipt so a stale card can never decide a rotated
+    // window (SA02-C). Absent on legacy cards → the CAS is skipped.
+    const interventionWindowId =
+      typeof interventionState?.windowId === 'string' ? interventionState.windowId : undefined;
     const sourceAction = toHeterogeneousSourceAction(
       actionType,
       interventionState?.interactionKind,
@@ -1428,6 +1434,29 @@ export class ConversationControlActionImpl {
         // Dynamic import keeps `@/services/electron/*` out of non-Electron bundles.
         const { heterogeneousAgentService } =
           await import('@/services/electron/heterogeneousAgent');
+        // F04/SA02-C: the exec-time `needs_approval` gate reads the durable
+        // receipt server-side — mirror this decision through the same
+        // mutation the remote path uses so a desktop-local op's receipt
+        // actually closes. Landed BEFORE the bridge resolve: the producer's
+        // retry reads the receipt, so a failed write must not let the card
+        // resolve — it throws into the outer catch and stays pending
+        // (fail-closed; the receipt can never grant what wasn't recorded).
+        await lambdaClient.aiAgent.submitHeteroIntervention.mutate(
+          actionType === 'submit'
+            ? {
+                operationId,
+                result: payload ?? {},
+                toolCallId,
+                windowId: interventionWindowId,
+              }
+            : {
+                cancelReason: 'user_cancelled',
+                cancelled: true,
+                operationId,
+                toolCallId,
+                windowId: interventionWindowId,
+              },
+        );
         await heterogeneousAgentService.submitIntervention(
           actionType === 'submit'
             ? { operationId, result: payload ?? {}, toolCallId }
@@ -1443,13 +1472,20 @@ export class ConversationControlActionImpl {
         this.#heteroResolutionRequestIds.set(resolutionKey, resolutionRequestId);
         await lambdaClient.aiAgent.submitHeteroIntervention.mutate(
           actionType === 'submit'
-            ? { operationId, resolutionRequestId, result: payload ?? {}, toolCallId }
+            ? {
+                operationId,
+                resolutionRequestId,
+                result: payload ?? {},
+                toolCallId,
+                windowId: interventionWindowId,
+              }
             : {
                 cancelReason: 'user_cancelled',
                 cancelled: true,
                 operationId,
                 resolutionRequestId,
                 toolCallId,
+                windowId: interventionWindowId,
               },
         );
       }

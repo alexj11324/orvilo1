@@ -18,17 +18,14 @@ const mocks = vi.hoisted(() => {
           backgroundColor?: string;
           name?: string;
           slug?: string;
-          storedAvatar?: string | null;
           title?: string;
         }
       >,
     },
     agentStoreListeners: new Set<() => void>(),
     actionIconProps: { all: [] as Record<string, unknown>[] },
-    artworkProps: { last: undefined as Record<string, unknown> | undefined },
     createAgentIdentityModal: vi.fn(),
     refreshAgentConfig: vi.fn(),
-    emojiPickerProps: { last: undefined as Record<string, unknown> | undefined },
     // In edit mode the header renders three inputs, in order: personal name,
     // role, slug. `all` accumulates across renders, so read from the TAIL — the
     // head holds a stale closure and a handler taken from it silently no-ops.
@@ -73,13 +70,6 @@ vi.mock('antd', async (importOriginal) => ({
   message: { error: vi.fn() },
 }));
 
-vi.mock('@/features/AgentProfileArtwork', () => ({
-  AgentProfileArtwork: (props: Record<string, unknown>) => {
-    mocks.artworkProps.last = props;
-    return <div>artwork</div>;
-  },
-}));
-
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ allowed: mocks.permissionState.allowed, reason: 'requires member' }),
 }));
@@ -112,8 +102,6 @@ vi.mock('@/store/agent/selectors', () => ({
       state.agentMap[agentId] || {},
     getAgentSlugById: (agentId: string) => (state: typeof mocks.agentStoreState) =>
       state.agentMap[agentId]?.slug,
-    getAgentStoredAvatarById: (agentId: string) => (state: typeof mocks.agentStoreState) =>
-      state.agentMap[agentId]?.storedAvatar || undefined,
   },
 }));
 
@@ -166,10 +154,8 @@ describe('AgentHeader', () => {
       },
     };
     mocks.agentStoreListeners.clear();
-    mocks.emojiPickerProps.last = undefined;
     mocks.inputProps.all = [];
     mocks.actionIconProps.all = [];
-    mocks.artworkProps.last = undefined;
     mocks.permissionState.allowed = false;
     mocks.randomAgentName.mockReturnValue('Zoe');
     mocks.sidebarAgents = [];
@@ -177,25 +163,6 @@ describe('AgentHeader', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-  });
-
-  it('keeps the artwork editor read-only when edits are not allowed', () => {
-    render(<AgentHeader />);
-
-    expect(mocks.artworkProps.last?.canEdit).toBe(false);
-  });
-
-  it('keeps the display fallback out of the artwork character reference', () => {
-    mocks.agentStoreState.agentMap = {
-      'agent-a': { avatar: '/avatars/agent-default.png', storedAvatar: null },
-    };
-
-    render(<AgentHeader />);
-
-    expect(mocks.artworkProps.last).toMatchObject({
-      avatar: '/avatars/agent-default.png',
-      storedAvatar: undefined,
-    });
   });
 
   it('opens the identity form instead of editing inline', () => {
@@ -402,28 +369,5 @@ describe('AgentHeader', () => {
     const view = render(<AgentHeader />);
 
     expect(view.container.textContent).not.toContain('settingAgent.personalName.pickForMe');
-  });
-
-  it('keeps an artwork update bound to the agent that started it', () => {
-    mocks.permissionState.allowed = true;
-    mocks.agentStoreState.agentMap = {
-      'agent-a': { title: 'Agent A' },
-      'agent-b': { title: 'Agent B' },
-    };
-    render(<AgentHeader />);
-    const onAvatarChange = mocks.artworkProps.last?.onAvatarChange as (avatar: string) => void;
-
-    act(() => {
-      mocks.agentStoreState.activeAgentId = 'agent-b';
-      mocks.agentStoreListeners.forEach((listener) => listener());
-    });
-
-    act(() => {
-      onAvatarChange('https://example.com/agent-a.png');
-    });
-
-    expect(mocks.updateAgentMetaById).toHaveBeenCalledExactlyOnceWith('agent-a', {
-      avatar: 'https://example.com/agent-a.png',
-    });
   });
 });

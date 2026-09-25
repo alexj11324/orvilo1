@@ -46,16 +46,20 @@ import {
   automationRunsRouteMeta,
   automationsRouteMeta,
 } from '@/features/Automations/routeMeta';
-import { inboxRouteMeta } from '@/features/HomeInbox/routeMeta';
+import { membersRouteMeta } from '@/features/Members/routeMeta';
+import { myWorkRouteMeta } from '@/features/MyWork/routeMeta';
 import {
   projectLibraryRouteMeta,
   projectResourcesRouteMeta,
   projectsRouteMeta,
 } from '@/features/Projects/routeMeta';
+import { reviewsRouteMeta } from '@/features/Reviews/routeMeta';
+import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
+import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
+import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
 import {
-  agentChannelRouteMeta,
   agentPermissionRouteMeta,
   agentProfileRouteMeta,
   agentRouteMeta,
@@ -244,22 +248,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
             ),
             handle: { meta: agentProfileRouteMeta },
             path: 'profile',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/channel'),
-              'Desktop > Chat > Channel',
-            ),
-            handle: { meta: agentChannelRouteMeta },
-            path: 'channel',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/channel/[platform]'),
-              'Desktop > Chat > Channel Platform',
-            ),
-            handle: { meta: agentChannelRouteMeta },
-            path: 'channel/:platform',
           },
           // Legacy `/agent/:aid/topics` URLs — the management page is gone,
           // keep deep-links landing on the agent chat instead of a phantom
@@ -617,13 +605,20 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
+        // Linear shape: a project opens on its Overview tab (verified against the
+        // real app — the issues collection lives on the Tasks tab).
+        element: redirectElement('overview'),
+        handle: { meta: projectsRouteMeta },
+        index: true,
+      },
+      {
         element: dynamicElement(
           () => import('@/routes/(main)/project/[projectId]'),
           'Desktop > Project Overview',
           { preloadId: 'project' },
         ),
         handle: { meta: projectsRouteMeta },
-        index: true,
+        path: 'overview',
       },
       {
         element: dynamicElement(
@@ -660,6 +655,18 @@ export const sharedMainAreaChildren: RouteObject[] = [
         handle: { meta: projectLibraryRouteMeta },
         path: 'library/:id',
       },
+      // The overview composer starts a project conversation at
+      // /project/:id/conversation?message=… — this registration is what makes
+      // that URL resolve; without it the send lands on the index redirect and
+      // drops the message.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/project/[projectId]/conversation'),
+          'Desktop > Project Conversation',
+        ),
+        handle: { meta: projectsRouteMeta },
+        path: 'conversation/:topicId?',
+      },
     ],
     element: dynamicLayout(
       () => import('@/routes/(main)/project/_layout'),
@@ -685,9 +692,8 @@ export const sharedMainAreaChildren: RouteObject[] = [
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'tasks',
       },
-      // The inbox kept its capability but lost its page when Web stopped mounting
-      // the old Home. A thin route is what the plan asks for, so the capability is
-      // reachable without reviving the surface it used to live on.
+      // Work inbox: first-class attention surface. The Home-hosted chat inbox
+      // page is gone; `/inbox` is needs-you / activity, not the built-in agent.
       {
         children: [
           {
@@ -700,6 +706,117 @@ export const sharedMainAreaChildren: RouteObject[] = [
         ],
         errorElement: <ErrorBoundary resetPath=".." />,
         path: 'inbox',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/my-issues'),
+              'Desktop > My Issues',
+              {
+                preloadId: 'my-work',
+              },
+            ),
+            handle: { meta: myWorkRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-issues',
+      },
+      {
+        children: [
+          {
+            // Legacy `/my-work` deep links land on this redirect — it maps the
+            // old tab params onto /my-issues and /reviews.
+            element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Desktop > My Work', {
+              preloadId: 'my-work',
+            }),
+            handle: { meta: myWorkRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-work',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Desktop > Reviews', {
+              preloadId: 'reviews',
+            }),
+            handle: { meta: reviewsRouteMeta },
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/reviews/[reviewId]'),
+              'Desktop > Pull Request Review',
+              { preloadId: 'reviews' },
+            ),
+            handle: { meta: reviewsRouteMeta },
+            path: ':reviewId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'reviews',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/members'), 'Desktop > Members', {
+              preloadId: 'members',
+            }),
+            handle: { meta: membersRouteMeta },
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'members',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/views'), 'Desktop > Views', {
+              preloadId: 'views',
+            }),
+            handle: { meta: savedViewsRouteMeta },
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/views/[viewId]'),
+              'Desktop > Saved View',
+              { preloadId: 'views' },
+            ),
+            handle: { meta: savedViewsRouteMeta },
+            path: ':viewId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'views',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/teams'), 'Desktop > Teams', {
+              preloadId: 'teams',
+            }),
+            handle: { meta: teamsRouteMeta },
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/teams/[teamId]'),
+              'Desktop > Team',
+              { preloadId: 'teams' },
+            ),
+            handle: { meta: teamsRouteMeta },
+            path: ':teamId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'teams',
       },
       {
         children: [
@@ -736,7 +853,8 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'Desktop > Task Workspace > Layout',
       { preloadId: 'tasks' },
     ),
-    // This one wrapper carries `/tasks`, `/inbox`, `/task/*` and `/goal/*`, and
+    // This one wrapper carries `/tasks`, `/inbox`, `/my-work`, `/views`,
+    // `/teams`, `/task/*` and `/goal/*`, and
     // every one of them mounts the portal column (`TaskWorkspaceLayout` renders
     // `AgentTaskManager` or `MobilePortal`). Declaring it once here is what lets
     // the acceptance drawer know it would be a second host; see `RouteMeta`.
@@ -858,7 +976,7 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         handle: { meta: settingsRouteMeta },
         path: ':tab',
       },
-      // Tabs that need a sub-segment (e.g. /settings/messenger/discord) reuse
+      // Tabs that need a sub-segment (e.g. /settings/xxx/yyy) reuse
       // the same tab page; nested feature components read `:sub` via useParams.
       {
         element: dynamicElement(
@@ -1091,23 +1209,7 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
                 handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
                 path: 'hotkey',
               },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Desktop > Workspace > Settings > Messenger',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'messenger',
-              },
-              // Platform detail level — the page reads the platform from `sub`.
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Desktop > Workspace > Settings > Messenger > Platform',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'messenger/:sub',
-              },
+
               // Developer tools mirrored inside the workspace (user preferences).
               {
                 element: dynamicElement(
@@ -1204,7 +1306,7 @@ export const createMainAreaRouteFactory = (options: MainAreaRouteOptions = {}) =
 export interface SharedDesktopRouteOptions {
   mainAreaChildren: RouteObject[];
   onboardingRoute: RouteObject;
-  /** Routes that intentionally exist on only one runtime, such as Web `/verify-im`. */
+  /** Routes that intentionally exist on only one runtime. */
   platformRoutes?: RouteObject[];
 }
 

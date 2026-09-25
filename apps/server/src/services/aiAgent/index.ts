@@ -1,5 +1,7 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
+import { builtinSkills } from '@orvilo/builtin-skills';
+import { isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
 import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
 import type {
@@ -14,6 +16,7 @@ import type {
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
+  getActivePluginIds,
   getWorkingDirEffectivePath,
   RequestTrigger,
   resolveOrviloCliAgentType,
@@ -39,17 +42,18 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { AgentService } from '@/server/services/agent';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
+import {
+  AgentRuntimeService,
+  type AgentRuntimeServiceOptions,
+} from '@/server/services/agentExecution';
 import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
-import type {
-  AgentRuntimeServiceOptions,
-  SubAgentBridgeParams,
-} from '@/server/services/agentRuntime';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
   GroupActionMemberBridgeParams,
-} from '@/server/services/agentRuntime/types';
+  SubAgentBridgeParams,
+} from '@/server/services/agentExecution/types';
+import { AgentStartError } from '@/server/services/agentExecution/types';
 import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';
@@ -59,6 +63,7 @@ import { InterventionController } from './intervention/InterventionController';
 import type { ApprovalClaimState } from './pipeline/approvalResume';
 import { claimApprovalResume, tryReuseInterventionContinuation } from './pipeline/approvalResume';
 import { dispatchHeteroAgent } from './pipeline/heteroDispatch';
+import { resolveExternalToolSurface } from './pipeline/resolveExternalToolSurface';
 import { resolveRunAgentConfig } from './pipeline/resolveRunAgentConfig';
 import { resolveRunToolSurface } from './pipeline/runToolSurface';
 import { resolveNewTopicSnapshot, setupTurn } from './pipeline/turnSetup';
@@ -457,6 +462,18 @@ export class AiAgentService {
    *   → AgentRuntimeService.createOperation(...)
    */
   async execAgent(inputParams: InternalExecAgentParams): Promise<ExecAgentResult> {
+    // `autoStart:false` was the lobehub deferred-start contract. Under ACP
+    // every accepted run is dispatched inside this call — there is no queued
+    // intent left for a later `startExecution` to release — so reject BEFORE
+    // any side effect (thread/message/operation rows, topic reservation,
+    // dispatch) instead of silently starting anyway.
+    if (inputParams.autoStart === false) {
+      throw new AgentStartError(
+        'deferred_start_unsupported',
+        'autoStart:false is not supported — every accepted run is dispatched immediately. To defer a run to a later time, use scheduleAgentRun.',
+      );
+    }
+
     // Creating the thread here (rather than inside the turn) means a run that
     // asked for one is already a thread run by the time the reservation check
     // below reads `appContext.threadId` — same isolation as a follow-up inside
@@ -642,8 +659,6 @@ export class AiAgentService {
       slug,
       prompt,
       appContext,
-      botContext,
-      botSender,
       beforeOperationStart,
       createdThreadId,
       clientIp,
@@ -671,6 +686,7 @@ export class AiAgentService {
       skipTaskVerification,
       parentMessageId,
       parentOperationId,
+      requiredToolIds,
       resume,
       resumeApproval,
       resumeApprovals,
@@ -914,8 +930,6 @@ export class AiAgentService {
         assistantAgentId,
         attachedFileIds,
         batchApprovalAnchorId,
-        botContext,
-        botSender,
         clientIds,
         continuationAssistantId,
         conversationAgentId,
@@ -939,7 +953,6 @@ export class AiAgentService {
     assistantMessageRef.current = turn.assistantMessageId;
     const {
       canUseDevice,
-      deviceAccessReason,
       model,
       provider,
       requestTriggerMetadata,
@@ -957,7 +970,6 @@ export class AiAgentService {
       appContext,
       assistantMessageId: turn.assistantMessageId,
       canUseDevice,
-      deviceAccessReason,
       model,
       parentMessageId,
       persistAgentId,
@@ -972,6 +984,29 @@ export class AiAgentService {
     // The retired loop mounted Orvilo builtin tools/skills directly; ACP runs
     // receive them as a per-run MCP surface (`builtinToolSpecs`) plus inline
     // capability instructions (`capabilityContext`) — see `runToolSurface`.
+    // Non-builtin ids (connectors, installed MCP plugins) are resolved against
+    // the caller's own rows first; mounts carry no credentials — the exec
+    // callback re-resolves the connection at call time.
+    const externalCandidates = [
+      ...new Set([
+        ...(additionalPluginIds ?? []),
+        ...(exclusivePluginIds ?? []),
+        ...(requiredToolIds ?? []),
+        ...(selectedToolIds ?? []),
+        ...getActivePluginIds(agentConfig.plugins),
+      ]),
+    ].filter(
+      (identifier) =>
+        !isBuiltinToolIdentifier(identifier) &&
+        !builtinSkills.some((skill) => skill.identifier === identifier),
+    );
+    const externalTools = await resolveExternalToolSurface({
+      agentId: resolvedAgentId,
+      candidateIds: externalCandidates,
+      db: this.db,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
     const toolSurface = resolveRunToolSurface({
       additionalPluginIds,
       agentPlugins: agentConfig.plugins,
@@ -980,6 +1015,8 @@ export class AiAgentService {
       disableTools,
       enableAgentMode: agentConfig.chatConfig?.enableAgentMode,
       exclusivePluginIds,
+      externalTools,
+      requiredToolIds,
       selectedToolIds,
       // MCP-mountable harnesses are the standard-ACP runtimes; remote platform
       // types and the non-standard adapters (cursor/devin/droid/grok/trae)
@@ -1008,6 +1045,8 @@ export class AiAgentService {
         beforeOperationStart,
         builtinToolSpecs: toolSurface.builtinToolSpecs,
         canManageAgent,
+        externalToolMounts: toolSurface.externalTools,
+        toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
         effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
         // Skill content, mounted-tool usage guidance and eval env prompts all
@@ -1033,6 +1072,7 @@ export class AiAgentService {
         skipTaskVerification,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,
         userAgent,
+        userInterventionConfig: params.userInterventionConfig,
       },
     );
 

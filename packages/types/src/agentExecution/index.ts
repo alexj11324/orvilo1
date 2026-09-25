@@ -16,6 +16,35 @@ export type AgentSignalOperationKind =
  * carries `agentId/operationId/topicId`). Runtime parsing/validation helpers live
  * server-side in `operationMarker.ts`.
  */
+/**
+ * Run-scoped marker for a retained background judgment executed as an
+ * explicitly-authorized ACP operation (R08). Stamped onto
+ * `appContext.judgment` at dispatch so the `agent_operations` row carries the
+ * consumer identity, the caller's attempt count, and the budget caps the run
+ * was dispatched under — this is the durable record behind every
+ * `kind: 'judgment'` generation.
+ */
+export interface AgentOperationJudgmentContext {
+  /** 1-based attempt index when the caller retries the same judgment. */
+  attempt?: number;
+  /** Budget caps applied to the run — the wait/steps envelope, not a token count. */
+  budget?: {
+    /** Wall-clock milliseconds the caller waited for a terminal state. */
+    maxWaitMs?: number;
+    /** Agent step cap the run was dispatched with. */
+    maxSteps?: number;
+  };
+  /**
+   * Launch identity minted before dispatch. When `execAgent`'s return is lost
+   * (throw, caller abort, or hang past the total budget), the runner looks up
+   * the operation row by this key and interrupts whatever landed — a judgment
+   * never dispatches a second writer for the same launch.
+   */
+  intentKey?: string;
+  /** Stable consumer identifier, e.g. 'verify.judge', 'goal.criteriaDraft'. */
+  purpose: string;
+}
+
 export interface AgentSignalOperationMarker {
   /**
    * The reviewed user agent a resulting receipt should be attributed to. Needed
@@ -130,6 +159,13 @@ export interface ExecAgentAppContext {
    */
   isSubAgent?: boolean;
   /**
+   * ACP judgment-run marker. Present on operations dispatched by the retained
+   * judgment path (`AiGenerationService.generateObject` with `kind: 'judgment'`
+   * / `runAcpJudgment`) — the durable proof the run was an explicitly
+   * authorized judgment rather than an untracked LLM call.
+   */
+  judgment?: AgentOperationJudgmentContext;
+  /**
    * Branch this run into a NEW thread (subtopic) under `topicId`, persisting the
    * turn there instead of on the topic's main spine.
    *
@@ -216,7 +252,12 @@ export interface ExecAgentParams {
   agentId?: string;
   /** Application context for message storage */
   appContext?: ExecAgentAppContext;
-  /** Whether to auto-start execution after creating operation (default: true) */
+  /**
+   * Retired lobehub deferred-start flag. Under ACP every accepted run is
+   * dispatched inside `execAgent` — there is no queued intent a later
+   * `startExecution` could release — so `false` is rejected before any side
+   * effect. Omit it (or pass `true`); to defer a run, use `scheduleAgentRun`.
+   */
   autoStart?: boolean;
   /** Client-minted ids for the rows this run creates (fresh sends only). */
   clientIds?: ExecAgentClientIds;

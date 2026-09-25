@@ -5,7 +5,19 @@ import type {
   ProjectVisibility,
   TaskCreationSubjectSnapshot,
 } from '@orvilo/types';
-import { and, asc, desc, eq, exists, inArray, isNull, max, or, type SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  getTableName,
+  inArray,
+  isNull,
+  max,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
 import { knowledgeBases } from '../schemas/file';
@@ -15,11 +27,12 @@ import {
   projectKnowledgeBases,
   projects,
 } from '../schemas/project';
-import { projectMembers } from '../schemas/projectMember';
 import { projectWorks } from '../schemas/projectWork';
 import { tasks } from '../schemas/task';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
+import { buildProjectReadableWhere } from '../utils/projectReadable';
+import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
 
@@ -192,35 +205,34 @@ export class ProjectModel {
   }
 
   private readable() {
-    const base = buildWorkspaceWhere(
-      { userId: this.userId, workspaceId: this.workspaceId },
-      projects,
-    );
-    // Personal mode has no memberships — the ownership predicate is final.
-    if (!this.workspaceId) return base;
-
-    // Workspace mode adds one more read path: an ACTIVE project_members row
-    // grants read on the project it names. The grant — not creator ownership —
-    // is what an accepted invitation or explicit share confers, and it is the
-    // only way a member reads somebody else's private project.
-    const grantedRead = exists(
-      this.db
-        .select({ one: sql`1` })
-        .from(projectMembers)
-        .where(
-          and(
-            eq(projectMembers.projectId, projects.id),
-            eq(projectMembers.userId, this.userId),
-            isNull(projectMembers.deletedAt),
-            isNull(projectMembers.suspendedAt),
-          ),
-        ),
-    );
-    return or(base, and(eq(projects.workspaceId, this.workspaceId), grantedRead)) as SQL;
+    return buildProjectReadableWhere(this.db, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
   }
 
   private manageable() {
     return and(this.readable(), eq(projects.userId, this.userId));
+  }
+
+  /**
+   * The same predicate TaskModel uses for list/read — workspace visibility,
+   * private-team ACL, and soft-delete. `taskCount` must match what the
+   * project's Issues list would actually show the caller.
+   */
+  private taskReadable() {
+    return and(
+      buildWorkspaceWhere(
+        { userId: this.userId, workspaceId: this.workspaceId },
+        {
+          userId: tasks.createdByUserId,
+          visibility: tasks.visibility,
+          workspaceId: tasks.workspaceId,
+        },
+      ),
+      this.workspaceId ? buildTaskTeamReadableWhere(this.db, this.userId) : undefined,
+      sql`${tasks.isDeleted} IS NOT TRUE`,
+    );
   }
 
   private orchestrationPolicyManageable() {
@@ -336,7 +348,12 @@ export class ProjectModel {
     const { limit = 50, offset = 0, statuses } = options;
     const statusWhere = statuses?.length ? inArray(projects.status, statuses) : undefined;
     return this.db
-      .select()
+      .select({
+        ...getTableColumns(projects),
+        // Column refs lose their table qualifier inside `sql` templates, so the
+        // outer correlation is spelled out — a bare "id" would bind to tasks.id.
+        taskCount: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${sql.raw(`"${getTableName(projects)}"."id"`)} and ${this.taskReadable()})`,
+      })
       .from(projects)
       .where(and(this.readable(), statusWhere))
       .orderBy(desc(projects.updatedAt))

@@ -11,9 +11,34 @@ import {
 } from 'react';
 import { type VListHandle } from 'virtua';
 
+import { useSingleton } from '@/hooks/useSingleton';
+
 import { dataSelectors, messageStateSelectors, useConversationStore } from '../../store';
+import { useAutoScrollEnabled } from '../components/AutoScroll/useAutoScrollEnabled';
 
 const log = debug('orvilo:conversation:scroll');
+
+// In-page ring buffer so e2e can read the hook's verdicts directly from the
+// DOM instead of relying on console forwarding (which races on CI workers).
+const pushScrollDiag = (entry: string) => {
+  try {
+    const w = globalThis as { __orviloScrollDiag?: string[] };
+    const buf = (w.__orviloScrollDiag ??= []);
+    buf.push(entry);
+    if (buf.length > 300) buf.splice(0, 100);
+  } catch {
+    // diagnostics must never break rendering
+  }
+};
+const diag = (entry: string) => {
+  log('%s', entry);
+  pushScrollDiag(entry);
+};
+
+// Module-load stamp: if a failure dump shows an empty buffer despite a live
+// chat page, the page either reloaded (wiping window state) or this bundle
+// never loaded there — the stamp disambiguates that without console lines.
+pushScrollDiag(`useConversationScroll module loaded t=${Math.round(performance.now())}`);
 
 export const CONVERSATION_SPACER_ID = '__conversation_spacer__';
 export const CONVERSATION_SPACER_TRANSITION_MS = 200;
@@ -140,6 +165,7 @@ interface UseSpacerHeightArgs {
   getItemOffset: ((index: number) => number) | undefined;
   getItemSize: ((index: number) => number) | undefined;
   getViewportSize: (() => number) | undefined;
+  isAIGeneratingRef: RefObject<boolean>;
   latestAssistantSignature: string;
   userMessageIndex: number | null;
 }
@@ -149,6 +175,7 @@ const useSpacerHeight = ({
   getItemOffset,
   getItemSize,
   getViewportSize,
+  isAIGeneratingRef,
   latestAssistantSignature,
   userMessageIndex,
   assistantMessageIndex,
@@ -192,16 +219,20 @@ const useSpacerHeight = ({
   }, []);
 
   const scheduleSpacerUnmount = useCallback(() => {
-    clearRemoveTimer();
+    // Keep an unmount that is already pending. Layout keeps settling after the
+    // reply ends (the ResizeObserver fires repeatedly under a slow renderer),
+    // and restarting the timer on each of those idle zero-height measures
+    // postponed the unmount until layout went quiet — until then the pin held
+    // the viewport at the user row instead of settling at the bottom.
+    if (removeTimerRef.current) return;
 
     removeTimerRef.current = setTimeout(() => {
       setMounted(false);
       removeTimerRef.current = null;
     }, CONVERSATION_SPACER_TRANSITION_MS);
-  }, [clearRemoveTimer]);
+  }, []);
 
   const updateSpacerHeight = useCallback(() => {
-    clearRemoveTimer();
     const { assistantId, assistantIndex, userId, userIndex } = getTrackedMessages();
     const viewportHeight = getViewportSize?.() || window.innerHeight;
 
@@ -223,10 +254,25 @@ const useSpacerHeight = ({
 
     if (nextHeight === 0) {
       setNaturalHeight(0);
-      scheduleSpacerUnmount();
+      if (!isAIGeneratingRef.current) {
+        scheduleSpacerUnmount();
+        return;
+      }
+      // While the reply is still streaming, a zero spacer means it already
+      // outgrew the viewport — the pin position is self-sustaining and must
+      // stay armed. Unmounting here flips `spacerActive` off, which remounts
+      // the trailing AutoScroll; with the pinned spot still inside the
+      // at-bottom threshold the next stream chunk would drag the viewport to
+      // the tail and strand the user message far above. Keep the row mounted
+      // at height 0; the unmount is deferred to the first recompute after
+      // generation ends.
+      clearRemoveTimer();
+      setMounted(true);
       return;
     }
 
+    // The spacer is needed again: cancel any pending unmount.
+    clearRemoveTimer();
     setMounted(true);
     setNaturalHeight(nextHeight);
   }, [
@@ -235,6 +281,7 @@ const useSpacerHeight = ({
     getItemOffset,
     getItemSize,
     getViewportSize,
+    isAIGeneratingRef,
     scheduleSpacerUnmount,
   ]);
 
@@ -315,13 +362,13 @@ const usePinController = ({
 
       const scrollToIndex = virtuaRef.current?.scrollToIndex;
       if (!scrollToIndex) {
-        log('scrollToPinned skipped: virtua not ready (%s) index=%d', reason, pin.index);
+        diag(`scrollToPinned skipped: virtua not ready (${reason}) index=${pin.index}`);
         return;
       }
 
       const smooth = Date.now() - pin.sentAt < SEND_SCROLL_ANIMATION_WINDOW_MS;
 
-      log('scrollToPinned (%s) index=%d smooth=%s', reason, pin.index, smooth);
+      diag(`scrollToPinned (${reason}) index=${pin.index} smooth=${smooth}`);
       // pin.index is a message index; the header slot row shifts virtua rows.
       scrollToIndex(pin.index + headerOffset, { align: 'start', smooth });
     },
@@ -330,7 +377,7 @@ const usePinController = ({
 
   const clearPin = useCallback((reason: string) => {
     if (!pinRef.current) return;
-    log('clearPin (%s) index=%d', reason, pinRef.current.index);
+    diag(`clearPin (${reason}) index=${pinRef.current.index}`);
     pinRef.current = null;
   }, []);
 
@@ -441,6 +488,7 @@ export interface UseConversationScrollOptions {
    * calls translate by this offset.
    */
   headerOffset?: number;
+  /** Retained for caller compatibility — send detection scans the appended tail itself. */
   isSecondLastMessageFromUser: boolean;
   virtuaRef: RefObject<VListHandle | null>;
 }
@@ -464,11 +512,12 @@ export const useConversationScroll = ({
   contextKey,
   dataSource,
   headerOffset = 0,
-  isSecondLastMessageFromUser,
   virtuaRef,
 }: UseConversationScrollOptions): UseConversationScrollResult => {
   const displayMessages = useConversationStore(dataSelectors.displayMessages);
   const isAIGenerating = useConversationStore(messageStateSelectors.isAIGenerating);
+  const scrollToBottom = useConversationStore((s) => s.scrollToBottom);
+  const autoScrollEnabled = useAutoScrollEnabled();
   const getItemOffset = useConversationStore((s) => s.virtuaScrollMethods?.getItemOffset);
   const getItemSize = useConversationStore((s) => s.virtuaScrollMethods?.getItemSize);
   const getScrollOffset = useConversationStore((s) => s.virtuaScrollMethods?.getScrollOffset);
@@ -476,7 +525,6 @@ export const useConversationScroll = ({
 
   const isAIGeneratingRef = useRef(isAIGenerating);
   isAIGeneratingRef.current = isAIGenerating;
-
   // State (not ref) so that downstream memos / effects re-run when a new turn
   // is pinned. The pin indices are only set from the send-detection effect;
   // using state keeps the observer & signature in sync on the very next
@@ -484,6 +532,21 @@ export const useConversationScroll = ({
   const [userMessageIndex, setUserMessageIndex] = useState<number | null>(null);
   const [assistantMessageIndex, setAssistantMessageIndex] = useState<number | null>(null);
   const prevLengthRef = useRef(dataSource.length);
+  // Tail-appended ids whose role wasn't resolvable on arrival — under load the
+  // displayMessages role map can lag dataSource by a commit, which would drop
+  // the pin for a split user+assistant commit. Re-checked every pass.
+  const unresolvedTailIds = useSingleton(() => new Set<string>());
+  // User ids already pinned this context — dedupes re-keys (tmp_ → real id)
+  // landing inside a later tail segment.
+  const pinnedUserIds = useSingleton(() => new Set<string>());
+  // Armed on mount AND on every context switch: ChatList swaps the welcome
+  // screen for this list only once the optimistic tail exists, so mount
+  // already sees the just-sent rows with prevLengthRef seeded past them; a
+  // send can likewise mint its topic id before the context adopts it, landing
+  // the tail under the new contextKey inside the seeding commit. Both paths
+  // leave the growth scan silent — while armed, pin the freshest tail user
+  // row once the turn is live.
+  const switchPinArmedRef = useRef(true);
 
   const { registerSpacerNode, spacerLayoutVersion } = useSpacerLayoutSignal();
 
@@ -511,6 +574,7 @@ export const useConversationScroll = ({
     getItemOffset,
     getItemSize,
     getViewportSize,
+    isAIGeneratingRef,
     latestAssistantSignature,
     userMessageIndex,
   });
@@ -535,30 +599,113 @@ export const useConversationScroll = ({
     if (prevContextKeyRef.current === contextKey) return;
     prevContextKeyRef.current = contextKey;
 
+    diag(`context switch ${prevContextKeyRef.current} len=${dataSource.length}`);
     prevLengthRef.current = dataSource.length;
+    unresolvedTailIds.clear();
+    pinnedUserIds.clear();
+    switchPinArmedRef.current = true;
     clearPin('context switch');
     setUserMessageIndex(null);
     setAssistantMessageIndex(null);
     setMounted(false);
     setScrollReduction(() => 0);
     prevScrollOffsetRef.current = null;
-  }, [contextKey]);
+  }, [contextKey, clearPin, dataSource.length, setMounted, setScrollReduction]);
 
   // --- send detection: single source of truth ---
   useEffect(() => {
     const newMessageCount = dataSource.length - prevLengthRef.current;
     prevLengthRef.current = dataSource.length;
 
-    if (newMessageCount !== 2 || !isSecondLastMessageFromUser) return;
+    if (newMessageCount > 0) diag(`dataSource grew +${newMessageCount} → len=${dataSource.length}`);
 
-    const userMessage = displayMessages.at(-2);
-    const assistantMessage = displayMessages.at(-1);
-    if (userMessage?.role !== 'user' || !assistantMessage) return;
+    // Topic-adoption rescue: the optimistic (user, assistant) tail can be
+    // already present in the first dataSource a fresh contextKey paints — the
+    // growth scan below then sees zero new rows. Pin the freshest tail user
+    // row once the new turn is live; freshness bounds this to just-sent rows
+    // so opening an older topic never triggers it.
+    if (switchPinArmedRef.current) {
+      let lastUserIndex = -1;
+      let lastUserCreatedAt = 0;
+      for (let i = dataSource.length - 1; i >= 0; i -= 1) {
+        const message = displayMessages.find((m) => m.id === dataSource[i]);
+        if (message?.role === 'user') {
+          lastUserIndex = i;
+          lastUserCreatedAt = message.createdAt;
+          break;
+        }
+      }
+      const fresh = lastUserIndex >= 0 && Date.now() - lastUserCreatedAt < 120_000;
+      if (!fresh) {
+        diag(`switch pin disarmed (no fresh user row, lastUserIndex=${lastUserIndex})`);
+        switchPinArmedRef.current = false;
+      } else if (isAIGenerating) {
+        switchPinArmedRef.current = false;
+        const userId = dataSource[lastUserIndex];
+        if (!pinnedUserIds.has(userId) && pinRef.current?.index !== lastUserIndex) {
+          pinnedUserIds.add(userId);
+          diag(`send detected via topic adoption userIndex=${lastUserIndex}`);
+          setScrollReduction(() => 0);
+          prevScrollOffsetRef.current = getScrollOffset?.() ?? null;
+          setUserMessageIndex(lastUserIndex);
+          const nextIndex = lastUserIndex + 1;
+          setAssistantMessageIndex(nextIndex < dataSource.length ? nextIndex : null);
+          pinRef.current = {
+            index: lastUserIndex,
+            seenActive: mountedRef.current,
+            sentAt: Date.now(),
+          };
+          scrollToPinned('send');
+          requestAnimationFrame(() => {
+            updateSpacerHeight();
+          });
+        }
+        return;
+      }
+      // fresh but the turn's op hasn't surfaced under this context yet — stay
+      // armed; isAIGenerating is a dep so the effect re-runs when it flips.
+    }
 
-    const userIndex = dataSource.length - 2;
-    const assistantIndex = dataSource.length - 1;
+    if (newMessageCount <= 0 && unresolvedTailIds.size === 0) return;
 
-    log('send detected userIndex=%d', userIndex);
+    // A send appends a (user, assistant, …) tail — usually one +2 commit, but
+    // under load the pair can split across commits or carry extra rows (tool,
+    // receipt, steer), which an exact `+2 & second-last-is-user` gate silently
+    // drops. Candidates are the ids appended in this pass (the tail segment —
+    // prepends never qualify) plus earlier tail ids whose role was not
+    // resolvable when they landed; the pin targets the latest new user row.
+    const tailStart = Math.max(0, dataSource.length - Math.max(newMessageCount, 0));
+    const candidates = new Set<string>([...unresolvedTailIds, ...dataSource.slice(tailStart)]);
+    unresolvedTailIds.clear();
+
+    let userIndex = -1;
+    for (const id of candidates) {
+      const message = displayMessages.find((m) => m.id === id);
+      if (!message) {
+        unresolvedTailIds.add(id);
+        continue;
+      }
+      if (message.role !== 'user' || pinnedUserIds.has(id)) continue;
+      const index = dataSource.indexOf(id);
+      if (index > userIndex) userIndex = index;
+    }
+
+    if (userIndex < 0) {
+      if (newMessageCount > 0)
+        diag(`send detection: no new user row in appended tail (+${newMessageCount})`);
+      return;
+    }
+
+    const userId = dataSource[userIndex];
+    pinnedUserIds.add(userId);
+    if (pinRef.current?.index === userIndex) return;
+
+    // The assistant bubble usually lands in the same commit; on a split commit
+    // it may not exist yet — the growth branch below adopts it when it does.
+    const nextIndex = userIndex + 1;
+    const assistantIndex = nextIndex < dataSource.length ? nextIndex : null;
+
+    diag(`send detected userIndex=${userIndex}`);
 
     setScrollReduction(() => 0);
     prevScrollOffsetRef.current = getScrollOffset?.() ?? null;
@@ -574,10 +721,11 @@ export const useConversationScroll = ({
       updateSpacerHeight();
     });
   }, [
+    assistantMessageIndex,
     dataSource,
     displayMessages,
     getScrollOffset,
-    isSecondLastMessageFromUser,
+    isAIGenerating,
     mountedRef,
     pinRef,
     prevScrollOffsetRef,
@@ -585,6 +733,18 @@ export const useConversationScroll = ({
     setScrollReduction,
     updateSpacerHeight,
   ]);
+
+  // A pin fired on a split commit may not have an assistant row yet — adopt it
+  // when it lands so the spacer signature tracks the live reply.
+  useEffect(() => {
+    const pin = pinRef.current;
+    if (!pin || assistantMessageIndex !== null) return;
+
+    const nextIndex = pin.index + 1;
+    if (nextIndex < dataSource.length) {
+      setAssistantMessageIndex(nextIndex);
+    }
+  }, [assistantMessageIndex, dataSource, pinRef]);
 
   // --- pin re-fire: every time spacer layout settles ---
   useEffect(() => {
@@ -599,11 +759,28 @@ export const useConversationScroll = ({
     // closes — either we've reached the target or the user scrolled away.
     if (pin.seenActive && !mounted) {
       clearPin('spacer unmounted after activation');
+      // The pin anchored the viewport to the user row for the whole stream,
+      // keeping `atBottom` false — so AutoScroll's streaming follower never
+      // fires and, on generation end, the viewport would stay stranded at the
+      // pin (distanceToBottom ≈ the retired spacer's height). A user scroll-up
+      // clears the pin before the unmount, so reaching this branch means the
+      // stream ended naturally: with auto-scroll enabled, settle at bottom.
+      if (autoScrollEnabled) {
+        scrollToBottom(false);
+      }
       return;
     }
 
     scrollToPinned('spacer layout settle');
-  }, [clearPin, mounted, pinRef, scrollToPinned, spacerLayoutVersion]);
+  }, [
+    autoScrollEnabled,
+    clearPin,
+    mounted,
+    pinRef,
+    scrollToBottom,
+    scrollToPinned,
+    spacerLayoutVersion,
+  ]);
 
   // Collapse spacer to unmount once the user has shrunk it to zero.
   useEffect(() => {

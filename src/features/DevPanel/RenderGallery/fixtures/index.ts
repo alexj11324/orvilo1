@@ -19,7 +19,6 @@ import orviloAgentManagement from './orvilo-agent-management';
 import orviloCloudSandbox from './orvilo-cloud-sandbox';
 import orviloGroupAgentBuilder from './orvilo-group-agent-builder';
 import orviloGroupManagement from './orvilo-group-management';
-import orviloImageGeneration from './orvilo-image-generation';
 import orviloKnowledgeBase from './orvilo-knowledge-base';
 import orviloLocalSystem from './orvilo-local-system';
 import orviloNotebook from './orvilo-notebook';
@@ -95,7 +94,6 @@ const toolsetModules: ToolsetFixtureModule[] = [
   orviloCloudSandbox,
   orviloGroupAgentBuilder,
   orviloGroupManagement,
-  orviloImageGeneration,
   orviloKnowledgeBase,
   orviloLocalSystem,
   orviloNotebook,

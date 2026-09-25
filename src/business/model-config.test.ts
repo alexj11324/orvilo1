@@ -19,7 +19,7 @@ describe('business model config', () => {
   it('should disable Orvilo model availability by default', () => {
     const getUserEmail = vi.fn();
 
-    expect(isOrviloModelAvailable('image-model', 'image', { getUserEmail })).toBe(false);
+    expect(isOrviloModelAvailable('image-model', 'tts', { getUserEmail })).toBe(false);
 
     expect(mockLoadModelBankModels).not.toHaveBeenCalled();
     expect(mockIsProviderModelAvailable).not.toHaveBeenCalled();

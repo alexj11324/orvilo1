@@ -78,16 +78,13 @@ describe('settings useCategory', () => {
   });
 
   // The point of the regroup: a capability's settings sit together, wherever they
-  // used to live. Messenger is a channel, Stats is usage, Storage/Devices are data.
+  // used to live. Stats is usage, Storage/Devices are data.
   it('files each tab under the capability it configures', () => {
     const { result } = renderHook(() => useCategory(), {
       wrapper: createWrapper(),
     });
     const keysOf = (key: SettingsGroupKey) =>
       result.current.find((group) => group.key === key)?.items.map((item) => item.key);
-
-    expect(keysOf(SettingsGroupKey.Channels)).toContain(SettingsTabs.Messenger);
-    expect(keysOf(SettingsGroupKey.Agent)).not.toContain(SettingsTabs.Messenger);
 
     expect(keysOf(SettingsGroupKey.UsageAndCost)).toContain(SettingsTabs.Stats);
     expect(keysOf(SettingsGroupKey.Data)).toContain(SettingsTabs.Devices);

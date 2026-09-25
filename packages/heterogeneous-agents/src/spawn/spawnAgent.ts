@@ -64,7 +64,7 @@ export interface SpawnAgentOptions {
    */
   inputOptions?: BuildAgentInputOptions;
   /**
-   * ACP `session/new` `mcpServers` entries (e.g. the local `lobe_cc`
+   * ACP `session/new` `mcpServers` entries (e.g. the local `orvilo_cc`
    * AskUserQuestion/browser-tools HTTP server). Standard-ACP agents only.
    */
   mcpServers?: Record<string, unknown>[];
@@ -412,7 +412,7 @@ const spawnStandardAcpAgent = async (
   const session = createStandardAcpSession(options.agentType, {
     args: selectors.args,
     askUserBridge: options.askUserBridge,
-    clientVersion: 'lobehub-cli',
+    clientVersion: 'orvilo-cli',
     commandArgs: target.commandArgs,
     commandPath: target.commandPath,
     configOptions,

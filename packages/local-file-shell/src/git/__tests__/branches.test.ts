@@ -13,6 +13,7 @@ import {
   listGitBranches,
   listGitRemoteBranches,
   mergeGitBranch,
+  probeGitRemoteRef,
   pullGitBranch,
   pushGitBranch,
   renameGitBranch,
@@ -592,5 +593,161 @@ describe('finalizeGitMerge', () => {
     const result = await finalizeGitMerge({ expectedHead: taskHead, path: repo });
     expect(result).toMatchObject({ state: 'conflict', success: false });
     expect(result.error).toContain('does not contain expected task head');
+  });
+});
+
+describe('pushGitBranch fencing + remote expectation (SA03-B)', () => {
+  /** Fresh bare remote wired as `origin`, with `main` published once. */
+  const withBareOrigin = async (): Promise<{ bare: string; remoteSha: string }> => {
+    const bare = await mkdtemp(path.join(tmpdir(), 'lfs-bare-'));
+    cleanup.push(bare);
+    execFileSync('git', ['init', '--bare', bare], { cwd: bare });
+    git(repo, 'remote', 'add', 'origin', bare);
+    git(repo, 'push', 'origin', 'main');
+    git(repo, 'fetch', 'origin', 'main');
+    return { bare, remoteSha: git(repo, 'rev-parse', 'refs/remotes/origin/main') };
+  };
+
+  it('pushes with a fence claim and reports the observed remote sha', async () => {
+    const { remoteSha } = await withBareOrigin();
+    await writeFile(path.join(repo, 'b.txt'), 'new work\n');
+    git(repo, 'add', 'b.txt');
+    git(repo, 'commit', '-m', 'work');
+    const pushed = await pushGitBranch({
+      expectedRemoteSha: remoteSha,
+      fence: { operationId: '5:op-a', ref: 'refs/heads/main', seq: 5 },
+      path: repo,
+      remoteBranch: 'main',
+    });
+    expect(pushed).toMatchObject({ fenceEnforced: true, remoteSha, success: true });
+    expect(git(repo, 'rev-parse', 'refs/remotes/origin/main')).toBe(git(repo, 'rev-parse', 'HEAD'));
+  });
+
+  it('refuses a push when another writer moved the remote after the read', async () => {
+    // The mandated race: writer A reads the remote tip (probe), writer B
+    // publishes, then A's push with the stale expectation must not land.
+    const { bare, remoteSha } = await withBareOrigin();
+    const probe = await probeGitRemoteRef({ path: repo, ref: 'main' });
+    expect(probe).toMatchObject({ sha: remoteSha, state: 'found' });
+
+    // Writer B advances origin/main from a second working clone.
+    const other = await mkdtemp(path.join(tmpdir(), 'lfs-writer-b-'));
+    cleanup.push(other);
+    execFileSync('git', ['clone', bare, other]);
+    git(other, 'config', 'user.email', 'b@example.com');
+    git(other, 'config', 'user.name', 'B');
+    git(other, 'config', 'commit.gpgsign', 'false');
+    await writeFile(path.join(other, 'b.txt'), 'B moved it\n');
+    git(other, 'add', 'b.txt');
+    git(other, 'commit', '-m', 'B write');
+    git(other, 'push', 'origin', 'main');
+    const movedSha = git(bare, 'rev-parse', 'refs/heads/main');
+    expect(movedSha).not.toBe(remoteSha);
+
+    // Old writer A pushes its own commit expecting the read's sha.
+    await writeFile(path.join(repo, 'c.txt'), 'A work\n');
+    git(repo, 'add', 'c.txt');
+    git(repo, 'commit', '-m', 'A work');
+    const stale = await pushGitBranch({
+      expectedRemoteSha: remoteSha,
+      fence: { operationId: '5:op-a', ref: 'refs/heads/main', seq: 5 },
+      path: repo,
+      remoteBranch: 'main',
+    });
+    expect(stale.success).toBe(false);
+    expect(stale.remoteSha).toBe(movedSha);
+    // The remote still holds exactly writer B's tip.
+    expect(git(bare, 'rev-parse', 'refs/heads/main')).toBe(movedSha);
+  });
+
+  it('refuses a stale fence epoch but accepts a second write in the same epoch', async () => {
+    await withBareOrigin();
+    const sameEpoch = { ref: 'refs/heads/main', seq: 7 };
+    await writeFile(path.join(repo, 'b.txt'), '1\n');
+    git(repo, 'add', 'b.txt');
+    git(repo, 'commit', '-m', 'one');
+    expect(
+      (
+        await pushGitBranch({
+          fence: { ...sameEpoch, operationId: '7:first' },
+          path: repo,
+          remoteBranch: 'main',
+        })
+      ).success,
+    ).toBe(true);
+    // A second fenced operation in the same acquisition shares the epoch.
+    await writeFile(path.join(repo, 'b.txt'), '2\n');
+    git(repo, 'commit', '-am', 'two');
+    expect(
+      (
+        await pushGitBranch({
+          fence: { ...sameEpoch, operationId: '7:second' },
+          path: repo,
+          remoteBranch: 'main',
+        })
+      ).success,
+    ).toBe(true);
+    // A newer epoch takes over; a retry from the superseded epoch is refused
+    // before the remote is even consulted.
+    await writeFile(path.join(repo, 'b.txt'), '3\n');
+    git(repo, 'commit', '-am', 'three');
+    expect(
+      (
+        await pushGitBranch({
+          fence: { operationId: '8:owner', ref: 'refs/heads/main', seq: 8 },
+          path: repo,
+          remoteBranch: 'main',
+        })
+      ).success,
+    ).toBe(true);
+    await writeFile(path.join(repo, 'b.txt'), '4\n');
+    git(repo, 'commit', '-am', 'four');
+    const stale = await pushGitBranch({
+      fence: { operationId: '7:late-retry', ref: 'refs/heads/main', seq: 7 },
+      path: repo,
+      remoteBranch: 'main',
+    });
+    expect(stale).toMatchObject({ fenceEnforced: false, success: false });
+    expect(stale.error).toContain('Stale push fence');
+  });
+
+  it('keeps the no-non-fast-forward policy under a held fence', async () => {
+    const { remoteSha } = await withBareOrigin();
+    // An unrelated commit that does not build on the remote tip.
+    git(repo, 'checkout', '--orphan', 'detached-history');
+    git(repo, 'rm', '-rf', '.');
+    await writeFile(path.join(repo, 'orphan.txt'), 'unrelated\n');
+    git(repo, 'add', 'orphan.txt');
+    git(repo, 'commit', '-m', 'orphan');
+    const orphanSha = git(repo, 'rev-parse', 'HEAD');
+
+    const refused = await pushGitBranch({
+      expectedRemoteSha: remoteSha,
+      fence: { operationId: '9:op', ref: 'refs/heads/main', seq: 9 },
+      path: repo,
+      remoteBranch: 'main',
+      sourceRef: orphanSha,
+    });
+    expect(refused.success).toBe(false);
+    expect(refused.error).toContain('non-fast-forward');
+  });
+
+  it('probeGitRemoteRef distinguishes found / missing / unknown', async () => {
+    const { bare } = await withBareOrigin();
+    expect(await probeGitRemoteRef({ path: repo, ref: 'main' })).toMatchObject({
+      ref: 'refs/heads/main',
+      state: 'found',
+    });
+    expect(await probeGitRemoteRef({ path: repo, ref: 'no-such-branch' })).toEqual({
+      ref: 'refs/heads/no-such-branch',
+      sha: undefined,
+      state: 'missing',
+    });
+    // Point origin at a dead path — an unreachable remote is 'unknown', never
+    // confused with a proven-absent ref.
+    git(repo, 'remote', 'set-url', 'origin', path.join(bare, 'gone'));
+    expect(await probeGitRemoteRef({ path: repo, ref: 'main' })).toMatchObject({
+      state: 'unknown',
+    });
   });
 });

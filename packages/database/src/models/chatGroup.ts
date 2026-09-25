@@ -9,7 +9,6 @@ import type {
   NewChatGroupAgent,
 } from '../schemas';
 import {
-  agentBotProviders,
   agentCronJobs,
   agents,
   chatGroups,
@@ -986,24 +985,15 @@ export class ChatGroupModel {
           .where(eq(agents.id, row.id));
       }
 
-      // Owner-attributed runtime rows (cron jobs, bot providers) execute AS
-      // their `userId`; the previous owner's rows on the owned agents re-home
-      // with them — DISABLED, so nothing runs silently under the recipient's
-      // identity and budget. Same policy as the single-agent handover.
+      // Owner-attributed cron jobs execute AS their `userId`; the previous
+      // owner's rows on the owned agents re-home with them — DISABLED, so
+      // nothing runs silently under the recipient's identity and budget.
+      // Same policy as the single-agent handover.
       await trx
         .update(agentCronJobs)
         .set({ enabled: false, updatedAt: agentCronJobs.updatedAt, userId: toUserId })
         .where(
           and(inArray(agentCronJobs.agentId, ownedAgentIds), eq(agentCronJobs.userId, fromUserId)),
-        );
-      await trx
-        .update(agentBotProviders)
-        .set({ enabled: false, updatedAt: agentBotProviders.updatedAt, userId: toUserId })
-        .where(
-          and(
-            inArray(agentBotProviders.agentId, ownedAgentIds),
-            eq(agentBotProviders.userId, fromUserId),
-          ),
         );
       // Quota account bindings (and exclusively-consumed provider accounts)
       // re-home: both cascade on user deletion. See the util.

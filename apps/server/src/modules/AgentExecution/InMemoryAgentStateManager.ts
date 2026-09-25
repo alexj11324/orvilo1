@@ -1,4 +1,4 @@
-import { type AgentState, normalizeAgentState } from '@orvilo/agent-runtime';
+import { type AgentState, normalizeAgentState } from '@orvilo/agent-execution';
 import debug from 'debug';
 
 import { type AgentOperationMetadata, type StepResult } from './AgentStateManager';

@@ -62,6 +62,7 @@ export interface TaskContextMenuActions {
 
 export const useTaskContextMenuActions = (
   routeScope: TaskItemRouteScope = 'agent',
+  onStatusChange?: (status: TaskStatus) => void | Promise<void>,
 ): TaskContextMenuActions => {
   const { t } = useTranslation(['chat', 'common']);
 
@@ -113,6 +114,10 @@ export const useTaskContextMenuActions = (
             domEvent.stopPropagation();
             if (!canEditTask) return;
             if (status === currentStatus) return;
+            if (onStatusChange) {
+              void onStatusChange(status);
+              return;
+            }
             void changeTaskStatus(task.identifier, status);
           },
         } as ContextMenuItem;
@@ -302,7 +307,8 @@ export const useTaskContextMenuActions = (
           event.stopPropagation();
           const nextStatus = USER_SELECTABLE_STATUSES[idx];
           if (nextStatus !== currentStatus) {
-            void changeTaskStatus(task.identifier, nextStatus);
+            if (onStatusChange) void onStatusChange(nextStatus);
+            else void changeTaskStatus(task.identifier, nextStatus);
           }
           closeContextMenu();
           cleanup();
@@ -337,6 +343,7 @@ export const useTaskContextMenuActions = (
     runTask,
     openTopicDrawer,
     inboxAgentId,
+    onStatusChange,
     routeScope,
   ]);
 };
@@ -344,8 +351,12 @@ export const useTaskContextMenuActions = (
 export const useTaskItemContextMenu = (
   task: TaskContextMenuTarget,
   routeScope?: TaskItemRouteScope,
+  onStatusChange?: (status: TaskStatus) => void | Promise<void>,
 ): TaskItemContextMenu => {
-  const { buildItems, installKeyboardHandlers } = useTaskContextMenuActions(routeScope);
+  const { buildItems, installKeyboardHandlers } = useTaskContextMenuActions(
+    routeScope,
+    onStatusChange,
+  );
   const transferItems = useTaskTransferMenuItem(task.identifier) as ContextMenuItem[] | null;
   const items = useMemo(() => {
     const base = buildItems(task);

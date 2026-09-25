@@ -13,10 +13,15 @@ const scrollOffsets = new Map<string, number>();
 interface SidebarLayoutProps {
   body?: ReactNode;
   header?: ReactNode;
+  /** Scroll-memory bucket — defaults to the active nav key. Pass a stable key
+      when the layout renders outside its own nav panel (e.g. an in-page rail)
+      so its offset never collides with the workspace panel's. */
+  scrollKey?: string;
 }
 
-const SideBarLayout = memo<SidebarLayoutProps>(({ header, body }) => {
-  const navKey = useActiveNavKey();
+const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => {
+  const activeNavKey = useActiveNavKey();
+  const navKey = scrollKey ?? activeNavKey;
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   const handleScroll = useCallback(

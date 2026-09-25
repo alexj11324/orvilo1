@@ -13,7 +13,6 @@ export const labPreferSelectors = {
     s.preference.lab?.enableDesktopSplitView ?? false,
   enableHeteroSessionImport: (s: UserState): boolean =>
     s.preference.lab?.enableHeteroSessionImport ?? false,
-  enableImessage: (s: UserState): boolean => s.preference.lab?.enableImessage ?? false,
   enableInputMarkdown: (s: UserState): boolean =>
     s.preference.lab?.enableInputMarkdown ?? DEFAULT_PREFERENCE.lab?.enableInputMarkdown ?? true,
   enableMessageTextSelectionActions: (s: UserState): boolean =>

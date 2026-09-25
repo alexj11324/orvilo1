@@ -38,6 +38,7 @@ import {
   TASK_INPUT_STATUSES,
   TaskInputService,
 } from '@/server/services/agentDelegation';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
@@ -139,6 +140,8 @@ const createSchema = z.object({
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().optional(),
   schedulePattern: z.string().optional(),
+  /** Owning team for workspace tasks — the team's issue-seq allocates the identifier. */
+  teamId: z.string().optional(),
   scheduleTimezone: z.string().optional(),
   // When omitted, the server derives visibility from the parent task or the
   // assignee agent's visibility (private agent → private task). UI surfaces
@@ -269,10 +272,11 @@ const groupListSchema = z
       .max(10)
       .optional(),
     parentTaskId: z.string().nullish(),
-    projectId: z.string().optional(),
+    // `null` narrows to tasks with no project — the board's "No project" chip.
+    projectId: z.string().nullish(),
     // Same "My tasks" narrowing as `listSchema.scope`, so the board renders the
     // exact set its list view does. Always resolved against `ctx.userId`.
-    scope: z.enum(['assigned', 'created']).optional(),
+    scope: z.enum(['assigned', 'created', 'delegated']).optional(),
     visibility: z.enum(['private', 'public']).optional(),
   })
   .refine(({ groupBy, groups }) => Boolean(groupBy) !== Boolean(groups), {
@@ -558,6 +562,15 @@ export const taskRouter = router({
       try {
         return await ctx.taskIntentService.analyze(input);
       } catch (error) {
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -593,6 +606,15 @@ export const taskRouter = router({
       try {
         return await ctx.taskIntentService.synthesize(input);
       } catch (error) {
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -1048,6 +1070,49 @@ export const taskRouter = router({
       }
     }),
 
+  contractContext: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
+    try {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      const topics = await ctx.taskTopicModel.findByTaskId(task.id).catch(() => []);
+      // The contract a fresh run would descend from — latest topic carrying
+      // one — plus whether the live task constraints have drifted from the
+      // revisions that contract pinned (pending un-adopted edits).
+      const contract = [...topics]
+        .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
+        .find((t) => t.contract)?.contract;
+      const pendingConstraintEdits = Boolean(
+        contract &&
+        (contract.versions?.requirementRevision !== task.requirementRevision ||
+          contract.versions?.policyRevision !== task.policyRevision),
+      );
+      return {
+        data: {
+          contract: contract
+            ? {
+                contractId: contract.contractId ?? null,
+                intent: contract.intent ?? null,
+                replan: contract.replan ?? null,
+                revision: contract.revision ?? null,
+                sourceContractId: contract.sourceContractId ?? null,
+              }
+            : null,
+          pendingConstraintEdits,
+          policyRevision: task.policyRevision,
+          requirementRevision: task.requirementRevision,
+        },
+        success: true,
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[task:contractContext]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get task contract context',
+      });
+    }
+  }),
+
   detail: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
     try {
       const detail = await ctx.taskService.getTaskDetail(input.id);
@@ -1217,6 +1282,7 @@ export const taskRouter = router({
         ...query,
         ...(scope === 'assigned' ? { assigneeUserId: ctx.userId } : {}),
         ...(scope === 'created' ? { createdByUserId: ctx.userId } : {}),
+        ...(scope === 'delegated' ? { delegatedByUserId: ctx.userId } : {}),
       });
       return { data: groups, success: true };
     } catch (error) {
@@ -1317,7 +1383,15 @@ export const taskRouter = router({
           continueTopicId: z.string().optional(),
           delegationGrantId: z.string().optional(),
           idempotencyKey: z.string().min(1).max(255).optional(),
+          // SB08: which contract this run adopts. `continue` continues an
+          // existing topic; `repair` re-executes the frozen contract;
+          // `authorized_replan` adopts the live (edited) constraints under a
+          // task.replan action approval. Omitting intent on a drifted
+          // contract is an explicit CONFLICT, never a silent adoption.
+          intent: z.enum(['continue', 'repair', 'authorized_replan']).optional(),
           prompt: z.string().optional(),
+          replanApprovalId: z.string().optional(),
+          sourceContractId: z.string().optional(),
         }),
       ),
     )
@@ -1352,6 +1426,9 @@ export const taskRouter = router({
           delegation,
           extraPrompt: input.prompt,
           idempotencyKey: input.idempotencyKey,
+          intent: input.intent,
+          replanApprovalId: input.replanApprovalId,
+          sourceContractId: input.sourceContractId,
           taskId: task.id,
         });
       } catch (error) {

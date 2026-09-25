@@ -10,7 +10,7 @@ import {
 } from '@/features/Conversation/store';
 import StoreUpdater from '@/features/Conversation/StoreUpdater';
 import { lambdaClient } from '@/libs/trpc/client';
-import { agentRuntimeClient } from '@/services/agentRuntime';
+import { agentStreamClient } from '@/services/agentExecution';
 import { useChatStore } from '@/store/chat/store';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
@@ -21,8 +21,8 @@ vi.mock('@/libs/trpc/client', () => ({
   },
 }));
 
-vi.mock('@/services/agentRuntime', () => ({
-  agentRuntimeClient: { createStreamConnection: vi.fn() },
+vi.mock('@/services/agentExecution', () => ({
+  agentStreamClient: { createStreamConnection: vi.fn() },
   StreamEvent: {},
 }));
 
@@ -167,7 +167,7 @@ describe('group chat — initial message flicker', () => {
       },
       false,
     );
-    vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({ abort: vi.fn() } as any);
+    vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({ abort: vi.fn() } as any);
   });
 
   afterEach(() => {

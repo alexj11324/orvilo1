@@ -8,14 +8,22 @@ import { type TopicGroupMode } from '@/types/topic';
 import { AsyncLocalStorage } from '@/utils/localStorage';
 
 export enum SidebarTabKey {
+  Agent = 'agent',
+  Agents = 'agents',
   Automations = 'automations',
   Chat = 'chat',
   Home = 'home',
+  Inbox = 'inbox',
   Knowledge = 'knowledge',
   Me = 'me',
+  MyIssues = 'my-issues',
+  MyWork = 'my-work',
   Resource = 'resource',
+  Reviews = 'reviews',
   Setting = 'settings',
   Tasks = 'tasks',
+  Teams = 'teams',
+  Views = 'views',
 }
 
 export enum ChatSettingsTabs {
@@ -77,7 +85,6 @@ export enum SettingsTabs {
   Labs = 'labs',
   LLM = 'llm',
   Memory = 'memory',
-  Messenger = 'messenger',
   Notification = 'notification',
   OAuthApps = 'oauth-apps',
   // business
@@ -110,34 +117,9 @@ export enum ProfileTabs {
   Usage = 'usage',
 }
 
-export const MODEL_DETAIL_PANEL_EXPANDED_KEYS = [
-  'rating',
-  'context',
-  'abilities',
-  'pricing',
-  'config',
-] as const;
-
-export type ModelDetailPanelExpandedKey = (typeof MODEL_DETAIL_PANEL_EXPANDED_KEYS)[number];
-
-/**
- * Expandable sections of the ModelDetailPanel Accordion, all expanded by default.
- *
- * Persistence stores the COLLAPSED keys (`modelDetailPanelCollapsedKeys`) instead of the
- * expanded ones: an expanded-keys array persisted before a section shipped would keep that
- * section collapsed forever (this happened to `rating`), while a collapsed-keys array lets
- * newly added sections default to expanded automatically.
- */
-export const MODEL_DETAIL_PANEL_EXPANDABLE_KEYS = [
-  'rating',
-  'abilities',
-  'pricing',
-  'config',
-] as const satisfies readonly ModelDetailPanelExpandedKey[];
-
 export type TaskViewMode = 'kanban' | 'list';
 
-export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['recents', 'agent', 'private'];
+export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['agent', 'workspace', 'favorites', 'teams'];
 
 export interface SystemStatus {
   /**
@@ -160,13 +142,12 @@ export interface SystemStatus {
    */
   agentListViewMode?: 'card' | 'list';
   /**
-   * Display options of the agent view-all page (grouping / ordering / hidden-agent visibility)
+   * Display options of the agent view-all page (grouping / ordering)
    */
   agentListViewOptions?: {
     groupBy: 'author' | 'label' | 'none';
     orderBy: 'author' | 'title' | 'updatedAt';
     orderDirection: 'asc' | 'desc';
-    showSidebarHidden: boolean;
   };
   /**
    * number of agents (defaultList) to display
@@ -199,6 +180,10 @@ export interface SystemStatus {
   expandInputActionbar?: boolean;
   // which sessionGroup should expand
   expandSessionGroupKeys: string[];
+  /**
+   * number of pinned favorites to display in the sidebar before More
+   */
+  favoritePageSize?: number;
   fileManagerViewMode?: 'list' | 'masonry';
   filePanelWidth: number;
   /**
@@ -250,22 +235,6 @@ export interface SystemStatus {
   leftPanelWidth: number;
   mobileShowPortal?: boolean;
   mobileShowTopic?: boolean;
-  /**
-   * Persisted collapsed keys of the ModelDetailPanel Accordion
-   * (Rating / Abilities / Pricing / Model Config). Single shared preference
-   * across all entries (model picker submenu, ChatInput extend-params popover).
-   * Collapsed (not expanded) keys are stored so new sections default to expanded
-   * — see MODEL_DETAIL_PANEL_EXPANDABLE_KEYS.
-   */
-  modelDetailPanelCollapsedKeys?: ModelDetailPanelExpandedKey[];
-  /**
-   * ModelSwitchPanel grouping mode
-   */
-  modelSwitchPanelGroupMode?: 'byModel' | 'byProvider';
-  /**
-   * ModelSwitchPanel width
-   */
-  modelSwitchPanelWidth?: number;
   noWideScreen?: boolean;
   pageAgentPanelWidth?: number;
   /**
@@ -506,11 +475,11 @@ export const INITIAL_STATUS = {
     groupBy: 'none' as const,
     orderBy: 'updatedAt' as const,
     orderDirection: 'desc' as const,
-    showSidebarHidden: true,
   },
   agentPageSize: 5,
   privateAgentPageSize: 5,
   chatInputHeight: 64,
+  favoritePageSize: 5,
   recentPageSize: 5,
   taskListViewOptions: {
     groupBy: 'status',
@@ -551,9 +520,6 @@ export const INITIAL_STATUS = {
   knowledgeBaseModalViewMode: 'list' as const,
   leftPanelWidth: 280,
   mobileShowTopic: false,
-  modelDetailPanelCollapsedKeys: [],
-  modelSwitchPanelGroupMode: 'byProvider',
-  modelSwitchPanelWidth: 460,
   noWideScreen: true,
   pageAgentPanelWidth: 360,
   pagePageSize: 20,

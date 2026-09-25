@@ -5,8 +5,6 @@ import type { TransferManifest } from '@/services/resourceTransferRequest';
 import { isTransferManifestActionable } from './manifestState';
 
 const manifest = {
-  botBindings: 0,
-  botPlatforms: [],
   connectorsAffected: 0,
   cronJobs: 0,
   deviceBindingAffected: false,

@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
 import {
@@ -58,6 +59,12 @@ export interface PredictReviewParams {
   includeTextEvidence?: boolean;
   /** The check's detailed judging rubric, when the criterion links one. */
   instructionDocumentId?: string | null;
+  /**
+   * Preferred ACP binding for the review judgment (the Acceptance's pinned
+   * verifier agent). Falls back to the builtin verify agent, then the
+   * operator env binding; unresolved → an `errored` prediction row.
+   */
+  judgmentAgentId?: string | null;
   modelConfig: { model: string; provider: string };
   /** The acceptance's requirement, used as the scope test. */
   requirement?: string | null;
@@ -242,6 +249,16 @@ export class VerifyReviewPredictorService {
           schema: REVIEW_PREDICTION_JSON_SCHEMA,
         },
         {
+          judgment: {
+            binding: {
+              agentId: params.judgmentAgentId,
+              slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+            },
+            // Visual evidence rides the judgment turn as attached files.
+            fileIds: visuals.map((visual) => visual.fileId),
+            purpose: 'verify.reviewPredict',
+          },
+          kind: 'judgment',
           tracing: {
             promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
             scenario: TRACING_SCENARIOS.ReviewPredict,
@@ -363,13 +380,20 @@ export class VerifyReviewPredictorService {
           accessUrl: await resolveModelReadableFrameUrl(this.fileService, file),
           description: row.description,
           evidenceId: row.id,
+          fileId: file.id,
         };
       }),
     );
 
     return resolved.filter(
-      (item): item is { accessUrl: string; description: string | null; evidenceId: string } =>
-        Boolean(item?.accessUrl),
+      (
+        item,
+      ): item is {
+        accessUrl: string;
+        description: string | null;
+        evidenceId: string;
+        fileId: string;
+      } => Boolean(item?.accessUrl),
     );
   }
 

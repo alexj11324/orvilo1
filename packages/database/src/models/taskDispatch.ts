@@ -1,17 +1,21 @@
 import type {
+  TaskDispatchOrigin,
   TaskDispatchPhase,
+  TaskDispatchSettlementGrant,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
 } from '@orvilo/types';
 import { and, asc, eq, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
 
+import { goals } from '../schemas/goal';
+import { goalNodes } from '../schemas/goalGraph';
 import { projectAgents, projects } from '../schemas/project';
 import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
-import type { OrviloDatabase } from '../type';
+import type { OrviloDatabase, Transaction } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
 import { normalizeProjectOrchestrationPolicy } from './project';
@@ -39,6 +43,15 @@ const PROJECT_CONCURRENCY_PHASES: TaskDispatchPhase[] = [
 
 const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
 
+/**
+ * Goal statuses that fence automated dispatch for a goal-owned Task. Pausing,
+ * canceling or finishing a goal is the stop boundary for every not-yet-running
+ * dispatch behind its nodes: nothing queued may execute while the stop stands.
+ * 'planning'/'verifying'/'review' keep dispatching — a goal still driving its
+ * plan or its acceptance needs its own recovery/corrective runs.
+ */
+const GOAL_DISPATCH_BLOCKED_STATUSES = ['paused', 'canceled', 'failed', 'achieved'] as const;
+
 const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
   task.assigneeAgentId === dispatch.agentId ||
   (dispatch.agentId !== null &&
@@ -53,11 +66,39 @@ const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
 export class TaskDispatchNotFoundError extends Error {}
 export class TaskDispatchIdempotencyConflictError extends Error {}
 
+/**
+ * An `internal` claim whose persisted settlement grant no longer verifies
+ * against the current task state — stale source generation, lapsed
+ * deadline, wrong workspace, or a reservation that expired before the claim.
+ * The claim is refused, never silently downgraded to another origin.
+ */
+export class TaskDispatchSettlementGrantError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`Settlement grant rejected: ${reason}`);
+    this.name = 'TaskDispatchSettlementGrantError';
+    this.reason = reason;
+  }
+}
+
 export interface RequestTaskDispatchInput {
   dispatchId?: string;
   idempotencyKey: string;
+  /** Raw actor identity persisted separately from the `trigger:actor`
+   *  `requestedBy` audit string (SA05-B). */
+  initiator?: string;
+  /**
+   * Authoritative execution origin persisted on the row — resolved
+   *  server-side from verified settlement evidence, not caller-supplied
+   *  marker presence. First write wins: idempotent retries never relabel.
+   */
+  origin?: TaskDispatchOrigin;
   planRevision?: number | null;
   requestedBy: string;
+  /** Server-verified settlement evidence for `origin: 'internal'` rows. */
+  settlementGrant?: TaskDispatchSettlementGrant;
+  sourceDispatchId?: string;
   taskId: string;
   trigger: TaskRunTrigger;
 }
@@ -211,6 +252,36 @@ export class TaskDispatchModel {
   }
 
   /**
+   * Automated dispatch on a Task owned by a stopped goal must not proceed:
+   * pausing/canceling the goal is the stop-intent boundary, and a queued
+   * dispatch resuming through a stray trigger would restart paid work the user
+   * already stopped. Returns `goal_<status>` when a blocking owner exists —
+   * the reason doubles as the durable `waitingReason`, resumable by the next
+   * request once the goal runs again. A 'manual' trigger is the user's own act
+   * on the Task and bypasses this gate, the same way it bypasses project
+   * policy.
+   */
+  private async goalDispatchWaitingReason(
+    db: OrviloDatabase,
+    task: TaskItem,
+    trigger: TaskRunTrigger,
+  ): Promise<string | null> {
+    if (trigger === 'manual') return null;
+    const [blocked] = await db
+      .select({ status: goals.status })
+      .from(goalNodes)
+      .innerJoin(goals, eq(goalNodes.goalId, goals.id))
+      .where(
+        and(
+          eq(goalNodes.taskId, task.id),
+          inArray(goals.status, [...GOAL_DISPATCH_BLOCKED_STATUSES]),
+        ),
+      )
+      .limit(1);
+    return blocked ? `goal_${blocked.status}` : null;
+  }
+
+  /**
    * Discover durable stop intents whose worker lease is available. The global
    * watchdog uses this read-only scan, then each workspace-scoped model claims
    * one row with compare-and-set before doing any remote interruption.
@@ -343,10 +414,34 @@ export class TaskDispatchModel {
             return { dispatch: waiting ?? existing, state: 'existing' as const, task };
           }
         }
+        // A goal stop fences queued dispatches too: when project policy passes
+        // (or does not apply), a waiting row still must not resume while an
+        // owning goal is paused/canceled/done.
+        if (!resumedWaitingReason && existing.phase === 'waiting' && input.trigger !== 'manual') {
+          const goalWaitingReason = await this.goalDispatchWaitingReason(tx, task, input.trigger);
+          if (goalWaitingReason) {
+            const [waiting] = await tx
+              .update(taskDispatches)
+              .set({ waitingReason: goalWaitingReason })
+              .where(and(eq(taskDispatches.id, existing.id), eq(taskDispatches.phase, 'waiting')))
+              .returning();
+            return { dispatch: waiting ?? existing, state: 'existing' as const, task };
+          }
+        }
         if (
           existing.phase === 'waiting' &&
           task.assigneeAgentId &&
-          (existing.waitingReason === 'no_eligible_agent' || resumedWaitingReason === null)
+          (existing.waitingReason === 'no_eligible_agent' ||
+            existing.waitingReason === 'goal_paused' ||
+            // `caid_dispatch_disabled` resumes optimistically — the service
+            // layer re-checks the admission flag after request() returns and
+            // re-parks the row if rollout is still off.
+            existing.waitingReason === 'caid_dispatch_disabled' ||
+            // A retryable prepare-stage failure (provisioning, prompt build,
+            // registration) parks the row here; the same idempotency key
+            // resumes it so the bound approval re-enters via adopt.
+            existing.waitingReason === 'dispatch_prepare_retryable' ||
+            resumedWaitingReason === null)
         ) {
           const [resumed] = await tx
             .update(taskDispatches)
@@ -388,7 +483,9 @@ export class TaskDispatchModel {
           active.id,
         );
         const waitingReason =
-          policyWaitingReason ?? (task.assigneeAgentId ? null : 'no_eligible_agent');
+          policyWaitingReason ??
+          (await this.goalDispatchWaitingReason(tx, task, activeTrigger)) ??
+          (task.assigneeAgentId ? null : 'no_eligible_agent');
         if (waitingReason) {
           const [waiting] = await tx
             .update(taskDispatches)
@@ -413,7 +510,21 @@ export class TaskDispatchModel {
       }
       if (active) return { active, state: 'busy' as const, task };
 
-      const waitingReason = await this.projectDispatchWaitingReason(tx, task, input.trigger);
+      // Persisted-claim verification (SB09): an `internal` row exists only
+      // while its grant is current and bounded — verify under the same task
+      // lock that mints the claim so a grant cannot be persisted past the
+      // state it was minted on.
+      if (input.origin === 'internal') {
+        const settlementStale = await this.verifySettlementGrant(tx, task, {
+          expectedSourceGeneration: task.executionGeneration,
+          grant: input.settlementGrant,
+        });
+        if (settlementStale) throw new TaskDispatchSettlementGrantError(settlementStale);
+      }
+
+      const waitingReason =
+        (await this.projectDispatchWaitingReason(tx, task, input.trigger)) ??
+        (await this.goalDispatchWaitingReason(tx, task, input.trigger));
       const generation = task.executionGeneration + 1;
       const [dispatch] = await tx
         .insert(taskDispatches)
@@ -422,12 +533,16 @@ export class TaskDispatchModel {
           generation,
           id: input.dispatchId ?? idGenerator('taskDispatches'),
           idempotencyKey: input.idempotencyKey,
+          initiator: input.initiator ?? null,
+          origin: input.origin ?? null,
           phase: waitingReason ? 'waiting' : 'requested',
           planRevision: input.planRevision,
           policyRevision: task.policyRevision,
           projectId: task.projectId,
           requestedBy: `${input.trigger}:${input.requestedBy}`,
           requirementRevision: task.requirementRevision,
+          settlementGrant: input.settlementGrant ?? null,
+          sourceDispatchId: input.sourceDispatchId ?? null,
           taskId: task.id,
           taskRevision: task.domainRevision,
           waitingReason,
@@ -485,6 +600,27 @@ export class TaskDispatchModel {
             leaseOwner: null,
             phase: 'canceled',
             waitingReason: 'superseded_before_claim',
+          })
+          .where(eq(taskDispatches.id, dispatch.id));
+        return null;
+      }
+
+      // A goal stop between request and claim parks the dispatch back to
+      // 'waiting' rather than canceling it — the next request resumes the same
+      // durable intent once the goal runs again.
+      const goalWaitingReason = await this.goalDispatchWaitingReason(
+        tx,
+        task,
+        dispatch.requestedBy.split(':', 1)[0] as TaskRunTrigger,
+      );
+      if (goalWaitingReason) {
+        await tx
+          .update(taskDispatches)
+          .set({
+            leaseExpiresAt: null,
+            leaseOwner: null,
+            phase: 'waiting',
+            waitingReason: goalWaitingReason,
           })
           .where(eq(taskDispatches.id, dispatch.id));
         return null;
@@ -595,6 +731,14 @@ export class TaskDispatchModel {
   }
 
   async transition(input: {
+    /**
+     * Optional admission re-check run inside the claim transaction after
+     * the row is locked — the final host-admission gate. Called for
+     * transitions into `dispatched` when the persisted (or legacy-derived)
+     * origin is `caid`; returning `false` parks the row `waiting` with
+     * `caid_dispatch_disabled` instead of starting a new writer (SA05-B).
+     */
+    admissionRecheck?: (dispatch: TaskDispatchItem) => Promise<boolean>;
     agentId?: string | null;
     dispatchId: string;
     environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
@@ -648,6 +792,29 @@ export class TaskDispatchModel {
           currentContract && task && automatedTrigger
             ? await this.projectDispatchWaitingReason(tx, task, automatedTrigger, dispatch.id)
             : null;
+        const goalWaitingReason =
+          currentContract && task && requestedTrigger !== 'manual'
+            ? await this.goalDispatchWaitingReason(tx, task, requestedTrigger as TaskRunTrigger)
+            : null;
+        if (goalWaitingReason) {
+          await tx
+            .update(taskDispatches)
+            .set({
+              leaseExpiresAt: null,
+              leaseOwner: null,
+              phase: 'waiting',
+              waitingReason: goalWaitingReason,
+            })
+            .where(
+              and(
+                eq(taskDispatches.id, dispatch.id),
+                eq(taskDispatches.fence, input.fence),
+                eq(taskDispatches.leaseOwner, input.owner),
+                inArray(taskDispatches.phase, input.expected),
+              ),
+            );
+          return null;
+        }
         if (!currentContract || policyWaitingReason) {
           await tx
             .update(taskDispatches)
@@ -667,6 +834,75 @@ export class TaskDispatchModel {
               ),
             );
           return null;
+        }
+
+        // Final CAID admission re-check (SA05-B): the persisted origin is
+        // the authority — a rollout flip after prepare must park the claim
+        // as `waiting`, not start a new orchestrated writer. Rows written
+        // before the `origin` column existed derive the origin from the
+        // `trigger:` prefix of `requestedBy`.
+        if (input.phase === 'dispatched') {
+          const persistedOrigin: TaskDispatchOrigin =
+            dispatch.origin ??
+            (requestedTrigger === 'goal' || requestedTrigger === 'orchestrator'
+              ? 'caid'
+              : 'external');
+          if (
+            persistedOrigin === 'caid' &&
+            input.admissionRecheck &&
+            !(await input.admissionRecheck(dispatch))
+          ) {
+            const [waiting] = await tx
+              .update(taskDispatches)
+              .set({
+                leaseExpiresAt: null,
+                leaseOwner: null,
+                phase: 'waiting',
+                waitingReason: 'caid_dispatch_disabled',
+              })
+              .where(
+                and(
+                  eq(taskDispatches.id, dispatch.id),
+                  eq(taskDispatches.fence, input.fence),
+                  eq(taskDispatches.leaseOwner, input.owner),
+                  inArray(taskDispatches.phase, input.expected),
+                ),
+              )
+              .returning();
+            return waiting ?? null;
+          }
+          // Final settlement verification (SB09): an `internal` writer only
+          // dispatches while its persisted grant is still current and
+          // bounded — a stale grant cancels the claim instead of letting a
+          // historical association start a new writer.
+          if (persistedOrigin === 'internal') {
+            const settlementStale = await this.verifySettlementGrant(tx, task, {
+              // The claim's own generation bumps executionGeneration at
+              // persist time, so the repaired delivery is the previous one.
+              expectedSourceGeneration: dispatch.generation - 1,
+              grant: dispatch.settlementGrant,
+            });
+            if (settlementStale) {
+              await tx
+                .update(taskDispatches)
+                .set({
+                  fence: sql`${taskDispatches.fence} + 1`,
+                  leaseExpiresAt: null,
+                  leaseOwner: null,
+                  phase: 'canceled',
+                  waitingReason: settlementStale,
+                })
+                .where(
+                  and(
+                    eq(taskDispatches.id, dispatch.id),
+                    eq(taskDispatches.fence, input.fence),
+                    eq(taskDispatches.leaseOwner, input.owner),
+                    inArray(taskDispatches.phase, input.expected),
+                  ),
+                );
+              return null;
+            }
+          }
         }
       }
 
@@ -691,6 +927,71 @@ export class TaskDispatchModel {
         .returning();
       return updated ?? null;
     });
+  }
+
+  /**
+   * Bounded settlement authority check (SB09): returns a `stale reason` when
+   * the minted grant no longer holds against the task's current state, else
+   * `null`. Verified at claim time (request) and again at final dispatch
+   * (transition into `dispatched`) so a grant can never be exercised outside
+   * the window and delivery chain it was minted on.
+   *
+   * - `reservation_takeover` binds the task's LIVE run reservation token and
+   *   its expiry — the handoff the completing run is still holding.
+   * - `integration_seed`/`parent_operation` bind the named source dispatch
+   *   row: it must exist, belong to this task and workspace, and carry the
+   *   generation recorded in the grant.
+   * - Grants missing their binding fields (legacy callers) are stale.
+   */
+  private async verifySettlementGrant(
+    tx: Transaction,
+    task: TaskItem,
+    input: {
+      expectedSourceGeneration?: number;
+      grant: TaskDispatchSettlementGrant | null | undefined;
+    },
+  ): Promise<string | null> {
+    const grant = input.grant;
+    if (!grant) return 'settlement_grant_missing';
+    if (grant.workspaceId != null && grant.workspaceId !== task.workspaceId) {
+      return 'settlement_grant_workspace_mismatch';
+    }
+    // A grant without a deadline is unbounded — treat it as expired.
+    if (!grant.expiresAt || new Date(grant.expiresAt).getTime() <= Date.now()) {
+      return 'settlement_grant_expired';
+    }
+
+    if (grant.kind === 'reservation_takeover') {
+      if (
+        !grant.reservationId ||
+        task.runReservationId !== grant.reservationId ||
+        !task.runReservationExpiresAt ||
+        new Date(task.runReservationExpiresAt).getTime() <= Date.now()
+      ) {
+        return 'settlement_grant_reservation_stale';
+      }
+      return null;
+    }
+
+    if (!grant.sourceDispatchId || grant.sourceGeneration === undefined) {
+      return 'settlement_grant_stale';
+    }
+    const [source] = await tx
+      .select()
+      .from(taskDispatches)
+      .where(eq(taskDispatches.id, grant.sourceDispatchId))
+      .limit(1);
+    if (
+      !source ||
+      source.taskId !== task.id ||
+      source.workspaceId !== task.workspaceId ||
+      source.generation !== grant.sourceGeneration ||
+      (input.expectedSourceGeneration !== undefined &&
+        source.generation !== input.expectedSourceGeneration)
+    ) {
+      return 'settlement_grant_source_stale';
+    }
+    return null;
   }
 
   async requestStop(input: {

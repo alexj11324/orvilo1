@@ -57,7 +57,7 @@ export interface OIDCConfig {
 
 /**
  * Decrypted shape of the `credentials` column.
- * Encrypted at rest via KeyVaultsGateKeeper (same as messengerInstallations).
+ * Encrypted at rest via KeyVaultsGateKeeper.
  */
 export type ConnectorCredentials =
   | {
@@ -138,6 +138,14 @@ export interface ConnectorMetadata {
   composio?: ComposioConnectorMetadata;
   customHeaders?: Record<string, string>;
   description?: string;
+  /**
+   * Grant epoch (SA02-C): a server-minted uuid that rotates whenever the
+   * stored credential changes — OAuth re-authorization, manual credential
+   * replacement, or revocation. Plain token REFRESHES never touch it, so the
+   * same grant keeps the same epoch while a re-auth to a different
+   * account/scope (even with an unchanged URL/clientId) produces a new one.
+   */
+  grantEpoch?: string;
   /**
    * "Mount" reference lock: a base (user-owned) connector referenced by an
    * agent via the "挂载/Linked" flow. The row stays user-owned (`agent_id`

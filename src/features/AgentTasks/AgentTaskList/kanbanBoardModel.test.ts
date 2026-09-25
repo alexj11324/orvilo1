@@ -16,8 +16,10 @@ import {
   getKanbanTaskPatch,
   KANBAN_STATUS_COLUMN_KEY,
   KANBAN_WORKFLOW_COLUMN_KEY,
+  kanbanBoardCapabilities,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
+  kanbanCreateTaskProjectId,
   kanbanStatusColumnsExcludedBy,
   normalizeKanbanGroupBy,
   placeKanbanCardInColumn,
@@ -405,7 +407,9 @@ describe('kanbanBoardModel', () => {
       });
     });
 
-    it('prefers the My tasks scope over the other scopes', () => {
+    it('prefers the My tasks scope over the agent scopes, but keeps the project filter', () => {
+      // My Work's board composes scope + project: "Delegated × No project" is a
+      // real query, so projectId rides along while agentId is dropped.
       const query = buildKanbanGroupQuery({
         agentId: 'agt_1',
         groupBy: 'status',
@@ -416,8 +420,30 @@ describe('kanbanBoardModel', () => {
       expect(query).toEqual({
         excludeStatuses: undefined,
         groupBy: 'status',
+        projectId: 'proj_1',
         scope: 'created',
       });
+    });
+
+    it('keeps a null No-project filter on My tasks without locking create-task', () => {
+      // Regression: My Work passes projectId: null into KanbanBoard. The grouped
+      // query must keep that IS NULL filter, but createTaskModal only accepts a
+      // concrete id (`string | undefined`) — forwarding null failed typecheck.
+      expect(
+        buildKanbanGroupQuery({
+          groupBy: 'status',
+          myTaskScope: 'assigned',
+          projectId: null,
+        }),
+      ).toEqual({
+        excludeStatuses: undefined,
+        groupBy: 'status',
+        projectId: null,
+        scope: 'assigned',
+      });
+      expect(kanbanCreateTaskProjectId(null)).toBeUndefined();
+      expect(kanbanCreateTaskProjectId(undefined)).toBeUndefined();
+      expect(kanbanCreateTaskProjectId('proj_1')).toBe('proj_1');
     });
 
     it('carries the status exclusions through every scope', () => {
@@ -542,5 +568,37 @@ describe('kanbanBoardModel', () => {
       };
       expect(kanbanColumnMoveScope('priority', priorityColumn)).toEqual({ priority: 4 });
     });
+  });
+});
+
+describe('kanbanBoardCapabilities', () => {
+  it('manual boards allow both reorder and cross-group moves', () => {
+    expect(kanbanBoardCapabilities({ movable: true, sortMode: 'manual' })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: true,
+    });
+  });
+
+  it('defaults an unset sortMode to manual', () => {
+    expect(kanbanBoardCapabilities({ movable: true })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: true,
+    });
+  });
+
+  it('field-sorted views refuse same-column position writes but keep moves', () => {
+    expect(kanbanBoardCapabilities({ movable: true, sortMode: 'field' })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: false,
+    });
+  });
+
+  it('movable=false disables both capabilities regardless of sortMode', () => {
+    for (const sortMode of ['field', 'manual', undefined] as const) {
+      expect(kanbanBoardCapabilities({ movable: false, sortMode })).toEqual({
+        canMoveAcrossGroups: false,
+        canReorderWithinGroup: false,
+      });
+    }
   });
 });

@@ -5,7 +5,6 @@ import {
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
   pruneWorkingDirByDeviceDeletes,
 } from '@orvilo/types';
-import { toRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -29,7 +28,6 @@ import { merge } from '@/utils/merge';
 
 import type { AgentItem } from '../schemas';
 import {
-  agentBotProviders,
   agentCronJobs,
   agentLabelAssignments,
   agents,
@@ -85,9 +83,12 @@ import { rehomeAgentQuotaBindingsForRecipient } from '../utils/agentQuotaBinding
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { resolveGroupMembershipType } from '../utils/groupMembership';
 import { normalizeInboxAgentMeta } from '../utils/inboxAgent';
-import { sanitizeAgentApiConfig } from '../utils/sanitizeAgentApiConfig';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
-import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import {
+  buildStrictWorkspaceWhere,
+  buildWorkspacePayload,
+  buildWorkspaceWhere,
+} from '../utils/workspace';
 import { AGENT_COPY_IN_PROGRESS, AgentCopyJobModel } from './agentCopyJob';
 import {
   AGENT_TRANSFER_IN_PROGRESS,
@@ -321,6 +322,25 @@ export class AgentModel {
   /** Same predicate but for the `sessions` table (used in delete cascade). */
   private sessionsOwnership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, sessions);
+
+  /**
+   * Strict per-scope variant for builtin-agent resolution: builtin slugs are
+   * per-scope infrastructure singletons (inbox, agent-builder), so an unfiled
+   * builtin must not be adopted as the workspace's own — the workspace
+   * provisions its own row instead.
+   */
+  private strictOwnership = () =>
+    buildStrictWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      {
+        userId: agents.userId,
+        workspaceId: agents.workspaceId,
+        visibility: agents.visibility,
+      },
+    );
+
+  private strictSessionsOwnership = () =>
+    buildStrictWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, sessions);
 
   /** Ownership predicates for the agent join/related tables. */
   private documentsOwnership = () =>
@@ -674,79 +694,6 @@ export class AgentModel {
   };
 
   /**
-   * List agents bindable by the System Bot messenger picker: real agents plus
-   * the inbox (other virtual agents excluded), ordered by `updatedAt DESC` with
-   * the inbox pinned to the top.
-   *
-   * Returns `name` and `title` separately — resolving them into one label is the
-   * caller's job (see `agentDisplayName`), since only the caller knows whether it
-   * can render an i18n fallback. `title` is still normalized here for the inbox
-   * (OrviloAI default) and falls back to `options.fallbackTitle` when blank
-   * (default `null`, so a client caller can supply its own i18n default).
-   */
-  listMessengerBindableAgents = async (options?: {
-    fallbackTitle?: string | null;
-  }): Promise<
-    Array<{
-      avatar: string | null;
-      backgroundColor: string | null;
-      id: string;
-      isInbox: boolean;
-      isPrivate: boolean;
-      name: string | null;
-      title: string | null;
-    }>
-  > => {
-    const fallbackTitle = options?.fallbackTitle ?? null;
-
-    const rows = await this.db
-      .select({
-        avatar: agents.avatar,
-        backgroundColor: agents.backgroundColor,
-        id: agents.id,
-        name: agents.name,
-        slug: agents.slug,
-        title: agents.title,
-        visibility: agents.visibility,
-      })
-      .from(agents)
-      .where(and(this.ownership(), or(ne(agents.virtual, true), eq(agents.slug, INBOX_SESSION_ID))))
-      .orderBy(desc(agents.updatedAt));
-
-    const normalized = rows
-      .filter((row) => row.id)
-      .map(({ slug, visibility, ...row }) => {
-        const meta = normalizeInboxAgentMeta(row, { slug });
-        return {
-          avatar: meta.avatar,
-          backgroundColor: meta.backgroundColor,
-          id: meta.id,
-          isInbox: slug === INBOX_SESSION_ID,
-          // Only meaningful in workspace mode: the ownership predicate already
-          // scopes visible private rows to the caller, so `isPrivate` means
-          // "the caller's own private agent in this workspace". Personal-mode
-          // rows are all implicitly private, so the flag stays false there to
-          // signal "no grouping needed".
-          isPrivate: Boolean(this.workspaceId) && visibility === 'private',
-          name: meta.name ?? null,
-          // The inbox title is already resolved by normalizeInboxAgentMeta; any
-          // other blank title falls back to the caller-provided default.
-          title: meta.title?.trim() || fallbackTitle,
-        };
-      });
-
-    // Pin the inbox agent to the top regardless of updatedAt — it's the
-    // implicit "default" agent and should always be the first option.
-    const inboxIdx = normalized.findIndex((row) => row.isInbox);
-    if (inboxIdx > 0) {
-      const [inbox] = normalized.splice(inboxIdx, 1);
-      normalized.unshift(inbox);
-    }
-
-    return normalized;
-  };
-
-  /**
    * Get agent config by ID or slug (single query with OR condition)
    */
   getAgentConfig = async (idOrSlug: string) => {
@@ -1077,9 +1024,7 @@ export class AgentModel {
    */
   create = async (input: Partial<AgentItem>): Promise<AgentItem> => {
     const config = this.stripReservedSlug(input);
-    const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(
-      sanitizeAgentApiConfig(config.agencyConfig),
-    );
+    const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(config.agencyConfig);
 
     await this.assertWorkspaceDeviceBinding(this.workspaceId ?? null, agencyConfig);
     await this.assertFixedExecutionTarget(this.workspaceId ?? null, agencyConfig);
@@ -1110,9 +1055,7 @@ export class AgentModel {
 
     const normalizedConfigs = configs.map((config) => ({
       ...this.stripReservedSlug(config),
-      agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
-        sanitizeAgentApiConfig(config.agencyConfig),
-      ),
+      agencyConfig: this.withWorkspaceSelectionPolicyDefaults(config.agencyConfig),
     }));
 
     await Promise.all(
@@ -1139,12 +1082,9 @@ export class AgentModel {
   };
 
   update = async (agentId: string, data: Partial<AgentItem>) => {
-    const apiSafeData = Object.hasOwn(data, 'agencyConfig')
-      ? { ...data, agencyConfig: sanitizeAgentApiConfig(data.agencyConfig) }
-      : data;
     const sanitizedData = await this.stripAgentBuilderProtectedFields(
       agentId,
-      this.stripImmutableFields(apiSafeData),
+      this.stripImmutableFields(data),
     );
 
     return this.db
@@ -1436,21 +1376,6 @@ export class AgentModel {
 
     const mergedValue = merge(agent, restData);
 
-    // API bindings follow updateConfig's partial deep-merge contract. A user-provider patch must
-    // only clear the deployment discriminator retained from a previous server-default binding.
-    const apiConfigPatch = toRecord(data.agencyConfig?.heterogeneousProvider?.apiConfig);
-    const mergedApiConfig = toRecord(mergedValue.agencyConfig?.heterogeneousProvider?.apiConfig);
-    if (
-      apiConfigPatch &&
-      apiConfigPatch.source !== 'server-default' &&
-      typeof apiConfigPatch.providerId === 'string' &&
-      mergedApiConfig
-    ) {
-      delete mergedApiConfig.source;
-    }
-
-    mergedValue.agencyConfig = sanitizeAgentApiConfig(mergedValue.agencyConfig) ?? null;
-
     // The inbox is Orvilo's built-in default cloud agent; it must never be
     // turned into a heterogeneous (external-CLI) agent. Two independent inputs can
     // flip it — a stray `agencyConfig.heterogeneousProvider`, and a legacy hetero
@@ -1460,8 +1385,11 @@ export class AgentModel {
     // GATEWAY_NOT_CONFIGURED, so sanitize both at this write chokepoint regardless
     // of caller (mirrors AGENT_BUILDER_PROTECTED_FIELDS).
     if (agent.slug === INBOX_SESSION_ID) {
-      if (mergedValue.agencyConfig?.heterogeneousProvider) {
-        delete mergedValue.agencyConfig.heterogeneousProvider;
+      // The builtin 'orvilo' harness is the inbox agent's own engine — only
+      // external-CLI bindings would reroute it through the device gateway.
+      const agency = mergedValue.agencyConfig;
+      if (agency?.heterogeneousProvider && agency.heterogeneousProvider.type !== 'orvilo') {
+        delete agency.heterogeneousProvider;
       }
       if (isHeterogeneousAgentModelId(mergedValue.model)) {
         mergedValue.model = null;
@@ -1786,16 +1714,33 @@ export class AgentModel {
   getBuiltinAgent = async (slug: string): Promise<AgentItem | null> => {
     const persistConfig = getAgentPersistConfig(slug);
 
-    // 1. First try to find existing agent by slug
+    // 1. First try to find existing agent by slug (strict scope: builtin
+    // slugs are per-scope singletons — an unfiled inbox agent must not
+    // satisfy the workspace's lookup).
     const existing = await this.db.query.agents.findFirst({
-      where: and(eq(agents.slug, slug), this.ownership()),
+      where: and(eq(agents.slug, slug), this.strictOwnership()),
     });
 
     if (existing) {
-      if (persistConfig?.chatConfig) {
+      // Persist-config keys a builtin must carry (e.g. the inbox's harness
+      // binding) heal on read: an existing row that predates the config is
+      // backfilled, while user-customized values on the same key are left alone.
+      const persistAgency = persistConfig?.agencyConfig;
+      const existingAgency = existing.agencyConfig as OrviloAgentAgencyConfig | null | undefined;
+      const healAgency =
+        persistAgency?.heterogeneousProvider && !existingAgency?.heterogeneousProvider
+          ? { ...existingAgency, ...persistAgency }
+          : undefined;
+
+      if (persistConfig?.chatConfig || healAgency) {
         const [updated] = await this.db
           .update(agents)
-          .set({ chatConfig: persistConfig.chatConfig })
+          .set({
+            ...(persistConfig?.chatConfig ? { chatConfig: persistConfig.chatConfig } : {}),
+            ...(healAgency
+              ? { agencyConfig: this.withWorkspaceSelectionPolicyDefaults(healAgency) }
+              : {}),
+          })
           .where(eq(agents.id, existing.id))
           .returning();
         return normalizeInboxAgentMeta(updated ?? existing, { slug: existing.slug });
@@ -1813,7 +1758,7 @@ export class AgentModel {
         .from(sessions)
         .innerJoin(agentsToSessions, eq(sessions.id, agentsToSessions.sessionId))
         .innerJoin(agents, eq(agentsToSessions.agentId, agents.id))
-        .where(and(eq(sessions.slug, INBOX_SESSION_ID), this.sessionsOwnership()))
+        .where(and(eq(sessions.slug, INBOX_SESSION_ID), this.strictSessionsOwnership()))
         .limit(1);
 
       if (result.length > 0 && result[0].agent) {
@@ -1851,7 +1796,7 @@ export class AgentModel {
         buildWorkspacePayload(
           { userId: this.userId, workspaceId: this.workspaceId },
           {
-            agencyConfig: this.withWorkspaceSelectionPolicyDefaults(undefined),
+            agencyConfig: this.withWorkspaceSelectionPolicyDefaults(persistConfig.agencyConfig),
             chatConfig: persistConfig.chatConfig,
             model: persistConfig.model,
             provider: persistConfig.provider,
@@ -2512,12 +2457,6 @@ export class AgentModel {
         }
       }
 
-      // 14. Update agent bot providers (transfer, not delete)
-      await trx
-        .update(agentBotProviders)
-        .set({ ...ownershipUpdate, updatedAt: agentBotProviders.updatedAt })
-        .where(inArray(agentBotProviders.agentId, agentIds));
-
       // 14a. Agent-scoped connectors (custom plugins) ride along, or every
       // custom tool the agent carries stops resolving in the target scope.
       // Same-owner rows keep their credentials; a target owner change strips
@@ -2730,21 +2669,17 @@ export class AgentModel {
       })
       .where(eq(agents.id, agentId));
 
-    // Owner-attributed runtime rows travel with the agent: cron jobs and bot
-    // providers execute AS their `userId`, so rows the previous owner set up
-    // must re-home or the transferred bot keeps running as the former member
-    // (and dies with their account). They arrive DISABLED — nothing may run
-    // silently under the recipient's identity and budget; re-enabling in the
-    // agent's settings is their explicit consent. Only the previous owner's
-    // rows move — teammates' schedules stay theirs, untouched.
+    // Owner-attributed cron jobs execute AS their `userId`, so rows the
+    // previous owner set up must re-home or the transferred schedule keeps
+    // running as the former member (and dies with their account). They arrive
+    // DISABLED — nothing may run silently under the recipient's identity and
+    // budget; re-enabling in the agent's settings is their explicit consent.
+    // Only the previous owner's rows move — teammates' schedules stay theirs,
+    // untouched.
     await trx
       .update(agentCronJobs)
       .set({ enabled: false, updatedAt: agentCronJobs.updatedAt, userId: toUserId })
       .where(and(eq(agentCronJobs.agentId, agentId), eq(agentCronJobs.userId, fromUserId)));
-    await trx
-      .update(agentBotProviders)
-      .set({ enabled: false, updatedAt: agentBotProviders.updatedAt, userId: toUserId })
-      .where(and(eq(agentBotProviders.agentId, agentId), eq(agentBotProviders.userId, fromUserId)));
     // Quota account bindings (and exclusively-consumed provider accounts)
     // re-home: both cascade on user deletion. See the util.
     await rehomeAgentQuotaBindingsForRecipient(trx, {

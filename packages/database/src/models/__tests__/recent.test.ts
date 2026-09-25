@@ -8,9 +8,15 @@ import {
   documents,
   knowledgeBases,
   messages,
+  projectMembers,
+  projects,
+  savedViews,
   tasks,
+  teamMembers,
+  teams,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -147,6 +153,34 @@ describe('RecentModel', () => {
           'topic-old-row-latest-message',
         ]);
         expect(result[0].updatedAt.getTime()).toBeGreaterThan(result[1].updatedAt.getTime());
+      });
+
+      it('breaks identical updatedAt ties deterministically by id', async () => {
+        // shared-timestamp rows used to flip order depending on the plan; the
+        // union now orders by (updated_at desc, id desc).
+        await serverDB.insert(agents).values({ id: 'agent-tie', userId, slug: 'inbox' });
+        const tiedAt = now();
+        await serverDB.insert(topics).values([
+          {
+            agentId: 'agent-tie',
+            id: 'topic-tie-a',
+            title: 'tie a',
+            updatedAt: tiedAt,
+            userId,
+          },
+          {
+            agentId: 'agent-tie',
+            id: 'topic-tie-b',
+            title: 'tie b',
+            updatedAt: tiedAt,
+            userId,
+          },
+        ]);
+
+        const first = await recentModel.queryRecent();
+        const second = await recentModel.queryRecent();
+        expect(first.map((r) => r.id)).toEqual(['topic-tie-b', 'topic-tie-a']);
+        expect(second.map((r) => r.id)).toEqual(['topic-tie-b', 'topic-tie-a']);
       });
 
       it('includes topics on non-virtual non-group agents', async () => {
@@ -851,13 +885,23 @@ describe('RecentModel', () => {
             })),
           );
 
-          for (const viewerId of [userId, otherUserId]) {
-            const viewer = new RecentModel(serverDB, viewerId, workspaceId);
-            const result = await viewer.queryRecent(2, ['topic'], true, false);
-            expect(result.map((row) => row.id)).toEqual(['topic-ws-mine', 'topic-ws-other']);
-            expect(result.every((row) => row.description === null)).toBe(true);
-            expect(result.every((row) => row.lastAssistantMessage === null)).toBe(true);
-          }
+          // A member who doesn't own the personal/foreign parents keeps a
+          // clean feed — their unfiled branch only matches their own rows.
+          const member = new RecentModel(serverDB, userId, workspaceId);
+          const memberResult = await member.queryRecent(2, ['topic'], true, false);
+          expect(memberResult.map((row) => row.id)).toEqual(['topic-ws-mine', 'topic-ws-other']);
+          expect(memberResult.every((row) => row.description === null)).toBe(true);
+          expect(memberResult.every((row) => row.lastAssistantMessage === null)).toBe(true);
+
+          // The parent owner is different: their unfiled resource is still in
+          // scope for them, so its conversations surface — recency puts them
+          // ahead of the workspace rows within the limit.
+          const owner = new RecentModel(serverDB, otherUserId, workspaceId);
+          const ownerResult = await owner.queryRecent(2, ['topic'], true, false);
+          expect(ownerResult.map((row) => row.id)).toEqual([
+            'personal-resource-topic-1',
+            'personal-resource-topic-0',
+          ]);
 
           const personalModel = new RecentModel(serverDB, otherUserId);
           const personal = await personalModel.queryRecent(2, ['topic'], true);
@@ -925,6 +969,259 @@ describe('RecentModel', () => {
           expect(result[0].lastAssistantMessage).toBe('Private reply');
         },
       );
+
+      describe('work-type arms', () => {
+        const viewQuery = { entityType: 'task', schemaVersion: 1 } as const;
+
+        it('returns readable teams, projects, and views', async () => {
+          await serverDB.insert(teams).values([
+            {
+              createdByUserId: otherUserId,
+              id: 'recent-team-public',
+              key: 'RT',
+              name: 'Public team',
+              workspaceId,
+            },
+            {
+              createdByUserId: otherUserId,
+              id: 'recent-team-private',
+              key: 'RT2',
+              name: 'Private team',
+              visibility: 'private',
+              workspaceId,
+            },
+          ]);
+          await serverDB.insert(projects).values([
+            {
+              id: 'recent-proj-public',
+              identifier: 'RP',
+              name: 'Public project',
+              userId: otherUserId,
+              workspaceId,
+            },
+            {
+              id: 'recent-proj-private',
+              identifier: 'RP2',
+              name: 'Private project',
+              userId: otherUserId,
+              visibility: 'private',
+              workspaceId,
+            },
+          ]);
+          await serverDB.insert(savedViews).values([
+            {
+              entityType: 'task',
+              id: 'recent-view-shared',
+              name: 'Shared view',
+              ownerUserId: otherUserId,
+              queryAst: viewQuery,
+              visibility: 'workspace',
+              workspaceId,
+            },
+            {
+              entityType: 'task',
+              id: 'recent-view-private-mine',
+              name: 'My private view',
+              ownerUserId: userId,
+              queryAst: viewQuery,
+              workspaceId,
+            },
+            {
+              entityType: 'task',
+              id: 'recent-view-private-other',
+              name: 'Other private view',
+              ownerUserId: otherUserId,
+              queryAst: viewQuery,
+              workspaceId,
+            },
+          ]);
+
+          const result = await workspaceModel.queryRecent(20, ['project', 'savedView', 'team']);
+          expect(result.map((row) => `${row.type}:${row.id}`).sort()).toEqual([
+            'project:recent-proj-public',
+            'savedView:recent-view-private-mine',
+            'savedView:recent-view-shared',
+            'team:recent-team-public',
+          ]);
+        });
+
+        it('shows private teams and granted private projects to members only', async () => {
+          await serverDB.insert(teams).values({
+            createdByUserId: otherUserId,
+            id: 'recent-team-member',
+            key: 'RM',
+            name: 'Member team',
+            visibility: 'private',
+            workspaceId,
+          });
+          await serverDB.insert(teamMembers).values({
+            teamId: 'recent-team-member',
+            userId,
+            workspaceId,
+          });
+          // project_members carries a composite FK to workspace_members.
+          await serverDB.insert(workspaceMembers).values([
+            { role: 'member', userId: otherUserId, workspaceId },
+            { role: 'owner', userId, workspaceId },
+          ]);
+          await serverDB.insert(projects).values({
+            id: 'recent-proj-granted',
+            identifier: 'RG',
+            name: 'Granted project',
+            userId: otherUserId,
+            visibility: 'private',
+            workspaceId,
+          });
+          await serverDB.insert(projectMembers).values({
+            projectId: 'recent-proj-granted',
+            role: 'contributor',
+            userId,
+            workspaceId,
+          });
+          await serverDB.insert(savedViews).values({
+            entityType: 'task',
+            id: 'recent-view-team',
+            name: 'Team view',
+            ownerUserId: otherUserId,
+            queryAst: viewQuery,
+            teamId: 'recent-team-member',
+            visibility: 'team',
+            workspaceId,
+          });
+
+          const member = await workspaceModel.queryRecent(20, ['project', 'savedView', 'team']);
+          expect(member.map((row) => row.id).sort()).toEqual([
+            'recent-proj-granted',
+            'recent-team-member',
+            'recent-view-team',
+          ]);
+
+          const outsider = new RecentModel(serverDB, otherUserId, workspaceId);
+          const outsiderRows = await outsider.queryRecent(20, ['project', 'savedView', 'team']);
+          // The owner still sees their own private rows, but the private team
+          // is membership-gated — owning it does not grant read.
+          expect(outsiderRows.map((row) => row.id).sort()).toEqual([
+            'recent-proj-granted',
+            'recent-view-team',
+          ]);
+        });
+
+        it('does not surface public-visibility private-team task titles to a non-member', async () => {
+          await serverDB.insert(teams).values([
+            {
+              createdByUserId: userId,
+              id: 'recent-task-private-team',
+              key: 'RTP',
+              name: 'Secret recents team',
+              visibility: 'private',
+              workspaceId,
+            },
+            {
+              createdByUserId: userId,
+              id: 'recent-task-public-team',
+              key: 'RTU',
+              name: 'Public recents team',
+              visibility: 'public',
+              workspaceId,
+            },
+          ]);
+          await serverDB.insert(teamMembers).values({
+            teamId: 'recent-task-private-team',
+            userId,
+            workspaceId,
+          });
+          await serverDB.insert(tasks).values([
+            {
+              createdByUserId: userId,
+              id: 'recent-task-secret',
+              identifier: 'RT-SECRET',
+              instruction: 'Keep this off CommandMenu recents',
+              name: 'Secret recents task',
+              seq: 11,
+              teamId: 'recent-task-private-team',
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              assigneeUserId: otherUserId,
+              createdByUserId: userId,
+              id: 'recent-task-assigned',
+              identifier: 'RT-ASSIGNED',
+              instruction: 'Assigned on the private team',
+              name: 'Assigned recents task',
+              seq: 12,
+              teamId: 'recent-task-private-team',
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              createdByUserId: userId,
+              id: 'recent-task-public-team-work',
+              identifier: 'RT-PUBLIC',
+              instruction: 'Public-team recents work',
+              name: 'Public-team recents task',
+              seq: 13,
+              teamId: 'recent-task-public-team',
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              createdByUserId: userId,
+              id: 'recent-task-private-vis',
+              identifier: 'RT-PRIV',
+              instruction: 'Private visibility recents work',
+              name: 'Private-visibility recents task',
+              seq: 14,
+              visibility: 'private',
+              workspaceId,
+            },
+          ]);
+
+          const member = await workspaceModel.queryRecent(20, ['task']);
+          expect(member.map((row) => row.title).sort()).toEqual([
+            'Assigned recents task',
+            'Private-visibility recents task',
+            'Public-team recents task',
+            'Secret recents task',
+          ]);
+
+          const outsider = new RecentModel(serverDB, otherUserId, workspaceId);
+          const outsiderRows = await outsider.queryRecent(20, ['task']);
+          expect(outsiderRows.map((row) => row.title).sort()).toEqual([
+            'Assigned recents task',
+            'Public-team recents task',
+          ]);
+        });
+
+        it('keeps work-type rows out of the personal-mode feed', async () => {
+          await serverDB.insert(projects).values({
+            id: 'recent-proj-personal',
+            identifier: 'RPP',
+            name: 'Personal project',
+            userId,
+          });
+          await serverDB.insert(savedViews).values({
+            entityType: 'task',
+            id: 'recent-view-personal',
+            name: 'Personal view',
+            ownerUserId: userId,
+            queryAst: viewQuery,
+          });
+          await serverDB.insert(teams).values({
+            createdByUserId: userId,
+            id: 'recent-team-workspace-only',
+            key: 'RW',
+            name: 'Workspace team',
+            workspaceId,
+          });
+
+          const result = await recentModel.queryRecent(20, ['project', 'savedView', 'team']);
+          expect(result.map((row) => row.id).sort()).toEqual([
+            'recent-proj-personal',
+            'recent-view-personal',
+          ]);
+        });
+      });
     });
   });
 });

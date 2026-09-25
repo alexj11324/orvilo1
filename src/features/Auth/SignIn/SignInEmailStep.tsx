@@ -1,18 +1,52 @@
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { Alert, Button, Text } from '@lobehub/ui/base-ui';
+import { Alert, Text } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { type FormInstance, type InputRef } from 'antd';
-import { Badge, Divider, Form } from 'antd';
+import { Badge, Form, type FormInstance } from 'antd';
 import { createStaticStyles } from 'antd-style';
-import { Mail } from 'lucide-react';
-import { type CSSProperties, useEffect, useRef } from 'react';
+import { ArrowRightIcon } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AuthIcons from '@/components/AuthIcons';
+import { Button as ReuiButton } from '@/components/ui/button';
+import { Input as ReuiInput } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 import AuthCard from '@/features/AuthCard';
 import AuthAgreement, { useAuthAgreement } from '@/features/AuthShell/AuthAgreement';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
+  divider: css`
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+  `,
+
+  fieldLabel: css`
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    color: ${cssVar.colorTextSecondary};
+  `,
+
+  form: css`
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  `,
+
+  formItem: css`
+    margin-block-end: 0;
+
+    .ant-form-item-label {
+      padding-block: 0 8px;
+    }
+
+    .ant-form-item-label > label {
+      height: auto;
+    }
+  `,
+
   inlineLink: css`
     cursor: pointer;
     color: ${cssVar.colorPrimary};
@@ -22,15 +56,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/;
 export const USERNAME_REGEX = /^\w+$/;
-
-// Pin both the provider logo and the loading spinner to the same spot so the
-// spinner doesn't jump when a social button enters its loading state.
-const PROVIDER_ICON_STYLE: CSSProperties = {
-  insetInlineStart: 12,
-  position: 'absolute',
-  top: '50%',
-  transform: 'translateY(-50%)',
-};
 
 // Turn a provider id into a display name, e.g. "google" -> "Google".
 const getProviderName = (provider: string) =>
@@ -71,18 +96,20 @@ export const SignInEmailStep = ({
 }: SignInEmailStepProps) => {
   const { t } = useTranslation('auth');
   const { agreementChecked, continueWithAgreement, setAgreementChecked } = useAuthAgreement();
-  const emailInputRef = useRef<InputRef>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     emailInputRef.current?.focus();
   }, []);
 
   const divider = (
-    <Divider>
-      <Text fontSize={12} type={'secondary'}>
+    <div className={styles.divider}>
+      <Separator />
+      <Text as={'span'} fontSize={12} type={'secondary'}>
         {t('betterAuth.signin.orContinueWith')}
       </Text>
-    </Divider>
+      <Separator />
+    </div>
   );
 
   const getProviderLabel = (provider: string) => {
@@ -97,7 +124,11 @@ export const SignInEmailStep = ({
   const showEmailForm = !disableEmailPassword && !isSocialOnly;
 
   return (
-    <AuthCard title={t('signin.subtitle', { appName: BRANDING_NAME })}>
+    <AuthCard
+      subtitle={t('betterAuth.signin.description', { appName: BRANDING_NAME })}
+      title={t('betterAuth.signin.heading')}
+      variant={'auth16'}
+    >
       {sessionExpired && (
         <Alert
           showIcon
@@ -108,25 +139,26 @@ export const SignInEmailStep = ({
         />
       )}
       {serverConfigInit && oAuthSSOProviders.length > 0 && (
-        <Flexbox gap={12}>
+        <div className="grid gap-2.5">
           {oAuthSSOProviders.map((provider) => {
             const button = (
-              <Button
-                block
-                icon={<Icon icon={AuthIcons(provider, 18)} />}
+              <ReuiButton
+                className="h-10 w-full justify-center px-4"
+                disabled={socialLoading === provider}
                 key={provider}
-                loading={socialLoading === provider}
-                size="large"
-                styles={{ icon: PROVIDER_ICON_STYLE }}
-                type="fill"
+                type="button"
+                variant="outline"
                 onClick={() =>
                   continueWithAgreement(() => {
                     onSocialSignIn(provider);
                   })
                 }
               >
+                <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+                  {socialLoading === provider ? <Spinner /> : AuthIcons(provider, 18)}
+                </span>
                 {getProviderLabel(provider)}
-              </Button>
+              </ReuiButton>
             );
             const showLastUsed =
               provider === lastAuthProvider &&
@@ -146,13 +178,14 @@ export const SignInEmailStep = ({
             );
           })}
           {showEmailForm && divider}
-        </Flexbox>
+        </div>
       )}
       {serverConfigInit && disableEmailPassword && oAuthSSOProviders.length === 0 && (
         <Alert showIcon description={t('betterAuth.signin.ssoOnlyNoProviders')} type="warning" />
       )}
       {showEmailForm && (
         <Form
+          className={styles.form}
           form={form}
           layout="vertical"
           onFinish={(values) =>
@@ -162,6 +195,9 @@ export const SignInEmailStep = ({
           }
         >
           <Form.Item
+            className={styles.formItem}
+            htmlFor="auth-signin-email"
+            label={<span className={styles.fieldLabel}>{t('betterAuth.signin.emailLabel')}</span>}
             name="email"
             rules={[
               { message: t('betterAuth.errors.emailRequired'), required: true },
@@ -177,20 +213,22 @@ export const SignInEmailStep = ({
               },
             ]}
           >
-            <Input
+            <ReuiInput
               autoComplete="username"
+              className="h-10"
+              id="auth-signin-email"
               inputMode="email"
               placeholder={t('betterAuth.signin.emailPlaceholder')}
-              prefix={<Icon icon={Mail} style={{ marginInline: 6 }} />}
               ref={emailInputRef}
-              size="large"
-              style={{ padding: 6 }}
+              type="text"
             />
           </Form.Item>
-          <AuthAgreement checked={agreementChecked} onChange={setAgreementChecked} />
-          <Button block htmlType="submit" loading={loading} size="large" type="primary">
+          <ReuiButton className="h-10 w-full gap-2" disabled={loading} type="submit">
+            {loading ? <Spinner /> : null}
             {t('betterAuth.signin.nextStep')}
-          </Button>
+            {!loading && <ArrowRightIcon aria-hidden="true" data-icon="inline-end" />}
+          </ReuiButton>
+          <AuthAgreement checked={agreementChecked} onChange={setAgreementChecked} />
         </Form>
       )}
       {isSocialOnly && (

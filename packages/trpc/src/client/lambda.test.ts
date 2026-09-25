@@ -194,9 +194,7 @@ describe('lambdaClient session-auth events', () => {
     const unsubscribe = sessionAuthEvents.on('session-auth-expired', handler);
 
     fetchMock.mockResolvedValueOnce(unauthorizedResponse());
-    await expect(
-      lambdaClient.market.agent.getOwnAgents.query({ page: 1, pageSize: 10 }),
-    ).rejects.toThrow();
+    await expect(lambdaClient.market.agent.getOnboardingFull.query()).rejects.toThrow();
 
     // A market.* 401 routes to marketAuthEvents (or bubbles when the Orvilo
     // session is already gone) — never to the session-auth funnel.

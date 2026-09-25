@@ -35,7 +35,7 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'about',
   'advanced',
   'apikey',
-  // Account-level tabs (profile / appearance / hotkey / messenger) are
+  // Account-level tabs (profile / appearance / hotkey) are
   // mirrored under the workspace so members can reach them without leaving
   // the workspace.
   'appearance',
@@ -55,7 +55,6 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'labs',
   'linear',
   'members',
-  'messenger',
   'notification',
   'plans',
   'profile',
@@ -75,22 +74,31 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
 const SETTINGS_PREFIX_REGEX = /^\/settings\/([^/?#]+)/;
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;
 
-const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
+export const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
   'agent',
   'agents',
+  'automations',
   'community',
   'eval',
+  'goal',
   'group',
   'image',
+  'inbox',
+  'members',
   'memory',
+  'my-issues',
+  'my-work',
   'page',
   'project',
   'projects',
   'resource',
+  'reviews',
   'settings',
   'task',
   'tasks',
+  'teams',
   'video',
+  'views',
 ]);
 
 const parseFirstSegment = (pathname: string): string | null => {

@@ -1150,8 +1150,11 @@ describe('KnowledgeBaseModel', () => {
         where: eq(knowledgeBases.id, knowledgeBaseId),
       });
 
+      // The unfiled source KB stays visible to its owner inside the target
+      // workspace, so the copy is disambiguated to avoid a duplicate name in
+      // the same visible scope.
       expect(copiedKb).toMatchObject({
-        name: 'Copy KB',
+        name: 'Copy KB (1)',
         workspaceId: 'workspace-copy-target',
       });
       expect(copiedLinks).toHaveLength(1);

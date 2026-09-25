@@ -96,4 +96,59 @@ describe('SearchResults', () => {
       );
     }
   });
+
+  it('routes work sidecar hits to task, team, project and view pages', () => {
+    const stamp = new Date('2026-09-18T00:00:00Z');
+    const results = [
+      {
+        createdAt: stamp,
+        description: 'T-12',
+        id: 'task_1',
+        relevance: 1,
+        title: 'Ship the inbox',
+        type: 'task',
+        updatedAt: stamp,
+      },
+      {
+        createdAt: stamp,
+        description: 'ENG',
+        id: 'team_1',
+        relevance: 2,
+        title: 'Engineering',
+        type: 'team',
+        updatedAt: stamp,
+      },
+      {
+        createdAt: stamp,
+        description: null,
+        id: 'builtin:all',
+        relevance: 3,
+        title: 'All tasks',
+        type: 'savedView',
+        updatedAt: stamp,
+      },
+    ] as const;
+
+    render(
+      <SearchResults
+        isLoading={false}
+        results={[...results]}
+        searchQuery="ship"
+        typeFilter={undefined}
+        onClose={vi.fn()}
+        onResultClick={vi.fn()}
+        onSetTypeFilter={vi.fn()}
+        onTypeFilterChange={vi.fn()}
+        onVisibleResultCountChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Ship the inbox/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Engineering/ }));
+    fireEvent.click(screen.getByRole('button', { name: /savedViews.builtinName.all/ }));
+
+    expect(navigate).toHaveBeenCalledWith(expect.stringContaining('/task/task_1'));
+    expect(navigate).toHaveBeenCalledWith('/teams/team_1');
+    expect(navigate).toHaveBeenCalledWith('/views/builtin:all');
+  });
 });

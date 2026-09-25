@@ -6,7 +6,6 @@ export * from './dataSync';
 export * from './devtools';
 export * from './git';
 export * from './heterogeneousAgent';
-export * from './imessageBridge';
 export * from './localDatabase';
 export * from './localSystem';
 export * from './mcpInstall';

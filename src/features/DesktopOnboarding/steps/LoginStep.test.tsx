@@ -1,6 +1,9 @@
 import type { DataSyncConfig } from '@orvilo/electron-client-ipc';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { remoteServerService } from '@/services/electron/remoteServer';
 
 import LoginStep from './LoginStep';
 
@@ -33,6 +36,11 @@ vi.mock('react-i18next', () => ({
         'screen5.actions.cancel': 'Cancel',
         'screen5.actions.connectToServer': 'Connect to server',
         'screen5.actions.done': 'Done',
+        'screen5.actions.signingIn': 'Signing in...',
+        'screen5.entry.selfhostAction': 'Use self-hosted server',
+        'screen5.entry.title': 'Back to building.',
+        'screen5.entry.serverTitle': 'Connect your Orvilo server',
+        'screen5.selfhost.endpointLabel': 'Server address',
         'screen5.actions.signInCloud': 'Sign in Cloud',
         'screen5.actions.signOut': 'Sign out',
         'screen5.actions.tryAgain': 'Try again',
@@ -103,12 +111,6 @@ vi.mock('@/utils/electron/autoOidc', () => ({
   setDesktopAutoOidcFirstOpenHandled: vi.fn(),
 }));
 
-vi.mock('../components/OrviloMessage', () => ({
-  default: ({ sentences }: { sentences: string[] }) => (
-    <div>{sentences.filter(Boolean).join(' ')}</div>
-  ),
-}));
-
 const renderLoginStep = async (props: { mode?: 'onboarding' | 'status' } = {}) => {
   const onBack = vi.fn();
   const onNext = vi.fn();
@@ -126,6 +128,8 @@ beforeEach(() => {
   mockElectronState.refreshServerConfig.mockClear();
   mockElectronState.remoteServerSyncError = undefined;
   mockElectronState.useDataSyncConfig.mockClear();
+  vi.mocked(useWatchBroadcast).mockClear();
+  vi.mocked(remoteServerService.cancelAuthorization).mockClear();
   mockSignOut.mockClear();
   mockSignOut.mockResolvedValue(undefined);
 });
@@ -187,5 +191,62 @@ describe('Desktop onboarding LoginStep', () => {
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button', { name: 'Sign in Cloud' })).not.toBeInTheDocument();
+  });
+
+  it('opens self-host connection as a labeled form and submits its address', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    await renderLoginStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use self-hosted server' }));
+    const address = screen.getByRole('textbox', { name: 'Server address' });
+    expect(screen.getByRole('button', { name: 'Connect to server' })).toBeDisabled();
+    fireEvent.change(address, { target: { value: 'https://my-server.example.com' } });
+    fireEvent.submit(address.closest('form')!);
+
+    expect(mockElectronState.connectRemoteServer).toHaveBeenCalledWith({
+      remoteServerUrl: 'https://my-server.example.com',
+      storageMode: 'selfHost',
+    });
+    expect(address).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('returns from the server form without starting authorization', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    await renderLoginStep();
+    fireEvent.click(screen.getByRole('button', { name: 'Use self-hosted server' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByRole('button', { name: 'Sign in Cloud' })).toBeInTheDocument();
+    expect(mockElectronState.connectRemoteServer).not.toHaveBeenCalled();
+  });
+
+  it('keeps authorization cancellation available and restores the sign-in choices', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    await renderLoginStep();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in Cloud' }));
+    expect(screen.getByRole('button', { name: 'Use self-hosted server' })).toBeDisabled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+    expect(remoteServerService.cancelAuthorization).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Sign in Cloud' })).toBeEnabled();
+  });
+
+  it('retries a failed authorization from the visible error state', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    await renderLoginStep();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in Cloud' }));
+    const failedListener = vi
+      .mocked(useWatchBroadcast)
+      .mock.calls.findLast(([event]) => event === 'authorizationFailed')?.[1] as (result: {
+      error: string;
+    }) => void;
+    act(() => {
+      failedListener({ error: 'Connection refused' });
+    });
+    expect(screen.getByText('Connection refused')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(mockElectronState.connectRemoteServer).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText('Connection refused')).not.toBeInTheDocument();
   });
 });

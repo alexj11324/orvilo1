@@ -5,8 +5,6 @@ import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactor
 import type { ChatCompletionErrorPayload } from '../../types';
 import { AgentRuntimeErrorType } from '../../types/error';
 import { processMultiProviderModelList } from '../../utils/modelParse';
-import { createSiliconCloudImage } from './createImage';
-import { createSiliconCloudVideo } from './createVideo';
 
 export interface SiliconCloudModelCard {
   id: string;
@@ -128,15 +126,6 @@ export const params = {
   },
   constructorOptions: {
     fetch: siliconFetch,
-  },
-  createImage: createSiliconCloudImage,
-  createVideo: createSiliconCloudVideo,
-  handlePollVideoStatus: async (inferenceId, options) => {
-    const { pollSiliconCloudVideoStatus } = await import('./createVideo');
-    return pollSiliconCloudVideoStatus(inferenceId, {
-      apiKey: options.apiKey,
-      baseURL: options.baseURL || '',
-    });
   },
   debug: {
     chatCompletion: () => process.env.DEBUG_SILICONCLOUD_CHAT_COMPLETION === '1',

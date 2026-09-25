@@ -1,9 +1,8 @@
-import { HomeIcon, SearchIcon } from 'lucide-react';
+import { INBOX_SESSION_ID } from '@orvilo/const';
+import { BotIcon, GitPullRequestIcon, InboxIcon, SquareUserIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { getRouteById } from '@/config/routes';
-import { useGlobalStore } from '@/store/global';
 import { SidebarTabKey } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
@@ -34,44 +33,44 @@ export interface NavLayout {
 
 export const useNavLayout = (): NavLayout => {
   const { t } = useTranslation('common');
-  const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
   const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
 
+  // Fixed primary IA (see features/Navigation/sidebarContract): the header
+  // carries the workspace switcher + search/new-issue icons; the body renders
+  // inbox/my-work/reviews/agent as core links (Agent is a flat row to /agent —
+  // the workspace conversation; the /agents management directory stays a
+  // secondary destination under Workspace → More) and the accordion sections
+  // favorites, teams) separately. Retired surfaces keep their routes for deep
+  // links but no sidebar entry.
   const topNavItems = useMemo(
     () =>
       [
         {
-          icon: SearchIcon,
-          key: 'search',
-          onClick: () => toggleCommandMenu(true),
-          title: t('tab.search'),
+          icon: InboxIcon,
+          key: SidebarTabKey.Inbox,
+          title: t('tab.inbox'),
+          url: '/inbox',
         },
         {
-          icon: HomeIcon,
-          key: SidebarTabKey.Home,
-          title: t('tab.home'),
-          url: '/',
+          icon: SquareUserIcon,
+          key: SidebarTabKey.MyWork,
+          title: t('tab.myWork'),
+          url: '/my-issues',
         },
         {
-          icon: getRouteById('tasks')!.icon,
-          key: SidebarTabKey.Tasks,
-          title: t('tab.tasks'),
-          url: '/tasks',
+          icon: GitPullRequestIcon,
+          key: SidebarTabKey.Reviews,
+          title: t('tab.reviews'),
+          url: '/reviews',
         },
         {
-          icon: getRouteById('automations')!.icon,
-          key: SidebarTabKey.Automations,
-          title: t('tab.automations'),
-          url: '/automations',
-        },
-        {
-          icon: getRouteById('resource')!.icon,
-          key: SidebarTabKey.Resource,
-          title: t('tab.resource'),
-          url: '/resource',
+          icon: BotIcon,
+          key: SidebarTabKey.Agent,
+          title: t('navPanel.agent'),
+          url: `/agent/${INBOX_SESSION_ID}`,
         },
       ] as NavItem[],
-    [t, toggleCommandMenu],
+    [t],
   );
 
   // Every destination that used to live here has been retired by the task-first

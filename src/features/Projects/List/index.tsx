@@ -31,8 +31,8 @@ import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import TopicCreatorAvatar from '@/features/TopicCreatorAvatar';
 import UserAvatar from '@/features/User/UserAvatar';
-import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import type { ProjectListItem } from '@/store/project/store';
 import { useUserStore } from '@/store/user';
@@ -48,29 +48,45 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       opacity: 1;
     }
   `,
-  identifier: css`
+  cell: css`
     flex: none;
-    min-width: 72px;
+
+    width: 96px;
+
+    font-size: 12px;
+    color: ${cssVar.colorTextTertiary};
+    white-space: nowrap;
+  `,
+  headerRow: css`
+    padding-block: 4px;
+    padding-inline: 28px 12px;
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+
+    font-size: 12px;
     color: ${cssVar.colorTextTertiary};
   `,
   link: css`
     display: flex;
     flex: 1;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
 
     min-width: 0;
 
     color: inherit;
   `,
+  nameCell: css`
+    flex: 1;
+    min-width: 0;
+  `,
   owner: css`
     flex: none;
-    width: 20px;
+    width: 96px;
   `,
   row: css`
     padding-block: 7px;
     padding-inline: 4px 12px;
-    border-radius: ${cssVar.borderRadiusLG};
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
     color: inherit;
 
     &:hover {
@@ -85,10 +101,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   updatedAt: css`
     flex: none;
 
-    min-width: 88px;
+    width: 96px;
 
+    font-size: 12px;
     color: ${cssVar.colorTextQuaternary};
-    text-align: end;
     white-space: nowrap;
   `,
 }));
@@ -150,36 +166,43 @@ const ProjectRow = memo<{ project: ProjectListItem }>(({ project }) => {
   ];
 
   const row = (
-    <Flexbox horizontal align={'center'} className={styles.row} gap={8}>
+    <Flexbox horizontal align={'center'} className={styles.row} gap={0}>
       <WorkspaceLink className={styles.link} to={`/project/${project.slug ?? project.id}`}>
-        <Tooltip title={t(`acceptance.status.${status}`)}>
-          <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
-        </Tooltip>
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
+        <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
+          <Tooltip title={t(`acceptance.status.${status}`)}>
+            <Icon color={statusVisual.color} icon={statusVisual.icon} size={16} />
+          </Tooltip>
           <Text ellipsis weight={500}>
             {project.name}
           </Text>
+          <Text className={styles.cell} fontSize={12}>
+            {project.identifier}
+          </Text>
         </Flexbox>
-        <Text className={styles.identifier} fontSize={12}>
-          {project.identifier}
+        <span className={styles.owner}>
+          {project.userId ? <ProjectOwnerAvatar userId={project.userId} /> : null}
+        </span>
+        <Text className={styles.cell} fontSize={12}>
+          {typeof project.taskCount === 'number' ? project.taskCount : '—'}
         </Text>
-        {project.userId ? <ProjectOwnerAvatar userId={project.userId} /> : null}
+        <Text className={styles.cell} fontSize={12}>
+          {t(`acceptance.status.${status}`)}
+        </Text>
         <Text
           className={styles.updatedAt}
-          fontSize={12}
           title={dayjs(project.updatedAt).format('YYYY-MM-DD HH:mm')}
         >
-          {dayjs(project.updatedAt).fromNow()}
+          {dayjs(project.updatedAt).format('MMM D')}
         </Text>
       </WorkspaceLink>
       {canDelete && (
         <span className={`${styles.actions} project-row-actions`}>
           <DropdownMenu items={menuItems} placement={'bottomRight'}>
             <ActionIcon
+              aria-label={t('list.moreActions')}
               icon={MoreHorizontalIcon}
               loading={deleting}
               size={'small'}
-              title={t('list.moreActions')}
             />
           </DropdownMenu>
         </span>
@@ -213,27 +236,37 @@ const ProjectListPage = memo(() => {
   if (!enabled) return <ProjectDisabled />;
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <WorkSurface>
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
             {t('list.title')}
           </Text>
         }
-      />
-      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <SearchBar
-            allowClear
-            placeholder={t('list.searchPlaceholder')}
-            style={{ maxWidth: 280 }}
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-          />
-          <Button icon={PlusIcon} onClick={() => openCreateProjectModal()}>
+        right={
+          <Button
+            icon={PlusIcon}
+            size={'small'}
+            type="primary"
+            onClick={() => openCreateProjectModal()}
+          >
             {t('create.action')}
           </Button>
-        </Flexbox>
+        }
+      />
+      <WorkSurfaceCollection
+        toolbar={
+          <WorkSurfaceToolbar>
+            <SearchBar
+              allowClear
+              placeholder={t('list.searchPlaceholder')}
+              style={{ maxWidth: 280 }}
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+            />
+          </WorkSurfaceToolbar>
+        }
+      >
         {error ? (
           <AsyncError error={error} onRetry={() => mutate()} />
         ) : isLoading && projects.length === 0 ? (
@@ -246,14 +279,39 @@ const ProjectListPage = memo(() => {
             />
           </Center>
         ) : (
-          <Flexbox gap={4}>
+          <Flexbox gap={0}>
+            <Flexbox horizontal align={'center'} className={styles.headerRow} gap={0}>
+              <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
+                <span style={{ width: 16 }} />
+                <Text fontSize={12} type={'secondary'}>
+                  {t('list.columnName', { defaultValue: 'Name' })}
+                </Text>
+                <Text className={styles.cell} fontSize={12} type={'secondary'}>
+                  {t('list.columnKey', { defaultValue: 'Key' })}
+                </Text>
+              </Flexbox>
+              <span className={styles.owner}>
+                <Text fontSize={12} type={'secondary'}>
+                  {t('list.columnOwner', { defaultValue: 'Owner' })}
+                </Text>
+              </span>
+              <Text className={styles.cell} fontSize={12} type={'secondary'}>
+                {t('list.columnIssues', { defaultValue: 'Issues' })}
+              </Text>
+              <Text className={styles.cell} fontSize={12} type={'secondary'}>
+                {t('list.columnStatus', { defaultValue: 'Status' })}
+              </Text>
+              <Text className={styles.updatedAt} type={'secondary'}>
+                {t('list.columnUpdated', { defaultValue: 'Updated' })}
+              </Text>
+            </Flexbox>
             {filteredProjects.map((project) => (
               <ProjectRow key={project.id} project={project} />
             ))}
           </Flexbox>
         )}
-      </WideScreenContainer>
-    </Flexbox>
+      </WorkSurfaceCollection>
+    </WorkSurface>
   );
 });
 

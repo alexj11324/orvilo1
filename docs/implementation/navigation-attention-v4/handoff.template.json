@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "workPackage": null,
+  "role": null,
+  "status": "PLANNED",
+  "contractVersion": "nav-attention-v4.1",
+  "baseSha": null,
+  "checkoutStartSha": null,
+  "headSha": null,
+  "targetBranch": "canary",
+  "worktreePath": null,
+  "leaseGeneration": null,
+  "pullRequest": null,
+  "files": [],
+  "behaviorDelivered": [],
+  "acceptanceEvidence": [],
+  "unverified": [],
+  "blockingDependencies": [],
+  "migrationImpact": null,
+  "rollbackNotes": null,
+  "reviewer": null
+}

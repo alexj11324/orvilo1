@@ -7,6 +7,7 @@ import { getTestDB } from '@/database/core/getTestDB';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { GoalModel } from '@/database/models/goal';
+import type * as GoalGraphModule from '@/database/models/goalGraph';
 import { GoalGraphModel } from '@/database/models/goalGraph';
 import { MetricModel } from '@/database/models/metric';
 import { TaskModel } from '@/database/models/task';
@@ -45,6 +46,42 @@ import { GoalService } from './index';
 import { VERIFY_SETTLE_GRACE_MS } from './recoveryPolicy';
 import { TaskRecoveryCoordinator } from './taskRecoveryCoordinator';
 import type { GoalTickObservation } from './traceObservation';
+
+// A CAID plan patch can land between a tick's graph snapshot and the locked
+// claim inside dispatchWork. getGraph is a per-instance field, so the only
+// seam is the class itself: the wrapper below injects a late-arriving edge
+// only on the transaction handle (this.db !== the service db), which is the
+// claim-time re-read. `graphEdgeInjection` is null in every other test, so
+// the wrapper is transparent outside this suite.
+const graphEdgeInjection = vi.hoisted(() => ({
+  current: null as null | { baseDb: unknown; edge: unknown },
+}));
+
+vi.mock('@/database/models/goalGraph', async (importOriginal) => {
+  const mod = await importOriginal<typeof GoalGraphModule>();
+  class InjectableGoalGraphModel extends mod.GoalGraphModel {
+    constructor(...args: ConstructorParameters<typeof mod.GoalGraphModel>) {
+      super(...args);
+      const bound = this.getGraph.bind(this);
+      this.getGraph = async (goalId: string) => {
+        const current = await bound(goalId);
+        const spec = graphEdgeInjection.current;
+        if (current && spec && (this as unknown as { db: unknown }).db !== spec.baseDb) {
+          current.edges.push(spec.edge as never);
+        }
+        return current;
+      };
+    }
+  }
+  return { ...mod, GoalGraphModel: InjectableGoalGraphModel };
+});
+
+// CAID admission (R10) is default-off; this suite exercises the orchestrated
+// dispatch path, so admission is allowed by default — one test flips it off.
+const caidAdmission = vi.hoisted(() => ({ allowed: vi.fn(async () => true) }));
+vi.mock('@/server/featureFlags/caidAdmission', () => ({
+  isCaidDispatchAllowed: caidAdmission.allowed,
+}));
 
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'goal-service-test-user';
@@ -349,6 +386,30 @@ describe('GoalService', () => {
 
     expect(runSpy).toHaveBeenCalledTimes(1);
     expect(results.filter((result) => result.message.startsWith('Started task'))).toHaveLength(1);
+  });
+
+  it('does not claim or start a Task while CAID dispatch admission is off (R10)', async () => {
+    caidAdmission.allowed.mockResolvedValue(false);
+    try {
+      const runSpy = vi
+        .spyOn(TaskRunnerService.prototype, 'runTask')
+        .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
+      const service = new GoalService(serverDB, userId);
+      const taskModel = new TaskModel(serverDB, userId);
+      const graph = await service.create({ title: 'Gated dispatch', tasks: ['Stay gated'] });
+      // First tick materializes the task node; the second reaches dispatchWork.
+      await service.tick(graph.goal.id);
+
+      const result = await service.tick(graph.goal.id);
+
+      // No claim, no run, no error — the node just waits for admission to open.
+      expect(result.outcome).toBe('waiting_external');
+      expect(result.message).toContain('CAID dispatch admission');
+      expect(runSpy).not.toHaveBeenCalled();
+      expect((await taskModel.findById(result.taskId!))?.status).not.toBe('running');
+    } finally {
+      caidAdmission.allowed.mockResolvedValue(true);
+    }
   });
 
   it('retries a failed verification once when advances race on recovery', async () => {
@@ -2347,5 +2408,50 @@ describe('GoalService', () => {
 
     const next = await service.tick(graph.goal.id);
     expect(next).toMatchObject({ nodeId: dependent.id, outcome: 'advanced' });
+  });
+});
+
+describe('dispatch readiness recheck', () => {
+  it('re-derives depends_on readiness under the dispatch lock when a plan patch lands mid-tick', async () => {
+    // The frontier ranks from a snapshot; a CAID `patch` (or a resolved
+    // decision) can commit a depends_on edge between that read and the locked
+    // claim. The claim must honor the current receipt, not the stale one —
+    // otherwise the new dependency is silently bypassed.
+    const runSpy = vi
+      .spyOn(TaskRunnerService.prototype, 'runTask')
+      .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
+    const service = new GoalService(serverDB, userId);
+    const taskModel = new TaskModel(serverDB, userId);
+    const graph = await service.create({
+      tasks: ['Ship the report'],
+      title: 'Patch-raced dispatch',
+    });
+    const nodeId = graph.nodes.find((node) => node.kind === 'task')!.id;
+    const created = await service.tick(graph.goal.id);
+
+    // The late depends_on edge is injected only on the claim-time re-read
+    // (the advisory-lock transaction handle), exactly where a CAID patch
+    // would have committed between the tick's snapshot and the claim.
+    graphEdgeInjection.current = {
+      baseDb: serverDB,
+      edge: {
+        createdAt: new Date(),
+        goalId: graph.goal.id,
+        id: 'edge-late-patch',
+        kind: 'depends_on',
+        sourceNodeId: nodeId,
+        targetNodeId: 'node-missing-prerequisite',
+      },
+    };
+    try {
+      const blocked = await service.tick(graph.goal.id);
+
+      expect(blocked).toMatchObject({ nodeId, outcome: 'waiting_external' });
+      expect(blocked.message).toContain('blocked');
+      expect(runSpy).not.toHaveBeenCalled();
+      expect((await taskModel.findById(created.taskId!))!.status).toBe('backlog');
+    } finally {
+      graphEdgeInjection.current = null;
+    }
   });
 });

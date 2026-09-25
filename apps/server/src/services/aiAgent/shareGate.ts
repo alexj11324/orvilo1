@@ -282,7 +282,7 @@ const SUB_AGENT_DISPATCH_APIS: Record<string, string> = {
  *    consent-gated call is blocked here instead;
  * 4. the per-API data-tool rules ({@link isShareBlockedDataToolCall}).
  *
- * Non-builtin identifiers (MCP/market/custom plugins, LobeHub skills) pass
+ * Non-builtin identifiers (MCP/market/custom plugins, Orvilo skills) pass
  * through untouched: their id namespace does not reliably match
  * `toolGrants` identifiers.
  */
@@ -366,8 +366,8 @@ export const isShareBlockedBuiltinDispatch = (
  *   matching entries out of the creator's ENTIRE saved credential store.
  *
  * - `lobe-message`: every bot-management API resolves `botId` straight from
- *   model args with no check against `context.agentId`; the messenger APIs act
- *   on the creator's whole personal messenger account.
+ *   model args with no check against `context.agentId`; the caller acts
+ *   on the creator's whole personal account.
  *
  * - `lobe-skill-store`: the `importFrom*` family fetches attacker-chosen
  *   remote code/zip content and persists it into the creator's skill catalog.

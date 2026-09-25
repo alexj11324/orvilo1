@@ -13,6 +13,7 @@ import {
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { openFeedbackModal } from '@/components/FeedbackModal';
 import { getNavigableRoutes, getRouteById } from '@/config/routes';
 import { FEEDBACK } from '@/const/url';
@@ -23,11 +24,13 @@ import { topicSelectors } from '@/store/chat/selectors';
 import { useCommandMenuContext } from './CommandMenuContext';
 import { CommandItem } from './components';
 import ContextCommands from './ContextCommands';
+import RecentsCommands from './RecentsCommands';
 import { useCommandMenu } from './useCommandMenu';
 
 const MainMenu = memo(() => {
   const { pathname, menuContext, setPages, pages, onClose } = useCommandMenuContext();
   const { t } = useTranslation('common');
+  const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
   // While the first send from the new-topic view is still creating the real
   // topic, openNewTopicOrSaveTopic is a no-op — disable the command instead of
@@ -43,6 +46,9 @@ const MainMenu = memo(() => {
     handleExternalLink,
     handleCreateAgentTeam,
   } = useCommandMenu();
+  const navigableRoutes = getNavigableRoutes().filter(
+    (route) => route.id !== 'teams' || workspaceId,
+  );
 
   return (
     <>
@@ -132,8 +138,10 @@ const MainMenu = memo(() => {
         </CommandItem>
       </Command.Group>
 
+      <RecentsCommands />
+
       <Command.Group heading={t('cmdk.navigate')}>
-        {getNavigableRoutes().map((route) => {
+        {navigableRoutes.map((route) => {
           const RouteIcon = route.icon;
           const keywords = route.keywordsKey
             ? t(route.keywordsKey as any).split(' ')

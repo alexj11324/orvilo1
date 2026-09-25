@@ -35,8 +35,28 @@ const PROJECT_LIST_KEY_PREFIX = '__project__:';
  */
 const MINE_LIST_KEY_PREFIX = '__mine__:';
 
-const projectIdFromListKey = (key?: string) =>
-  key?.startsWith(PROJECT_LIST_KEY_PREFIX) ? key.slice(PROJECT_LIST_KEY_PREFIX.length) : undefined;
+const NO_PROJECT_MARKER = 'no-project';
+
+/**
+ * The project filter segment of a group-list key: a project board carries it
+ * in `PROJECT_LIST_KEY_PREFIX`, a scoped ("My tasks") board as a `:…` suffix
+ * after the scope name. `no-project` decodes back to `null` — the "No
+ * project" chip — so refresh helpers rebuild the same cache key the fetch
+ * registered.
+ */
+const projectIdFromListKey = (key?: string): string | null | undefined => {
+  if (key?.startsWith(PROJECT_LIST_KEY_PREFIX)) {
+    const value = key.slice(PROJECT_LIST_KEY_PREFIX.length);
+    return value === NO_PROJECT_MARKER ? null : value;
+  }
+  if (key?.startsWith(MINE_LIST_KEY_PREFIX)) {
+    const separator = key.indexOf(':', MINE_LIST_KEY_PREFIX.length);
+    if (separator === -1) return undefined;
+    const value = key.slice(separator + 1);
+    return value === NO_PROJECT_MARKER ? null : value;
+  }
+  return undefined;
+};
 
 const isMineListKey = (key?: string) => !!key?.startsWith(MINE_LIST_KEY_PREFIX);
 
@@ -298,12 +318,15 @@ export class TaskListSliceActionImpl {
       enabled?: boolean;
       excludeStatuses?: readonly TaskStatus[];
       groupBy?: TaskKanbanGroupBy;
-      projectId?: string;
+      /** `null` narrows to tasks with no project — the "No project" board chip. */
+      projectId?: string | null;
       /**
        * "My tasks" board: the caller's own slice of the workspace, narrowed
        * server-side exactly like `useFetchMyTaskList` narrows its list.
+       * 'delegated' = tasks the caller delegated to agents (active execution
+       * grant) — the My Work "Delegated" tab.
        */
-      scope?: 'assigned' | 'created';
+      scope?: 'assigned' | 'created' | 'delegated';
     } = {},
   ) => {
     const {
@@ -316,13 +339,19 @@ export class TaskListSliceActionImpl {
       projectId,
       scope,
     } = options;
+    // A scoped board's project filter is part of its identity too — flipping
+    // the "No project" chip must reset like a scope change, not share the
+    // unfiltered scope's slot and groups.
+    const scopeKeySuffix = projectId === null ? ':no-project' : projectId ? `:${projectId}` : '';
     const effectiveKey = scope
-      ? `${MINE_LIST_KEY_PREFIX}${scope}`
-      : projectId
-        ? `${PROJECT_LIST_KEY_PREFIX}${projectId}`
-        : allAgents
-          ? ALL_AGENTS_LIST_KEY
-          : agentId;
+      ? `${MINE_LIST_KEY_PREFIX}${scope}${scopeKeySuffix}`
+      : projectId === null
+        ? `${PROJECT_LIST_KEY_PREFIX}no-project`
+        : projectId
+          ? `${PROJECT_LIST_KEY_PREFIX}${projectId}`
+          : allAgents
+            ? ALL_AGENTS_LIST_KEY
+            : agentId;
     const excludeStatusesSignature = excludeStatuses?.length
       ? [...excludeStatuses].sort().join(',')
       : undefined;

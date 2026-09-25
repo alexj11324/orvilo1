@@ -46,17 +46,6 @@ export interface DeviceToolCallResult {
   success: boolean;
 }
 
-/** Result envelope returned by a tunneled device messaging call. */
-export interface DeviceMessageApiResult {
-  content: string;
-  error?: string;
-  /** Normalized transport failure code; see {@link DeviceToolCallResult.errorCode}. */
-  errorCode?: DeviceTransportErrorCode | 'GATEWAY_NOT_CONFIGURED';
-  /** Structured availability context for callers that can choose whether to retry. */
-  errorData?: DeviceUnavailableErrorData;
-  success: boolean;
-}
-
 /**
  * Result envelope returned by a generic device RPC.
  *
@@ -240,39 +229,6 @@ export class GatewayHttpClient {
       content: deviceContent || (typeof data.error === 'string' ? data.error : ''),
       error: data.error,
       state: data.state,
-      success: data.success ?? true,
-    };
-  }
-
-  async executeMessageApi(
-    params: { deviceId?: string; timeout?: number; userId: string; workspaceId?: string },
-    api: { apiName: string; payload: Record<string, unknown>; platform: string },
-  ): Promise<DeviceMessageApiResult> {
-    const res = await this.post('/api/device/message-api', {
-      api,
-      deviceId: params.deviceId,
-      timeout: params.timeout,
-      userId: params.userId,
-      workspaceId: params.workspaceId,
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      const failure = describeGatewayResponseFailure(res.status, text, 'message API call', params);
-      return {
-        content: failure.content,
-        error: failure.error,
-        errorCode: failure.code,
-        ...(failure.data ? { errorData: failure.data } : {}),
-        success: false,
-      };
-    }
-
-    const data = await res.json();
-    return {
-      content:
-        typeof data.content === 'string' ? data.content : JSON.stringify(data.content ?? data),
-      error: data.error,
       success: data.success ?? true,
     };
   }

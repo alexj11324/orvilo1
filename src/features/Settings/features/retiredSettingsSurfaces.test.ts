@@ -139,7 +139,7 @@ describe('a retired settings tab leaves no way to reach it', () => {
       'src/features/CommandMenu/utils/contextCommands.ts',
       'src/features/HomeSidebar/Footer/index.tsx',
       'src/features/Projects/Layout/navigation.ts',
-      'src/features/Projects/Layout/Sidebar.tsx',
+      'src/features/Projects/Layout/TabsBar.tsx',
       'src/features/Projects/Workspace/ProjectDashboard.tsx',
     ]) {
       for (const retired of retiredPaths) {

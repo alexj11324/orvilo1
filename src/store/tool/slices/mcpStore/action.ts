@@ -1,30 +1,21 @@
-import { type PluginItem, type PluginListResponse } from '@lobehub/market-sdk';
-import { CURRENT_VERSION, isDesktop } from '@orvilo/const';
+import { type PluginItem } from '@lobehub/market-sdk';
 import { type ToolManifest } from '@orvilo/types';
 import { type TRPCClientError } from '@trpc/client';
 import debug from 'debug';
-import { uniqBy } from 'es-toolkit/compat';
 import { produce } from 'immer';
 import { gt, valid } from 'semver';
-import { type SWRResponse } from 'swr';
-import useSWR from 'swr';
 
 import { type MCPErrorData } from '@/libs/mcp/types';
 import { parseStdioErrorMessage } from '@/libs/mcp/types';
-import { toolKeys } from '@/libs/swr/keys';
 import { discoverService } from '@/services/discover';
 import { mcpService } from '@/services/mcp';
 import { pluginService } from '@/services/plugin';
-import { globalHelpers } from '@/store/global/helpers';
-import { mcpStoreSelectors } from '@/store/tool/selectors';
 import { type StoreSetter } from '@/store/types';
-import { McpConnectionType } from '@/types/discover';
 import {
   type CheckMcpInstallResult,
   type McpConnectionParams,
   type MCPErrorInfo,
   type MCPInstallProgress,
-  type MCPPluginListParams,
 } from '@/types/plugins';
 import { MCPInstallStep } from '@/types/plugins';
 import { sleep } from '@/utils/sleep';
@@ -200,16 +191,10 @@ export class PluginMCPStoreActionImpl {
   ): Promise<boolean | undefined> => {
     const { resume = false, config, skipDepsCheck } = options;
     const normalizedConfig = toNonEmptyStringRecord(config);
-    let plugin = mcpStoreSelectors.getPluginById(identifier)(this.#get());
+    const detail = await discoverService.getMcpDetail({ identifier });
+    if (!detail) return;
 
-    if (!plugin || !plugin.manifestUrl) {
-      const data = await discoverService.getMcpDetail({ identifier });
-      if (!data) return;
-
-      plugin = data as unknown as PluginItem;
-    }
-
-    if (!plugin) return;
+    const plugin = detail as unknown as PluginItem;
 
     // Extract haveCloudEndpoint after plugin is loaded
     // @ts-expect-error
@@ -229,13 +214,9 @@ export class PluginMCPStoreActionImpl {
       n('installMCPPlugin/setController'),
     );
 
-    // Record installation start time
-    const installStartTime = Date.now();
-
     let data: any;
     let result: CheckMcpInstallResult | undefined;
     let connection: any;
-    const userAgent = `Orvilo Desktop/${CURRENT_VERSION}`;
 
     try {
       // Check if already cancelled
@@ -580,30 +561,6 @@ export class PluginMCPStoreActionImpl {
         step: MCPInstallStep.COMPLETED,
       });
 
-      // Calculate installation duration
-      const installDurationMs = Date.now() - installStartTime;
-
-      discoverService.reportMcpEvent({
-        event: 'install',
-        identifier: plugin.identifier,
-        source: 'self',
-      });
-
-      discoverService.reportMcpInstallResult({
-        identifier: plugin.identifier,
-        installDurationMs,
-        installParams: connection,
-        manifest: {
-          prompts: (manifest as any).prompts,
-          resources: (manifest as any).resources,
-          tools: (manifest as any).tools,
-        },
-        platform: result?.platform || process.platform,
-        success: true,
-        userAgent,
-        version: manifest.version || data.version,
-      });
-
       // Show completed status briefly then clear progress
       await sleep(1000);
 
@@ -630,9 +587,6 @@ export class PluginMCPStoreActionImpl {
       const error = e as TRPCClientError<any>;
 
       console.error('MCP plugin installation failed:', error);
-
-      // Calculate installation duration (failure case)
-      const installDurationMs = Date.now() - installStartTime;
 
       // Handle structured error info
       let errorInfo: MCPErrorInfo;
@@ -678,20 +632,6 @@ export class PluginMCPStoreActionImpl {
         step: MCPInstallStep.ERROR,
       });
 
-      // Report installation failure result
-      discoverService.reportMcpInstallResult({
-        errorCode: errorInfo.type,
-        errorMessage: errorInfo.message,
-        identifier: plugin.identifier,
-        installDurationMs,
-        installParams: connection,
-        metadata: errorInfo.metadata,
-        platform: result?.platform || process.platform,
-        success: false,
-        userAgent,
-        version: data?.version,
-      });
-
       updateInstallLoadingState(identifier, undefined);
 
       // Clean up AbortController
@@ -703,34 +643,6 @@ export class PluginMCPStoreActionImpl {
         n('installMCPPlugin/clearController'),
       );
     }
-  };
-
-  loadMoreMCPPlugins = (): void => {
-    const { mcpPluginItems, totalCount, currentPage } = this.#get();
-
-    // Check if there's more data to load
-    if (mcpPluginItems.length < (totalCount || 0)) {
-      this.#set(
-        produce((draft: MCPStoreState) => {
-          draft.currentPage = currentPage + 1;
-        }),
-        false,
-        n('loadMoreMCPPlugins'),
-      );
-    }
-  };
-
-  resetMCPPluginList = (keywords?: string): void => {
-    this.#set(
-      produce((draft: MCPStoreState) => {
-        draft.mcpPluginItems = [];
-        draft.currentPage = 1;
-        draft.mcpSearchKeywords = keywords;
-        draft.isMcpListInit = false;
-      }),
-      false,
-      n('resetMCPPluginList'),
-    );
   };
 
   testMcpConnection = async (params: McpConnectionParams): Promise<TestMcpConnectionResult> => {
@@ -803,12 +715,6 @@ export class PluginMCPStoreActionImpl {
         n('testMcpConnection/success'),
       );
 
-      discoverService.reportMcpEvent({
-        event: 'activate',
-        identifier,
-        source: 'self',
-      });
-
       return { manifest, success: true };
     } catch (error) {
       // Silently handle errors caused by cancellation
@@ -839,12 +745,6 @@ export class PluginMCPStoreActionImpl {
   uninstallMCPPlugin = async (identifier: string): Promise<void> => {
     await pluginService.uninstallPlugin(identifier);
     await this.#get().refreshPlugins();
-
-    discoverService.reportMcpEvent({
-      event: 'uninstall',
-      identifier,
-      source: 'self',
-    });
   };
 
   updateMCPInstallProgress = (
@@ -857,58 +757,6 @@ export class PluginMCPStoreActionImpl {
       }),
       false,
       n(`updateMCPInstallProgress/${progress?.step || 'clear'}`),
-    );
-  };
-
-  useFetchMCPPluginList = (params: MCPPluginListParams): SWRResponse<PluginListResponse> => {
-    const locale = globalHelpers.getCurrentLanguage();
-    const requestParams = isDesktop
-      ? params
-      : { ...params, connectionType: McpConnectionType.http };
-    const page = requestParams.page ?? 1;
-
-    return useSWR<PluginListResponse>(
-      toolKeys.mcpPluginList(locale, {
-        connectionType: requestParams.connectionType,
-        page: requestParams.page,
-        pageSize: requestParams.pageSize,
-        q: requestParams.q,
-      }),
-      () => discoverService.getMCPPluginList(requestParams),
-      {
-        onSuccess: (data) => {
-          this.#set(
-            produce((draft: MCPStoreState) => {
-              draft.searchLoading = false;
-
-              // Set basic information
-              if (!draft.isMcpListInit) {
-                draft.activeMCPIdentifier = data.items?.[0]?.identifier;
-
-                draft.isMcpListInit = true;
-                draft.categories = data.categories;
-                draft.totalCount = data.totalCount;
-                draft.totalPages = data.totalPages;
-              }
-
-              // Accumulate data logic
-              if (page === 1) {
-                // First page, set directly
-                draft.mcpPluginItems = uniqBy(data.items, 'identifier');
-              } else {
-                // Subsequent pages, accumulate data
-                draft.mcpPluginItems = uniqBy(
-                  [...draft.mcpPluginItems, ...data.items],
-                  'identifier',
-                );
-              }
-            }),
-            false,
-            n('useFetchMCPPluginList/onSuccess'),
-          );
-        },
-        revalidateOnFocus: false,
-      },
     );
   };
 }

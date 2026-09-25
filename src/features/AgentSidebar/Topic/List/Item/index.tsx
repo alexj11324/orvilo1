@@ -29,7 +29,6 @@ import NavItem from '@/features/NavPanel/components/NavItem';
 import TopicCreatorAvatar, { useTopicCreator } from '@/features/TopicCreatorAvatar';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { getWorkingDirectoryName } from '@/helpers/workingDirectoryPath';
-import { getPlatformIcon } from '@/routes/(main)/agent/channel/const';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -476,12 +475,6 @@ const TopicItemRow = memo<TopicItemRowProps>(
           </Tooltip>
         );
       }
-      if (metadata?.bot?.platform) {
-        const ProviderIcon = getPlatformIcon(metadata.bot!.platform);
-        if (ProviderIcon) {
-          return <ProviderIcon color={cssVar.colorTextDescription} size={16} />;
-        }
-      }
       return null;
     })();
 
@@ -489,7 +482,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
 
     // Workspace mode (creator resolvable): the creator's round avatar is the
     // primary visual and always leads the row; the row's own icon — execution
-    // status first, then identity icons (Discord / WeChat / PR marker) —
+    // status first, then the identity-flavored PR marker —
     // shrinks into a bottom-right corner badge. Personal mode keeps the
     // original layout untouched.
     const ownIconNode = statusIconNode ?? identityIconNode;

@@ -36,7 +36,6 @@ type CreatedTask = NonNullable<Awaited<ReturnType<typeof taskService.create>>['d
 type DeletedTask = NonNullable<Awaited<ReturnType<typeof taskService.delete>>['data']>;
 
 // config / heartbeatInterval / heartbeatTimeout are not exposed here:
-// - model/provider goes through configSlice.updateTaskModelConfig
 // - checkpoint goes through configSlice.updateCheckpoint
 // - review goes through configSlice.updateReview
 // - heartbeat config will get a dedicated action once the upstream task scheduler infra is complete
@@ -303,6 +302,7 @@ export class TaskDetailSliceActionImpl {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    teamId?: string;
     visibility?: 'private' | 'public';
   }): Promise<CreatedTask | null> => {
     this.#set({ isCreatingTask: true }, false, 'createTask/start');

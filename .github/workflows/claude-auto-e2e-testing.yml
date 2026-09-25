@@ -60,6 +60,27 @@ jobs:
       - name: Install Playwright browsers (with system deps)
         run: bunx playwright install --with-deps chromium
 
+      # The service container runs a stock ParadeDB config; on CI runners its
+      # checkpoints degrade into multi-minute write storms that starve queries.
+      # This is a disposable test database, so trade durability for a fast write
+      # path — fsync off and checkpoints spread out. Every setting is
+      # SIGHUP-reloadable; `options` can't pass postgres args (they'd be docker
+      # args). Same tuning as e2e.yml's "Tune test Postgres for CI" step.
+      - name: Tune test Postgres for CI
+        run: |
+          CONTAINER=$(docker ps --filter "ancestor=paradedb/paradedb:latest" --format '{{.ID}}')
+          # One -c per statement: a multi-statement -c wraps everything in an
+          # implicit transaction and ALTER SYSTEM rejects transaction blocks.
+          docker exec "$CONTAINER" psql -U postgres -d postgres \
+            -c "ALTER SYSTEM SET fsync = 'off'" \
+            -c "ALTER SYSTEM SET synchronous_commit = 'off'" \
+            -c "ALTER SYSTEM SET full_page_writes = 'off'" \
+            -c "ALTER SYSTEM SET checkpoint_timeout = '1800s'" \
+            -c "ALTER SYSTEM SET checkpoint_completion_target = '0.9'" \
+            -c "ALTER SYSTEM SET max_wal_size = '4GB'" \
+            -c "ALTER SYSTEM SET autovacuum = 'off'" \
+            -c "SELECT pg_reload_conf()"
+
       - name: Run database migrations
         run: bun run db:migrate
 

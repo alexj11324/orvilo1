@@ -176,23 +176,20 @@ const resolveHeteroRunContext = (
   });
   const workingDirectory = topic?.metadata?.workingDirectory || agentWorkingDirectory;
   const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
-  const providerBinding = heterogeneousProvider?.authMode === 'api';
 
   // Drops the saved sessionId when its bound cwd disagrees with the current
   // one — without this CC emits "No conversation found with session ID".
-  const { cwdChanged, reason, resumeBindingKey, resumeSessionId } = resolveHeteroResume(
+  const { cwdChanged, reason, resumeSessionId } = resolveHeteroResume(
     topic?.metadata,
     workingDirectory,
     {
-      currentBindingKey:
-        heterogeneousProvider && !providerBinding
-          ? getHeteroProviderSessionBindingKey(heterogeneousProvider)
-          : undefined,
-      providerBinding,
+      currentBindingKey: heterogeneousProvider
+        ? getHeteroProviderSessionBindingKey(heterogeneousProvider)
+        : undefined,
     },
   );
 
-  return { cwdChanged, reason, resumeBindingKey, resumeSessionId, workingDirectory };
+  return { cwdChanged, reason, resumeSessionId, workingDirectory };
 };
 
 /**
@@ -223,8 +220,11 @@ const runHeterogeneousFromExistingMessage = async (
   if (!agentId) throw new Error('agentId is required for heterogeneous agent');
 
   await ensureEffectiveAgencyAccess(agentId);
-  const { cwdChanged, reason, resumeBindingKey, resumeSessionId, workingDirectory } =
-    resolveHeteroRunContext(chatStore, context, agentId);
+  const { cwdChanged, reason, resumeSessionId, workingDirectory } = resolveHeteroRunContext(
+    chatStore,
+    context,
+    agentId,
+  );
   if (cwdChanged) toast.info(t('heteroAgent.resumeReset.cwdChanged', { ns: 'chat' }));
   else if (reason === 'binding_changed')
     toast.info(t('heteroAgent.resumeReset.bindingChanged', { ns: 'chat' }));
@@ -274,7 +274,6 @@ const runHeterogeneousFromExistingMessage = async (
     imageList: imageList?.length ? imageList : undefined,
     message: prompt,
     operationId: heteroOpId,
-    resumeBindingKey,
     resumeSessionId,
     workingDirectory,
   });

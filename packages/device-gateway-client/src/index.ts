@@ -11,7 +11,6 @@ export {
   DeviceTransportErrorCode,
 } from './deviceTransportError';
 export type {
-  DeviceMessageApiResult,
   DeviceRpcResult,
   DeviceStatusResult,
   DeviceToolCallResult,

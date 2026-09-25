@@ -132,7 +132,7 @@ vi.mock('@/database/models/thread', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -309,14 +309,6 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     service = new AiAgentService(mockDb, userId);
   };
 
-  const botContext = {
-    applicationId: 'app-1',
-    isOwner: true,
-    platform: 'discord',
-    platformThreadId: 'discord:guild-1:channel-1',
-    senderExternalUserId: 'owner-id',
-  } as any;
-
   describe('default and sandbox targets', () => {
     it('fails a default (unset-target) run loudly — no silent cloud-sandbox fallback', async () => {
       // No agencyConfig → the synthesized binding resolves `none` — a pending
@@ -407,25 +399,24 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       );
     });
 
-    it('routes a `local` bot run to its bound device instead of auto-picking', async () => {
+    it('routes a `local` run to its bound device instead of auto-picking', async () => {
       await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'local' });
 
-      await service.execAgent({ agentId: 'agent-1', botContext, prompt: 'Run a command' });
+      await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
 
       expect(mockDispatchAgentRun).toHaveBeenCalledWith(
         expect.objectContaining({ deviceId: 'device-001' }),
       );
     });
 
-    it('fails an unbound `local` bot run loudly (auto has no online-device visibility)', async () => {
-      // Bot + unbound `local` upgrades to `auto`, but hetero dispatch carries
-      // no onlineDeviceIds — auto can never resolve, so the run stays
+    it('fails an unbound `local` run loudly (auto has no online-device visibility)', async () => {
+      // An unbound `local` target upgrades to `auto`, but hetero dispatch
+      // carries no onlineDeviceIds — auto can never resolve, so the run stays
       // unrouted rather than silently landing on the cloud sandbox.
       await useAgencyConfig({ executionTarget: 'local' });
 
       const result = await service.execAgent({
         agentId: 'agent-1',
-        botContext,
         prompt: 'Run a command',
       });
 
@@ -576,24 +567,6 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         expect.objectContaining({ deviceId: 'device-001' }),
       );
       expect(result).toMatchObject({ error: 'DEVICE_NOT_FOUND', success: false });
-    });
-  });
-
-  describe('device access policy', () => {
-    it('degrades a denied sender to the cloud sandbox instead of their bound device', async () => {
-      // External (non-owner) bot senders get canUseDevice=false; the
-      // device-capable binding falls back to the sandbox so their run can
-      // never touch the owner's machine.
-      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
-
-      await service.execAgent({
-        agentId: 'agent-1',
-        botContext: { ...botContext, isOwner: false },
-        prompt: 'Run a command',
-      });
-
-      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
-      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
     });
   });
 });

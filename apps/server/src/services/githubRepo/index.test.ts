@@ -219,11 +219,53 @@ describe('github api helpers', () => {
         repo: 'acme/widgets',
         token: 'tok',
       }),
-    ).resolves.toEqual({ merged: true, message: undefined, sha: 'merge123' });
+    ).resolves.toEqual({
+      message: undefined,
+      outcome: 'confirmed_success',
+      sha: 'merge123',
+    });
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.github.com/repos/acme/widgets/pulls/9/merge',
       expect.objectContaining({ body: expect.stringContaining('head123'), method: 'PUT' }),
     );
+  });
+
+  describe('merge outcome discrimination', () => {
+    const mergeParams = { expectedHeadSha: 'head123', prNumber: 9, repo: 'acme/widgets' };
+
+    it('reports outcome_unknown when the transport fails after the mutation may have landed', async () => {
+      fetchMock.mockRejectedValue(new Error('ECONNRESET: socket hang up'));
+      await expect(mergePullRequest(mergeParams)).resolves.toEqual({
+        message: 'Merge request never reached GitHub',
+        outcome: 'outcome_unknown',
+      });
+    });
+
+    it.each([
+      ['permission denial', 403, { message: 'Forbidden' }],
+      ['not mergeable', 405, { message: 'Pull Request is not mergeable' }],
+      ['head revision conflict', 409, { message: 'Head does not match' }],
+      ['missing PR', 404, { message: 'Not Found' }],
+    ])('reports confirmed_rejected on a proven refusal (%s)', async (_label, status, body) => {
+      fetchMock.mockResolvedValue(jsonResponse(body, status));
+      await expect(mergePullRequest(mergeParams)).resolves.toMatchObject({
+        outcome: 'confirmed_rejected',
+      });
+    });
+
+    it('reports outcome_unknown on a server error (merge may have committed)', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ message: 'Server Error' }, 502));
+      await expect(mergePullRequest(mergeParams)).resolves.toMatchObject({
+        outcome: 'outcome_unknown',
+      });
+    });
+
+    it('reports outcome_unknown on a success-status response without merged:true', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ message: 'Scheduled for merge queue' }, 202));
+      await expect(mergePullRequest(mergeParams)).resolves.toMatchObject({
+        outcome: 'outcome_unknown',
+      });
+    });
   });
 });
 

@@ -1,6 +1,15 @@
 import type { NotificationMetadata } from '@orvilo/types';
 import { sql } from 'drizzle-orm';
-import { boolean, index, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import { createdAt, timestamptz, updatedAt } from './_helpers';
 import { users } from './user';
@@ -47,6 +56,31 @@ export const notifications = pgTable(
     /** Archived notifications are hidden from inbox but not deleted */
     isArchived: boolean('is_archived').default(false).notNull(),
 
+    /**
+     * Canonical object this card is about. Renderer hydrates the live title
+     * from the source when the caller still has ACL; otherwise a tombstone.
+     */
+    resourceType: text('resource_type'),
+    resourceId: text('resource_id'),
+    sourceEventId: text('source_event_id'),
+    threadKey: text('thread_key'),
+    episodeKey: text('episode_key'),
+    /** `update` is informational; `action` is backed by a live source request. */
+    kind: text('kind').$type<'action' | 'update'>().notNull().default('update'),
+    actionKind: text('action_kind'),
+    actionRequestId: text('action_request_id'),
+    /** Increments on each canonical event that lands on this episode. */
+    activityVersion: integer('activity_version').notNull().default(1),
+    /** Highest activityVersion the recipient has actually seen. */
+    readVersion: integer('read_version').notNull().default(0),
+    latestFeedRevision: integer('latest_feed_revision').notNull().default(0),
+    lastActivityAt: timestamptz('last_activity_at'),
+    snoozedUntil: timestamptz('snoozed_until'),
+    archivedAt: timestamptz('archived_at'),
+    /** Set from the authoritative source, never from a read/archive click. */
+    resolvedAt: timestamptz('resolved_at'),
+    projectionVersion: integer('projection_version').notNull().default(1),
+
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -71,6 +105,13 @@ export const notifications = pgTable(
     index('idx_notifications_archived_cleanup')
       .on(table.updatedAt, table.createdAt, table.id)
       .where(sql`${table.isArchived} = true`),
+    index('idx_notifications_user_workspace_activity').on(
+      table.userId,
+      table.workspaceId,
+      table.lastActivityAt,
+    ),
+    index('idx_notifications_episode').on(table.userId, table.episodeKey),
+    index('idx_notifications_action_request').on(table.actionRequestId),
   ],
 );
 
@@ -86,7 +127,7 @@ export const notificationDeliveries = pgTable(
       .references(() => notifications.id, { onDelete: 'cascade' })
       .notNull(),
 
-    /** Delivery channel: `inbox` | `email` | `push` | `im` (messenger DM) */
+    /** Delivery channel: `inbox` | `email` | `push` */
     channel: text('channel').$type<'email' | 'im' | 'inbox' | 'push'>().notNull(),
     /** Lifecycle status: `pending` | `sent` | `delivered` | `failed` */
     status: text('status').$type<'delivered' | 'failed' | 'pending' | 'sent'>().notNull(),

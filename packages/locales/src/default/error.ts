@@ -271,15 +271,11 @@ export default {
     'The agent changed since this request was created, so it can no longer complete.',
   'unlock.addProxyUrl': 'Add OpenAI proxy URL (optional)',
   'unlock.apiKey.description': 'Enter your {{name}} API Key to start the session',
-  'unlock.apiKey.imageGenerationDescription': 'Enter your {{name}} API Key to start generating',
   'unlock.apiKey.title': 'Use custom {{name}} API Key',
   'unlock.closeMessage': 'Close message',
   'unlock.credentialsUnavailable.description':
     'Custom provider keys are managed by the deployment, not here. Ask your administrator to update the {{name}} credentials, or rebind an agent runtime in the agent profile.',
   'unlock.credentialsUnavailable.title': '{{name}} credentials unavailable',
-  'unlock.comfyui.description': 'Enter valid {{name}} credentials to start generating images.',
-  'unlock.comfyui.modifyBaseUrl': 'Edit ComfyUI service URL',
-  'unlock.comfyui.title': 'Verify your {{name}} credentials',
   'unlock.confirm': 'Confirm and Retry',
   'unlock.goToSettings': 'Go to Settings',
   'unlock.oauth.description':

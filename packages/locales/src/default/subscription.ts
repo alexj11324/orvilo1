@@ -476,13 +476,11 @@ export default {
   'plans.features.earlyAccess': 'Early Access to SOTA Model',
   'plans.features.earlyAccessTooltip':
     'Some frontier models may only be open to subscribed users when the model is initially launched. This does not affect custom API keys.',
-  'plans.features.imageGeneration': 'Image Generation',
   'plans.features.internet': 'Smart Web Search',
   'plans.features.plugins': 'Exclusive Premium Plugins',
   'plans.features.showAll': 'View All Features',
   'plans.features.title': 'Premium Features',
   'plans.features.unlimitedPages': 'Unlimited Pages',
-  'plans.features.videoGeneration': 'Video Generation',
   'plans.fileStorage.title': 'File Storage',
   'plans.fileStorage.storagePayAsYouGo': 'Storage overages support pay-as-you-go billing',
   'plans.fileStorage.tooltip': 'File storage for storing files, images, and other data',
@@ -567,9 +565,6 @@ export default {
   'plansModal.fileStorageLimit.desc':
     'Your file storage is full. Upgrade to keep uploading, or delete unused files on the <1>Resources page</1> to free up space.',
   'plansModal.fileStorageLimit.title': 'Storage limit reached',
-  'plansModal.messengerWechat.desc':
-    'The WeChat System Bot is available on paid personal plans. Upgrade to connect and use it.',
-  'plansModal.messengerWechat.title': 'Connect WeChat after upgrading',
   'plansModal.modelAccess.desc':
     'This model is available on paid plans. Upgrade to use the full model lineup.',
   'plansModal.modelAccess.title': 'Unlock all models',

@@ -3,7 +3,6 @@ import {
   FileUserIcon,
   GraduationCapIcon,
   MessageSquare,
-  RadioTowerIcon,
   Share2Icon,
   UsersIcon,
 } from 'lucide-react';
@@ -19,11 +18,6 @@ const AgentDynamicMeta = lazy(() => import('@/features/RouteMeta/AgentDynamicMet
 const ProfileDynamicMeta = lazy(() =>
   import('@/features/RouteMeta/AgentDynamicMeta').then((module) => ({
     default: module.ProfileDynamicMeta,
-  })),
-);
-const ChannelDynamicMeta = lazy(() =>
-  import('@/features/RouteMeta/AgentDynamicMeta').then((module) => ({
-    default: module.ChannelDynamicMeta,
   })),
 );
 const StatisticsDynamicMeta = lazy(() =>
@@ -59,13 +53,6 @@ export const agentProfileRouteMeta = routeMeta({
   icon: FileUserIcon,
   Skeleton: ProfileSkeleton,
   titleKey: 'navigation.profile',
-});
-
-export const agentChannelRouteMeta = routeMeta({
-  DynamicMeta: ChannelDynamicMeta,
-  icon: RadioTowerIcon,
-  Skeleton: createSurfaceSkeleton('grid'),
-  titleKey: 'navigation.channels',
 });
 
 export const agentStatisticsRouteMeta = routeMeta({

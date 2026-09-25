@@ -34,14 +34,11 @@ export enum McpSorts {
 }
 
 export enum McpNavKey {
-  Agents = 'agents',
   Deployment = 'deployment',
   Overview = 'overview',
-  Related = 'related',
   Schema = 'schema',
   Score = 'score',
   Settings = 'settings',
-  Version = 'version',
 }
 
 export enum McpConnectionType {

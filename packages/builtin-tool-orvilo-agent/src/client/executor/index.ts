@@ -1,5 +1,6 @@
 import { UserInteractionExecutionRuntime } from '@orvilo/builtin-tool-user-interaction/executionRuntime';
-import type { BuiltinToolContext, BuiltinToolResult, ChatStreamPayload } from '@orvilo/types';
+import { TRACING_SCENARIOS } from '@orvilo/const';
+import type { BuiltinToolContext, BuiltinToolResult } from '@orvilo/types';
 import { BaseExecutor, RequestTrigger } from '@orvilo/types';
 
 import { notebookService } from '@/services/notebook';
@@ -15,6 +16,8 @@ import {
   getUnexpectedAnalyzeMediaArgumentKeys,
   hasAnalyzableMediaFiles,
   hasUserMediaFiles,
+  MEDIA_ANALYSIS_JSON_SCHEMA,
+  MEDIA_ANALYSIS_PROMPT_VERSION,
   normalizeAnalyzeMediaInput,
   selectMediaFileItems,
   validateMediaUrls,
@@ -355,57 +358,59 @@ class OrviloAgentExecutor extends BaseExecutor<typeof OrviloAgentApiName> {
 
     const payloadItems = await resolveClientMediaPayloadItems({ selectedRefs, selectedUrls });
 
-    let content = '';
-    let error: { message?: string } | undefined;
-    let usage: unknown;
     const abortController = createAbortController(ctx.signal);
-    const { chatService } = await import('@/services/chat');
+    const { aiChatService } = await import('@/services/aiChat');
 
-    const payload = {
-      max_tokens: 2000,
-      messages: [
+    // Bound judgment call — the ACP layer resolves the runtime binding from the
+    // traced agent/topic; the client supplies model/provider as payload data.
+    let envelope: { data?: unknown; tracingId?: string } | null;
+    try {
+      envelope = await aiChatService.generateJSON(
         {
-          content: buildAnalyzeMediaContent(payloadItems, params.question, {
-            includeFallbackInstruction: true,
-            includeFileSummary: true,
-          }),
-          role: 'user' as const,
+          messages: [
+            {
+              content: buildAnalyzeMediaContent(payloadItems, params.question, {
+                includeFallbackInstruction: true,
+                includeFileSummary: true,
+              }),
+              role: 'user',
+            },
+          ],
+          metadata: { trigger: RequestTrigger.MultimodalAnalysis },
+          model: config.model,
+          provider: config.provider,
+          schema: MEDIA_ANALYSIS_JSON_SCHEMA,
+          tracing: {
+            agentId: ctx.agentId,
+            messageId: ctx.messageId,
+            promptVersion: MEDIA_ANALYSIS_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.MediaAnalysis,
+            schemaName: MEDIA_ANALYSIS_JSON_SCHEMA.name,
+            topicId: ctx.topicId,
+          },
         },
-      ],
-      model: config.model,
-      provider: config.provider,
-      stream: true,
-    } satisfies Partial<ChatStreamPayload>;
+        abortController,
+      );
+    } catch (err) {
+      if (abortController.signal.aborted) {
+        return { stop: true, success: false };
+      }
 
-    await chatService.getChatCompletion(payload, {
-      onFinish: async (output, metadata) => {
-        content = output || content;
-        usage = metadata.usage;
-      },
-      onErrorHandle: (err) => {
-        error = err;
-      },
-      onMessageHandle: (chunk) => {
-        if (chunk.type === 'text') content += chunk.text || '';
-      },
-      metadata: { trigger: RequestTrigger.MultimodalAnalysis },
-      signal: abortController.signal,
-    });
-
-    if (abortController.signal.aborted) {
-      return { stop: true, success: false };
-    }
-
-    if (error) {
       return {
         error: {
-          body: error,
-          message: error.message ?? 'Multimodal understanding request failed',
+          body: err,
+          message: err instanceof Error ? err.message : 'Multimodal understanding request failed',
           type: 'PluginServerError',
         },
         success: false,
       };
     }
+
+    if (abortController.signal.aborted) {
+      return { stop: true, success: false };
+    }
+
+    const content = (envelope?.data as { answer?: string } | undefined)?.answer ?? '';
 
     return {
       content,
@@ -414,7 +419,6 @@ class OrviloAgentExecutor extends BaseExecutor<typeof OrviloAgentApiName> {
         model: config.model,
         provider: config.provider,
         trigger: RequestTrigger.MultimodalAnalysis,
-        usage,
       },
       success: true,
     };

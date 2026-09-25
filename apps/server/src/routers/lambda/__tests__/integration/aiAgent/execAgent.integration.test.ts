@@ -204,7 +204,6 @@ describe('execAgent', () => {
       const result = await caller.execAgent({
         agentId: testAgentId,
         appContext: { topicId: existingTopic.id },
-        autoStart: false,
         prompt: 'Follow up question',
       });
 
@@ -255,20 +254,23 @@ describe('execAgent', () => {
       expect(result.autoStarted).toBe(true);
     });
 
-    // ACP dispatch is the run start itself — there is no server-side
-    // deferred start, so autoStart=false no longer changes the outcome.
-    it('should still dispatch when autoStart=false', async () => {
+    // ACP dispatch is the run start itself — there is no deferred start to
+    // honor, so the retired flag is rejected BEFORE any run side effects.
+    it('should reject autoStart=false without dispatching or persisting', async () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
-      const result = await caller.execAgent({
-        agentId: testAgentId,
-        autoStart: false,
-        prompt: 'Hello',
-      });
+      await expect(
+        caller.execAgent({
+          agentId: testAgentId,
+          autoStart: false,
+          prompt: 'Hello',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
-      expect(result.success).toBe(true);
-      expect(result.autoStarted).toBe(true);
-      expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
+      expect(await serverDB.select().from(topics).where(eq(topics.agentId, testAgentId))).toEqual(
+        [],
+      );
     });
   });
 

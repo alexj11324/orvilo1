@@ -1,6 +1,7 @@
 import { moveLocalFiles, renameLocalFile, writeLocalFile } from '@orvilo/local-file-shell/file';
 import {
   addGitWorktree,
+  addGitWorktreeClaimed,
   checkoutGitBranch,
   deleteGitBranch,
   finalizeGitMerge,
@@ -11,13 +12,16 @@ import {
   getGitWorkingTreePatches,
   getGitWorkingTreeStatus,
   getLinkedPullRequest,
+  inspectGitWorktreePath,
   listGitBranches,
   listGitRemoteBranches,
   listGitWorktrees,
   mergeGitBranch,
+  probeGitRemoteRef,
   pullGitBranch,
   pushGitBranch,
   removeGitWorktree,
+  removeGitWorktreeVerified,
   renameGitBranch,
   revertGitFile,
 } from '@orvilo/local-file-shell/git';
@@ -79,6 +83,7 @@ export const DEVICE_RPC_METHODS = [
   'listGitBranches',
   'listGitRemoteBranches',
   'listGitWorktrees',
+  'inspectGitWorktreePath',
   'checkoutGitBranch',
   'renameGitBranch',
   'deleteGitBranch',
@@ -87,6 +92,7 @@ export const DEVICE_RPC_METHODS = [
   'mergeGitBranch',
   'finalizeGitMerge',
   'pullGitBranch',
+  'probeGitRemoteRef',
   'pushGitBranch',
   'revertGitFile',
 ] as const;
@@ -238,6 +244,24 @@ export const executeDeviceRpc = async (
       return listGitWorktrees((params as { path: string }).path);
     }
 
+    case 'inspectGitWorktreePath': {
+      const payload = params as { path: string; worktreePath: string };
+      const inspection = await inspectGitWorktreePath(payload);
+      // Capability negotiation before writer admission: this host binds a
+      // presented claim token to the created checkout inside the claims
+      // mutex. Hosts that predate it simply omit the field, and the server
+      // refuses claim-bound provisioning on them instead of creating a
+      // directory that could never be safely cleaned up.
+      inspection.capabilities = { worktreeClaims: true };
+      // Writer presence is the host's signal: when the host exposes a run
+      // registry the dep answers which run owns the path; without one the
+      // field stays undefined — "cannot prove safe", never "free".
+      if (deps.getActiveWorktreeWriter) {
+        inspection.activeWriter = await deps.getActiveWorktreeWriter(payload.worktreePath);
+      }
+      return inspection;
+    }
+
     case 'checkoutGitBranch': {
       return checkoutGitBranch(params as { branch: string; create?: boolean; path: string });
     }
@@ -251,23 +275,62 @@ export const executeDeviceRpc = async (
     }
 
     case 'removeGitWorktree': {
-      return removeGitWorktree(params as { force?: boolean; path: string; worktreePath: string });
+      const payload = params as {
+        claimToken?: string;
+        force?: boolean;
+        path: string;
+        worktreePath: string;
+      };
+      // A cleanup presenting a claim token must prove it against the claim
+      // this host registered for that physical checkout — inside the registry
+      // mutation section, together with the writer check, before any delete.
+      // `claimTokenVerified` on the result is only ever set after that real
+      // compare; a host that cannot answer (no run registry, no claims
+      // registry, no registered claim) refuses instead of deleting blind.
+      if (payload.claimToken !== undefined) {
+        return removeGitWorktreeVerified({
+          claimToken: payload.claimToken,
+          force: payload.force,
+          getActiveWriter: deps.getActiveWorktreeWriter,
+          path: payload.path,
+          worktreePath: payload.worktreePath,
+        });
+      }
+      return removeGitWorktree(payload);
     }
 
     case 'addGitWorktree': {
-      return addGitWorktree(
-        params as {
-          branch: string;
-          detach?: boolean;
-          path: string;
-          ref?: string;
-          worktreePath: string;
-        },
-      );
+      const payload = params as {
+        branch: string;
+        claimToken?: string;
+        detach?: boolean;
+        path: string;
+        ref?: string;
+        worktreePath: string;
+      };
+      // A claim-bound add is writer admission: the worktree is created and
+      // the server-issued token bound inside the ONE claims-registry mutex
+      // section — never create first and register in the open, where a crash
+      // between the two leaves a directory no cleanup can verify. The
+      // `claimRegistered` flag in the result remains the capability signal
+      // callers check before relying on verified deletes.
+      if (payload.claimToken !== undefined) {
+        return addGitWorktreeClaimed({
+          branch: payload.branch,
+          claimToken: payload.claimToken,
+          detach: payload.detach,
+          path: payload.path,
+          ref: payload.ref,
+          worktreePath: payload.worktreePath,
+        });
+      }
+      return addGitWorktree(payload);
     }
 
     case 'mergeGitBranch': {
-      return mergeGitBranch(params as { baseRef?: string; branch: string; path: string });
+      return mergeGitBranch(
+        params as { baseRef?: string; branch: string; fetchBase?: boolean; path: string },
+      );
     }
 
     case 'finalizeGitMerge': {
@@ -278,10 +341,16 @@ export const executeDeviceRpc = async (
       return pullGitBranch(params as { path: string });
     }
 
+    case 'probeGitRemoteRef': {
+      return probeGitRemoteRef(params as { path: string; ref: string; remote?: string });
+    }
+
     case 'pushGitBranch': {
       return pushGitBranch(
         params as {
+          expectedRemoteSha?: string;
           expectedSha?: string;
+          fence?: { operationId: string; ref: string; seq: number };
           path: string;
           remoteBranch?: string;
           sourceRef?: string;

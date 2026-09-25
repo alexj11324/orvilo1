@@ -38,6 +38,16 @@ export const FeatureFlagsSchema = z.object({
 
   rag_eval: FeatureFlagValue.optional(),
 
+  /**
+   * CAID rollout gate: controls NEW orchestrated dispatches (goal fan-out and
+   * planner/orchestrator wakes). Off by default everywhere — an admin enables it
+   * per deployment (boolean), per user (id list), or per workspace via
+   * `caid_dispatch_workspaces`. Settlement of existing runs, corrective runs,
+   * and manual/schedule/heartbeat wakes are unaffected.
+   */
+  caid_dispatch: FeatureFlagValue.optional(),
+  caid_dispatch_workspaces: z.array(z.string()).optional(),
+
   // internal flag
   agent_self_iteration: FeatureFlagValue.optional(),
   agent_onboarding: FeatureFlagValue.optional(),
@@ -96,6 +106,8 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   knowledge_base: true,
   rag_eval: false,
 
+  caid_dispatch: false,
+
   agent_self_iteration: isDev,
   agent_onboarding: isDev,
   dev_dock: isDev,
@@ -125,6 +137,9 @@ export const mapFeatureFlagsEnvToState = (
     isAgentEditable: evaluateFeatureFlag(config.edit_agent, userId),
 
     enableAgentShare: evaluateFeatureFlag(config.agent_share, userId),
+    // User-level half of the CAID rollout gate — workspace-scoped grants are
+    // evaluated server-side (see apps/server featureFlags/caidAdmission).
+    enableCaidDispatch: evaluateFeatureFlag(config.caid_dispatch, userId),
     showProvider: evaluateFeatureFlag(config.provider_settings, userId),
 
     showOpenAIApiKey: evaluateFeatureFlag(config.openai_api_key, userId),

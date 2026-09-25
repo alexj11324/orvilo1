@@ -50,9 +50,13 @@ class TaskService {
       workflowCategories?: TaskWorkflowCategory[];
     }>;
     parentTaskId?: string | null;
-    projectId?: string;
-    /** "My tasks" narrowing: assigned to the caller, or created by them. */
-    scope?: 'assigned' | 'created';
+    /** `null` narrows to tasks with no project — the board's "No project" chip. */
+    projectId?: string | null;
+    /**
+     * "My tasks" narrowing: assigned to the caller, created by them, or
+     * delegated by them to an agent.
+     */
+    scope?: 'assigned' | 'created' | 'delegated';
     visibility?: 'private' | 'public';
   }) =>
     lambdaClient.task.groupList.query({
@@ -133,6 +137,7 @@ class TaskService {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    teamId?: string;
     visibility?: 'private' | 'public';
   }) => lambdaClient.task.create.mutate(params);
 
@@ -233,11 +238,24 @@ class TaskService {
 
   run = async (
     id: string,
-    params?: { continueTopicId?: string; idempotencyKey?: string; prompt?: string },
+    params?: {
+      continueTopicId?: string;
+      idempotencyKey?: string;
+      intent?: 'continue' | 'repair' | 'authorized_replan';
+      prompt?: string;
+      replanApprovalId?: string;
+      sourceContractId?: string;
+    },
   ) =>
     lambdaClient.task.run.mutate({
       id,
-      idempotencyKey: params?.idempotencyKey ?? crypto.randomUUID(),
+      // A replan retry must land on the same dispatch — the consumed approval
+      // is bound to that dispatch, so a fresh key would demand a new grant.
+      idempotencyKey:
+        params?.idempotencyKey ??
+        (params?.intent === 'authorized_replan' && params.replanApprovalId
+          ? `replan:${id}:${params.replanApprovalId}`
+          : crypto.randomUUID()),
       ...params,
     });
 

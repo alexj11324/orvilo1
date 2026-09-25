@@ -1,6 +1,11 @@
 /**
  * API Key Scopes
  *
+ * These scopes belong to **Orvilo signed TRPC keys** stored in `api_keys`
+ * and enforced by `TRPC_NAMESPACE_API_KEY_RULES`. They are not model /
+ * custom-provider credentials, and this catalog must not resurrect the
+ * retired `/settings/provider` surface.
+ *
  * A scope describes what a signed API key is allowed to do. The effective
  * permission of a request is always the intersection of the issuer's own
  * permissions (RBAC / workspace role) and the key's scopes — scopes can only
@@ -175,8 +180,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // the discussion on an acceptance follows the acceptance itself
   acceptanceComment: 'blocked',
   agent: rw('agent:read', 'agent:write'),
-  // bot channel wiring carries channel credentials
-  agentBotProvider: 'blocked',
   agentDocument: rw('knowledge:read', 'knowledge:write'),
   agentEval: 'blocked',
   agentEvalExternal: 'blocked',
@@ -204,15 +207,12 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   apiKey: 'blocked',
   asr: { any: 'model:invoke' },
   artifactShare: rw('chat:read', null),
-  // decrypts stored bot/messenger credentials and calls external channel APIs
-  botMessage: 'blocked',
   brief: rw('chat:read', 'chat:write'),
   changelog: 'open',
   chunk: rw('knowledge:read', 'knowledge:write'),
   // room tickets/snapshots stay inside the caller's verified membership —
   // the ticket itself grants nothing beyond it
   collaboration: { any: 'workspace:read' },
-  comfyui: rw('model:read', 'model:write'),
   // third-party integrations hold external credentials
   composio: 'blocked',
   config: 'open',
@@ -226,21 +226,16 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   exporter: 'blocked',
   file: rw('file:read', 'file:write'),
   followUpAction: rw('chat:read', 'chat:write'),
-  generation: { any: 'model:invoke' },
-  generationBatch: { any: 'model:invoke' },
-  generationTopic: { any: 'model:invoke' },
   goal: rw('agent:read', 'agent:write'),
   group: rw('agent:read', 'agent:write'),
   healthcheck: 'open',
   home: rw('chat:read', 'chat:write'),
-  image: { any: 'model:invoke' },
   // whole-account backup import can overwrite credential-bearing settings,
   // provider/model config and agents
   importer: 'blocked',
   // invitation accept/resend/revoke grants or revokes membership — same class
   // as workspace_member management, an interactive human decision
   invitation: 'blocked',
-  klavis: 'blocked',
   knowledge: rw('knowledge:read', 'knowledge:write'),
   knowledgeBase: rw('knowledge:read', 'knowledge:write'),
   linearSync: rw('workspace:read', 'workspace:write'),
@@ -249,8 +244,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // tool execution inside a chat run
   mcp: { any: 'model:invoke' },
   message: rw('chat:read', 'chat:write'),
-  // IM channel management carries channel credentials
-  messenger: 'blocked',
   // numeric telemetry attached to a goal / agent / task / project — same
   // domain as the subjects that own it
   metric: rw('agent:read', 'agent:write'),
@@ -266,6 +259,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // membership listing is readable; grant/revoke mutations stay off-limits to
   // restricted keys, like workspaceMember
   projectMember: rw('workspace:read', null),
+  // GitHub PR review queue + review submission, proxied through the member's
+  // own GitHub OAuth — same tier as task/agent work.
+  pullRequest: rw('agent:read', 'agent:write'),
   pushToken: 'blocked',
   ragEval: 'blocked',
   recent: rw('chat:read', null),
@@ -299,10 +295,16 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   userMemories: rw('user:read', 'user:write'),
   userMemory: rw('user:read', 'user:write'),
   verify: 'blocked',
-  video: { any: 'model:invoke' },
   waitlist: 'blocked',
   webBrowsing: { any: 'model:invoke' },
   work: rw('agent:read', 'agent:write'),
+  // Inbox / My Work / saved views: personal attention is the `notification`
+  // domain (`user:*`) on **signed Orvilo TRPC keys**, not model-provider
+  // credentials. Task-shaped queries and mutations stack `agent:*`
+  // via TRPC_PROCEDURE_EXTRA_SCOPES. `workAttention.decide` is blocked
+  // below — ACP permits, PR review, and ownership transfer are interactive
+  // human decisions, same class as `resourceTransferRequest`.
+  workAttention: rw('user:read', 'user:write'),
   workspace: rw('workspace:read', 'workspace:write'),
   // Agent roster is a read-only listing inside the caller's membership
   workspaceAgent: rw('workspace:read', null),
@@ -362,20 +364,8 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'aiChat.archiveToolResult': ['chat:write'],
   // creates user/assistant messages and topics alongside the model call
   'aiChat.sendMessageInServer': ['chat:write'],
-  // runs a ComfyUI image-generation workflow, not a config write
-  'comfyui.createImage': ['model:invoke'],
   // extracts follow-up actions via `AiGenerationService.generateObject`
   'followUpAction.extract': ['model:invoke'],
-  // asset cleanup/organization is file management, not model invocation —
-  // a model-only key must not delete or reorganize generated assets
-  'generation.deleteGeneration': ['file:write'],
-  'generationBatch.deleteGenerationBatch': ['file:write'],
-  'generationTopic.deleteTopic': ['file:write'],
-  // sharing/visibility control is asset management, not generation
-  'generationTopic.setTopicVisibility': ['file:write'],
-  'generationTopic.updateTopic': ['file:write'],
-  // fetches caller-supplied image data and uploads a cover file
-  'generationTopic.updateTopicCover': ['file:write'],
   // Market tool-execution surface (mounted on the tools router): external
   // tool calls burn quota / cause side effects; file export writes files
   'market.callCloudMcpEndpoint': ['model:invoke'],
@@ -406,6 +396,21 @@ export const TRPC_PROCEDURE_EXTRA_SCOPES: Record<string, ApiKeyScope[]> = {
   'user.startOnboardingUnderstanding': ['model:invoke'],
   // persists crawled pages as `documents` rows — a knowledge write
   'webBrowsing.upsertCrawledDocument': ['knowledge:write'],
+  // My Work / Views / Team Triage query the task contract, not just the
+  // caller's notification inbox. A user-only key must not enumerate or
+  // mutate workspace work items through this surface.
+  'workAttention.myWork': ['agent:read'],
+  'workAttention.query': ['agent:read'],
+  'workAttention.count': ['agent:read'],
+  'workAttention.facet': ['agent:read'],
+  'workAttention.savedViewEvaluate': ['agent:read'],
+  'workAttention.savedViewGet': ['agent:read'],
+  'workAttention.savedViewList': ['agent:read'],
+  'workAttention.search': ['agent:read'],
+  'workAttention.savedViewCreate': ['agent:write'],
+  'workAttention.savedViewDelete': ['agent:write'],
+  'workAttention.savedViewUpdate': ['agent:write'],
+  'workAttention.triage': ['agent:write'],
 };
 
 /**
@@ -428,6 +433,9 @@ export const TRPC_BLOCKED_PATH_PREFIXES: string[] = [
   'market.creds.',
   // marketplace OIDC auth flows carry tokens
   'market.oidc.',
+  // Inbox decide consumes live ACP permits, review requests, and ownership
+  // transfers — an interactive human decision, not a restricted-key action
+  'workAttention.decide',
 ];
 
 export type TrpcScopeDecision = { scopes: ApiKeyScope[] } | { open: true } | { blocked: true };

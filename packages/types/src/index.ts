@@ -29,7 +29,6 @@ export * from './fetch';
 export * from './files';
 export * from './followUpAction';
 export * from './ftsSearch';
-export * from './generation';
 export * from './goal';
 export * from './hatchet';
 export * from './heteroSessionImport';
@@ -45,6 +44,7 @@ export * from './metric';
 export * from './notification';
 export * from './plugins';
 export * from './project';
+export * from './pullRequestReview';
 export * from './rag';
 export * from './recent';
 export * from './redis';
@@ -67,6 +67,7 @@ export * from './user';
 export * from './userMemory';
 export * from './verify';
 export * from './work';
+export * from './workAttention';
 export * as workspaceContractFixtures from './workspaceContract.fixtures';
 // FIXME: I think we need a refactor for the "openai" types
 // it more likes the UI message payload

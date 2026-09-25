@@ -5,11 +5,11 @@ import { VerifyExecutorService } from '../executor';
 
 const mocks = vi.hoisted(() => ({
   aiGenerateObject: vi.fn(),
-  aiModelFind: vi.fn(),
   documentFindByIds: vi.fn(),
   evidenceListByRun: vi.fn(),
   fileAccessUrl: vi.fn(),
   fileFindById: vi.fn(),
+  modelProperty: vi.fn(),
   resultCreateMany: vi.fn(),
   resultListByRun: vi.fn(),
   resultUpdateByCheckItem: vi.fn(),
@@ -19,12 +19,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@orvilo/model-runtime', () => ({
-  getModelPropertyWithFallback: vi.fn(async () => ({ vision: false })),
-}));
-vi.mock('@/database/models/aiModel', () => ({
-  AiModelModel: vi.fn(function () {
-    return { findByIdAndProvider: mocks.aiModelFind };
-  }),
+  getModelPropertyWithFallback: mocks.modelProperty,
 }));
 vi.mock('@/database/models/document', () => ({
   DocumentModel: vi.fn(function () {
@@ -55,7 +50,8 @@ vi.mock('@/database/models/verifyRun', () => ({
     return { ensureForOperation: mocks.runEnsureForOperation };
   }),
 }));
-vi.mock('@/server/services/aiGeneration', () => ({
+vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
   AiGenerationService: vi.fn(function () {
     return { generateObject: mocks.aiGenerateObject };
   }),
@@ -79,7 +75,7 @@ describe('VerifyExecutorService', () => {
     vi.clearAllMocks();
     mocks.evidenceListByRun.mockResolvedValue([]);
     mocks.documentFindByIds.mockResolvedValue([]);
-    mocks.aiModelFind.mockResolvedValue({ abilities: { vision: false } });
+    mocks.modelProperty.mockResolvedValue({ vision: false });
     mocks.fileAccessUrl.mockResolvedValue('https://files.example/image.png');
     mocks.fileFindById.mockResolvedValue({
       fileType: 'image/png',
@@ -309,7 +305,7 @@ describe('VerifyExecutorService', () => {
   });
 
   it('loads screenshot content into a vision-model message', async () => {
-    mocks.aiModelFind.mockResolvedValue({ abilities: { vision: true } });
+    mocks.modelProperty.mockResolvedValue({ vision: true });
     mocks.runEnsureForOperation.mockResolvedValue({
       id: 'run-1',
       plan: [

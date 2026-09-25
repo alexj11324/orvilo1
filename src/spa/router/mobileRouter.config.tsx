@@ -172,6 +172,118 @@ export const sharedMainAreaChildren: RouteObject[] = [
         errorElement: <ErrorBoundary resetPath="../tasks" />,
         path: 'agent',
       },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/inbox'), 'Mobile > Inbox', {
+              preloadId: 'mobile-inbox',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'inbox',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/my-issues'),
+              'Mobile > My Issues',
+              {
+                preloadId: 'mobile-my-work',
+              },
+            ),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-issues',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Mobile > My Work', {
+              preloadId: 'mobile-my-work',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-work',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Mobile > Reviews', {
+              preloadId: 'mobile-reviews',
+            }),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/reviews/[reviewId]'),
+              'Mobile > Pull Request Review',
+              { preloadId: 'mobile-reviews' },
+            ),
+            path: ':reviewId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'reviews',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/members'), 'Mobile > Members', {
+              preloadId: 'mobile-members',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'members',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/views'), 'Mobile > Views', {
+              preloadId: 'mobile-views',
+            }),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/views/[viewId]'),
+              'Mobile > Saved View',
+              { preloadId: 'mobile-views' },
+            ),
+            path: ':viewId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'views',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/teams'), 'Mobile > Teams', {
+              preloadId: 'mobile-teams',
+            }),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/teams/[teamId]'),
+              'Mobile > Team',
+              { preloadId: 'mobile-teams' },
+            ),
+            path: ':teamId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'teams',
+      },
     ],
     element: dynamicLayout(
       () => import('@/routes/(main)/(task-workspace)/_layout'),
@@ -365,20 +477,6 @@ export const mobileRoutes: RouteObject[] = [
               },
               {
                 element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Mobile > Workspace > Settings > Messenger',
-                ),
-                path: 'messenger',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Mobile > Workspace > Settings > Messenger > Platform',
-                ),
-                path: 'messenger/:sub',
-              },
-              {
-                element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/advanced'),
                   'Mobile > Workspace > Settings > Advanced',
                 ),
@@ -549,11 +647,4 @@ export const mobileRoutes: RouteObject[] = [
     path: '/onboarding',
   },
   ...BusinessMobileRoutesWithoutMainLayout,
-
-  // Messenger verify route (outside main layout)
-  {
-    element: dynamicElement(() => import('@/routes/verify-im'), 'Mobile > VerifyIm'),
-    errorElement: <ErrorBoundary />,
-    path: '/verify-im',
-  },
 ];

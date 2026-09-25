@@ -1,16 +1,20 @@
 'use client';
 
-import { Center, Flexbox, Icon, Input } from '@lobehub/ui';
-import { Alert, Button, Text } from '@lobehub/ui/base-ui';
+import '@/app/globals.css';
+
+import { Alert } from '@lobehub/ui/base-ui';
 import { type AuthorizationPhase, type AuthorizationProgress } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { Divider } from 'antd';
-import { cssVar } from 'antd-style';
-import { Cloud, LogOutIcon, Server, Undo2Icon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Cloud, ExternalLink, LogOutIcon, Server } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Spinner } from '@/components/ui/spinner';
 import { OFFICIAL_SITE } from '@/const/url';
 import { isDesktop } from '@/const/version';
 import UserInfo from '@/features/User/UserInfo';
@@ -20,8 +24,6 @@ import { remoteServerService } from '@/services/electron/remoteServer';
 import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
 import { setDesktopAutoOidcFirstOpenHandled } from '@/utils/electron/autoOidc';
-
-import OrviloMessage from '../components/OrviloMessage';
 
 const LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL = urlJoin(
   OFFICIAL_SITE,
@@ -34,27 +36,12 @@ type LoginMethod = 'cloud' | 'selfhost';
 // Login status type
 type LoginStatus = 'idle' | 'loading' | 'success' | 'error';
 
-const authorizationPhaseI18nKeyMap: Record<AuthorizationPhase, string> = {
+const authorizationPhaseI18nKeyMap = {
   browser_opened: 'screen5.auth.phase.browserOpened',
   cancelled: 'screen5.actions.cancel',
   verifying: 'screen5.auth.phase.verifying',
   waiting_for_auth: 'screen5.auth.phase.waitingForAuth',
-};
-
-const loginMethodMetas = {
-  cloud: {
-    descriptionKey: 'screen5.methods.cloud.description',
-    icon: Cloud,
-    id: 'cloud' as LoginMethod,
-    nameKey: 'screen5.methods.cloud.name',
-  },
-  selfhost: {
-    descriptionKey: 'screen5.methods.selfhost.description',
-    icon: Server,
-    id: 'selfhost' as LoginMethod,
-    nameKey: 'screen5.methods.selfhost.name',
-  },
-} as const satisfies Record<LoginMethod, unknown>;
+} as const satisfies Record<AuthorizationPhase, string>;
 
 // `status` hosts render this step as a connection panel for already-signed-in users,
 // where the wizard's "back" and "next" have no meaning.
@@ -143,11 +130,6 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   const successLoginMethod =
     statusSuccessLoginMethod ??
     (!hasLocalLoginResult && !pendingLoginMethod ? authorizedLoginMethod : null);
-
-  // Determine if user can proceed (either method succeeding is sufficient)
-  const canStart = () => {
-    return !!successLoginMethod;
-  };
 
   // Handle cloud login
   const handleCloudLogin = async () => {
@@ -304,306 +286,224 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     await remoteServerService.cancelAuthorization();
   };
 
-  const renderSuccessContent = (method: LoginMethod) => {
+  if (successLoginMethod) {
     const isStatusMode = mode === 'status';
     const serverUrl = dataSyncConfig?.remoteServerUrl;
-
-    const title = isStatusMode
-      ? [method === 'cloud' ? t('screen5.status.cloud.title') : t('screen5.status.selfhost.title')]
-      : [t('screen5.title'), t('screen5.title2'), t('screen5.title3')];
-
-    const description = !isStatusMode
-      ? t('screen5.description')
-      : method === 'selfhost' && serverUrl
+    const title =
+      successLoginMethod === 'cloud'
+        ? t('screen5.status.cloud.title')
+        : t('screen5.status.selfhost.title');
+    const description =
+      successLoginMethod === 'selfhost' && serverUrl
         ? t('screen5.status.selfhost.description', { url: serverUrl })
         : t('screen5.status.description');
 
     return (
-      <Center gap={32} style={{ height: '100%', minHeight: '100%' }}>
-        <Flexbox align={'flex-start'} justify={'flex-start'} style={{ width: '100%' }}>
-          <OrviloMessage sentences={title} />
-          <Text as={'p'}>{description}</Text>
-        </Flexbox>
-
-        <Flexbox gap={16} style={{ width: '100%' }}>
-          <UserInfo
-            style={{
-              background: cssVar.colorFillSecondary,
-              borderRadius: 8,
-            }}
-          />
-        </Flexbox>
-
-        <Flexbox horizontal justify={'space-between'} style={{ marginTop: 32 }}>
+      <section className="orvilo-entry-surface text-foreground mx-auto flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col gap-2 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <p className="text-muted-foreground text-sm leading-6">{description}</p>
+        </div>
+        <UserInfo />
+        <div className="flex items-center justify-between gap-4">
           {isStatusMode ? (
-            <Button
-              disabled={isSigningOut}
-              icon={LogOutIcon}
-              style={{ color: cssVar.colorTextDescription }}
-              type={'text'}
-              onClick={handleSignOut}
-            >
+            <Button disabled={isSigningOut} variant="ghost" onClick={handleSignOut}>
+              {isSigningOut ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <LogOutIcon data-icon="inline-start" />
+              )}
               {isSigningOut ? t('screen5.actions.signingOut') : t('screen5.actions.signOut')}
             </Button>
           ) : (
-            <Button
-              icon={Undo2Icon}
-              style={{ color: cssVar.colorTextDescription }}
-              type={'text'}
-              onClick={onBack}
-            >
+            <Button variant="ghost" onClick={onBack}>
+              <ArrowLeft data-icon="inline-start" />
               {t('back')}
             </Button>
           )}
-          <Button type={'primary'} onClick={onNext}>
+          <Button onClick={onNext}>
             {isStatusMode ? t('screen5.actions.done') : t('next')}
+            <ArrowRight data-icon="inline-end" />
           </Button>
-        </Flexbox>
-      </Center>
+        </div>
+      </section>
     );
-  };
+  }
 
-  // Render Cloud login content
-  const renderCloudContent = () => {
-    if (cloudLoginStatus === 'error') {
-      const errorMessage = remoteError?.toLowerCase().includes('timed out')
-        ? t('screen5.errors.timedOut')
-        : remoteError || t('authResult.failed.desc');
-
-      return (
-        <Flexbox gap={16} style={{ width: '100%' }}>
-          <Alert
-            description={errorMessage}
-            title={t('authResult.failed.title')}
-            type={'secondary'}
-          />
-          <Button
-            block
-            icon={Cloud}
-            size={'large'}
-            type={'primary'}
-            onClick={() => setCloudLoginStatus('idle')}
-          >
-            {t('screen5.actions.tryAgain')}
-          </Button>
-        </Flexbox>
-      );
-    }
-
-    if (cloudLoginStatus === 'loading') {
-      const phaseText = t(authorizationPhaseI18nKeyMap[authProgress?.phase ?? 'browser_opened'], {
-        defaultValue: t('screen5.actions.signingIn'),
-      });
-
-      return (
-        <Flexbox gap={8} style={{ width: '100%' }}>
-          <Button block disabled={true} icon={Cloud} loading={true} size={'large'} type={'primary'}>
-            {t('screen5.actions.signingIn')}
-          </Button>
-          <Text style={{ color: cssVar.colorTextDescription }} type={'secondary'}>
-            {phaseText}
-          </Text>
-          <Flexbox horizontal align={'center'} justify={'space-between'}>
-            {localRemainingSeconds !== null ? (
-              <Text style={{ color: cssVar.colorTextDescription }} type={'secondary'}>
-                {t('screen5.auth.remaining', {
-                  time: localRemainingSeconds,
-                })}
-              </Text>
-            ) : (
-              <div />
-            )}
-            <Button size={'small'} type={'text'} onClick={handleCancelAuth}>
-              {t('screen5.actions.cancel')}
-            </Button>
-          </Flexbox>
-        </Flexbox>
-      );
-    }
-
-    return (
-      <Button
-        block
-        disabled={isConnectingServer}
-        icon={Cloud}
-        loading={false}
-        size={'large'}
-        type={'primary'}
-        onClick={handleCloudLogin}
-      >
-        {t('screen5.actions.signInCloud')}
-      </Button>
-    );
-  };
-
-  // Render Self-host login content
-  const renderSelfhostContent = () => {
-    if (selfhostLoginStatus === 'error') {
-      const errorMessage = remoteError?.toLowerCase().includes('timed out')
-        ? t('screen5.errors.timedOut')
-        : remoteError || t('authResult.failed.desc');
-
-      return (
-        <Flexbox gap={16} style={{ width: '100%' }}>
-          <Alert
-            description={errorMessage}
-            title={t('authResult.failed.title')}
-            type={'secondary'}
-          />
-          <Button icon={Server} type={'primary'} onClick={() => setSelfhostLoginStatus('idle')}>
-            {t('screen5.actions.tryAgain')}
-          </Button>
-        </Flexbox>
-      );
-    }
-
-    if (selfhostLoginStatus === 'loading') {
-      const phaseText = t(authorizationPhaseI18nKeyMap[authProgress?.phase ?? 'browser_opened'], {
-        defaultValue: t('screen5.actions.connecting'),
-      });
-
-      return (
-        <Flexbox gap={8} style={{ width: '100%' }}>
-          <Button
-            block
-            disabled={true}
-            icon={Server}
-            loading={true}
-            size={'large'}
-            type={'primary'}
-          >
-            {t('screen5.actions.connecting')}
-          </Button>
-          <Text style={{ color: cssVar.colorTextDescription }} type={'secondary'}>
-            {phaseText}
-          </Text>
-          <Flexbox horizontal align={'center'} justify={'space-between'}>
-            {localRemainingSeconds !== null ? (
-              <Text style={{ color: cssVar.colorTextDescription }} type={'secondary'}>
-                {t('screen5.auth.remaining', {
-                  time: localRemainingSeconds,
-                })}
-              </Text>
-            ) : (
-              <div />
-            )}
-            <Button size={'small'} type={'text'} onClick={handleCancelAuth}>
-              {t('screen5.actions.cancel')}
-            </Button>
-          </Flexbox>
-        </Flexbox>
-      );
-    }
-
-    return (
-      <Flexbox gap={16} style={{ width: '100%' }}>
-        <Text color={cssVar.colorTextSecondary}>{t(loginMethodMetas.selfhost.descriptionKey)}</Text>
-        <Input
-          placeholder={t('screen5.selfhost.endpointPlaceholder')}
-          prefix={<Icon icon={Server} style={{ marginRight: 4 }} />}
-          size={'large'}
-          style={{ width: '100%' }}
-          value={endpoint}
-          onChange={(e) => setEndpoint(e.target.value)}
-          {...compositionProps}
-          onContextMenu={async (e) => {
-            if (!isDesktop) return;
-            e.preventDefault();
-            const { electronSystemService } = await import('@/services/electron/system');
-            const input = e.target as HTMLInputElement;
-            const selectionText = input.value.slice(
-              input.selectionStart || 0,
-              input.selectionEnd || 0,
-            );
-            await electronSystemService.showContextMenu('editor', {
-              selectionText: selectionText || undefined,
-            });
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !isComposingRef.current) {
-              handleSelfhostConnect();
-            }
-          }}
-        />
-        <Button
-          disabled={!endpoint.trim() || isConnectingServer}
-          loading={false}
-          size={'large'}
-          style={{ width: '100%' }}
-          type={'primary'}
-          onClick={handleSelfhostConnect}
-        >
-          {t('screen5.actions.connectToServer')}
-        </Button>
-      </Flexbox>
-    );
-  };
-
-  if (successLoginMethod) return renderSuccessContent(successLoginMethod);
+  const busy = cloudLoginStatus === 'loading' || selfhostLoginStatus === 'loading';
+  const failed = cloudLoginStatus === 'error' || selfhostLoginStatus === 'error';
+  const errorMessage = remoteError?.toLowerCase().includes('timed out')
+    ? t('screen5.errors.timedOut')
+    : remoteError || t('authResult.failed.desc');
 
   return (
-    <Center gap={32} style={{ height: '100%', minHeight: '100%' }}>
-      <Flexbox align={'flex-start'} justify={'flex-start'} style={{ width: '100%' }}>
-        <OrviloMessage sentences={[t('screen5.title'), t('screen5.title2'), t('screen5.title3')]} />
-        <Text as={'p'}>{t('screen5.description')}</Text>
-      </Flexbox>
+    <section className="orvilo-entry-surface text-foreground mx-auto flex w-full max-w-sm flex-col gap-6">
+      <div className="flex flex-col gap-2 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {showEndpoint ? t('screen5.entry.serverTitle') : t('screen5.entry.title')}
+        </h1>
+        <p className="text-muted-foreground text-sm leading-6">
+          {showEndpoint
+            ? t('screen5.methods.selfhost.description')
+            : t('screen5.entry.description')}
+        </p>
+      </div>
 
-      <Flexbox align={'flex-start'} gap={16} style={{ width: '100%' }} width={'100%'}>
-        {renderCloudContent()}
-        <Flexbox horizontal justify={'center'} style={{ width: '100%' }}>
-          {hasLegacyLocalDb && (
-            <Button
-              style={{ padding: 0 }}
-              type={'link'}
-              onClick={() =>
-                electronSystemService.openExternalLink(LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL)
-              }
-            >
-              {t('screen5.legacyLocalDb.link', 'Migrate legacy local database')}
-            </Button>
-          )}
-        </Flexbox>
-        {!showEndpoint ? (
-          <Center width={'100%'}>
-            <Button
-              type={'text'}
-              style={{
-                color: cssVar.colorTextSecondary,
-              }}
-              onClick={() => setShowEndpoint(true)}
-            >
-              {t(loginMethodMetas.selfhost.descriptionKey)}
-            </Button>
-          </Center>
-        ) : (
-          <>
-            <Divider>
-              <Text fontSize={12} type={'secondary'}>
-                OR
-              </Text>
-            </Divider>
+      {failed && (
+        <Alert description={errorMessage} title={t('authResult.failed.title')} type="error" />
+      )}
 
-            {/* Self-host option */}
-            {renderSelfhostContent()}
-          </>
-        )}
-      </Flexbox>
-      {canStart() && (
-        <Flexbox horizontal justify={'space-between'} style={{ marginTop: 32 }}>
+      {showEndpoint ? (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!isComposingRef.current && endpoint.trim() && !busy && !isConnectingServer) {
+              void handleSelfhostConnect();
+            }
+          }}
+        >
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="orvilo-server-url">
+                {t('screen5.selfhost.endpointLabel')}
+              </FieldLabel>
+              <Input
+                autoCapitalize="none"
+                autoComplete="url"
+                className="h-10"
+                disabled={busy || isConnectingServer}
+                id="orvilo-server-url"
+                inputMode="url"
+                placeholder={t('screen5.selfhost.endpointPlaceholder')}
+                spellCheck={false}
+                value={endpoint}
+                onChange={(event) => setEndpoint(event.target.value)}
+                {...compositionProps}
+                onContextMenu={async (event) => {
+                  if (!isDesktop) return;
+                  event.preventDefault();
+                  const input = event.target as HTMLInputElement;
+                  const selectionText = input.value.slice(
+                    input.selectionStart || 0,
+                    input.selectionEnd || 0,
+                  );
+                  await electronSystemService.showContextMenu('editor', {
+                    selectionText: selectionText || undefined,
+                  });
+                }}
+              />
+              <FieldDescription>{t('screen5.entry.browserHint')}</FieldDescription>
+            </Field>
+          </FieldGroup>
           <Button
-            icon={Undo2Icon}
-            style={{ color: cssVar.colorTextDescription }}
-            type={'text'}
-            onClick={onBack}
+            className="w-full"
+            disabled={!endpoint.trim() || busy || isConnectingServer}
+            size="lg"
+            type="submit"
           >
+            {selfhostLoginStatus === 'loading' ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <Server data-icon="inline-start" />
+            )}
+            {selfhostLoginStatus === 'loading'
+              ? t('screen5.actions.connecting')
+              : selfhostLoginStatus === 'error'
+                ? t('screen5.actions.tryAgain')
+                : t('screen5.actions.connectToServer')}
+          </Button>
+          <Button
+            disabled={busy || isConnectingServer}
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setShowEndpoint(false);
+              setSelfhostLoginStatus('idle');
+              setRemoteError(null);
+              clearRemoteServerSyncError();
+            }}
+          >
+            <ArrowLeft data-icon="inline-start" />
             {t('back')}
           </Button>
-          <Button type={'primary'} onClick={onNext}>
-            {t('next')}
+        </form>
+      ) : (
+        <>
+          <Button
+            className="w-full"
+            disabled={busy || isConnectingServer}
+            size="lg"
+            onClick={handleCloudLogin}
+          >
+            {cloudLoginStatus === 'loading' ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <Cloud data-icon="inline-start" />
+            )}
+            {cloudLoginStatus === 'loading'
+              ? t('screen5.actions.signingIn')
+              : cloudLoginStatus === 'error'
+                ? t('screen5.actions.tryAgain')
+                : t('screen5.actions.signInCloud')}
+            {!busy && <ExternalLink data-icon="inline-end" />}
           </Button>
-        </Flexbox>
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-muted-foreground text-xs">{t('screen5.entry.or')}</span>
+            <Separator className="flex-1" />
+          </div>
+          <Button
+            className="w-full"
+            disabled={busy || isConnectingServer}
+            size="lg"
+            variant="outline"
+            onClick={() => {
+              setShowEndpoint(true);
+              setCloudLoginStatus('idle');
+              setRemoteError(null);
+              clearRemoteServerSyncError();
+            }}
+          >
+            <Server data-icon="inline-start" />
+            {t('screen5.entry.selfhostAction')}
+          </Button>
+          {!busy && (
+            <p className="text-muted-foreground text-center text-xs leading-5">
+              {t('screen5.entry.browserHint')}
+            </p>
+          )}
+        </>
       )}
-    </Center>
+
+      {busy && (
+        <div
+          aria-live="polite"
+          className="text-muted-foreground flex flex-col gap-2 text-sm"
+          role="status"
+        >
+          <p>{t(authorizationPhaseI18nKeyMap[authProgress?.phase ?? 'browser_opened'])}</p>
+          <div className="flex items-center justify-between gap-4">
+            {localRemainingSeconds !== null && (
+              <span>{t('screen5.auth.remaining', { time: localRemainingSeconds })}</span>
+            )}
+            <Button size="sm" variant="ghost" onClick={handleCancelAuth}>
+              {t('screen5.actions.cancel')}
+            </Button>
+          </div>
+        </div>
+      )}
+      {hasLegacyLocalDb && (
+        <Button
+          variant="link"
+          onClick={() =>
+            electronSystemService.openExternalLink(LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL)
+          }
+        >
+          {t('screen5.legacyLocalDb.link')}
+        </Button>
+      )}
+    </section>
   );
 });
 

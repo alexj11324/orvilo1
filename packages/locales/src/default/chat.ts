@@ -395,8 +395,6 @@ export default {
   'heteroAgent.fullAccess.label': 'Full access',
   'heteroAgent.fullAccess.tooltip':
     'The local coding agent runs with full read/write access to the working directory. Switching permission modes is not available yet.',
-  'heteroAgent.claudeQuota.accountActive': 'In use',
-  'heteroAgent.claudeQuota.accountSwitch': 'Switch',
   'heteroAgent.claudeQuota.accounts': 'Accounts',
   'heteroAgent.claudeQuota.calendar.burnout.exhausted': 'Exhausted — resets {{time}}',
   'heteroAgent.claudeQuota.calendar.burnout.safe':
@@ -435,34 +433,13 @@ export default {
   'heteroAgent.claudeQuota.calendar.windowSpend': '{{tokens}} tokens · {{cost}} this window',
   'heteroAgent.claudeQuota.calendar.unpricedCost': 'cost unavailable',
   'heteroAgent.claudeQuota.calendar.windowUtilization': '{{percent}}% used',
-  'heteroAgent.claudeQuota.manage.addHint':
-    'Sign in to the Claude Code CLI and the account shows up here automatically.',
-  'heteroAgent.claudeQuota.manage.autoNoAccount': 'No eligible account — enable one below.',
-  'heteroAgent.claudeQuota.manage.autoRoutingTo': 'Now routing to {{account}}',
-  'heteroAgent.claudeQuota.manage.confirmSwitch': 'Confirm switch',
-  'heteroAgent.claudeQuota.manage.disable': 'Remove from rotation',
-  'heteroAgent.claudeQuota.manage.disabled': 'Disabled',
-  'heteroAgent.claudeQuota.manage.edit': 'Edit',
-  'heteroAgent.claudeQuota.manage.editTitle': 'Edit account',
-  'heteroAgent.claudeQuota.manage.empty': 'No accounts yet.',
-  'heteroAgent.claudeQuota.manage.enable': 'Add to rotation',
-  'heteroAgent.claudeQuota.manage.entry': 'Manage',
-  'heteroAgent.claudeQuota.manage.labelField': 'Display name',
-  'heteroAgent.claudeQuota.manage.labelPlaceholder': 'Defaults to the account email',
-  'heteroAgent.claudeQuota.manage.more': 'More',
-  'heteroAgent.claudeQuota.manage.exhausted': 'Exhausted',
-  'heteroAgent.claudeQuota.manage.modeAuto': 'Auto balance',
-  'heteroAgent.claudeQuota.manage.modeAutoHint':
-    'Route each run to the account with the most weekly headroom.',
-  'heteroAgent.claudeQuota.manage.modeManual': 'Pin one',
-  'heteroAgent.claudeQuota.manage.modeManualHint': 'Always run this agent on the account you pick.',
-  'heteroAgent.claudeQuota.manage.remove': 'Remove account',
-  'heteroAgent.claudeQuota.manage.title': 'Claude Code accounts',
-  'heteroAgent.claudeQuota.manage.use': 'Use',
-  'heteroAgent.claudeQuota.manage.weeklyLeft': '{{percent}}% weekly',
   'heteroAgent.claudeQuota.errorGeneric': "Couldn't reach the quota service. Tap refresh to retry.",
   'heteroAgent.claudeQuota.errorRateLimited':
     'Claude Code quota is temporarily rate limited. Please try again later.',
+  'heteroAgent.claudeQuota.identityUnverified':
+    'Showing the last confirmed identity — its current state could not be verified.',
+  'heteroAgent.claudeQuota.persistFailed':
+    'Showing the live reading — it could not be saved to history yet.',
   'heteroAgent.claudeQuota.refreshRateLimited':
     'Quota refresh is temporarily rate limited. Showing the last available data.',
   'heteroAgent.claudeQuota.scopedWeekly': 'Weekly ({{model}})',
@@ -474,6 +451,7 @@ export default {
     'This agent uses an API key / custom endpoint, so subscription quota does not apply.',
   'heteroAgent.claudeQuota.unavailableNotFound':
     'No Claude Code login found. Run claude in a terminal to sign in first.',
+  'heteroAgent.claudeQuota.unknownIdentity': 'Unknown',
   'heteroAgent.claudeSdkRuntime.state.closed': 'SDK closed',
   'heteroAgent.claudeSdkRuntime.state.closing': 'SDK closing',
   'heteroAgent.claudeSdkRuntime.state.error': 'SDK error',
@@ -589,32 +567,6 @@ export default {
   'heteroAgent.cloudNotConfigured.desc':
     'Configure your Claude Code token in agent profile to start sending messages.',
   'heteroAgent.cloudNotConfigured.title': 'Cloud credentials required',
-  'heteroAgent.apiMode.agentUnsupported': '{{name}} does not support Orvilo Provider binding.',
-  'heteroAgent.apiMode.configMissing':
-    'Provider binding requires a provider and model. Open the agent profile to configure it.',
-  'heteroAgent.apiMode.defaultProviderConfigMissing':
-    'Orvilo requires a compatible model. Open the agent profile to select one.',
-  'heteroAgent.apiMode.credentialUnsupported':
-    'The provider "{{providerId}}" uses an authentication method this agent does not support.',
-  'heteroAgent.apiMode.credentialsMissing':
-    'The provider "{{providerId}}" has no API key configured.',
-  'heteroAgent.apiMode.endpointMissing':
-    'The provider "{{providerId}}" requires a base URL for this agent.',
-  'heteroAgent.apiMode.endpointUnsupported':
-    'The provider "{{providerId}}" has an unsupported base URL.',
-  'heteroAgent.apiMode.labDisabled.action': 'Enable in Labs',
-  'heteroAgent.apiMode.labDisabled.desc':
-    'Turn it on in Settings → Labs, or switch this agent to Subscription authentication.',
-  'heteroAgent.apiMode.labDisabled.title': 'Provider binding is a Labs experiment',
-  'heteroAgent.apiMode.localOnly.desc':
-    'Switch the execution environment to Local device, or use Subscription authentication.',
-  'heteroAgent.apiMode.localOnly.title': 'API mode requires Desktop local execution',
-  'heteroAgent.apiMode.modelUnavailable':
-    'The model "{{providerId}}/{{model}}" is disabled or no longer available.',
-  'heteroAgent.apiMode.protocolMismatch':
-    'The provider "{{providerId}}" does not expose a protocol supported by {{agentType}}.',
-  'heteroAgent.apiMode.providerUnavailable':
-    'The provider "{{providerId}}" is disabled or no longer available.',
   'heteroAgent.cloudRepo.sectionTitle': 'Repositories',
   'heteroAgent.cloudRepo.notSet': 'No repo selected',
   'heteroAgent.cloudRepo.noRepos': 'No repositories configured. Add them in agent settings.',
@@ -1335,7 +1287,6 @@ export default {
   'sessionGroup.createSuccess': 'Created successfully',
   'sessionGroup.creatingAgent': 'Creating agent...',
   'sessionGroup.groupName': 'Category Name',
-  'sessionGroup.hideFromSidebar': 'Hide from my sidebar',
   'sessionGroup.inputPlaceholder': 'Please enter category name...',
   'sessionGroup.moveGroup': 'Move to Category',
   'sessionGroup.newGroup': 'New Category',
@@ -1350,7 +1301,6 @@ export default {
   'sessionGroup.renameSuccess': 'Renamed successfully',
   'sessionGroup.searchAgents': 'Search agents',
   'sessionGroup.selectedAgents': 'Selected agents ({{count}})',
-  'sessionGroup.showInSidebar': 'Show in my sidebar',
   'sessionGroup.sortSuccess': 'Reorder successful',
   'sessionGroup.sorting': 'Category sorting updating...',
   'sessionGroup.tooLong': 'Category name length should be between 1-20',
@@ -1661,6 +1611,9 @@ export default {
   'taskDetail.nextRunCountdown': 'Next run in {{countdown}}',
   'taskDetail.nextRunCountdownDays': 'Next run in {{days}}d {{hours}}h',
   'taskDetail.pauseTask': 'Pause task',
+  'taskDetail.pendingContractEdits.content':
+    'The goal or acceptance changed after contract revision {{revision}} was adopted. Running now uses the frozen contract; the edits stay pending until an approved replan adopts them.',
+  'taskDetail.pendingContractEdits.title': 'Constraints changed since the last run',
   'taskDetail.rerunTask': 'Re-run task',
   'taskDetail.runNow': 'Run now',
   'taskDetail.runTask': 'Run',
@@ -1826,6 +1779,11 @@ export default {
   'createGoal.roundBudgetHint':
     'If it runs out without reaching the goal, it stops and waits for you.',
   'createGoal.roundBudgetLabel': 'Round budget',
+  'createGoal.parallelismLabel': 'Parallel tasks',
+  'createGoal.parallelismPlaceholder': 'Auto',
+  'createGoal.parallelismUnit': 'tasks at once',
+  'createGoal.parallelismHint':
+    'Independent tasks run in parallel up to this many; leave blank for the default.',
   'createGoal.roundsUnit': 'rounds',
   'createGoal.roundBudgetUncappedHint':
     'It keeps going until the goal is reached — watch the cost.',
@@ -1838,6 +1796,7 @@ export default {
   'createTask.expandToInline': 'Dock to page',
   'createTask.instructionPlaceholder': 'Add task instruction...',
   'createTask.submit': 'Create task',
+  'createTask.team': 'Team',
   'createTask.titlePlaceholder': 'Task title',
   'createTask.visibility.changeFailed': 'Failed to change task visibility',
   'createTask.visibility.helperPrivate': 'Only you can see this task.',
@@ -2115,6 +2074,8 @@ export default {
   'goalProcess.metricDetail.budget.tokensValue': '{{value}} tokens',
   'goalProcess.metricDetail.budget.raiseNote':
     'Raising a cap is what restarts a goal the coordinator parked on its budget \u2014 it starts moving again on its own, no Resume needed. Leave a field empty to run uncapped.',
+  'goalProcess.metricDetail.budget.parallelism': 'Parallel tasks',
+  'goalProcess.metricDetail.budget.parallelismAuto': 'Auto',
   'goalProcess.metricDetail.budget.rounds': 'Rounds',
   'goalProcess.metricDetail.budget.saveFailed': 'Could not update the budget',
   'goalProcess.metricDetail.budget.title': 'Cost',
@@ -2289,10 +2250,15 @@ export default {
   'taskList.kanban.done': 'Done',
   'taskList.kanban.emptyColumn': 'No tasks',
   'taskList.kanban.hiddenColumns': 'Hidden columns',
+  'taskList.kanban.failed': 'Failed',
   'taskList.kanban.hideColumn': 'Hide column',
+  'taskList.kanban.inProgress': 'In progress',
+  'taskList.kanban.inReview': 'In review',
   'taskList.kanban.loadMore': 'Load more ({{shown}}/{{total}})',
+  'taskList.kanban.paused': 'Paused',
   'taskList.kanban.needsInput': 'Pending review',
   'taskList.kanban.running': 'In progress',
+  'taskList.kanban.scheduled': 'Scheduled',
   'taskList.kanban.showColumn': 'Show column',
   'taskList.kanban.todo': 'Todo',
   'taskList.kanban.triage': 'Triage',

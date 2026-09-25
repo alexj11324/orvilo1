@@ -1,4 +1,4 @@
-import { isParkedStatus } from '@orvilo/agent-runtime';
+import { isParkedStatus } from '@orvilo/agent-execution';
 import { RequestTrigger } from '@orvilo/types';
 import { deserializeParts } from '@orvilo/utils';
 import { isRecord } from '@orvilo/utils/object';
@@ -1269,7 +1269,7 @@ const buildAttachmentFromUrl = (
       type: inferAttachmentTypeFromMime(mimeType),
     };
   }
-  // Bare http(s) URL — let the downstream messenger fetch it lazily.
+  // Bare http(s) URL — let the downstream fetcher load it lazily.
   if (/^https?:\/\//.test(url)) {
     return { fetchUrl: url, type: fallbackType };
   }

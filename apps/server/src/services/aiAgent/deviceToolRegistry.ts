@@ -1,7 +1,7 @@
 /**
  * Single source of truth for "what counts as a device tool" — i.e. tools
  * whose execution can read or write the bot owner's machine and therefore
- * MUST be gated by `resolveDeviceAccessPolicy`. Adding a third device tool
+ * MUST be gated by `canUseDevice`. Adding a third device tool
  * means updating this file and nowhere else.
  *
  * Two related guarantees flow from this module:
@@ -47,7 +47,7 @@ export const isDeviceToolIdentifier = (identifier: string): boolean =>
 
 export interface AllowedBuiltinToolsParams {
   /**
-   * Output of `resolveDeviceAccessPolicy`. When `false`, BOTH device tools
+   * When `false`, BOTH device tools
    * (local-system and remote-device) are stripped from the returned list —
    * this is the hard wall that keeps external bot senders from reaching the
    * owner's machine even via `orvilo-activator`'s `isExplicitActivation`

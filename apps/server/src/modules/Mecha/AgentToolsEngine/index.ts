@@ -11,11 +11,9 @@
  */
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
-import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
-import { MessageManifest } from '@orvilo/builtin-tool-message';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { WebBrowsingManifest } from '@orvilo/builtin-tool-web-browsing';
 import {
@@ -27,12 +25,7 @@ import {
 } from '@orvilo/builtin-tools';
 import { createEnableChecker, type OrviloToolManifest } from '@orvilo/context-engine';
 import { ToolsEngine } from '@orvilo/context-engine';
-import {
-  type BuiltinToolManifest,
-  getActivePluginIds,
-  type RuntimeEnvMode,
-  type RuntimePlatform,
-} from '@orvilo/types';
+import { type BuiltinToolManifest, type RuntimeEnvMode, type RuntimePlatform } from '@orvilo/types';
 import debug from 'debug';
 
 import {
@@ -206,11 +199,9 @@ export const createServerAgentToolsEngine = (
     executionPlan,
     globalMemoryEnabled = false,
     hasEnabledKnowledgeBases = false,
-    isBotConversation = false,
     isGroupSupervisor = false,
     manifestContext,
     model,
-    modelAbilities,
     provider,
     useApplicationBuiltinSearchTool,
   } = params;
@@ -255,13 +246,6 @@ export const createServerAgentToolsEngine = (
 
   const searchMode = agentConfig.chatConfig?.searchMode ?? 'auto';
   const isSearchEnabled = useApplicationBuiltinSearchTool ?? searchMode !== 'off';
-  // Chat mode no longer auto-injects image generation. Opt in by pinning the
-  // tool; native imageOutput models never receive the fallback.
-  const pinnedPluginIds = getActivePluginIds(agentConfig.plugins);
-  const imageGenerationCapable =
-    context.isModelSupportToolUse(model, provider) && !modelAbilities?.imageOutput;
-  const imageGenerationEnabled =
-    imageGenerationCapable && pinnedPluginIds.includes(ImageGenerationManifest.identifier);
   // Tool mode: explicit `toolMode` wins; otherwise derive from `enableAgentMode`
   // (undefined = agent). `custom` = toolset is exactly the agent's plugins.
   const toolMode = resolveToolMode(agentConfig.chatConfig ?? undefined);
@@ -283,11 +267,9 @@ export const createServerAgentToolsEngine = (
 
   // Chat mode: strict outer whitelist. Drop alwaysOn tools and every other
   // runtime-managed rule. Each entry still passes through its own gate (KB /
-  // memory / search). Image generation is opt-in via a pinned plugin — no
-  // automatic injection. `allowExplicitActivation` is off so the activator
-  // can't smuggle anything else in.
+  // memory / search). `allowExplicitActivation` is off so the activator can't
+  // smuggle anything else in.
   const chatModeRules = {
-    [ImageGenerationManifest.identifier]: imageGenerationEnabled,
     [KnowledgeBaseManifest.identifier]: hasEnabledKnowledgeBases,
     [MemoryManifest.identifier]: globalMemoryEnabled,
     [WebBrowsingManifest.identifier]: isSearchEnabled,
@@ -326,8 +308,6 @@ export const createServerAgentToolsEngine = (
       !!deviceContext?.deviceOnline &&
       !!deviceContext?.autoActivated,
     [MemoryManifest.identifier]: globalMemoryEnabled,
-    // Only auto-enable in bot conversations; otherwise let user's plugin selection take effect
-    ...(isBotConversation && { [MessageManifest.identifier]: true }),
     // Group supervisor: enable the orchestration toolset (see
     // `groupSupervisorToolIds`). The same list also feeds the candidate set
     // below, so the bundle has a single source of truth.

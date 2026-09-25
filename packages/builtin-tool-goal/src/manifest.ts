@@ -43,6 +43,11 @@ export const GoalManifest: BuiltinToolManifest = {
             type: ['string', 'null'],
           },
           instruction: { description: 'Detailed task direction and constraints.', type: 'string' },
+          maxConcurrentTasks: {
+            description:
+              "How many of the goal's tasks may run at once (1-10). Lower serializes the work for less spend pressure; higher fans out independent tasks. Null means the coordinator default.",
+            type: ['number', 'null'],
+          },
           maxIterations: {
             description:
               'Maximum attempts one task may take before the goal opens a decision gate. Default 3, minimum 2. Null means no user-specified cap.',

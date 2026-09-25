@@ -499,6 +499,8 @@ export class TaskService {
       content,
       iteration,
       judge: reviewConfig.judge,
+      // Rubric judgments bind to the task's own assignee agent.
+      judgeAgentId: task.assigneeAgentId,
       rubrics: reviewConfig.rubrics,
       taskName: task.name || task.identifier,
     });

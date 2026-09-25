@@ -12,12 +12,19 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
+import type { TaskStatus, WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import {
+  applyWorkQueryStatusChange,
+  commitWorkQueryBoardMove,
+  kanbanStatusMoveGroupBy,
+  storeKanbanUsesWorkflowMove,
+} from '@/features/MyWork/workQueryBoardMove';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { taskService } from '@/services/task';
@@ -26,27 +33,32 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 import { KANBAN_GROUP_PAGE_SIZE, kanbanGroupLimitCap } from '@/store/task/slices/list/action';
-import type { TaskListItem } from '@/store/task/slices/list/initialState';
+import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import { createTaskStatusCascadeModal } from '../features/TaskStatusCascadeModal';
-import { getOpenSubtasks } from '../features/useTaskStatusChange';
+import { getOpenSubtasks, useTaskStatusChange } from '../features/useTaskStatusChange';
 import { taskDetailPath } from '../shared/taskDetailPath';
-import HiddenColumnsPanel from './HiddenColumnsPanel';
 import {
   buildKanbanColumnMap,
   buildKanbanColumns,
   buildKanbanGroupQuery,
+  canDropTaskIntoExternalColumn,
   canDropTaskIntoKanbanColumn,
   computeKanbanPosition,
   effectiveTaskPosition,
+  externalKanbanColumnMoveScope,
+  externalKanbanColumns,
+  externalKanbanTaskPatch,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
+  kanbanBoardCapabilities,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
+  kanbanCreateTaskProjectId,
   kanbanStatusColumnsExcludedBy,
   makeKanbanCollision,
   normalizeKanbanGroupBy,
@@ -54,9 +66,16 @@ import {
   preserveKanbanColumnOrder,
   resolveKanbanDragTask,
   resolveKanbanDropColumn,
+  taskMatchesExternalColumn,
   taskMatchesKanbanColumn,
+  type WorkQueryBoardGroupBy,
 } from './kanbanBoardModel';
-import KanbanColumn, { COLUMN_I18N_KEYS, COLUMN_STATUS_ICON, COLUMN_WIDTH } from './KanbanColumn';
+import KanbanColumn, {
+  CollapsedKanbanColumn,
+  COLUMN_I18N_KEYS,
+  COLUMN_STATUS_VISUAL,
+  COLUMN_WIDTH,
+} from './KanbanColumn';
 import type { TaskListViewOptions } from './listViewOptions';
 import { HIDDEN_WHEN_COMPLETED_STATUSES } from './listViewOptions';
 import TaskBoardCard from './TaskBoardCard';
@@ -112,35 +131,110 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+/**
+ * Externally-sourced board data for surfaces whose queries can't map to the
+ * task store's groupList scopes (saved views, team boards — arbitrary
+ * work-query ASTs). `groups` must already be bucketed under the board's
+ * column keys (`wf:<category>` / `st:<status>` — one column per raw
+ * dimension member, no folding). Cross-column drops commit through
+ * `workAttention.moveBoard` (VIEW08 CAS + exact-state picker); same-column
+ * reorders persist through the task position anchors. `onRefresh` is the
+ * caller's refetch so the settled write can resync the columns.
+ */
+export interface KanbanExternalGroups {
+  error?: unknown;
+  groups: TaskGroupItem[];
+  isLoading?: boolean;
+  /** Whether cards may be dragged (default true, still gated by permission). */
+  movable?: boolean;
+  onLoadMoreGroup?: (columnKey: string) => void;
+  onRefresh?: () => Promise<unknown> | void;
+  /**
+   * Work-query grouping the supplied `groups` were fetched with. Selects
+   * both the column set (`wf:` / `st:`) and the `moveBoard` `targetKey`.
+   */
+  queryGroupBy?: 'status' | 'workflowCategory';
+  /** AsyncBoundary settle flag — defaults to `groups` being defined. */
+  settled?: boolean;
+  /**
+   * The view's sort mode. `manual` (default) boards persist same-column
+   * reorders via position anchors; `field`-sorted views must never write
+   * manual position — same-column drops are refused there.
+   */
+  sortMode?: WorkQuerySortMode;
+}
+
 interface KanbanBoardProps {
   /** When set, scopes the board (and task creation) to a single agent. */
   agentId?: string;
+  /**
+   * Where a task created from this board should land. Team boards pass their
+   * teamId so a card made on the team's board is owned by that team; without
+   * it an external board keeps the create entry hidden (an ambiguous
+   * multi-team view must not silently pick one).
+   */
+  createContext?: { teamId?: string; teamOptions?: { id: string; name: string }[] };
   /** Overrides the generic "no tasks" copy with the collection's own line. */
   emptyDescription?: string;
+  /** Externally-supplied groups — bypasses the task-store fetch entirely. */
+  external?: KanbanExternalGroups;
   /**
    * "My tasks" board: narrows the server groups to the caller's own slice of
    * the workspace, matching what that tab's list view fetches — including its
-   * lack of an automation filter.
+   * lack of an automation filter. 'delegated' covers tasks the caller handed
+   * to agents (active execution grant) — My Work's Delegated tab.
    */
-  myTaskScope?: 'assigned' | 'created';
+  myTaskScope?: 'assigned' | 'created' | 'delegated';
   options: TaskListViewOptions;
-  projectId?: string;
+  /** `null` narrows to tasks with no project — My Work's "No project" chip. */
+  projectId?: string | null;
   routeScope?: TaskItemRouteScope;
 }
 
 const KanbanBoard = memo<KanbanBoardProps>((props) => {
-  const { agentId, emptyDescription, myTaskScope, options, projectId, routeScope } = props;
+  const {
+    agentId,
+    createContext,
+    emptyDescription,
+    external,
+    myTaskScope,
+    options,
+    projectId,
+    routeScope,
+  } = props;
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
-  const { allowed: canEditTask } = usePermission('create_content');
+  const { allowed: canEditTaskPerm } = usePermission('create_content');
+  const { canMoveAcrossGroups, canReorderWithinGroup } = kanbanBoardCapabilities({
+    movable: external?.movable,
+    sortMode: external?.sortMode,
+  });
+  const canEditTask =
+    canEditTaskPerm && (!external || canMoveAcrossGroups || canReorderWithinGroup);
   const groupBy = normalizeKanbanGroupBy(options.groupBy);
   const excludeStatuses = options.hideCompleted ? HIDDEN_WHEN_COMPLETED_STATUSES : undefined;
+  /** External (work-query) boards render the query's own dimension —
+   * `wf:` business categories or `st:` raw execution statuses. */
+  const externalGroupBy: WorkQueryBoardGroupBy =
+    external?.queryGroupBy === 'status' ? 'status' : 'workflowCategory';
 
   const useFetchTaskGroupList = useTaskStore((s) => s.useFetchTaskGroupList);
   // Keep the SWR handle only for `error` + `mutate` (the error/Retry state).
-  const { error, isLoading, isQueryScopeCurrent, mutate } = useFetchTaskGroupList(
-    buildKanbanGroupQuery({ agentId, excludeStatuses, groupBy, myTaskScope, projectId }),
+  // An external board disables the store query entirely (no effective key →
+  // the scope sync never scribbles the shared list state).
+  const swr = useFetchTaskGroupList(
+    external
+      ? { enabled: false }
+      : buildKanbanGroupQuery({ agentId, excludeStatuses, groupBy, myTaskScope, projectId }),
   );
+  const error = external?.error ?? swr.error;
+  const isLoading = external ? (external.isLoading ?? false) : swr.isLoading;
+  const isQueryScopeCurrent = external ? true : swr.isQueryScopeCurrent;
+  const mutate = external
+    ? async () => {
+        await external.onRefresh?.();
+      }
+    : swr.mutate;
   // Drive the loading/empty boundary off the store's own init flag, NOT SWR's
   // per-key `data`. On a scope or visibility switch the store resets
   // `taskGroups` + `isTaskGroupListInit` together (`scopeChangeResetState`)
@@ -148,21 +242,24 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   // off SWR `data` flashed the "no tasks" empty board during the refetch.
   // `isTaskGroupListInit` resets in lockstep with `taskGroups`, so the settled
   // signal never disagrees with the emptiness signal.
-  const isTaskGroupListInit = useTaskStore(taskListSelectors.isTaskGroupListInit);
+  const storeGroupListInit = useTaskStore(taskListSelectors.isTaskGroupListInit);
+  const isTaskGroupListInit = external
+    ? (external.settled ?? external.groups !== undefined)
+    : storeGroupListInit;
 
-  const taskGroups = useTaskStore(taskListSelectors.taskGroups);
+  const storeTaskGroups = useTaskStore(taskListSelectors.taskGroups);
   const currentTaskGroups = useMemo(
-    () => (isQueryScopeCurrent ? taskGroups : []),
-    [isQueryScopeCurrent, taskGroups],
+    () => (external ? external.groups : isQueryScopeCurrent ? storeTaskGroups : []),
+    [external, isQueryScopeCurrent, storeTaskGroups],
   );
   const updateTask = useTaskStore((s) => s.updateTask);
+  const changeTaskStatus = useTaskStatusChange();
   const loadMoreTaskGroup = useTaskStore((s) => s.loadMoreTaskGroup);
   const boardGroupLimits = useTaskStore((s) => s.boardGroupLimits);
   const refreshTaskGroupList = useTaskStore((s) => s.refreshTaskGroupList);
   const internalRefreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
 
   const hiddenColumns = useGlobalStore(systemStatusSelectors.taskKanbanHiddenColumns);
-  const hiddenPanelCollapsed = useGlobalStore(systemStatusSelectors.taskKanbanHiddenPanelCollapsed);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
   const [activeTask, setActiveTask] = useState<TaskListItem | null>(null);
@@ -176,13 +273,26 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   const [cardOverrides, setCardOverrides] = useState<Record<string, Partial<TaskListItem>>>({});
 
   const allColumns = useMemo(() => {
+    if (external) {
+      const fixed = externalKanbanColumns(externalGroupBy);
+      const covered = new Set(fixed.map((column) => column.key));
+      const extras = currentTaskGroups
+        .filter((group) => !covered.has(group.key))
+        .map((group) => ({
+          droppable: false,
+          groupMeta: undefined,
+          key: group.key,
+          targetStatus: null,
+        }));
+      return [...fixed, ...extras];
+    }
     const filteredOut = kanbanStatusColumnsExcludedBy(
       groupBy === 'status' ? excludeStatuses : undefined,
     );
     return buildKanbanColumns(currentTaskGroups, groupBy).filter(
       (column) => !filteredOut.has(column.key),
     );
-  }, [currentTaskGroups, excludeStatuses, groupBy]);
+  }, [currentTaskGroups, excludeStatuses, external, externalGroupBy, groupBy]);
   const columnDefMap = useMemo(
     () => new Map(allColumns.map((column) => [column.key, column])),
     [allColumns],
@@ -224,10 +334,26 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     setColumns(
       preserveKanbanColumnOrder(
         columnsRef.current,
-        buildKanbanColumnMap(columnKeys, useTaskStore.getState().taskGroups),
+        buildKanbanColumnMap(
+          columnKeys,
+          external ? external.groups : useTaskStore.getState().taskGroups,
+        ),
       ),
     );
-  }, [columnKeys, columnsRef, setColumns]);
+  }, [columnKeys, columnsRef, external, setColumns]);
+
+  /** Store boards resync via the store; external boards via the caller's refetch. */
+  const refreshGroups = useCallback(
+    () => (external?.onRefresh ? external.onRefresh() : refreshTaskGroupList()),
+    [external, refreshTaskGroupList],
+  );
+  const loadMoreGroup = useCallback(
+    (columnKey: string) => {
+      if (external) return external.onLoadMoreGroup?.(columnKey);
+      return loadMoreTaskGroup(columnKey);
+    },
+    [external, loadMoreTaskGroup],
+  );
 
   // Resync the mirror whenever store truth lands outside a drag/settle.
   useEffect(() => {
@@ -254,13 +380,6 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [hiddenColumns, updateSystemStatus],
   );
 
-  const handleToggleHiddenPanel = useCallback(
-    (collapsed: boolean) => {
-      updateSystemStatus({ taskKanbanHiddenPanelCollapsed: collapsed }, 'toggleKanbanHiddenPanel');
-    },
-    [updateSystemStatus],
-  );
-
   // ── Drop commit ────────────────────────────────────────────────
 
   /**
@@ -277,29 +396,53 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       // The column's membership fields ride with the anchors so the server can
       // find the true neighbour past the loaded page and respace the column
       // when fractional positions collapse.
-      const moveScope = kanbanColumnMoveScope(groupBy, column);
+      const moveScope = external
+        ? externalKanbanColumnMoveScope(externalGroupBy, column)
+        : kanbanColumnMoveScope(groupBy, column);
       const anchors = {
         afterId: move.afterId,
         beforeId: move.beforeId,
         moveScope,
         position: move.position,
       };
-      const memberAlready = taskMatchesKanbanColumn(task, groupBy, column.key);
+      const memberAlready = external
+        ? taskMatchesExternalColumn(task, externalGroupBy, column.key)
+        : taskMatchesKanbanColumn(task, groupBy, column.key);
 
-      if (groupBy === 'status') {
-        if (task.workflowStateId) {
-          const targetWorkflowCategory = column.targetWorkflowCategory;
-          if (!targetWorkflowCategory || memberAlready) {
-            await updateTask(task.identifier, anchors);
-            return true;
-          }
-          await updateTask(task.identifier, {
-            ...anchors,
-            workflowCategory: targetWorkflowCategory,
-          });
+      if (external) {
+        if (memberAlready) {
+          // A field-sorted view never writes manual position — the drop
+          // reverts instead of silently redefining the saved sort.
+          if (!canReorderWithinGroup) return false;
+          // Same-column reorder persists through the position anchors —
+          // `task.update` resolves them server-side, so a refresh or another
+          // client sees the same manual order.
+          await taskService.update(task.identifier, anchors);
           return true;
         }
+        if (!canMoveAcrossGroups) return false;
+        return commitWorkQueryBoardMove({
+          column,
+          groupBy: external.queryGroupBy ?? 'workflowCategory',
+          task,
+        });
+      }
 
+      if (storeKanbanUsesWorkflowMove(groupBy, task)) {
+        // Same-column reorder still writes position through the store.
+        // Cross-column Linear drops need VIEW08's exact-state picker.
+        if (memberAlready) {
+          await updateTask(task.identifier, anchors);
+          return true;
+        }
+        return commitWorkQueryBoardMove({
+          column,
+          groupBy: 'workflowCategory',
+          task,
+        });
+      }
+
+      if (groupBy === 'status') {
         const targetStatus = column.targetStatus;
         // The column writes no status (running), or the task already buckets
         // inside it (a `failed` card in `needsInput`) → pure reorder.
@@ -354,7 +497,16 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       await updateTask(task.identifier, { ...anchors, priority: patch?.priority ?? 0 });
       return true;
     },
-    [groupBy, internalRefreshTaskDetail, t, updateTask],
+    [
+      canMoveAcrossGroups,
+      canReorderWithinGroup,
+      external,
+      externalGroupBy,
+      groupBy,
+      internalRefreshTaskDetail,
+      t,
+      updateTask,
+    ],
   );
 
   // ── Drag handlers ──────────────────────────────────────────────
@@ -392,7 +544,15 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         const overCol = findKanbanColumn(prev, overId, columnKeySet);
         if (!activeCol || !overCol || activeCol === overCol) return prev;
         const overDef = columnDefMap.get(overCol);
-        if (!overDef?.droppable || !canDropTaskIntoKanbanColumn(task, groupBy, overDef)) {
+        const canDrop = external
+          ? canDropTaskIntoExternalColumn(
+              task,
+              overDef ?? { droppable: false, key: '', targetStatus: null },
+            )
+          : overDef
+            ? canDropTaskIntoKanbanColumn(task, groupBy, overDef)
+            : false;
+        if (!overDef || !canDrop) {
           return prev;
         }
         recentlyMovedRef.current = true;
@@ -403,7 +563,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         return { ...prev, [activeCol]: nextSource, [overCol]: nextTarget };
       });
     },
-    [columnDefMap, columnKeySet, groupBy, recentlyMovedRef, setColumns],
+    [columnDefMap, columnKeySet, external, groupBy, recentlyMovedRef, setColumns],
   );
 
   const handleDragEnd = useCallback(
@@ -441,13 +601,16 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         overId,
         columnKeySet,
         columnDefMap,
+        external ? externalGroupBy : undefined,
       );
       if (!overCol) {
         resetColumns();
         return;
       }
       const finalDef = columnDefMap.get(overCol)!;
-      const sameColumn = taskMatchesKanbanColumn(frozenTask, groupBy, overCol);
+      const sameColumn = external
+        ? taskMatchesExternalColumn(frozenTask, externalGroupBy, overCol)
+        : taskMatchesKanbanColumn(frozenTask, groupBy, overCol);
 
       // Order the release column the way the pointer left it: a same-column
       // sort sits at its old index until moved to the released-on card, and a
@@ -466,7 +629,9 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         return;
       }
 
-      const patch = getKanbanTaskPatch(groupBy, finalDef, frozenTask) ?? {};
+      const patch = external
+        ? (externalKanbanTaskPatch(externalGroupBy, finalDef) ?? {})
+        : (getKanbanTaskPatch(groupBy, finalDef, frozenTask) ?? {});
       const assigneeUpdate =
         groupBy === 'assignee' || groupBy === 'member'
           ? getKanbanAssigneeUpdate(frozenTask, patch)
@@ -502,7 +667,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         // mirror back so a persisted move is never displayed as reverted.
         revert();
         release();
-        await refreshTaskGroupList().catch(() => {});
+        await refreshGroups()?.catch(() => {});
         return;
       }
       if (!applied) {
@@ -513,14 +678,14 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       try {
         // Land the reconciled order before releasing the lock so the resync
         // renders server truth, not a stale intermediate page.
-        await refreshTaskGroupList();
+        await refreshGroups();
         release();
       } catch {
         // The move persisted but the reconcile failed — keep the optimistic
         // placement (reverting would lie about a write the server accepted)
         // and retry the refetch in the background.
         release({ resync: false });
-        void refreshTaskGroupList().catch(() => {});
+        void refreshGroups()?.catch(() => {});
       }
     },
     [
@@ -530,12 +695,14 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       columnKeySet,
       columnsRef,
       commitMove,
+      external,
+      externalGroupBy,
       groupBy,
       handleHideColumn,
       handleRestoreColumn,
       hiddenColumns,
       isDraggingRef,
-      refreshTaskGroupList,
+      refreshGroups,
       resetColumns,
       setColumns,
     ],
@@ -547,18 +714,38 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     resetColumns();
   }, [isDraggingRef, resetColumns]);
 
+  const handleCardStatusChange = useCallback(
+    async (task: TaskListItem, status: TaskStatus) => {
+      const applied = await applyWorkQueryStatusChange({
+        changeLocal: changeTaskStatus,
+        groupBy: kanbanStatusMoveGroupBy(external?.queryGroupBy),
+        status,
+        task,
+      });
+      if (!applied) return;
+      try {
+        await refreshGroups();
+      } catch (error) {
+        console.error('[KanbanBoard] Failed to refresh after status change:', error);
+      }
+    },
+    [changeTaskStatus, external?.queryGroupBy, refreshGroups],
+  );
+
   const handleCreateTask = useCallback(() => {
     if (!canEditTask) return;
     createTaskModal({
       agentId,
       lockAssignee: !!agentId,
-      projectId,
+      projectId: kanbanCreateTaskProjectId(projectId),
+      teamId: createContext?.teamId,
+      teamOptions: createContext?.teamOptions,
       onCreated: (task) => {
         navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
       },
       showInlineToggle: false,
     });
-  }, [agentId, canEditTask, navigate, projectId]);
+  }, [agentId, canEditTask, createContext, navigate, projectId]);
 
   // ── Derived layout ─────────────────────────────────────────────
 
@@ -580,7 +767,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           columnKey: col.key,
           droppable: canEditTask && col.droppable,
           label: t(COLUMN_I18N_KEYS[col.key] as any),
-          statusIcon: COLUMN_STATUS_ICON[col.key],
+          statusIcon: COLUMN_STATUS_VISUAL[col.key],
           total: currentTaskGroups.find((group) => group.key === col.key)?.total ?? 0,
         })),
     [allColumns, canEditTask, currentTaskGroups, hiddenColumnSet, t],
@@ -671,16 +858,17 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               tasks={columnTasks}
               total={group?.total ?? 0}
               footer={
-                group?.hasMore ? (
+                group?.hasMore && (!external || external.onLoadMoreGroup) ? (
                   <button
                     data-no-board-pan
                     className={styles.loadMore}
                     type="button"
                     disabled={
+                      !external &&
                       (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >=
-                      kanbanGroupLimitCap(groupBy)
+                        kanbanGroupLimitCap(groupBy)
                     }
-                    onClick={() => loadMoreTaskGroup(col.key)}
+                    onClick={() => loadMoreGroup(col.key)}
                   >
                     {t('taskList.kanban.loadMore', {
                       shown: columnTasks.length,
@@ -690,28 +878,39 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                 ) : undefined
               }
               onHide={groupBy === 'status' ? () => handleHideColumn(col.key) : undefined}
+              onStatusChange={handleCardStatusChange}
               onCreate={
                 // "My tasks" offers no create entry (its list view has none
                 // either): a task created here carries neither the member
                 // assignment nor — under `created` — any guarantee it lands
-                // in the column it was started from.
-                groupBy === 'status' && col.key === 'backlog' && !myTaskScope
+                // in the column it was started from. An external board only
+                // shows it when the caller declared where the card belongs.
+                groupBy === 'status' &&
+                col.key === 'backlog' &&
+                !myTaskScope &&
+                (!external ||
+                  Boolean(createContext?.teamId) ||
+                  (createContext?.teamOptions?.length ?? 0) > 0)
                   ? handleCreateTask
                   : undefined
               }
             />
           );
         })}
-        {groupBy === 'status' && (
-          <HiddenColumnsPanel
-            // A drag force-expands the rail so its hidden-column rows mount
-            // and register as drop targets; collapsed keeps them unmounted.
-            collapsed={hiddenPanelCollapsed && !activeTask}
-            columns={hiddenColumnEntries}
-            onRestore={handleRestoreColumn}
-            onToggleCollapsed={handleToggleHiddenPanel}
-          />
-        )}
+        {/* Hidden columns fold into Cordy's in-flow rails at the board's end:
+            always mounted, each stays a live drop target, click restores. */}
+        {groupBy === 'status' &&
+          hiddenColumnEntries.map((entry) => (
+            <CollapsedKanbanColumn
+              columnKey={entry.columnKey}
+              droppable={entry.droppable}
+              key={entry.columnKey}
+              label={entry.label}
+              statusIcon={entry.statusIcon}
+              total={entry.total}
+              onExpand={() => handleRestoreColumn(entry.columnKey)}
+            />
+          ))}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeTask ? (
@@ -738,7 +937,10 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       empty={emptyState}
       error={error}
       errorVariant={'block'}
-      isEmpty={totalTasks === 0}
+      // Status boards always have their columns — an empty workspace still
+      // renders the empty board (Cordy's behavior), not a centered empty state.
+      // Only dynamic groupings with zero groups fall back to `empty`.
+      isEmpty={totalTasks === 0 && groupBy !== 'status'}
       isLoading={isLoading || (!isQueryScopeCurrent && !error) || (!isTaskGroupListInit && !error)}
       loading={skeletonBoard}
       onRetry={() => mutate()}

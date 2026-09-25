@@ -146,17 +146,12 @@
     "workflow:set-desktop-version": "tsx ./scripts/electronWorkflow/setDesktopVersion.ts"
   },
   "lint-staged": {
-    "*.md": [
-      "remark --silent --output --",
-      "prettier --write --no-error-on-unmatched-pattern"
-    ],
+    "*.md": "node scripts/lint-staged-skip-packet.mjs md",
     "*.mdx": [
       "remark -r ./.remarkrc.mdx.mjs --silent --output --",
       "eslint --quiet --fix"
     ],
-    "*.json": [
-      "prettier --write --no-error-on-unmatched-pattern"
-    ],
+    "*.json": "node scripts/lint-staged-skip-packet.mjs json",
     "*.{mjs,cjs}": [
       "eslint --fix",
       "prettier --write"
@@ -202,10 +197,6 @@
     "@better-auth/expo": "1.6.15",
     "@better-auth/passkey": "1.6.15",
     "@cfworker/json-schema": "^4.1.1",
-    "@chat-adapter/discord": "~4.38.0",
-    "@chat-adapter/slack": "~4.38.0",
-    "@chat-adapter/state-ioredis": "~4.38.0",
-    "@chat-adapter/telegram": "~4.38.0",
     "@codesandbox/sandpack-react": "^2.20.0",
     "@composio/core": "^0.10.0",
     "@discordjs/rest": "^2.6.3",
@@ -221,7 +212,7 @@
     "@google/genai": "~1.50.1",
     "@hatchet-dev/typescript-sdk": "^1.33.1",
     "@henrygd/queue": "^1.2.0",
-    "@hugeicons/core-free-icons": "^4.3.3",
+    "@hugeicons/core-free-icons": "4.3.3",
     "@hugeicons/react": "^1.1.10",
     "@huggingface/inference": "^4.13.25",
     "@icons-pack/react-simple-icons": "^13.13.0",
@@ -243,9 +234,9 @@
     "@opentelemetry/resources": "^2.10.0",
     "@opentelemetry/sdk-metrics": "^2.10.0",
     "@opentelemetry/winston-transport": "^0.28.0",
+    "@orvilo/agent-execution": "workspace:*",
     "@orvilo/agent-gateway-client": "workspace:*",
     "@orvilo/agent-mock": "workspace:*",
-    "@orvilo/agent-runtime": "workspace:*",
     "@orvilo/agent-signal": "workspace:*",
     "@orvilo/agent-templates": "workspace:*",
     "@orvilo/artifact-template": "workspace:*",
@@ -266,11 +257,9 @@
     "@orvilo/builtin-tool-goal": "workspace:*",
     "@orvilo/builtin-tool-group-agent-builder": "workspace:*",
     "@orvilo/builtin-tool-group-management": "workspace:*",
-    "@orvilo/builtin-tool-image-generation": "workspace:*",
     "@orvilo/builtin-tool-knowledge-base": "workspace:*",
     "@orvilo/builtin-tool-local-system": "workspace:*",
     "@orvilo/builtin-tool-memory": "workspace:*",
-    "@orvilo/builtin-tool-message": "workspace:*",
     "@orvilo/builtin-tool-notebook": "workspace:*",
     "@orvilo/builtin-tool-orvilo-agent": "workspace:*",
     "@orvilo/builtin-tool-page-agent": "workspace:*",
@@ -289,11 +278,6 @@
     "@orvilo/business-const": "workspace:*",
     "@orvilo/business-model-bank": "workspace:*",
     "@orvilo/business-model-runtime": "workspace:*",
-    "@orvilo/chat-adapter-feishu": "workspace:*",
-    "@orvilo/chat-adapter-imessage": "workspace:*",
-    "@orvilo/chat-adapter-line": "workspace:*",
-    "@orvilo/chat-adapter-qq": "workspace:*",
-    "@orvilo/chat-adapter-wechat": "workspace:*",
     "@orvilo/config": "workspace:*",
     "@orvilo/connector-data": "workspace:*",
     "@orvilo/const": "workspace:*",
@@ -556,6 +540,7 @@
     "fake-indexeddb": "^6.2.5",
     "fs-extra": "^11.4.0",
     "glob": "^13.0.6",
+    "graphql": "16.14.2",
     "happy-dom": "~20.11.15",
     "import-in-the-middle": "^2.0.6",
     "just-diff": "^6.0.2",

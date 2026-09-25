@@ -1,31 +1,12 @@
 import { DEFAULT_PROVIDER } from '@orvilo/business-const';
 import { DEFAULT_MODEL } from '@orvilo/const';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { snapshotAgentModel, snapshotAgentReasoning } from './snapshotAgentModel';
 
 const agentMap: Record<string, any> = {};
 
 vi.mock('@/store/agent', () => ({ getAgentStoreState: () => ({ agentMap }) }));
-
-const aiInfra = vi.hoisted(() => ({
-  state: {
-    loaded: false,
-    reasoningConfig: undefined as Record<string, string> | undefined,
-    reasoningParams: false,
-  },
-}));
-
-vi.mock('@/store/aiInfra', () => ({
-  getAiInfraStoreState: () => ({ ...aiInfra.state, ensureModelReasoningConfig: () => {} }),
-}));
-vi.mock('@/store/aiInfra/slices/aiModel/selectors', () => ({
-  aiModelSelectors: {
-    isModelHasReasoningExtendParams: () => (s: typeof aiInfra.state) => s.reasoningParams,
-    isModelReasoningConfigLoaded: () => (s: typeof aiInfra.state) => s.loaded,
-    modelReasoningConfig: () => (s: typeof aiInfra.state) => s.reasoningConfig,
-  },
-}));
 
 const seedAgent = (id: string, config: Record<string, any>) => {
   agentMap[id] = config;
@@ -84,35 +65,14 @@ describe('snapshotAgentModel', () => {
     expect(snapshotAgentModel(id)).toEqual({ model: 'stale-model', provider: 'cursor' });
   });
 
-  it('snapshots a heterogeneous API binding', () => {
-    const id = seedAgent('cursor-api', {
+  it('snapshots only the provider type for a heterogeneous agent without selection', () => {
+    const id = seedAgent('hetero-type-only', {
       agencyConfig: {
-        heterogeneousProvider: {
-          apiConfig: { model: 'claude-sonnet-4-6', providerId: 'anthropic' },
-          authMode: 'api',
-          type: 'cursor',
-        },
+        heterogeneousProvider: { type: 'claude-code' },
       },
     });
 
-    expect(snapshotAgentModel(id)).toEqual({
-      model: 'claude-sonnet-4-6',
-      provider: 'anthropic',
-    });
-  });
-
-  it('keeps a server-default API model Agent-scoped', () => {
-    const id = seedAgent('claude-server-default', {
-      agencyConfig: {
-        heterogeneousProvider: {
-          apiConfig: { model: 'claude-sonnet-4-6', source: 'server-default' },
-          authMode: 'api',
-          type: 'claude-code',
-        },
-      },
-    });
-
-    expect(snapshotAgentModel(id)).toEqual({ provider: 'claude-code' });
+    expect(snapshotAgentModel(id)).toEqual({ model: 'default', provider: 'claude-code' });
   });
 
   it('pins nothing when a heterogeneous config carries no type', () => {
@@ -127,10 +87,6 @@ describe('snapshotAgentModel', () => {
 
 describe('snapshotAgentReasoning', () => {
   const modelSnapshot = { model: 'gpt-5.5', provider: 'openai' };
-
-  beforeEach(() => {
-    aiInfra.state = { loaded: false, reasoningConfig: undefined, reasoningParams: false };
-  });
 
   it('returns nothing without an agent', async () => {
     expect(await snapshotAgentReasoning(undefined, modelSnapshot)).toBeUndefined();
@@ -148,31 +104,11 @@ describe('snapshotAgentReasoning', () => {
     expect(await snapshotAgentReasoning(without, {})).toBeUndefined();
   });
 
-  it('skips models without reasoning extend params', async () => {
+  it('pins nothing for API models — the user-level reasoning config is retired', async () => {
     const id = seedAgent('plain', { model: 'gpt-4o', provider: 'openai' });
+    const reasoning = seedAgent('reasoning', { model: 'gpt-5.5', provider: 'openai' });
 
     expect(await snapshotAgentReasoning(id, modelSnapshot)).toBeUndefined();
-  });
-
-  it('pins the loaded user-level config, an empty object when nothing is saved', async () => {
-    const id = seedAgent('reasoning', { model: 'gpt-5.5', provider: 'openai' });
-    aiInfra.state = {
-      loaded: true,
-      reasoningConfig: { gpt5_2ReasoningEffort: 'high' },
-      reasoningParams: true,
-    };
-    expect(await snapshotAgentReasoning(id, modelSnapshot)).toEqual({
-      reasoningConfig: { gpt5_2ReasoningEffort: 'high' },
-    });
-
-    aiInfra.state = { loaded: true, reasoningConfig: undefined, reasoningParams: true };
-    expect(await snapshotAgentReasoning(id, modelSnapshot)).toEqual({ reasoningConfig: {} });
-  });
-
-  it('retains fallback when the user-level config could not be loaded', async () => {
-    const id = seedAgent('loading', { model: 'gpt-5.5', provider: 'openai' });
-    aiInfra.state = { loaded: false, reasoningConfig: undefined, reasoningParams: true };
-
-    expect(await snapshotAgentReasoning(id, modelSnapshot)).toBeUndefined();
+    expect(await snapshotAgentReasoning(reasoning, modelSnapshot)).toBeUndefined();
   });
 });

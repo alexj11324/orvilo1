@@ -6,13 +6,17 @@ import type {
   TaskAssignmentMode,
   TaskCreationSubjectKind,
   TaskCreationSubjectSnapshot,
+  TaskDispatchOrigin,
   TaskDispatchPhase,
+  TaskDispatchSettlementGrant,
+  TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskHumanLock,
   TaskLockField,
   TaskOrchestrationOwner,
   TaskRunState,
   TaskTopicIntegration,
+  TaskTriageStatus,
   TaskWorkflowCategory,
 } from '@orvilo/types';
 import { isNotNull, isNull, sql } from 'drizzle-orm';
@@ -86,9 +90,20 @@ export const tasks = pgTable(
     // ("pending review"). Stamped when a run finishes and hands off for
     // review; the assignees above stay the executors.
     reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /**
+     * Team intake state. NULL means the task is not in triage (legacy and
+     * already-accepted work). Existing backlog rows are never backfilled to
+     * `untriaged`.
+     */
+    triageStatus: text('triage_status').$type<TaskTriageStatus>(),
 
     // Tree structure (self-referencing, no depth limit)
     parentTaskId: text('parent_task_id'),
+    /**
+     * Canonical task this row duplicates. Mark-duplicate never hard-deletes
+     * or merges execution history; it only records the relationship.
+     */
+    duplicateOfTaskId: text('duplicate_of_task_id'),
 
     // Task definition
     name: text('name'),
@@ -196,6 +211,11 @@ export const tasks = pgTable(
       foreignColumns: [t.id],
       name: 'tasks_parent_task_id_tasks_id_fk',
     }).onDelete('set null'),
+    foreignKey({
+      columns: [t.duplicateOfTaskId],
+      foreignColumns: [t.id],
+      name: 'tasks_duplicate_of_task_id_tasks_id_fk',
+    }).onDelete('set null'),
     uniqueIndex('tasks_identifier_idx')
       .on(t.identifier, t.createdByUserId)
       .where(isNull(t.workspaceId)),
@@ -204,6 +224,7 @@ export const tasks = pgTable(
     index('tasks_assignee_user_id_idx').on(t.assigneeUserId),
     index('tasks_assignee_agent_id_idx').on(t.assigneeAgentId),
     index('tasks_parent_task_id_idx').on(t.parentTaskId),
+    index('tasks_duplicate_of_task_id_idx').on(t.duplicateOfTaskId),
     index('tasks_status_idx').on(t.status),
     index('tasks_workflow_category_idx').on(t.workflowCategory),
     index('tasks_orchestration_owner_idx').on(t.orchestrationOwner),
@@ -213,6 +234,7 @@ export const tasks = pgTable(
     index('tasks_workspace_id_idx').on(t.workspaceId),
     index('tasks_project_id_status_idx').on(t.projectId, t.status),
     index('tasks_team_id_status_idx').on(t.teamId, t.status),
+    index('tasks_team_id_triage_idx').on(t.teamId, t.triageStatus),
     index('tasks_workflow_state_ref_idx').on(t.workflowStateRefId),
     index('tasks_cycle_ref_idx').on(t.cycleRefId),
     index('tasks_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.createdByUserId),
@@ -223,6 +245,10 @@ export const tasks = pgTable(
     check(
       'tasks_managed_creator_requires_workspace',
       sql`${t.createdBySubjectKind} NOT IN ('integration', 'system') OR ${t.workspaceId} IS NOT NULL`,
+    ),
+    check(
+      'tasks_duplicate_of_not_self',
+      sql`${t.duplicateOfTaskId} IS NULL OR ${t.duplicateOfTaskId} <> ${t.id}`,
     ),
   ],
 );
@@ -247,6 +273,21 @@ export const taskDispatches = pgTable(
     operationId: text('operation_id'),
     idempotencyKey: text('idempotency_key').notNull(),
     requestedBy: text('requested_by').notNull(),
+    /**
+     * Authoritative execution origin recorded at claim (SA05-B): 'caid' =
+     * new orchestrated writer; 'internal' = settlement continuing an
+     * existing dispatch; 'external' = direct user/schedule invocation.
+     * NULL on rows persisted before this column existed — readers derive
+     * the legacy equivalent from `requestedBy`.
+     */
+    origin: text('origin').$type<TaskDispatchOrigin>(),
+    /** Raw actor identity, kept separate from the `trigger:actor` audit
+     *  string stored in `requestedBy`. */
+    initiator: text('initiator'),
+    /** The dispatch this settlement run continues (origin='internal'). */
+    sourceDispatchId: text('source_dispatch_id'),
+    /** Server-verified settlement evidence recorded at claim. */
+    settlementGrant: jsonb('settlement_grant').$type<TaskDispatchSettlementGrant>(),
     leaseOwner: text('lease_owner'),
     leaseExpiresAt: timestamptz('lease_expires_at'),
     waitingReason: text('waiting_reason'),
@@ -403,6 +444,13 @@ export const taskTopics = pgTable(
     // this run — a direct FK would make the two schemas mutually recursive).
     executionGrantId: text('execution_grant_id'),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
+    /**
+     * Frozen TaskExecutionContract for this run — the versioned binding of
+     * revisions, environment, mounted tools, acceptance gate and budget that
+     * the run was dispatched under. Retries/continuations rebind to it rather
+     * than re-deriving constraints from mutable task config.
+     */
+    contract: jsonb('contract').$type<TaskExecutionContract>(),
 
     // What triggered this run: 'manual' (ad-hoc run-now / agent tool call),
     // 'schedule' (cron tick) or 'heartbeat' (interval tick). Null for legacy

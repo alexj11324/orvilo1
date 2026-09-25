@@ -12,8 +12,7 @@ export const createCollaborationHatchetTasks = (hatchet: HatchetClient) => {
     executionTimeout: '10m',
     fn: async () => {
       const db = await getServerDB();
-      const drained = await new CollaborationOutboxProjector(db).projectPending();
-      return { drained };
+      return new CollaborationOutboxProjector(db).projectPending();
     },
     onCrons: ['* * * * *'],
     retries: 3,

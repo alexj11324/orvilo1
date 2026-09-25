@@ -161,10 +161,10 @@ const main = async () => {
       },
       {
         // Task-linked row: selecting it mounts the shared issue surface in the
-        // detail pane, which resolves the task by primary key (`taskpv0011`
-        // intentionally lacks the `task_` prefix to cover imported/seeded ids).
-        // Unread + mention keeps it in the Priority bucket, so the click also
-        // exercises the read-receipt retention path.
+        // detail pane, which resolves the task by primary key (`task_pv0011`
+        // is the seeded APX-11 row). Unread + mention keeps it in the
+        // Priority bucket, so the click also exercises the read-receipt
+        // retention path.
         category: 'mention',
         content: 'A teammate mentioned you on the seeded APX-11 issue.',
         dedupeKey: `${FIXTURE_DEDUPE_PREFIX}task-link`,
@@ -172,7 +172,7 @@ const main = async () => {
         isRead: false,
         kind: 'update' as const,
         metadata: { actor: { name: 'Fixture Teammate', userId: 'fixture-teammate' } },
-        resourceId: 'taskpv0011',
+        resourceId: 'task_pv0011',
         resourceType: 'task',
         title: 'Mentioned you on APX-11',
         type: 'mention',

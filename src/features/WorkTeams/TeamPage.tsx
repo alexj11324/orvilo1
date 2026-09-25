@@ -1,8 +1,9 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { InboxIcon, UsersIcon } from 'lucide-react';
+import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
+import { ActionIcon, type DropdownItem, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import { cssVar } from 'antd-style';
+import { EllipsisIcon, InboxIcon, Link2Icon, SettingsIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -25,6 +26,7 @@ import {
   builderToFilter,
   stableStringify,
 } from '@/features/SavedViews/workQueryBuilder';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -168,6 +170,35 @@ const TeamPage = memo(() => {
     ]);
   }, [teamId, workspaceId]);
 
+  const navigate = useWorkspaceAwareNavigate();
+
+  const copyTeamUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success(t('savedViews.linkCopied'));
+    } catch {
+      toast.error(t('savedViews.linkCopyFailed'));
+    }
+  }, [t]);
+
+  const teamMenuItems = useMemo<DropdownItem[]>(
+    () => [
+      {
+        icon: <Icon icon={SettingsIcon} />,
+        key: 'settings',
+        label: t('teams.navSettings'),
+        onClick: () => navigate('/settings'),
+      },
+      {
+        icon: <Icon icon={Link2Icon} />,
+        key: 'copyUrl',
+        label: t('teams.copyTeamUrl'),
+        onClick: copyTeamUrl,
+      },
+    ],
+    [copyTeamUrl, navigate, t],
+  );
+
   // The views tab is a routed surface of its own — a team-scoped directory
   // plus the `?new=1` draft editor — so it returns before the shared team
   // chrome. The team fetch still gates it: the editor header and save-to
@@ -237,25 +268,48 @@ const TeamPage = memo(() => {
                 id={teamData.data.team.id}
                 letter={(teamData.data.team.key || teamData.data.team.name).slice(0, 1)}
               />
+              <Text weight={500}>{teamData.data.team.name}</Text>
+              <span aria-hidden style={{ color: cssVar.colorTextTertiary }}>
+                ›
+              </span>
               <Text weight={500}>{t('teams.triage')}</Text>
+              {teamId && (
+                <WorkFavoriteButton
+                  icon="star"
+                  targetId={teamId}
+                  targetType="team"
+                  variant="icon"
+                />
+              )}
             </Flexbox>
           ) : (
-            <Text style={{ paddingInlineStart: 4 }} weight={500}>
-              {teamData?.data.team.name ?? t('tab.teams')}
-            </Text>
+            <Flexbox horizontal align={'center'} gap={6} style={{ paddingInlineStart: 4 }}>
+              {teamData ? (
+                <TeamIdentity
+                  color={teamData.data.team.color}
+                  id={teamData.data.team.id}
+                  letter={(teamData.data.team.key || teamData.data.team.name).slice(0, 1)}
+                />
+              ) : null}
+              <Text weight={500}>{teamData?.data.team.name ?? t('tab.teams')}</Text>
+              {teamId && (
+                <>
+                  <WorkFavoriteButton
+                    icon="star"
+                    targetId={teamId}
+                    targetType="team"
+                    variant="icon"
+                  />
+                  <DropdownMenu items={teamMenuItems} placement={'bottomRight'}>
+                    <ActionIcon icon={EllipsisIcon} size={'small'} title={t('teams.actions')} />
+                  </DropdownMenu>
+                </>
+              )}
+            </Flexbox>
           )
         }
         right={
           <Flexbox horizontal align={'center'} gap={8}>
-            {/* Reference header order: star favourite, Add filter, Display
-                options (AUDIT G1). The icon-only star is opt-in — other tabs
-                keep the labelled button. */}
-            <WorkFavoriteButton
-              icon={wantsTriage ? 'star' : 'pin'}
-              targetId={teamId}
-              targetType="team"
-              variant={wantsTriage ? 'icon' : 'button'}
-            />
             {/* Linear keeps triage's Add filter / Display options in the
                 header — additive opt-in, the other tabs' chrome is
                 untouched. */}
@@ -274,6 +328,13 @@ const TeamPage = memo(() => {
                 }
               />
             ) : null}
+            <ActionIcon
+              aria-label={t('teams.copyTeamUrl')}
+              icon={Link2Icon}
+              size={'small'}
+              title={t('teams.copyTeamUrl')}
+              onClick={copyTeamUrl}
+            />
           </Flexbox>
         }
       />

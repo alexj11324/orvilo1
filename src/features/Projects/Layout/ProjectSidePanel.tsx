@@ -1,18 +1,22 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AccordionArrowIcon from '@/features/AgentTasks/shared/AccordionArrowIcon';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
-import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { useProjectDateFormatter } from '@/features/Projects/useProjectDateFormatter';
+import MilestoneComposer from '@/features/Projects/Workspace/MilestoneComposer';
 import ProjectPropertiesCard from '@/features/Projects/Workspace/ProjectPropertiesCard';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { ProjectCreationActivity } from '../Activity/ProjectCreationActivity';
 import { getProjectActivityPath, getProjectTasksPath } from './navigation';
@@ -191,25 +195,75 @@ export function ProjectPanelSection({
 const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
   ({ projectId, showActivity }) => {
     const { t } = useTranslation('project');
+    const formatDate = useProjectDateFormatter();
     const detail = useCurrentProjectDetail(projectId);
     useProjectStore((s) => s.useFetchProjectDetail)(projectId);
+    const createMilestone = useProjectStore((s) => s.createMilestone);
+    const userId = useUserStore(userProfileSelectors.userId);
+    const [creating, setCreating] = useState(false);
+    const [saving, setSaving] = useState(false);
     const databaseId = detail?.project.id;
 
     if (!detail || !databaseId) return null;
 
     const milestones = detail.milestones ?? [];
     const projectRef = detail.project.slug || databaseId;
+    // Same owner gate the overview body uses for its milestone controls.
+    const canEdit = !!detail.project.userId && userId === detail.project.userId;
+
+    // The rail card's "+" opens an inline composer inside the card — the
+    // reference keeps milestone creation here even while the overview body
+    // hides its whole section on an empty project.
+    const submitMilestone = async (draft: { date?: string; description: string; name: string }) => {
+      if (saving) return;
+      setSaving(true);
+      try {
+        await createMilestone(databaseId, {
+          date: draft.date ?? null,
+          description: draft.description || null,
+          name: draft.name,
+        });
+        setCreating(false);
+      } catch (error) {
+        console.error('Project milestone creation failed', error);
+        toast.error(t('overview.milestoneSaveError'));
+      } finally {
+        setSaving(false);
+      }
+    };
 
     return (
       <Flexbox className={styles.panel} gap={12}>
         <ProjectPanelSection title={t('overview.propertiesLabel')}>
           <ProjectPropertiesCard detail={detail} projectId={databaseId} />
         </ProjectPanelSection>
-        <ProjectPanelSection title={t('overview.milestones', { defaultValue: 'Milestones' })}>
+        <ProjectPanelSection
+          title={t('overview.milestones', { defaultValue: 'Milestones' })}
+          action={
+            canEdit ? (
+              <ActionIcon
+                aria-label={t('overview.milestoneAdd')}
+                icon={PlusIcon}
+                size={'small'}
+                title={t('overview.milestoneAdd')}
+                onClick={() => setCreating(true)}
+              />
+            ) : undefined
+          }
+        >
+          {creating && (
+            <MilestoneComposer
+              saving={saving}
+              onCancel={() => setCreating(false)}
+              onSubmit={submitMilestone}
+            />
+          )}
           {milestones.length === 0 ? (
-            <Text fontSize={12} type={'secondary'}>
-              {t('overview.milestonesEmpty')}
-            </Text>
+            creating ? undefined : (
+              <Text fontSize={12} type={'secondary'}>
+                {t('overview.milestonesEmpty')}
+              </Text>
+            )
           ) : (
             <Flexbox gap={1}>
               {milestones.map((milestone) => (
@@ -231,19 +285,20 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                   <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
                     {milestone.name}
                   </Text>
-                  {milestone.date && (
-                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-                      {formatProjectDate(milestone.date)}
-                    </Text>
-                  )}
                   {/* A `null` readout could not be computed honestly — omit it
-                      rather than render it as 0%. */}
+                      rather than render it as 0%. The reference row reads
+                      name → progress → date. */}
                   {milestone.progress && (
                     <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
                       {t('overview.milestoneProgressOf', {
                         count: milestone.progress.issues,
                         percent: milestone.progress.percent,
                       })}
+                    </Text>
+                  )}
+                  {milestone.date && (
+                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+                      {formatDate(milestone.date)}
                     </Text>
                   )}
                   <WorkspaceLink
@@ -259,7 +314,12 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
           )}
         </ProjectPanelSection>
         <ProjectPanelSection title={t('overview.progressLabel', { defaultValue: 'Progress' })}>
-          <ProjectIssueProgress issues={detail.tasks} />
+          <ProjectIssueProgress
+            assignees={detail.assignees}
+            issues={detail.tasks}
+            projectRef={projectRef}
+            taskLabels={detail.taskLabels}
+          />
         </ProjectPanelSection>
         {showActivity && (
           <ProjectPanelSection

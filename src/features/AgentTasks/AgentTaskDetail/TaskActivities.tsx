@@ -1,5 +1,5 @@
-import { Block, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Collapsible, Text } from '@lobehub/ui/base-ui';
+import { Empty, Flexbox, Icon } from '@lobehub/ui';
+import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type {
   BriefType,
   TaskAutomationSnapshot,
@@ -8,21 +8,24 @@ import type {
 } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { TFunction } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeftRight,
+  Ban,
   BotMessageSquare,
+  // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- topic activity kind, not a status mark
   CircleDot,
   CirclePlus,
+  Link2,
   MessageCircle,
   Timer,
   UserRoundCog,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
@@ -32,7 +35,6 @@ import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selectors';
 
 import { PRIORITY_META } from '../features/TaskPriorityTag';
-import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
@@ -40,6 +42,7 @@ import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
 import TaskBriefCard from './TaskBriefCard';
 import TaskRunReport from './TaskRunReport';
+import TaskSubscribers from './TaskSubscribers';
 import TopicCard from './TopicCard';
 
 const PRIORITY_NAME: Record<number, 'high' | 'low' | 'none' | 'normal' | 'urgent'> = {
@@ -139,7 +142,7 @@ const ActivityAuthor = memo<{
 });
 
 const RelativeTime = memo<{ time?: string }>(({ time }) => {
-  const { text, title } = useActivityTime(time);
+  const { text, title } = useActivityTime(time, { compact: true });
   if (!text) return null;
   return (
     <span style={{ color: cssVar.colorTextQuaternary, marginInlineStart: 4 }} title={title}>
@@ -174,7 +177,7 @@ const RowMark = ({
   icon,
 }: {
   author?: TaskDetailActivityAuthor | null;
-  icon: LucideIcon;
+  icon: StatusVisual['icon'];
 }) =>
   author?.avatar ? (
     <Avatar avatar={author.avatar} size={16} />
@@ -251,10 +254,27 @@ interface TaskActivitiesProps {
   variant?: 'activity' | 'result';
 }
 
-const PROPERTY_ICON: Record<'automation' | 'status', LucideIcon> = {
+const PROPERTY_ICON: Record<'automation' | 'status', StatusVisual['icon']> = {
   automation: Timer,
-  status: CircleDot,
+  status: STATUS_PROPERTY_ICON,
 };
+
+// The feed sentence for each (direction, action) pair — relates edges are
+// symmetric so they don't take a direction.
+const RELATION_COPY = {
+  blockedBy: {
+    added: 'taskDetail.activities.relation.blockedBy.added',
+    removed: 'taskDetail.activities.relation.blockedBy.removed',
+  },
+  blocking: {
+    added: 'taskDetail.activities.relation.blocking.added',
+    removed: 'taskDetail.activities.relation.blocking.removed',
+  },
+  relates: {
+    added: 'taskDetail.activities.relation.relates.added',
+    removed: 'taskDetail.activities.relation.relates.removed',
+  },
+} as const;
 
 const PriorityMark = ({ level }: { level: number | null }) => {
   const meta = PRIORITY_META[level ?? 0] ?? PRIORITY_META[0];
@@ -362,6 +382,18 @@ const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
         );
       break;
     }
+    case 'relation': {
+      // The target's identifier + title were denormalized when the row was
+      // written — the feed stays readable after the other issue is renamed
+      // or deleted.
+      const target = value(change.targetTaskIdentifier ?? change.targetTaskId);
+      const copyKey =
+        change.kind === 'relates'
+          ? RELATION_COPY.relates[change.action]
+          : RELATION_COPY[change.direction ?? 'blockedBy'][change.action];
+      sentence = <Trans components={{ actor, target }} i18nKey={copyKey} ns={'chat'} />;
+      break;
+    }
   }
 
   return (
@@ -373,6 +405,8 @@ const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
       mark={
         change.field === 'priority' ? (
           <PriorityMark level={change.to} />
+        ) : change.field === 'relation' ? (
+          <RowMark icon={change.kind === 'relates' ? Link2 : Ban} />
         ) : (
           <RowMark icon={PROPERTY_ICON[change.field]} />
         )
@@ -390,7 +424,6 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const workspaceId = useActiveWorkspaceId();
   const activeTaskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
-  const [isExpanded, setIsExpanded] = useState(true);
 
   const refreshActiveTask = useCallback(async () => {
     if (activeTaskId) await refreshTaskDetail(activeTaskId);
@@ -410,6 +443,12 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
 
   const commentInput = activeTaskId ? (
     <CommentInput key={commentComposerKey(activeTaskId, workspaceId)} taskId={activeTaskId} />
+  ) : null;
+
+  // Linear keeps the notification row under the comment composer on every
+  // issue feed: subscribe state for oneself plus the members manager.
+  const subscribersRow = activeTaskDatabaseId ? (
+    <TaskSubscribers key={activeTaskDatabaseId} taskId={activeTaskDatabaseId} />
   ) : null;
 
   // A goal loop can produce many rounds; only the newest run opens by default so
@@ -510,31 +549,25 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   }
 
   return (
-    <Flexbox gap={8}>
-      <Block
-        clickable
+    <Flexbox gap={12}>
+      <Flexbox
         horizontal
         align="center"
-        gap={8}
-        paddingBlock={4}
-        paddingInline={8}
-        style={{ cursor: 'pointer', width: 'fit-content' }}
-        variant="borderless"
-        onClick={() => setIsExpanded((prev) => !prev)}
+        justify="space-between"
+        style={{ minHeight: 28, paddingInline: 8 }}
       >
-        <Icon color={cssVar.colorTextDescription} icon={BotMessageSquare} size={16} />
-        <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
-          {t('taskDetail.activities')}
-        </Text>
-        <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
-        <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
-      </Block>
-      <Collapsible open={isExpanded}>
-        <Flexbox gap={12} paddingBlock={4} paddingInline={12}>
-          {commentInput}
-          {rows}
+        <Flexbox horizontal align="center" gap={8}>
+          <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+            {t('taskDetail.activities')}
+          </Text>
+          <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         </Flexbox>
-      </Collapsible>
+        {subscribersRow}
+      </Flexbox>
+      <Flexbox gap={12} paddingBlock={4} paddingInline={8}>
+        {rows}
+        {commentInput}
+      </Flexbox>
     </Flexbox>
   );
 });

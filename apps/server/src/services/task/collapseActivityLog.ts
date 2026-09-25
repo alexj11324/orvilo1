@@ -66,6 +66,13 @@ export const collapseActivityLog = <T extends CollapsibleRow>(
   const open = new Map<string, { first: T; index: number; last: T }>();
 
   for (const row of rows) {
+    // Relation events carry no from/to chain — each add/remove is its own
+    // fact, so they never merge and never read as a net no-op.
+    if (row.type === 'relation') {
+      out.push(row);
+      continue;
+    }
+
     const key = `${row.type}|${row.actorAgentId ?? ''}|${row.actorUserId ?? ''}`;
     const run = open.get(key);
 
@@ -93,5 +100,5 @@ export const collapseActivityLog = <T extends CollapsibleRow>(
     open.set(key, { first: row, index: out.length - 1, last: row });
   }
 
-  return out.filter((row) => !isNetNoop(row.payload));
+  return out.filter((row) => row.type === 'relation' || !isNetNoop(row.payload));
 };

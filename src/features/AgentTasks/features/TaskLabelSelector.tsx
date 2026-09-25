@@ -28,6 +28,7 @@ interface TaskLabelSelectorProps {
   assignedLabels: readonly TaskLabelSummary[];
   children: ReactNode;
   disabled?: boolean;
+  fullWidth?: boolean;
   /** Identifier or id — the label model resolves either under the caller's scope. */
   taskIdentifier: string;
 }
@@ -66,7 +67,7 @@ const styles = createStaticStyles(({ css }) => ({
 const triggerStyle: CSSProperties = {
   alignItems: 'center',
   display: 'inline-flex',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   lineHeight: 1,
   maxWidth: '100%',
   minWidth: 0,
@@ -85,7 +86,7 @@ const isConflictError = (error: unknown): boolean =>
  * multi-select — the popover stays open so several labels can flip in one go.
  */
 const TaskLabelSelector = memo<TaskLabelSelectorProps>(
-  ({ assignedLabels, children, disabled, taskIdentifier }) => {
+  ({ assignedLabels, children, disabled, fullWidth, taskIdentifier }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [search, setSearch] = useState('');
@@ -228,17 +229,28 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
     );
 
     const blocked = disabled || !canEditTask;
+    const currentTriggerStyle = fullWidth ? { ...triggerStyle, width: '100%' } : triggerStyle;
     const trigger = blocked ? (
       <Tooltip title={disabled ? t('taskDetail.labels.disabled') : reason}>
         <div
-          style={{ ...triggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
+          style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
           onClick={(event) => event.stopPropagation()}
         >
-          <span style={{ pointerEvents: 'none' }}>{children}</span>
+          <div
+            style={{
+              alignItems: 'center',
+              display: 'inline-flex',
+              minWidth: 0,
+              pointerEvents: 'none',
+              width: fullWidth ? '100%' : 'auto',
+            }}
+          >
+            {children}
+          </div>
         </div>
       </Tooltip>
     ) : (
-      <div style={triggerStyle} onClick={(event) => event.stopPropagation()}>
+      <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
         {children}
       </div>
     );

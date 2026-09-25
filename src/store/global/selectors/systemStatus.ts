@@ -213,7 +213,6 @@ export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'reviews',
   'agent',
   'drafts',
-  'create',
   'workspace',
   'favorites',
   'teams',
@@ -250,6 +249,10 @@ export const RETIRED_SIDEBAR_KEYS = new Set([
   'private',
   'project',
   'views',
+  // The standalone quick-create row was retired against the live product:
+  // Linear's sidebar has no `+`/Create entry (create lives behind the
+  // shortcut and page-level actions).
+  'create',
 ]);
 
 /**

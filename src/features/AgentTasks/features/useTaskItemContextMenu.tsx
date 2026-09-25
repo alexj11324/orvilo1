@@ -3,27 +3,37 @@ import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import {
   BarChart3Icon,
-  CircleDashedIcon,
   CopyIcon,
+  CopySlashIcon,
+  InboxIcon,
   LinkIcon,
   MessageSquareTextIcon,
   PlayIcon,
   Trash2Icon,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
+import MarkDuplicateModal from '@/features/WorkTeams/MarkDuplicateModal';
+import { buildTriageMutationInput } from '@/features/WorkTeams/triage/teamTriageRowModel';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePermission } from '@/hooks/usePermission';
 import { closeContextMenu } from '@/libs/contextMenu';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
+import { useClientDataSWR } from '@/libs/swr';
+import { lambdaClient } from '@/libs/trpc/client';
+import { workAttentionService } from '@/services/workAttention';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
+import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { renderMenuExtra } from './menuExtra';
@@ -35,6 +45,8 @@ type ActiveSubmenu = 'status' | 'priority' | null;
 type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemContextMenu {
+  /** Renders the Duplicate-canonical picker when the task is triage-eligible. */
+  duplicateModal?: ReactNode;
   items: NativeContextMenuItem[];
   onContextMenu: () => void;
 }
@@ -44,11 +56,25 @@ export interface TaskContextMenuTarget {
   assigneeUserId?: string | null;
   /** Live run's topic — present while a run is in flight; gates "Open run". */
   currentTopicId?: string | null;
+  domainRevision?: number;
+  id?: string;
   identifier: string;
   /** Only feeds the copied link's readable slug tail. */
   name?: string | null;
   priority?: number | null;
   status: string;
+  teamId?: string | null;
+}
+
+export interface TaskTriageTarget {
+  domainRevision: number;
+  id: string;
+  teamId: string;
+}
+
+export interface TaskTriageMenuExtras {
+  onOpenDuplicate: () => void;
+  triageTarget: TaskTriageTarget;
 }
 
 const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
@@ -56,11 +82,13 @@ const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
 export interface TaskContextMenuActions {
   buildItems: (task: TaskContextMenuTarget) => NativeContextMenuItem[];
   installKeyboardHandlers: (task: TaskContextMenuTarget) => void;
+  runTriageAction: (action: 'duplicate' | 'retriage', canonicalTaskId?: string) => Promise<void>;
 }
 
 export const useTaskContextMenuActions = (
   routeScope: TaskItemRouteScope = 'agent',
   onStatusChange?: (status: TaskStatus) => void | Promise<void>,
+  triage?: TaskTriageMenuExtras,
 ): TaskContextMenuActions => {
   const { t } = useTranslation(['chat', 'common']);
 
@@ -82,6 +110,27 @@ export const useTaskContextMenuActions = (
   useEffect(() => () => cleanupRef.current?.(), []);
 
   return useMemo<TaskContextMenuActions>(() => {
+    const runTriageAction = async (action: 'duplicate' | 'retriage', canonicalTaskId?: string) => {
+      if (!triage) return;
+      const input = buildTriageMutationInput(
+        triage.triageTarget,
+        triage.triageTarget.teamId,
+        action,
+        { canonicalTaskId },
+      );
+      if (!input) return;
+      try {
+        await workAttentionService.triage(input);
+        await refreshTaskList();
+      } catch (error) {
+        toast.error(
+          isTrpcErrorCode(error, 'CONFLICT')
+            ? t('teams.transferConflict', { ns: 'common' })
+            : t('taskDetail.updateFailed'),
+        );
+      }
+    };
+
     const triggerDelete = (identifier: string) => {
       if (!canEditTask) return;
       confirmModal({
@@ -121,12 +170,46 @@ export const useTaskContextMenuActions = (
         } as ContextMenuItem;
       });
 
-      const priorityChildren = PRIORITY_LEVELS.map((level, index) => {
+      // Linear's status submenu trails the selectable states with the same
+      // intake actions the issue-page status menu carries: Duplicate gets the
+      // next positional digit, Triage the dedicated '0' key.
+      if (triage) {
+        statusChildren.push(
+          {
+            extra: renderMenuExtra(String(USER_SELECTABLE_STATUSES.length + 1), false),
+            icon: <Icon icon={CopySlashIcon} />,
+            key: 'status-duplicate',
+            label: t('savedViews.values.triageStatus.duplicate', { ns: 'common' }),
+            disabled: !canEditTask,
+            onClick: ({ domEvent }: MenuInfo) => {
+              domEvent.stopPropagation();
+              if (!canEditTask) return;
+              triage.onOpenDuplicate();
+            },
+          } as ContextMenuItem,
+          {
+            extra: renderMenuExtra('0', false),
+            icon: <Icon icon={InboxIcon} />,
+            key: 'status-triage',
+            label: t('taskDetail.workflow.category.triage'),
+            disabled: !canEditTask,
+            onClick: ({ domEvent }: MenuInfo) => {
+              domEvent.stopPropagation();
+              if (!canEditTask) return;
+              void runTriageAction('retriage');
+            },
+          } as ContextMenuItem,
+        );
+      }
+
+      const priorityChildren = PRIORITY_LEVELS.map((level) => {
         const meta = PRIORITY_META[level];
         const PriorityIcon = meta.icon;
         const isCurrent = level === currentPriority;
         return {
-          extra: renderMenuExtra(String(index + 1), isCurrent),
+          // Linear labels its priority digits with the level value itself:
+          // "No priority 0 / Urgent 1 / High 2 / Medium 3 / Low 4".
+          extra: renderMenuExtra(String(level), isCurrent),
           icon: <PriorityIcon color={getPriorityIconColor(level)} size={16} />,
           key: `priority-${level}`,
           label: t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label }),
@@ -194,7 +277,7 @@ export const useTaskContextMenuActions = (
         {
           children: statusChildren,
           disabled: !canEditTask,
-          icon: <Icon icon={CircleDashedIcon} />,
+          icon: <Icon icon={STATUS_PROPERTY_ICON} />,
           key: 'status',
           label: t('taskList.contextMenu.status'),
           onTitleMouseEnter: () => {
@@ -281,10 +364,11 @@ export const useTaskContextMenuActions = (
         if (!openSubmenu) return;
 
         if (openSubmenu === 'priority') {
-          if (idx < 0 || idx >= PRIORITY_LEVELS.length) return;
+          // Priority digits are the level values themselves (0 = No priority).
+          if (!PRIORITY_LEVELS.includes(num as (typeof PRIORITY_LEVELS)[number])) return;
           event.preventDefault();
           event.stopPropagation();
-          const nextLevel = PRIORITY_LEVELS[idx];
+          const nextLevel = num;
           if (nextLevel !== currentPriority) {
             void (async () => {
               await updateTask(task.identifier, { priority: nextLevel });
@@ -297,13 +381,23 @@ export const useTaskContextMenuActions = (
         }
 
         if (openSubmenu === 'status') {
-          if (idx < 0 || idx >= USER_SELECTABLE_STATUSES.length) return;
+          const extraCount = triage ? 2 : 0;
+          const optionCount = USER_SELECTABLE_STATUSES.length + extraCount;
+          // '0' is Linear's dedicated key for the trailing Triage entry.
+          const statusIdx = num === 0 ? (triage ? optionCount - 1 : -1) : idx;
+          if (statusIdx < 0 || statusIdx >= optionCount) return;
           event.preventDefault();
           event.stopPropagation();
-          const nextStatus = USER_SELECTABLE_STATUSES[idx];
-          if (nextStatus !== currentStatus) {
-            if (onStatusChange) void onStatusChange(nextStatus);
-            else void changeTaskStatus(task.identifier, nextStatus);
+          if (statusIdx < USER_SELECTABLE_STATUSES.length) {
+            const nextStatus = USER_SELECTABLE_STATUSES[statusIdx];
+            if (nextStatus !== currentStatus) {
+              if (onStatusChange) void onStatusChange(nextStatus);
+              else void changeTaskStatus(task.identifier, nextStatus);
+            }
+          } else if (statusIdx === USER_SELECTABLE_STATUSES.length) {
+            triage?.onOpenDuplicate();
+          } else {
+            void runTriageAction('retriage');
           }
           closeContextMenu();
           cleanup();
@@ -325,7 +419,7 @@ export const useTaskContextMenuActions = (
       cleanupRef.current = cleanup;
     };
 
-    return { buildItems, installKeyboardHandlers };
+    return { buildItems, installKeyboardHandlers, runTriageAction };
   }, [
     canEditTask,
     t,
@@ -340,6 +434,7 @@ export const useTaskContextMenuActions = (
     inboxAgentId,
     onStatusChange,
     routeScope,
+    triage,
   ]);
 };
 
@@ -348,9 +443,27 @@ export const useTaskItemContextMenu = (
   routeScope?: TaskItemRouteScope,
   onStatusChange?: (status: TaskStatus) => void | Promise<void>,
 ): TaskItemContextMenu => {
-  const { buildItems, installKeyboardHandlers } = useTaskContextMenuActions(
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+
+  const workspaceId = useActiveWorkspaceId();
+  const triageTarget =
+    task.id && task.teamId && task.domainRevision !== undefined
+      ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
+      : undefined;
+  const { data: teamData } = useClientDataSWR(
+    triageTarget?.teamId && workspaceId ? ['team', workspaceId, triageTarget.teamId] : null,
+    () => triageTarget && lambdaClient.team.team.query({ teamId: triageTarget.teamId }),
+  );
+  const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
+  const triage: TaskTriageMenuExtras | undefined =
+    triageTarget && triageCapable
+      ? { onOpenDuplicate: () => setDuplicateModalOpen(true), triageTarget }
+      : undefined;
+
+  const { buildItems, installKeyboardHandlers, runTriageAction } = useTaskContextMenuActions(
     routeScope,
     onStatusChange,
+    triage,
   );
   const transferItems = useTaskTransferMenuItem(task.identifier) as ContextMenuItem[] | null;
   const items = useMemo(() => {
@@ -389,5 +502,16 @@ export const useTaskItemContextMenu = (
     () => installKeyboardHandlers(task),
     [installKeyboardHandlers, task],
   );
-  return { items, onContextMenu };
+  const duplicateModal = triageTarget ? (
+    <MarkDuplicateModal
+      open={duplicateModalOpen}
+      taskId={triageTarget.id}
+      onClose={() => setDuplicateModalOpen(false)}
+      onConfirm={(_taskId, canonicalTaskId) => {
+        setDuplicateModalOpen(false);
+        void runTriageAction('duplicate', canonicalTaskId);
+      }}
+    />
+  ) : undefined;
+  return { duplicateModal, items, onContextMenu };
 };

@@ -16,17 +16,31 @@ import {
   CirclePause,
   CircleX,
   Clock,
-  Contrast,
   HandIcon,
-  Inbox,
   PauseCircle,
   StarIcon,
   TriangleAlert,
 } from 'lucide-react';
 
+import {
+  type StatusIconComponent,
+  StatusPropertyIcon,
+  WORKFLOW_CATEGORY_ICONS,
+} from './WorkflowCategoryIcon';
+
 export interface ExecutionStatusVisual {
   color: string;
   icon: LucideIcon;
+}
+
+/**
+ * A status mark that may be a lucide glyph or one of the traced workflow
+ * icons — for surfaces that draw either axis. Rendered through `@lobehub/ui`'s
+ * `<Icon icon>`, which takes both kinds.
+ */
+export interface StatusVisual {
+  color: string;
+  icon: LucideIcon | StatusIconComponent;
 }
 
 /**
@@ -72,31 +86,48 @@ export const resolveTaskStatus = (status: null | string | undefined): TaskStatus
  * One glyph + color per Linear workflow category — the business-state axis a
  * task's `workflowCategory` carries, kept deliberately distinct from the
  * execution axis above (a card can be `status: 'backlog'` while its business
- * state is `todo`). Marks follow Linear's own grammar: triage is the inbox
- * tray, backlog the dashed ring, todo the empty ring, in_progress the
- * half-filled ring (`Contrast` is lucide's half-filled circle), in_review the
- * violet pending-review clock, done the check ring, canceled the X ring.
- * `TaskWorkflowBadge`, the `wf:` kanban columns and workflow-category group
- * headers all read this map, so the same category never draws two marks.
+ * state is `todo`). Glyphs are Linear's own ring-and-pie marks
+ * (`WORKFLOW_CATEGORY_ICONS`) and the colors are Linear's: grey backlog/todo,
+ * yellow in progress, green in review, indigo done, grey canceled, orange
+ * triage. Task rows, board cards, the `wf:` kanban columns, workflow-category
+ * group headers and the filter menu all read this map, so the same category
+ * never draws two marks — do not reach for a lucide circle instead.
  */
-export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, ExecutionStatusVisual> = {
-  backlog: { color: cssVar.colorTextQuaternary, icon: CircleDashed },
-  canceled: { color: cssVar.orange, icon: CircleX },
-  done: VISUALS.completed,
-  in_progress: { color: cssVar.colorWarning, icon: Contrast },
-  in_review: TASK_STATUS_VISUALS.paused,
-  todo: { color: cssVar.blue, icon: Circle },
-  triage: { color: cssVar.orange, icon: Inbox },
+export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, StatusVisual> = {
+  backlog: { color: cssVar.colorTextQuaternary, icon: WORKFLOW_CATEGORY_ICONS.backlog },
+  canceled: { color: cssVar.colorTextDescription, icon: WORKFLOW_CATEGORY_ICONS.canceled },
+  // Linear's brand indigo — the same paint the milestone diamond uses.
+  done: { color: '#5e6ad2', icon: WORKFLOW_CATEGORY_ICONS.done },
+  in_progress: { color: cssVar.colorWarning, icon: WORKFLOW_CATEGORY_ICONS.in_progress },
+  in_review: { color: cssVar.colorSuccess, icon: WORKFLOW_CATEGORY_ICONS.in_review },
+  todo: { color: cssVar.colorTextTertiary, icon: WORKFLOW_CATEGORY_ICONS.todo },
+  triage: { color: cssVar.orange, icon: WORKFLOW_CATEGORY_ICONS.triage },
 };
 
+/**
+ * The icon for the Status *property* (filter rows, bulk "Status" button,
+ * context-menu "Status" submenu, "changed status" activity) — as opposed to
+ * the per-value marks above. One mark, so the same field never reads as two.
+ */
+export const STATUS_PROPERTY_ICON: StatusIconComponent = StatusPropertyIcon;
+
+/**
+ * Project lifecycle marks follow Linear's project-status set, not the task
+ * workflow set: dashed ring for backlog, hollow ring for planned, the traced
+ * progress ring for in-progress, a filled check for completed and an X ring
+ * for canceled — gray for everything not started, indigo only on done.
+ * `paused`/`reviewing`/`archived` are Orvilo extensions with no Linear
+ * counterpart; they keep quiet gray marks so the column still reads as one
+ * axis.
+ */
 export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual> = {
   active: VISUALS.running,
   archived: VISUALS.archived,
-  backlog: VISUALS.backlog,
-  canceled: VISUALS.canceled,
-  completed: VISUALS.completed,
+  backlog: { color: cssVar.colorTextTertiary, icon: CircleDashed },
+  canceled: { color: cssVar.colorTextDescription, icon: CircleX },
+  completed: { color: cssVar.purple, icon: CircleCheck },
   paused: { color: cssVar.colorTextSecondary, icon: PauseCircle },
-  planned: { color: cssVar.purple, icon: CircleDot },
+  planned: { color: cssVar.colorTextTertiary, icon: Circle },
   reviewing: VISUALS.waitingForHuman,
 };
 

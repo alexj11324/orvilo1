@@ -60,6 +60,11 @@ export const fromNow = (time?: string | Date | number | null): string => {
 
 export interface FormatActivityTimeOptions {
   formatOtherYear?: string;
+  /**
+   * Custom relative renderer (e.g. Linear's compact "4d ago"). Defaults to
+   * dayjs `from()`.
+   */
+  formatRelative?: (date: Dayjs, now: Dayjs) => string;
   formatThisYear?: string;
   fullDateTimeFormat?: string;
   now?: Date | string | number;
@@ -90,6 +95,7 @@ export const formatActivityTime = (
 
   const {
     formatOtherYear = 'MMM D, YYYY',
+    formatRelative,
     formatThisYear = 'MMM D',
     fullDateTimeFormat = 'YYYY-MM-DD HH:mm:ss',
     now = new Date(),
@@ -100,7 +106,7 @@ export const formatActivityTime = (
   const diff = Math.abs(current.diff(date));
   const text =
     diff < relativeThresholdMs
-      ? date.from(current)
+      ? (formatRelative?.(date, current) ?? date.from(current))
       : date.format(date.isSame(current, 'year') ? formatThisYear : formatOtherYear);
 
   return { text, title: date.format(fullDateTimeFormat) };

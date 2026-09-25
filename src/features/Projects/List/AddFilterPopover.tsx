@@ -6,14 +6,12 @@ import type { ProjectHealth, ProjectStatus } from '@orvilo/types';
 import { PROJECT_HEALTH_STATES, PROJECT_STATUSES } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { ParseKeys } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
 import {
   ALargeSmallIcon,
   ArrowLeftIcon,
   CalendarDaysIcon,
   CheckIcon,
   ChevronRightIcon,
-  CircleDotIcon,
   CircleUserIcon,
   DiamondIcon,
   FilterIcon,
@@ -32,6 +30,7 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -173,7 +172,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const GROUP_ICONS: Record<ProjectListFilterGroupId, LucideIcon> = {
+const GROUP_ICONS: Record<ProjectListFilterGroupId, StatusVisual['icon']> = {
   creator: CircleUserIcon,
   dates: CalendarDaysIcon,
   health: HeartPulseIcon,
@@ -186,7 +185,7 @@ const GROUP_ICONS: Record<ProjectListFilterGroupId, LucideIcon> = {
   priority: SignalHighIcon,
   projects: PROJECT_ENTITY_ICON,
   relations: LinkIcon,
-  status: CircleDotIcon,
+  status: STATUS_PROPERTY_ICON,
   teams: UsersRoundIcon,
   template: LayoutTemplateIcon,
   text: ALargeSmallIcon,

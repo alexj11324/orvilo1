@@ -31,6 +31,15 @@ jobs:
         with:
           concurrent_skipping: 'same_content_newer'
           skip_after_successful_duplicate: 'true'
+          # Never cancel sibling runs: the dedup matches same-workflow runs
+          # across refs (push vs pull_request for one SHA, or unrelated
+          # in-flight runs repo-wide). With the default `cancel_others`,
+          # whichever run's check job executes later kills every other
+          # in-flight run — a mutual kill that has repeatedly zeroed out
+          # both the owner and the mirror. Skipping via `concurrent_skipping`
+          # + the gate's owner-verdict mirror gives the same dedup without
+          # the race.
+          cancel_others: 'false'
           # Push runs are the canonical owner: when a PR run and a push run
           # for the same head SHA start within seconds of each other,
           # `same_content_newer` on the push run sees the PR run as the newer

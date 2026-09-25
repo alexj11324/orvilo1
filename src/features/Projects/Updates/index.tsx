@@ -4,7 +4,7 @@ import { Flexbox, Icon, Markdown } from '@lobehub/ui';
 import { Button, confirmModal, DropdownMenu, Tabs, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import dayjs from 'dayjs';
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ import { projectService } from '@/services/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 import { ProjectUpdateEditor } from './ProjectUpdateEditor';
 
 /**
@@ -368,6 +369,7 @@ export const ProjectUpdateRow = memo<{
   update: ProjectUpdate;
 }>(({ update, canEdit, onChanged, onEdit }) => {
   const { t } = useTranslation(['project', 'common']);
+  const formatDate = useProjectDateFormatter();
   const meta = update.health ? PROJECT_HEALTH_META[update.health] : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const confirmDelete = () =>
@@ -418,7 +420,7 @@ export const ProjectUpdateRow = memo<{
             </Tag>
           )}
           <Text fontSize={12} type={'secondary'}>
-            {dayjs(update.createdAt).format('MMM D')}
+            {formatDate(update.createdAt)}
           </Text>
           {canEdit && (
             <Flexbox

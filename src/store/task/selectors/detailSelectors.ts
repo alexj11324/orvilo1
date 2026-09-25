@@ -11,6 +11,10 @@ const activeTaskDetail = (s: TaskStoreState): TaskDetailData | undefined =>
 
 const activeTaskDatabaseId = (s: TaskStoreState) => activeTaskDetail(s)?.id;
 
+const activeTaskDomainRevision = (s: TaskStoreState) => activeTaskDetail(s)?.domainRevision;
+
+const activeTaskTeamId = (s: TaskStoreState) => activeTaskDetail(s)?.teamId;
+
 const taskDetailById = (id: string) => (s: TaskStoreState) => s.taskDetailMap[id];
 
 const isTaskDetailLoading = (s: TaskStoreState): boolean =>
@@ -158,6 +162,7 @@ export const taskDetailSelectors = {
   activeTaskDependencies,
   activeTaskDescription,
   activeTaskDetail,
+  activeTaskDomainRevision,
   activeTaskEditorData,
   activeTaskError,
   activeTaskFiles,
@@ -176,6 +181,7 @@ export const taskDetailSelectors = {
   activeTaskScheduleTimezone,
   activeTaskStatus,
   activeTaskSubtasks,
+  activeTaskTeamId,
   activeTaskTopicCount,
   activeTaskVerifyConfig,
   activeTaskVisibility,

@@ -11,7 +11,7 @@ import type {
   TaskCreationSubjectSnapshot,
   TaskWorkflowCategory,
 } from '@orvilo/types';
-import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
+import { PROJECT_CREATABLE_STATUSES, workflowBucket } from '@orvilo/types';
 import {
   and,
   asc,
@@ -236,43 +236,6 @@ const toOrchestrationPolicyView = (project: ProjectPolicyRow): ProjectOrchestrat
   requireHumanReviewRequired: projectRequiresHumanReview(project),
 });
 
-/** How one task's workflow category counts toward its milestone's readout. */
-type MilestoneProgressBucket = 'canceled' | 'completed' | 'open' | 'unknown';
-
-/**
- * Classify a task's workflow category for milestone progress.
- *
- * This restates `src/features/Projects/projectIssueProgress.ts` rather than
- * sharing it: that module lives in the app and cannot be imported from this
- * package. The two must agree — the project rail renders both readouts at
- * once, and a milestone that reads 50% next to a Progress card that reads
- * 40% is a bug in one of them. **A new `TaskWorkflowCategory` member has to be
- * classified in both places.**
- */
-const milestoneProgressBucket = (category: TaskWorkflowCategory): MilestoneProgressBucket => {
-  switch (category) {
-    case 'done': {
-      return 'completed';
-    }
-    case 'canceled': {
-      return 'canceled';
-    }
-    case 'in_progress':
-    case 'in_review':
-    case 'triage':
-    case 'backlog':
-    case 'todo': {
-      return 'open';
-    }
-    default: {
-      // Unreachable through the type, reachable through the database. An
-      // unrecognised state must not be counted as open work (that reports a
-      // smaller, prettier percentage than the truth) nor as done.
-      return 'unknown';
-    }
-  }
-};
-
 interface MilestoneTally {
   completed: number;
   /** In scope: linked tasks that are neither canceled nor unclassifiable. */
@@ -283,8 +246,8 @@ interface MilestoneTally {
 const EMPTY_MILESTONE_TALLY: MilestoneTally = { completed: 0, issues: 0, unknown: 0 };
 
 const tallyMilestoneCategory = (tally: MilestoneTally, category: TaskWorkflowCategory) => {
-  switch (milestoneProgressBucket(category)) {
-    case 'canceled': {
+  switch (workflowBucket(category)) {
+    case 'excluded': {
       // Out of scope, exactly as the project-level Progress card treats it:
       // canceled work neither counts as done nor dilutes the percentage.
       return tally;
@@ -292,10 +255,14 @@ const tallyMilestoneCategory = (tally: MilestoneTally, category: TaskWorkflowCat
     case 'completed': {
       return { ...tally, completed: tally.completed + 1, issues: tally.issues + 1 };
     }
-    case 'open': {
+    case 'scoped':
+    case 'started': {
       return { ...tally, issues: tally.issues + 1 };
     }
     default: {
+      // Unreachable through the type, reachable through the database. An
+      // unrecognised state must not be counted as open work (that reports a
+      // smaller, prettier percentage than the truth) nor as done.
       return { ...tally, unknown: tally.unknown + 1 };
     }
   }

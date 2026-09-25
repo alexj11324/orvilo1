@@ -328,6 +328,23 @@ describe('time utilities', () => {
       expect(result.text).toBe('4月29日');
     });
 
+    it('delegates relative rendering to formatRelative when inside the threshold', () => {
+      const result = formatActivityTime('2026-04-25T10:00:00Z', {
+        formatRelative: (date, now) => `${now.diff(date, 'day')}d ago`,
+        now: '2026-05-01T10:00:00Z',
+        relativeThresholdMs: Number.POSITIVE_INFINITY,
+      });
+      expect(result.text).toBe('6d ago');
+    });
+
+    it('still uses the absolute date outside the threshold even with formatRelative', () => {
+      const result = formatActivityTime('2026-04-25T10:00:00Z', {
+        formatRelative: () => 'never',
+        now: '2026-05-01T10:00:00Z',
+      });
+      expect(result.text).toBe('Apr 25');
+    });
+
     it('returns empty strings for missing or invalid input', () => {
       expect(formatActivityTime()).toEqual({ text: '', title: '' });
       expect(formatActivityTime('not a date')).toEqual({ text: '', title: '' });

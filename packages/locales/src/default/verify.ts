@@ -404,7 +404,7 @@ export default {
   'acceptance.tabs.resources': 'Files',
   'acceptance.subject.document': 'Document',
   'acceptance.subject.standalone': 'Standalone',
-  'acceptance.subject.task': 'Task',
+  'acceptance.subject.task': 'Issue',
   'acceptance.subject.topic': 'Topic',
   'acceptance.tray.addCheck': 'Add tracking item',
   'acceptance.tray.editModal.addTitle': 'Add tracking item',
@@ -547,7 +547,7 @@ export default {
   'acceptance.workspace.merge.success': '{{count}} checks merged',
   'acceptance.workspace.merge.error': 'Failed to merge acceptance',
   'acceptance.workspace.renameModal.description':
-    'Renames this entry only. The source topic, task or document keeps its own title.',
+    'Renames this entry only. The source topic, issue or document keeps its own title.',
   'acceptance.workspace.renameError': 'Failed to rename',
   'acceptance.workspace.renameSuccess': 'Renamed',
   'acceptance.workspace.statusError': 'Failed to update status',
@@ -736,7 +736,7 @@ export default {
   'reports.actions.refresh': 'Refresh',
   'reports.actions.retry': 'Retry',
   'reports.dateUnknown': 'Date unknown',
-  'reports.empty.action': 'Configure task checks',
+  'reports.empty.action': 'Configure issue checks',
   'reports.empty.description':
     'Reports appear here after a delivery checker run finishes or a standalone verification is ingested.',
   'reports.empty.title': 'No verification reports yet',
@@ -791,10 +791,10 @@ export default {
   'status.verifying': 'Delivery Checker: waiting for run to finish',
 
   'templates.count': '{{count}} saved',
-  'templates.empty': 'Save checks as a template from a task to reuse them here.',
+  'templates.empty': 'Save checks as a template from an issue to reuse them here.',
   'templates.savedTemplate': 'Reusable verification template',
   'templates.subtitle':
-    'Templates are saved delivery standards. Apply them from a task checker, then every run keeps its own frozen snapshot.',
+    'Templates are saved delivery standards. Apply them from an issue checker, then every run keeps its own frozen snapshot.',
   'templates.title': 'Reusable templates',
 
   'workspace.clearSearch': 'Clear search',

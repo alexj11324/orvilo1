@@ -18,6 +18,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   MoreHorizontalIcon,
+  PanelRightIcon,
   PlusIcon,
   SearchXIcon,
   TrashIcon,
@@ -51,7 +52,9 @@ import type { ProjectListItem } from '@/store/project/store';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
 
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 import AddFilterPopover from './AddFilterPopover';
+import { projectListSummaryRows, summarizeProjectList } from './aggregateSummary';
 import {
   DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS,
   filterClosedProjects,
@@ -76,6 +79,7 @@ import {
 } from './listFilters';
 import ProjectMilestoneChip from './MilestoneChip';
 import ProjectBoard from './ProjectBoard';
+import ProjectListAggregateSidebar from './ProjectListAggregateSidebar';
 import ProjectTimeline from './ProjectTimeline';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -215,12 +219,14 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     z-index: 1;
 
     display: inline-flex;
+    gap: 8px;
     align-items: center;
-    justify-content: center;
 
-    width: 28px;
+    min-width: 28px;
+    max-width: 100%;
     height: 28px;
-    padding: 0;
+    padding-block: 0;
+    padding-inline: 4px;
     border: 0;
     border-radius: 4px;
 
@@ -267,21 +273,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       opacity: 1;
     }
   `,
-  progressFill: css`
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorTextSecondary};
-  `,
-  progressTrack: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 20px;
-    height: 3px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
+  sparkline: css`
+    flex: none;
   `,
   screenReaderOnly: css`
     position: absolute;
@@ -358,18 +351,59 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
       to={getProjectActivityPath(project.slug ?? project.id)}
     >
       <ProjectHealthIcon health={health} size={14} />
-      {/* Linear renders the no-update state as the dashed circle alone —
-          the label appears only once a real update set the health. */}
-      {health ? (
-        <Text fontSize={12}>{t(PROJECT_HEALTH_META[health].key, { defaultValue: health })}</Text>
-      ) : (
-        <span className={styles.screenReaderOnly}>{t('list.health.noUpdates')}</span>
-      )}
+      <Text fontSize={12}>
+        {health
+          ? t(PROJECT_HEALTH_META[health].key, { defaultValue: health })
+          : t('list.health.noUpdates')}
+      </Text>
     </WorkspaceLink>
   );
 });
 
 ProjectHealthCell.displayName = 'ProjectHealthCell';
+
+const SPARKLINE_WIDTH = 32;
+const SPARKLINE_HEIGHT = 16;
+
+/**
+ * Linear's Status cell trails the percent with a 32×16 two-stroke
+ * sparkline: a straight segment from the origin to (time elapsed,
+ * completion) and a scope curve that eases to the top edge at the same x
+ * then runs flat. The now-point's x is the fraction of the project's own
+ * start→target schedule elapsed; without dates it sits at 70% so the
+ * curve still reads as a trend, not a fill.
+ */
+const ProjectProgressSparkline = memo<{
+  percent: number;
+  start?: Date | string | null;
+  target?: Date | string | null;
+}>(({ percent, start, target }) => {
+  const startMs = start ? new Date(start).getTime() : Number.NaN;
+  const targetMs = target ? new Date(target).getTime() : Number.NaN;
+  const timeFrac =
+    Number.isFinite(startMs) && Number.isFinite(targetMs) && targetMs > startMs
+      ? Math.min(1, Math.max(0.1, (Date.now() - startMs) / (targetMs - startMs)))
+      : 0.7;
+  const px = Math.max(3, timeFrac * SPARKLINE_WIDTH);
+  const py = SPARKLINE_HEIGHT - (percent / 100) * SPARKLINE_HEIGHT;
+  const flat1 = px + (SPARKLINE_WIDTH - px) / 3;
+  const flat2 = SPARKLINE_WIDTH - (SPARKLINE_WIDTH - px) / 3;
+  const scopeD = `M0,${SPARKLINE_HEIGHT}C${(px / 3).toFixed(2)},${SPARKLINE_HEIGHT / 2 + 0.5},${((px * 2) / 3).toFixed(2)},1,${px.toFixed(2)},1C${flat1.toFixed(2)},1,${flat2.toFixed(2)},1,${SPARKLINE_WIDTH},1`;
+  return (
+    <svg aria-hidden className={styles.sparkline} height={SPARKLINE_HEIGHT} width={SPARKLINE_WIDTH}>
+      <rect fill={'transparent'} height={SPARKLINE_HEIGHT} width={SPARKLINE_WIDTH} />
+      <path
+        d={`M0,${SPARKLINE_HEIGHT}L${px.toFixed(2)},${py.toFixed(2)}`}
+        fill={'none'}
+        stroke={cssVar.purple}
+        strokeWidth={1.25}
+      />
+      <path d={scopeD} fill={'none'} stroke={cssVar.colorTextQuaternary} strokeWidth={1.25} />
+    </svg>
+  );
+});
+
+ProjectProgressSparkline.displayName = 'ProjectProgressSparkline';
 
 export type MembersQuery = ReturnType<typeof useWorkspaceMembersQuery>;
 
@@ -516,16 +550,21 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
 ProjectLeadCell.displayName = 'ProjectLeadCell';
 
 // `lll` needs the localizedFormat plugin, which src/initialize.ts does not
-// register — spell the same shape out in core tokens instead.
-const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) => (
-  <Text
-    className={styles.cell}
-    fontSize={12}
-    title={value ? dayjs(value).format('MMM D, YYYY h:mm A') : undefined}
-  >
-    {value ? dayjs(value).format('MMM D') : '—'}
-  </Text>
-));
+// register — spell the same shape out in core tokens instead. The title keeps
+// the full timestamp in the active locale's long-day pattern.
+const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) => {
+  const { t } = useTranslation('common');
+  const formatDate = useProjectDateFormatter();
+  return (
+    <Text
+      className={styles.cell}
+      fontSize={12}
+      title={value ? dayjs(value).format(`${t('time.formatOtherYear')} HH:mm`) : undefined}
+    >
+      {value ? formatDate(value) : '—'}
+    </Text>
+  );
+});
 
 DateCell.displayName = 'DateCell';
 
@@ -626,7 +665,8 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
         return <DateCell value={project.completedAt} />;
       }
       case 'status': {
-        // Reference §5: status icon + percentage + a thin progress bar.
+        // Reference §5: status icon + percentage + the trailing-30-day
+        // progress sparkline Linear draws beside it.
         const percent =
           typeof project.progressPercent === 'number'
             ? Math.min(100, Math.max(0, project.progressPercent))
@@ -637,9 +677,11 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
             <ProjectStatusIcon percent={percent ?? 0} size={14} status={status} />
             <Text fontSize={12}>{percent == null ? '—' : `${percent}%`}</Text>
             {percent == null ? null : (
-              <span aria-hidden className={styles.progressTrack}>
-                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
-              </span>
+              <ProjectProgressSparkline
+                percent={percent}
+                start={project.startDate}
+                target={project.targetDate}
+              />
             )}
           </Flexbox>
         );
@@ -917,6 +959,7 @@ const ProjectListPage = memo(() => {
   );
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const [advancedFilterOpen, setAdvancedFilterOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const projectName = useCallback(
     (id: string) => projects.find((project) => project.id === id)?.name ?? id,
     [projects],
@@ -952,6 +995,21 @@ const ProjectListPage = memo(() => {
     [memberName, options.grouping, options.layout, visibleProjects],
   );
 
+  // Aggregate sidebar — the reference's Health/Teams/Leads tab panel.
+  // Buckets double as one-click filters and count the full loaded set minus
+  // what the closed-window option hides (those rows can never render), so
+  // they stay stable while a bucket filter narrows the table; shared with
+  // the team projects tab.
+  const summaryRows = useMemo(
+    () => projectListSummaryRows(projects, options.showClosed),
+    [options.showClosed, projects],
+  );
+  const summary = useMemo(
+    () => summarizeProjectList(summaryRows, memberName),
+    [memberName, summaryRows],
+  );
+  const summaryRowIds = useMemo(() => summaryRows.map((project) => project.id), [summaryRows]);
+
   const handleHeaderSort = useCallback(
     (field: ProjectListSortableOrdering) => updateOptions(nextSortFromHeader(options, field)),
     [options, updateOptions],
@@ -979,111 +1037,136 @@ const ProjectListPage = memo(() => {
           </Button>
         }
       />
-      <WorkSurfaceCollection
-        toolbar={
-          <WorkSurfaceToolbar
-            asideLabel={t('list.toolbarControls')}
-            aside={
-              <>
-                <AddFilterPopover
-                  currentUserId={currentUserId}
-                  filters={filters}
-                  members={membersData}
-                  membersError={membersError}
-                  membersLoading={membersLoading}
-                  projects={projects}
-                  onChange={updateFilters}
-                  onOpenAdvanced={() => setAdvancedFilterOpen(true)}
-                />
-                <DisplayOptionsPopover
-                  options={options}
-                  onChange={updateOptions}
-                  onReset={resetOptions}
-                />
-              </>
-            }
-          >
-            <SearchBar
-              allowClear
-              placeholder={t('list.searchPlaceholder')}
-              style={{ maxWidth: 280 }}
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-            />
-            <ProjectListFilterChips
-              filters={filters}
-              memberName={memberName}
-              projectName={projectName}
-              onClearAll={() => updateFilters([])}
-              onRemove={(key) => updateFilters(removeProjectListFilter(filters, key))}
-            />
-          </WorkSurfaceToolbar>
-        }
-      >
-        {error ? (
-          <AsyncError error={error} onRetry={() => mutate()} />
-        ) : isLoading && projects.length === 0 ? (
-          <SkeletonList rows={8} />
-        ) : visibleProjects.length === 0 ? (
-          <Center flex={1} padding={48}>
-            <Empty
-              icon={keyword.trim() || filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON}
-              description={
-                filters.length > 0
-                  ? t('list.filter.noResults')
-                  : keyword.trim()
-                    ? t('list.searchEmpty')
-                    : t('list.emptyDescription')
-              }
-            />
-          </Center>
-        ) : options.layout === 'board' ? (
-          <ProjectBoard
-            groups={groups}
-            leadAvatar={memberAvatar}
-            leadName={memberName}
-            properties={options.properties}
+      {/* The reference's sidebar is a floating panel over the rows — never a
+          flex sibling — so the toolbar owns a full-width row and the panel
+          overlays only the collection region below it. */}
+      <Flexbox flex={1} style={{ minHeight: 0 }}>
+        <WorkSurfaceToolbar
+          asideLabel={t('list.toolbarControls')}
+          aside={
+            <>
+              <AddFilterPopover
+                currentUserId={currentUserId}
+                filters={filters}
+                members={membersData}
+                membersError={membersError}
+                membersLoading={membersLoading}
+                projects={projects}
+                onChange={updateFilters}
+                onOpenAdvanced={() => setAdvancedFilterOpen(true)}
+              />
+              <DisplayOptionsPopover
+                options={options}
+                onChange={updateOptions}
+                onReset={resetOptions}
+              />
+              {/* Icon-only disclosure toggle — the reference's 28px panel
+                  button: name flips Open↔Close, aria-expanded tracks state. */}
+              <ActionIcon
+                active={sidebarOpen}
+                aria-expanded={sidebarOpen}
+                aria-label={sidebarOpen ? t('list.sidebar.close') : t('list.sidebar.open')}
+                icon={PanelRightIcon}
+                size="small"
+                title={sidebarOpen ? t('list.sidebar.close') : t('list.sidebar.open')}
+                onClick={() => setSidebarOpen((open) => !open)}
+              />
+            </>
+          }
+        >
+          <SearchBar
+            allowClear
+            placeholder={t('list.searchPlaceholder')}
+            style={{ maxWidth: 280 }}
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
           />
-        ) : options.layout === 'timeline' ? (
-          <ProjectTimeline
-            groupLabel={groupHeader}
-            groups={groups}
-            leadAvatar={memberAvatar}
-            leadName={memberName}
-            options={options}
+          <ProjectListFilterChips
+            filters={filters}
+            memberName={memberName}
+            projectName={projectName}
+            onClearAll={() => updateFilters([])}
+            onRemove={(key) => updateFilters(removeProjectListFilter(filters, key))}
           />
-        ) : (
-          <Flexbox gap={0} style={{ minWidth: 'max-content' }}>
-            <ProjectListTableHeader
-              columns={columns}
-              orderBy={options.orderBy}
-              orderDirection={options.orderDirection}
-              onSort={handleHeaderSort}
-            />
-            {groups.map((group) => (
-              <Flexbox gap={0} key={group.key}>
-                {group.key !== 'all' ? (
-                  <div className={styles.groupHeader}>
-                    {groupHeader(group.key)}
-                    <Text fontSize={12} type="secondary">
-                      {group.items.length}
-                    </Text>
-                  </div>
-                ) : null}
-                {group.items.map((project) => (
-                  <ProjectRow
-                    columns={columns}
-                    key={project.id}
-                    members={members}
-                    project={project}
-                    properties={options.properties}
-                  />
+        </WorkSurfaceToolbar>
+        <Flexbox flex={1} style={{ minHeight: 0, position: 'relative' }}>
+          <WorkSurfaceCollection>
+            {error ? (
+              <AsyncError error={error} onRetry={() => mutate()} />
+            ) : isLoading && projects.length === 0 ? (
+              <SkeletonList rows={8} />
+            ) : visibleProjects.length === 0 ? (
+              <Center flex={1} padding={48}>
+                <Empty
+                  icon={keyword.trim() || filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON}
+                  description={
+                    filters.length > 0
+                      ? t('list.filter.noResults')
+                      : keyword.trim()
+                        ? t('list.searchEmpty')
+                        : t('list.emptyDescription')
+                  }
+                />
+              </Center>
+            ) : options.layout === 'board' ? (
+              <ProjectBoard
+                groups={groups}
+                leadAvatar={memberAvatar}
+                leadName={memberName}
+                properties={options.properties}
+              />
+            ) : options.layout === 'timeline' ? (
+              <ProjectTimeline
+                groupLabel={groupHeader}
+                groups={groups}
+                leadAvatar={memberAvatar}
+                leadName={memberName}
+                options={options}
+              />
+            ) : (
+              <Flexbox gap={0} style={{ minWidth: 'max-content' }}>
+                <ProjectListTableHeader
+                  columns={columns}
+                  orderBy={options.orderBy}
+                  orderDirection={options.orderDirection}
+                  onSort={handleHeaderSort}
+                />
+                {groups.map((group) => (
+                  <Flexbox gap={0} key={group.key}>
+                    {group.key !== 'all' ? (
+                      <div className={styles.groupHeader}>
+                        {groupHeader(group.key)}
+                        <Text fontSize={12} type="secondary">
+                          {group.items.length}
+                        </Text>
+                      </div>
+                    ) : null}
+                    {group.items.map((project) => (
+                      <ProjectRow
+                        columns={columns}
+                        key={project.id}
+                        members={members}
+                        project={project}
+                        properties={options.properties}
+                      />
+                    ))}
+                  </Flexbox>
                 ))}
               </Flexbox>
-            ))}
-          </Flexbox>
-        )}
-      </WorkSurfaceCollection>
+            )}
+          </WorkSurfaceCollection>
+          {sidebarOpen ? (
+            <ProjectListAggregateSidebar
+              filters={filters}
+              memberAvatar={memberAvatar}
+              memberName={memberName}
+              rowIds={summaryRowIds}
+              summary={summary}
+              onFilters={updateFilters}
+            />
+          ) : null}
+        </Flexbox>
+      </Flexbox>
       {/* "Advanced filter" lands here: the WorkQuery builder (AND/OR groups)
           exists only for saved views, so the menu entry opens the real
           project-entity view builder instead of a fake inline clause row. */}

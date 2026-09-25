@@ -2,6 +2,7 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { AutoComplete, Button, Modal, Text } from '@lobehub/ui/base-ui';
+import type { ReactNode } from 'react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -60,6 +61,12 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
     return () => clearTimeout(timer);
   }, [needle, open, taskId]);
 
+  // Items here are always `options` entries — base-ui types them `unknown`.
+  const displayValue = (item: unknown) => {
+    const option = item as { label?: ReactNode; value: string };
+    return typeof option.label === 'string' ? option.label : option.value;
+  };
+
   const confirm = () => {
     if (taskId && selected) onConfirm(taskId, selected);
     onClose();
@@ -86,6 +93,10 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
           {t('teams.markDuplicateHint')}
         </Text>
         <AutoComplete
+          // Server-side search: the built-in filter matches typed text against
+          // `itemToStringValue` and would drop every fetched option.
+          filteredItems={options}
+          itemToStringValue={displayValue}
           options={options}
           placeholder={t('teams.markDuplicatePlaceholder')}
           style={{ width: '100%' }}
@@ -96,8 +107,10 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
                 : t('teams.markDuplicateEmpty')
               : t('teams.markDuplicatePrompt')
           }
-          onChange={(value) => setSelected(value)}
           onSearch={setNeedle}
+          onChange={(value) =>
+            setSelected(options.find((option) => displayValue(option) === value)?.value)
+          }
         />
       </Flexbox>
     </Modal>

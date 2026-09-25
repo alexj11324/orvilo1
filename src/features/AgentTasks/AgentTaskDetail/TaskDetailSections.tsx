@@ -8,7 +8,6 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import TaskAcceptance from './TaskAcceptance';
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
-import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import TaskDetailRunPauseAction from './TaskDetailRunPauseAction';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
@@ -35,13 +34,12 @@ const TaskDetailSections = memo(() => {
         <div className={styles.header}>
           <Flexbox className={styles.main} gap={12}>
             {/* Reference order: the title owns the top line, then the
-                "Sub-issue of" parent bar, then the run/assignee controls. */}
+                "Sub-issue of" parent bar, then the run controls — the
+                task's one primary CTA cluster. The agent executor lives in
+                the rail's Assignee group, not here. */}
             <TaskDetailTitleInput />
             <TaskParentBar />
-            <Flexbox horizontal align={'center'} gap={8} style={{ maxWidth: '100%' }} wrap={'wrap'}>
-              <TaskDetailRunPauseAction />
-              <TaskDetailAssignee />
-            </Flexbox>
+            <TaskDetailRunPauseAction />
           </Flexbox>
           <div className={styles.side}>
             {/* Rail, top to bottom, matching the reference: round quick

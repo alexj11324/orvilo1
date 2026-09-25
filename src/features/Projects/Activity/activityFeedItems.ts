@@ -14,6 +14,10 @@ export interface ActivityFeedRow {
     actorKind?: 'agent' | 'system' | 'user';
     from?: unknown;
     fromId?: string | null;
+    relationAction?: 'added' | 'removed';
+    relationDirection?: 'blockedBy' | 'blocking';
+    relationKind?: 'blocks' | 'relates';
+    relationTargetIdentifier?: string | null;
     to?: unknown;
     toId?: string | null;
   } | null;

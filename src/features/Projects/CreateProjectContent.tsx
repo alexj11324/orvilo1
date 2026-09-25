@@ -14,11 +14,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import {
   CalendarIcon,
   ChevronRightIcon,
-  CircleDashedIcon,
-  CircleDotIcon,
-  CircleSlashIcon,
   GitBranchIcon,
-  PauseCircleIcon,
   TagsIcon,
   UserRoundIcon,
   UsersIcon,
@@ -46,11 +42,9 @@ import {
 } from './createProjectForm';
 import { ProjectIcon } from './ProjectIcon';
 import ProjectMilestoneEditor from './ProjectMilestoneEditor';
-import {
-  formatProjectDate,
-  PROJECT_DATE_PRECISIONS,
-  type ProjectDatePrecision,
-} from './projectPlanningDate';
+import { PROJECT_DATE_PRECISIONS, type ProjectDatePrecision } from './projectPlanningDate';
+import { ProjectStatusIcon } from './ProjectStatusIcon';
+import { useProjectDateFormatter } from './useProjectDateFormatter';
 
 export interface CreateProjectOptions {
   /**
@@ -83,14 +77,15 @@ interface CreateProjectFormState extends CreateProjectDraft {
   slugEdited: boolean;
 }
 
+// Glyphs come from `ProjectStatusIcon`, the one renderer for project status —
+// the picker must show the same mark the list row will.
 const PROJECT_STATUS_OPTIONS = [
-  { icon: CircleDashedIcon, labelKey: 'status.backlog', value: 'backlog' },
-  { icon: CircleDashedIcon, labelKey: 'create.status.planned', value: 'planned' },
-  { icon: CircleDotIcon, labelKey: 'create.status.inProgress', value: 'active' },
-  { icon: PauseCircleIcon, labelKey: 'create.status.paused', value: 'paused' },
-  { icon: CircleSlashIcon, labelKey: 'status.canceled', value: 'canceled' },
+  { labelKey: 'status.backlog', value: 'backlog' },
+  { labelKey: 'create.status.planned', value: 'planned' },
+  { labelKey: 'create.status.inProgress', value: 'active' },
+  { labelKey: 'create.status.paused', value: 'paused' },
+  { labelKey: 'status.canceled', value: 'canceled' },
 ] as const satisfies ReadonlyArray<{
-  icon: typeof CircleDashedIcon;
   labelKey: string;
   value: ProjectStatus;
 }>;
@@ -315,6 +310,7 @@ ProjectDatePrecisionTabs.displayName = 'ProjectDatePrecisionTabs';
 const CreateProjectContent = memo<CreateProjectOptions>(
   ({ onCreated, projectLabels: suppliedLabels, teamId }) => {
     const { t } = useTranslation(['project', 'common']);
+    const formatDate = useProjectDateFormatter();
     const { close } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
     const workspaceId = useActiveWorkspaceId();
@@ -505,7 +501,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               options={PROJECT_STATUS_OPTIONS.map((option) => ({
                 label: (
                   <Flexbox horizontal align="center" gap={6}>
-                    <Icon icon={option.icon} size={13} />
+                    <ProjectStatusIcon size={13} status={option.value} />
                     {t(option.labelKey)}
                   </Flexbox>
                 ),
@@ -588,7 +584,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               suffixIcon={null}
               value={form.startDate ? dayjs(form.startDate) : null}
               format={(date) =>
-                formatProjectDate(date.format('YYYY-MM-DD'), form.startDatePrecision ?? 'day')
+                formatDate(date.format('YYYY-MM-DD'), form.startDatePrecision ?? 'day')
               }
               panelRender={(panel) => (
                 <>
@@ -629,7 +625,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               suffixIcon={null}
               value={form.targetDate ? dayjs(form.targetDate) : null}
               format={(date) =>
-                formatProjectDate(date.format('YYYY-MM-DD'), form.targetDatePrecision ?? 'day')
+                formatDate(date.format('YYYY-MM-DD'), form.targetDatePrecision ?? 'day')
               }
               panelRender={(panel) => (
                 <>

@@ -50,8 +50,19 @@ export function createDevOrchestrator({
 
   // Spawn vite through the current node binary instead of a `pnpm` shim:
   // on Windows the shim is `pnpm.cmd`, which a shell-less spawn cannot start.
-  const spawnVite = (args) =>
-    spawn(nodeBin, [viteBin, ...args], { cwd: desktopRoot, stdio: 'inherit' });
+  const nodeOptions = process.env.NODE_OPTIONS || '--max-old-space-size=8192';
+  const spawnVite = (args) => {
+    const child = spawn(nodeBin, [viteBin, ...args], {
+      cwd: desktopRoot,
+      env: {
+        ...process.env,
+        NODE_OPTIONS: nodeOptions,
+      },
+      stdio: 'inherit',
+    });
+    children.push({ args, child });
+    return child;
+  };
 
   function shutdown(code) {
     if (shuttingDown) return;
@@ -59,7 +70,7 @@ export function createDevOrchestrator({
     clearInterval(poll);
     clearTimeout(debounce);
     electron?.kill();
-    for (const child of children) child.kill();
+    for (const { child } of children) child.kill();
     exit(code);
   }
 
@@ -116,21 +127,13 @@ export function createDevOrchestrator({
 
   function start() {
     rmSync(path.join(desktopRoot, 'dist'), { force: true, recursive: true });
-    children.push(
-      spawnVite(['--config', 'vite.renderer.config.ts']),
-      spawnVite(['build', '--watch', '--mode', 'development', '--config', 'vite.main.config.ts']),
-      spawnVite([
-        'build',
-        '--watch',
-        '--mode',
-        'development',
-        '--config',
-        'vite.preload.config.ts',
-      ]),
-    );
+    spawnVite(['--config', 'vite.renderer.config.ts']);
+    spawnVite(['build', '--watch', '--mode', 'development', '--config', 'vite.main.config.ts']);
+    spawnVite(['build', '--watch', '--mode', 'development', '--config', 'vite.preload.config.ts']);
 
-    for (const child of children) {
+    for (const { args, child } of children) {
       child.on('exit', (code) => {
+        logError(`[desktop-dev] child with args [${args.join(' ')}] exited with code: ${code}`);
         if (!shuttingDown) shutdown(code ?? 1);
       });
     }

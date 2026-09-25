@@ -31,6 +31,12 @@ interface ToggleRightPanelButtonProps {
   id?: string | null;
   onToggle?: () => void;
   showActive?: boolean;
+  /**
+   * Whether the tooltip advertises the user's global ToggleRightPanel
+   * hotkey. Suppress it when `onToggle` drives a local panel — that hotkey
+   * targets the global right panel, not this one.
+   */
+  showHotkey?: boolean;
   size?: ActionIconProps['size'];
   title?: ReactNode;
 }
@@ -45,6 +51,7 @@ const ToggleRightPanelButton = memo<ToggleRightPanelButtonProps>(
     expand: expandProp,
     onToggle,
     id = TOGGLE_BUTTON_ID,
+    showHotkey = true,
   }) => {
     const [globalExpand, globalToggle, isStatusInit] = useGlobalStore((s) => [
       systemStatusSelectors.showRightPanel(s),
@@ -64,15 +71,17 @@ const ToggleRightPanelButton = memo<ToggleRightPanelButtonProps>(
     if (expandProp === undefined && !isStatusInit) return null;
 
     if (hideWhenExpanded && expand) return null;
+    const label = title || t('toggleRightPanel.title', { ns: 'hotkey' });
     return (
       <ActionIcon
         active={showActive ? expand : undefined}
+        aria-label={typeof label === 'string' ? label : undefined}
         icon={icon || (expand ? PanelRightClose : PanelRightOpen)}
         id={id ?? undefined}
         size={size || DESKTOP_HEADER_ICON_SMALL_SIZE}
-        title={title || t('toggleRightPanel.title', { ns: 'hotkey' })}
+        title={label}
         tooltipProps={{
-          hotkey,
+          hotkey: showHotkey ? hotkey : undefined,
           placement: 'bottom',
         }}
         onClick={handleClick}

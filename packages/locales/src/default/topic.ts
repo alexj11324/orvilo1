@@ -201,10 +201,10 @@ export default {
   'sidebar.collapseAll': 'Collapse all groups',
   'sidebar.expandAll': 'Expand all groups',
   'sidebar.title': 'Topics',
-  'taskManager.agent': 'Task Agent',
+  'taskManager.agent': 'Issue Manager',
   'taskManager.agentSelector.privateGroup': 'Private',
   'taskManager.agentSelector.workspaceGroup': 'Workspace',
-  'taskManager.welcome': 'Ask me about your tasks',
+  'taskManager.welcome': 'Ask me about your issues',
   'temp': 'Temporary',
   'title': 'Topic',
 };

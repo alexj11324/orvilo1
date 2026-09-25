@@ -63,6 +63,10 @@ jobs:
         with:
           concurrent_skipping: 'same_content_newer'
           skip_after_successful_duplicate: 'true'
+          # Same reasoning as test.yml: `cancel_others` lets whichever run's
+          # check job executes later kill every other in-flight E2E run
+          # repo-wide — a race that has zeroed out sibling push/PR pairs.
+          cancel_others: 'false'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
   e2e:

@@ -28,7 +28,6 @@ import { useUserStore } from '@/store/user';
 import { isModifierClick } from '@/utils/navigation';
 
 import { useInboxUnreadCount } from '../Header/components/useInboxUnreadCount';
-import CreateRow from './CreateRow';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import TeamsSection from './TeamsSection';
 import { useSyncWorkspaceSidebarPreference } from './useSyncWorkspaceSidebarPreference';
@@ -44,9 +43,8 @@ export enum GroupKey {
 
 const ACCORDION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, GroupKey.Teams]);
 
-/** Core entries can never be hidden — the fixed IA keeps them always mounted.
- * `create` is the standalone quick-create row (Linear's `+`). */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'drafts', 'create']);
+/** Core entries can never be hidden — the fixed IA keeps them always mounted. */
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'drafts']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
@@ -290,9 +288,6 @@ const Body = memo(() => {
             style={{ flex: '1 1 0', minHeight: 0 }}
           />,
         );
-      } else if (key === 'create') {
-        flushAccordion();
-        elements.push(<CreateRow key={key} />);
       } else if (ACCORDION_KEYS.has(key)) {
         const comp = accordionComponents[key]?.(key);
         if (comp) accGroup.push({ element: comp, key });

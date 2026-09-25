@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { ProjectDetail } from '@/store/project';
 
 import { ProjectIcon } from '../ProjectIcon';
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 
 /**
  * Compact inline row matching the activity feed's measured reference spec:
@@ -39,6 +40,7 @@ const styles = createStaticStyles(({ css }) => ({
 /** Creation is an immutable audit fact, not the project's current owner or current viewer. */
 export function ProjectCreationActivity({ project }: { project: ProjectDetail['project'] }) {
   const { t } = useTranslation('project');
+  const formatDate = useProjectDateFormatter();
   const date = dayjs(project.createdAt);
   if (!project.createdAt || !date.isValid()) return null;
   const creator = project.createdBySnapshot?.displayName;
@@ -51,7 +53,7 @@ export function ProjectCreationActivity({ project }: { project: ProjectDetail['p
         {creator ? t('activity.createdBy', { name: creator }) : t('activity.created')}
         {' · '}
         <time dateTime={date.toISOString()} title={date.format('YYYY-MM-DD HH:mm')}>
-          {date.format('MMM D')}
+          {formatDate(date.toISOString())}
         </time>
       </span>
     </div>

@@ -112,9 +112,17 @@ export const buildTaskDetailPrompt = (input: BuildTaskDetailPromptInput, now?: D
       } else if (act.type === 'property') {
         const actor = assignmentParticipantLabel(act.author, 'system');
         const change = act.propertyChange;
-        lines.push(
-          `  🔁 ${ago} ${actor} changed ${change?.field}: ${formatPropertyValue(change?.field, change?.from)} → ${formatPropertyValue(change?.field, change?.to)}${idSuffix}`,
-        );
+        if (change?.field === 'relation') {
+          const direction = change.direction ? ` (${change.direction})` : '';
+          const target = change.targetTaskIdentifier ?? change.targetTaskId;
+          lines.push(
+            `  🔗 ${ago} ${actor} ${change.action} ${change.kind} relation${direction} with ${target}${idSuffix}`,
+          );
+        } else {
+          lines.push(
+            `  🔁 ${ago} ${actor} changed ${change?.field}: ${formatPropertyValue(change?.field, change?.from)} → ${formatPropertyValue(change?.field, change?.to)}${idSuffix}`,
+          );
+        }
       } else if (act.type === 'assignment') {
         // Who owns this task has changed hands before; the agent reading the
         // detail should see that history, not just the current chip.

@@ -26,6 +26,7 @@ import {
   EyeIcon,
   InboxIcon,
   ListFilterIcon,
+  MailIcon,
   MailOpenIcon,
   MoreHorizontalIcon,
   SlidersHorizontalIcon,
@@ -90,6 +91,7 @@ import {
   INBOX_FILTER_CHIPS,
   INBOX_SNOOZE_PRESETS,
   inboxBulkFingerprint,
+  inboxCardActionFlags,
   type InboxFilterChip,
   inboxIssueTaskId,
   inboxOpenTarget,
@@ -175,6 +177,63 @@ const styles = createStaticStyles(({ css }) => ({
     &:focus-visible {
       box-shadow: inset 0 0 0 2px ${cssVar.colorPrimary};
     }
+  `,
+  /**
+   * Linear row hover affordances: quick actions surface over the row's right
+   * edge (covering the timestamp) only while the row is hovered or an action
+   * inside holds focus. The wrapper owns the reveal because the actions are
+   * siblings of the row <button> — nested buttons inside it would be invalid.
+   */
+  rowWrap: css`
+    position: relative;
+
+    &:hover .work-inbox-row-actions,
+    &:focus-within .work-inbox-row-actions {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    &:hover .work-inbox-row-time {
+      opacity: 0;
+    }
+  `,
+  rowActions: css`
+    pointer-events: none;
+
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 10px;
+    transform: translateY(-50%);
+
+    display: flex;
+    gap: 2px;
+    align-items: center;
+
+    padding-block: 2px;
+    padding-inline: 2px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: ${cssVar.borderRadius};
+
+    opacity: 0;
+    background: ${cssVar.colorBgElevated};
+
+    transition: opacity ${cssVar.motionDurationFast};
+  `,
+  /* Title must shrink inside the flex row so the trailing type glyph and the
+     unread dot keep their slots instead of being pushed out by long names. */
+  rowTitle: css`
+    flex: 1;
+    min-width: 0;
+  `,
+  /* Linear trails the notification-type glyph at the title line's right edge
+     (colored 14px icon). Actor rows keep the avatar as the leading anchor, so
+     the kind signal needs this trailing slot; no-actor rows already show the
+     glyph as their leading element. */
+  typeTail: css`
+    display: flex;
+    flex: none;
+    align-items: center;
+    color: ${cssVar.colorTextSecondary};
   `,
   typeGlyph: css`
     display: flex;
@@ -645,6 +704,35 @@ const WorkInboxPage = memo(() => {
     [feedScope, organizeFailed, pager, refresh, selectedId, workspaceId],
   );
 
+  // Row-hover "Mark as read" — same observed-version receipt as the selection
+  // path, minus the selection bookkeeping: the card may not be the open one.
+  const markCardRead = useCallback(
+    async (card: NotificationFeedCard) => {
+      try {
+        await notificationService.markReadObserved(card.notificationId, card.activityVersion);
+        // A manual receipt on the open card must not be re-sent by the
+        // selection effect — arm the same suppression the unread path uses.
+        const suppression = armInboxReadReceiptSuppression({
+          activityVersion: card.activityVersion,
+          notificationId: card.notificationId,
+          scope: feedScope,
+          selectedId,
+        });
+        if (suppression) readReceiptAttemptRef.current = suppression;
+        pager.updateCard(card.notificationId, (current) => ({
+          ...current,
+          read: true,
+          readVersion: current.readVersion + 1,
+        }));
+        void mutate(inboxKeys.feedCard(workspaceId, card.notificationId));
+        await refresh();
+      } catch {
+        organizeFailed();
+      }
+    },
+    [feedScope, organizeFailed, pager, refresh, selectedId, workspaceId],
+  );
+
   const decide = useCallback(
     async (
       card: NotificationFeedCard,
@@ -772,12 +860,25 @@ const WorkInboxPage = memo(() => {
   );
   const selectedOpenTarget = selected ? inboxOpenTarget(selected) : null;
 
+  // Snooze presets are shared by the detail `…` submenu, the pane-header clock
+  // button, and the row-hover clock — one builder keeps them identical.
+  const snoozeMenuItems = useCallback(
+    (card: NotificationFeedCard): DropdownItem[] =>
+      INBOX_SNOOZE_PRESETS.map((preset) => ({
+        key: `snooze-${preset}`,
+        label: t(`inbox.snoozePreset.${preset}`),
+        onClick: () => void snoozeCard(card, preset),
+      })),
+    [snoozeCard, t],
+  );
+
   // Secondary card actions live behind `…` — only actions the card actually
   // advertises make the list, and an empty list hides the trigger entirely.
   const detailMoreItems = useMemo(() => {
     if (!selected) return [] as DropdownItem[];
+    const flags = inboxCardActionFlags(selected);
     return [
-      selected.availableActions.includes('archive')
+      flags.archive
         ? {
             icon: <Icon icon={ArchiveIcon} />,
             key: 'archive',
@@ -785,21 +886,17 @@ const WorkInboxPage = memo(() => {
             onClick: () => void archiveCard(selected),
           }
         : null,
-      selected.availableActions.includes('snooze')
+      flags.snooze
         ? {
             // Pick an absolute moment, not a bare "4h" —
             // every preset resolves against local time.
-            children: INBOX_SNOOZE_PRESETS.map((preset) => ({
-              key: `snooze-${preset}`,
-              label: t(`inbox.snoozePreset.${preset}`),
-              onClick: () => void snoozeCard(selected, preset),
-            })),
+            children: snoozeMenuItems(selected),
             icon: <Icon icon={TimerOffIcon} />,
             key: 'snooze',
             label: t('inbox.snooze'),
           }
         : null,
-      selected.read
+      flags.markUnread
         ? {
             icon: <Icon icon={MailOpenIcon} />,
             key: 'markUnread',
@@ -808,7 +905,7 @@ const WorkInboxPage = memo(() => {
           }
         : null,
     ].filter(Boolean) as DropdownItem[];
-  }, [archiveCard, markCardUnread, selected, snoozeCard, t]);
+  }, [archiveCard, markCardUnread, selected, snoozeMenuItems, t]);
 
   const selectCard = useCallback(
     (id: string, openDetail: boolean) => {
@@ -1026,48 +1123,92 @@ const WorkInboxPage = memo(() => {
         </Center>
       ) : (
         <>
-          {visibleCards.map((card) => (
-            <button
-              aria-current={card.notificationId === selected?.notificationId ? 'true' : undefined}
-              className={styles.row}
-              data-active={card.notificationId === selected?.notificationId}
-              data-inbox-id={card.notificationId}
-              key={card.notificationId}
-              type="button"
-              onClick={() => selectCard(card.notificationId, true)}
-            >
-              <Flexbox horizontal align={'center'} gap={10}>
-                {card.actor || card.agent ? (
-                  <Avatar
-                    avatar={card.actor?.avatar ?? card.agent?.avatar}
-                    background={card.agent?.backgroundColor}
-                    name={card.actor?.name ?? card.agent?.name}
-                    size={28}
-                  />
-                ) : (
-                  <span className={styles.typeGlyph}>
-                    <Icon icon={inboxCardIcon(card)} size={14} />
+          <div role={'list'}>
+            {visibleCards.map((card) => {
+              const cardActions = inboxCardActionFlags(card);
+              return (
+                <div className={styles.rowWrap} key={card.notificationId} role={'listitem'}>
+                  <button
+                    className={styles.row}
+                    data-active={card.notificationId === selected?.notificationId}
+                    data-inbox-id={card.notificationId}
+                    type="button"
+                    aria-current={
+                      card.notificationId === selected?.notificationId ? 'true' : undefined
+                    }
+                    onClick={() => selectCard(card.notificationId, true)}
+                  >
+                    <Flexbox horizontal align={'center'} gap={10}>
+                      {card.actor || card.agent ? (
+                        <Avatar
+                          avatar={card.actor?.avatar ?? card.agent?.avatar}
+                          background={card.agent?.backgroundColor}
+                          name={card.actor?.name ?? card.agent?.name}
+                          size={28}
+                        />
+                      ) : (
+                        <span className={styles.typeGlyph}>
+                          <Icon icon={inboxCardIcon(card)} size={14} />
+                        </span>
+                      )}
+                      <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+                        <Flexbox horizontal align={'center'} gap={6}>
+                          {card.read ? null : <span className={styles.unreadDot} />}
+                          <Text ellipsis className={styles.rowTitle} fontSize={13} weight={500}>
+                            {titleFor(card)}
+                          </Text>
+                          {card.actor || card.agent ? (
+                            <span className={styles.typeTail}>
+                              <Icon icon={inboxCardIcon(card)} size={14} />
+                            </span>
+                          ) : null}
+                        </Flexbox>
+                        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+                          <Text className={styles.snippet} fontSize={12}>
+                            {card.content}
+                          </Text>
+                          <Text className={`${styles.time} work-inbox-row-time`} fontSize={12}>
+                            {compactInboxTime(card.lastActivityAt)}
+                          </Text>
+                        </Flexbox>
+                      </Flexbox>
+                    </Flexbox>
+                  </button>
+                  <span className={`${styles.rowActions} work-inbox-row-actions`}>
+                    {cardActions.markRead ? (
+                      <ActionIcon
+                        icon={MailIcon}
+                        size={'small'}
+                        title={t('inbox.markRead')}
+                        onClick={() => void markCardRead(card)}
+                      />
+                    ) : null}
+                    {cardActions.markUnread ? (
+                      <ActionIcon
+                        icon={MailOpenIcon}
+                        size={'small'}
+                        title={t('inbox.markUnread')}
+                        onClick={() => void markCardUnread(card)}
+                      />
+                    ) : null}
+                    {cardActions.snooze ? (
+                      <DropdownMenu items={snoozeMenuItems(card)} placement={'bottomRight'}>
+                        <ActionIcon icon={TimerOffIcon} size={'small'} title={t('inbox.snooze')} />
+                      </DropdownMenu>
+                    ) : null}
+                    {cardActions.archive ? (
+                      <ActionIcon
+                        icon={ArchiveIcon}
+                        size={'small'}
+                        title={t('inbox.archive')}
+                        onClick={() => void archiveCard(card)}
+                      />
+                    ) : null}
                   </span>
-                )}
-                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-                  <Flexbox horizontal align={'center'} gap={6}>
-                    {card.read ? null : <span className={styles.unreadDot} />}
-                    <Text ellipsis fontSize={13} weight={500}>
-                      {titleFor(card)}
-                    </Text>
-                  </Flexbox>
-                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                    <Text className={styles.snippet} fontSize={12}>
-                      {card.content}
-                    </Text>
-                    <Text className={styles.time} fontSize={12}>
-                      {compactInboxTime(card.lastActivityAt)}
-                    </Text>
-                  </Flexbox>
-                </Flexbox>
-              </Flexbox>
-            </button>
-          ))}
+                </div>
+              );
+            })}
+          </div>
           {hasMore || loadMoreError ? (
             <Center padding={12} style={{ flexDirection: 'column', gap: 8 }}>
               {loadMoreError ? (
@@ -1131,6 +1272,25 @@ const WorkInboxPage = memo(() => {
                 size={'small'}
                 title={t('inbox.open')}
                 onClick={() => openTarget(selected)}
+              />
+            ) : null}
+            {/*
+             * Linear's pane header carries the notification's organize actions
+             * as standalone icons (snooze clock + archive tray) ahead of the
+             * overflow `⋯` — not hidden two clicks deep. Same capability gating
+             * as the row-hover strip: unavailable actions simply don't render.
+             */}
+            {inboxCardActionFlags(selected).snooze ? (
+              <DropdownMenu items={snoozeMenuItems(selected)} placement={'bottomRight'}>
+                <ActionIcon icon={TimerOffIcon} size={'small'} title={t('inbox.snooze')} />
+              </DropdownMenu>
+            ) : null}
+            {inboxCardActionFlags(selected).archive ? (
+              <ActionIcon
+                icon={ArchiveIcon}
+                size={'small'}
+                title={t('inbox.archive')}
+                onClick={() => void archiveCard(selected)}
               />
             ) : null}
             {detailMoreItems.length > 0 ? (
@@ -1222,6 +1382,21 @@ const WorkInboxPage = memo(() => {
               <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
                 {t('inbox.open')}
               </Button>
+            ) : null}
+            {/* Same standalone organize icons as the task pane header — a
+                card's snooze/archive affordance doesn't depend on its kind. */}
+            {inboxCardActionFlags(selected).snooze ? (
+              <DropdownMenu items={snoozeMenuItems(selected)} placement={'bottomRight'}>
+                <ActionIcon icon={TimerOffIcon} size={'small'} title={t('inbox.snooze')} />
+              </DropdownMenu>
+            ) : null}
+            {inboxCardActionFlags(selected).archive ? (
+              <ActionIcon
+                icon={ArchiveIcon}
+                size={'small'}
+                title={t('inbox.archive')}
+                onClick={() => void archiveCard(selected)}
+              />
             ) : null}
             {detailMoreItems.length > 0 ? (
               <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>

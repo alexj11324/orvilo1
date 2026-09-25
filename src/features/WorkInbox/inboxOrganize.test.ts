@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   feedFilterForChip,
   inboxBulkFingerprint,
+  inboxCardActionFlags,
   inboxIssueTaskId,
   inboxOpenTarget,
   inboxUrlOpenMode,
@@ -56,6 +57,36 @@ describe('inboxBulkFingerprint in unified mode', () => {
     expect(inboxBulkFingerprint('mark_read', 'unread')).toBe('mark_read:unread');
     expect(parseNotificationBulkFingerprint('archive', 'archive:all')).toEqual({
       filter: undefined,
+    });
+  });
+});
+
+describe('inboxCardActionFlags', () => {
+  const all = ['archive', 'decide', 'open', 'snooze'] as Array<
+    'archive' | 'decide' | 'open' | 'snooze'
+  >;
+
+  it('gates snooze/archive on the actions the card advertises', () => {
+    expect(inboxCardActionFlags({ availableActions: all, read: false })).toEqual({
+      archive: true,
+      markRead: true,
+      markUnread: false,
+      snooze: true,
+    });
+    expect(inboxCardActionFlags({ availableActions: [], read: false })).toEqual({
+      archive: false,
+      markRead: true,
+      markUnread: false,
+      snooze: false,
+    });
+  });
+
+  it('swaps the envelope direction on the card read state', () => {
+    expect(inboxCardActionFlags({ availableActions: all, read: true })).toEqual({
+      archive: true,
+      markRead: false,
+      markUnread: true,
+      snooze: true,
     });
   });
 });

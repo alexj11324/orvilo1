@@ -2,6 +2,7 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { AutoComplete, Button, Modal, Text } from '@lobehub/ui/base-ui';
+import type { ReactNode } from 'react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -60,6 +61,9 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
     return () => clearTimeout(timer);
   }, [needle, open, taskId]);
 
+  const displayValue = (option: { label?: ReactNode; value: string }) =>
+    typeof option.label === 'string' ? option.label : option.value;
+
   const confirm = () => {
     if (taskId && selected) onConfirm(taskId, selected);
     onClose();
@@ -86,9 +90,10 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
           {t('teams.markDuplicateHint')}
         </Text>
         <AutoComplete
-          // Server-side search: antd's default filter matches typed text against
-          // `value` (the task id) and would drop every fetched option.
-          filterOption={false}
+          // Server-side search: the built-in filter matches typed text against
+          // `itemToStringValue` and would drop every fetched option.
+          filteredItems={options}
+          itemToStringValue={(item) => displayValue(item)}
           options={options}
           placeholder={t('teams.markDuplicatePlaceholder')}
           style={{ width: '100%' }}
@@ -101,7 +106,7 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
           }
           onSearch={setNeedle}
           onChange={(value) =>
-            setSelected(options.some((option) => option.value === value) ? value : undefined)
+            setSelected(options.find((option) => displayValue(option) === value)?.value)
           }
         />
       </Flexbox>

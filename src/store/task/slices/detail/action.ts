@@ -367,8 +367,17 @@ export class TaskDetailSliceActionImpl {
     await this.internal_refreshTaskDetail(taskId);
   };
 
-  removeDependency = async (taskId: string, dependsOnId: string): Promise<void> => {
-    await taskService.removeDependency(taskId, dependsOnId);
+  removeDependency = async (
+    taskId: string,
+    dependsOnId: string,
+    type?: 'blocks' | 'relates',
+  ): Promise<void> => {
+    await taskService.removeDependency(taskId, dependsOnId, type);
+    await this.internal_refreshTaskDetail(taskId);
+  };
+
+  removeIssueRelation = async (taskId: string, relationId: string): Promise<void> => {
+    await taskService.removeIssueRelation(taskId, relationId);
     await this.internal_refreshTaskDetail(taskId);
   };
 

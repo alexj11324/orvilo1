@@ -1069,6 +1069,24 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
             handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
             path: 'linear',
           },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/[workspaceSlug]/settings/imports'),
+              'Desktop > Workspace > Settings > Imports',
+              { preloadId: 'settings' },
+            ),
+            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
+            path: 'imports',
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/[workspaceSlug]/settings/imports/linear'),
+              'Desktop > Workspace > Settings > Linear Import',
+              { preloadId: 'settings' },
+            ),
+            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
+            path: 'imports/linear',
+          },
           // Padded tabs share a centered, max-width container layout.
           {
             children: [

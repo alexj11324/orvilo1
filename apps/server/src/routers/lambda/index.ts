@@ -61,6 +61,7 @@ import { homeRouter } from './home';
 import { importerRouter } from './importer';
 import { knowledgeRouter } from './knowledge';
 import { knowledgeBaseRouter } from './knowledgeBase';
+import { linearImportRouter } from './linearImport';
 import { linearSyncRouter } from './linearSync';
 import { llmGenerationTracingRouter } from './llmGenerationTracing';
 import { marketRouter } from './market';
@@ -143,6 +144,7 @@ export const lambdaRouter = router({
   knowledge: knowledgeRouter,
   knowledgeBase: knowledgeBaseRouter,
   linearSync: linearSyncRouter,
+  linearImport: linearImportRouter,
   llmGenerationTracing: llmGenerationTracingRouter,
   market: marketRouter,
   message: messageRouter,

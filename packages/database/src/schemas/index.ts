@@ -34,6 +34,7 @@ export * from './goalTrace';
 export * from './hatchetDispatch';
 export * from './hatchetWorkflowStep';
 export * from './integrationLease';
+export * from './linearImport';
 export * from './linearSync';
 export * from './llmGenerationTracing';
 export * from './message';

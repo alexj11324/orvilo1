@@ -107,10 +107,6 @@ vi.mock('./CustomizeSidebarModal', () => ({
   openCustomizeSidebarModal: vi.fn(),
 }));
 
-vi.mock('./CreateRow', () => ({
-  default: () => <div data-testid="sidebar-item-create" />,
-}));
-
 vi.mock('@/libs/swr', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useClientDataSWR: () => ({ data: undefined, error: undefined, isLoading: false }),
@@ -166,9 +162,9 @@ describe('Home sidebar body', () => {
     expect(texts[2]).toBe('Reviews');
     expect(texts[3]).toBe('Agent');
     expect(texts[4]).toBe('Drafts');
-    // The standalone quick-create row sits between the flat links and the
-    // first accordion, mirroring Linear's `+` slot.
-    expect(children[5]).toHaveAttribute('data-testid', 'sidebar-item-create');
+    // Linear's sidebar has no standalone quick-create row — the accordion
+    // sections directly follow the flat links.
+    expect(screen.queryByTestId('sidebar-item-create')).not.toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
     expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
     // There is no personal mode — Your teams renders even while the

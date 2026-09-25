@@ -75,7 +75,7 @@ const TaskProperties = memo(() => {
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
   return (
-    <div className={styles.properties}>
+    <div className={styles.properties} data-testid="task-properties">
       <TaskStatusTag status={status} taskIdentifier={taskId}>
         <Block
           clickable

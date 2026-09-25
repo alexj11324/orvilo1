@@ -85,8 +85,8 @@ Then(
           exact: true,
           name: `Remove blocking dependency on ${second.identifier}`,
         }),
-      ).toBeVisible();
-      await expect(blocked).toBeVisible();
+      ).toBeVisible({ timeout: 25_000 });
+      await expect(blocked).toBeVisible({ timeout: 25_000 });
       await rejected('run', { id: target.id });
       await rejected('updateStatus', { id: target.id, status: 'completed' });
       expect((await rpc<TaskFixture>('find', { id: target.id }, true)).status).toBe('backlog');

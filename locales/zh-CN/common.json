@@ -731,6 +731,7 @@
   "savedViews.exportCsv": "导出为 CSV",
   "savedViews.exportCsvDone": "CSV 已导出",
   "savedViews.exportCsvFailed": "无法导出这个视图",
+  "savedViews.exportCsvTruncated": "CSV 已导出，但仅包含前 {{count}} 行",
   "savedViews.exportingCsv": "正在导出…",
   "savedViews.facetNoProject": "无项目",
   "savedViews.facetNoTeam": "无团队",

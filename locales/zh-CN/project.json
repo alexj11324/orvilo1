@@ -345,6 +345,7 @@
   "overview.milestoneIssues_other": "{{count}} 个议题 · {{percent}}%",
   "overview.milestoneMenu": "打开菜单",
   "overview.milestoneProgressOf": "{{percent}}%（共 {{count}} 个议题）",
+  "overview.milestoneRefreshError": "已保存，但里程碑列表可能需要稍等片刻才会更新。",
   "overview.milestoneSaveError": "保存里程碑失败，请重试。",
   "overview.milestoneSeeIssues": "查看议题",
   "overview.milestoneSet": "设置里程碑",

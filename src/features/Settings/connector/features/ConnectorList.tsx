@@ -16,6 +16,7 @@ import type React from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useFetchInstalledPlugins } from '@/hooks/useFetchInstalledPlugins';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
@@ -93,6 +94,7 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
   const agentBoundConnectors = useToolStore(connectorSelectors.agentBoundConnectors, isEqual);
   const isAgentBoundInit = useToolStore((s) => s.isAgentBoundInit);
   const fetchAgentBoundConnectors = useToolStore((s) => s.fetchAgentBoundConnectors);
+  const activeWorkspaceId = useActiveWorkspaceId();
 
   const [useFetchOrviloSkillConnections, useFetchUserComposioConnections] = useToolStore((s) => [
     s.useFetchOrviloSkillConnections,
@@ -104,16 +106,18 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
   useFetchUserComposioConnections(isComposioEnabled);
 
   // Load custom connectors (new connector store) so user-added OAuth MCP
-  // connectors appear in the list.
+  // connectors appear in the list. `connector.list` is scope-filtered, so a
+  // fetch that resolved before the workspace id landed holds stale rows even
+  // though `isConnectorsInit` latches — refetch whenever the scope changes.
   useEffect(() => {
-    if (!isConnectorsInit) fetchConnectors();
-  }, [isConnectorsInit, fetchConnectors]);
+    fetchConnectors();
+  }, [activeWorkspaceId, fetchConnectors]);
 
   // Load agent-owned connectors (across all agents) for the Agent Connectors
-  // section.
+  // section — likewise scope-filtered.
   useEffect(() => {
-    if (!isAgentBoundInit) fetchAgentBoundConnectors();
-  }, [isAgentBoundInit, fetchAgentBoundConnectors]);
+    fetchAgentBoundConnectors();
+  }, [activeWorkspaceId, fetchAgentBoundConnectors]);
 
   const getOrviloSkillServerByProvider = useCallback(
     (providerId: string) => {

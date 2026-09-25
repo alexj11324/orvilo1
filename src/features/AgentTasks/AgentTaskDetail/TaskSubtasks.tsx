@@ -307,12 +307,22 @@ const TaskSubtasks = memo(() => {
                 clickable
                 horizontal
                 align="center"
+                aria-expanded={isExpanded}
+                aria-label={t('taskDetail.subtasks')}
                 gap={8}
                 paddingBlock={4}
                 paddingInline={8}
+                role="button"
                 style={{ cursor: 'pointer', width: 'fit-content' }}
+                tabIndex={0}
                 variant="borderless"
                 onClick={() => setIsExpanded((prev) => !prev)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsExpanded((prev) => !prev);
+                  }
+                }}
               >
                 <Icon color={cssVar.colorTextDescription} icon={ListTodoIcon} size={16} />
                 <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
@@ -331,6 +341,7 @@ const TaskSubtasks = memo(() => {
             </Flexbox>
             <Flexbox horizontal align="center" gap={4}>
               <ActionIcon
+                aria-label={canEditTask ? t('taskDetail.runAll') : reason}
                 disabled={!canEditTask || isPlanning}
                 icon={PlayCircle}
                 loading={isPlanning}
@@ -339,6 +350,7 @@ const TaskSubtasks = memo(() => {
                 onClick={handleRunAll}
               />
               <ActionIcon
+                aria-label={canEditTask ? t('taskDetail.addSubtask') : reason}
                 disabled={!canEditTask}
                 icon={Plus}
                 size="small"
@@ -381,13 +393,22 @@ const TaskSubtasks = memo(() => {
             clickable
             horizontal
             align="center"
+            aria-label={t('taskDetail.addSubtask')}
             gap={8}
             paddingBlock={4}
             paddingInline={8}
+            role="button"
             style={{ width: 'fit-content' }}
+            tabIndex={0}
             title={canEditTask ? undefined : reason}
             variant="borderless"
             onClick={toggleCreating}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleCreating();
+              }
+            }}
           >
             <Icon color={cssVar.colorTextDescription} icon={Plus} size={16} />
             <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>

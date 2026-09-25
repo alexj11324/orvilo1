@@ -116,13 +116,22 @@ const TaskAcceptanceStateRow = memo(() => {
       clickable
       horizontal
       align={'center'}
+      aria-label={`${label} · ${t('taskDetail.acceptanceState.hint')}`}
       className={styles.propertyItem}
       gap={8}
+      role={'button'}
+      tabIndex={0}
       // The label may be truncated below, so the hover title carries it in
       // full ahead of the "click to review" hint.
       title={`${label} · ${t('taskDetail.acceptanceState.hint')}`}
       variant={'borderless'}
       onClick={() => openAcceptanceInPanel(acceptance.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openAcceptanceInPanel(acceptance.id);
+        }
+      }}
     >
       <Icon
         color={meta.color}

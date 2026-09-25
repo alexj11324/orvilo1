@@ -1534,6 +1534,7 @@ export default {
   'taskDetail.acceptanceState.rejected': 'Sent back',
   'taskDetail.acceptanceState.repairing': 'Repairing',
   'taskDetail.acceptanceState.verifying': 'Verifying',
+  'taskDetail.agent': 'Agent',
   'taskDetail.assignee': 'Assignee',
   'taskDetail.goalTimeline.hover.cost': 'Cost',
   'taskDetail.goalTimeline.hover.duration': 'Duration',

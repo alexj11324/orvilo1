@@ -40,9 +40,15 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     padding-block-end: 120px;
   `,
   side: css`
+    /* Collapsed layout: one wrapping chip row under the title, matching the
+       reference — every rail group (properties, project, relations) folds
+       into the same flow instead of stacking as labeled sections. Section
+       wrappers go display: contents so their rows join this wrap. */
     display: flex;
-    flex-direction: column;
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+
     min-width: 0;
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
@@ -53,6 +59,10 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
          rail's height to end. (1 / -1 can't resolve — the rows are
          implicit; the grid always has exactly two by construction.) */
       grid-row: 1 / 3;
+      flex-flow: column nowrap;
+      gap: 16px;
+      align-items: stretch;
+
       padding-block-start: 0;
     }
   `,
@@ -73,10 +83,14 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
    * hides, matching Linear, where pill rows carry no section titles.
    */
   railSection: css`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
+    display: contents;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
   `,
   railSectionLabel: css`
     display: none;
@@ -100,29 +114,94 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
    * relation outside the wide sidebar.
    */
   railSectionHeader: css`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: contents;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
   `,
-  /** A stacked row inside a rail section — same hit area as a property cell. */
+
+  railSectionHint: css`
+    /* Collapsed: visually hidden rather than display:none — it stays
+       announced (role=status) while a bare text line would dangle between
+       the pills. */
+    position: absolute;
+
+    overflow: hidden;
+
+    width: 1px;
+    height: 1px;
+
+    clip-path: inset(50%);
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      position: static;
+
+      overflow: visible;
+      display: block;
+
+      width: auto;
+      height: auto;
+      padding-inline: 8px;
+
+      clip-path: none;
+    }
+  `,
+  /** A stacked row inside a rail section — a full-width line in the wide
+     sidebar, an inline chip in the collapsed row (same pill as a property
+     cell). */
   railRow: css`
-    width: 100%;
+    display: inline-flex;
+
+    width: auto;
     max-width: 100%;
-    height: 30px;
+    height: 28px;
     padding-inline: 8px 10px;
     border-radius: ${cssVar.borderRadius};
 
     white-space: nowrap;
+
+    background: ${cssVar.colorFillTertiary};
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: flex;
+      width: 100%;
+      height: 30px;
+      background: transparent;
+    }
   `,
-  properties: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  /** One related-issue row: the clickable issue plus its remove button, an
+     inline chip in the collapsed layout. */
+  relatedRow: css`
+    display: inline-flex;
     align-items: center;
 
     max-width: 100%;
+    height: 28px;
+    padding-inline: 4px;
+    border-radius: ${cssVar.borderRadius};
+
+    background: ${cssVar.colorFillTertiary};
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: flex;
+
+      width: 100%;
+      height: 30px;
+      padding-inline: 0;
+
+      background: transparent;
+    }
+  `,
+  properties: css`
+    /* Collapsed: contents so the property pills join .side's single wrap
+       together with the project and relation chips. */
+    display: contents;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: flex;
       flex-direction: column;
       gap: 2px;
       align-items: stretch;

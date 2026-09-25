@@ -23,6 +23,43 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       margin-inline-start: -6px;
     }
   `,
+  avatarStackBtn: css`
+    cursor: pointer;
+
+    display: inline-flex;
+    align-items: center;
+
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+
+    background: transparent;
+
+    transition: opacity ${cssVar.motionDurationFast};
+
+    &:hover {
+      opacity: 0.8;
+    }
+  `,
+  overflowCount: css`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 3px;
+    border: 1.5px solid ${cssVar.colorBgContainer};
+    border-radius: 999px;
+
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    color: ${cssVar.colorTextSecondary};
+
+    background: ${cssVar.colorFillSecondary};
+  `,
   memberRow: css`
     cursor: pointer;
 
@@ -51,6 +88,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface Subscriber {
   userId: string;
 }
+
+const MAX_AVATARS = 5;
 
 /**
  * The issue's notification row under the comment composer: subscribe /
@@ -150,35 +189,54 @@ const TaskSubscribers = memo<{ taskId: string }>(({ taskId }) => {
           ? t('taskDetail.subscribers.unsubscribe', { defaultValue: 'Unsubscribe' })
           : t('taskDetail.subscribers.subscribe', { defaultValue: 'Subscribe' })}
       </button>
-      <Flexbox horizontal align="center" gap={8} style={{ marginInlineStart: 'auto' }}>
-        <div className={styles.avatarStack}>
-          {subscribers.slice(0, 5).map((s) => (
-            <Avatar
-              avatar={memberById.get(s.userId)?.user?.avatar || undefined}
-              key={s.userId}
-              name={memberName(s.userId)}
-              shape={'circle'}
-              size={18}
-              title={memberName(s.userId)}
-            />
-          ))}
-        </div>
-        {members.length > 0 && (
-          <Popover
-            arrow={false}
-            content={manageContent}
-            open={manageOpen}
-            placement="bottomRight"
-            trigger="click"
-            onOpenChange={setManageOpen}
+      {members.length > 0 && (
+        <Popover
+          arrow={false}
+          content={manageContent}
+          open={manageOpen}
+          placement="bottomRight"
+          trigger="click"
+          onOpenChange={setManageOpen}
+        >
+          <button
+            aria-label={t('taskDetail.subscribers.change', { defaultValue: 'Change subscribers' })}
+            className={styles.avatarStackBtn}
+            title={t('taskDetail.subscribers.change', { defaultValue: 'Change subscribers' })}
+            type="button"
           >
-            <button className={actionLinkStyles.actionLink} type="button">
-              <Users size={13} />
-              {t('taskDetail.subscribers.change', { defaultValue: 'Change subscribers' })}
-            </button>
-          </Popover>
-        )}
-      </Flexbox>
+            {subscribers.length > 0 ? (
+              <div className={styles.avatarStack}>
+                {subscribers.slice(0, MAX_AVATARS).map((s) => (
+                  <Avatar
+                    avatar={memberById.get(s.userId)?.user?.avatar || undefined}
+                    key={s.userId}
+                    name={memberName(s.userId)}
+                    shape={'circle'}
+                    size={18}
+                    title={memberName(s.userId)}
+                  />
+                ))}
+                {subscribers.length > MAX_AVATARS && (
+                  <span
+                    className={styles.overflowCount}
+                    title={subscribers
+                      .slice(MAX_AVATARS)
+                      .map((s) => memberName(s.userId))
+                      .join(', ')}
+                  >
+                    +{subscribers.length - MAX_AVATARS}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className={actionLinkStyles.actionLink}>
+                <Users size={13} />
+                {t('taskDetail.subscribers.change', { defaultValue: 'Change subscribers' })}
+              </span>
+            )}
+          </button>
+        </Popover>
+      )}
     </Flexbox>
   );
 });

@@ -140,6 +140,7 @@ const TaskProperties = memo(() => {
 
           {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
             <AssigneeMemberSelector
+              fullWidth
               currentUserId={assigneeUserId}
               disabled={status === 'running'}
               taskCreatorId={createdByUserId}
@@ -164,7 +165,7 @@ const TaskProperties = memo(() => {
                 ) : (
                   <>
                     <UnassignedAssigneeIcon kind={'human'} size={16} />
-                    <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                    <Text style={{ color: cssVar.colorTextSecondary }} weight={500}>
                       {t('taskDetail.assignee')}
                     </Text>
                   </>
@@ -177,6 +178,7 @@ const TaskProperties = memo(() => {
             which agent runs the task. Lives in the rail with Assignee so the
             under-title row stays a single primary-CTA cluster. */}
           <AssigneeAgentSelector
+            fullWidth
             currentAgentId={assigneeAgentId}
             disabled={status === 'running'}
             taskIdentifier={taskId}
@@ -201,7 +203,7 @@ const TaskProperties = memo(() => {
                 ) : (
                   <>
                     <UnassignedAssigneeIcon kind={'agent'} size={16} />
-                    <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                    <Text style={{ color: cssVar.colorTextSecondary }} weight={500}>
                       {t('taskDetail.agent')}
                     </Text>
                   </>
@@ -216,6 +218,7 @@ const TaskProperties = memo(() => {
           {(status === 'paused' || reviewerUserId) &&
             shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
               <AssigneeMemberSelector
+                fullWidth
                 currentUserId={reviewerUserId}
                 disabled={status === 'running'}
                 taskCreatorId={createdByUserId}
@@ -257,7 +260,7 @@ const TaskProperties = memo(() => {
                     ) : (
                       <>
                         <UnassignedAssigneeIcon kind={'human'} size={16} />
-                        <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+                        <Text style={{ color: cssVar.colorTextSecondary }} weight={500}>
                           {t('taskDetail.reviewer')}
                         </Text>
                       </>
@@ -267,7 +270,9 @@ const TaskProperties = memo(() => {
               </AssigneeMemberSelector>
             )}
 
-          {status && workflowStateId && (
+          {/* Business state badge — only shown when pending delivery acceptance,
+              avoiding duplicate status badges since TaskStatusTag already displays status */}
+          {status && workflowStateId && workflowCategory === 'done' && status !== 'completed' && (
             <Block
               horizontal
               align="center"
@@ -288,24 +293,29 @@ const TaskProperties = memo(() => {
             Recurring tasks have no delivery acceptance, so no state to show. */}
           {!automationMode && <TaskAcceptanceStateRow />}
 
-          <TaskScheduleConfig>
-            <Block
-              clickable
-              horizontal
-              align="center"
-              className={styles.propertyItem}
-              gap={8}
-              variant={'borderless'}
-            >
-              <TaskTriggerTag
-                automationMode={automationMode}
-                heartbeatInterval={heartbeatInterval}
-                mode="inline"
-                schedulePattern={schedulePattern}
-                scheduleTimezone={scheduleTimezone}
-              />
-            </Block>
-          </TaskScheduleConfig>
+          {/* Schedule row: only visible when a schedule or automation is configured */}
+          {Boolean(
+            automationMode || schedulePattern || (heartbeatInterval && heartbeatInterval > 0),
+          ) && (
+            <TaskScheduleConfig>
+              <Block
+                clickable
+                horizontal
+                align="center"
+                className={styles.propertyItem}
+                gap={8}
+                variant={'borderless'}
+              >
+                <TaskTriggerTag
+                  automationMode={automationMode}
+                  heartbeatInterval={heartbeatInterval}
+                  mode="inline"
+                  schedulePattern={schedulePattern}
+                  scheduleTimezone={scheduleTimezone}
+                />
+              </Block>
+            </TaskScheduleConfig>
+          )}
         </div>
       </div>
 
@@ -319,6 +329,7 @@ const TaskProperties = memo(() => {
           </span>
         </div>
         <TaskLabelSelector
+          fullWidth
           assignedLabels={labels}
           disabled={status === 'running'}
           taskIdentifier={taskId}

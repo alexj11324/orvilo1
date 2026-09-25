@@ -1,5 +1,5 @@
 import { useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Tooltip } from '@lobehub/ui';
 import { Paperclip } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -151,19 +151,33 @@ const TaskInstruction = memo(() => {
           />
         </div>
       </CollapsibleContent>
-      {/* Linear's description footer: reaction chips + the muted "Add reaction"
-          and attach links sitting directly under the body text. */}
-      <Flexbox gap={6}>
-        {taskDatabaseId && <TaskReactions taskId={taskDatabaseId} />}
-        {showAttach && (
-          <button className={actionLinkStyles.actionLink} type="button" onClick={handleAttach}>
-            <Paperclip size={13} />
-            {t('taskDetail.attachImagesFiles', {
-              defaultValue: 'Attach images, files, or videos',
-            })}
-          </button>
-        )}
-      </Flexbox>
+      {/* Linear's description footer: reaction chips + compact icon buttons
+          for adding reactions and attaching files directly under body text. */}
+      {taskDatabaseId && (
+        <TaskReactions
+          taskId={taskDatabaseId}
+          extraAction={
+            showAttach ? (
+              <Tooltip
+                title={t('taskDetail.attachImagesFiles', {
+                  defaultValue: 'Attach images, files, or videos',
+                })}
+              >
+                <button
+                  className={actionLinkStyles.iconActionBtn}
+                  type="button"
+                  aria-label={t('taskDetail.attachImagesFiles', {
+                    defaultValue: 'Attach images, files, or videos',
+                  })}
+                  onClick={handleAttach}
+                >
+                  <Paperclip size={15} />
+                </button>
+              </Tooltip>
+            ) : undefined
+          }
+        />
+      )}
     </Flexbox>
   );
 });

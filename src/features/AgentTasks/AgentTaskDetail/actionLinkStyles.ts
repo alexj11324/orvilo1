@@ -26,4 +26,28 @@ export const actionLinkStyles = createStaticStyles(({ css, cssVar }) => ({
       color: ${cssVar.colorText};
     }
   `,
+  iconActionBtn: css`
+    cursor: pointer;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: ${cssVar.borderRadiusSM};
+
+    color: ${cssVar.colorTextTertiary};
+
+    background: transparent;
+
+    transition: all ${cssVar.motionDurationFast};
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
 }));

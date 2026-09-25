@@ -2416,6 +2416,41 @@ describe('TaskModel', () => {
       const resolved = await model.resolve('T-999');
       expect(resolved).toBeNull();
     });
+
+    it('should fall back to the primary key when the identifier lookup misses', async () => {
+      const model = new TaskModel(serverDB, userId);
+      // Seeded/imported rows can carry a primary key without the task_ prefix;
+      // resolve() must still reach them by id after the identifier lookup fails.
+      await serverDB.insert(tasks).values({
+        createdByUserId: userId,
+        id: 'taskparity0001',
+        identifier: 'PX-1',
+        instruction: 'Fixture task',
+        seq: 1,
+      });
+
+      const resolved = await model.resolve('taskparity0001');
+      expect(resolved!.id).toBe('taskparity0001');
+      expect(resolved!.identifier).toBe('PX-1');
+    });
+
+    it('should still prefer the identifier over a colliding primary key', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const owner = await model.create({ instruction: 'Identifier owner' });
+      // A row whose primary key happens to equal another task's identifier must
+      // not shadow the identifier match.
+      await serverDB.insert(tasks).values({
+        createdByUserId: userId,
+        id: owner.identifier!,
+        identifier: 'PX-2',
+        instruction: 'Row whose id collides with an identifier',
+        seq: 2,
+      });
+
+      const resolved = await model.resolve(owner.identifier!.toLowerCase());
+      expect(resolved!.id).toBe(owner.id);
+      expect(resolved!.identifier).toBe(owner.identifier);
+    });
   });
 
   describe('update early return', () => {

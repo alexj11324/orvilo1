@@ -159,6 +159,24 @@ const main = async () => {
         title: 'Synthetic fixture refreshed',
         type: 'task_assigned',
       },
+      {
+        // Task-linked row: selecting it mounts the shared issue surface in the
+        // detail pane, which resolves the task by primary key (`taskpv0011`
+        // intentionally lacks the `task_` prefix to cover imported/seeded ids).
+        // Unread + mention keeps it in the Priority bucket, so the click also
+        // exercises the read-receipt retention path.
+        category: 'mention',
+        content: 'A teammate mentioned you on the seeded APX-11 issue.',
+        dedupeKey: `${FIXTURE_DEDUPE_PREFIX}task-link`,
+        id: '10000000-0000-4000-8000-000000000006',
+        isRead: false,
+        kind: 'update' as const,
+        metadata: { actor: { name: 'Fixture Teammate', userId: 'fixture-teammate' } },
+        resourceId: 'taskpv0011',
+        resourceType: 'task',
+        title: 'Mentioned you on APX-11',
+        type: 'mention',
+      },
     ];
 
     for (const [index, row] of rows.entries()) {

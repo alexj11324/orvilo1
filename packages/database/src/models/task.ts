@@ -758,7 +758,12 @@ export class TaskModel {
   // Resolve id or identifier (e.g. 'T-1') to a task
   async resolve(idOrIdentifier: string): Promise<TaskItem | null> {
     if (idOrIdentifier.startsWith('task_')) return this.findById(idOrIdentifier);
-    return this.findByIdentifier(idOrIdentifier.toUpperCase());
+    // The `task_` prefix is a convention, not a guarantee — fixture rows and
+    // non-standard ids (e.g. `taskparity0001`) still carry a primary key. When
+    // the identifier lookup misses, fall back to the id path before giving up.
+    return (
+      (await this.findByIdentifier(idOrIdentifier.toUpperCase())) ?? this.findById(idOrIdentifier)
+    );
   }
 
   async findByIdentifier(identifier: string): Promise<TaskItem | null> {

@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
-# Print the resolved local test environment for agent-testing.
+# test-env.sh — print the resolved local test environment for agent-testing.
 #
 # This is intentionally read-only. It mirrors scripts/runWithEnv.mts precedence:
 # .env -> .env.$NODE_ENV -> .env.local -> .env.$NODE_ENV.local, then shell env.
+#
+# Usage:
+#   test-env.sh              # print resolved test environment
+#   test-env.sh --exports    # print source-able export lines
+#   test-env.sh --value KEY  # print one resolved value
+#   test-env.sh -h|--help    # show usage
+#
+# Env:
+#   NODE_ENV   (default development)  selects which .env.* files are layered
+#
+# Exit behavior:
+#   0 after printing; 2 on unknown option; fails fast (set -euo pipefail)
+#   on unreadable state.
 
 set -euo pipefail
 

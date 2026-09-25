@@ -189,6 +189,7 @@ describe('TaskService', () => {
     getCommentFileIdsMap: vi.fn().mockResolvedValue({}),
     getDependencies: vi.fn(),
     getDependenciesByTaskIds: vi.fn().mockResolvedValue([]),
+    getDependents: vi.fn().mockResolvedValue([]),
     getReviewConfig: vi.fn(),
     getVerifyConfig: vi.fn(),
     getTaskFileIds: vi.fn().mockResolvedValue([]),

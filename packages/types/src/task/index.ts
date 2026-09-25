@@ -1223,6 +1223,17 @@ export interface TaskDetailData {
     status?: string | null;
     type: string;
   }>;
+  /** Tasks that declare an edge on this one — the rail's "Blocking" (type
+   * `blocks`) and symmetric "Related" (type `relates`) groups. */
+  dependents?: Array<{
+    dependsBy: string;
+    /** Raw edge target (the other task), retained for relation removal. */
+    id?: string;
+    name?: string | null;
+    /** Null/omitted means unavailable, never implicitly completed. */
+    status?: string | null;
+    type: string;
+  }>;
   description?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;

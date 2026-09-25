@@ -301,6 +301,7 @@ export default {
   'overview.milestoneDeleteConfirm.ok': 'Delete milestone',
   'overview.milestoneDeleteConfirm.title': 'Delete milestone?',
   'overview.milestoneDeleteError': 'Could not delete the milestone. Please try again.',
+  'overview.milestoneRefreshError': 'Saved, but the milestone list may take a moment to update.',
   'overview.milestoneDrag': 'Drag to reorder milestone',
   'overview.milestoneEdit': 'Edit milestone',
   'overview.milestoneExpand': 'Expand',

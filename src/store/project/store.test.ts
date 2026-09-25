@@ -173,6 +173,26 @@ describe('project store cache scope', () => {
     expect(useProjectStore.getState().pendingProjectLinkKeys).toEqual([]);
   });
 
+  it('resolves a committed milestone write with refreshError when readback fails', async () => {
+    const milestone = { id: 'milestone-1', name: 'M1' };
+    vi.spyOn(projectService, 'createMilestone').mockResolvedValue({
+      data: milestone,
+      success: true,
+    } as Awaited<ReturnType<typeof projectService.createMilestone>>);
+    vi.mocked(mutate).mockRejectedValueOnce(new Error('Readback unavailable'));
+
+    // A rejected refresh must not surface as a failed create — retrying would
+    // write a duplicate milestone.
+    await expect(
+      useProjectStore.getState().createMilestone('project-1', { name: 'M1' }),
+    ).resolves.toMatchObject({
+      data: milestone,
+      refreshError: new Error('Readback unavailable'),
+      success: true,
+    });
+    expect(mutate).toHaveBeenCalledWith(['project/detail', 'user-1:personal', 'project-1']);
+  });
+
   it('restores a persisted project list into the store before the first paint', () => {
     const cachedProject = { id: 'cached-project', name: 'Cached project' } as ProjectListItem;
     mocks.swrData = { data: [cachedProject], message: 'cached', success: true };

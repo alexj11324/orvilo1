@@ -51,11 +51,10 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
         description: description.trim() || null,
         name: trimmed,
       };
-      if (milestone) {
-        await updateMilestone(projectId, milestone.id, input);
-      } else {
-        await createMilestone(projectId, input);
-      }
+      const result = milestone
+        ? await updateMilestone(projectId, milestone.id, input)
+        : await createMilestone(projectId, input);
+      if (result.refreshError) toast.warning(t('overview.milestoneRefreshError'));
       close();
     } catch (error) {
       console.error('Failed to save project milestone', error);

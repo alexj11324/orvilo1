@@ -13,10 +13,9 @@ import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import type React from 'react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useFetchInstalledPlugins } from '@/hooks/useFetchInstalledPlugins';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
@@ -36,6 +35,7 @@ import type { ConnectorDetailType } from './ConnectorDetail';
 import McpPresetItem from './McpPresetItem';
 import McpSkillItem from './McpSkillItem';
 import OrviloSkillItem from './OrviloSkillItem';
+import { useScopeAwareConnectorFetch } from './useScopeAwareConnectorFetch';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -89,12 +89,7 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
   const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
   const installedPluginList = useToolStore(pluginSelectors.installedPluginMetaList, isEqual);
   const customConnectors = useToolStore(connectorSelectors.customConnectors, isEqual);
-  const isConnectorsInit = useToolStore((s) => s.isConnectorsInit);
-  const fetchConnectors = useToolStore((s) => s.fetchConnectors);
   const agentBoundConnectors = useToolStore(connectorSelectors.agentBoundConnectors, isEqual);
-  const isAgentBoundInit = useToolStore((s) => s.isAgentBoundInit);
-  const fetchAgentBoundConnectors = useToolStore((s) => s.fetchAgentBoundConnectors);
-  const activeWorkspaceId = useActiveWorkspaceId();
 
   const [useFetchOrviloSkillConnections, useFetchUserComposioConnections] = useToolStore((s) => [
     s.useFetchOrviloSkillConnections,
@@ -106,18 +101,10 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
   useFetchUserComposioConnections(isComposioEnabled);
 
   // Load custom connectors (new connector store) so user-added OAuth MCP
-  // connectors appear in the list. `connector.list` is scope-filtered, so a
-  // fetch that resolved before the workspace id landed holds stale rows even
-  // though `isConnectorsInit` latches — refetch whenever the scope changes.
-  useEffect(() => {
-    fetchConnectors();
-  }, [activeWorkspaceId, fetchConnectors]);
-
-  // Load agent-owned connectors (across all agents) for the Agent Connectors
-  // section — likewise scope-filtered.
-  useEffect(() => {
-    fetchAgentBoundConnectors();
-  }, [activeWorkspaceId, fetchAgentBoundConnectors]);
+  // connectors appear in the list, and agent-owned connectors for the Agent
+  // Connectors section. Both lists are scope-filtered, so the hook refetches
+  // them when the active workspace id changes.
+  useScopeAwareConnectorFetch();
 
   const getOrviloSkillServerByProvider = useCallback(
     (providerId: string) => {

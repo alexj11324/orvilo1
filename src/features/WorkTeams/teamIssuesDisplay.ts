@@ -46,7 +46,9 @@ export interface TeamIssuesDisplay {
 export const DEFAULT_TEAM_ISSUES_DISPLAY: TeamIssuesDisplay = {
   boardGrouping: 'workflowCategory',
   completed: 'all',
-  grouping: 'status',
+  // Same workflow states as the board, so every group header draws the glyph
+  // of the row status marks under it (Linear groups its list by Status).
+  grouping: 'workflowCategory',
   nestedSubIssues: true,
   ordering: 'default',
   projectChip: true,
@@ -55,8 +57,8 @@ export const DEFAULT_TEAM_ISSUES_DISPLAY: TeamIssuesDisplay = {
 };
 
 export const TEAM_ISSUES_LIST_GROUPINGS: readonly TeamIssuesListGrouping[] = [
-  'status',
   'workflowCategory',
+  'status',
   'priority',
   'project',
   'assignee',

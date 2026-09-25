@@ -89,10 +89,11 @@ state, and "Change subscribers" hides when the workspace roster is empty
   Then sign in via the scripted OIDC flow (see
   `acceptance-dockerless-env` skill → "Scripted Electron OIDC sign-in"):
   LoginStep → "Connect to your own Orvilo server instance" → the Next port of
-  the running env (parity env: `http://localhost:3010`, database
-  `orvilo_linear_parity_20260922`, seeded via
-  `init-dev-env.sh seed-parity`). Safari hops handle better-auth + consent;
-  desktop polls the handoff and lands signed-in.
+  the running env (read from `.records/env/agent-testing-ports.env` or run
+  `.agents/acceptance/scripts/dev-up.sh` to bring up services; database
+  `orvilo_linear_parity_20260922` or standard dev DB, configured in `.env`).
+  Safari hops handle better-auth + consent; desktop polls the handoff and
+  lands signed-in.
   Open `/ws-useragenttes/task/VYG-2`, screenshot the feed (reactions row,
   attach link, subscribers row, relation events), compare against the Linear
   reference browser (Chrome CDP :9222, profile `~/linear-ref-profile`,
@@ -128,6 +129,6 @@ scripts/seedLinearParity` (wired into `init-dev-env.sh seed-parity` by #246);
 - macOS `timeout` doesn't always kill `tsgo`; run it without the wrapper or
   watch it yourself. `bun run check` = lint + related tests; full-repo
   typecheck is `NODE_OPTIONS=--max-old-space-size=12288 bunx tsgo --noEmit`.
-- Several ports on this box are/were in use: parity env Next :3010 /
-  Vite :37935 / s3rver :29000; signed-in Chrome CDP :9223 (localhost-scoped
-  cookies); Linear reference Chrome CDP :9222 (read-only).
+- Several ports on this box are/were in use: Next (check `.records/env/agent-testing-ports.env`, e.g. :20236 or :3010) /
+  Vite (:37935 or similar) / s3rver :29000; signed-in Chrome CDP :9223 (localhost-scoped
+  cookies); Linear reference Chrome CDP :9222 (read-only). If servers are down, run `.agents/acceptance/scripts/dev-up.sh` to restart.

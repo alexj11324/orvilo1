@@ -147,8 +147,8 @@ export const workQueryListSections = (
       }));
   }
   // 'attention' can't be derived client-side (it reads the dependency graph),
-  // so a groups-less response degrades to the status bucketing.
-  return workQueryListGroups(tasks, groupBy === 'attention' ? 'status' : groupBy);
+  // so a groups-less response degrades to its tail axis — workflow state.
+  return workQueryListGroups(tasks, groupBy === 'attention' ? 'workflowCategory' : groupBy);
 };
 
 export const cascadeStatusForBoardKey = (

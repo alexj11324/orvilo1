@@ -16,6 +16,7 @@ import {
   type WorkQueryPredicate,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
@@ -43,6 +44,7 @@ import {
   WorkQueryError,
   WorkQueryModel,
 } from '@/database/models/workQuery';
+import { workspaceMembers } from '@/database/schemas';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { ActionSourceRegistry, buildInboxFeed } from '@/server/services/workAttention';
@@ -741,6 +743,54 @@ export const workAttentionRouter = router({
       if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
       const row = await ctx.subscriptionModel.subscribe(input.taskId);
       return { data: row, message: 'Subscribed', success: true };
+    }),
+
+  subscribers: organizeProcedure
+    .input(z.object({ taskId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const task = await ctx.taskModel.findById(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      const rows = await ctx.subscriptionModel.listByTask(input.taskId);
+      return rows.map((row) => ({ reason: row.reason, userId: row.userId }));
+    }),
+
+  setSubscriber: organizeProcedure
+    .input(
+      z.object({ subscribed: z.boolean(), taskId: z.string().min(1), userId: z.string().min(1) }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const task = await ctx.taskModel.findById(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      // Managing somebody else's row is a workspace-issues affordance: the
+      // task must itself live in the caller's workspace (caller-scoped
+      // findById also returns the caller's personal/private tasks, which the
+      // target cannot read) and the target must be an active member.
+      if (input.userId !== ctx.userId) {
+        if (!ctx.workspaceId || task.workspaceId !== ctx.workspaceId) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace task required' });
+        }
+        const [member] = await ctx.serverDB
+          .select({ userId: workspaceMembers.userId })
+          .from(workspaceMembers)
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, ctx.workspaceId),
+              eq(workspaceMembers.userId, input.userId),
+              isNull(workspaceMembers.deletedAt),
+              isNull(workspaceMembers.suspendedAt),
+            ),
+          )
+          .limit(1);
+        if (!member) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace member not found' });
+        }
+      }
+      if (input.subscribed) {
+        await ctx.subscriptionModel.subscribeForUser(input.taskId, input.userId);
+      } else {
+        await ctx.subscriptionModel.unsubscribeForUser(input.taskId, input.userId);
+      }
+      return { message: input.subscribed ? 'Subscribed' : 'Unsubscribed', success: true };
     }),
 
   moveBoard: taskWriteProcedure

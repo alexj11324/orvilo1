@@ -666,11 +666,9 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               ›
             </span>
             <Text weight={500}>{t('teams.navIssues')}</Text>
-          </Flexbox>
-        }
-        right={
-          <Flexbox horizontal align={'center'} gap={8}>
-            <WorkFavoriteButton targetId={teamId} targetType="team" />
+            {teamId && (
+              <WorkFavoriteButton icon="star" targetId={teamId} targetType="team" variant="icon" />
+            )}
           </Flexbox>
         }
       />

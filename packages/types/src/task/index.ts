@@ -317,7 +317,13 @@ export type TaskActivityType =
  * change with no migration.
  */
 export type TaskActivityLogType =
-  'assignee_agent' | 'assignee_user' | 'automation' | 'priority' | 'reviewer' | 'status';
+  | 'assignee_agent'
+  | 'assignee_user'
+  | 'automation'
+  | 'priority'
+  | 'relation'
+  | 'reviewer'
+  | 'status';
 
 /**
  * Payload of a `task_activities` row: what the slot moved between.
@@ -334,6 +340,18 @@ export interface TaskActivityLogPayload {
   actorKind?: 'agent' | 'system' | 'user';
   from?: TaskActivityValue;
   fromId?: string | null;
+  /**
+   * `relation` events: whether the edge appeared or disappeared. Denormalized
+   * target fields keep the row readable after the other task is deleted or
+   * renamed — the feed must not turn a historical "blocked by T-3" into a
+   * dangling id.
+   */
+  relationAction?: 'added' | 'removed';
+  /** 'blockedBy' on the task that became blocked, 'blocking' on the one doing the blocking; relates edges are symmetric and leave it unset. */
+  relationDirection?: 'blockedBy' | 'blocking';
+  relationKind?: 'blocks' | 'relates';
+  relationTargetIdentifier?: string | null;
+  relationTargetTaskId?: string;
   to?: TaskActivityValue;
   toId?: string | null;
 }
@@ -1180,6 +1198,14 @@ export interface TaskDetailActivity {
         to: TaskAutomationSnapshot | null;
       }
     | { field: 'priority'; from: number | null; to: number | null }
+    | {
+        action: 'added' | 'removed';
+        direction?: 'blockedBy' | 'blocking';
+        field: 'relation';
+        kind: 'blocks' | 'relates';
+        targetTaskId: string;
+        targetTaskIdentifier?: string | null;
+      }
     | { field: 'status'; from: TaskStatus | null; to: TaskStatus };
   readAt?: string | null;
   resolvedAction?: string | null;

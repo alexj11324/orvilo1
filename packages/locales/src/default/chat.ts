@@ -1576,6 +1576,22 @@ export default {
   'taskDetail.activities.fallback.comment': 'left a comment',
   'taskDetail.activities.fallback.created': 'created the issue',
   'taskDetail.activities.fallback.topic': 'started a topic',
+  'taskDetail.activities.relation.blockedBy.added':
+    '<actor/> marked this issue as blocked by <target/>',
+  'taskDetail.activities.relation.blockedBy.removed':
+    '<actor/> removed the blocked by link to <target/>',
+  'taskDetail.activities.relation.blocking.added':
+    '<actor/> marked this issue as blocking <target/>',
+  'taskDetail.activities.relation.blocking.removed':
+    '<actor/> removed the blocking link to <target/>',
+  'taskDetail.activities.relation.relates.added': '<actor/> linked this issue to <target/>',
+  'taskDetail.activities.relation.relates.removed': '<actor/> removed the link to <target/>',
+  'taskDetail.attachImagesFiles': 'Attach images, files, or videos',
+  'taskDetail.reactions.add': 'Add reaction',
+  'taskDetail.reactions.more': 'More reactions',
+  'taskDetail.subscribers.change': 'Change subscribers',
+  'taskDetail.subscribers.subscribe': 'Subscribe',
+  'taskDetail.subscribers.unsubscribe': 'Unsubscribe',
   'taskDetail.blockedBy': 'Blocked by {{id}}',
   'taskDetail.blockedBy.title': 'Blocked by',
   'taskDetail.blocking.title': 'Blocking',

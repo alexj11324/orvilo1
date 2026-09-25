@@ -1,9 +1,9 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskDependencies, tasks, users, workspaces } from '../../schemas';
+import { agents, taskActivities, taskDependencies, tasks, users, workspaces } from '../../schemas';
 import { TaskModel } from '../task';
 import { TaskDependencyError } from '../taskDependency';
 
@@ -317,5 +317,113 @@ describe('prerequisite review regressions', () => {
     expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
     await model.update(task.id, { status: 'scheduled', automationMode: 'schedule' });
     expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
+  });
+});
+
+describe('dependency activity feed', () => {
+  const relationRows = async (...taskIds: string[]) =>
+    db
+      .select()
+      .from(taskActivities)
+      .where(and(inArray(taskActivities.taskId, taskIds), eq(taskActivities.type, 'relation')));
+
+  it('writes a denormalized relation row on both issues for add and remove', async () => {
+    const blocker = await create('Blocker');
+    const dependent = await create('Dependent');
+
+    await model.addDependency(dependent.id, blocker.id, 'blocks');
+
+    let rows = await relationRows(dependent.id, blocker.id);
+    expect(rows).toHaveLength(2);
+    expect(rows.find((r) => r.taskId === dependent.id)?.payload).toMatchObject({
+      actorKind: 'user',
+      relationAction: 'added',
+      relationDirection: 'blockedBy',
+      relationKind: 'blocks',
+      relationTargetIdentifier: blocker.identifier,
+      relationTargetTaskId: blocker.id,
+    });
+    expect(rows.find((r) => r.taskId === blocker.id)?.payload).toMatchObject({
+      relationAction: 'added',
+      relationDirection: 'blocking',
+      relationKind: 'blocks',
+      relationTargetTaskId: dependent.id,
+    });
+    expect(rows.every((r) => r.actorUserId === userId)).toBe(true);
+
+    await model.removeDependency(dependent.id, blocker.id);
+
+    rows = await relationRows(dependent.id, blocker.id);
+    expect(rows).toHaveLength(4);
+    const removed = rows.filter((r) => r.payload?.relationAction === 'removed');
+    expect(removed).toHaveLength(2);
+    expect(removed.map((r) => r.taskId).sort()).toEqual([blocker.id, dependent.id].sort());
+  });
+
+  it('records relates edges without a direction and attributes agent actors', async () => {
+    const agentId = 'relation-feed-agent';
+    await db.insert(agents).values({ id: agentId, slug: agentId, userId });
+    const a = await create('Left');
+    const b = await create('Right');
+
+    await model.addDependency(a.id, b.id, 'relates', { actor: { agentId } });
+
+    const rows = await relationRows(a.id, b.id);
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.actorAgentId).toBe(agentId);
+      expect(row.payload).toMatchObject({
+        actorKind: 'agent',
+        relationAction: 'added',
+        relationKind: 'relates',
+      });
+      expect(row.payload?.relationDirection).toBeUndefined();
+    }
+  });
+
+  it('records the old link removal on both issues when relates upgrades to blocks', async () => {
+    const a = await create('First');
+    const b = await create('Second');
+
+    await model.addDependency(a.id, b.id, 'relates');
+    await model.addDependency(a.id, b.id, 'blocks');
+
+    const rows = await relationRows(a.id, b.id);
+    // relates-add pair + relates-remove pair + blocks-add pair.
+    expect(rows).toHaveLength(6);
+    const removed = rows.filter((r) => r.payload?.relationAction === 'removed');
+    expect(removed).toHaveLength(2);
+    for (const row of removed) {
+      expect(row.payload).toMatchObject({ relationKind: 'relates' });
+      expect(row.payload?.relationDirection).toBeUndefined();
+    }
+    expect(removed.map((r) => r.taskId).sort()).toEqual([a.id, b.id].sort());
+    const added = rows.filter(
+      (r) => r.payload?.relationAction === 'added' && r.payload?.relationKind === 'blocks',
+    );
+    expect(added).toHaveLength(2);
+    expect(added.map((r) => r.payload?.relationDirection).sort()).toEqual([
+      'blockedBy',
+      'blocking',
+    ]);
+  });
+
+  it('keeps a private target identifier off the counterpart issue feed', async () => {
+    const hidden = await model.create({ instruction: 'Secret', visibility: 'private' });
+    const open = await create('Public');
+
+    await model.addDependency(open.id, hidden.id, 'blocks');
+
+    const rows = await relationRows(open.id, hidden.id);
+    expect(rows).toHaveLength(2);
+    // The public issue's feed must not name the private issue it points at.
+    expect(rows.find((r) => r.taskId === open.id)?.payload).toMatchObject({
+      relationTargetIdentifier: null,
+      relationTargetTaskId: hidden.id,
+    });
+    // The private issue's own feed can still name the public counterpart.
+    expect(rows.find((r) => r.taskId === hidden.id)?.payload).toMatchObject({
+      relationTargetIdentifier: open.identifier,
+    });
   });
 });

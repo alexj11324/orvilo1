@@ -10,7 +10,7 @@ import { memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
-  type ExecutionStatusVisual,
+  type StatusVisual,
   TASK_STATUS_VISUALS,
   WORKFLOW_CATEGORY_VISUALS,
 } from '@/components/ExecutionStatus';
@@ -283,7 +283,7 @@ export const COLUMN_I18N_KEYS: Record<string, string> = {
  * status-grouped surfaces; attention buckets (`urgent`/`blocking`) are not
  * statuses and keep their own marks.
  */
-export const COLUMN_STATUS_VISUAL: Record<string, ExecutionStatusVisual> = {
+export const COLUMN_STATUS_VISUAL: Record<string, StatusVisual> = {
   // Attention buckets (Linear My issues) are not execution statuses — urgent
   // keeps the app's urgent glyph, blocking the stop-marked one.
   'blocking': { color: cssVar.colorError, icon: OctagonAlert },
@@ -324,7 +324,7 @@ interface CollapsedKanbanColumnProps {
   droppable: boolean;
   label: string;
   onExpand: () => void;
-  statusIcon?: ExecutionStatusVisual;
+  statusIcon?: StatusVisual;
   total: number;
 }
 

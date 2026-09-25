@@ -1,12 +1,9 @@
 /**
  * @vitest-environment happy-dom
  */
-import { Icon } from '@lobehub/ui';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 
 import AgentTaskItem from './AgentTaskItem';
 
@@ -77,12 +74,10 @@ vi.mock('./TaskPriorityTag', () => ({
 }));
 
 vi.mock('./TaskStatusTag', () => ({
-  default: () => <span>status</span>,
-}));
-
-vi.mock('../shared/TaskWorkflowBadge', () => ({
-  default: ({ workflowCategory }: { workflowCategory?: string }) => (
-    <span data-task-workflow-state={workflowCategory} data-testid="workflow-badge" />
+  default: ({ glyph }: { glyph?: { icon?: { displayName?: string } } }) => (
+    <span data-glyph={glyph?.icon?.displayName ?? 'execution'} data-testid="status-mark">
+      status
+    </span>
   ),
 }));
 
@@ -254,70 +249,53 @@ describe('AgentTaskItem', () => {
     await waitFor(() => expect(mocks.fetchTaskDetail).toHaveBeenCalledWith('T-22'));
   });
 
-  it('keeps the inline priority selector and workflow chip on shared scopes', () => {
-    render(
-      <AgentTaskItem
-        task={{
-          ...createTask('agt_owner'),
-          workflowCategory: 'in_review',
-          workflowStateId: 'in-review',
-        }}
-      />,
-    );
+  describe('status mark', () => {
+    const workflowTask = () => ({
+      ...createTask('agent-1'),
+      workflowCategory: 'todo',
+      workflowStateId: 'wf-todo',
+    });
 
-    expect(screen.getByText('priority')).toBeInTheDocument();
-    expect(screen.getByTestId('workflow-badge')).toBeInTheDocument();
+    it('draws the workflow state as the only status mark, after the identifier', () => {
+      const { container } = render(<AgentTaskItem routeScope={'global'} task={workflowTask()} />);
+
+      const marks = screen.getAllByTestId('status-mark');
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveAttribute('data-glyph', 'WorkflowIcon(todo)');
+      // No second labelled workflow pill beside the mark.
+      expect(container.querySelector('[data-task-workflow-state]')).toBeNull();
+      // Linear's order: identifier, then status, then title.
+      const identifier = screen.getByText('T-22');
+      expect(
+        identifier.compareDocumentPosition(marks[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        marks[0].compareDocumentPosition(screen.getByText('Hourly trend update')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('falls back to the execution glyph when the task has no workflow state', () => {
+      render(<AgentTaskItem routeScope={'global'} task={createTask('agent-1')} />);
+
+      expect(screen.getByTestId('status-mark')).toHaveAttribute('data-glyph', 'execution');
+    });
   });
 
-  it('uses the board workflow glyph in project rows when execution status differs', () => {
+  it('places caller chips before the assignee and the date, as Linear orders them', () => {
     const { container } = render(
       <AgentTaskItem
-        linearIssueRow
-        task={{
-          ...createTask('agt_owner'),
-          workflowCategory: 'in_review',
-          workflowStateId: 'in-review',
-        }}
+        routeScope={'global'}
+        task={createTask('agent-1')}
+        trailingChips={<span data-testid="project-chip">Apollo</span>}
       />,
     );
 
-    // The linked task is execution-scheduled but workflow-in-review. Its
-    // project row shows the canonical workflow glyph, without an execution
-    // status selector that would open the wrong status menu.
-    expect(screen.queryByTestId('workflow-badge')).not.toBeInTheDocument();
-    expect(screen.queryByText('status')).not.toBeInTheDocument();
-
-    const priority = screen.getByText('priority');
-    const identifier = screen.getByText('T-22');
-    const statusIcon = container.querySelector('[data-task-workflow-icon="in_review"]');
-    const title = screen.getByText('Hourly trend update');
-    expect(statusIcon).toBeInTheDocument();
-    const { container: canonical } = render(
-      <Icon icon={WORKFLOW_CATEGORY_VISUALS.in_review.icon} size={16} />,
-    );
-    expect(statusIcon?.querySelector('svg')?.innerHTML).toBe(
-      canonical.querySelector('svg')?.innerHTML,
-    );
-    expect(statusIcon?.querySelector('svg')).toHaveAttribute(
-      'stroke',
-      WORKFLOW_CATEGORY_VISUALS.in_review.color,
-    );
-
-    expect(
-      priority.compareDocumentPosition(identifier) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      identifier.compareDocumentPosition(statusIcon!) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      statusIcon!.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it('keeps the execution status icon for project rows without linked workflow state', () => {
-    const { container } = render(<AgentTaskItem linearIssueRow task={createTask('agt_owner')} />);
-
-    expect(screen.getByText('status')).toBeInTheDocument();
-    expect(container.querySelector('[data-task-workflow-icon]')).not.toBeInTheDocument();
+    const chip = screen.getByTestId('project-chip');
+    const assignee = container.querySelector('[data-collab-id$=":assignee"]')!;
+    const date = screen.getByText('today');
+    expect(assignee).not.toBeNull();
+    expect(chip.compareDocumentPosition(assignee) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(assignee.compareDocumentPosition(date) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

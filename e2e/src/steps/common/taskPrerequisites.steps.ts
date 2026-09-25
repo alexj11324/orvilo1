@@ -77,7 +77,7 @@ Then(
         }),
       ).toBeVisible({ timeout: 25_000 });
 
-      await this.page.getByRole('button', { name: 'Add relation to Prerequisite issues' }).click();
+      await this.page.getByRole('button', { name: 'Add relation to Blocked by' }).click();
       const input = this.page.getByRole('textbox', { name: 'Prerequisite issue identifier' });
       await input.fill(second.identifier);
       await input.press('Enter');

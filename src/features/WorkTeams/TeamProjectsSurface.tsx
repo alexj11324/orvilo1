@@ -331,11 +331,13 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               ›
             </span>
             <Text weight={500}>{t('list.title', { ns: 'project' })}</Text>
+            {teamId && (
+              <WorkFavoriteButton icon="star" targetId={teamId} targetType="team" variant="icon" />
+            )}
           </Flexbox>
         }
         right={
           <Flexbox horizontal align={'center'} gap={8}>
-            <WorkFavoriteButton targetId={teamId} targetType="team" />
             <Button
               icon={PlusIcon}
               shape={'round'}

@@ -20,11 +20,15 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import MarkDuplicateModal from '@/features/WorkTeams/MarkDuplicateModal';
 import { buildTriageMutationInput } from '@/features/WorkTeams/triage/teamTriageRowModel';
 import { usePermission } from '@/hooks/usePermission';
+import { useClientDataSWR } from '@/libs/swr';
+import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useTaskStore } from '@/store/task';
+import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { renderMenuExtra } from './menuExtra';
 import { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
@@ -88,6 +92,12 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
     const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
     const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
 
+    const workspaceId = useActiveWorkspaceId();
+    const { data: teamData } = useClientDataSWR(
+      triageTarget?.teamId && workspaceId ? ['team', workspaceId, triageTarget.teamId] : null,
+      () => triageTarget && lambdaClient.team.team.query({ teamId: triageTarget.teamId }),
+    );
+
     const displayStatus = status ?? 'backlog';
     const meta = STATUS_META[displayStatus];
 
@@ -127,8 +137,12 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
           await workAttentionService.triage(input);
           if (taskIdentifier) await refreshTaskDetail(taskIdentifier).catch(() => {});
           await refreshTaskList();
-        } catch {
-          toast.error(t('taskDetail.updateFailed'));
+        } catch (error) {
+          toast.error(
+            isTrpcErrorCode(error, 'CONFLICT')
+              ? t('teams.transferConflict', { ns: 'common' })
+              : t('taskDetail.updateFailed'),
+          );
         }
       },
       [refreshTaskDetail, refreshTaskList, t, taskIdentifier, triageTarget],
@@ -137,14 +151,18 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
     const actionsRef = useRef({ handleStatusChange, runTriageAction });
     actionsRef.current = { handleStatusChange, runTriageAction };
 
-    const hasTriageOptions = Boolean(triageTarget);
+    // Triage is a per-team capability — an opted-out team's server rejects
+    // every triage write, so its tasks must not render the intake entries.
+    const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
+    const hasTriageOptions = Boolean(triageTarget) && triageCapable;
 
     useEffect(() => {
       if (!open) return;
       const onKeyDown = (event: KeyboardEvent) => {
         const num = Number.parseInt(event.key, 10);
         if (Number.isNaN(num)) return;
-        const idx = num - 1;
+        // '0' is Linear's dedicated key for the trailing Triage entry.
+        const idx = num === 0 ? (hasTriageOptions ? TRIAGE_OPTION_INDEX : -1) : num - 1;
         const optionCount = hasTriageOptions
           ? TRIAGE_OPTION_INDEX + 1
           : USER_SELECTABLE_STATUSES.length;
@@ -260,9 +278,7 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
                         <DropdownMenuItemLabel>
                           {t('taskDetail.workflow.category.triage')}
                         </DropdownMenuItemLabel>
-                        <DropdownMenuItemExtra>
-                          {renderMenuExtra(String(TRIAGE_OPTION_INDEX + 1), false)}
-                        </DropdownMenuItemExtra>
+                        <DropdownMenuItemExtra>{renderMenuExtra('0', false)}</DropdownMenuItemExtra>
                       </DropdownMenuItemContent>
                     </DropdownMenuItem>
                   </>

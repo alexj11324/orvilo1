@@ -16,10 +16,31 @@ rendered 12px/500).
   clears `duplicateOfTaskId`. The entries only render for team tasks — the
   mutation requires team write access plus the CAS revision token, so
   surfaces that cannot prove all three fields omit them.
-- **Digit hotkey hints styled** (P2): the shortcut span in the shared
-  `renderMenuExtra` now renders 12px/500 like Linear. Status digits extend
-  to 5/6 when the intake entries are present; priority and the context-menu
-  status submenu inherit the styled hints through the same helper.
+- **Digit hotkey hints styled + '0' convention** (P2): the shortcut span
+  in the shared `renderMenuExtra` renders 12px/500 like Linear. Digit
+  assignment follows Linear's scheme, verified live 2026-09-25: statuses
+  take positional digits 1–N, `Duplicate` the next positional digit, and
+  `Triage` the dedicated key `0` (issue menu `… Canceled 6, Duplicate 7,
+Triage 0`); the priority menu's digits are the level values themselves
+  (`No priority 0, Urgent 1, High 2, Medium 3, Low 4`), so '0' selects
+  No priority in both the priority dropdown and the context-menu submenu.
+- **Context-menu Status submenu carries the same extras**: verified live
+  that Linear's right-click `Status ▸` submenu ends with `Duplicate 7 /
+Triage 0`. `useTaskItemContextMenu` appends the same pair whenever the
+  task supplies `{ id, teamId, domainRevision }` — the list-row context
+  menu is the only additional surface that can, since
+  `TaskContextMenuTarget` now projects the three triage fields.
+- **Triage-capable gating**: both the issue-page menu and the context menu
+  hide the intake entries when the owning team sets
+  `orchestrationPolicy.triageEnabled === false` (the server rejects every
+  triage write with `PRECONDITION_FAILED`, and the repo's other surfaces
+  hide the affordance on that flag). Resolved through the shared
+  `['team', workspaceId, teamId]` SWR; until it lands, entries render —
+  matching the `!== false` convention used elsewhere.
+- **CAS conflict surfaces properly**: triage writes that lose a
+  `domainRevision` race toast `teams.transferConflict` ("This issue
+  changed. Refresh and move it again.") instead of the generic
+  update-failed copy, matching `TeamTriageRow`'s mapping.
 - **Menu semantics + item type** (P3): the dropdown was rebuilt on the
   `@lobehub/ui` compound atoms (`DropdownMenuRoot/Trigger/Portal/Positioner/
 Popup/Item`) instead of the `items` array API, so the popup carries

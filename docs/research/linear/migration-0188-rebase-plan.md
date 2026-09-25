@@ -33,21 +33,21 @@ also deletes the matching schema files (`schemas/agentBotProvider.ts`, `aiInfra.
 `generation.ts`, `messengerAccountLink.ts`, `messengerInstallation.ts`, `systemBotProvider.ts`),
 their models, lambda routers, `packages/types/src/generation`, `packages/const/src/bot.ts`,
 3 `idGenerator` prefixes (`generationBatches`, `generationTopics`, `generations`),
-and the generation relations in `schemas/relations.ts` (\~13.3k LOC under `packages/database` alone).
+and the generation relations in `schemas/relations.ts` (~13.3k LOC under `packages/database` alone).
 
 **Branch added eight dev-stage migrations, all branch-introduced** (zero hits on
 `git log origin/canary -- <file>` for each):
 
-| Migration                         | Added by commit | Objects touched                                                                                                                                                      |
-| --------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0188_project_planning_fields`    | `e6d00f7e8`     | `projects` cols: summary, lead\_user\_id (FK→users), start\_date, target\_date                                                                                       |
-| `0189_project_fields`             | `bdd127f78`     | `project_dependencies`, `project_label_bindings`, `project_labels`, `project_milestones`; `projects` cols: priority, start\_date\_precision, target\_date\_precision |
-| `0190_project_updates_and_health` | `7243dd690`     | `project_updates`; `projects.health`                                                                                                                                 |
-| `0191_project_update_kind`        | `7400daae0`     | `project_updates.kind`                                                                                                                                               |
-| `0192_user_job_title`             | `ed95abc0b`     | `users.job_title`                                                                                                                                                    |
-| `0193_project_links`              | `02bfc4ee3`     | `project_links`                                                                                                                                                      |
-| `0194_task_project_milestone`     | `42fbd87a0`     | `tasks.project_milestone_id` + idx                                                                                                                                   |
-| `0195_task_comment_drafts`        | `c5293bc3a`     | `task_comment_drafts`                                                                                                                                                |
+| Migration | Added by commit | Objects touched |
+|---|---|---|
+| `0188_project_planning_fields` | `e6d00f7e8` | `projects` cols: summary, lead_user_id (FK→users), start_date, target_date |
+| `0189_project_fields` | `bdd127f78` | `project_dependencies`, `project_label_bindings`, `project_labels`, `project_milestones`; `projects` cols: priority, start_date_precision, target_date_precision |
+| `0190_project_updates_and_health` | `7243dd690` | `project_updates`; `projects.health` |
+| `0191_project_update_kind` | `7400daae0` | `project_updates.kind` |
+| `0192_user_job_title` | `ed95abc0b` | `users.job_title` |
+| `0193_project_links` | `02bfc4ee3` | `project_links` |
+| `0194_task_project_milestone` | `42fbd87a0` | `tasks.project_milestone_id` + idx |
+| `0195_task_comment_drafts` | `c5293bc3a` | `task_comment_drafts` |
 
 Branch journal entries to remove: idx 188–195, tags `0188_project_planning_fields` …
 `0195_task_comment_drafts` (`when` 1790030419400 → 1790102909110).
@@ -95,7 +95,7 @@ Everything else auto-merges, including `schemas/index.ts`, `docs/development/dat
 ### Step A — rebase onto canary
 
 ```bash
-git rebase origin/canary # or: merge origin/canary into the branch — resolution identical
+git rebase origin/canary        # or: merge origin/canary into the branch — resolution identical
 ```
 
 Expected conflicts, in replay order:
@@ -121,20 +121,20 @@ After the rebase completes, in one cleanup commit:
 
 ```bash
 git rm packages/database/migrations/0188_project_planning_fields.sql \
-  packages/database/migrations/0189_project_fields.sql \
-  packages/database/migrations/0190_project_updates_and_health.sql \
-  packages/database/migrations/0191_project_update_kind.sql \
-  packages/database/migrations/0192_user_job_title.sql \
-  packages/database/migrations/0193_project_links.sql \
-  packages/database/migrations/0194_task_project_milestone.sql \
-  packages/database/migrations/0195_task_comment_drafts.sql
+       packages/database/migrations/0189_project_fields.sql \
+       packages/database/migrations/0190_project_updates_and_health.sql \
+       packages/database/migrations/0191_project_update_kind.sql \
+       packages/database/migrations/0192_user_job_title.sql \
+       packages/database/migrations/0193_project_links.sql \
+       packages/database/migrations/0194_task_project_milestone.sql \
+       packages/database/migrations/0195_task_comment_drafts.sql
 git rm packages/database/migrations/meta/0189_snapshot.json \
-  packages/database/migrations/meta/0190_snapshot.json \
-  packages/database/migrations/meta/0191_snapshot.json \
-  packages/database/migrations/meta/0192_snapshot.json \
-  packages/database/migrations/meta/0193_snapshot.json \
-  packages/database/migrations/meta/0194_snapshot.json \
-  packages/database/migrations/meta/0195_snapshot.json
+       packages/database/migrations/meta/0190_snapshot.json \
+       packages/database/migrations/meta/0191_snapshot.json \
+       packages/database/migrations/meta/0192_snapshot.json \
+       packages/database/migrations/meta/0193_snapshot.json \
+       packages/database/migrations/meta/0194_snapshot.json \
+       packages/database/migrations/meta/0195_snapshot.json
 ```
 
 Keep canary's `meta/0188_snapshot.json` (id `29bcefbc-…`) — it must remain, describing the
@@ -160,7 +160,7 @@ Consolidate all eight dev migrations into one — none has shipped; production m
 intermediate draft shapes.
 
 ```bash
-bun run db:generate # = drizzle-kit generate && npm run workflow:dbml
+bun run db:generate   # = drizzle-kit generate && npm run workflow:dbml
 ```
 
 Produces exactly one new migration numbered **0189** (canary max is 0188):
@@ -178,7 +178,7 @@ Then per skill Steps 2–4:
 1. Rename to something meaningful, e.g. `0189_linear_parity_project_layering.sql`.
 2. Update the journal `tag` to match (no `.sql`).
 3. Audit the generated SQL: it must contain ONLY our objects — `projects` columns
-   (summary, lead\_user\_id+FK, start/target date + precisions, priority, health),
+   (summary, lead_user_id+FK, start/target date + precisions, priority, health),
    `project_dependencies`, `project_label_bindings`, `project_labels`, `project_milestones`,
    `project_updates` (final shape incl. `kind`), `project_links`, `users.job_title`,
    `tasks.project_milestone_id`, `task_comment_drafts`. **It must NOT contain
@@ -213,7 +213,7 @@ DELETE FROM "drizzle"."__drizzle_migrations"
 ```
 
 Run via the `access-pg` pattern: `set -a && source .env && set +a && bun -e 'import pg …'`
-against DATABASE\_URL.
+against DATABASE_URL.
 
 Alternative (preserves dev data): leave objects in place and let the hardened `IF NOT EXISTS`
 0189 run — it no-ops on existing shapes and records itself; then delete the eight stale
@@ -225,7 +225,7 @@ the drop path unless dev data matters).
 
 - `docs/development/database-schema.dbml` — regenerated by `bun run db:generate`
   (`workflow:dbml`); must be committed. Auto-merges during the rebase but the regenerated
-  output is authoritative (canary deleted \~230 retired-table lines; we add the project-layer
+  output is authoritative (canary deleted ~230 retired-table lines; we add the project-layer
   tables).
 - `packages/database/src/core/migrations.json` — **does not exist in this repo** (skill text
   is stale; verified via `git ls-files`). `src/core/` holds only `__tests__`, `db-adaptor.ts`,

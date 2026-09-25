@@ -106,4 +106,4 @@
 - 里程碑点击后的落地页（主列 `N issues · 100%` 指向 `issues?projectMilestoneId=<uuid>`，
   是 observed 的 href；但**落地页本身未打开验证**）
 - 窄窗口（768 / 390）下两端各自的换行行为
-- hover /focus/loading/error 态
+- hover /focus/loading /error 态

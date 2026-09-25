@@ -8,19 +8,19 @@ Candidate viewport 1440x900, locale zh-CN; reference 1237x908, en-US.
 
 ## Surfaces verified
 
-| Surface              | Candidate                                                                        | Reference                       | Result                                                                                                           |
-| -------------------- | -------------------------------------------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Projects list        | `electron-projects-1440.png`                                                     | `linear-ref-projects.png`       | Same 7 columns (Name/Health/Priority/Lead/Target date/Issues/Status), empty health copy, status + progress cells |
-| Lead picker          | `electron-projects-lead-popover.png`                                             | —                               | Search input, "no lead" option, member list render                                                               |
-| Lead persistence     | `electron-projects-lead-avatar.png`, `electron-projects-lead-set.png`            | —                               | Member avatar renders in the cell after save; persists into project overview                                     |
-| Project overview     | `electron-project-overview.png`, `electron-project-overview2.png`                | —                               | Inline properties row (status/priority/lead/members), milestones, right rail, progress                           |
-| Team home            | `electron-team-home-loaded.png`                                                  | `linear-ref-team-home.png`      | Identity rail + description placeholder + members rail + quick links match Linear's layout                       |
-| Team views directory | `electron-team-views.png`                                                        | `linear-ref-team-views.png`     | Directory, entity tabs, saved views; reference captured in its empty state                                       |
-| Views sorting        | `electron-views-sort-popover.png`                                                | —                               | Six-option sort select; Z-A ordering verified live                                                               |
-| New-view editor      | `electron-views-editor.png`, `electron-views-editor-project.png`                 | `linear-ref-newview-editor.png` | Breadcrumb, name/description inputs, Save-to-team + Cancel + Create, entity tabs, live preview — same structure  |
-| View save flow       | `electron-view-saved.png`                                                        | —                               | Create navigates to `/views/:id` with team sharing scope                                                         |
-| Inbox                | `electron-inbox.png`, `electron-inbox-detail.png`, `electron-inbox-rejected.png` | —                               | Priority/other segmentation, unread counts, master-detail card with actions, `?item=&detail=1` deep link         |
-| Team tabs            | (verified live, no shots)                                                        | —                               | Issues, Triage, Projects, Views all render without regression                                                    |
+| Surface | Candidate | Reference | Result |
+| --- | --- | --- | --- |
+| Projects list | `electron-projects-1440.png` | `linear-ref-projects.png` | Same 7 columns (Name/Health/Priority/Lead/Target date/Issues/Status), empty health copy, status + progress cells |
+| Lead picker | `electron-projects-lead-popover.png` | — | Search input, "no lead" option, member list render |
+| Lead persistence | `electron-projects-lead-avatar.png`, `electron-projects-lead-set.png` | — | Member avatar renders in the cell after save; persists into project overview |
+| Project overview | `electron-project-overview.png`, `electron-project-overview2.png` | — | Inline properties row (status/priority/lead/members), milestones, right rail, progress |
+| Team home | `electron-team-home-loaded.png` | `linear-ref-team-home.png` | Identity rail + description placeholder + members rail + quick links match Linear's layout |
+| Team views directory | `electron-team-views.png` | `linear-ref-team-views.png` | Directory, entity tabs, saved views; reference captured in its empty state |
+| Views sorting | `electron-views-sort-popover.png` | — | Six-option sort select; Z-A ordering verified live |
+| New-view editor | `electron-views-editor.png`, `electron-views-editor-project.png` | `linear-ref-newview-editor.png` | Breadcrumb, name/description inputs, Save-to-team + Cancel + Create, entity tabs, live preview — same structure |
+| View save flow | `electron-view-saved.png` | — | Create navigates to `/views/:id` with team sharing scope |
+| Inbox | `electron-inbox.png`, `electron-inbox-detail.png`, `electron-inbox-rejected.png` | — | Priority/other segmentation, unread counts, master-detail card with actions, `?item=&detail=1` deep link |
+| Team tabs | (verified live, no shots) | — | Issues, Triage, Projects, Views all render without regression |
 
 ## Bugs found and fixed during this pass
 
@@ -39,7 +39,7 @@ Candidate viewport 1440x900, locale zh-CN; reference 1237x908, en-US.
   section, and the Go-to rail's "Connect channel"/"Team settings" entries are
   not in this slice.
 - Project overview milestone rail copy reads "2 个中的 100%" vs the main
-  list's "2 个议题・100%".
+  list's "2 个议题 · 100%".
 - New-view editor: Linear prefixes the name field with a layers icon; ours
   does not.
 - Team views favorite affordance: Linear puts a star next to the title; we

@@ -71,11 +71,9 @@ HEAD = `6a9bd400a`，但**测量期间工作树是脏的，并且有另一个 ag
 ### 1.1 左栏（observed）
 
 - 容器 `src/features/HomeSidebar/Body/index.tsx:283:5:Flexbox` `[0,85,280,750.2]`，`display:flex; flex-direction:column`。
-
 - 用户头 `src/features/HomeSidebar/Header/components/User.tsx:44:7:Block` `[8,46,216,32]`：
   头像 `AG` 28x28（`14px/700`）+ Text `Agent Testing User's workspace` `14px/500 #080808`（`User.tsx:71:15:Text`）
   - `lucide-chevron-down` 16x16 `stroke #999999`。`role=button`。
-
 - 导航项（每个都是 `<a>`，`src/features/Workspace/WorkspaceLink.desktop.tsx:27:5:a`，`[4,y,272,28]`，行距 29，`radius 8px`）：
 
   | 文本                   | y     | href                           | 图标（18x18）                              |
@@ -98,7 +96,6 @@ HEAD = `6a9bd400a`，但**测量期间工作树是脏的，并且有另一个 ag
 
 - **激活行背景不在 `<a>` 上**，由 `src/features/NavPanel/components/NavItem.tsx:180:7:Block` 画：
   `[4,257.9,272,28]`，`background rgba(0,0,0,0.03)`，`radius 8px`。
-
 - 左栏底 `src/features/HomeSidebar/Footer/index.tsx:266:9:Flexbox` `[0,835.2,280,44.8]`：
   `ActionIcon` 28.8x28.8 + `Block` 28x28（头像 `AG` `10px/700`）。
 

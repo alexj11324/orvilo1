@@ -555,9 +555,9 @@ const ReviewsPage = memo(() => {
                 loadingLabel={t('myWork.loading')}
                 tasks={tasks}
                 total={data?.data.total}
-                onLoadMoreGroup={(key) => workMore.runLoadMoreGroup(key, () => loadMoreGroup(key))}
                 onRetryLoadMore={workMore.retryLoadMore}
                 onRetryLoadMoreGroup={workMore.retryLoadMoreGroup}
+                onLoadMoreGroup={(key) => workMore.runLoadMoreGroup(key, () => loadMoreGroup(key))}
               />
             )}
           </QueueGroup>

@@ -34,21 +34,21 @@
 
 ### 参考端 `nav` 实测：**13 个 `<a>`，全部可见**
 
-| #   | 文本        | href                                 | 备注    |
-| --- | ----------- | ------------------------------------ | ------- |
-| 1   | Inbox       | `/bdiverifier/inbox`                 | 角标 31 |
-| 2   | My issues   | `/bdiverifier/my-issues/assigned`    |         |
-| 3   | Reviews     | `/bdiverifier/reviews`               | 角标 18 |
-| 4   | Agent       | `/bdiverifier/agent`                 |         |
-| 5   | Drafts      | `/bdiverifier/drafts`                | 角标 2  |
-| 6   | Projects    | `/bdiverifier/projects/all`          |         |
-| 7   | Views       | `/bdiverifier/views/issues`          |         |
-| 8   | Home        | `/bdiverifier/team/ORV/overview`     | team 组 |
-| 9   | Triage      | `/bdiverifier/team/ORV/triage`       | team 组 |
-| 10  | Issues      | `/bdiverifier/team/ORV/all`          | team 组 |
-| 11  | Projects    | `/bdiverifier/team/ORV/projects/all` | team 组 |
-| 12  | Views       | `/bdiverifier/team/ORV/views/issues` | team 组 |
-| 13  | Initiatives | `/bdiverifier/settings/initiatives`  |         |
+| #   | 文本         | href                          | 备注            |
+| --- | ------------ | ----------------------------- | --------------- |
+| 1   | Inbox        | `/bdiverifier/inbox`          | 角标 31         |
+| 2   | My issues    | `/bdiverifier/my-issues/assigned` |             |
+| 3   | Reviews      | `/bdiverifier/reviews`        | 角标 18         |
+| 4   | Agent        | `/bdiverifier/agent`          |                 |
+| 5   | Drafts       | `/bdiverifier/drafts`         | 角标 2          |
+| 6   | Projects     | `/bdiverifier/projects/all`   |                 |
+| 7   | Views        | `/bdiverifier/views/issues`   |                 |
+| 8   | Home         | `/bdiverifier/team/ORV/overview` | team 组      |
+| 9   | Triage       | `/bdiverifier/team/ORV/triage`   | team 组      |
+| 10  | Issues       | `/bdiverifier/team/ORV/all`      | team 组      |
+| 11  | Projects     | `/bdiverifier/team/ORV/projects/all` | team 组  |
+| 12  | Views        | `/bdiverifier/team/ORV/views/issues` | team 组  |
+| 13  | Initiatives  | `/bdiverifier/settings/initiatives` |            |
 
 **参考端侧栏没有折叠手风琴。** 那两个 `aria-expanded="false"` 是头像下拉
 （`Workspace Menu` / `Team menu`），不是导航分组。team 组本来就展开 —— 所以
@@ -66,16 +66,16 @@
 
 ### 候选端 `nav` 实测：**8 个 `<a>`**
 
-| #   | 文本     | 参考端对应                         | 判定         |
-| --- | -------- | ---------------------------------- | ------------ |
-| 1   | 收件箱   | Inbox                              | ✓            |
-| 2   | 我的事项 | My issues                          | ✓            |
-| 3   | 待审核   | Reviews                            | ✓            |
-| 4   | 助理     | Agent                              | ✓            |
-| 5   | 项目     | Projects                           | ✓            |
-| 6   | 视图     | Views                              | ✓            |
-| 7   | 成员     | **无**                             | ✗ 候选端多出 |
-| 8   | 团队     | **无**（参考端是分组标题，非链接） | ✗ 候选端多出 |
+| #   | 文本   | 参考端对应            | 判定              |
+| --- | ------ | --------------------- | ----------------- |
+| 1   | 收件箱 | Inbox                 | ✓                 |
+| 2   | 我的事项 | My issues           | ✓                 |
+| 3   | 待审核 | Reviews               | ✓                 |
+| 4   | 助理   | Agent                 | ✓                 |
+| 5   | 项目   | Projects              | ✓                 |
+| 6   | 视图   | Views                 | ✓                 |
+| 7   | 成员   | **无**                | ✗ 候选端多出      |
+| 8   | 团队   | **无**（参考端是分组标题，非链接） | ✗ 候选端多出 |
 
 **候选端的 team 分组是折叠的**：y 从 417 直接跳到 765，中间没有 Home/Triage/Issues/Projects/Views。
 这 5 项在 `TeamsSection` 的 `TEAM_SUB_ITEMS` 里**已经存在**，只是 `sidebarExpandedKeys`
@@ -91,10 +91,10 @@
 
 判据：删导航入口前，该功能必须在**别处仍可达**，否则等于把功能变成不可达。
 
-| 入口            | 是否有第二条路由                                                               | 判定                                                            |
-| --------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| 成员 `/members` | **有** —— `desktopRouter.shared.tsx:1095`，`/[workspaceSlug]/settings/members` | **✅ 可移除入口**（与 Linear 把成员放在 settings 下一致）       |
-| 团队 `/teams`   | **没有** —— `desktopRouter.shared.tsx:845` 是唯一一条，无 settings 版本        | **❌ 不得移除** —— 移除会让 `/teams` 与 `/teams/:teamId` 不可达 |
+| 入口 | 是否有第二条路由 | 判定 |
+| --- | --- | --- |
+| 成员 `/members` | **有** —— `desktopRouter.shared.tsx:1095`，`/[workspaceSlug]/settings/members` | **✅ 可移除入口**（与 Linear 把成员放在 settings 下一致） |
+| 团队 `/teams` | **没有** —— `desktopRouter.shared.tsx:845` 是唯一一条，无 settings 版本 | **❌ 不得移除** —— 移除会让 `/teams` 与 `/teams/:teamId` 不可达 |
 
 ### ⚠️ 并且 `团队` 这一项**不是「多出来的」** —— 上表把它记错了
 
@@ -103,10 +103,10 @@
 
 差别在**元素类型与去向**，不在有无：
 
-|      | 参考端                           | 候选端                |
-| ---- | -------------------------------- | --------------------- |
-| 元素 | `<button>`，`aria-expanded` 可控 | `<a href="/teams">`   |
-| 行为 | 展开 / 收起该 team 的子导航      | 跳到 Teams **列表页** |
+| | 参考端 | 候选端 |
+| --- | --- | --- |
+| 元素 | `<button>`，`aria-expanded` 可控 | `<a href="/teams">` |
+| 行为 | 展开/收起该 team 的子导航 | 跳到 Teams **列表页** |
 
 所以正确处理是**对齐它的行为**（能展开），**不是删掉它**。
 「候选端多出 `Teams`」这个判断来自只看 `<a>` 的枚举 —— 按钮不在 `<a>` 里，于是参考端那一行被漏掉了。

@@ -604,7 +604,6 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               ? teamTasksData.data.total
               : undefined
           }
-          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
           onCreateInGroup={createInGroup}
           onLoadMore={teamGroups.length === 0 ? () => runLoadMore(loadMore) : undefined}
           onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreGroup(key))}
@@ -613,6 +612,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           onRetryLoadMore={retryLoadMore}
           onRetryLoadMoreGroup={retryLoadMoreGroup}
           onSelectTask={(task) => setSelected(task)}
+          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
         />
       </>
     );

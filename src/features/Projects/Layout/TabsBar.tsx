@@ -181,9 +181,9 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
             <Flexbox horizontal align={'center'} gap={10}>
               <Tag
                 color={headerStatusVisual.color}
-                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
                 shape={'round'}
                 size={'small'}
+                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
               >
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,

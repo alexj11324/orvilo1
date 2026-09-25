@@ -83,11 +83,7 @@ const main = async () => {
 
   if (process.argv.includes('--list')) {
     process.stdout.write(
-      `${JSON.stringify(
-        pages.map((t) => ({ title: t.title, url: t.url })),
-        null,
-        2,
-      )}\n`,
+      `${JSON.stringify(pages.map((t) => ({ title: t.title, url: t.url })), null, 2)}\n`,
     );
     return;
   }
@@ -183,9 +179,7 @@ const main = async () => {
     expression: '`${innerWidth}x${innerHeight}@dpr${devicePixelRatio}`',
     returnByValue: true,
   });
-  const inherited = VIEWPORT
-    ? ''
-    : " (INHERITED — no --viewport given; may be another caller's override, not the window)";
+  const inherited = VIEWPORT ? '' : ' (INHERITED — no --viewport given; may be another caller\'s override, not the window)';
   process.stderr.write(`viewport: ${effective.result?.value ?? 'unknown'}${inherited}\n`);
 
   if (CLICK) {
@@ -256,9 +250,7 @@ const main = async () => {
   if (res.result?.value === undefined && !res.result?.unserializableValue) {
     process.stderr.write('WARN: expression produced no value (undefined), not null\n');
     if (!/\breturn\b/.test(loadSource())) {
-      process.stderr.write(
-        'WARN: source has no `return` — its value was discarded. Add `return`.\n',
-      );
+      process.stderr.write('WARN: source has no `return` — its value was discarded. Add `return`.\n');
     }
     process.stdout.write('<undefined>\n');
     ws.close();

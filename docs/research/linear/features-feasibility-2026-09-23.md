@@ -15,10 +15,10 @@
 - 入口位置：项目类视图的 **Display options → Layout: List / Board / Timeline**，不是独立 tab 或独立路由。已观察页面：workspace `/bdiverifier/projects/all`（`cdp-session-2026-09-22.md:19`）与 team `/bdiverifier/team/ORV/projects/all`（`team-projects/DIFFERENCE-AND-ACCEPTANCE.md:20`、`team-pages/TEAM-SURFACES-AUDIT.md:51`）。Timeline 选项被看到但**从未被点开**。
 - Linear 官方文档（`https://linear.app/docs/timeline`，MCP 检索）：
   - Timeline 只承载 project，不显示 issue（"designed to only surface projects"）。
-  - Zoom：week /month/quarter/year（timeline 文档写 days/weeks/months/quarters，display-options 文档写 week\~year —— 以实测为准）。
+  - Zoom：week /month/quarter /year（timeline 文档写 days/weeks/months/quarters，display-options 文档写 week\~year —— 以实测为准）。
   - 可按 initiative 或属性分组；可定制显示属性：milestones、dependencies、lead、members、priority、status、health。
   - 可把 team cycles 叠加为时间轴覆盖层；里程碑是项目内检查点标记；dependency 是项目间前后关系。
-  - `https://linear.app/docs/display-options`：项目视图 Ordering 支持 manual /status/priority/updated/created + 反向；「Completed projects」过滤档位 = past week /month/year/all/none；project issue 视图默认隐藏 triage issues。
+  - `https://linear.app/docs/display-options`：项目视图 Ordering 支持 manual /status/priority /updated/created + 反向；「Completed projects」过滤档位 = past week /month/year /all/none；project issue 视图默认隐藏 triage issues。
 
 **待 CDP 采集**
 

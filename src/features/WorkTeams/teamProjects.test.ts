@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ProjectListItem } from '@/store/project/store';
 
-import { enrichTeamProjects, summarizeTeamProjects, teamProjectsWorkQuery } from './teamProjects';
+import { enrichTeamProjects, summarizeProjectList, teamProjectsWorkQuery } from './teamProjects';
 
 describe('teamProjectsWorkQuery', () => {
   it('scopes the project scan to the given team', () => {
@@ -45,9 +45,9 @@ describe('enrichTeamProjects', () => {
   });
 });
 
-describe('summarizeTeamProjects', () => {
+describe('summarizeProjectList', () => {
   it('counts health buckets in workflow order and tallies update-missing rows', () => {
-    const summary = summarizeTeamProjects([
+    const summary = summarizeProjectList([
       { health: 'atRisk' },
       { health: 'onTrack' },
       { health: 'onTrack' },
@@ -60,10 +60,23 @@ describe('summarizeTeamProjects', () => {
       { count: 1, state: 'atRisk' },
     ]);
     expect(summary.updateMissing).toBe(2);
+    expect(summary.noUpdateExpected).toBe(0);
+  });
+
+  it('counts terminal-status rows under no-update-expected instead', () => {
+    const summary = summarizeProjectList([
+      { health: null, status: 'completed' },
+      { health: 'onTrack', status: 'archived' },
+      { health: null, status: 'active' },
+    ]);
+
+    expect(summary.noUpdateExpected).toBe(2);
+    expect(summary.updateMissing).toBe(1);
+    expect(summary.health).toEqual([]);
   });
 
   it('groups leads by count with the lead-less bucket last', () => {
-    const summary = summarizeTeamProjects(
+    const summary = summarizeProjectList(
       [{ leadUserId: 'u1' }, { leadUserId: 'u2' }, { leadUserId: 'u2' }, { leadUserId: null }, {}],
       (userId) => ({ u1: 'Ada', u2: 'Ben' })[userId],
     );
@@ -76,7 +89,7 @@ describe('summarizeTeamProjects', () => {
   });
 
   it('breaks lead count ties by resolved display name', () => {
-    const summary = summarizeTeamProjects(
+    const summary = summarizeProjectList(
       [{ leadUserId: 'u2' }, { leadUserId: 'u1' }],
       (userId) => ({ u1: 'Zed', u2: 'Ada' })[userId],
     );
@@ -85,6 +98,11 @@ describe('summarizeTeamProjects', () => {
   });
 
   it('returns empty aggregates for an empty team', () => {
-    expect(summarizeTeamProjects([])).toEqual({ health: [], leads: [], updateMissing: 0 });
+    expect(summarizeProjectList([])).toEqual({
+      health: [],
+      leads: [],
+      noUpdateExpected: 0,
+      updateMissing: 0,
+    });
   });
 });

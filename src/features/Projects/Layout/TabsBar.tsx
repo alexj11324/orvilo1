@@ -28,7 +28,6 @@ import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from 
 
 import {
   getProjectActivityPath,
-  getProjectMilestonesPath,
   getProjectOverviewPath,
   getProjectTasksPath,
   projectPathSection,
@@ -121,8 +120,12 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
     [navigate],
   );
 
-  // Linear's project header is Overview | Activity | Issues | Milestones —
-  // goals and resources live as sections on the Overview body instead of tabs.
+  // Linear's project header is exactly Overview | Activity | Issues — verified
+  // 2026-09-24 on the live reference, including on a project that HAS a
+  // milestone (Daymark): milestones live as an overview body section and a
+  // rail card, never a tab. The /milestones route still resolves for deep
+  // links; it just isn't a tab. Goals and resources likewise live as sections
+  // on the Overview body.
   const tabs = useMemo(
     () => [
       {
@@ -139,11 +142,6 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
         label: t('sections.issues'),
         path: getProjectTasksPath(projectReference),
         section: 'tasks',
-      },
-      {
-        label: t('sections.milestones'),
-        path: getProjectMilestonesPath(projectReference),
-        section: 'milestones',
       },
     ],
     [projectReference, t],
@@ -181,9 +179,9 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
             <Flexbox horizontal align={'center'} gap={10}>
               <Tag
                 color={headerStatusVisual.color}
+                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
                 shape={'round'}
                 size={'small'}
-                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
               >
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,

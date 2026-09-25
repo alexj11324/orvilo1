@@ -578,6 +578,7 @@ describe('TaskService', () => {
       expect(result?.subtasks?.[0]).toEqual({
         blockedBy: undefined,
         children: undefined,
+        id: 'task_002',
         identifier: 'TASK-2',
         name: 'Sub 1',
         priority: 'normal',
@@ -586,6 +587,7 @@ describe('TaskService', () => {
       expect(result?.subtasks?.[1]).toEqual({
         blockedBy: 'TASK-2',
         children: undefined,
+        id: 'task_003',
         identifier: 'TASK-3',
         name: 'Sub 2',
         priority: 'high',
@@ -729,6 +731,7 @@ describe('TaskService', () => {
       expect(child1?.children?.[0]).toEqual({
         blockedBy: undefined,
         children: undefined,
+        id: 'task_004',
         identifier: 'TASK-4',
         name: 'Grandchild 1',
         priority: 'normal',

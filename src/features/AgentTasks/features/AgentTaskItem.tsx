@@ -222,6 +222,11 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           <TaskStatusTag
             status={status}
             taskIdentifier={task.identifier}
+            triageTarget={
+              task.teamId
+                ? { domainRevision: task.domainRevision, id: task.id, teamId: task.teamId }
+                : undefined
+            }
             onChange={onStatusChange}
           />
         )}

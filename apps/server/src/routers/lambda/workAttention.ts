@@ -821,7 +821,7 @@ export const workAttentionRouter = router({
   triage: taskWriteProcedure
     .input(
       z.object({
-        action: z.enum(['accept', 'decline', 'duplicate', 'reassign']),
+        action: z.enum(['accept', 'decline', 'duplicate', 'reassign', 'retriage']),
         assigneeUserId: z.string().min(1).optional(),
         canonicalTaskId: z.string().min(1).optional(),
         expectedDomainRevision: z.number().int().min(1),
@@ -884,12 +884,15 @@ export const workAttentionRouter = router({
             ? 'declined'
             : input.action === 'duplicate'
               ? 'duplicate'
-              : 'accepted';
+              : input.action === 'retriage'
+                ? 'untriaged'
+                : 'accepted';
       try {
         const updated = await ctx.taskModel.update(
           input.taskId,
           {
             triageStatus,
+            ...(input.action === 'retriage' ? { duplicateOfTaskId: null } : {}),
             ...(input.action === 'duplicate' && input.canonicalTaskId
               ? { duplicateOfTaskId: input.canonicalTaskId }
               : {}),

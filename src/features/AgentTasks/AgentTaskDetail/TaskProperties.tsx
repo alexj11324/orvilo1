@@ -94,7 +94,15 @@ const TaskProperties = memo(() => {
           {t('taskDetail.properties')}
         </span>
         <div className={styles.properties}>
-          <TaskStatusTag status={status} taskIdentifier={taskId}>
+          <TaskStatusTag
+            status={status}
+            taskIdentifier={taskId}
+            triageTarget={
+              databaseId && teamId && domainRevision
+                ? { domainRevision, id: databaseId, teamId }
+                : undefined
+            }
+          >
             <Block
               clickable
               horizontal

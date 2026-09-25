@@ -54,22 +54,37 @@ const sortKey = (sort: WorkQuerySort[] | undefined): string => {
   return `${first.field === 'updatedAt' ? 'updated' : first.field === 'createdAt' ? 'created' : first.field}${first.direction === 'desc' ? 'Desc' : 'Asc'}`;
 };
 
-const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, WorkQueryGroupBy[]> = {
+// 'attention' is the My-issues default grouping, not a view-editor choice —
+// keep it out of the option union so the savedViews.groupBy.* key set stays
+// exactly the three translated groups.
+type EditableGroupBy = Exclude<WorkQueryGroupBy, 'attention'>;
+
+const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, EditableGroupBy[]> = {
   project: ['none', 'status'],
   task: ['none', 'status', 'workflowCategory'],
 };
 
 interface ViewDefinitionEditorProps {
   onChange: (next: ViewEditorState) => void;
+  showDisplay?: boolean;
   /** Entity picker renders only in the create dialog. */
   showEntityPicker?: boolean;
+  showFilters?: boolean;
   showName?: boolean;
   showShare?: boolean;
   value: ViewEditorState;
 }
 
 const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
-  ({ onChange, showEntityPicker, showName, showShare, value }) => {
+  ({
+    onChange,
+    showDisplay = true,
+    showEntityPicker,
+    showFilters = true,
+    showName,
+    showShare,
+    value,
+  }) => {
     const { t } = useTranslation('common');
     const workspaceId = useActiveWorkspaceId();
     const { data: teamsData } = useClientDataSWR(
@@ -124,84 +139,89 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
             />
           </Flexbox>
         ) : null}
-        <Flexbox horizontal align="flex-start" gap={8}>
-          <Text fontSize={13} style={{ paddingBlock: 4, width: 72 }} type="secondary">
-            {t('savedViews.filters.label')}
-          </Text>
-          <Flexbox flex={1}>
-            <WorkQueryFilterBuilder
-              entityType={value.entityType}
-              value={value.builder}
-              onChange={(builder) => set({ builder })}
+        {showFilters ? (
+          <Flexbox horizontal align="flex-start" gap={8}>
+            <Text fontSize={13} style={{ paddingBlock: 4, width: 72 }} type="secondary">
+              {t('savedViews.filters.label')}
+            </Text>
+            <Flexbox flex={1}>
+              <WorkQueryFilterBuilder
+                entityType={value.entityType}
+                value={value.builder}
+                onChange={(builder) => set({ builder })}
+              />
+            </Flexbox>
+          </Flexbox>
+        ) : null}
+        {showDisplay ? (
+          <Flexbox horizontal align="center" gap={8} wrap="wrap">
+            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+              {t('savedViews.display')}
+            </Text>
+            <Select
+              size="small"
+              style={{ minWidth: 140 }}
+              value={value.layout}
+              options={[
+                { label: t('savedViews.layoutList'), value: 'list' },
+                { label: t('savedViews.layoutBoard'), value: 'board' },
+              ]}
+              onChange={(next) => {
+                if (next === 'board' || next === 'list') {
+                  set({
+                    groupBy:
+                      next === 'board' && value.groupBy === 'none' ? 'status' : value.groupBy,
+                    layout: next,
+                  });
+                }
+              }}
+            />
+            <Select
+              size="small"
+              style={{ minWidth: 150 }}
+              value={value.groupBy}
+              options={GROUP_BY_OPTIONS[value.entityType].map((groupBy) => ({
+                label: t(`savedViews.groupBy.${groupBy}`),
+                value: groupBy,
+              }))}
+              onChange={(next) => {
+                if (next === 'none' || next === 'status' || next === 'workflowCategory') {
+                  set({ groupBy: next });
+                }
+              }}
+            />
+            <Select
+              size="small"
+              style={{ minWidth: 170 }}
+              options={[
+                ...(value.layout === 'board'
+                  ? [{ label: t('savedViews.sort.manual'), value: 'manual' }]
+                  : []),
+                { label: t('savedViews.sortDefault'), value: 'default' },
+                ...Object.keys(SORT_PRESETS).map((key) => ({
+                  label: t(`savedViews.sort.${key}` as never),
+                  value: key,
+                })),
+              ]}
+              value={
+                value.layout === 'board' && (value.sortMode ?? 'manual') === 'manual'
+                  ? 'manual'
+                  : sortKey(value.sort)
+              }
+              onChange={(next) => {
+                if (next === 'manual') {
+                  set({ sortMode: 'manual' });
+                  return;
+                }
+                if (typeof next === 'string' && next in SORT_PRESETS) {
+                  set({ sort: SORT_PRESETS[next], sortMode: 'field' });
+                  return;
+                }
+                set({ sort: undefined, sortMode: undefined });
+              }}
             />
           </Flexbox>
-        </Flexbox>
-        <Flexbox horizontal align="center" gap={8} wrap="wrap">
-          <Text fontSize={13} style={{ width: 72 }} type="secondary">
-            {t('savedViews.display')}
-          </Text>
-          <Select
-            size="small"
-            style={{ minWidth: 140 }}
-            value={value.layout}
-            options={[
-              { label: t('savedViews.layoutList'), value: 'list' },
-              { label: t('savedViews.layoutBoard'), value: 'board' },
-            ]}
-            onChange={(next) => {
-              if (next === 'board' || next === 'list') {
-                set({
-                  groupBy: next === 'board' && value.groupBy === 'none' ? 'status' : value.groupBy,
-                  layout: next,
-                });
-              }
-            }}
-          />
-          <Select
-            size="small"
-            style={{ minWidth: 150 }}
-            value={value.groupBy}
-            options={GROUP_BY_OPTIONS[value.entityType].map((groupBy) => ({
-              label: t(`savedViews.groupBy.${groupBy}`),
-              value: groupBy,
-            }))}
-            onChange={(next) => {
-              if (next === 'none' || next === 'status' || next === 'workflowCategory') {
-                set({ groupBy: next });
-              }
-            }}
-          />
-          <Select
-            size="small"
-            style={{ minWidth: 170 }}
-            options={[
-              ...(value.layout === 'board'
-                ? [{ label: t('savedViews.sort.manual'), value: 'manual' }]
-                : []),
-              { label: t('savedViews.sortDefault'), value: 'default' },
-              ...Object.keys(SORT_PRESETS).map((key) => ({
-                label: t(`savedViews.sort.${key}` as never),
-                value: key,
-              })),
-            ]}
-            value={
-              value.layout === 'board' && (value.sortMode ?? 'manual') === 'manual'
-                ? 'manual'
-                : sortKey(value.sort)
-            }
-            onChange={(next) => {
-              if (next === 'manual') {
-                set({ sortMode: 'manual' });
-                return;
-              }
-              if (typeof next === 'string' && next in SORT_PRESETS) {
-                set({ sort: SORT_PRESETS[next], sortMode: 'field' });
-                return;
-              }
-              set({ sort: undefined, sortMode: undefined });
-            }}
-          />
-        </Flexbox>
+        ) : null}
         {showShare ? (
           <Flexbox horizontal align="center" gap={8} wrap="wrap">
             <Text fontSize={13} style={{ width: 72 }} type="secondary">

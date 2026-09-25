@@ -16,12 +16,17 @@ import type {
 
 import type { TaskGroupBy, TaskGroupMeta } from './listViewOptions';
 import {
+  effectiveTaskPosition,
   getTaskAssigneeGroupMeta,
   getTaskGroupMeta,
   getTaskMemberGroupMeta,
   getTaskPriorityGroupMeta,
   sortGroupEntries,
 } from './listViewOptions';
+
+// The position helper now lives with the other view-option primitives (the
+// "Manual" list ordering reads it too); re-export keeps existing imports here.
+export { effectiveTaskPosition };
 
 export interface KanbanColumnDefinition {
   droppable: boolean;
@@ -275,6 +280,22 @@ export const kanbanBoardCapabilities = (input: {
 export const externalKanbanColumns = (groupBy: WorkQueryBoardGroupBy): KanbanColumnDefinition[] =>
   groupBy === 'workflowCategory' ? WORKFLOW_KANBAN_COLUMNS : RAW_STATUS_KANBAN_COLUMNS;
 
+/**
+ * Linear parity: a work-query board hides a column whose group is empty —
+ * the reference team-issues board only renders categories that hold issues.
+ * Columns the query never returned count as empty too. A board where every
+ * column is empty keeps all of them — the status-board contract still wants
+ * its column chrome (and `+` pills) rather than a blank area.
+ */
+export const externalVisibleKanbanColumns = (
+  columns: KanbanColumnDefinition[],
+  taskGroups: Pick<TaskGroupItem, 'key' | 'total'>[],
+): KanbanColumnDefinition[] => {
+  const totals = new Map(taskGroups.map((group) => [group.key, group.total]));
+  const visible = columns.filter((column) => (totals.get(column.key) ?? 0) > 0);
+  return visible.length === 0 ? columns : visible;
+};
+
 /** The work-query group key a column represents — strips the `wf:`/`st:` prefix. */
 export const workQueryKeyForKanbanColumn = (columnKey: string): string =>
   columnKey.replace(/^(?:wf|st):/, '');
@@ -324,6 +345,44 @@ export const externalKanbanColumnMoveScope = (
     : column.targetStatus
       ? { statuses: [column.targetStatus] }
       : undefined;
+
+/**
+ * Board-column create gate. "My tasks" offers no create entry (its list view
+ * has none either): a task created there carries neither the member
+ * assignment nor — under `created` — any guarantee it lands in the column it
+ * was started from. An external (work-query) board only shows it when the
+ * caller declared where the card belongs.
+ *
+ * Every column on a status-grouped board offers `+` (Linear parity): the
+ * clicked column's dimension value presets the new issue via
+ * {@link kanbanColumnCreatePreset}.
+ */
+export const kanbanColumnAllowsCreate = (input: {
+  columnKey: string;
+  createContext?: { teamId?: string; teamOptions?: { id: string; name: string }[] };
+  external?: boolean;
+  groupBy: string;
+  myTaskScope?: boolean;
+}): boolean =>
+  input.groupBy === 'status' &&
+  !input.myTaskScope &&
+  (!input.external ||
+    Boolean(input.createContext?.teamId) ||
+    (input.createContext?.teamOptions?.length ?? 0) > 0);
+
+/**
+ * The create preset a `+` click on a column carries — `wf:`/`st:` work-query
+ * keys map back to their dimension, internal status columns to `status`.
+ */
+export const kanbanColumnCreatePreset = (
+  columnKey: string,
+): { status?: TaskStatus; workflowCategory?: TaskWorkflowCategory } => {
+  if (columnKey.startsWith('wf:'))
+    return { workflowCategory: workQueryKeyForKanbanColumn(columnKey) as TaskWorkflowCategory };
+  if (columnKey.startsWith('st:'))
+    return { status: workQueryKeyForKanbanColumn(columnKey) as TaskStatus };
+  return { status: columnKey as TaskStatus };
+};
 
 export const getKanbanAssigneeUpdate = (
   task: TaskListItem,
@@ -544,18 +603,6 @@ export const resolveKanbanDropColumn = (
   if (taskMatchesKanbanColumn(task, groupBy, overCol)) return overCol;
   if (!def.droppable || !canDropTaskIntoKanbanColumn(task, groupBy, def)) return null;
   return overCol;
-};
-
-/**
- * The board ordering key a row renders at. Rows never dragged carry
- * `position: null` and fall back to `-epoch(createdAt)` — the same fallback
- * the server applies — so untouched rows keep their newest-first order.
- */
-export const effectiveTaskPosition = (task: TaskListItem): number => {
-  if (task.position !== null && task.position !== undefined) return task.position;
-  const createdAt = task.createdAt;
-  const time = createdAt instanceof Date ? createdAt.getTime() : new Date(createdAt).getTime();
-  return -(time / 1000);
 };
 
 /**

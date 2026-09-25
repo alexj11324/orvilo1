@@ -1,4 +1,12 @@
-import { PROJECT_IDENTIFIER_REGEX, PROJECT_STATUSES, PROJECT_VISIBILITIES } from '@orvilo/types';
+import {
+  PROJECT_CREATABLE_STATUSES,
+  PROJECT_DATE_PRECISIONS,
+  PROJECT_HEALTH_STATES,
+  PROJECT_IDENTIFIER_REGEX,
+  PROJECT_STATUSES,
+  PROJECT_UPDATE_KINDS,
+  PROJECT_VISIBILITIES,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -8,7 +16,10 @@ import {
   type WorkspaceRole,
   wsCompatProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { AgentModel } from '@/database/models/agent';
 import { ProjectModel } from '@/database/models/project';
+import { TaskModel } from '@/database/models/task';
+import { UserModel } from '@/database/models/user';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
@@ -61,6 +72,8 @@ const orchestrationPolicySchema = z.object({
   requireHumanReview: z.boolean(),
 });
 
+const healthInput = z.enum(PROJECT_HEALTH_STATES);
+
 function requireResult<T>(result: T | null, message = 'Project not found'): T {
   if (!result) throw new TRPCError({ code: 'NOT_FOUND', message });
   return result;
@@ -74,6 +87,98 @@ function mapProjectError(error: unknown, operation: string): never {
 }
 
 export const projectRouter = router({
+  /**
+   * Linear parity — the project Activity tab: newest-first task field-change
+   * feed for the project's issues (assignee/status/priority moves), with the
+   * actor resolved so the row renders without a second fetch.
+   */
+  activityFeed: projectProcedure
+    .input(
+      idInput.extend({
+        cursor: z.string().nullish(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        const taskModel = new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
+        const { items: rows, nextCursor } = await taskModel.getProjectActivities(
+          project.id,
+          input.limit,
+          input.cursor ?? undefined,
+        );
+
+        const agentIds = new Set<string>();
+        const userIds = new Set<string>();
+        for (const row of rows) {
+          if (row.activity.actorAgentId) agentIds.add(row.activity.actorAgentId);
+          if (row.activity.actorUserId) userIds.add(row.activity.actorUserId);
+          // Assignment events carry participant ids on both sides of the
+          // change; resolve them so the row can name the new assignee.
+          const type = row.activity.type;
+          if (type === 'assignee_agent' || type === 'assignee_user' || type === 'reviewer') {
+            const target = type === 'assignee_agent' ? agentIds : userIds;
+            for (const id of [row.activity.payload?.fromId, row.activity.payload?.toId]) {
+              if (id) target.add(id);
+            }
+          }
+        }
+        const [agentRows, userRows] = await Promise.all([
+          agentIds.size
+            ? new AgentModel(
+                ctx.serverDB,
+                ctx.userId,
+                ctx.workspaceId ?? undefined,
+              ).getAgentAvatarsByIds([...agentIds])
+            : [],
+          userIds.size ? UserModel.findByIds(ctx.serverDB, [...userIds]) : [],
+        ]);
+        const actors = new Map<
+          string,
+          { avatar?: string | null; id: string; name?: string | null; type: 'agent' | 'user' }
+        >();
+        for (const a of agentRows) {
+          actors.set(a.id, { avatar: a.avatar, id: a.id, name: a.title || a.name, type: 'agent' });
+        }
+        for (const u of userRows) {
+          actors.set(u.id, {
+            avatar: u.avatar,
+            id: u.id,
+            name: u.fullName || u.username,
+            type: 'user',
+          });
+        }
+
+        return {
+          data: {
+            items: rows.map((row) => ({
+              actor:
+                (row.activity.actorAgentId && actors.get(row.activity.actorAgentId)) ||
+                (row.activity.actorUserId && actors.get(row.activity.actorUserId)) ||
+                undefined,
+              createdAt: row.activity.createdAt.toISOString(),
+              fromTarget:
+                (row.activity.payload?.fromId && actors.get(row.activity.payload.fromId)) ||
+                undefined,
+              id: row.activity.id,
+              payload: row.activity.payload,
+              target:
+                (row.activity.payload?.toId && actors.get(row.activity.payload.toId)) || undefined,
+              taskId: row.taskId,
+              taskIdentifier: row.taskIdentifier,
+              taskTitle: row.taskTitle,
+              type: row.activity.type,
+            })),
+            nextCursor: nextCursor ?? null,
+          },
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'activityFeed');
+      }
+    }),
+
   acceptCompletion: projectWriteProcedure
     .input(idInput.extend({ comment: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
@@ -149,10 +254,40 @@ export const projectRouter = router({
   create: projectWriteProcedure
     .input(
       z.object({
+        dependencies: z
+          .array(
+            z.object({ projectId: z.string().min(1), type: z.enum(['blockedBy', 'blocking']) }),
+          )
+          .max(100)
+          .optional(),
+        labelIds: z.array(z.uuid()).max(100).optional(),
+        memberIds: z.array(z.string().min(1)).max(100).optional(),
+        milestones: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(255),
+              description: z.string().max(10000).optional(),
+              date: z.iso.date().optional(),
+            }),
+          )
+          .max(100)
+          .optional(),
+        newLabelNames: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
+        priority: z
+          .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+          .optional(),
+        startDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).optional(),
+        targetDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).optional(),
+        status: z.enum(PROJECT_CREATABLE_STATUSES).optional(),
         avatar: z.string().optional(),
         description: z.string().optional(),
         identifier: projectIdentifierInput,
         name: z.string().min(1).max(255),
+        summary: z.string().max(280).optional(),
+        leadUserId: z.string().min(1).optional(),
+        startDate: z.iso.date().optional(),
+        targetDate: z.iso.date().optional(),
+        teamId: z.string().min(1).optional(),
         slug: projectSlugInput.optional(),
         visibility: z.enum(PROJECT_VISIBILITIES).optional(),
       }),
@@ -184,15 +319,26 @@ export const projectRouter = router({
   detail: projectProcedure.input(idInput).query(async ({ ctx, input }) => {
     try {
       const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
-      const [agents, completionReviews, knowledgeBases, tasks, works] = await Promise.all([
-        ctx.projectModel.listAgents(project.id),
-        ctx.projectModel.listCompletionReviews(project.id),
-        ctx.projectModel.listKnowledgeBases(project.id),
-        ctx.projectModel.listTasks(project.id),
-        ctx.projectModel.listWorks(project.id),
-      ]);
+      const [agents, completionReviews, knowledgeBases, tasks, works, planning] = await Promise.all(
+        [
+          ctx.projectModel.listAgents(project.id),
+          ctx.projectModel.listCompletionReviews(project.id),
+          ctx.projectModel.listKnowledgeBases(project.id),
+          ctx.projectModel.listTasks(project.id),
+          ctx.projectModel.listWorks(project.id),
+          ctx.projectModel.getPlanning(project.id),
+        ],
+      );
       return {
-        data: { agents, completionReviews, knowledgeBases, project, tasks, works },
+        data: {
+          agents,
+          completionReviews,
+          knowledgeBases,
+          project,
+          tasks,
+          works,
+          ...requireResult(planning),
+        },
         success: true,
       };
     } catch (error) {
@@ -222,6 +368,11 @@ export const projectRouter = router({
     }
   }),
 
+  labels: projectProcedure.query(async ({ ctx }) => ({
+    data: await ctx.projectModel.listLabels(),
+    success: true,
+  })),
+
   list: projectProcedure
     .input(
       z.object({
@@ -235,6 +386,138 @@ export const projectRouter = router({
         return { data: await ctx.projectModel.list(input), success: true };
       } catch (error) {
         mapProjectError(error, 'list');
+      }
+    }),
+
+  listUpdates: projectProcedure.input(idInput).query(async ({ ctx, input }) => {
+    try {
+      const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+      return { data: requireResult(await ctx.projectModel.listUpdates(project.id)), success: true };
+    } catch (error) {
+      mapProjectError(error, 'listUpdates');
+    }
+  }),
+
+  listLinks: projectProcedure.input(idInput).query(async ({ ctx, input }) => {
+    try {
+      const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+      return { data: requireResult(await ctx.projectModel.listLinks(project.id)), success: true };
+    } catch (error) {
+      mapProjectError(error, 'listLinks');
+    }
+  }),
+
+  saveLink: projectWriteProcedure
+    .input(
+      idInput.extend({
+        linkId: z.uuid().optional(),
+        title: z.string().trim().max(255).optional(),
+        url: z.string().trim().url().max(8192),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.saveLink(project.id, {
+              id: input.linkId,
+              title: input.title,
+              url: input.url,
+            }),
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'saveLink');
+      }
+    }),
+
+  removeLink: projectWriteProcedure
+    .input(idInput.extend({ linkId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(await ctx.projectModel.removeLink(project.id, input.linkId)),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'removeLink');
+      }
+    }),
+
+  createUpdate: projectWriteProcedure
+    .input(
+      idInput.extend({
+        body: z.string().min(1),
+        health: healthInput.optional(),
+        kind: z.enum(PROJECT_UPDATE_KINDS).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.createUpdate(project.id, {
+              body: input.body,
+              health: input.health,
+              kind: input.kind,
+            }),
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'createUpdate');
+      }
+    }),
+
+  /**
+   * Edit a published project update/comment. Uses `projectPolicyModel` so the
+   * model's moderation ACL sees `canManageAll`: the author, the project
+   * owner/lead, or a workspace admin may edit — everyone else gets NOT_FOUND.
+   */
+  updateUpdate: projectWriteProcedure
+    .input(
+      idInput.extend({
+        body: z.string().min(1),
+        health: healthInput.optional(),
+        updateId: z.uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectPolicyModel.updateUpdate(project.id, input.updateId, {
+              body: input.body,
+              health: input.health,
+            }),
+            'Update not found',
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'updateUpdate');
+      }
+    }),
+
+  deleteUpdate: projectWriteProcedure
+    .input(idInput.extend({ updateId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectPolicyModel.deleteUpdate(project.id, input.updateId),
+            'Update not found',
+          ),
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'deleteUpdate');
       }
     }),
 
@@ -257,6 +540,104 @@ export const projectRouter = router({
         return { data: rows, message: `${rows.length} task(s) moved`, success: true };
       } catch (error) {
         mapProjectError(error, 'moveTask');
+      }
+    }),
+
+  createMilestone: projectWriteProcedure
+    .input(
+      idInput.extend({
+        date: z.iso.date().nullish(),
+        description: z.string().max(10_000).nullish(),
+        name: z.string().trim().min(1).max(255),
+        sortOrder: z.number().int().min(0).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input: { id, ...input } }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(id));
+        return {
+          data: requireResult(await ctx.projectModel.createMilestone(project.id, input)),
+          message: 'Milestone created',
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'createMilestone');
+      }
+    }),
+
+  updateMilestone: projectWriteProcedure
+    .input(
+      idInput.extend({
+        date: z.iso.date().nullish(),
+        description: z.string().max(10_000).nullish(),
+        milestoneId: z.uuid(),
+        name: z.string().trim().min(1).max(255).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input: { id, milestoneId, ...input } }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.updateMilestone(project.id, milestoneId, input),
+          ),
+          message: 'Milestone updated',
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'updateMilestone');
+      }
+    }),
+
+  deleteMilestone: projectWriteProcedure
+    .input(idInput.extend({ milestoneId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        const removed = await ctx.projectModel.deleteMilestone(project.id, input.milestoneId);
+        if (!removed) throw new TRPCError({ code: 'NOT_FOUND', message: 'Milestone not found' });
+        return { message: 'Milestone deleted', success: true };
+      } catch (error) {
+        mapProjectError(error, 'deleteMilestone');
+      }
+    }),
+
+  reorderMilestones: projectWriteProcedure
+    .input(idInput.extend({ milestoneIds: z.array(z.uuid()).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
+        return {
+          data: requireResult(
+            await ctx.projectModel.reorderMilestones(project.id, input.milestoneIds),
+          ),
+          message: 'Milestones reordered',
+          success: true,
+        };
+      } catch (error) {
+        mapProjectError(error, 'reorderMilestones');
+      }
+    }),
+
+  /**
+   * Attach a task to one of this project's milestones, or detach it with
+   * `milestoneId: null`. The overview's "No milestone" row calls this to file
+   * an unassigned issue under a milestone; the same path clears the link.
+   */
+  setTaskMilestone: projectWriteProcedure
+    .input(idInput.extend({ milestoneId: z.uuid().nullable(), taskId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const task = requireResult(
+          await ctx.projectModel.setTaskMilestone({
+            milestoneId: input.milestoneId,
+            projectId: input.id,
+            taskId: input.taskId,
+          }),
+        );
+        return { data: task, message: 'Task milestone updated', success: true };
+      } catch (error) {
+        mapProjectError(error, 'setTaskMilestone');
       }
     }),
 
@@ -341,8 +722,18 @@ export const projectRouter = router({
       idInput.extend({
         avatar: z.string().nullish(),
         description: z.string().nullish(),
+        leadUserId: z.string().min(1).nullish(),
+        labelIds: z.array(z.uuid()).max(100).optional(),
         name: z.string().min(1).max(255).optional(),
         slug: projectSlugInput.nullish(),
+        summary: z.string().max(280).optional(),
+        priority: z
+          .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+          .optional(),
+        startDate: z.iso.date().nullish(),
+        startDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).nullish(),
+        targetDate: z.iso.date().nullish(),
+        targetDatePrecision: z.enum(PROJECT_DATE_PRECISIONS).nullish(),
         visibility: z.enum(PROJECT_VISIBILITIES).optional(),
       }),
     )

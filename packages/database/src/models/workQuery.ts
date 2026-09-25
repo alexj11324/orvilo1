@@ -1,5 +1,6 @@
 import type {
   MyWorkMode,
+  TaskLabelSummary,
   WorkQuery,
   WorkQueryCountResult,
   WorkQueryEntityType,
@@ -42,13 +43,14 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
-import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { actionApprovals } from '../schemas/actionApproval';
 import { executionGrants } from '../schemas/executionGrant';
 import { notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
-import { tasks } from '../schemas/task';
+import { taskDependencies, tasks } from '../schemas/task';
+import { taskLabelBindings } from '../schemas/taskLabel';
 import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
@@ -57,6 +59,7 @@ import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
+import { TaskLabelModel, toTaskLabelSummary } from './taskLabel';
 import { TeamModel } from './team';
 
 export class WorkQueryError extends Error {
@@ -75,6 +78,7 @@ const TASK_FIELDS = new Set<WorkQueryField>([
   'cycleId',
   'delegatedByUserId',
   'id',
+  'labelId',
   'priority',
   'projectId',
   'reviewerUserId',
@@ -358,6 +362,54 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
     );
   }
 
+  if (predicate.field === 'labelId') {
+    // Labels are many-to-many: match through an EXISTS on the join table so a
+    // multi-labeled task is returned once, never duplicated per binding. The
+    // join table alone is sufficient — binding rows are scope-stamped at write
+    // and a foreign-scope label id simply matches nothing.
+    const resolved = resolveValue(predicate.value, ctx.currentUserId);
+    const anyBinding = sql`exists (select 1 from ${taskLabelBindings} where ${taskLabelBindings.taskId} = ${tasks.id})`;
+    const bindingWith = (match: SQL) =>
+      sql`exists (select 1 from ${taskLabelBindings} where ${taskLabelBindings.taskId} = ${tasks.id} and ${match})`;
+    switch (predicate.op) {
+      case 'isNull': {
+        return sql`not ${anyBinding}`;
+      }
+      case 'isNotNull': {
+        return anyBinding;
+      }
+      case 'eq': {
+        if (typeof resolved !== 'string') {
+          throw new WorkQueryError('INVALID_QUERY', 'labelId eq requires a label id');
+        }
+        return bindingWith(sql`${taskLabelBindings.labelId} = ${resolved}`);
+      }
+      case 'neq': {
+        if (typeof resolved !== 'string') {
+          throw new WorkQueryError('INVALID_QUERY', 'labelId neq requires a label id');
+        }
+        return sql`not ${bindingWith(sql`${taskLabelBindings.labelId} = ${resolved}`)}`;
+      }
+      case 'in': {
+        const values = assertInValues(resolved, 'in').filter(
+          (item): item is string => typeof item === 'string',
+        );
+        return values.length ? bindingWith(inArray(taskLabelBindings.labelId, values)) : FALSE_SQL;
+      }
+      case 'notIn': {
+        const values = assertInValues(resolved, 'notIn').filter(
+          (item): item is string => typeof item === 'string',
+        );
+        return values.length
+          ? sql`not ${bindingWith(inArray(taskLabelBindings.labelId, values))}`
+          : TRUE_SQL;
+      }
+      default: {
+        throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(predicate.op)}`);
+      }
+    }
+  }
+
   const op: WorkQueryOp = predicate.op;
   const resolved = resolveValue(predicate.value, ctx.currentUserId);
   return compileColumnPredicate(taskColumn(predicate.field), op, resolved);
@@ -483,7 +535,8 @@ export const applyWorkQueryLayout = (
     }
     return {
       ...query,
-      groupBy: nextGroupBy === 'workflowCategory' ? 'workflowCategory' : 'status',
+      groupBy:
+        nextGroupBy === 'workflowCategory' || nextGroupBy === 'attention' ? nextGroupBy : 'status',
       layout: 'list',
     };
   }
@@ -496,21 +549,96 @@ export const applyWorkQueryLayout = (
 
 export const workQueryBoardGroupBy = (
   query: WorkQuery,
-): 'status' | 'workflowCategory' | undefined => {
+): 'attention' | 'status' | 'workflowCategory' | undefined => {
   if (query.layout === 'board') {
     return query.groupBy === 'status' ? 'status' : 'workflowCategory';
   }
-  if (query.groupBy === 'status' || query.groupBy === 'workflowCategory') {
+  if (
+    query.groupBy === 'status' ||
+    query.groupBy === 'workflowCategory' ||
+    query.groupBy === 'attention'
+  ) {
     return query.groupBy;
   }
   return undefined;
 };
 
-const boardColumnFor = (groupBy: 'status' | 'workflowCategory') =>
-  groupBy === 'status' ? tasks.status : tasks.workflowCategory;
+/** A canceled/completed blocked row no longer needs the blocker. */
+const OPEN_BLOCKED_STATUS_SQL = sql.join(
+  WORK_QUERY_STATUS_COLUMNS.filter((status) => status !== 'completed' && status !== 'canceled').map(
+    (status) => sql`${status}`,
+  ),
+  sql`, `,
+);
 
-const stableBoardKeys = (groupBy: 'status' | 'workflowCategory'): readonly string[] =>
-  groupBy === 'status' ? WORK_QUERY_STATUS_COLUMNS : WORK_QUERY_WORKFLOW_COLUMNS;
+/**
+ * The blocked side of a `blocks` edge inside the attention EXISTS leg. The
+ * alias is declared in the raw `INNER JOIN` clause; its columns resolve to
+ * `attention_blocked.*` so the readability predicates bind to the downstream
+ * task, not the grouped row.
+ */
+const attentionBlockedTasks = alias(tasks, 'attention_blocked');
+
+/**
+ * Linear's My issues grouping: urgent issues first, then issues that block
+ * others, then the rest by workflow state (Linear's status is the workflow
+ * state — Todo, In Progress… — not the agent run state, so the tail buckets
+ * match the one status mark each row draws). Not a stored column — a CASE over
+ * `priority` and a live `blocks` edge, so the bucket always reflects the
+ * current graph.
+ *
+ * Two guards keep the buckets honest:
+ * - The grouped row itself must be open — a completed/canceled issue stays
+ *   in its workflow bucket even when it is urgent or still blocks work.
+ * - The blocked downstream task must be readable by the caller — otherwise
+ *   an invisible task could flip a visible one into the `blocking` group.
+ */
+const attentionGroupExpr = (ctx: {
+  db: OrviloDatabase;
+  userId: string;
+  workspaceId?: string;
+}): SQL<string> =>
+  sql<string>`CASE
+  WHEN ${tasks.status} IN (${OPEN_BLOCKED_STATUS_SQL}) AND ${tasks.priority} = 1 THEN 'urgent'
+  WHEN ${tasks.status} IN (${OPEN_BLOCKED_STATUS_SQL}) AND EXISTS (
+    SELECT 1
+    FROM ${taskDependencies} attention_dep
+    INNER JOIN ${tasks} attention_blocked
+      ON attention_dep.task_id = ${attentionBlockedTasks.id}
+    WHERE attention_dep.depends_on_id = ${tasks.id}
+      AND attention_dep.type = 'blocks'
+      AND ${attentionBlockedTasks.status} IN (${OPEN_BLOCKED_STATUS_SQL})
+      AND ${buildWorkspaceWhere(
+        { userId: ctx.userId, workspaceId: ctx.workspaceId },
+        {
+          userId: attentionBlockedTasks.createdByUserId,
+          visibility: attentionBlockedTasks.visibility,
+          workspaceId: attentionBlockedTasks.workspaceId,
+        },
+      )}
+      AND ${buildTaskTeamReadableWhere(ctx.db, ctx.userId, attentionBlockedTasks as unknown as typeof tasks)}
+  ) THEN 'blocking'
+  ELSE ${tasks.workflowCategory}
+END`;
+
+const groupExprFor = (
+  groupBy: 'attention' | 'status' | 'workflowCategory',
+  attentionExpr: SQL,
+): SQL | AnyPgColumn =>
+  groupBy === 'attention'
+    ? attentionExpr
+    : groupBy === 'status'
+      ? tasks.status
+      : tasks.workflowCategory;
+
+const stableBoardKeys = (
+  groupBy: 'attention' | 'status' | 'workflowCategory',
+): readonly string[] =>
+  groupBy === 'attention'
+    ? ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS]
+    : groupBy === 'status'
+      ? WORK_QUERY_STATUS_COLUMNS
+      : WORK_QUERY_WORKFLOW_COLUMNS;
 
 /** Keyset for board-ordered groups: position asc, then createdAt/seq desc —
  * the same total order TASK_BOARD_ORDER applies on the task-store board. */
@@ -561,7 +689,14 @@ const DEFAULT_TASK_SORT: WorkQuerySort[] = [
 
 const normalizeTaskSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[] => {
   const next = sort?.length ? [...sort] : [...DEFAULT_TASK_SORT];
-  if (next.some((item) => item.field === 'delegatedByUserId' || item.field === 'reviewerUserId')) {
+  if (
+    next.some(
+      (item) =>
+        item.field === 'delegatedByUserId' ||
+        item.field === 'labelId' ||
+        item.field === 'reviewerUserId',
+    )
+  ) {
     throw new WorkQueryError('INVALID_QUERY', 'Cannot sort by a virtual field');
   }
   if (next.at(-1)?.field !== 'id') {
@@ -589,6 +724,7 @@ const sortValue = (
   if (field === 'cycleId') return row.cycleRefId;
   if (
     field === 'delegatedByUserId' ||
+    field === 'labelId' ||
     field === 'ownerUserId' ||
     field === 'reviewerUserId' ||
     field === 'visibility'
@@ -727,6 +863,22 @@ export class WorkQueryModel {
     return new Set(rows.map((row) => row.id));
   };
 
+  /**
+   * Batch-hydrate label chips for a page of task rows — one `IN` query through
+   * the label registry, grouped by task. Keeping it off the main SELECT means
+   * a multi-labeled task is never duplicated per binding.
+   */
+  private taskLabelsByTaskIds = async (
+    taskIds: string[],
+  ): Promise<Map<string, TaskLabelSummary[]>> => {
+    const byTask = await new TaskLabelModel(this.db, this.userId, this.workspaceId).listForTasks(
+      taskIds,
+    );
+    return new Map(
+      [...byTask.entries()].map(([taskId, labels]) => [taskId, labels.map(toTaskLabelSummary)]),
+    );
+  };
+
   private compileCtx = (
     entityType: WorkQueryEntityType,
     readableTeamIds: ReadonlySet<string>,
@@ -860,12 +1012,14 @@ export class WorkQueryModel {
       .orderBy(...orderBy)
       .limit(limit);
 
+    const labelsByTask = await this.taskLabelsByTaskIds(rows.map((row) => row.id));
+
     return {
       groupBy: 'none' as const,
       groups: undefined,
       layout: 'list' as const,
       queryHash,
-      tasks: rows,
+      tasks: rows.map((row) => ({ ...row, labels: labelsByTask.get(row.id) ?? [] })),
       total: Number(countRow?.count ?? 0),
     };
   };
@@ -879,7 +1033,7 @@ export class WorkQueryModel {
   private queryTaskBoard = async (params: {
     afterId?: string;
     conditions: SQL[];
-    groupBy: 'status' | 'workflowCategory';
+    groupBy: 'attention' | 'status' | 'workflowCategory';
     groupKey?: string;
     layout: WorkQueryLayout;
     limit: number;
@@ -896,14 +1050,32 @@ export class WorkQueryModel {
     }
 
     // Raw dimension keys everywhere — no folding into Cordy columns, so an
-    // in-review issue never lands in a needs-input run-state bucket.
-    const column = boardColumnFor(params.groupBy);
-    const matchesKey = (key: string): SQL => eq(column, key as never);
+    // in-review issue never lands in a needs-input run-state bucket. The
+    // grouping dimension is an expression, not always a stored column —
+    // 'attention' derives urgent/blocking from priority + live blocks edges.
+    const dimension = groupExprFor(
+      params.groupBy,
+      attentionGroupExpr({
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }),
+    );
+    const matchesKey = (key: string): SQL => sql`${dimension} = ${key}`;
+    // Group over a derived `key` column: the dimension may carry params
+    // (attention's NOT-IN list), and Postgres won't match a SELECT CASE whose
+    // placeholders differ from the GROUP BY one's.
+    const keyed = this.db.$with('keyed_tasks').as(
+      this.db
+        .select({ id: tasks.id, key: sql<string>`${dimension}`.as('key') })
+        .from(tasks)
+        .where(and(...params.conditions)),
+    );
     const countRows = await this.db
-      .select({ count: sql<number>`count(*)`, key: column })
-      .from(tasks)
-      .where(and(...params.conditions))
-      .groupBy(column);
+      .with(keyed)
+      .select({ count: sql<number>`count(*)`, key: keyed.key })
+      .from(keyed)
+      .groupBy(keyed.key);
 
     const countByKey = new Map<string, number>();
     for (const row of countRows) {
@@ -967,12 +1139,20 @@ export class WorkQueryModel {
       }),
     );
 
+    const labelsByTask = await this.taskLabelsByTaskIds(
+      groups.flatMap((group) => group.tasks.map((task) => task.id)),
+    );
+    const groupsWithLabels = groups.map((group) => ({
+      ...group,
+      tasks: group.tasks.map((row) => ({ ...row, labels: labelsByTask.get(row.id) ?? [] })),
+    }));
+
     return {
       groupBy: params.groupBy,
-      groups,
+      groups: groupsWithLabels,
       layout: params.layout,
       queryHash: params.queryHash,
-      tasks: groups.flatMap((group) => group.tasks),
+      tasks: groupsWithLabels.flatMap((group) => group.tasks),
       total,
     };
   };

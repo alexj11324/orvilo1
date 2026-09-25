@@ -19,6 +19,7 @@ import { useSingleton } from '@/hooks/useSingleton';
 export interface InboxFeedScope {
   filter?: string;
   kind: string;
+  snoozed?: boolean;
   userId?: string;
   workspaceId: string | null;
 }
@@ -30,6 +31,7 @@ export const inboxFeedScopeKey = (scope: InboxFeedScope): string =>
     scope.workspaceId ?? 'personal',
     scope.kind,
     scope.filter ?? 'all',
+    scope.snoozed ?? false,
   ]);
 
 export interface InboxFeedTail {

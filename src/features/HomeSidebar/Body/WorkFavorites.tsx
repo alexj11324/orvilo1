@@ -109,8 +109,9 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
     ] as MenuProps['items'];
   }, [favoritePageSize, t, updateSystemStatus]);
 
-  if (items.length === 0) return null;
-
+  // Linear keeps the Favorites section header mounted even when the workspace
+  // has no pins — an empty panel is the correct shape, not a missing group.
+  // Hiding the whole section is the user's call via Customize sidebar.
   return (
     <AccordionItem className={cx(accordionStyles.item)} value={itemKey}>
       <AccordionHeader>

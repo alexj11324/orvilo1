@@ -1,7 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Input, Text } from '@lobehub/ui/base-ui';
-import { CheckIcon, LockKeyholeIcon, XIcon } from 'lucide-react';
-import { useState } from 'react';
+import type { TaskStatus } from '@orvilo/types';
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- unreadable-dependency placeholder, not a status
+import { CircleDashed, XIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -9,8 +11,30 @@ import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import TaskStatusIcon from '../features/TaskStatusIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 
+const TASK_STATUS_SET = new Set<string>([
+  'backlog',
+  'canceled',
+  'completed',
+  'failed',
+  'paused',
+  'running',
+  'scheduled',
+]);
+
+const toTaskStatus = (status?: string | null): TaskStatus =>
+  status && TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
+
+/**
+ * The rail's "Related" group — Linear lists every issue relation under one
+ * label, so both `blocks` edges (this task's prerequisites, which also gate the
+ * run button) and `relates` edges render here. The blocking hint keeps the
+ * prerequisite semantics: it only counts `blocks` edges, since `relates` is a
+ * plain link and never holds a run back.
+ */
 const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
@@ -21,7 +45,17 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   const [identifier, setIdentifier] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
-  const prerequisites = detail?.dependencies?.filter((dep) => dep.type === 'blocks') ?? [];
+  const dependencies = useMemo(() => detail?.dependencies ?? [], [detail?.dependencies]);
+  // Blocking edges first: the hint talks about them and they gate runs, so
+  // they stay on top even though the section now reads "Related".
+  const orderedDeps = useMemo(
+    () => [
+      ...dependencies.filter((dep) => dep.type === 'blocks'),
+      ...dependencies.filter((dep) => dep.type !== 'blocks'),
+    ],
+    [dependencies],
+  );
+  const prerequisites = dependencies.filter((dep) => dep.type === 'blocks');
   const blocked = prerequisites.some((dep) => dep.status !== 'completed');
 
   const change = async (operation: () => Promise<void>, adding = false) => {
@@ -51,9 +85,9 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   };
 
   return (
-    <Flexbox gap={8} style={{ marginTop: 16, minWidth: 0 }}>
-      <Text weight={500}>{t('taskDetail.prerequisites.title')}</Text>
-      <Text fontSize={12} role={'status'} type={'secondary'}>
+    <Flexbox className={styles.railSection}>
+      <span className={styles.railSectionLabel}>{t('taskDetail.related')}</span>
+      <Text fontSize={12} role={'status'} style={{ paddingInline: 8 }} type={'secondary'}>
         {t(
           blocked
             ? 'taskDetail.prerequisites.blocked'
@@ -62,36 +96,49 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
               : 'taskDetail.prerequisites.empty',
         )}
       </Text>
-      {prerequisites.map((dep) => (
-        <Flexbox horizontal align={'center'} gap={4} key={dep.id ?? dep.dependsOn}>
-          <Button
-            disabled={!dep.status}
-            icon={dep.status === 'completed' ? CheckIcon : LockKeyholeIcon}
-            size={'small'}
-            style={{ flex: 1, minWidth: 0 }}
-            type={'text'}
-            onClick={() => navigate(taskDetailPath(dep.dependsOn, undefined, dep.name))}
-          >
-            <Text ellipsis title={dep.name ?? dep.dependsOn}>
-              {dep.status
-                ? `${dep.dependsOn}${dep.name ? ` · ${dep.name}` : ''}`
-                : t('taskDetail.prerequisites.unavailable')}
-            </Text>
-          </Button>
-          {allowed && (
+      {orderedDeps.map((dep) => {
+        const unavailable = !dep.status;
+        return (
+          <Flexbox horizontal align={'center'} gap={2} key={dep.id ?? dep.dependsOn}>
             <Button
-              aria-label={t('taskDetail.prerequisites.remove', { identifier: dep.dependsOn })}
-              disabled={pending}
-              icon={XIcon}
+              disabled={unavailable}
               size={'small'}
+              style={{ flex: 1, justifyContent: 'flex-start', minWidth: 0 }}
+              title={dep.name ?? dep.dependsOn}
               type={'text'}
-              onClick={() => change(() => removeDependency(taskId, dep.id ?? dep.dependsOn))}
-            />
-          )}
-        </Flexbox>
-      ))}
+              icon={
+                unavailable ? (
+                  <Icon icon={CircleDashed} size={16} style={{ color: 'inherit' }} />
+                ) : (
+                  <TaskStatusIcon size={16} status={toTaskStatus(dep.status)} />
+                )
+              }
+              onClick={() => navigate(taskDetailPath(dep.dependsOn, undefined, dep.name))}
+            >
+              <Text ellipsis style={{ minWidth: 0 }}>
+                <Text as={'span'} type={'secondary'}>
+                  {dep.dependsOn}
+                </Text>
+                {dep.name ? ` · ${dep.name}` : ''}
+                {unavailable ? ` · ${t('taskDetail.prerequisites.unavailable')}` : ''}
+              </Text>
+            </Button>
+            {allowed && (
+              <Button
+                aria-label={t('taskDetail.prerequisites.remove', { identifier: dep.dependsOn })}
+                disabled={pending}
+                icon={XIcon}
+                size={'small'}
+                type={'text'}
+                onClick={() => change(() => removeDependency(taskId, dep.id ?? dep.dependsOn))}
+              />
+            )}
+          </Flexbox>
+        );
+      })}
       {allowed && (
         <form
+          style={{ paddingInline: 8 }}
           onSubmit={(event) => {
             event.preventDefault();
             const value = identifier.trim();
@@ -119,12 +166,12 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
         </form>
       )}
       {!allowed && reason && (
-        <Text fontSize={12} type={'secondary'}>
+        <Text fontSize={12} style={{ paddingInline: 8 }} type={'secondary'}>
           {reason}
         </Text>
       )}
       {error && (
-        <Text fontSize={12} role={'alert'} type={'danger'}>
+        <Text fontSize={12} role={'alert'} style={{ paddingInline: 8 }} type={'danger'}>
           {error}
         </Text>
       )}

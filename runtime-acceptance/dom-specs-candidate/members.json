@@ -1,0 +1,2841 @@
+{
+  "landmarks": {
+    "sidebar-nav": {
+      "name": "sidebar-nav",
+      "strategy": "layout:leftRail",
+      "tag": "ASIDE",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "AGAgent Testing User's workspace收件箱我的事项待审核助理草稿1工作区项目视图更多收藏你的团队SParity Shipping主页",
+      "rect": {
+        "x": 0,
+        "y": 38,
+        "w": 244,
+        "h": 842
+      },
+      "style": {
+        "fontFamily": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "22px",
+        "color": "rgb(170, 170, 170)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "oklch(1 0 0 / 0.1)",
+        "borderTopColor": "oklch(1 0 0 / 0.1)",
+        "borderRightColor": "oklch(1 0 0 / 0.1)",
+        "borderBottomColor": "oklch(1 0 0 / 0.1)",
+        "borderLeftColor": "oklch(1 0 0 / 0.1)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "relative"
+      }
+    },
+    "sidebar-nav-item": {
+      "name": "sidebar-nav-item",
+      "strategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]",
+      "tag": "DIV",
+      "id": "base-ui-_r_1j_",
+      "role": "button",
+      "testId": null,
+      "ariaLabel": null,
+      "text": "AGAgent Testing User's workspace",
+      "rect": {
+        "x": 8,
+        "y": 46,
+        "w": 180,
+        "h": 32
+      },
+      "style": {
+        "fontFamily": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "22px",
+        "color": "rgb(170, 170, 170)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "10px",
+        "padding": "2px 8px 2px 2px",
+        "paddingTop": "2px",
+        "paddingRight": "8px",
+        "paddingBottom": "2px",
+        "paddingLeft": "2px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "8px",
+        "rowGap": "8px",
+        "columnGap": "8px",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "rgb(170, 170, 170)",
+        "borderTopColor": "rgb(170, 170, 170)",
+        "borderRightColor": "rgb(170, 170, 170)",
+        "borderBottomColor": "rgb(170, 170, 170)",
+        "borderLeftColor": "rgb(170, 170, 170)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "relative"
+      }
+    },
+    "header": {
+      "name": "header",
+      "strategy": "layout:topBar",
+      "tag": "DIV",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "项目待审核收件箱团队收件箱团队视图收件箱我的事项待审核草稿团队任务团队项目团队我的事项团队团队成员 To pick up a draggable item, p",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 1440,
+        "h": 38
+      },
+      "style": {
+        "fontFamily": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "22px",
+        "color": "rgb(255, 255, 255)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px 12px",
+        "paddingTop": "0px",
+        "paddingRight": "12px",
+        "paddingBottom": "0px",
+        "paddingLeft": "12px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "0px",
+        "rowGap": "0px",
+        "columnGap": "0px",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "oklch(1 0 0 / 0.1)",
+        "borderTopColor": "oklch(1 0 0 / 0.1)",
+        "borderRightColor": "oklch(1 0 0 / 0.1)",
+        "borderBottomColor": "oklch(1 0 0 / 0.1)",
+        "borderLeftColor": "oklch(1 0 0 / 0.1)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "static"
+      }
+    },
+    "tabs": null,
+    "list-row": {
+      "name": "list-row",
+      "strategy": "layout:firstRow",
+      "tag": "TR",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "Agent5",
+      "rect": {
+        "x": 261,
+        "y": 289,
+        "w": 1154,
+        "h": 36
+      },
+      "style": {
+        "fontFamily": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "lineHeight": "20.4286px",
+        "color": "rgb(255, 255, 255)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "oklch(1 0 0 / 0.1)",
+        "borderTopColor": "oklch(1 0 0 / 0.1)",
+        "borderRightColor": "oklch(1 0 0 / 0.1)",
+        "borderBottomColor": "oklch(1 0 0 / 0.1)",
+        "borderLeftColor": "oklch(1 0 0 / 0.1)",
+        "boxShadow": "none",
+        "display": "table-row",
+        "position": "static"
+      }
+    },
+    "primary-button": {
+      "name": "primary-button",
+      "strategy": "layout:primaryButton",
+      "tag": "DIV",
+      "id": "root",
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "((e, i, s, u, m, a, l, h) => { let d = document.documentElement, w = [\"light\", \"",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 1440,
+        "h": 900
+      },
+      "style": {
+        "fontFamily": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "14px",
+        "color": "rgb(255, 255, 255)",
+        "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "oklch(1 0 0 / 0.1)",
+        "borderTopColor": "oklch(1 0 0 / 0.1)",
+        "borderRightColor": "oklch(1 0 0 / 0.1)",
+        "borderBottomColor": "oklch(1 0 0 / 0.1)",
+        "borderLeftColor": "oklch(1 0 0 / 0.1)",
+        "boxShadow": "none",
+        "display": "block",
+        "position": "static"
+      }
+    },
+    "detail-pane": {
+      "name": "detail-pane",
+      "strategy": "layout:detailPane",
+      "tag": "DIV",
+      "id": null,
+      "role": null,
+      "testId": null,
+      "ariaLabel": null,
+      "text": "话题问我关于你的任务从任何想法开始… 按 换行...DeepSeek V4 Flash",
+      "rect": {
+        "x": 1024,
+        "y": 59,
+        "w": 407,
+        "h": 799
+      },
+      "style": {
+        "fontFamily": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "22px",
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(13, 13, 13) none repeat scroll 0% 0% / auto padding-box border-box",
+        "backgroundColor": "rgb(13, 13, 13)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "paddingTop": "0px",
+        "paddingRight": "0px",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "margin": "0px",
+        "marginTop": "0px",
+        "marginRight": "0px",
+        "marginBottom": "0px",
+        "marginLeft": "0px",
+        "gap": "normal",
+        "rowGap": "normal",
+        "columnGap": "normal",
+        "borderWidth": "0px",
+        "borderTopWidth": "0px",
+        "borderRightWidth": "0px",
+        "borderBottomWidth": "0px",
+        "borderLeftWidth": "0px",
+        "borderColor": "oklch(1 0 0 / 0.1)",
+        "borderTopColor": "oklch(1 0 0 / 0.1)",
+        "borderRightColor": "oklch(1 0 0 / 0.1)",
+        "borderBottomColor": "oklch(1 0 0 / 0.1)",
+        "borderLeftColor": "oklch(1 0 0 / 0.1)",
+        "boxShadow": "none",
+        "display": "flex",
+        "position": "static"
+      }
+    },
+    "empty-state": null
+  },
+  "meta": {
+    "url": "app://renderer/ws-useragenttes/members",
+    "title": "成员 · Orvilo",
+    "capturedAt": "2026-09-23T10:14:20.622Z",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 2
+    },
+    "tag": "members",
+    "navigatedVia": "url",
+    "navHref": null,
+    "clicks": [],
+    "settle": {
+      "ms": 11563,
+      "polls": 15,
+      "inflightLeft": 0
+    }
+  },
+  "probeLog": [
+    {
+      "name": "sidebar-nav",
+      "strategy": "layout:leftRail"
+    },
+    {
+      "name": "sidebar-nav-item",
+      "strategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]"
+    },
+    {
+      "name": "header",
+      "strategy": "layout:topBar"
+    },
+    {
+      "name": "tabs",
+      "strategy": null
+    },
+    {
+      "name": "list-row",
+      "strategy": "layout:firstRow"
+    },
+    {
+      "name": "primary-button",
+      "strategy": "layout:primaryButton"
+    },
+    {
+      "name": "detail-pane",
+      "strategy": "layout:detailPane"
+    },
+    {
+      "name": "empty-state",
+      "strategy": null
+    }
+  ],
+  "text": [
+    "项目",
+    "待审核",
+    "收件箱",
+    "团队",
+    "视图",
+    "我的事项",
+    "草稿",
+    "任务",
+    "成员",
+    "AG",
+    "Agent Testing User's workspace",
+    "助理",
+    "1",
+    "工作区",
+    "更多",
+    "收藏",
+    "你的团队",
+    "S",
+    "Parity Shipping",
+    "团队菜单",
+    "主页",
+    "分诊",
+    "P",
+    "Parity Test Team",
+    "帮助中心",
+    "在设置中管理",
+    "邀请",
+    "按姓名或邮箱搜索",
+    "全部",
+    "Agent",
+    "姓名",
+    "邮箱",
+    "状态",
+    "加入时间",
+    "最近在线",
+    "活跃",
+    "AT",
+    "Agent Testing User",
+    "agent_testing_user",
+    "agent-testing@orvilo.aspectlylabs.com",
+    "所有者",
+    "4 个项目",
+    "9月22日",
+    "—",
+    "5",
+    "AP",
+    "Apollo Platform Coordinator",
+    "由 Agent Testing User 维护",
+    "1 个项目",
+    "MM",
+    "Mercury Migration Coordinator",
+    "OA",
+    "Orbital Archive Coordinator",
+    "📦",
+    "Parity Test Project Coordinator",
+    "VL",
+    "Voyager Launch Coordinator",
+    "话题",
+    "问我关于你的任务",
+    "从任何想法开始… 按 换行...",
+    "avatar",
+    "DeepSeek V4 Flash",
+    "Agent Mock",
+    "Feature Flags",
+    "Render Gallery",
+    "Tab Routers",
+    "/ws-useragenttes/members",
+    "144 FPS",
+    "CLS 0.001",
+    "R2.1G · J455.4M",
+    "CPU 3.0%",
+    "GPU 0.3% · 62M",
+    "1/20"
+  ],
+  "tree": {
+    "t": "body",
+    "k": 6,
+    "b": [0, 0, 1440, 900],
+    "ch": [
+      {
+        "t": "div",
+        "k": 4,
+        "b": [0, 0, 0, 0],
+        "ch": [
+          {
+            "t": "div",
+            "k": 3,
+            "b": [0, 0, 1440, 880],
+            "ch": [
+              {
+                "t": "div",
+                "c": "lobe-flex acss-1d73z9s",
+                "k": 3,
+                "b": [0, 0, 1440, 38],
+                "ch": [
+                  {
+                    "t": "div",
+                    "c": "lobe-flex",
+                    "k": 2,
+                    "b": [12, 7, 232, 24],
+                    "ch": [
+                      {
+                        "t": "button",
+                        "c": "acss-17zzxcx",
+                        "k": 2,
+                        "b": [80, 7, 24, 24],
+                        "ch": [
+                          {
+                            "t": "span",
+                            "r": "img",
+                            "c": "anticon",
+                            "k": 1,
+                            "b": [85, 12, 14, 14]
+                          }
+                        ]
+                      },
+                      {
+                        "t": "div",
+                        "c": "lobe-flex acss-iq7uq6",
+                        "k": 3,
+                        "b": [160, 7, 76, 24],
+                        "ch": [
+                          {
+                            "t": "button",
+                            "c": "acss-17zzxcx",
+                            "k": 2,
+                            "b": [160, 7, 24, 24],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon",
+                                "k": 1,
+                                "b": [165, 12, 14, 14]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "button",
+                            "c": "acss-17zzxcx",
+                            "k": 2,
+                            "b": [186, 7, 24, 24],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon",
+                                "k": 1,
+                                "b": [191, 12, 14, 14]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-wghkl9",
+                            "k": 1,
+                            "b": [212, 7, 24, 24],
+                            "ch": [
+                              {
+                                "t": "button",
+                                "c": "acss-17zzxcx",
+                                "k": 2,
+                                "b": [212, 7, 24, 24],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [217, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "t": "div",
+                    "c": "lobe-flex acss-rimv92",
+                    "k": 4,
+                    "b": [244, 6, 1128, 26],
+                    "ch": [
+                      {
+                        "t": "div",
+                        "c": "acss-1k0urf8",
+                        "k": 21,
+                        "b": [244, 6, 1098, 26],
+                        "ch": [
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [244, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [261, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "项目",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [282, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [269, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [272, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [294, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [311, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "待审核",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [332, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [319, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [322, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [344, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [361, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "收件箱",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [382, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [369, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [372, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [394, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [411, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "团队",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [432, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [419, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [422, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [444, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [461, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "收件箱",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [482, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [469, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [472, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [494, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [511, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "团队",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [532, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [519, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [522, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [544, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [561, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "视图",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [582, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [569, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [572, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [594, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [611, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "收件箱",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [632, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [619, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [622, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [644, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [661, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "我的事项",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [682, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [669, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [672, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [694, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [711, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "待审核",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [732, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [719, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [722, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [744, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [761, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "草稿",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [782, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [769, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [772, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [794, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [811, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "团队",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [832, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [819, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [822, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [844, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [861, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "任务",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [882, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [869, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [872, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [894, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [911, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "团队",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [932, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [919, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [922, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [944, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [961, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "项目",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [982, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [969, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [972, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [994, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [1011, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "团队",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [1032, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [1019, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [1022, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [1044, 6, 48, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [1061, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "我的事项",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [1082, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [1069, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [1072, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [1094, 6, 47, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [1111, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "团队",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [1132, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [1118, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [1121, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-1wx3jbo",
+                            "k": 3,
+                            "b": [1143, 6, 47, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [1160, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "团队",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [1181, 10, 4, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [1167, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [1170, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "r": "button",
+                            "c": "acss-hygp97",
+                            "k": 3,
+                            "b": [1192, 6, 150, 26],
+                            "ch": [
+                              {
+                                "t": "span",
+                                "r": "img",
+                                "c": "anticon acss-yiskbr",
+                                "k": 1,
+                                "b": [1201, 12, 14, 14]
+                              },
+                              {
+                                "t": "span",
+                                "x": "成员",
+                                "c": "acss-1bi0nb3",
+                                "k": 0,
+                                "b": [1222, 10, 114, 19]
+                              },
+                              {
+                                "t": "button",
+                                "c": "acss-qwwv1b",
+                                "k": 2,
+                                "b": [1319, 9, 20, 20],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [1322, 12, 14, 14]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "t": "div",
+                        "x": "To pick up a draggable item, press the space bar. While drag",
+                        "k": 0,
+                        "b": [0, 0, 0, 0]
+                      },
+                      {
+                        "t": "div",
+                        "r": "status",
+                        "k": 0,
+                        "b": [-1, -1, 1, 1]
+                      },
+                      {
+                        "t": "button",
+                        "c": "acss-1jgqwzv",
+                        "k": 2,
+                        "b": [1344, 7, 24, 24],
+                        "ch": [
+                          {
+                            "t": "span",
+                            "r": "img",
+                            "c": "anticon",
+                            "k": 1,
+                            "b": [1349, 12, 14, 14]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "t": "div",
+                    "c": "lobe-flex acss-iq7uq6",
+                    "k": 2,
+                    "b": [1372, 7, 56, 24],
+                    "ch": [
+                      {
+                        "t": "div",
+                        "r": "button",
+                        "k": 1,
+                        "b": [1372, 7, 24, 24]
+                      },
+                      {
+                        "t": "button",
+                        "c": "acss-17zzxcx",
+                        "k": 2,
+                        "b": [1404, 7, 24, 24],
+                        "ch": [
+                          {
+                            "t": "span",
+                            "r": "img",
+                            "c": "anticon",
+                            "k": 1,
+                            "b": [1409, 12, 14, 14]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "t": "div",
+                "c": "lobe-flex acss-1psltl0",
+                "k": 3,
+                "b": [0, 38, 1440, 842],
+                "ch": [
+                  {
+                    "t": "aside",
+                    "c": "base-draggable-panel acss-19u2kur",
+                    "k": 2,
+                    "b": [0, 38, 244, 842],
+                    "ch": [
+                      {
+                        "t": "div",
+                        "c": "base-draggable-panel-content acss-o0okt5",
+                        "k": 2,
+                        "b": [0, 38, 244, 842],
+                        "ch": [
+                          {
+                            "t": "div",
+                            "c": "lobe-flex",
+                            "k": 2,
+                            "b": [0, 38, 244, 797],
+                            "ch": [
+                              {
+                                "t": "div",
+                                "c": "lobe-flex acss-10gpk7a",
+                                "k": 2,
+                                "b": [0, 38, 244, 46],
+                                "ch": [
+                                  {
+                                    "t": "div",
+                                    "r": "button",
+                                    "c": "lobe-flex acss-7inxci",
+                                    "k": 2,
+                                    "b": [8, 46, 180, 32],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "x": "AG",
+                                        "c": "acss-126alxb",
+                                        "k": 0,
+                                        "b": [10, 48, 28, 28]
+                                      },
+                                      {
+                                        "t": "div",
+                                        "c": "lobe-flex",
+                                        "k": 2,
+                                        "b": [46, 51, 134, 22],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "x": "Agent Testing User's workspace",
+                                            "c": "acss-141dqjk",
+                                            "k": 0,
+                                            "b": [46, 51, 130, 22]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "r": "img",
+                                            "c": "anticon",
+                                            "k": 1,
+                                            "b": [180, 55, 0, 14]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "div",
+                                    "c": "lobe-flex",
+                                    "k": 2,
+                                    "b": [188, 50, 50, 24],
+                                    "ch": [
+                                      {
+                                        "t": "button",
+                                        "c": "acss-17zzxcx",
+                                        "k": 2,
+                                        "b": [188, 50, 24, 24],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "r": "img",
+                                            "c": "anticon",
+                                            "k": 1,
+                                            "b": [193, 55, 14, 14]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "button",
+                                        "c": "acss-17zzxcx",
+                                        "k": 2,
+                                        "b": [214, 50, 24, 24],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "r": "img",
+                                            "c": "anticon",
+                                            "k": 1,
+                                            "b": [219, 55, 14, 14]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "t": "div",
+                                "r": "presentation",
+                                "c": "acss-1tc0f7m",
+                                "k": 1,
+                                "b": [0, 85, 244, 750],
+                                "ch": [
+                                  {
+                                    "t": "div",
+                                    "r": "presentation",
+                                    "c": "acss-xm9ybh base-ui-disable-scrollbar",
+                                    "k": 1,
+                                    "b": [0, 85, 244, 750],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "r": "presentation",
+                                        "k": 1,
+                                        "b": [0, 85, 244, 750],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "lobe-flex",
+                                            "k": 8,
+                                            "b": [0, 85, 244, 750],
+                                            "ch": [
+                                              {
+                                                "t": "div",
+                                                "c": "lobe-flex lobe-context-trigger acss-4as1",
+                                                "k": 3,
+                                                "b": [4, 85, 236, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "r": "img",
+                                                    "c": "anticon",
+                                                    "k": 1,
+                                                    "b": [13, 90, 18, 18]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "收件箱",
+                                                    "c": "acss-141dqjk",
+                                                    "k": 0,
+                                                    "b": [44, 89, 192, 20]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "c": "lobe-flex lobe-context-trigger acss-4as1",
+                                                "k": 3,
+                                                "b": [4, 114, 236, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "r": "img",
+                                                    "c": "anticon",
+                                                    "k": 1,
+                                                    "b": [13, 119, 18, 18]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "我的事项",
+                                                    "c": "acss-141dqjk",
+                                                    "k": 0,
+                                                    "b": [44, 118, 192, 20]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "c": "lobe-flex lobe-context-trigger acss-4as1",
+                                                "k": 3,
+                                                "b": [4, 143, 236, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "r": "img",
+                                                    "c": "anticon",
+                                                    "k": 1,
+                                                    "b": [13, 148, 18, 18]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "待审核",
+                                                    "c": "acss-141dqjk",
+                                                    "k": 0,
+                                                    "b": [44, 147, 192, 20]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "c": "lobe-flex lobe-context-trigger acss-4as1",
+                                                "k": 3,
+                                                "b": [4, 172, 236, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "r": "img",
+                                                    "c": "anticon",
+                                                    "k": 1,
+                                                    "b": [13, 177, 18, 18]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "助理",
+                                                    "c": "acss-141dqjk",
+                                                    "k": 0,
+                                                    "b": [44, 176, 192, 20]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "c": "lobe-flex lobe-context-trigger acss-4as1",
+                                                "k": 3,
+                                                "b": [4, 201, 236, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "span",
+                                                    "r": "img",
+                                                    "c": "anticon",
+                                                    "k": 1,
+                                                    "b": [13, 206, 18, 18]
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "r": "button",
+                                                "c": "lobe-dropdown-menu-trigger",
+                                                "k": 1,
+                                                "b": [4, 230, 236, 28],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "a": "新建",
+                                                    "c": "lobe-flex acss-4as1a9",
+                                                    "k": 2,
+                                                    "b": [4, 230, 236, 28]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "c": "lobe-flex",
+                            "k": 2,
+                            "b": [0, 835, 244, 45],
+                            "ch": [
+                              {
+                                "t": "button",
+                                "a": "帮助中心",
+                                "c": "lobe-dropdown-menu-trigger acss-1nlc6jl",
+                                "k": 2,
+                                "b": [8, 843, 29, 29],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "r": "img",
+                                    "c": "anticon",
+                                    "k": 1,
+                                    "b": [14, 850, 16, 16]
+                                  }
+                                ]
+                              },
+                              {
+                                "t": "div",
+                                "c": "lobe-flex",
+                                "k": 2,
+                                "b": [177, 843, 59, 29],
+                                "ch": [
+                                  {
+                                    "t": "button",
+                                    "c": "acss-1nlc6jl",
+                                    "k": 2,
+                                    "b": [177, 843, 29, 29],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon",
+                                        "k": 1,
+                                        "b": [184, 850, 16, 16]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "div",
+                                    "r": "button",
+                                    "c": "lobe-flex acss-19i1yqv",
+                                    "k": 1,
+                                    "b": [208, 844, 28, 28],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "x": "AG",
+                                        "c": "acss-126alxb",
+                                        "k": 0,
+                                        "b": [212, 848, 20, 20]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "t": "div",
+                        "r": "separator",
+                        "c": "base-draggable-panel-handle acss-zpawmn",
+                        "k": 0,
+                        "b": [236, 38, 16, 842]
+                      }
+                    ]
+                  },
+                  {
+                    "t": "div",
+                    "c": "lobe-flex",
+                    "k": 2,
+                    "b": [245, 47, 1186, 824],
+                    "ch": [
+                      {
+                        "t": "div",
+                        "c": "lobe-flex acss-119yr5f",
+                        "k": 2,
+                        "b": [245, 47, 1186, 824],
+                        "ch": [
+                          {
+                            "t": "div",
+                            "c": "lobe-flex",
+                            "k": 2,
+                            "b": [245, 47, 1186, 44],
+                            "ch": [
+                              {
+                                "t": "div",
+                                "x": "成员",
+                                "c": "acss-644054",
+                                "k": 0,
+                                "b": [253, 58, 33, 22]
+                              },
+                              {
+                                "t": "div",
+                                "c": "lobe-flex",
+                                "k": 2,
+                                "b": [1327, 57, 97, 24],
+                                "ch": [
+                                  {
+                                    "t": "button",
+                                    "a": "在设置中管理",
+                                    "c": "acss-17zzxcx",
+                                    "k": 2,
+                                    "b": [1327, 57, 24, 24],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon",
+                                        "k": 1,
+                                        "b": [1332, 62, 14, 14]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "button",
+                                    "x": "邀请",
+                                    "c": "acss-15wv5rl",
+                                    "k": 2,
+                                    "b": [1359, 57, 65, 24],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon",
+                                        "k": 1,
+                                        "b": [1368, 61, 16, 16]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "c": "lobe-flex",
+                            "k": 2,
+                            "b": [245, 91, 1186, 780],
+                            "ch": [
+                              {
+                                "t": "div",
+                                "c": "acss-1e2igy2",
+                                "k": 3,
+                                "b": [245, 91, 1186, 52],
+                                "ch": [
+                                  {
+                                    "t": "span",
+                                    "c": "ant-input-affix-wrapper css-dev-only-do-",
+                                    "k": 3,
+                                    "b": [261, 99, 232, 36],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon acss-13cn2u3",
+                                        "k": 1,
+                                        "b": [273, 110, 14, 14]
+                                      },
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "a": "close-circle",
+                                        "c": "anticon anticon-close-circle",
+                                        "k": 1,
+                                        "b": [469, 111, 12, 12]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "div",
+                                    "r": "group",
+                                    "c": "acss-9pfpza",
+                                    "k": 5,
+                                    "b": [1208, 100, 207, 34],
+                                    "ch": [
+                                      {
+                                        "t": "button",
+                                        "a": "全部",
+                                        "c": "acss-1nt0w2w",
+                                        "k": 1,
+                                        "b": [1212, 104, 45, 26],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "全部",
+                                            "c": "acss-1u2ped1",
+                                            "k": 0,
+                                            "b": [1222, 108, 25, 19]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "button",
+                                        "a": "成员",
+                                        "c": "acss-1nt0w2w",
+                                        "k": 1,
+                                        "b": [1261, 104, 45, 26],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "成员",
+                                            "c": "acss-1u2ped1",
+                                            "k": 0,
+                                            "b": [1271, 108, 25, 19]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "button",
+                                        "a": "Agent",
+                                        "c": "acss-1nt0w2w",
+                                        "k": 1,
+                                        "b": [1309, 104, 53, 26],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "Agent",
+                                            "c": "acss-1u2ped1",
+                                            "k": 0,
+                                            "b": [1319, 108, 33, 19]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "button",
+                                        "a": "邀请",
+                                        "c": "acss-1nt0w2w",
+                                        "k": 1,
+                                        "b": [1367, 104, 45, 26],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "邀请",
+                                            "c": "acss-1u2ped1",
+                                            "k": 0,
+                                            "b": [1377, 108, 25, 19]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "button",
+                                    "a": "筛选",
+                                    "c": "acss-1bx01tz",
+                                    "k": 2,
+                                    "b": [0, 0, 0, 0],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon",
+                                        "k": 1,
+                                        "b": [0, 0, 0, 0]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "t": "table",
+                                "c": "acss-1rrh2w8",
+                                "k": 3,
+                                "b": [261, 159, 1154, 450],
+                                "ch": [
+                                  {
+                                    "t": "tr",
+                                    "k": 7,
+                                    "b": [261, 159, 1154, 36],
+                                    "ch": [
+                                      {
+                                        "t": "th",
+                                        "x": "姓名",
+                                        "k": 0,
+                                        "b": [261, 159, 409, 36]
+                                      },
+                                      {
+                                        "t": "th",
+                                        "x": "邮箱",
+                                        "k": 0,
+                                        "b": [670, 159, 247, 36]
+                                      },
+                                      {
+                                        "t": "th",
+                                        "x": "状态",
+                                        "k": 0,
+                                        "b": [917, 159, 130, 36]
+                                      },
+                                      {
+                                        "t": "th",
+                                        "x": "项目",
+                                        "k": 0,
+                                        "b": [1047, 159, 100, 36]
+                                      },
+                                      {
+                                        "t": "th",
+                                        "x": "加入时间",
+                                        "k": 0,
+                                        "b": [1147, 159, 110, 36]
+                                      },
+                                      {
+                                        "t": "th",
+                                        "x": "最近在线",
+                                        "k": 0,
+                                        "b": [1257, 159, 110, 36]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "tbody",
+                                    "k": 2,
+                                    "b": [261, 195, 1154, 93],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "x": "活跃",
+                                        "c": "acss-q7u2w4",
+                                        "k": 1,
+                                        "b": [285, 203, 1106, 20],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "1",
+                                            "c": "acss-16rqxlc",
+                                            "k": 0,
+                                            "b": [319, 205, 8, 17]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "tr",
+                                        "k": 7,
+                                        "b": [261, 232, 1154, 57],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "acss-1lbpsvn",
+                                            "k": 2,
+                                            "b": [285, 240, 377, 41],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "AT",
+                                                "c": "acss-126alxb",
+                                                "k": 0,
+                                                "b": [285, 246, 28, 28]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "k": 2,
+                                                "b": [323, 240, 124, 41],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Agent Testing User",
+                                                    "c": "acss-zxbnaa",
+                                                    "k": 0,
+                                                    "b": [323, 240, 124, 22]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "agent_testing_user",
+                                                    "c": "acss-z4vnt2",
+                                                    "k": 0,
+                                                    "b": [323, 262, 124, 19]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "x": "agent-testing@orvilo.aspectlylabs.com",
+                                            "c": "acss-1uld4kn",
+                                            "k": 0,
+                                            "b": [678, 250, 231, 20]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "x": "所有者",
+                                            "c": "acss-1jvvsig",
+                                            "k": 0,
+                                            "b": [925, 249, 53, 22]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "4 个项目",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1055, 250, 84, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "9月22日",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1155, 250, 94, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1265, 250, 94, 20]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "tbody",
+                                    "k": 6,
+                                    "b": [261, 289, 1154, 321],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "x": "Agent",
+                                        "c": "acss-q7u2w4",
+                                        "k": 1,
+                                        "b": [285, 297, 1106, 20],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "x": "5",
+                                            "c": "acss-16rqxlc",
+                                            "k": 0,
+                                            "b": [327, 298, 8, 17]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "tr",
+                                        "k": 7,
+                                        "b": [261, 325, 1154, 57],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "acss-1lbpsvn",
+                                            "k": 2,
+                                            "b": [285, 333, 377, 41],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "AP",
+                                                "c": "acss-126alxb",
+                                                "k": 0,
+                                                "b": [285, 340, 28, 28]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "k": 2,
+                                                "b": [323, 333, 182, 41],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Apollo Platform Coordinator",
+                                                    "c": "acss-zxbnaa",
+                                                    "k": 0,
+                                                    "b": [323, 333, 182, 22]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "由 Agent Testing User 维护",
+                                                    "c": "acss-z4vnt2",
+                                                    "k": 0,
+                                                    "b": [323, 355, 182, 19]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "x": "—",
+                                            "c": "acss-1uld4kn",
+                                            "k": 0,
+                                            "b": [678, 343, 231, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "Agent",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [925, 343, 114, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "1 个项目",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1055, 343, 84, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1155, 343, 94, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1265, 343, 94, 20]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "tr",
+                                        "k": 7,
+                                        "b": [261, 382, 1154, 57],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "acss-1lbpsvn",
+                                            "k": 2,
+                                            "b": [285, 390, 377, 41],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "MM",
+                                                "c": "acss-126alxb",
+                                                "k": 0,
+                                                "b": [285, 396, 28, 28]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "k": 2,
+                                                "b": [323, 390, 199, 41],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Mercury Migration Coordinator",
+                                                    "c": "acss-zxbnaa",
+                                                    "k": 0,
+                                                    "b": [323, 390, 199, 22]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "由 Agent Testing User 维护",
+                                                    "c": "acss-z4vnt2",
+                                                    "k": 0,
+                                                    "b": [323, 412, 199, 19]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "x": "—",
+                                            "c": "acss-1uld4kn",
+                                            "k": 0,
+                                            "b": [678, 400, 231, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "Agent",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [925, 400, 114, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "1 个项目",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1055, 400, 84, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1155, 400, 94, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1265, 400, 94, 20]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "tr",
+                                        "k": 7,
+                                        "b": [261, 439, 1154, 57],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "acss-1lbpsvn",
+                                            "k": 2,
+                                            "b": [285, 447, 377, 41],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "OA",
+                                                "c": "acss-126alxb",
+                                                "k": 0,
+                                                "b": [285, 453, 28, 28]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "k": 2,
+                                                "b": [323, 447, 177, 41],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Orbital Archive Coordinator",
+                                                    "c": "acss-zxbnaa",
+                                                    "k": 0,
+                                                    "b": [323, 447, 177, 22]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "由 Agent Testing User 维护",
+                                                    "c": "acss-z4vnt2",
+                                                    "k": 0,
+                                                    "b": [323, 469, 177, 19]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "x": "—",
+                                            "c": "acss-1uld4kn",
+                                            "k": 0,
+                                            "b": [678, 457, 231, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "Agent",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [925, 457, 114, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "1 个项目",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1055, 457, 84, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1155, 457, 94, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1265, 457, 94, 20]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "tr",
+                                        "k": 7,
+                                        "b": [261, 496, 1154, 57],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "acss-1lbpsvn",
+                                            "k": 2,
+                                            "b": [285, 504, 377, 41],
+                                            "ch": [
+                                              {
+                                                "t": "div",
+                                                "k": 2,
+                                                "b": [323, 504, 200, 41],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Parity Test Project Coordinator",
+                                                    "c": "acss-zxbnaa",
+                                                    "k": 0,
+                                                    "b": [323, 504, 200, 22]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "由 Agent Testing User 维护",
+                                                    "c": "acss-z4vnt2",
+                                                    "k": 0,
+                                                    "b": [323, 526, 200, 19]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "x": "—",
+                                            "c": "acss-1uld4kn",
+                                            "k": 0,
+                                            "b": [678, 514, 231, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "Agent",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [925, 514, 114, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "1 个项目",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1055, 514, 84, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1155, 514, 94, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1265, 514, 94, 20]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "t": "tr",
+                                        "k": 7,
+                                        "b": [261, 553, 1154, 57],
+                                        "ch": [
+                                          {
+                                            "t": "div",
+                                            "c": "acss-1lbpsvn",
+                                            "k": 2,
+                                            "b": [285, 561, 377, 41],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "x": "VL",
+                                                "c": "acss-126alxb",
+                                                "k": 0,
+                                                "b": [285, 567, 28, 28]
+                                              },
+                                              {
+                                                "t": "div",
+                                                "k": 2,
+                                                "b": [323, 561, 186, 41],
+                                                "ch": [
+                                                  {
+                                                    "t": "div",
+                                                    "x": "Voyager Launch Coordinator",
+                                                    "c": "acss-zxbnaa",
+                                                    "k": 0,
+                                                    "b": [323, 561, 186, 22]
+                                                  },
+                                                  {
+                                                    "t": "div",
+                                                    "x": "由 Agent Testing User 维护",
+                                                    "c": "acss-z4vnt2",
+                                                    "k": 0,
+                                                    "b": [323, 583, 186, 19]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "t": "span",
+                                            "x": "—",
+                                            "c": "acss-1uld4kn",
+                                            "k": 0,
+                                            "b": [678, 571, 231, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "Agent",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [925, 571, 114, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "1 个项目",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1055, 571, 84, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1155, 571, 94, 20]
+                                          },
+                                          {
+                                            "t": "div",
+                                            "x": "—",
+                                            "c": "acss-1g5q5er",
+                                            "k": 0,
+                                            "b": [1265, 571, 94, 20]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "t": "div",
+                        "c": "lobe-flex",
+                        "k": 3,
+                        "b": [1024, 59, 407, 799],
+                        "ch": [
+                          {
+                            "t": "div",
+                            "c": "lobe-flex",
+                            "k": 2,
+                            "b": [1024, 59, 407, 43],
+                            "ch": [
+                              {
+                                "t": "div",
+                                "x": "话题",
+                                "c": "acss-1icyuaw",
+                                "k": 0,
+                                "b": [1039, 71, 26, 20]
+                              },
+                              {
+                                "t": "div",
+                                "c": "lobe-flex",
+                                "k": 3,
+                                "b": [1338, 67, 85, 27],
+                                "ch": [
+                                  {
+                                    "t": "button",
+                                    "c": "acss-1nlc6jl",
+                                    "k": 2,
+                                    "b": [1338, 67, 27, 27],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon",
+                                        "k": 1,
+                                        "b": [1344, 73, 16, 16]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "button",
+                                    "c": "acss-1nlc6jl",
+                                    "k": 2,
+                                    "b": [1367, 67, 27, 27],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon",
+                                        "k": 1,
+                                        "b": [1373, 73, 16, 16]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "button",
+                                    "c": "acss-1nlc6jl",
+                                    "k": 2,
+                                    "b": [1396, 67, 27, 27],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "r": "img",
+                                        "c": "anticon",
+                                        "k": 1,
+                                        "b": [1402, 73, 16, 16]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "t": "div",
+                            "x": "问我关于你的任务",
+                            "c": "acss-1g5q5er",
+                            "k": 0,
+                            "b": [1168, 416, 119, 23]
+                          },
+                          {
+                            "t": "div",
+                            "c": "lobe-flex acss-1sjr496",
+                            "k": 3,
+                            "b": [1039, 752, 376, 99],
+                            "ch": [
+                              {
+                                "t": "div",
+                                "c": "acss-ymumk8",
+                                "k": 2,
+                                "b": [1040, 753, 374, 62],
+                                "ch": [
+                                  {
+                                    "t": "div",
+                                    "c": "acss-3kh57l",
+                                    "k": 2,
+                                    "b": [1052, 761, 351, 54],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "x": "从任何想法开始… 按 换行...",
+                                        "c": "lobe-flex",
+                                        "k": 1,
+                                        "b": [1052, 765, 208, 21],
+                                        "ch": [
+                                          {
+                                            "t": "kbd",
+                                            "c": "lobe-flex acss-17slpcj",
+                                            "k": 2,
+                                            "b": [1180, 765, 36, 21],
+                                            "ch": [
+                                              {
+                                                "t": "span",
+                                                "r": "img",
+                                                "c": "anticon",
+                                                "k": 1,
+                                                "b": [1184, 769, 11, 11]
+                                              },
+                                              {
+                                                "t": "span",
+                                                "r": "img",
+                                                "c": "anticon",
+                                                "k": 1,
+                                                "b": [1201, 769, 12, 12]
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "t": "div",
+                                "c": "lobe-flex acss-10gpk7a",
+                                "k": 2,
+                                "b": [1040, 815, 374, 35],
+                                "ch": [
+                                  {
+                                    "t": "div",
+                                    "c": "lobe-flex",
+                                    "k": 2,
+                                    "b": [1044, 819, 80, 27],
+                                    "ch": [
+                                      {
+                                        "t": "div",
+                                        "r": "button",
+                                        "c": "lobe-flex acss-x4ld6l",
+                                        "k": 1,
+                                        "b": [1044, 819, 50, 27]
+                                      },
+                                      {
+                                        "t": "button",
+                                        "c": "acss-1nlc6jl",
+                                        "k": 2,
+                                        "b": [1096, 819, 27, 27],
+                                        "ch": [
+                                          {
+                                            "t": "span",
+                                            "r": "img",
+                                            "c": "anticon",
+                                            "k": 1,
+                                            "b": [1102, 825, 16, 16]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "t": "div",
+                                    "c": "lobe-flex",
+                                    "k": 2,
+                                    "b": [1273, 819, 138, 27],
+                                    "ch": [
+                                      {
+                                        "t": "span",
+                                        "x": "DeepSeek V4 Flash",
+                                        "c": "acss-s84hu2",
+                                        "k": 0,
+                                        "b": [1273, 827, 105, 12]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "t": "div",
+            "c": "lobe-flex acss-kz5pv",
+            "k": 16,
+            "b": [0, 872, 1440, 28],
+            "ch": [
+              {
+                "t": "div",
+                "c": "lobe-flex",
+                "k": 4,
+                "b": [31, 876, 381, 20],
+                "ch": [
+                  {
+                    "t": "span",
+                    "x": "Agent Mock",
+                    "k": 0,
+                    "b": [53, 877, 61, 17]
+                  },
+                  {
+                    "t": "span",
+                    "x": "Feature Flags",
+                    "k": 0,
+                    "b": [144, 877, 68, 17]
+                  },
+                  {
+                    "t": "span",
+                    "x": "Render Gallery",
+                    "k": 0,
+                    "b": [242, 877, 74, 17]
+                  },
+                  {
+                    "t": "span",
+                    "x": "Tab Routers",
+                    "k": 0,
+                    "b": [347, 877, 60, 17]
+                  }
+                ]
+              },
+              {
+                "t": "span",
+                "x": "/ws-useragenttes/members",
+                "c": "acss-18ez64y",
+                "k": 0,
+                "b": [415, 877, 158, 17]
+              },
+              {
+                "t": "span",
+                "x": "144 FPS",
+                "c": "acss-1yab8b6",
+                "k": 0,
+                "b": [964, 877, 46, 17]
+              },
+              {
+                "t": "span",
+                "x": "CLS 0.001",
+                "c": "acss-1yab8b6",
+                "k": 0,
+                "b": [1017, 877, 59, 17]
+              },
+              {
+                "t": "button",
+                "x": "R2.1G · J455.4M",
+                "c": "acss-ha2z1z",
+                "k": 0,
+                "b": [1084, 876, 107, 20]
+              },
+              {
+                "t": "span",
+                "x": "CPU 3.0%",
+                "c": "acss-1yab8b6",
+                "k": 0,
+                "b": [1198, 877, 53, 17]
+              },
+              {
+                "t": "span",
+                "x": "GPU 0.3% · 62M",
+                "c": "acss-1yab8b6",
+                "k": 0,
+                "b": [1257, 877, 92, 17]
+              },
+              {
+                "t": "span",
+                "x": "1/20",
+                "k": 0,
+                "b": [1376, 877, 25, 17]
+              },
+              {
+                "t": "span",
+                "r": "button",
+                "c": "lobe-dropdown-menu-trigger acss-1pp1qam",
+                "k": 1,
+                "b": [1412, 876, 20, 20]
+              }
+            ]
+          },
+          {
+            "t": "div",
+            "k": 6,
+            "b": [0, 0, 1440, 0],
+            "ch": [
+              {
+                "t": "div",
+                "r": "region",
+                "a": "Notifications",
+                "c": "acss-1dt36ip",
+                "k": 0,
+                "b": [540, 24, 360, 0]
+              },
+              {
+                "t": "div",
+                "r": "region",
+                "a": "Notifications",
+                "c": "acss-ltex35",
+                "k": 0,
+                "b": [24, 24, 360, 0]
+              },
+              {
+                "t": "div",
+                "r": "region",
+                "a": "Notifications",
+                "c": "acss-sp6y83",
+                "k": 0,
+                "b": [1056, 24, 360, 0]
+              },
+              {
+                "t": "div",
+                "r": "region",
+                "a": "Notifications",
+                "c": "acss-13kpitn",
+                "k": 0,
+                "b": [540, 876, 360, 0]
+              },
+              {
+                "t": "div",
+                "r": "region",
+                "a": "Notifications",
+                "c": "acss-1s6v7l9",
+                "k": 0,
+                "b": [24, 876, 360, 0]
+              },
+              {
+                "t": "div",
+                "r": "region",
+                "a": "Notifications",
+                "c": "acss-5damhk",
+                "k": 0,
+                "b": [1056, 876, 360, 0]
+              }
+            ]
+          },
+          {
+            "t": "span",
+            "r": "button",
+            "c": "acss-xpcdtl",
+            "k": 0,
+            "b": [-9999, -9999, 0, 0]
+          }
+        ]
+      }
+    ]
+  },
+  "treeMeta": {
+    "maxDepth": 12,
+    "nodes": 320,
+    "truncated": true
+  }
+}

@@ -8,6 +8,7 @@ import {
   projectCompletionReviews,
   projectMembers,
   projects,
+  projectTeams,
   projectWorks,
   tasks,
   teamMembers,
@@ -48,6 +49,243 @@ describe('ProjectModel', () => {
     await serverDB.delete(users);
   });
 
+  it('keeps comments separate from project health and scopes activity to the owner', async () => {
+    const project = await createProject(model, { name: 'Activity' });
+    await model.createUpdate(project.id, { body: 'Risk identified', health: 'atRisk' });
+    const comment = await model.createUpdate(project.id, {
+      body: 'Discuss the mitigation',
+      health: 'onTrack',
+      kind: 'comment',
+    });
+
+    expect(comment).toMatchObject({ kind: 'comment', health: null });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'atRisk' });
+    expect(await model.listUpdates(project.id)).toHaveLength(2);
+    expect(await otherModel.listUpdates(project.id)).toBeNull();
+    expect(
+      await otherModel.createUpdate(project.id, { body: 'Not allowed', kind: 'comment' }),
+    ).toBeNull();
+  });
+
+  it('uses the same default health on the update and its project', async () => {
+    const project = await createProject(model, { name: 'Default update health' });
+    await model.createUpdate(project.id, { body: 'Blocked', health: 'offTrack' });
+    const update = await model.createUpdate(project.id, { body: 'Recovered' });
+
+    expect(update).toMatchObject({ kind: 'update', health: 'onTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
+  });
+
+  it('recomputes denormalized health when the newest update is edited or deleted', async () => {
+    const project = await createProject(model, { name: 'Health denorm' });
+    const stale = await model.createUpdate(project.id, { body: 'Early', health: 'atRisk' });
+    const latest = await model.createUpdate(project.id, { body: 'Now', health: 'onTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
+
+    // Editing the newest update's health moves the project health.
+    const edited = await model.updateUpdate(project.id, latest!.id, {
+      body: 'Now — revised',
+      health: 'offTrack',
+    });
+    expect(edited).toMatchObject({ body: 'Now — revised', health: 'offTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'offTrack' });
+
+    // Editing an older update leaves the newest one's health in charge.
+    await model.updateUpdate(project.id, stale!.id, { body: 'Early', health: 'onTrack' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'offTrack' });
+
+    // Deleting the newest update falls back to the previous update's health.
+    await model.deleteUpdate(project.id, latest!.id);
+    expect(await model.findById(project.id)).toMatchObject({ health: 'onTrack' });
+
+    // Deleting the last status update clears the denormalized health.
+    await model.deleteUpdate(project.id, stale!.id);
+    expect(await model.findById(project.id)).toMatchObject({ health: null });
+    expect(await model.listUpdates(project.id)).toEqual([]);
+  });
+
+  it('keeps comments body-only on edit and never lets them move project health', async () => {
+    const project = await createProject(model, { name: 'Comment edit' });
+    const status = await model.createUpdate(project.id, { body: 'Status', health: 'atRisk' });
+    const comment = await model.createUpdate(project.id, {
+      body: 'Draft comment',
+      kind: 'comment',
+    });
+
+    // A comment stays body-only: a health payload is ignored.
+    const edited = await model.updateUpdate(project.id, comment!.id, {
+      body: 'Edited comment',
+      health: 'offTrack',
+    });
+    expect(edited).toMatchObject({ body: 'Edited comment', health: null, kind: 'comment' });
+    expect(await model.findById(project.id)).toMatchObject({ health: 'atRisk' });
+
+    // Deleting a comment does not disturb the denormalized health.
+    await model.deleteUpdate(project.id, comment!.id);
+    expect(await model.findById(project.id)).toMatchObject({ health: 'atRisk' });
+    expect(await model.listUpdates(project.id)).toEqual([
+      expect.objectContaining({ id: status!.id }),
+    ]);
+  });
+
+  it('rejects update edits and deletes from users who cannot moderate them', async () => {
+    const project = await createProject(model, { name: 'Moderated update' });
+    const update = await model.createUpdate(project.id, { body: 'Owner status' });
+    const missingId = '00000000-0000-0000-0000-000000000000';
+
+    // Another user cannot even see the personal project, let alone moderate it.
+    expect(await otherModel.updateUpdate(project.id, update!.id, { body: 'Nope' })).toBeNull();
+    expect(await otherModel.deleteUpdate(project.id, update!.id)).toBeNull();
+    // Missing rows and cross-project ids collapse to the same null.
+    expect(await model.updateUpdate(project.id, missingId, { body: 'Nope' })).toBeNull();
+    expect(await model.deleteUpdate(project.id, missingId)).toBeNull();
+    const sibling = await createProject(model, { name: 'Sibling' });
+    expect(await model.updateUpdate(sibling.id, update!.id, { body: 'Nope' })).toBeNull();
+    expect(await model.deleteUpdate(sibling.id, update!.id)).toBeNull();
+    expect(await model.listUpdates(project.id)).toHaveLength(1);
+  });
+
+  it('lets the author, project lead and workspace admin moderate updates', async () => {
+    const workspaceId = 'project-update-mod-workspace';
+    const leadId = 'project-update-lead';
+    const memberId = 'project-update-member';
+    await serverDB.insert(users).values([{ id: leadId }, { id: memberId }]);
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Update moderation',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    // project create validates the lead is an active workspace member.
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: leadId, workspaceId },
+      { role: 'member', userId: memberId, workspaceId },
+      { role: 'admin', userId: otherUserId, workspaceId },
+    ]);
+    const owner = new ProjectModel(serverDB, userId, workspaceId);
+    const lead = new ProjectModel(serverDB, leadId, workspaceId);
+    const member = new ProjectModel(serverDB, memberId, workspaceId);
+    const admin = new ProjectModel(serverDB, otherUserId, workspaceId, { canManageAll: true });
+    const project = await createProject(owner, { leadUserId: leadId, name: 'Moderated' });
+
+    const ownerUpdate = await owner.createUpdate(project.id, {
+      body: 'Owner status',
+      health: 'atRisk',
+    });
+    // Any member who can read the project may post a comment on it.
+    const memberComment = await member.createUpdate(project.id, {
+      body: 'Member note',
+      kind: 'comment',
+    });
+    expect(memberComment).not.toBeNull();
+
+    // The author edits their own comment; a plain member cannot touch the
+    // owner's update.
+    expect(
+      await member.updateUpdate(project.id, memberComment!.id, { body: 'Member note v2' }),
+    ).toMatchObject({ body: 'Member note v2' });
+    expect(await member.updateUpdate(project.id, ownerUpdate!.id, { body: 'Nope' })).toBeNull();
+    expect(await member.deleteUpdate(project.id, ownerUpdate!.id)).toBeNull();
+
+    // The project lead may edit another member's update — denorm follows.
+    expect(
+      await lead.updateUpdate(project.id, ownerUpdate!.id, {
+        body: 'Owner status',
+        health: 'offTrack',
+      }),
+    ).toMatchObject({ health: 'offTrack' });
+    expect(await owner.findById(project.id)).toMatchObject({ health: 'offTrack' });
+
+    // A workspace admin may delete another member's comment; the owner may
+    // delete the remaining update, which clears the denormalized health.
+    expect(await admin.deleteUpdate(project.id, memberComment!.id)).toMatchObject({
+      id: memberComment!.id,
+    });
+    expect(await owner.deleteUpdate(project.id, ownerUpdate!.id)).toMatchObject({
+      id: ownerUpdate!.id,
+    });
+    expect(await owner.findById(project.id)).toMatchObject({ health: null });
+  });
+
+  it('persists external links independently and rejects cross-project or cross-user edits', async () => {
+    const project = await createProject(model, { name: 'Linked project' });
+    const sibling = await createProject(model, { name: 'Other project' });
+    const input = { title: '  Design brief  ', url: 'https://example.com/brief' };
+    const link = await model.saveLink(project.id, input);
+    expect(link).toMatchObject({ title: 'Design brief', url: input.url, projectId: project.id });
+    expect(await model.listLinks(project.id)).toEqual([link]);
+    expect(await otherModel.listLinks(project.id)).toBeNull();
+    expect(await otherModel.saveLink(project.id, input)).toBeNull();
+    expect(await otherModel.removeLink(project.id, link!.id)).toBeNull();
+    expect(await model.saveLink(sibling.id, { ...input, id: link!.id })).toBeNull();
+    expect(await model.removeLink(sibling.id, link!.id)).toBeNull();
+    await model.saveLink(project.id, {
+      id: link!.id,
+      title: 'Edited',
+      url: 'https://example.com/revised',
+    });
+    expect(await model.listLinks(project.id)).toEqual([
+      expect.objectContaining({
+        id: link!.id,
+        title: 'Edited',
+        url: 'https://example.com/revised',
+      }),
+    ]);
+    await model.removeLink(project.id, link!.id);
+    expect(await model.listLinks(project.id)).toEqual([]);
+    expect(await model.findById(project.id)).not.toBeNull();
+  });
+
+  it('rejects unsafe or invalid external link values without persisting them', async () => {
+    const project = await createProject(model, { name: 'Link validation' });
+    for (const url of [
+      'javascript:alert(1)',
+      'data:text/html,hello',
+      'file:///etc/passwd',
+      '/relative',
+      'https://user:pass@example.com',
+      'https://example.com/' + 'a'.repeat(8192),
+    ]) {
+      await expect(model.saveLink(project.id, { title: 'Invalid', url })).rejects.toThrow();
+    }
+    for (const title of ['a'.repeat(256)]) {
+      await expect(
+        model.saveLink(project.id, { title, url: 'https://example.com' }),
+      ).rejects.toThrow();
+    }
+    expect(await model.listLinks(project.id)).toEqual([]);
+  });
+
+  it('accepts an optional link title and allows clearing a previously saved title', async () => {
+    const project = await createProject(model, { name: 'Optional title' });
+    const link = await model.saveLink(project.id, { url: 'https://example.com/spec' });
+    expect(link).toMatchObject({ title: '', url: 'https://example.com/spec' });
+    await model.saveLink(project.id, { id: link!.id, title: 'Spec', url: link!.url });
+    await model.saveLink(project.id, { id: link!.id, title: '  ', url: link!.url });
+    expect(await model.listLinks(project.id)).toEqual([
+      expect.objectContaining({ id: link!.id, title: '' }),
+    ]);
+  });
+
+  it('does not expose project links across workspaces even to the same owner', async () => {
+    const firstId = 'project-links-scope-a';
+    const secondId = 'project-links-scope-b';
+    for (const id of [firstId, secondId]) {
+      await serverDB.insert(workspaces).values({ id, name: id, slug: id, primaryOwnerId: userId });
+      await serverDB.insert(workspaceMembers).values({ workspaceId: id, userId, role: 'owner' });
+    }
+    const first = new ProjectModel(serverDB, userId, firstId);
+    const second = new ProjectModel(serverDB, userId, secondId);
+    const project = await createProject(first, { name: 'Scoped links' });
+    const input = { title: 'Brief', url: 'https://example.com/brief' };
+    const link = await first.saveLink(project.id, input);
+    expect(await second.listLinks(project.id)).toBeNull();
+    expect(await second.saveLink(project.id, input)).toBeNull();
+    expect(await second.removeLink(project.id, link!.id)).toBeNull();
+    expect(await first.listLinks(project.id)).toEqual([link]);
+  });
+
   it('creates, lists, updates, and deletes a project in the owner scope', async () => {
     const project = await createProject(model, { description: 'A large effort', name: 'Apollo' });
     expect(project.status).toBe('backlog');
@@ -73,6 +311,137 @@ describe('ProjectModel', () => {
     expect(
       await serverDB.select().from(agents).where(eq(agents.id, project.coordinatorAgentId!)),
     ).toHaveLength(0);
+  });
+
+  it('persists project planning fields and rejects leads outside the project scope', async () => {
+    const draft = {
+      name: 'Launch plan',
+      summary: 'A focused launch',
+      avatar: '🚀',
+      description: 'Release checklist',
+      leadUserId: userId,
+      startDate: '2026-09-21',
+      targetDate: '2026-10-01',
+    };
+    const project = await createProject(model, draft);
+    expect(await model.findById(project.id)).toMatchObject(draft);
+    await expect(createProject(model, { ...draft, leadUserId: otherUserId })).rejects.toThrow();
+  });
+
+  it('persists project priority, status and date precision', async () => {
+    const draft = {
+      name: 'Planning precision',
+      priority: 2,
+      status: 'active',
+      startDate: '2026-10-01',
+      startDatePrecision: 'quarter',
+      targetDate: '2027-06-30',
+      targetDatePrecision: 'halfYear',
+    } as const;
+    const project = await createProject(model, draft);
+    expect(await model.findById(project.id)).toMatchObject(draft);
+  });
+
+  it('persists independent project milestones and rejects empty milestones atomically', async () => {
+    const milestones = [{ name: 'Launch', description: 'Ship the release', date: '2026-12-01' }];
+    const project = await createProject(model, { name: 'Milestone project', milestones });
+    expect((await model.getPlanning(project.id))?.milestones).toEqual([
+      expect.objectContaining(milestones[0]),
+    ]);
+    await expect(
+      createProject(model, { name: 'Invalid milestone', milestones: [{ name: ' ' }] }),
+    ).rejects.toThrow();
+    expect((await model.list()).map(({ name }) => name)).toEqual(['Milestone project']);
+    expect(await otherModel.getPlanning(project.id)).toBeNull();
+  });
+
+  it('persists workspace members, project labels and directional dependencies without leaking scope', async () => {
+    const workspaceId = 'planning-fields-workspace';
+    await serverDB
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Planning', slug: workspaceId, primaryOwnerId: userId });
+    await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    const scoped = new ProjectModel(serverDB, userId, workspaceId);
+    const predecessor = await createProject(scoped, { name: 'Predecessor' });
+    const project = await createProject(scoped, {
+      name: 'Launch',
+      memberIds: [userId],
+      newLabelNames: ['Launch'],
+      dependencies: [{ projectId: predecessor.id, type: 'blockedBy' }],
+    });
+    const planning = await scoped.getPlanning(project.id);
+    expect(planning?.members).toEqual([expect.objectContaining({ userId })]);
+    expect(planning?.labels).toEqual([expect.objectContaining({ name: 'Launch' })]);
+    expect(planning?.dependencies).toEqual([
+      expect.objectContaining({
+        type: 'blockedBy',
+        project: expect.objectContaining({ id: predecessor.id }),
+      }),
+    ]);
+    expect((await scoped.getPlanning(predecessor.id))?.dependencies).toEqual([
+      expect.objectContaining({
+        type: 'blocking',
+        project: expect.objectContaining({ id: project.id }),
+      }),
+    ]);
+    await expect(
+      createProject(scoped, {
+        name: 'Transitive cycle',
+        dependencies: [
+          { projectId: predecessor.id, type: 'blocking' },
+          { projectId: project.id, type: 'blockedBy' },
+        ],
+      }),
+    ).rejects.toThrow('cycle');
+    const labels = await scoped.listLabels();
+    expect(labels).toHaveLength(1);
+    await expect(
+      createProject(model, { name: 'Wrong labels', labelIds: [labels[0].id] }),
+    ).rejects.toThrow();
+    await expect(
+      createProject(scoped, { name: 'Wrong member', memberIds: [otherUserId] }),
+    ).rejects.toThrow();
+    const privateProject = await createProject(otherModel, { name: 'Private' });
+    await expect(
+      createProject(scoped, {
+        name: 'Private dependency',
+        dependencies: [{ projectId: privateProject.id, type: 'blockedBy' }],
+      }),
+    ).rejects.toThrow();
+    await expect(
+      createProject(scoped, {
+        name: 'Cycle',
+        dependencies: [
+          { projectId: predecessor.id, type: 'blockedBy' },
+          { projectId: predecessor.id, type: 'blocking' },
+        ],
+      }),
+    ).rejects.toThrow();
+    expect((await scoped.list()).map(({ name }) => name).sort()).toEqual(['Launch', 'Predecessor']);
+    expect(await otherModel.getPlanning(project.id)).toBeNull();
+  });
+
+  it('links the selected team atomically and rejects a team from another workspace', async () => {
+    const workspaceId = 'project-planning-workspace';
+    const otherWorkspaceId = 'project-planning-other';
+    await serverDB.insert(workspaces).values([
+      { id: workspaceId, name: 'Planning', slug: workspaceId, primaryOwnerId: userId },
+      { id: otherWorkspaceId, name: 'Other', slug: otherWorkspaceId, primaryOwnerId: otherUserId },
+    ]);
+    await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await serverDB.insert(teams).values([
+      { id: 'planning-team', workspaceId, name: 'Design', key: 'DSN' },
+      { id: 'other-planning-team', workspaceId: otherWorkspaceId, name: 'Other', key: 'OTH' },
+    ]);
+    const scoped = new ProjectModel(serverDB, userId, workspaceId);
+    const project = await createProject(scoped, { name: 'Team launch', teamId: 'planning-team' });
+    expect(
+      await serverDB.select().from(projectTeams).where(eq(projectTeams.projectId, project.id)),
+    ).toEqual([expect.objectContaining({ teamId: 'planning-team', workspaceId })]);
+    await expect(
+      createProject(scoped, { name: 'Invalid team', teamId: 'other-planning-team' }),
+    ).rejects.toThrow();
+    expect((await scoped.list()).map(({ name }) => name)).toEqual(['Team launch']);
   });
 
   it('resolves a project by slug without escaping the current scope', async () => {
@@ -139,6 +508,94 @@ describe('ProjectModel', () => {
     await expect(model.create({ identifier: 'ABCDEF', name: 'Maximum' })).resolves.toEqual(
       expect.objectContaining({ identifier: 'ABCDEF' }),
     );
+  });
+
+  it('replaces project labels atomically, preserving taxonomy and workspace isolation', async () => {
+    const workspaceId = 'project-label-edit-ws';
+    await serverDB
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Labels', slug: workspaceId, primaryOwnerId: userId });
+    await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    const scoped = new ProjectModel(serverDB, userId, workspaceId);
+    const project = await createProject(scoped, {
+      name: 'Labels',
+      newLabelNames: ['Keep', 'Remove'],
+    });
+    const labels = await scoped.listLabels();
+    const keep = labels.find((label) => label.name === 'Keep')!;
+    await scoped.update(project.id, { labelIds: [keep.id, keep.id] });
+    expect((await scoped.getPlanning(project.id))?.labels.map((label) => label.id)).toEqual([
+      keep.id,
+    ]);
+    expect(await scoped.listLabels()).toHaveLength(2);
+    const foreignWorkspaceId = 'project-label-foreign-ws';
+    await serverDB.insert(workspaces).values({
+      id: foreignWorkspaceId,
+      name: 'Foreign labels',
+      slug: foreignWorkspaceId,
+      primaryOwnerId: otherUserId,
+    });
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ workspaceId: foreignWorkspaceId, userId: otherUserId, role: 'owner' });
+    const foreign = new ProjectModel(serverDB, otherUserId, foreignWorkspaceId);
+    await createProject(foreign, { name: 'Foreign', newLabelNames: ['Foreign label'] });
+    const [foreignLabel] = await foreign.listLabels();
+    await expect(scoped.update(project.id, { labelIds: [foreignLabel.id] })).rejects.toThrow(
+      'Project label is not available',
+    );
+    await expect(
+      scoped.update(project.id, {
+        name: 'Must roll back',
+        labelIds: ['00000000-0000-0000-0000-000000000000'],
+      }),
+    ).rejects.toThrow('Project label is not available');
+    expect((await scoped.findById(project.id))?.name).toBe('Labels');
+    expect((await scoped.getPlanning(project.id))?.labels.map((label) => label.id)).toEqual([
+      keep.id,
+    ]);
+    expect(await otherModel.update(project.id, { labelIds: [] })).toBeNull();
+    await scoped.update(project.id, { labelIds: [] });
+    expect((await scoped.getPlanning(project.id))?.labels).toEqual([]);
+    expect(await scoped.listLabels()).toHaveLength(2);
+  });
+
+  it('only assigns active members of the project workspace as lead', async () => {
+    const workspaceId = 'project-lead-edit-ws';
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Lead editing',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    const owner = new ProjectModel(serverDB, userId, workspaceId);
+    const project = await createProject(owner, { name: 'Lead editing' });
+    await expect(owner.update(project.id, { leadUserId: otherUserId })).rejects.toThrow(
+      'Project lead must be an active workspace member',
+    );
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ role: 'member', userId: otherUserId, workspaceId });
+    expect(await owner.update(project.id, { leadUserId: otherUserId })).toMatchObject({
+      leadUserId: otherUserId,
+    });
+    await serverDB
+      .update(workspaceMembers)
+      .set({ suspendedAt: new Date() })
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, otherUserId),
+        ),
+      );
+    await expect(owner.update(project.id, { leadUserId: otherUserId })).rejects.toThrow(
+      'Project lead must be an active workspace member',
+    );
+    expect(await owner.update(project.id, { leadUserId: null })).toMatchObject({
+      leadUserId: null,
+    });
+    expect(await otherModel.update(project.id, { leadUserId: otherUserId })).toBeNull();
   });
 
   it('filters and paginates projects', async () => {
@@ -219,6 +676,24 @@ describe('ProjectModel', () => {
       expect.objectContaining({ id: project.id, taskCount: 3 }),
     ]);
     expect(visible.id).toBeTruthy();
+  });
+
+  it('reports project issue progress from readable, non-canceled tasks', async () => {
+    const project = await createProject(model, { name: 'Progress' });
+    const taskModel = new TaskModel(serverDB, userId);
+    const done = await taskModel.create({ instruction: 'Done', projectId: project.id });
+    await taskModel.create({ instruction: 'Open', projectId: project.id });
+    const canceled = await taskModel.create({ instruction: 'Canceled', projectId: project.id });
+
+    await serverDB.update(tasks).set({ workflowCategory: 'done' }).where(eq(tasks.id, done.id));
+    await serverDB
+      .update(tasks)
+      .set({ workflowCategory: 'canceled' })
+      .where(eq(tasks.id, canceled.id));
+
+    expect(await model.list()).toEqual([
+      expect.objectContaining({ id: project.id, progressPercent: 50, taskCount: 3 }),
+    ]);
   });
 
   it('does not expose or mutate another user project in personal mode', async () => {

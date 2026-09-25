@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
 
+import { ProjectLinkForm } from './ProjectLinkModal';
+import { ProjectLinks } from './ProjectLinks';
 import ProjectResources from './ProjectResources';
 
 const mocks = vi.hoisted(() => ({
@@ -12,12 +14,21 @@ const mocks = vi.hoisted(() => ({
   onOk: undefined as (() => unknown) | undefined,
   removeKnowledgeBase: vi.fn(),
   toastError: vi.fn(),
+  close: vi.fn(),
+  saveLink: vi.fn(),
+  linkQuery: {
+    data: undefined as { data: { id: string; title: string; url: string }[] } | undefined,
+    error: undefined,
+    isLoading: true,
+    mutate: vi.fn(),
+  },
 }));
 
 // Spelled out rather than spread from `importOriginal`: the real `Button` needs
 // the app-level motion provider, so pulling it back in would trade one mock for
 // a provider this test never mounts.
-vi.mock('@lobehub/ui', () => ({
+vi.mock('@lobehub/ui', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
   Flexbox: ({ children, className }: { children?: ReactNode; className?: string }) => (
@@ -26,7 +37,9 @@ vi.mock('@lobehub/ui', () => ({
   Icon: () => null,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
+vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useModalContext: () => ({ close: mocks.close, setCanDismissByClickOutside: vi.fn() }),
   Button: ({
     children,
     disabled,
@@ -49,6 +62,17 @@ vi.mock('@lobehub/ui/base-ui', () => ({
   },
   toast: { error: mocks.toastError },
 }));
+
+vi.mock('@/store/project', () => ({
+  useProjectStore: (
+    selector: (state: {
+      saveProjectLink: typeof mocks.saveLink;
+      useFetchProjectLinks: () => typeof mocks.linkQuery;
+    }) => unknown,
+  ) => selector({ saveProjectLink: mocks.saveLink, useFetchProjectLinks: () => mocks.linkQuery }),
+}));
+
+vi.mock('@/store/user', () => ({ useUserStore: () => 'viewer' }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
@@ -81,11 +105,85 @@ beforeEach(() => {
   mocks.onOk = undefined;
   mocks.removeKnowledgeBase.mockReset().mockResolvedValue(undefined);
   mocks.toastError.mockReset();
+  mocks.close.mockReset();
+  mocks.saveLink.mockReset().mockResolvedValue({ data: { id: 'saved-link' }, success: true });
+  mocks.linkQuery.data = undefined;
+  mocks.linkQuery.isLoading = true;
 });
 
 afterEach(cleanup);
 
 describe('project resources', () => {
+  it('renders the first-load link placeholder without crashing the project page', () => {
+    expect(() => render(<ProjectLinks ownerId="owner" projectId="prj_1" />)).not.toThrow();
+  });
+  it('keeps resource links visible when the project creator has been deleted', () => {
+    mocks.linkQuery.data = {
+      data: [{ id: 'link-1', title: 'Project spec', url: 'https://example.com/spec' }],
+    };
+    mocks.linkQuery.isLoading = false;
+
+    render(<ProjectLinks ownerId={null} projectId="prj_1" />);
+
+    expect(screen.getByRole('link', { name: 'Project spec' })).toHaveAttribute(
+      'href',
+      'https://example.com/spec',
+    );
+    expect(screen.queryByText('overview.resourcesAdd')).not.toBeInTheDocument();
+  });
+  it('saves a URL without requiring a title and closes after confirmed success', async () => {
+    render(<ProjectLinkForm projectId="prj_1" />);
+    const url = screen.getByLabelText('resources.link.url');
+    fireEvent.change(url, { target: { value: 'https://example.com/spec' } });
+    fireEvent.submit(url.closest('form')!);
+    await waitFor(() => expect(mocks.close).toHaveBeenCalledOnce());
+    expect(mocks.saveLink).toHaveBeenCalledWith('prj_1', {
+      title: '',
+      url: 'https://example.com/spec',
+      linkId: undefined,
+    });
+  });
+
+  it('keeps the add action available so an empty URL receives form validation', () => {
+    render(<ProjectLinkForm projectId="prj_1" />);
+
+    expect(screen.getByRole('button', { name: 'resources.link.add' })).toBeEnabled();
+  });
+
+  it('keeps input after a rejected save and rejects unsafe URLs before submitting', async () => {
+    mocks.saveLink.mockRejectedValue(new Error('Forbidden'));
+    render(<ProjectLinkForm projectId="prj_1" />);
+    const url = screen.getByLabelText('resources.link.url');
+    fireEvent.change(url, { target: { value: 'javascript:alert(1)' } });
+    fireEvent.submit(url.closest('form')!);
+    expect(mocks.saveLink).not.toHaveBeenCalled();
+    fireEvent.change(url, { target: { value: 'https://example.com/spec' } });
+    fireEvent.submit(url.closest('form')!);
+    await waitFor(() => expect(mocks.saveLink).toHaveBeenCalledOnce());
+    expect(url).toHaveValue('https://example.com/spec');
+    expect(mocks.close).not.toHaveBeenCalled();
+  });
+
+  it('updates the committed link rather than duplicating it after a readback failure', async () => {
+    mocks.saveLink.mockResolvedValueOnce({
+      data: { id: 'saved-link' },
+      success: true,
+      refreshError: new Error('Offline'),
+    });
+    render(<ProjectLinkForm projectId="prj_1" />);
+    const url = screen.getByLabelText('resources.link.url');
+    fireEvent.change(url, { target: { value: 'https://example.com/spec' } });
+    fireEvent.submit(url.closest('form')!);
+    await screen.findByText('resources.link.save');
+    expect(mocks.close).not.toHaveBeenCalled();
+    fireEvent.submit(url.closest('form')!);
+    await waitFor(() => expect(mocks.close).toHaveBeenCalledOnce());
+    expect(mocks.saveLink).toHaveBeenLastCalledWith(
+      'prj_1',
+      expect.objectContaining({ linkId: 'saved-link' }),
+    );
+  });
+
   it('lists every library the project references', () => {
     renderPage([link('kb_1', 'Alpha'), link('kb_2', 'Beta')]);
 

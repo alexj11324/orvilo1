@@ -91,7 +91,11 @@ const UsernameRow = () => {
   }, [username]);
 
   return (
-    <ProfileRow anchor={'profile-username'} label={t('profile.username')}>
+    <ProfileRow
+      anchor={'profile-username'}
+      description={t('profile.usernameDescription')}
+      label={t('profile.username')}
+    >
       <Flexbox horizontal align="center" gap={8}>
         {saving && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />}
         {error && (
@@ -111,13 +115,15 @@ const UsernameRow = () => {
           </Button>
         )}
         <Input
+          aria-label={t('profile.username')}
           defaultValue={username || ''}
           disabled={saving}
           key={username}
           placeholder={t('profile.usernamePlaceholder')}
           ref={inputRef}
+          size={'small'}
           status={error ? 'error' : undefined}
-          variant="filled"
+          style={{ width: 180, maxWidth: '100%' }}
           onBlur={handleSave}
           onChange={handleChange}
           onPressEnter={handleSave}

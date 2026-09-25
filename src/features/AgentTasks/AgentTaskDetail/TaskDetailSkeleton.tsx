@@ -70,34 +70,36 @@ const TaskDetailBodySkeleton = () => (
           ))}
         </div>
       </div>
-    </div>
 
-    <Flexbox gap={24} style={{ paddingBottom: 120 }}>
-      <Flexbox gap={12}>
-        <SkeletonBar height={14} width={'94%'} />
-        <SkeletonBar height={14} width={'88%'} />
-        <SkeletonBar height={14} width={'72%'} />
-      </Flexbox>
-
-      <Flexbox gap={12}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <SkeletonBar height={16} radius={'50%'} width={16} />
-          <SkeletonBar height={18} width={112} />
+      {/* Same grid child as the real body column — the skeleton mirrors the
+          two-column layout instead of painting a full-width block. */}
+      <Flexbox className={layout.body} gap={24}>
+        <Flexbox gap={12}>
+          <SkeletonBar height={14} width={'94%'} />
+          <SkeletonBar height={14} width={'88%'} />
+          <SkeletonBar height={14} width={'72%'} />
         </Flexbox>
-        <Flexbox className={styles.acceptance}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Flexbox key={index}>
-              {index > 0 && <div className={styles.divider} />}
-              <Flexbox horizontal align={'center'} gap={10} padding={'12px'}>
-                <SkeletonBar height={16} radius={'50%'} width={16} />
-                <SkeletonBar height={12} width={24} />
-                <SkeletonBar height={14} width={`${58 + index * 9}%`} />
+
+        <Flexbox gap={12}>
+          <Flexbox horizontal align={'center'} gap={8}>
+            <SkeletonBar height={16} radius={'50%'} width={16} />
+            <SkeletonBar height={18} width={112} />
+          </Flexbox>
+          <Flexbox className={styles.acceptance}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Flexbox key={index}>
+                {index > 0 && <div className={styles.divider} />}
+                <Flexbox horizontal align={'center'} gap={10} padding={'12px'}>
+                  <SkeletonBar height={16} radius={'50%'} width={16} />
+                  <SkeletonBar height={12} width={24} />
+                  <SkeletonBar height={14} width={`${58 + index * 9}%`} />
+                </Flexbox>
               </Flexbox>
-            </Flexbox>
-          ))}
+            ))}
+          </Flexbox>
         </Flexbox>
       </Flexbox>
-    </Flexbox>
+    </div>
   </Flexbox>
 );
 

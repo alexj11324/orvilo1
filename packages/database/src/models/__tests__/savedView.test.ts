@@ -307,17 +307,14 @@ describe('SavedViewModel', () => {
     expect(serialized).toContain(publicCycle!.id);
   });
 
-  it('lists virtual builtins that cannot be overwritten or deleted', async () => {
+  it('keeps virtual builtins off the directory but lazily resolvable by id', async () => {
     const ownerViews = new SavedViewModel(serverDB, ownerId, workspaceId);
     const visitorViews = new SavedViewModel(serverDB, visitorId, workspaceId);
+    // R2: virtual presets never list as directory rows, so an empty workspace
+    // really reaches the empty state; deep links and favorites still resolve.
     const listed = await visitorViews.list();
-    expect(listed.map((row) => row.id)).toEqual([
-      'builtin:all',
-      'builtin:blocked',
-      'builtin:in-progress',
-      'builtin:projects',
-      'builtin:review',
-    ]);
+    expect(listed.some((row) => row.id.startsWith('builtin:'))).toBe(false);
+    expect(listed).toEqual([]);
 
     const review = await visitorViews.findById('builtin:review');
     expect(review?.queryAst.filter).toEqual({

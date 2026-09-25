@@ -1,21 +1,24 @@
 import { type ContextMenuItem, copyToClipboard, Icon, type MenuInfo } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import {
   BarChart3Icon,
-  CircleDashedIcon,
   CopyIcon,
   LinkIcon,
   MessageSquareTextIcon,
   PlayIcon,
   Trash2Icon,
+  UserRoundIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import type { WorkspaceMemberWithProfile } from '@/business/client/hooks/useWorkspaceMembers';
+import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
+import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePermission } from '@/hooks/usePermission';
@@ -25,13 +28,13 @@ import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
 
+import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import { useAssigneeMenuItems } from './assigneeMenuItems';
 import { renderMenuExtra } from './menuExtra';
 import { PRIORITY_META } from './TaskPriorityTag';
 import { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
 import { useTaskStatusChange } from './useTaskStatusChange';
-
-const PRIORITY_LEVELS = [0, 1, 2, 3, 4];
 
 type ActiveSubmenu = 'status' | 'priority' | null;
 type TaskItemRouteScope = 'agent' | 'global';
@@ -44,6 +47,8 @@ interface TaskItemContextMenu {
 export interface TaskContextMenuTarget {
   assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
+  /** Creator owns a private task's only assignable member — mirrors the row picker. */
+  createdByUserId?: string | null;
   /** Live run's topic — present while a run is in flight; gates "Open run". */
   currentTopicId?: string | null;
   identifier: string;
@@ -51,6 +56,8 @@ export interface TaskContextMenuTarget {
   name?: string | null;
   priority?: number | null;
   status: string;
+  /** `private` narrows the Assignee submenu to the task creator. */
+  visibility?: 'private' | 'public' | null;
 }
 
 const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
@@ -58,6 +65,12 @@ const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
 export interface TaskContextMenuActions {
   buildItems: (task: TaskContextMenuTarget) => NativeContextMenuItem[];
   installKeyboardHandlers: (task: TaskContextMenuTarget) => void;
+  /**
+   * Submenu titles appended outside `buildItems` (the Assignee entry) must
+   * clear the tracked digit-accelerator hover — wire this to their
+   * `onTitleMouseEnter`.
+   */
+  resetActiveSubmenu: () => void;
 }
 
 export const useTaskContextMenuActions = (
@@ -126,13 +139,10 @@ export const useTaskContextMenuActions = (
       const priorityChildren = PRIORITY_LEVELS.map((level, index) => {
         const meta = PRIORITY_META[level];
         const PriorityIcon = meta.icon;
-        const isUrgent = level === 1;
         const isCurrent = level === currentPriority;
         return {
           extra: renderMenuExtra(String(index + 1), isCurrent),
-          icon: (
-            <PriorityIcon color={isUrgent ? cssVar.orange : cssVar.colorTextSecondary} size={16} />
-          ),
+          icon: <PriorityIcon color={getPriorityIconColor(level)} size={16} />,
           key: `priority-${level}`,
           label: t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label }),
           disabled: !canEditTask,
@@ -199,7 +209,7 @@ export const useTaskContextMenuActions = (
         {
           children: statusChildren,
           disabled: !canEditTask,
-          icon: <Icon icon={CircleDashedIcon} />,
+          icon: <Icon icon={STATUS_PROPERTY_ICON} />,
           key: 'status',
           label: t('taskList.contextMenu.status'),
           onTitleMouseEnter: () => {
@@ -217,27 +227,40 @@ export const useTaskContextMenuActions = (
           },
         },
         { type: 'divider' },
+        // Linear nests the clipboard actions under one `Copy` submenu.
         {
+          children: [
+            {
+              icon: <Icon icon={CopyIcon} />,
+              key: 'copyId',
+              label: t('taskList.contextMenu.copyId'),
+              onClick: async ({ domEvent }: MenuInfo) => {
+                domEvent.stopPropagation();
+                await copyToClipboard(task.identifier);
+                toast.success(t('taskList.contextMenu.copyIdSuccess'));
+              },
+              sfSymbol: 'doc.on.doc',
+            },
+            {
+              icon: <Icon icon={LinkIcon} />,
+              key: 'copyLink',
+              label: t('taskList.contextMenu.copyLink'),
+              onClick: async ({ domEvent }: MenuInfo) => {
+                domEvent.stopPropagation();
+                await copyToClipboard(taskUrl);
+                toast.success(t('taskList.contextMenu.copyLinkSuccess'));
+              },
+              sfSymbol: 'doc.on.doc',
+            },
+          ] satisfies NativeContextMenuItem[],
           icon: <Icon icon={CopyIcon} />,
-          key: 'copyId',
-          label: t('taskList.contextMenu.copyId'),
-          onClick: async ({ domEvent }: MenuInfo) => {
-            domEvent.stopPropagation();
-            await copyToClipboard(task.identifier);
-            toast.success(t('taskList.contextMenu.copyIdSuccess'));
+          key: 'copy',
+          label: t('taskList.contextMenu.copy', { defaultValue: 'Copy' }),
+          onTitleMouseEnter: () => {
+            // Not a digit-accelerated submenu — clear the tracked hover so a
+            // stray number key can't fire the status/priority pick behind it.
+            activeSubmenuRef.current = null;
           },
-          sfSymbol: 'doc.on.doc',
-        },
-        {
-          icon: <Icon icon={LinkIcon} />,
-          key: 'copyLink',
-          label: t('taskList.contextMenu.copyLink'),
-          onClick: async ({ domEvent }: MenuInfo) => {
-            domEvent.stopPropagation();
-            await copyToClipboard(taskUrl);
-            toast.success(t('taskList.contextMenu.copyLinkSuccess'));
-          },
-          sfSymbol: 'doc.on.doc',
         },
         { type: 'divider' },
         {
@@ -330,7 +353,11 @@ export const useTaskContextMenuActions = (
       cleanupRef.current = cleanup;
     };
 
-    return { buildItems, installKeyboardHandlers };
+    const resetActiveSubmenu = () => {
+      activeSubmenuRef.current = null;
+    };
+
+    return { buildItems, installKeyboardHandlers, resetActiveSubmenu };
   }, [
     canEditTask,
     t,
@@ -353,43 +380,108 @@ export const useTaskItemContextMenu = (
   routeScope?: TaskItemRouteScope,
   onStatusChange?: (status: TaskStatus) => void | Promise<void>,
 ): TaskItemContextMenu => {
-  const { buildItems, installKeyboardHandlers } = useTaskContextMenuActions(
+  const { buildItems, installKeyboardHandlers, resetActiveSubmenu } = useTaskContextMenuActions(
     routeScope,
     onStatusChange,
   );
   const transferItems = useTaskTransferMenuItem(task.identifier) as ContextMenuItem[] | null;
+  const { t } = useTranslation('chat');
+  const { allowed: canEditTask } = usePermission('create_content');
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const activeWorkspaceId = useActiveWorkspaceId();
+
+  const handleAssigneeSelect = useCallback(
+    (userId: string | null, member?: WorkspaceMemberWithProfile) => {
+      if (!canEditTask || userId === (task.assigneeUserId ?? null)) return;
+      void updateTask(
+        task.identifier,
+        { assigneeUserId: userId },
+        {
+          optimisticAssignee: member
+            ? {
+                avatar: member.user?.avatar ?? null,
+                id: member.userId,
+                name: member.user?.fullName ?? null,
+                type: 'user',
+              }
+            : undefined,
+        },
+      );
+    },
+    [canEditTask, task.assigneeUserId, task.identifier, updateTask],
+  );
+
+  const assigneeItems = useAssigneeMenuItems(task.assigneeUserId, handleAssigneeSelect, {
+    creatorId: task.createdByUserId,
+    disabled: !canEditTask,
+    visibility: task.visibility,
+  });
+  // The member directory is absent in personal mode — the Assignee submenu
+  // still earns its slot once a user assignee exists so it can be cleared.
+  const showAssignee =
+    hasWorkspaceMemberDirectory(activeWorkspaceId) || Boolean(task.assigneeUserId);
+
   const items = useMemo(() => {
     const base = buildItems(task);
-    if (!transferItems || transferItems.length === 0) return base;
+    // Linear orders Assignee immediately after Priority.
+    const withAssignee = showAssignee
+      ? (() => {
+          const priorityIndex = base.findIndex(
+            (item) =>
+              item !== null && typeof item === 'object' && 'key' in item && item.key === 'priority',
+          );
+          const assigneeItem: ContextMenuItem = {
+            children: assigneeItems,
+            disabled: !canEditTask,
+            icon: <Icon icon={UserRoundIcon} />,
+            key: 'assignee',
+            label: t('taskList.contextMenu.assignee'),
+            onTitleMouseEnter: resetActiveSubmenu,
+          };
+          const next = [...base];
+          next.splice(priorityIndex === -1 ? 2 : priorityIndex + 1, 0, assigneeItem);
+          return next;
+        })()
+      : base;
+    if (!transferItems || transferItems.length === 0) return withAssignee;
 
     // Insert transfer/copy entries above the final divider + delete pair so
     // they sit next to the other lifecycle actions but kept distinct from
     // in-place state changes.
-    const deleteAnchor = base.findIndex(
+    const deleteAnchor = withAssignee.findIndex(
       (item) =>
         item !== null &&
         typeof item === 'object' &&
         'key' in item &&
         (item as { key?: string }).key === 'delete',
     );
-    if (deleteAnchor === -1) return [...base, ...transferItems];
+    if (deleteAnchor === -1) return [...withAssignee, ...transferItems];
 
     const insertAt =
       deleteAnchor > 0 &&
-      base[deleteAnchor - 1] !== null &&
-      typeof base[deleteAnchor - 1] === 'object' &&
-      'type' in (base[deleteAnchor - 1] as object) &&
-      (base[deleteAnchor - 1] as { type?: string }).type === 'divider'
+      withAssignee[deleteAnchor - 1] !== null &&
+      typeof withAssignee[deleteAnchor - 1] === 'object' &&
+      'type' in (withAssignee[deleteAnchor - 1] as object) &&
+      (withAssignee[deleteAnchor - 1] as { type?: string }).type === 'divider'
         ? deleteAnchor - 1
         : deleteAnchor;
 
     return [
-      ...base.slice(0, insertAt),
+      ...withAssignee.slice(0, insertAt),
       ...transferItems,
       { type: 'divider' } as ContextMenuItem,
-      ...base.slice(deleteAnchor),
+      ...withAssignee.slice(deleteAnchor),
     ];
-  }, [buildItems, task, transferItems]);
+  }, [
+    assigneeItems,
+    buildItems,
+    canEditTask,
+    resetActiveSubmenu,
+    showAssignee,
+    t,
+    task,
+    transferItems,
+  ]);
   const onContextMenu = useCallback(
     () => installKeyboardHandlers(task),
     [installKeyboardHandlers, task],

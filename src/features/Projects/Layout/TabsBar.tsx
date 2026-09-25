@@ -1,14 +1,15 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { TabsIndicator, TabsList, TabsRoot, TabsTab, Tag } from '@lobehub/ui/base-ui';
+import { Flexbox } from '@lobehub/ui';
+import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, type Ref, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
+import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import {
@@ -17,17 +18,18 @@ import {
 } from '@/features/NavPanel/SidebarHeaderSelect';
 import type { SwitcherItem } from '@/features/NavPanel/switcher/switcherItems';
 import SwitcherMenu from '@/features/NavPanel/switcher/SwitcherMenu';
-import { PROJECT_STATUS_META } from '@/features/Projects/Workspace/ProjectPropertiesCard';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useTeammatesEnabled } from '@/features/Teammates/useTeammatesEnabled';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useCurrentProjectDetail, useCurrentProjectList, useProjectStore } from '@/store/project';
 
 import {
-  getProjectGoalsPath,
+  getProjectActivityPath,
+  getProjectMilestonesPath,
   getProjectOverviewPath,
-  getProjectResourcesPath,
   getProjectTasksPath,
   projectPathSection,
 } from './navigation';
@@ -49,14 +51,45 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   tabsRow: css`
     flex: none;
+    min-height: 40px;
     padding-inline: 20px;
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  navigationLink: css`
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+
+    height: 28px;
+    padding-inline: 10px;
+    border-radius: 9999px;
+
+    font-size: 12px;
+    font-weight: 500;
+    line-height: normal;
+    color: ${cssVar.colorTextSecondary};
+    text-decoration: none;
+
+    &:hover {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &[aria-current='page'] {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillSecondary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+      outline-offset: 2px;
+    }
   `,
 }));
 
 // Linear shape: project navigation is a tab strip in the content header, not a
 // second left rail — the workspace nav panel is the only rail on /project/*.
-const ProjectTabsBar = memo(() => {
+const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> }) => {
   const { t } = useTranslation(['project', 'common']);
   const { projectId } = useActiveRouteParams<{ projectId: string }>();
   const navigate = useWorkspaceAwareNavigate();
@@ -69,6 +102,8 @@ const ProjectTabsBar = memo(() => {
   const membersSWR = useProjectMembersQuery(detail?.project.id, membersEnabled);
 
   const projectReference = detail?.project.slug ?? projectId ?? '';
+  // Same glyph and colour the project list and the rail draw for this status.
+  const headerStatusVisual = PROJECT_STATUS_VISUALS[resolveProjectStatus(detail?.project.status)];
 
   const items = useMemo<SwitcherItem[]>(
     () =>
@@ -86,6 +121,8 @@ const ProjectTabsBar = memo(() => {
     [navigate],
   );
 
+  // Linear's project header is Overview | Activity | Issues | Milestones —
+  // goals and resources live as sections on the Overview body instead of tabs.
   const tabs = useMemo(
     () => [
       {
@@ -93,12 +130,20 @@ const ProjectTabsBar = memo(() => {
         path: getProjectOverviewPath(projectReference),
         section: 'overview',
       },
-      { label: t('sections.tasks'), path: getProjectTasksPath(projectReference), section: 'tasks' },
-      { label: t('sections.goals'), path: getProjectGoalsPath(projectReference), section: 'goals' },
       {
-        label: t('resources.title'),
-        path: getProjectResourcesPath(projectReference),
-        section: 'resources',
+        label: t('sections.activity'),
+        path: getProjectActivityPath(projectReference),
+        section: 'activity',
+      },
+      {
+        label: t('sections.issues'),
+        path: getProjectTasksPath(projectReference),
+        section: 'tasks',
+      },
+      {
+        label: t('sections.milestones'),
+        path: getProjectMilestonesPath(projectReference),
+        section: 'milestones',
       },
     ],
     [projectReference, t],
@@ -135,19 +180,12 @@ const ProjectTabsBar = memo(() => {
           detail?.project.id ? (
             <Flexbox horizontal align={'center'} gap={10}>
               <Tag
-                color={PROJECT_STATUS_META[detail.project.status]?.color}
+                color={headerStatusVisual.color}
+                shape={'round'}
                 size={'small'}
-                icon={
-                  <Icon
-                    size={12}
-                    icon={
-                      (PROJECT_STATUS_META[detail.project.status] ?? PROJECT_STATUS_META.backlog)
-                        .icon
-                    }
-                  />
-                }
+                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
               >
-                {t(`acceptance.status.${detail.project.status}`, {
+                {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,
                 })}
               </Tag>
@@ -172,17 +210,20 @@ const ProjectTabsBar = memo(() => {
           ) : undefined
         }
       />
-      <Flexbox className={styles.tabsRow}>
-        <TabsRoot value={activeTab} onValueChange={(path) => navigate(path)}>
-          <TabsList>
-            <TabsIndicator />
-            {tabs.map((tab) => (
-              <TabsTab key={tab.path} value={tab.path}>
-                {tab.label}
-              </TabsTab>
-            ))}
-          </TabsList>
-        </TabsRoot>
+      <Flexbox horizontal align={'center'} className={styles.tabsRow} justify={'space-between'}>
+        <Flexbox horizontal gap={4}>
+          {tabs.map((tab) => (
+            <WorkspaceLink
+              aria-current={activeTab === tab.path ? 'page' : undefined}
+              className={styles.navigationLink}
+              key={tab.path}
+              to={tab.path}
+            >
+              {tab.label}
+            </WorkspaceLink>
+          ))}
+        </Flexbox>
+        <div ref={toolbarRef} />
       </Flexbox>
     </>
   );

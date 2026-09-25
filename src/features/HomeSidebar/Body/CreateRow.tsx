@@ -2,13 +2,14 @@
 
 import type { MenuProps } from '@lobehub/ui';
 import { DropdownMenu, Icon } from '@lobehub/ui';
-import { FolderKanbanIcon, LayersIcon, PlusIcon, SquarePenIcon } from 'lucide-react';
+import { LayersIcon, PlusIcon, SquarePenIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 
 /**
@@ -36,7 +37,7 @@ const CreateRow = memo(() => {
         onClick: () => setCreatingView(true),
       },
       {
-        icon: <Icon icon={FolderKanbanIcon} />,
+        icon: <Icon icon={PROJECT_ENTITY_ICON} />,
         key: 'project',
         label: t('project:create.action'),
         onClick: () => openCreateProjectModal(),

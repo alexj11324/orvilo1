@@ -79,6 +79,7 @@ export const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
   'agents',
   'automations',
   'community',
+  'drafts',
   'eval',
   'goal',
   'group',

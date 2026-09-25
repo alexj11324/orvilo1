@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 
+import InterestsRow from '../profile/features/InterestsRow';
 import { ManageMemoryButton } from './features/ManageMemoryButton';
 import Memory from './features/Memory';
 
@@ -18,6 +19,7 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
       {showSettingHeader && (
         <SettingHeader extra={<ManageMemoryButton />} title={t('tab.memory')} />
       )}
+      <InterestsRow />
       <Memory />
     </>
   );

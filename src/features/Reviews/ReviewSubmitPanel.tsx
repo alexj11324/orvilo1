@@ -84,6 +84,10 @@ const ReviewSubmitPanel = memo<{
     }
   };
 
+  // A write or a verify-and-retry is in flight — all three intents disable
+  // together so a second click can never land a parallel submission.
+  const busy = submitting !== null || verifying;
+
   return (
     <Flexbox className={styles.card} gap={8}>
       <Flexbox horizontal align={'center'} gap={8}>
@@ -118,16 +122,18 @@ const ReviewSubmitPanel = memo<{
         value={body}
         onChange={setBody}
       />
+      {/* One write intent in flight at a time — a second click would send a
+          different operationId and land two submissions. */}
       <Flexbox horizontal gap={8} justify={'flex-end'}>
         <Button
-          disabled={disabled || stale || !body.trim()}
+          disabled={disabled || stale || busy || !body.trim()}
           loading={submitting === 'COMMENT'}
           onClick={() => void submit('COMMENT', body.trim())}
         >
           {t('reviews.submitComment')}
         </Button>
         <Button
-          disabled={disabled || stale}
+          disabled={disabled || stale || busy}
           loading={submitting === 'APPROVE'}
           onClick={() => void submit('APPROVE', body.trim())}
         >
@@ -135,7 +141,7 @@ const ReviewSubmitPanel = memo<{
         </Button>
         <Button
           danger
-          disabled={disabled || stale}
+          disabled={disabled || stale || busy}
           loading={submitting === 'REQUEST_CHANGES'}
           onClick={() => void submit('REQUEST_CHANGES', body.trim())}
         >

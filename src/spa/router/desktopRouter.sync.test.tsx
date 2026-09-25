@@ -198,7 +198,7 @@ describe('desktop router shared definition', () => {
   });
 
   it.each(mainAreaVariants)(
-    '%s exposes the project overview, task, goal, and resource workspaces',
+    '%s exposes the project overview, activity, task, milestone, goal, and resource workspaces',
     (_, factory) => {
       const projectRoute = factory().find((route) => route.path === 'project/:projectId');
       const projectIndexRoute = projectRoute?.children?.find((route) => route.index);
@@ -212,7 +212,9 @@ describe('desktop router shared definition', () => {
       // than being relaxed — the list is still compared exactly.
       expect(projectPaths).toEqual([
         'overview',
+        'activity',
         'tasks',
+        'milestones',
         'goals',
         'resources',
         'library/:id',

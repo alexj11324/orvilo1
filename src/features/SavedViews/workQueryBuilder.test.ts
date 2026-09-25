@@ -1,11 +1,18 @@
 import type { WorkQuery } from '@orvilo/types';
+import {
+  WORK_QUERY_PROJECT_FIELD_SPECS,
+  WORK_QUERY_TASK_FIELD_SPECS,
+  workQueryFieldSpec,
+} from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
   builderToFilter,
   comparableQuery,
+  defaultRowValue,
   filterToBuilder,
   isRowComplete,
+  newFilterRow,
 } from './workQueryBuilder';
 
 describe('workQueryBuilder', () => {
@@ -132,5 +139,66 @@ describe('workQueryBuilder', () => {
       entityType: 'task',
     };
     expect(comparableQuery(a as never)).toBe(comparableQuery(b as never));
+  });
+
+  it('newFilterRow seeds the first registry field and op per entity', () => {
+    const taskRow = newFilterRow('task');
+    expect(taskRow.field).toBe(WORK_QUERY_TASK_FIELD_SPECS[0]!.field);
+    expect(taskRow.op).toBe(WORK_QUERY_TASK_FIELD_SPECS[0]!.ops[0]);
+    expect(taskRow.value).toBeUndefined();
+
+    const projectRow = newFilterRow('project');
+    expect(projectRow.field).toBe(WORK_QUERY_PROJECT_FIELD_SPECS[0]!.field);
+    expect(projectRow.op).toBe(WORK_QUERY_PROJECT_FIELD_SPECS[0]!.ops[0]);
+    // ids are unique across calls — React keys must never collide.
+    expect(taskRow.id).not.toBe(projectRow.id);
+  });
+
+  it('defaultRowValue pre-fills currentUser only for user-kind specs', () => {
+    expect(defaultRowValue(workQueryFieldSpec('task', 'assigneeUserId')!)).toEqual({
+      ref: 'currentUser',
+    });
+    expect(defaultRowValue(workQueryFieldSpec('task', 'status')!)).toBeUndefined();
+    expect(defaultRowValue(workQueryFieldSpec('project', 'teamId')!)).toBeUndefined();
+  });
+
+  it('builderToFilter returns undefined when nothing survives serialization', () => {
+    expect(builderToFilter('task', { any: [], rows: [], slots: [] })).toBeUndefined();
+    // A row left untouched after "Add filter" drops out — the saved query
+    // carries no filter key at all rather than a half-built predicate.
+    expect(
+      builderToFilter('task', {
+        any: [],
+        rows: [{ field: 'status', id: 'x', op: 'eq' }],
+        slots: [],
+      }),
+    ).toBeUndefined();
+  });
+
+  it('appends new rows after preserved slots in row order', () => {
+    const retainedNode = { any: [{ field: 'teamId', op: 'eq', value: 't1' }] };
+    const state = filterToBuilder('task', { all: [retainedNode] } as never);
+    const next = builderToFilter('task', {
+      ...state,
+      rows: [
+        { field: 'priority', id: 'r1', op: 'eq', value: 3 },
+        { field: 'projectId', id: 'r2', op: 'isNull' },
+      ],
+    });
+    expect(next).toEqual({
+      all: [
+        retainedNode,
+        { field: 'priority', op: 'eq', value: 3 },
+        { field: 'projectId', op: 'isNull' },
+      ],
+    });
+  });
+
+  it('keeps an in/notIn predicate with non-string members as a locked node', () => {
+    const mixedIn = { field: 'priority', op: 'in', value: ['a', 2] };
+    const state = filterToBuilder('task', { all: [mixedIn] } as never);
+    expect(state.rows).toHaveLength(0);
+    expect(state.slots).toEqual([{ node: mixedIn, type: 'node' }]);
+    expect(builderToFilter('task', state)).toEqual({ all: [mixedIn] });
   });
 });

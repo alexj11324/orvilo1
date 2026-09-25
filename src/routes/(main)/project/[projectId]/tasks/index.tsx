@@ -17,7 +17,12 @@ const ProjectTasks = () => {
     return <AsyncError error={error} variant={'page'} onRetry={() => void mutate()} />;
   if (!data) return null;
 
-  return <AgentTasksPage projectId={data.data.project.id} />;
+  return (
+    <AgentTasksPage
+      projectId={data.data.project.id}
+      projectMilestones={data.data.milestones ?? undefined}
+    />
+  );
 };
 
 export default ProjectTasks;

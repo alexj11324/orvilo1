@@ -1,12 +1,13 @@
 import type { RecentItem } from '@orvilo/types';
 import { Command } from 'cmdk';
-import { BookmarkIcon, FolderKanbanIcon, ListTodo, UsersIcon } from 'lucide-react';
+import { BookmarkIcon, ListTodo, UsersIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
 import type { RECENT_SIDEBAR_TYPES } from '@/services/recent';
@@ -17,7 +18,7 @@ import { useCommandMenuContext } from './CommandMenuContext';
 import { CommandItem } from './components';
 
 const RECENT_ICON_MAP: Record<(typeof RECENT_SIDEBAR_TYPES)[number], typeof ListTodo> = {
-  project: FolderKanbanIcon,
+  project: PROJECT_ENTITY_ICON,
   savedView: BookmarkIcon,
   task: ListTodo,
   team: UsersIcon,

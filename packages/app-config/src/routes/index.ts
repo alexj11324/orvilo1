@@ -1,10 +1,10 @@
 import { type LucideIcon } from 'lucide-react';
 import {
   AlarmClock,
+  BoxIcon,
   BrainCircuit,
   Download,
   FilePenIcon,
-  FolderKanbanIcon,
   Image,
   Inbox,
   LayoutList,
@@ -172,7 +172,10 @@ export const NAVIGATION_ROUTES: NavigationRoute[] = [
   },
   {
     cmdkKey: 'cmdk.project',
-    icon: FolderKanbanIcon,
+    // The project entity mark — mirrors PROJECT_ENTITY_ICON in
+    // src/features/Projects/ProjectIcon.tsx (the registry stays lucide-only, so
+    // it references the same glyph rather than importing the component module).
+    icon: BoxIcon,
     id: 'project',
     keywords: ['project', 'projects', 'workspace', 'board'],
     keywordsKey: 'cmdk.keywords.project',

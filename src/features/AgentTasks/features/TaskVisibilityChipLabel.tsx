@@ -1,11 +1,14 @@
 import { Block, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
-import { LockIcon, UsersIcon } from 'lucide-react';
 import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { getTaskVisibilityDefaultLabel, getTaskVisibilityLabelKey } from './taskVisibilityLabel';
+import {
+  getTaskVisibilityDefaultLabel,
+  getTaskVisibilityLabelKey,
+  TASK_VISIBILITY_ICONS,
+} from './taskVisibilityLabel';
 
 type BlockProps = ComponentProps<typeof Block>;
 
@@ -30,7 +33,7 @@ interface TaskVisibilityChipLabelProps extends Omit<BlockProps, 'children' | 'va
 const TaskVisibilityChipLabel = memo<TaskVisibilityChipLabelProps>(
   ({ variant = 'chip', visibility, ...rest }) => {
     const { t } = useTranslation('chat');
-    const IconComp = visibility === 'private' ? LockIcon : UsersIcon;
+    const IconComp = TASK_VISIBILITY_ICONS[visibility];
     const label = t(getTaskVisibilityLabelKey(visibility) as never, {
       defaultValue: getTaskVisibilityDefaultLabel(visibility),
     });

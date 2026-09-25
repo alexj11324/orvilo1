@@ -46,7 +46,7 @@ describe('useNavLayout', () => {
     const { result } = renderHook(() => useNavLayout());
     const keys = result.current.topNavItems.map((item) => item.key);
 
-    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent']);
+    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'drafts']);
     expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
     expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
       '/my-issues',

@@ -58,8 +58,17 @@ export const routeOverlayWrites = (
 
 export const systemStatus = (s: GlobalState) => s.status;
 
+// The Linear parity default `INITIAL_STATUS.leftPanelWidth` (244) sits only 4px
+// above this floor. Raising the floor past 244 silently swallows it: the clamp
+// returns the floor and nothing downstream can tell the parity value was rejected.
 export const NAV_PANEL_MIN_WIDTH = 240;
 export const NAV_PANEL_MAX_WIDTH = 400;
+// Viewport width below which the nav panel auto-collapses into the header
+// toggle instead of pinning a fixed column.
+export const NAV_PANEL_AUTO_COLLAPSE_BELOW = 960;
+// Session flag marking that the current collapsed nav state was set by the
+// narrow-viewport auto-collapse (not by the user), so a wide relaunch restores.
+export const NAV_PANEL_AUTO_COLLAPSED_KEY = 'nav-panel-auto-collapsed';
 
 const normalizeNavPanelWidth = (width: number | string | undefined): number => {
   const parsed = typeof width === 'string' ? Number.parseInt(width) : width;
@@ -100,6 +109,8 @@ const favoritePageSize = (s: GlobalState): number => s.status.favoritePageSize |
 const recentPageSize = (s: GlobalState): number => s.status.recentPageSize || 5;
 
 const pagePageSize = (s: GlobalState): number => s.status.pagePageSize || 20;
+const taskListViewDefaults = (s: GlobalState) => s.status.taskListViewDefaults;
+
 const taskListViewOptions = (s: GlobalState) =>
   s.status.taskListViewOptions || {
     groupBy: 'status',
@@ -108,7 +119,8 @@ const taskListViewOptions = (s: GlobalState) =>
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
     orderDirection: 'asc',
-    showSubTasks: false,
+    showMilestone: true,
+    showSubTasks: true,
     subGroupBy: 'none',
   };
 
@@ -164,6 +176,17 @@ const hiddenSidebarSections =
     return withoutRetiredItems(s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS);
   };
 
+/**
+ * Keys the user folded away, in the same `team:<id>` vocabulary as
+ * `sidebarExpandedKeys`. Empty means "nothing was ever folded", which is also
+ * the state of every account that predates the field — those keys default to
+ * expanded (Linear keeps a team's sub-navigation open until you close it).
+ */
+const sidebarCollapsedKeys =
+  (workspaceId: string | null) =>
+  (s: GlobalState): string[] =>
+    readOverridableField(s.status, 'sidebarCollapsedKeys', workspaceId) ?? [];
+
 const sidebarExpandedKeys =
   (workspaceId: string | null) =>
   (s: GlobalState): string[] =>
@@ -189,6 +212,7 @@ export const DEFAULT_SIDEBAR_ITEMS: string[] = [
   'my-work',
   'reviews',
   'agent',
+  'drafts',
   'create',
   'workspace',
   'favorites',
@@ -402,6 +426,8 @@ const filePanelWidth = (s: GlobalState) => s.status.filePanelWidth;
 const groupAgentBuilderPanelWidth = (s: GlobalState) => s.status.groupAgentBuilderPanelWidth || 360;
 const agentListViewMode = (s: GlobalState) => s.status.agentListViewMode || 'list';
 const agentListViewOptions = (s: GlobalState) => s.status.agentListViewOptions;
+const projectListViewOptions = (s: GlobalState) => s.status.projectListViewOptions;
+const teamProjectsViewOptions = (s: GlobalState) => s.status.teamProjectsViewOptions;
 const agentListExpandedGroupKeys = (s: GlobalState) => s.status.agentListExpandedGroupKeys ?? [];
 const agentListSidebarSectionCollapsed = (s: GlobalState) =>
   s.status.agentListSidebarSectionCollapsed ?? false;
@@ -440,6 +466,30 @@ const tokenDisplayFormatShort = (s: GlobalState) =>
 
 const homeSelectedAgentId = (s: GlobalState) => s.status.homeSelectedAgentId;
 
+/**
+ * Per (user, workspace) priority-inbox choice. `scopeKey` is the WorkInbox
+ * `inboxPriorityScopeKey` (`userId:workspaceId`); `undefined` means the user
+ * has not decided yet, which is what keeps the onboarding banner visible.
+ */
+const inboxPriorityMode =
+  (scopeKey: string) =>
+  (s: GlobalState): 'all' | 'priority' | undefined =>
+    s.status.inboxPriorityMode?.[scopeKey];
+
+/** Per (user, workspace) inbox "show snoozed" toggle; undefined/false hides. */
+const inboxShowSnoozed =
+  (scopeKey: string) =>
+  (s: GlobalState): boolean | undefined =>
+    s.status.inboxShowSnoozed?.[scopeKey];
+
+/**
+ * Per (user, workspace) My issues display options, keyed by the same scope
+ * key as `inboxPriorityMode` (`userId:workspaceId`), then by tab. The page
+ * normalizes the payload against its per-tab defaults.
+ */
+const myWorkViewOptions = (scopeKey: string) => (s: GlobalState) =>
+  s.status.myWorkViewOptions?.[scopeKey];
+
 export const systemStatusSelectors = {
   agentBuilderPanelWidth,
   agentListExpandedGroupKeys,
@@ -462,6 +512,8 @@ export const systemStatusSelectors = {
   homeRecentsCount,
   homeSelectedAgentId,
   homeTaskCount,
+  inboxPriorityMode,
+  inboxShowSnoozed,
   isBannerDismissed,
   isNotificationRead,
   isShowCredit,
@@ -470,17 +522,22 @@ export const systemStatusSelectors = {
   leftPanelWidth,
   mobileShowPortal,
   mobileShowTopic,
+  myWorkViewOptions,
   pageAgentPanelWidth,
   pagePageSize,
   portalWidth,
   portalWidths,
+  projectListViewOptions,
   privateAgentPageSize,
   recentPageSize,
   taskCreateInlineCollapsed,
   taskKanbanHiddenColumns,
   taskKanbanHiddenPanelCollapsed,
+  taskListViewDefaults,
   taskListViewMode,
   taskListViewOptions,
+  teamProjectsViewOptions,
+  sidebarCollapsedKeys,
   sidebarExpandedKeys,
   agentSidebarSections,
   sidebarItems,

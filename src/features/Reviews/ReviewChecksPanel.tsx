@@ -8,8 +8,10 @@ import {
   ExternalLinkIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 
 import CollectionFooter from './CollectionFooter';
 import type { CheckSummary, NormalizedCheckItem, PullRequestCollection } from './types';
@@ -87,9 +89,14 @@ export const checkSummaryVisual = (
  */
 const ReviewChecksPanel = memo<{
   checks: PullRequestCollection<NormalizedCheckItem> & { summary: CheckSummary };
-  onLoadMore?: (cursor: string) => Promise<void> | void;
+  onLoadMore?: (cursor: string) => Promise<void>;
 }>(({ checks, onLoadMore }) => {
   const { t } = useTranslation('common');
+  const checksMore = usePagedLoadMore();
+  const checksEndCursor = checks.endCursor;
+  useEffect(() => {
+    checksMore.resetLoadMoreError();
+  }, [checksEndCursor, checksMore.resetLoadMoreError]);
   const summary = checks.summary;
   const visual = checkSummaryVisual(summary.state);
   return (
@@ -128,11 +135,15 @@ const ReviewChecksPanel = memo<{
         );
       })}
       <CollectionFooter
+        error={checksMore.loadMoreError}
         hasMore={checks.hasMore}
         loaded={checks.loaded}
         total={checks.total}
+        onRetry={checksMore.retryLoadMore}
         onLoadMore={
-          checks.endCursor && onLoadMore ? () => onLoadMore(checks.endCursor!) : undefined
+          checks.endCursor && onLoadMore
+            ? () => checksMore.runLoadMore(() => onLoadMore(checks.endCursor!))
+            : undefined
         }
       />
     </Flexbox>

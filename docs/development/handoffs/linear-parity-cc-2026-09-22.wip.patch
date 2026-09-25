@@ -1,0 +1,248 @@
+diff --git a/docs/research/linear/project-overview/activity-composer-controls.spec.md b/docs/research/linear/project-overview/activity-composer-controls.spec.md
+index c61fef9a..7f339690 100644
+--- a/docs/research/linear/project-overview/activity-composer-controls.spec.md
++++ b/docs/research/linear/project-overview/activity-composer-controls.spec.md
+@@ -62,3 +62,32 @@ Project-change summary baseline, date/progress calculation, empty-body posting
+ semantics, and inclusion/exclusion interactions remain unknown. Investigate those
+ before adding API/schema or relaxing current submission validation. Track the
+ remaining work under ORV-125; this document does not close that issue.
++
++## Batch follow-up, 2026-09-22 (source 44afd39e)
++
++Main-agent-only execution requested by the user; no builder handoff or subagent
++review. Both CDP pages were captured at 1440×900; Comment/Update, editor focus,
++Post hover and the health menu were inspected without submitting or selecting a
++health value. Local evidence: `/tmp/orv-composer-9222-*.json` and corresponding PNGs.
++
++Confirmed additional measurements:
++
++- Composer border 1px `lch(97.3 0 282)`, radius10, white, two subtle shadows
++  (0 3px 6px -2px at .02; 0 1px 1px at .04). A pseudo-element's stored blue shadow
++  alone does not prove it is painted; the focused screenshot has no black border.
++- Header padding12px 12px 0, gap8; tablist26px, tabs24px, zero list gap/padding.
++- Editor content15px/450/24px, content inset16px; editor region70px with12px
++  preceding space. Footer52px: 12px top/bottom, 12px left/14px right, 28px row.
++- Health icon16px; its On track label is `lch(60 64.37 141.95)`, not gray.
++- Post hover background `lch(95.886 0 282)`. Comment mode hides Health and Write
++  with Agent, changes placeholder, and its submit label is `Comment`.
++- Source locales already use `Comment`; the current Electron instance displayed
++  older `Post comment`. Investigate loaded locale/caching, do not duplicate keys.
++- At390px the reference Properties surface overlays the content; the candidate
++  instead unmounts the panel. This is a separate frame/interaction gap, not a pass.
++
++Implement these measured composer controls in one scoped batch. Preserve working
++mode/health/post behavior and empty-body validation; reference `disabled=false`
++does not establish successful empty posting. Keep existing dark tokens rather
++than applying unobserved light colors globally. Attachment, Agent, summary,
++health-icon geometry, dark states and full page-frame parity remain open.
+diff --git a/src/features/Projects/Updates/ProjectUpdateEditor.tsx b/src/features/Projects/Updates/ProjectUpdateEditor.tsx
+index 95e3e034..15765d03 100644
+--- a/src/features/Projects/Updates/ProjectUpdateEditor.tsx
++++ b/src/features/Projects/Updates/ProjectUpdateEditor.tsx
+@@ -10,6 +10,7 @@ const styles = createStaticStyles(({ css }) => ({
+     [contenteditable] {
+       min-height: 32px;
+       font-size: 15px !important;
++      font-weight: 450;
+       line-height: 24px;
+     }
+   `,
+@@ -51,7 +52,7 @@ export function ProjectUpdateEditor({
+       editor={editor}
+       placeholder={placeholder}
+       plugins={plugins}
+-      style={{ minHeight: 32, maxHeight: 240, overflowY: 'auto', padding: '10px 12px 4px' }}
++      style={{ minHeight: 82, maxHeight: 240, overflowY: 'auto', padding: '16px 16px 0' }}
+       theme={{ fontSize: 15, lineHeight: 1.6 }}
+       type="text"
+       variant="chat"
+diff --git a/src/features/Projects/Updates/index.tsx b/src/features/Projects/Updates/index.tsx
+index ef4c6fd8..d439f164 100644
+--- a/src/features/Projects/Updates/index.tsx
++++ b/src/features/Projects/Updates/index.tsx
+@@ -10,6 +10,7 @@ import { memo, useState } from 'react';
+ import { useTranslation } from 'react-i18next';
+ 
+ import Avatar from '@/components/Avatar';
++import { useIsDark } from '@/hooks/useIsDark';
+ import { useClientDataSWR } from '@/libs/swr';
+ import { projectService } from '@/services/project';
+ 
+@@ -70,28 +71,90 @@ const styles = createStaticStyles(({ css }) => ({
+   `,
+   composer: css`
+     overflow: hidden;
+-    border: 1px solid ${cssVar.colorBorder};
+-    border-radius: 12px;
+-    background: ${cssVar.colorBgContainer};
+ 
+-    &:focus-within {
+-      border-color: ${cssVar.colorPrimary};
+-    }
++    border: 1px solid var(--project-composer-border, ${cssVar.colorBorder});
++    border-radius: 10px;
++
++    background: ${cssVar.colorBgContainer};
++    box-shadow: var(--project-control-shadow, ${cssVar.boxShadowTertiary});
+   `,
+   composerFooter: css`
+-    padding-block: 4px 6px;
+-    padding-inline: 12px 6px;
++    box-sizing: border-box;
++    min-height: 52px;
++    padding-block: 12px;
++    padding-inline: 12px 14px;
+   `,
+-  healthPick: css`
+-    cursor: pointer;
++  composerLight: css`
++    --project-composer-border: lch(97.3% 0 282deg);
++    --project-control-border: lch(90.55% 0 282deg);
++    --project-control-text: lch(20% 1 282deg);
++    --project-control-muted: lch(40% 1 282deg);
++    --project-control-selected: lch(95.543% 0 282deg);
++    --project-control-hover: lch(95.886% 0 282deg);
++    --project-control-ring: lch(0% 0 0deg / 10.3%);
++    --project-control-shadow: 0 3px 6px -2px lch(0% 0 0deg / 2%), 0 1px 1px lch(0% 0 0deg / 4%);
++    --project-health-ontrack: lch(60% 64.37 141.95deg);
++  `,
++  controlButton: css`
++    && {
++      height: 24px;
++      min-height: 24px;
++      padding-block: 0;
++      padding-inline: 8px;
++      border-color: transparent;
++      border-radius: 9999px;
++
++      font-size: 12px;
++      font-weight: 500;
++      line-height: normal;
++      color: var(--project-control-text, ${cssVar.colorText});
++
++      background: ${cssVar.colorBgContainer};
++      box-shadow:
++        0 0 0 1px var(--project-control-ring, ${cssVar.colorBorder}),
++        var(--project-control-shadow, ${cssVar.boxShadowTertiary});
++    }
++
++    &&:hover:not(:disabled),
++    &&[data-popup-open] {
++      background: var(--project-control-hover, ${cssVar.colorFillSecondary});
++    }
+   `,
+   modeTab: css`
+-    height: 24px;
+-    min-height: 24px;
+-    padding-block: 0;
+-    padding-inline: 8px;
++    && {
++      height: 24px;
++      min-height: 24px;
++      padding-block: 0;
++      padding-inline: 8px;
++      border-radius: 9999px;
++
++      font-size: 12px;
++      line-height: 18px;
++      color: var(--project-control-muted, ${cssVar.colorTextSecondary});
++    }
++
++    &&[data-active] {
++      color: var(--project-control-text, ${cssVar.colorText});
++      background: var(--project-control-selected, ${cssVar.colorFillSecondary});
++      box-shadow:
++        0 0 0 1px var(--project-control-border, ${cssVar.colorBorder}),
++        var(--project-control-shadow, ${cssVar.boxShadowTertiary});
++    }
++  `,
++  modeList: css`
++    && {
++      gap: 0;
++
++      padding: 0;
++      border: 1px solid var(--project-control-border, ${cssVar.colorBorder});
++      border-radius: 9999px;
+ 
+-    font-size: 12px;
++      background: ${cssVar.colorBgContainer};
++      box-shadow: var(--project-control-shadow, ${cssVar.boxShadowTertiary});
++    }
++  `,
++  modeIndicator: css`
++    display: none;
+   `,
+   modeTabs: css`
+     flex: none;
+@@ -155,6 +218,7 @@ export const ProjectUpdateComposer = memo<{
+   projectId: string;
+ }>(({ defaultExpanded, defaultMode = 'update', emptyState, onExpand, onPosted, projectId }) => {
+   const { t } = useTranslation('project');
++  const isDark = useIsDark();
+   const [body, setBody] = useState('');
+   const [health, setHealth] = useState<ProjectHealth>('onTrack');
+   const [posting, setPosting] = useState(false);
+@@ -214,12 +278,18 @@ export const ProjectUpdateComposer = memo<{
+   }
+ 
+   return (
+-    <Flexbox className={styles.composer}>
+-      <Flexbox horizontal align={'center'} gap={4} padding={8}>
++    <Flexbox
++      className={[styles.composer, !isDark && styles.composerLight].filter(Boolean).join(' ')}
++    >
++      <Flexbox horizontal align={'center'} gap={8} padding={'12px 12px 0'}>
+         <Tabs
+           activeKey={mode}
+           className={styles.modeTabs}
+-          classNames={{ tab: styles.modeTab }}
++          classNames={{
++            indicator: styles.modeIndicator,
++            list: styles.modeList,
++            tab: styles.modeTab,
++          }}
+           size="small"
+           items={[
+             { key: 'comment', label: t('overview.updateModeComment') },
+@@ -239,11 +309,26 @@ export const ProjectUpdateComposer = memo<{
+             }))}
+           >
+             <Button
+-              className={styles.modeTab}
+-              icon={<Icon icon={PROJECT_UPDATE_HEALTH_META[health].icon} size={12} />}
++              className={styles.controlButton}
++              icon={
++                <Icon
++                  icon={PROJECT_UPDATE_HEALTH_META[health].icon}
++                  size={16}
++                  style={{ marginInlineStart: -4 }}
++                />
++              }
+               size={'small'}
+             >
+-              {t(`overview.health.${health}`, { defaultValue: health })}
++              <span
++                style={{
++                  color:
++                    health === 'onTrack'
++                      ? `var(--project-health-ontrack, ${cssVar.colorSuccess})`
++                      : cssVar[PROJECT_UPDATE_HEALTH_META[health].color],
++                }}
++              >
++                {t(`overview.health.${health}`, { defaultValue: health })}
++              </span>
+             </Button>
+           </DropdownMenu>
+         )}
+@@ -260,10 +345,9 @@ export const ProjectUpdateComposer = memo<{
+       />
+       <Flexbox horizontal align={'center'} className={styles.composerFooter} justify={'flex-end'}>
+         <Button
+-          className={styles.modeTab}
++          className={styles.controlButton}
+           disabled={!body.trim()}
+           loading={posting}
+-          type={'primary'}
+           onClick={() => void post()}
+         >
+           {t(mode === 'update' ? 'overview.postUpdate' : 'overview.postComment')}

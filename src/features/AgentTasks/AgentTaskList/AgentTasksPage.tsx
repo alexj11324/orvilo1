@@ -1,8 +1,20 @@
 import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, TabsIndicator, TabsList, TabsRoot, TabsTab, Text } from '@lobehub/ui/base-ui';
+import {
+  ActionIcon,
+  Button,
+  DropdownMenu,
+  TabsIndicator,
+  TabsList,
+  TabsRoot,
+  TabsTab,
+  Text,
+} from '@lobehub/ui/base-ui';
+import { agentDisplayName } from '@orvilo/types';
 import { Pagination } from 'antd';
-import { Plus } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { ChevronDownIcon, Plus, XIcon } from 'lucide-react';
+import { memo, use, useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -25,16 +37,44 @@ import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPag
 import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
 import NavHeader from '@/features/NavHeader';
+import IssueDetailPane from '@/features/Projects/Issues/IssueDetailPane';
+import IssueFilterChips from '@/features/Projects/Issues/IssueFilterChips';
+import type { ProjectIssueFilter } from '@/features/Projects/Issues/issueFilters';
+import {
+  filterProjectIssueList,
+  projectIssuesViewFilterSeed,
+  readProjectIssueFilters,
+  removeProjectIssueFilter,
+  serializeIssueFilterParam,
+  writeProjectIssueFilters,
+} from '@/features/Projects/Issues/issueFilters';
+import ProjectIssuesControls from '@/features/Projects/Issues/ProjectIssuesControls';
+import { ProjectToolbarContext } from '@/features/Projects/Layout/ProjectToolbarContext';
+import {
+  filterTasksByMilestone,
+  PROJECT_MILESTONE_FILTER_PARAM,
+  readProjectMilestoneFilter,
+  type TaskMilestoneRef,
+} from '@/features/Projects/milestoneFilter';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
+import NewViewModal from '@/features/SavedViews/NewViewModal';
+import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
+import { useClientDataSWR } from '@/libs/swr';
+import { taskLabelKeys } from '@/libs/swr/keys';
+import { taskLabelService } from '@/services/taskLabel';
 import { useGlobalStore } from '@/store/global';
 import type { TaskViewMode } from '@/store/global/initialState';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { useHomeStore } from '@/store/home';
+import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
+import { useUserStore } from '@/store/user';
+import { authSelectors } from '@/store/user/selectors';
 
 import { createTaskModal } from '../CreateTaskModal';
 import Breadcrumb from '../shared/Breadcrumb';
@@ -47,6 +87,23 @@ import { shouldRenderTaskAgentPanelToggle } from './taskAgentPanelToggle';
 import TaskList from './TaskList';
 import TaskListVisibilityFilter from './TaskListVisibilityFilter';
 import TasksGroupConfig from './TasksGroupConfig';
+
+const styles = createStaticStyles(({ css }) => ({
+  /**
+   * The project issues peek pane — same 400px / layout background contract
+   * the My issues detail pane holds.
+   */
+  detailPane: css`
+    overflow-y: auto;
+    flex: none;
+
+    width: 400px;
+    padding-block-end: 12px;
+    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
+
+    background: ${cssVar.colorBgLayout};
+  `,
+}));
 
 interface TaskCreateActionBehaviorParams {
   canCreateTask: boolean;
@@ -83,13 +140,17 @@ export const getTaskPageHeaderVisibility = ({
   isMobile,
   projectId,
 }: TaskPageHeaderVisibilityParams) => {
-  // The global page's own crumb is the `tasks` tab, so the breadcrumb only
-  // earns its place once the list is scoped to an agent or a project.
-  const isScoped = !!(agentId || projectId);
+  // Projects already own their breadcrumb and details panel in the shared layout.
+  const isScoped = !!agentId && !projectId;
 
   return {
     showBreadcrumb: isScoped,
-    showTaskAgentPanelToggle: shouldRenderTaskAgentPanelToggle(isMobile),
+    showTaskAgentPanelToggle: !projectId && shouldRenderTaskAgentPanelToggle(isMobile),
+    // The visibility chip is the issues surface's filter entry; a project
+    // scope is still a workspace list, so hiding it there was collateral of
+    // the `!projectId` header gates — not intent. Agent scope stays without
+    // it (its list is already scoped to one assignee).
+    showVisibilityFilter: !agentId,
     showViewOptions: true,
   };
 };
@@ -102,6 +163,12 @@ interface AgentTasksPageProps {
   agentId?: string;
   /** When provided, shows the complete task workspace scoped to one project. */
   projectId?: string;
+  /**
+   * The project's milestones — names the `?projectMilestoneId=` chip and feeds
+   * the issues list's milestone grouping and row badges. Only read when
+   * `projectId` is set.
+   */
+  projectMilestones?: readonly TaskMilestoneRef[];
 }
 
 export type TaskCollection = 'mine' | 'scheduled' | 'tasks';
@@ -196,13 +263,23 @@ export const resolveTaskCollectionView = (
 export const resolveOrdinaryCollectionSurface = (viewMode: TaskViewMode): 'board' | 'list' =>
   resolveTaskCollectionView('tasks', viewMode);
 
-const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
+const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectMilestones }) => {
   const { t } = useTranslation('chat');
+  const projectToolbar = use(ProjectToolbarContext);
   const navigate = useWorkspaceAwareNavigate();
   const isMobile = useIsMobile();
   const { allowed: canCreateTask, reason } = usePermission('create_content');
-  const viewMode = useGlobalStore(systemStatusSelectors.taskListViewMode);
+  const storedViewMode = useGlobalStore((s) => s.status.taskListViewMode);
+  // Linear parity scoped to this surface: a project's Issues collection opens
+  // on the grouped list; every other collection keeps the board default. A
+  // stored value is the user's own choice and always wins.
   const [searchParams, setSearchParams] = useSearchParams();
+  // A project's issues narrowed to one milestone (the overview's progress
+  // link; the rail's See issues opens the unfiltered list, as measured on
+  // the reference). Filtered client-side over the complete list,
+  // so the surface is pinned to that list: the board pages its columns on the
+  // server and would show counts for the unfiltered set.
+  const milestoneFilterId = projectId ? readProjectMilestoneFilter(searchParams) : undefined;
   const [collectionPage, setCollectionPage] = useState(1);
   const activeWorkspaceId = useActiveWorkspaceId();
   const mineRedirect = resolveMineCollectionRedirect({
@@ -223,6 +300,27 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   const isScheduledCollection = collection === 'scheduled';
   const isMineCollection = collection === 'mine';
   const isOrdinaryCollection = collection === 'tasks';
+  // The generic Add-filter menu's applied clauses — `?filter=` params, the
+  // same URL convention the projects list uses. Read only on a project's
+  // ordinary issues tab: the param is meaningless on other scopes, and a
+  // stray value on the scheduled tab must not paint chips there.
+  const issueFilters = useMemo(
+    () => (projectId && isOrdinaryCollection ? readProjectIssueFilters(searchParams) : []),
+    [isOrdinaryCollection, projectId, searchParams],
+  );
+  const hasIssueFilters = issueFilters.length > 0;
+  const updateIssueFilters = useCallback(
+    (next: ProjectIssueFilter[]) =>
+      setSearchParams(writeProjectIssueFilters(searchParams, next), { replace: true }),
+    [searchParams, setSearchParams],
+  );
+  // Filtered surfaces pin the list for the same reason the milestone cut
+  // does: the board pages columns server-side and would show counts for the
+  // unfiltered set.
+  const viewMode: TaskViewMode =
+    milestoneFilterId || hasIssueFilters
+      ? 'list'
+      : (storedViewMode ?? (projectId ? 'list' : 'kanban'));
   const myTaskScope = resolveMyTaskScope(searchParams);
   // The automations tab reads the same two narrowings as the Automations page,
   // off the same query params, so a link into either door opens the same slice.
@@ -254,7 +352,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
           complete: isListView,
           enabled: isOrdinaryCollection,
           projectId,
-          visibility: 'all',
+          // No `visibility` pin: the header's visibility chip is the filter
+          // entry for this scope too, so the fetch follows it like the
+          // global list does.
         }
       : agentId
         ? { agentId, automated: false, complete: isListView, enabled: isOrdinaryCollection }
@@ -275,10 +375,104 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
   // signal never disagrees with the emptiness signal. Still resets to false on a
   // failed first load, so we surface loading only while there's no error (below).
   const isTaskListInit = useTaskStore(taskListSelectors.isTaskListInit);
+  const storeTasks = useTaskStore(taskListSelectors.taskList);
+  const milestoneTasks = useMemo(
+    () => (milestoneFilterId ? filterTasksByMilestone(storeTasks, milestoneFilterId) : undefined),
+    [milestoneFilterId, storeTasks],
+  );
+  // An id no milestone answers to still narrows the list; say which id rather
+  // than pretend the filter is not there.
+  const milestoneFilterName =
+    milestoneFilterId &&
+    (projectMilestones?.find((milestone) => milestone.id === milestoneFilterId)?.name ??
+      milestoneFilterId);
+  // The menu's milestone picker and the header chip write the same param —
+  // one state, two affordances.
+  const handleMilestoneFilterChange = useCallback(
+    (id: string | undefined) => {
+      const next = new URLSearchParams(searchParams);
+      if (id) next.set(PROJECT_MILESTONE_FILTER_PARAM, id);
+      else next.delete(PROJECT_MILESTONE_FILTER_PARAM);
+      setSearchParams(next);
+    },
+    [searchParams, setSearchParams],
+  );
+  const clearMilestoneFilter = useCallback(
+    () => handleMilestoneFilterChange(undefined),
+    [handleMilestoneFilterChange],
+  );
   // The surface follows the stored view mode alone; an empty collection no
   // longer snaps onto the board (see resolveOrdinaryCollectionSurface).
   const ordinarySurface = resolveOrdinaryCollectionSurface(viewMode);
   const isBoardSurface = isMineBoard || (isOrdinaryCollection && ordinarySurface === 'board');
+
+  /* ------------------- project issues Add-filter state ------------------- */
+
+  // Chip labels resolve through the same rosters the pickers use — fetched
+  // only while a filter clause actually references them.
+  const isLogin = useUserStore(authSelectors.isLogin);
+  const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const membersSWR = useWorkspaceMembersQuery({
+    enabled: !!projectId && hasIssueFilters && !!activeWorkspaceId,
+  });
+  const { data: issueLabelsData } = useClientDataSWR(
+    projectId && hasIssueFilters && isLogin ? taskLabelKeys.list(isLogin, activeWorkspaceId) : null,
+    () => taskLabelService.getLabels(),
+  );
+  const memberName = useCallback(
+    (userId: string) => {
+      const member = membersSWR.members?.find((item) => item.userId === userId);
+      return member?.user?.fullName || member?.user?.username || userId;
+    },
+    [membersSWR.members],
+  );
+  const agentName = useCallback(
+    (id: string) => agentDisplayName(agents.find((agent) => agent.id === id)) || id,
+    [agents],
+  );
+  const labelName = useCallback(
+    (id: string) => issueLabelsData?.find((label) => label.id === id)?.name ?? id,
+    [issueLabelsData],
+  );
+
+  // Every field the menu offers rides the task row (labels included — the
+  // list route batches them on), so applied filters narrow client-side over
+  // the complete project fetch, exactly like the milestone cut. With no
+  // filter applied `items` stays undefined and TaskList reads the store
+  // itself (its truncation note only makes sense unfiltered).
+  const filteredIssueTasks = useMemo(() => {
+    if (!projectId || !isOrdinaryCollection || issueFilters.length === 0) return milestoneTasks;
+    return filterProjectIssueList(milestoneTasks ?? storeTasks, issueFilters);
+  }, [isOrdinaryCollection, issueFilters, milestoneTasks, projectId, storeTasks]);
+
+  /* --------------------- selection + peek ("Open details") ------------- */
+
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedIdentifier, setSelectedIdentifier] = useState<string | null>(null);
+  const [advancedFilterOpen, setAdvancedFilterOpen] = useState(false);
+  // The saved-view seed: project scope first, then every expressible applied
+  // filter. Recomputed only when the URL filters change so NewViewModal's
+  // builder state stays stable between renders.
+  const viewFilterSeed = useMemo(
+    () => (projectId ? projectIssuesViewFilterSeed(projectId, issueFilters) : undefined),
+    [projectId, issueFilters],
+  );
+  // A selection is only meaningful inside the list it came from — switching
+  // collection, filters or surface drops it (My issues clears on the same
+  // cues).
+  const issueFiltersSignature = issueFilters.map(serializeIssueFilterParam).join('|');
+  useEffect(() => {
+    setSelectedIdentifier(null);
+  }, [collection, issueFiltersSignature, milestoneFilterId, projectId, viewMode]);
+  // Peek only arms on the project issues list — board cards own their clicks.
+  const peekEnabled = !!projectId && isOrdinaryCollection && ordinarySurface === 'list';
+  const peekOnSelect = peekEnabled && detailsOpen;
+  const openSelectedTaskPage = useCallback(() => {
+    if (!selectedIdentifier) return;
+    const task = storeTasks.find((item) => item.identifier === selectedIdentifier);
+    navigate(taskDetailPath(selectedIdentifier, undefined, task?.name));
+  }, [navigate, selectedIdentifier, storeTasks]);
+
   const scheduledSWR = useScheduledTaskPage({
     agentId,
     enabled: isScheduledCollection,
@@ -464,6 +658,97 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
     </Flexbox>
   );
 
+  const pageHeader = (
+    <NavHeader
+      left={projectId ? undefined : headerLeft}
+      right={
+        <Flexbox horizontal align={'center'} gap={4}>
+          {milestoneFilterName && (
+            <Flexbox horizontal align={'center'} gap={2}>
+              <Text fontSize={12} type={'secondary'}>
+                {t('taskList.milestoneFilter', { name: milestoneFilterName })}
+              </Text>
+              <ActionIcon
+                icon={XIcon}
+                size={'small'}
+                title={t('taskList.milestoneFilterClear')}
+                onClick={clearMilestoneFilter}
+              />
+            </Flexbox>
+          )}
+          {projectId && (
+            <DropdownMenu
+              items={[
+                {
+                  key: 'tasks',
+                  label: t('taskList.title'),
+                  onClick: () => handleCollectionChange('tasks'),
+                },
+                {
+                  key: 'scheduled',
+                  label: t('taskList.scheduled.title'),
+                  onClick: () => handleCollectionChange('scheduled'),
+                },
+              ]}
+            >
+              <Button icon={ChevronDownIcon} shape={'round'} size={'small'} type={'text'}>
+                {t(isScheduledCollection ? 'taskList.scheduled.title' : 'taskList.title')}
+              </Button>
+            </DropdownMenu>
+          )}
+          {isOrdinaryCollection && headerVisibility.showVisibilityFilter && (
+            <TaskListVisibilityFilter />
+          )}
+          {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
+            <ActionIcon
+              disabled={createActionBehavior.disabled}
+              icon={Plus}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              style={{ borderRadius: 9999 }}
+              title={createActionBehavior.disabled ? reason : undefined}
+              onClick={handleCreateTask}
+            />
+          )}
+          {!isScheduledCollection && headerVisibility.showViewOptions && (
+            <TasksGroupConfig
+              milestones={projectId ? projectMilestones : undefined}
+              options={viewOptions}
+              pinnedOptions={isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined}
+              setOptions={setViewOptions}
+              viewMode={viewMode}
+            />
+          )}
+          {projectId && isOrdinaryCollection && (
+            <ProjectIssuesControls
+              detailsOpen={detailsOpen}
+              filters={issueFilters}
+              milestoneId={milestoneFilterId || undefined}
+              milestones={projectMilestones}
+              peekEnabled={peekEnabled}
+              onFiltersChange={updateIssueFilters}
+              onMilestoneChange={handleMilestoneFilterChange}
+              onNewView={() => setAdvancedFilterOpen(true)}
+              onToggleDetails={() => setDetailsOpen((open) => !open)}
+            />
+          )}
+          {headerVisibility.showTaskAgentPanelToggle && (
+            <ToggleRightPanelButton
+              hideWhenExpanded
+              expand={showTaskAgentPanel}
+              onToggle={() => toggleTaskAgentPanel()}
+            />
+          )}
+        </Flexbox>
+      }
+      styles={{
+        left: {
+          paddingLeft: 4,
+          gap: 8,
+        },
+      }}
+    />
+  );
+
   // Collaboration scope: a project board joins `project:{id}`; the global
   // workspace task page joins `workspace:{id}`; personal mode joins nothing —
   // there is no tenant to share presence with. Project rooms only exist under
@@ -484,45 +769,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
         }
       >
         <Flexbox flex={1} height={'100%'}>
-          <NavHeader
-            left={headerLeft}
-            right={
-              <Flexbox horizontal align={'center'} gap={4}>
-                {isOrdinaryCollection && !agentId && !projectId && <TaskListVisibilityFilter />}
-                {isOrdinaryCollection && (inlineCollapsed || isBoardSurface) && (
-                  <ActionIcon
-                    disabled={createActionBehavior.disabled}
-                    icon={Plus}
-                    size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-                    title={createActionBehavior.disabled ? reason : undefined}
-                    onClick={handleCreateTask}
-                  />
-                )}
-                {!isScheduledCollection && headerVisibility.showViewOptions && (
-                  <TasksGroupConfig
-                    options={viewOptions}
-                    setOptions={setViewOptions}
-                    pinnedOptions={
-                      isMineCollection ? PAGINATED_COLLECTION_PINNED_OPTIONS : undefined
-                    }
-                  />
-                )}
-                {headerVisibility.showTaskAgentPanelToggle && (
-                  <ToggleRightPanelButton
-                    hideWhenExpanded
-                    expand={showTaskAgentPanel}
-                    onToggle={() => toggleTaskAgentPanel()}
-                  />
-                )}
-              </Flexbox>
-            }
-            styles={{
-              left: {
-                paddingLeft: 4,
-                gap: 8,
-              },
-            }}
-          />
+          {projectId && projectToolbar ? createPortal(pageHeader, projectToolbar) : pageHeader}
           {isMineBoard ? (
             <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
               <KanbanBoard
@@ -607,32 +854,71 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId }) => {
               />
             </Flexbox>
           ) : (
-            <WideScreenContainer
-              fullWidth
-              gap={16}
-              paddingBlock={16}
-              paddingInline={16}
-              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-            >
-              {!inlineCollapsed && (
-                <CreateTaskInlineEntry
-                  agentId={agentId}
-                  lockAssignee={!!agentId}
-                  projectId={projectId}
+            <Flexbox horizontal flex={1} style={{ minHeight: 0, minWidth: 0 }}>
+              <WideScreenContainer
+                fullWidth
+                gap={16}
+                paddingBlock={16}
+                paddingInline={16}
+                wrapperStyle={{ flex: 1, overflowY: 'auto' }}
+              >
+                {projectId && (
+                  <IssueFilterChips
+                    agentName={agentName}
+                    filters={issueFilters}
+                    labelName={labelName}
+                    memberName={memberName}
+                    onClearAll={() => updateIssueFilters([])}
+                    onRemove={(key) =>
+                      updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+                    }
+                  />
+                )}
+                {!inlineCollapsed && (
+                  <CreateTaskInlineEntry
+                    agentId={agentId}
+                    lockAssignee={!!agentId}
+                    projectId={projectId}
+                  />
+                )}
+                <TaskList
+                  data={isTaskListInit || undefined}
+                  error={error}
+                  isLoading={isLoading || (!isTaskListInit && !error)}
+                  items={filteredIssueTasks}
+                  milestones={projectId ? projectMilestones : undefined}
+                  options={viewOptions}
+                  peekOnSelect={peekOnSelect}
+                  routeScope={routeScope}
+                  selectedIdentifier={selectedIdentifier ?? undefined}
+                  onRetry={() => mutate()}
+                  onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                  onShowHiddenCompleted={handleShowHiddenCompleted}
+                  onOpenTask={(task) =>
+                    navigate(taskDetailPath(task.identifier, undefined, task.name))
+                  }
                 />
+              </WideScreenContainer>
+              {peekOnSelect && (
+                <div className={styles.detailPane}>
+                  <IssueDetailPane
+                    identifier={selectedIdentifier}
+                    onClose={() => setDetailsOpen(false)}
+                    onOpen={openSelectedTaskPage}
+                  />
+                </div>
               )}
-              <TaskList
-                data={isTaskListInit || undefined}
-                error={error}
-                isLoading={isLoading || (!isTaskListInit && !error)}
-                options={viewOptions}
-                routeScope={routeScope}
-                onRetry={() => mutate()}
-                onShowHiddenCompleted={handleShowHiddenCompleted}
-              />
-            </WideScreenContainer>
+            </Flexbox>
           )}
           <CollaborationOverlay />
+          {projectId && viewFilterSeed && (
+            <NewViewModal
+              defaultEntityType={'task'}
+              open={advancedFilterOpen}
+              seedFilter={viewFilterSeed}
+              onClose={() => setAdvancedFilterOpen(false)}
+            />
+          )}
         </Flexbox>
       </LinearTaskSyncProvider>
     </CollaborationProvider>

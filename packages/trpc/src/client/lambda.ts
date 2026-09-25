@@ -228,15 +228,17 @@ export const lambdaClient = createTRPCClient<LambdaRouter>({
  * from the personal settings page — pin the workspace header per client
  * instead. The override runs after the business headers merge, so it wins.
  */
-export const createWorkspaceLambdaClient = (workspaceId: string) => {
+export const createWorkspaceLambdaClient = (workspaceId: string | null) => {
   const scopedLinkOptions = {
     ...linkOptions,
-    headers: async () => ({
-      ...(await linkOptions.headers()),
-      // Same contract as the cloud business headers slot / the server's
-      // `WORKSPACE_ID_HEADER` (src/app/(backend)/webapi/_utils/workspace.ts).
-      'X-Workspace-Id': workspaceId,
-    }),
+    headers: async () => {
+      const headers = { ...(await linkOptions.headers()) } as Record<string, string>;
+      // Override the currently active workspace, including an explicit
+      // personal scope after the user navigates into a workspace.
+      if (workspaceId) headers['X-Workspace-Id'] = workspaceId;
+      else delete headers['X-Workspace-Id'];
+      return headers;
+    },
   };
   return createTRPCClient<LambdaRouter>({
     links: [

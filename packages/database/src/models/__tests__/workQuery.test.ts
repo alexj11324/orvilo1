@@ -3,6 +3,7 @@ import {
   applyDelegatedFilter,
   applyNoProjectFilter,
   WORK_QUERY_MAX_IN_VALUES,
+  type WorkQueryPredicate,
 } from '@orvilo/types';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -24,9 +25,10 @@ import {
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import { notifications } from '../../schemas/notification';
-import { tasks as tasksTable } from '../../schemas/task';
+import { taskDependencies, tasks as tasksTable } from '../../schemas/task';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
+import { TaskLabelModel } from '../taskLabel';
 import { TaskSubscriptionModel } from '../taskSubscription';
 import {
   applyWorkQueryLayout,
@@ -625,6 +627,178 @@ describe('WorkQueryModel', () => {
     expect(runningPage?.total).toBe(3);
     expect(runningPage?.tasks).toHaveLength(1);
     expect(runningPage?.tasks[0]!.id).not.toBe(byKey.get('running')!.tasks[0]!.id);
+  });
+
+  it('groups an assigned list by attention — urgent, then blocking, then workflow state', async () => {
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    // An urgent blocker lands in 'urgent' only — Linear's first bucket wins.
+    const urgentBlocker = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Urgent blocker',
+      priority: 1,
+      status: 'running',
+    });
+    const blocker = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Plain blocker',
+      status: 'running',
+    });
+    const blocked = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Blocked backlog',
+      status: 'backlog',
+      // Run state and workflow state disagree on purpose: the tail bucket
+      // must follow the workflow state, as Linear's status groups do.
+      workflowCategory: 'todo',
+    });
+    const doneBlocked = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Freed task',
+      status: 'completed',
+      workflowCategory: 'done',
+    });
+    const normal = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Ordinary paused',
+      status: 'paused',
+      workflowCategory: 'in_review',
+    });
+    // The urgent blocker also blocks an open task — it must stay in 'urgent'.
+    // `blocker` blocks `blocked`; `urgentBlocker`'s finished dependent is done
+    // but its second edge targets an open row... kept simple: urgentBlocker
+    // blocks `blocked` too; `blocker` also blocks the completed row, which
+    // must NOT count.
+    await serverDB.insert(taskDependencies).values([
+      {
+        dependsOnId: urgentBlocker.id,
+        taskId: blocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: blocker.id,
+        taskId: blocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: urgentBlocker.id,
+        taskId: doneBlocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: normal.id,
+        taskId: doneBlocked.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+    ]);
+
+    const query = applyWorkQueryLayout(myWorkQueryForMode('assigned'), 'list', 'attention');
+    const result = await model.queryTasks({ limit: 10, query });
+
+    expect(result.groupBy).toBe('attention');
+    const populated = result.groups!.filter((group) => group.total > 0);
+    expect(populated.map((group) => group.key)).toEqual([
+      'urgent',
+      'blocking',
+      'todo',
+      'in_review',
+      'done',
+    ]);
+    const byKey = new Map(result.groups!.map((group) => [group.key, group]));
+    expect(byKey.get('urgent')?.tasks.map((task) => task.id)).toEqual([urgentBlocker.id]);
+    expect(byKey.get('blocking')?.tasks.map((task) => task.id)).toEqual([blocker.id]);
+    expect(byKey.get('todo')?.tasks.map((task) => task.id)).toEqual([blocked.id]);
+    // `normal` blocks only a completed task — not a Linear "blocking issue".
+    expect(byKey.get('in_review')?.tasks.map((task) => task.id)).toEqual([normal.id]);
+    expect(byKey.get('done')?.tasks.map((task) => task.id)).toEqual([doneBlocked.id]);
+    // No execution-status key leaks into the tail buckets.
+    expect(result.groups!.map((group) => group.key)).not.toContain('paused');
+  });
+
+  it('keeps terminal rows and unreadable downstreams out of attention buckets', async () => {
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    // A completed urgent issue is not an "Urgent issue" — terminal rows stay
+    // in their workflow bucket.
+    const urgentDone = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Shipped urgent',
+      priority: 1,
+      status: 'completed',
+      workflowCategory: 'done',
+    });
+    // A completed blocker no longer holds the edge — finished work does not
+    // surface as "Blocking issues".
+    const doneBlocker = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Retired blocker',
+      status: 'completed',
+      workflowCategory: 'done',
+    });
+    const open = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Still open',
+      status: 'backlog',
+    });
+    // A blocker whose only downstream is invisible to the caller must NOT be
+    // promoted — an unreadable task cannot change what the caller sees.
+    const hiddenDownstream = await createTask(otherUserId, {
+      name: 'Other member private task',
+      status: 'backlog',
+      visibility: 'private',
+    });
+    const blockerOfHidden = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Blocks hidden task',
+      status: 'running',
+      workflowCategory: 'in_progress',
+    });
+    await serverDB.insert(taskDependencies).values([
+      {
+        dependsOnId: doneBlocker.id,
+        taskId: open.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+      {
+        dependsOnId: blockerOfHidden.id,
+        taskId: hiddenDownstream.id,
+        type: 'blocks',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      },
+    ]);
+
+    const query = applyWorkQueryLayout(myWorkQueryForMode('assigned'), 'list', 'attention');
+    const result = await model.queryTasks({ limit: 10, query });
+    const byKey = new Map(result.groups!.map((group) => [group.key, group]));
+
+    expect(byKey.get('urgent')?.total ?? 0).toBe(0);
+    expect(byKey.get('blocking')?.total ?? 0).toBe(0);
+    expect(
+      byKey
+        .get('done')
+        ?.tasks.map((task) => task.id)
+        .sort(),
+    ).toEqual([doneBlocker.id, urgentDone.id].sort());
+    expect(byKey.get('in_progress')?.tasks.map((task) => task.id)).toEqual([blockerOfHidden.id]);
+    // The private downstream row itself never leaks into the caller's list.
+    expect(result.groups!.flatMap((group) => group.tasks.map((task) => task.id))).not.toContain(
+      hiddenDownstream.id,
+    );
   });
 
   it('lists a readable PR review without creating a Task', async () => {
@@ -1364,5 +1538,115 @@ describe('WorkQueryModel', () => {
     // Name needle narrows within the readable set.
     const searched = await model.listCycleOptions({ needle: 'public' });
     expect(searched.map((row) => row.id)).toEqual([cycleA!.id]);
+  });
+});
+
+describe('labelId predicates', () => {
+  const labelQuery = (predicate: Omit<WorkQueryPredicate, 'field'>) => ({
+    entityType: 'task' as const,
+    filter: { all: [{ field: 'labelId' as const, ...predicate }] },
+    schemaVersion: 1 as const,
+  });
+
+  it('eq / neq / in / notIn match through bindings without duplicating rows', async () => {
+    const labels = new TaskLabelModel(serverDB, userId, workspaceId);
+    const bug = await labels.create({ name: 'Bug' });
+    const urgent = await labels.create({ name: 'Urgent' });
+
+    const both = await createTask(userId, { name: 'Two labels' });
+    await labels.assign(both.id, bug.id);
+    await labels.assign(both.id, urgent.id);
+    const single = await createTask(userId, { name: 'One label' });
+    await labels.assign(single.id, bug.id);
+    const bare = await createTask(userId, { name: 'No labels' });
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+
+    const eq = await model.queryTasks({ query: labelQuery({ op: 'eq', value: bug.id }) });
+    expect(eq.tasks.map((row) => row.id).sort()).toEqual([both.id, single.id].sort());
+    // Multi-labeled tasks come back exactly once — the predicate is an
+    // EXISTS, not a join.
+    expect(eq.tasks.filter((row) => row.id === both.id)).toHaveLength(1);
+
+    const neq = await model.queryTasks({ query: labelQuery({ op: 'neq', value: bug.id }) });
+    expect(neq.tasks.map((row) => row.id)).toContain(bare.id);
+    expect(neq.tasks.map((row) => row.id)).not.toContain(both.id);
+    expect(neq.tasks.map((row) => row.id)).not.toContain(single.id);
+
+    const inList = await model.queryTasks({
+      query: labelQuery({ op: 'in', value: [urgent.id] }),
+    });
+    expect(inList.tasks.map((row) => row.id)).toEqual([both.id]);
+
+    const notIn = await model.queryTasks({
+      query: labelQuery({ op: 'notIn', value: [bug.id, urgent.id] }),
+    });
+    expect(notIn.tasks.map((row) => row.id)).toContain(bare.id);
+    expect(notIn.tasks.map((row) => row.id)).not.toContain(both.id);
+  });
+
+  it('isNull / isNotNull answer "has any label"', async () => {
+    const labels = new TaskLabelModel(serverDB, userId, workspaceId);
+    const bug = await labels.create({ name: 'Bug' });
+    const tagged = await createTask(userId, { name: 'Tagged' });
+    await labels.assign(tagged.id, bug.id);
+    const bare = await createTask(userId, { name: 'Bare' });
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+
+    const unlabeled = await model.queryTasks({ query: labelQuery({ op: 'isNull' }) });
+    expect(unlabeled.tasks.map((row) => row.id)).toContain(bare.id);
+    expect(unlabeled.tasks.map((row) => row.id)).not.toContain(tagged.id);
+
+    const labeled = await model.queryTasks({ query: labelQuery({ op: 'isNotNull' }) });
+    expect(labeled.tasks.map((row) => row.id)).toEqual([tagged.id]);
+  });
+
+  it('hydrates row labels and rejects labelId as a sort field', async () => {
+    const labels = new TaskLabelModel(serverDB, userId, workspaceId);
+    const bug = await labels.create({ color: '#ff0000', name: 'Bug' });
+    const task = await createTask(userId, { name: 'Labeled row' });
+    await labels.assign(task.id, bug.id);
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const result = await model.queryTasks({
+      query: labelQuery({ op: 'eq', value: bug.id }),
+    });
+    expect(result.tasks[0]?.labels).toEqual([{ color: '#ff0000', id: bug.id, name: 'Bug' }]);
+
+    await expect(
+      model.queryTasks({
+        query: {
+          ...labelQuery({ op: 'isNotNull' }),
+          sort: [
+            { direction: 'asc' as const, field: 'labelId' as const },
+            { direction: 'asc' as const, field: 'id' as const },
+          ],
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_QUERY' });
+  });
+
+  it('a foreign-scope label id matches nothing', async () => {
+    await serverDB.insert(workspaces).values({
+      id: 'wq-foreign-ws',
+      name: 'Foreign WS',
+      primaryOwnerId: otherUserId,
+      slug: 'wq-foreign-ws',
+    });
+    const foreign = await new TaskLabelModel(serverDB, otherUserId, 'wq-foreign-ws').create({
+      name: 'Foreign',
+    });
+    const task = await createTask(userId, { name: 'Local' });
+    await new TaskLabelModel(serverDB, userId, workspaceId).assign(
+      task.id,
+      (await new TaskLabelModel(serverDB, userId, workspaceId).create({ name: 'Local label' })).id,
+    );
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const result = await model.queryTasks({
+      query: labelQuery({ op: 'eq', value: foreign.id }),
+    });
+    expect(result.tasks).toHaveLength(0);
   });
 });

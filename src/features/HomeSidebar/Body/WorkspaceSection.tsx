@@ -14,19 +14,20 @@ import {
   AlarmClock,
   BotIcon,
   EyeOffIcon,
-  FolderKanbanIcon,
+  Layers,
   LayoutList,
   LibraryBigIcon,
   MoreHorizontalIcon,
   Settings2,
   SlidersHorizontalIcon,
-  UsersIcon,
+  Users,
 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
@@ -40,7 +41,7 @@ interface WorkspaceSectionProps {
   itemKey: string;
 }
 
-/** Workspace section of the fixed IA: Projects / Views / Members / More. */
+/** Workspace section of the fixed IA: Projects / Views / More. */
 const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
   const tab = useActiveTabKey();
@@ -75,6 +76,34 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
   const moreMenu = useMemo(
     () =>
       [
+        // Linear's More menu opens with a non-interactive "Showing all items"
+        // group header over Members / Teams / Customize sidebar.
+        {
+          children: [
+            {
+              icon: <Icon icon={Users} />,
+              key: 'members',
+              label: t('navPanel.members'),
+              onClick: () => navigate('/members'),
+            },
+            {
+              icon: <Icon icon={Layers} />,
+              key: 'teams',
+              label: t('tab.teams'),
+              onClick: () => navigate('/teams'),
+            },
+            {
+              icon: <Icon icon={SlidersHorizontalIcon} />,
+              key: 'customizeSidebar',
+              label: t('navPanel.customizeSidebar'),
+              onClick: () => openCustomizeSidebarModal(),
+            },
+          ],
+          key: 'showingAllItems',
+          label: t('navPanel.showingAllItems'),
+          type: 'group' as const,
+        },
+        { type: 'divider' as const },
         {
           icon: <Icon icon={BotIcon} />,
           key: 'agents',
@@ -125,11 +154,12 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey }) => {
       </ContextMenuTrigger>
       <AccordionPanel>
         <Flexbox gap={1} paddingBlock={1}>
-          {row('project', FolderKanbanIcon, t('navPanel.projects'), '/projects')}
+          {row('project', PROJECT_ENTITY_ICON, t('navPanel.projects'), '/projects')}
           {row('views', LayoutList, t('tab.views'), '/views')}
-          {row('members', UsersIcon, t('navPanel.members'), '/members')}
-          {/* Linear renders "More" as a row — it opens the menu holding the
-              retired surfaces (Automations / Resource / workspace settings). */}
+          {/* Linear renders "More" as a row — it opens a menu headed by
+              "Showing all items" (Members / Teams / Customize sidebar),
+              then the retired surfaces (Automations / Resource / workspace
+              settings) behind a divider. */}
           <DropdownMenu items={moreMenu}>
             <div>
               <NavItem icon={MoreHorizontalIcon} title={t('navPanel.more')} />

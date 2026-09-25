@@ -27,14 +27,80 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
   main: css`
     min-width: 0;
   `,
+  /**
+   * The prose column — instruction, sub-issues, artifacts, activity. Pinned to
+   * the grid's first track so in the wide layout it stays bounded beside the
+   * rail instead of running underneath it (the reference keeps two columns for
+   * the whole page; the space under the rail stays empty). In the narrow
+   * single-column grid this is simply the next block after the rail groups.
+   */
+  body: css`
+    grid-column: 1;
+    min-width: 0;
+    padding-block-end: 120px;
+  `,
   side: css`
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     min-width: 0;
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
       grid-column: 2;
-      grid-row: 1;
-      padding-block-start: 8px;
+
+      /* Span both rows: the rail is a persistent column, so the prose body in
+         row 2 starts directly under the controls instead of waiting for the
+         rail's height to end. (1 / -1 can't resolve — the rows are
+         implicit; the grid always has exactly two by construction.) */
+      grid-row: 1 / 3;
+      padding-block-start: 0;
     }
+  `,
+  /**
+   * The rail's own quick actions — the round copy buttons Linear parks at the
+   * top-right of the issue body, above "Properties". Right-aligned so they sit
+   * on the column's outer edge in both layouts.
+   */
+  railActions: css`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  `,
+  /**
+   * One labeled rail group ("Properties", "Project", "Related"). In the wide
+   * sidebar the label reads as the group heading; in the narrow pill layout it
+   * hides, matching Linear, where pill rows carry no section titles.
+   */
+  railSection: css`
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  `,
+  railSectionLabel: css`
+    display: none;
+
+    padding-block: 4px;
+    padding-inline: 8px 10px;
+
+    font-size: 13px;
+    font-weight: 500;
+    color: ${cssVar.colorTextSecondary};
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      display: block;
+    }
+  `,
+  /** A stacked row inside a rail section — same hit area as a property cell. */
+  railRow: css`
+    width: 100%;
+    max-width: 100%;
+    height: 30px;
+    padding-inline: 8px 10px;
+    border-radius: ${cssVar.borderRadius};
+
+    white-space: nowrap;
   `,
   properties: css`
     display: flex;

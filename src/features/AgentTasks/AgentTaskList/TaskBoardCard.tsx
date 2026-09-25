@@ -1,14 +1,16 @@
 import { ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { LockIcon, MessageSquareTextIcon } from 'lucide-react';
+import { MessageSquareTextIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
@@ -22,12 +24,13 @@ import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
+import { TASK_VISIBILITY_ICONS } from '../features/taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from '../features/useTaskItemContextMenu';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
-import TaskWorkflowBadge from '../shared/TaskWorkflowBadge';
+import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   /* Cordy keeps the empty-assign affordance hidden until the card is hovered —
@@ -147,10 +150,23 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       useTaskItemContextMenu(task, routeScope, onStatusChange);
     const navigate = useWorkspaceAwareNavigate();
     const activeWorkspaceId = useActiveWorkspaceId();
+    // Project chip: `projectId` resolves through the cached project list — an
+    // unknown project renders no chip rather than a raw id (Linear honesty).
+    useProjectStore((s) => s.useFetchProjectList)(Boolean(activeWorkspaceId && task.projectId));
+    const projects = useCurrentProjectList();
+    const projectName = task.projectId
+      ? projects.find((project) => project.id === task.projectId)?.name
+      : undefined;
 
     const status = toTaskStatus(task.status);
+    // One status mark per card: the workflow state when the task has one.
+    const workflowGlyph = useTaskWorkflowGlyph({
+      executionStatus: task.status,
+      workflowCategory: task.workflowCategory,
+      workflowStateId: task.workflowStateId,
+    });
     const hasName = Boolean(task.name?.trim());
-    const time = formatTaskItemDate(task.updatedAt || task.createdAt, {
+    const time = formatTaskItemDate(task.createdAt, {
       formatOtherYear: t('time.formatOtherYear'),
       formatThisYear: t('time.formatThisYear'),
       locale: i18n.language,
@@ -183,7 +199,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
     const isPrivate = task.visibility === 'private';
     const privacyBadge = isPrivate ? (
       <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-        <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={14} />
+        <Icon color={cssVar.colorTextDescription} icon={TASK_VISIBILITY_ICONS.private} size={14} />
       </Tooltip>
     ) : null;
 
@@ -297,7 +313,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             data-collab-id-alt={`task:${task.identifier}:status`}
             style={{ flex: 'none', marginTop: 2 }}
           >
-            <TaskStatusIcon size={14} status={status} />
+            {workflowGlyph ? (
+              <Tooltip title={workflowGlyph.label}>
+                <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={14} />
+              </Tooltip>
+            ) : (
+              <TaskStatusIcon size={14} status={status} />
+            )}
           </span>
           <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
         </Flexbox>
@@ -319,11 +341,15 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         >
           <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           <LinearTaskSyncStatus taskId={task.id} />
-          <TaskWorkflowBadge
-            executionStatus={task.status}
-            workflowCategory={task.workflowCategory}
-            workflowStateId={task.workflowStateId}
-          />
+          {projectName ? (
+            <Tag
+              icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />}
+              size="small"
+              variant="outlined"
+            >
+              {projectName}
+            </Tag>
+          ) : null}
           {task.automationMode ? (
             <TaskTriggerTag
               automationMode={task.automationMode}
@@ -359,7 +385,8 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           </Flexbox>
           {time ? (
             <Text ellipsis fontSize={12} style={{ minWidth: 0 }} type={'secondary'}>
-              {time}
+              {/* Linear cards stamp the creation date, not the last touch. */}
+              {tChat('taskList.createdAt', { date: time, defaultValue: 'Created {{date}}' })}
             </Text>
           ) : null}
           <Flexbox horizontal align={'center'} flex={'none'} gap={4} style={{ marginLeft: 'auto' }}>

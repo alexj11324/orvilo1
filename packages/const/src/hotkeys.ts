@@ -42,9 +42,16 @@ export const KeyEnum = {
 export const HotkeyEnum = {
   AddUserMessage: 'addUserMessage',
   CommandPalette: 'commandPalette',
+  CreateTask: 'createTask',
   DeleteAndRegenerateMessage: 'deleteAndRegenerateMessage',
   DeleteLastMessage: 'deleteLastMessage',
   EditMessage: 'editMessage',
+  GoToDrafts: 'goToDrafts',
+  GoToInbox: 'goToInbox',
+  GoToMyIssues: 'goToMyIssues',
+  GoToProjects: 'goToProjects',
+  GoToReviews: 'goToReviews',
+  GoToViews: 'goToViews',
   NavigateToChat: 'navigateToChat',
   NextTab: 'nextTab',
   OpenChatSettings: 'openChatSettings',
@@ -86,6 +93,57 @@ export const HOTKEYS_REGISTRATION: HotkeyRegistration = [
     group: HotkeyGroupEnum.Essential,
     id: HotkeyEnum.Search,
     keys: combineKeys([KeyEnum.Mod, 'j']),
+    scopes: [HotkeyScopeEnum.Global],
+  },
+  {
+    group: HotkeyGroupEnum.Essential,
+    id: HotkeyEnum.CreateTask,
+    keys: 'c',
+    scopes: [HotkeyScopeEnum.Global],
+  },
+  // Linear-style go-to navigation: `g` then a second key. Sequences are
+  // expressed with the `>` separator supported by react-hotkeys-hook and are
+  // nonEditable because HotkeyInput can only record single combos.
+  {
+    group: HotkeyGroupEnum.Essential,
+    id: HotkeyEnum.GoToInbox,
+    keys: 'g>i',
+    nonEditable: true,
+    scopes: [HotkeyScopeEnum.Global],
+  },
+  {
+    group: HotkeyGroupEnum.Essential,
+    id: HotkeyEnum.GoToMyIssues,
+    keys: 'g>m',
+    nonEditable: true,
+    scopes: [HotkeyScopeEnum.Global],
+  },
+  {
+    group: HotkeyGroupEnum.Essential,
+    id: HotkeyEnum.GoToReviews,
+    keys: 'g>r',
+    nonEditable: true,
+    scopes: [HotkeyScopeEnum.Global],
+  },
+  {
+    group: HotkeyGroupEnum.Essential,
+    id: HotkeyEnum.GoToDrafts,
+    keys: 'g>d',
+    nonEditable: true,
+    scopes: [HotkeyScopeEnum.Global],
+  },
+  {
+    group: HotkeyGroupEnum.Essential,
+    id: HotkeyEnum.GoToProjects,
+    keys: 'g>p',
+    nonEditable: true,
+    scopes: [HotkeyScopeEnum.Global],
+  },
+  {
+    group: HotkeyGroupEnum.Essential,
+    id: HotkeyEnum.GoToViews,
+    keys: 'g>v',
+    nonEditable: true,
     scopes: [HotkeyScopeEnum.Global],
   },
   {
@@ -137,7 +195,8 @@ export const HOTKEYS_REGISTRATION: HotkeyRegistration = [
   {
     group: HotkeyGroupEnum.Essential,
     id: HotkeyEnum.OpenHotkeyHelper,
-    keys: combineKeys([KeyEnum.Ctrl, KeyEnum.Shift, KeyEnum.QuestionMark]),
+    // Linear's `?` (shift+/) opens the shortcuts help modal.
+    keys: combineKeys([KeyEnum.Shift, KeyEnum.QuestionMark]),
     scopes: [HotkeyScopeEnum.Global],
   },
   // Chat

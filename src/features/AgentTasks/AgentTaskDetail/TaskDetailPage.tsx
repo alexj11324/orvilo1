@@ -18,7 +18,6 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import Breadcrumb from '../shared/Breadcrumb';
 import IssueContent from './IssueContent';
-import TaskDetailCopyActions from './TaskDetailCopyActions';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
 import TopicChatDrawer from './TopicChatDrawer';
 import { useActiveTaskDetail } from './useActiveTaskDetail';
@@ -83,6 +82,11 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
         left={
           <>
             <Breadcrumb taskId={taskId} />
+            {/* Reference: the star and overflow sit inline right after the
+                issue crumb; the copy buttons moved into the rail's round
+                action row (TaskRailActions), so the header's right side only
+                keeps the agent-panel toggle. */}
+            <WorkFavoriteButton icon={'star'} targetId={taskId} targetType="task" variant="icon" />
             <TaskDetailHeaderActions />
             {saveStatus === 'saving' || saveStatus === 'failed' ? (
               <AutoSaveHint saveStatus={saveStatus} />
@@ -91,8 +95,6 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
         }
         right={
           <>
-            <WorkFavoriteButton targetId={taskId} targetType="task" variant="icon" />
-            <TaskDetailCopyActions />
             {showTaskAgentPanelToggle ? (
               <ToggleRightPanelButton
                 hideWhenExpanded

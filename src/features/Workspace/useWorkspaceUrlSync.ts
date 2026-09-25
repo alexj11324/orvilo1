@@ -34,6 +34,7 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   'agents',
   'automations',
   'community',
+  'drafts',
   'goal',
   'group',
   'inbox',

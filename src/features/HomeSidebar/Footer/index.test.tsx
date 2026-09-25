@@ -95,11 +95,14 @@ const renderFooter = async ({
   vi.doMock('@/features/Billboard/MenuItems', () => ({
     useBillboardMenuItems: () => billboardItems,
   }));
-  vi.doMock('@/features/NavPanel', () => ({
+  vi.doMock('@/features/NavPanel/useActiveNavKey', () => ({
     useActiveNavKey: () => (homeSidebar ? 'home' : 'discover'),
   }));
   vi.doMock('@/features/User/UserPanel/ThemeButton', () => ({
     default: () => null,
+  }));
+  vi.doMock('@/features/RightPanel/ToggleRightPanelButton', () => ({
+    default: () => <span data-testid="toggle-right-panel" />,
   }));
   vi.doMock('@/features/User/UserPanel', () => ({
     default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -161,6 +164,7 @@ afterEach(() => {
   vi.doUnmock('@/features/Billboard');
   vi.doUnmock('@/features/Billboard/MenuItems');
   vi.doUnmock('@/features/NavPanel');
+  vi.doUnmock('@/features/RightPanel/ToggleRightPanelButton');
   vi.doUnmock('@/features/User/UserPanel/ThemeButton');
   vi.doUnmock('@/features/Workspace/WorkspaceLink');
   vi.doUnmock('@/hooks/useNavLayout');
@@ -261,6 +265,17 @@ describe('Footer help menu tracking', () => {
       'https://discord.gg/orvilo',
     );
   }, 20000);
+
+  // Linear's bottom bar puts the agent-panel switch next to the avatar on the
+  // right — that affordance belongs to the main (home) sidebar only.
+  it('shows the agent-panel toggle on the home sidebar but not other panels', async () => {
+    await renderFooter({ homeSidebar: true });
+    expect(screen.getByTestId('toggle-right-panel')).toBeInTheDocument();
+
+    cleanup();
+    await renderFooter({ homeSidebar: false });
+    expect(screen.queryByTestId('toggle-right-panel')).not.toBeInTheDocument();
+  });
 
   it('excludes billboard items from the opened keys to keep per-key CTR aligned', async () => {
     const user = userEvent.setup();

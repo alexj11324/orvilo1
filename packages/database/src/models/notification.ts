@@ -19,6 +19,7 @@ import {
   inArray,
   isNull,
   lt,
+  lte,
   not,
   notInArray,
   or,
@@ -127,7 +128,10 @@ export class NotificationModel {
         return [eq(notifications.isArchived, true)];
       }
       case 'snoozed': {
+        // Snoozed = postponed inbox cards; a card archived after snoozing
+        // belongs to the archive, not this filter.
         return [
+          eq(notifications.isArchived, false),
           sql`${notifications.snoozedUntil} is not null and ${notifications.snoozedUntil} > ${now}`,
         ];
       }
@@ -141,6 +145,15 @@ export class NotificationModel {
   };
 
   /**
+   * Inbox visibility for snoozed rows (Linear hide-until-wake): a snoozed card
+   * leaves every default listing until `snoozedUntil` passes. Only the
+   * dedicated 'snoozed' filter, the archived view, or an explicit
+   * `includeSnoozed` opt-in may list it earlier.
+   */
+  private notCurrentlySnoozed = (): SQL =>
+    or(isNull(notifications.snoozedUntil), lte(notifications.snoozedUntil, new Date()))!;
+
+  /**
    * `kind` is a feed bucket: `action`/`update` mirror the stored column while
    * `priority`/`other` classify by "still needs you" — a pending action or an
    * unread mention is priority regardless of row kind, and a card belongs to
@@ -148,9 +161,13 @@ export class NotificationModel {
    */
   private feedWhere = (opts: {
     filter?: Exclude<NotificationPresentationFilter, 'all'>;
+    includeSnoozed?: boolean;
     kind?: NotificationFeedBucket;
   }): SQL[] => {
     const conditions: SQL[] = [...this.scope(), this.resourceReadable()];
+    if (!opts.includeSnoozed && opts.filter !== 'snoozed' && opts.filter !== 'archived') {
+      conditions.push(this.notCurrentlySnoozed());
+    }
     if (opts.kind === 'priority' || opts.kind === 'other') {
       const priorityClause = or(
         and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
@@ -177,18 +194,23 @@ export class NotificationModel {
     opts: {
       category?: string;
       cursor?: string;
+      includeSnoozed?: boolean;
       isRead?: boolean;
       limit?: number;
       unreadOnly?: boolean;
     } = {},
   ) {
-    const { cursor, limit = 20, category, isRead, unreadOnly } = opts;
+    const { cursor, limit = 20, category, isRead, unreadOnly, includeSnoozed } = opts;
 
     const conditions = [
       ...this.scope(),
       this.resourceReadable(),
       eq(notifications.isArchived, false),
     ];
+
+    if (!includeSnoozed) {
+      conditions.push(this.notCurrentlySnoozed());
+    }
 
     if (typeof isRead === 'boolean') {
       conditions.push(eq(notifications.isRead, isRead));
@@ -348,6 +370,7 @@ export class NotificationModel {
     opts: {
       cursor?: string;
       filter?: NotificationPresentationFilter;
+      includeSnoozed?: boolean;
       kind?: NotificationFeedBucket;
       limit?: number;
       lookahead?: boolean;
@@ -357,6 +380,7 @@ export class NotificationModel {
     const conditions: SQL[] = [
       ...this.feedWhere({
         filter: opts.filter === 'all' ? undefined : opts.filter,
+        includeSnoozed: opts.includeSnoozed,
         kind: opts.kind,
       }),
     ];

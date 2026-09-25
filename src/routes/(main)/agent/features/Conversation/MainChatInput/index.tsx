@@ -40,6 +40,12 @@ const MainChatInput = memo(() => {
       <AgentConfigError />
       <ChatInput
         skipScrollMarginWithList
+        // Reference parity: the composer card wraps its control strip (no
+        // free-floating bar below the card), and the editor opens at a single
+        // text row (~24px, matching the 676x24 reference measurement) instead
+        // of the shared two-row default.
+        controlBarInCard
+        editorDefaultRows={1}
         isConfigLoading={isAgentConfigLoading}
         leftActions={leftActions}
         rightActions={rightActions}

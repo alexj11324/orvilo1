@@ -24,6 +24,7 @@ import { DOCUMENTS_REFER_URL, GITHUB } from '@/const/url';
 import Billboard from '@/features/Billboard';
 import { useBillboardMenuItems } from '@/features/Billboard/MenuItems';
 import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
+import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import UserAvatar from '@/features/User/UserAvatar';
 import UserPanel from '@/features/User/UserPanel';
 import ThemeButton from '@/features/User/UserPanel/ThemeButton';
@@ -263,7 +264,11 @@ const Footer = memo(() => {
           <ThemeButton placement={'topCenter'} size={16} />
         </Flexbox>
       ) : (
-        <Flexbox horizontal align={'center'} gap={2} padding={8}>
+        // Linear's bottom bar: `?` help anchors the left; the right cluster is
+        // the agent-panel switch followed by the avatar. The toggle rides the
+        // global `showRightPanel` state — the panel itself materializes on the
+        // surfaces that host it (agent conversation, task detail, …).
+        <Flexbox horizontal align={'center'} justify={'space-between'} padding={8}>
           <DropdownMenu
             items={helpMenuItems}
             placement="topLeft"
@@ -271,21 +276,30 @@ const Footer = memo(() => {
           >
             <ActionIcon aria-label={t('userPanel.help')} icon={CircleHelp} size={16} />
           </DropdownMenu>
-          <UserPanel>
-            <Block clickable align={'center'} justify={'center'} padding={4} variant={'borderless'}>
-              <UserAvatar size={20} />
-            </Block>
-          </UserPanel>
-          {isDevMode && (
-            <WorkspaceLink to="/settings">
-              <ActionIcon
-                aria-label={t(settingLabelKey)}
-                icon={SettingsIcon}
-                size={16}
-                title={t(settingLabelKey)}
-              />
-            </WorkspaceLink>
-          )}
+          <Flexbox horizontal align={'center'} gap={2}>
+            {isHomeSidebar && <ToggleRightPanelButton id={null} size={16} />}
+            {isDevMode && (
+              <WorkspaceLink to="/settings">
+                <ActionIcon
+                  aria-label={t(settingLabelKey)}
+                  icon={SettingsIcon}
+                  size={16}
+                  title={t(settingLabelKey)}
+                />
+              </WorkspaceLink>
+            )}
+            <UserPanel>
+              <Block
+                clickable
+                align={'center'}
+                justify={'center'}
+                padding={4}
+                variant={'borderless'}
+              >
+                <UserAvatar size={20} />
+              </Block>
+            </UserPanel>
+          </Flexbox>
         </Flexbox>
       )}
       {isHomeSidebar && <Billboard />}

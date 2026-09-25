@@ -12,9 +12,9 @@
  */
 
 export const QUEUE_QUERY = `
-query PullRequestReviewQueue($query: String!, $first: Int!, $after: String) {
+query PullRequestReviewQueue($query: String!, $type: SearchType!, $first: Int!, $after: String) {
   rateLimit { cost remaining resetAt }
-  search(query: $query, type: ISSUE, first: $first, after: $after) {
+  search(query: $query, type: $type, first: $first, after: $after) {
     issueCount
     pageInfo { hasNextPage endCursor }
     nodes {

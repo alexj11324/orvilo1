@@ -18,6 +18,7 @@ export const users = pgTable(
     firstName: text('first_name'),
     lastName: text('last_name'),
     fullName: text('full_name'),
+    jobTitle: varchar('job_title', { length: 128 }),
     interests: varchar('interests', { length: 64 }).array(),
 
     /** @deprecated */

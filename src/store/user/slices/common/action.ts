@@ -57,6 +57,22 @@ export class CommonActionImpl {
     await this.#get().refreshUserState();
   };
 
+  updateJobTitle = async (jobTitle: string): Promise<void> => {
+    const userId = this.#get().user?.id;
+    await userService.updateJobTitle(jobTitle);
+    const user = this.#get().user;
+    // Settings can remain mounted without a bootstrap SWR subscriber. Publish
+    // the confirmed value so a second edit compares against the saved title.
+    if (user && user.id === userId) {
+      this.#set(
+        { user: { ...user, jobTitle: jobTitle.trim() || null } },
+        false,
+        n('updateJobTitle'),
+      );
+    }
+    await this.#get().refreshUserState();
+  };
+
   updateInterests = async (interests: string[]): Promise<void> => {
     const previousUser = this.#get().user;
     if (previousUser) {
@@ -140,6 +156,7 @@ export class CommonActionImpl {
                     fullName: data.fullName,
                     id: data.userId,
                     interests: data.interests,
+                    jobTitle: data.jobTitle,
                     latestName: data.lastName,
                     username: data.username,
                   } as OrviloUser)

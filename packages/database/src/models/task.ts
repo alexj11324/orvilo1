@@ -3764,6 +3764,68 @@ export class TaskModel {
     return newest.reverse();
   }
 
+  /**
+   * Newest-first project-scoped feed: every activity row whose parent task
+   * belongs to the project and is readable by the caller right now. The
+   * parent row goes through the full `ownership()` predicate (workspace +
+   * task visibility + private-team readability) — the activity row's
+   * mirrored visibility alone cannot prove the viewer is still allowed to
+   * see a task whose team's ACL changed since the row was written.
+   */
+  async getProjectActivities(
+    projectId: string,
+    limit = 50,
+    cursorId?: string,
+  ): Promise<{
+    items: {
+      activity: TaskActivityItem;
+      taskId: string;
+      taskIdentifier: string;
+      taskTitle: string;
+    }[];
+    nextCursor?: string;
+  }> {
+    const conditions: SQL[] = [
+      eq(tasks.projectId, projectId),
+      this.ownership(),
+      this.activitiesOwnership(),
+    ];
+    if (cursorId) {
+      // Keyset on the feed's (createdAt desc, id desc) order. The cursor row
+      // resolves inside the same project + visibility scope, so a foreign or
+      // stale cursor yields an empty page rather than an arbitrary offset.
+      const [cursor] = await this.db
+        .select({ createdAt: taskActivities.createdAt, id: taskActivities.id })
+        .from(taskActivities)
+        .innerJoin(tasks, eq(taskActivities.taskId, tasks.id))
+        .where(and(eq(taskActivities.id, cursorId), ...conditions))
+        .limit(1);
+      if (!cursor) return { items: [] };
+      conditions.push(
+        or(
+          lt(taskActivities.createdAt, cursor.createdAt),
+          and(eq(taskActivities.createdAt, cursor.createdAt), lt(taskActivities.id, cursor.id)),
+        )!,
+      );
+    }
+    const rows = await this.db
+      .select({
+        activity: taskActivities,
+        taskId: tasks.id,
+        taskIdentifier: tasks.identifier,
+        taskTitle: sql<string>`coalesce(${tasks.name}, ${tasks.instruction})`.as('task_title'),
+      })
+      .from(taskActivities)
+      .innerJoin(tasks, eq(taskActivities.taskId, tasks.id))
+      .where(and(...conditions))
+      .orderBy(desc(taskActivities.createdAt), desc(taskActivities.id))
+      .limit(limit + 1);
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: rows.length > limit ? rows[limit - 1]?.activity.id : undefined,
+    };
+  }
+
   // ========== Transfer / Copy ==========
 
   /**

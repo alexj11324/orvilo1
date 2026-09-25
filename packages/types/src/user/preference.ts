@@ -129,6 +129,7 @@ export interface OrviloUser {
   fullName?: string | null;
   id: string;
   interests?: string[];
+  jobTitle?: string | null;
   latestName?: string | null;
   username?: string | null;
 }
@@ -285,6 +286,7 @@ export interface UserInitializationState {
   isFreePlan?: boolean;
   /** @deprecated Use onboarding field instead */
   isOnboard?: boolean;
+  jobTitle?: string | null;
   lastName?: string;
   onboarding?: UserOnboarding;
   preference: UserPreference;

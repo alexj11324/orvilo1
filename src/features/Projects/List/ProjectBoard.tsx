@@ -4,7 +4,6 @@ import { Flexbox, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,6 +16,7 @@ import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import type { ProjectListItem } from '@/store/project';
 
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 import type { ProjectListDisplayOptions, ProjectListGroup } from './displayOptions';
 import ProjectMilestoneChip from './MilestoneChip';
 
@@ -100,6 +100,7 @@ interface ProjectBoardProps {
  */
 const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, properties }) => {
   const { t } = useTranslation('project');
+  const formatDate = useProjectDateFormatter();
   return (
     <div className={styles.board}>
       {groups.map((group) => {
@@ -162,7 +163,7 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
                         />
                       ) : null}
                       {properties.targetDate && project.targetDate ? (
-                        <span>{dayjs(project.targetDate).format('MMM D')}</span>
+                        <span>{formatDate(project.targetDate)}</span>
                       ) : null}
                       {properties.issues && typeof project.taskCount === 'number' ? (
                         <span>{project.taskCount}</span>

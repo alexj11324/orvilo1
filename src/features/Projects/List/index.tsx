@@ -51,6 +51,7 @@ import type { ProjectListItem } from '@/store/project/store';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
 
+import { useProjectDateFormatter } from '../useProjectDateFormatter';
 import AddFilterPopover from './AddFilterPopover';
 import {
   DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS,
@@ -516,16 +517,21 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
 ProjectLeadCell.displayName = 'ProjectLeadCell';
 
 // `lll` needs the localizedFormat plugin, which src/initialize.ts does not
-// register — spell the same shape out in core tokens instead.
-const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) => (
-  <Text
-    className={styles.cell}
-    fontSize={12}
-    title={value ? dayjs(value).format('MMM D, YYYY h:mm A') : undefined}
-  >
-    {value ? dayjs(value).format('MMM D') : '—'}
-  </Text>
-));
+// register — spell the same shape out in core tokens instead. The title keeps
+// the full timestamp in the active locale's long-day pattern.
+const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) => {
+  const { t } = useTranslation('common');
+  const formatDate = useProjectDateFormatter();
+  return (
+    <Text
+      className={styles.cell}
+      fontSize={12}
+      title={value ? dayjs(value).format(`${t('time.formatOtherYear')} HH:mm`) : undefined}
+    >
+      {value ? formatDate(value) : '—'}
+    </Text>
+  );
+});
 
 DateCell.displayName = 'DateCell';
 

@@ -881,6 +881,27 @@ describe('NotificationModel (integration)', () => {
       expect((await model.listFeed({ includeSnoozed: true })).map((r) => r.title)).toEqual([]);
     });
 
+    it('lists archived and snoozed rows across the whole inbox, not per tab', async () => {
+      const model = new NotificationModel(serverDB, userId, { workspaceId: null });
+      const archived = await model.create(baseNotification({ title: 'Archived' }));
+      const snoozed = await model.create(baseNotification({ kind: 'update', title: 'Snoozed' }));
+      await model.archive(archived!.id);
+      await model.snooze(snoozed!.id, inOneHour(), snoozed!.activityVersion);
+
+      // The archived/snoozed chips ignore the active Priority/Other tab:
+      // archived rows carry isArchived (never a tab member) and a snoozed
+      // non-action row is 'other' by bucketing yet must still surface under
+      // the Priority tab's snoozed chip.
+      for (const kind of ['priority', 'other'] as const) {
+        expect((await model.listFeed({ filter: 'archived', kind })).map((r) => r.title)).toEqual([
+          'Archived',
+        ]);
+        expect((await model.listFeed({ filter: 'snoozed', kind })).map((r) => r.title)).toEqual([
+          'Snoozed',
+        ]);
+      }
+    });
+
     it('does not mark-read or archive hidden snoozed cards in bulk', async () => {
       const model = new NotificationModel(serverDB, userId, { workspaceId: null });
       const visible = await model.create(baseNotification({ title: 'Visible' }));

@@ -169,14 +169,20 @@ export class NotificationModel {
       conditions.push(this.notCurrentlySnoozed());
     }
     if (opts.kind === 'priority' || opts.kind === 'other') {
-      const priorityClause = or(
-        and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
-        and(eq(notifications.category, 'mention'), eq(notifications.isRead, false)),
-      )!;
-      conditions.push(eq(notifications.isArchived, false));
-      conditions.push(opts.kind === 'priority' ? priorityClause : not(priorityClause));
-      if (opts.filter) {
+      if (opts.filter === 'archived' || opts.filter === 'snoozed') {
+        // Archived and snoozed rows belong to no tab: those filters list
+        // them across the whole inbox, regardless of the active bucket.
         conditions.push(...this.presentationWhere(opts.filter));
+      } else {
+        const priorityClause = or(
+          and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
+          and(eq(notifications.category, 'mention'), eq(notifications.isRead, false)),
+        )!;
+        conditions.push(eq(notifications.isArchived, false));
+        conditions.push(opts.kind === 'priority' ? priorityClause : not(priorityClause));
+        if (opts.filter) {
+          conditions.push(...this.presentationWhere(opts.filter));
+        }
       }
     } else if (opts.kind === 'action') {
       conditions.push(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt));

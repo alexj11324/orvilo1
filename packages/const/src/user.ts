@@ -13,6 +13,7 @@ export const DEFAULT_PREFERENCE: UserPreference = {
     enableMessageTextSelectionActions: false,
     enableOAuthApps: false,
   },
+  showInCollaboration: true,
   topicGroupMode: 'byTime',
   topicIncludeCompleted: false,
   topicSortBy: 'updatedAt',

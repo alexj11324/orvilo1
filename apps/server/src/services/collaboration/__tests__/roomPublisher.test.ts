@@ -23,18 +23,19 @@ const kick = (scope: 'project' | 'task' | 'workspace') =>
 const respond = (status: number, headers: Record<string, string> = {}) =>
   new Response('{}', { headers, status });
 
-const v2Headers = {
+const currentHeaders = {
   [GATEWAY_PROTOCOL_VERSION_HEADER]: String(COLLABORATION_GATEWAY_PROTOCOL_VERSION),
 };
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   delete (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY];
 });
 
 describe('httpRoomPublisher capability handshake', () => {
   it('delivers a project kick to a v2 gateway', async () => {
-    const fetchMock = vi.fn(async () => respond(202, v2Headers));
+    const fetchMock = vi.fn(async () => respond(202, currentHeaders));
     vi.stubGlobal('fetch', fetchMock);
 
     const publisher = createRoomPublisher('http://gateway.test');
@@ -90,6 +91,30 @@ describe('httpRoomPublisher capability handshake', () => {
       }),
     ).resolves.toBeUndefined();
   });
+
+  it('delivers concealment only when the gateway proves v3 support', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respond(202, currentHeaders)),
+    );
+
+    const publisher = createRoomPublisher('http://gateway.test');
+    await expect(
+      publisher.setUserPresenceVisibility('user-9', false, 'hidden-epoch'),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects a concealment silently acked by an old gateway', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respond(202, { [GATEWAY_PROTOCOL_VERSION_HEADER]: '2' })),
+    );
+
+    const publisher = createRoomPublisher('http://gateway.test');
+    await expect(
+      publisher.setUserPresenceVisibility('user-9', false, 'hidden-epoch'),
+    ).rejects.toThrow('does not support presence visibility control');
+  });
 });
 
 describe('localRoomPublisher scoped kicks', () => {
@@ -135,5 +160,62 @@ describe('localRoomPublisher scoped kicks', () => {
     await createRoomPublisher('').publish('workspace:ws-1', kick('workspace'));
 
     expect(legacyKick).toHaveBeenCalledWith('workspace:ws-1', 'user-9', 'project_member.removed');
+  });
+
+  it('conceals through a capable local bus', async () => {
+    const setUserPresenceVisibility = vi.fn();
+    (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY] = {
+      kick: vi.fn(),
+      presence: () => [],
+      publish: vi.fn(),
+      setUserPresenceVisibility,
+    };
+
+    await createRoomPublisher('').setUserPresenceVisibility('user-9', false, 'hidden-epoch');
+
+    expect(setUserPresenceVisibility).toHaveBeenCalledWith('user-9', false, 'hidden-epoch');
+  });
+
+  it('fails concealment when an old local bus cannot enforce it', async () => {
+    (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY] = {
+      kick: vi.fn(),
+      presence: () => [],
+      publish: vi.fn(),
+    };
+
+    await expect(
+      createRoomPublisher('').setUserPresenceVisibility('user-9', false, 'hidden-epoch'),
+    ).rejects.toThrow('does not support presence visibility control');
+  });
+
+  it('fails concealment without a local bus when a public gateway may hold sockets', async () => {
+    vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', 'wss://gateway.example/collaboration');
+
+    await expect(
+      createRoomPublisher('').setUserPresenceVisibility('user-9', false, 'hidden-epoch'),
+    ).rejects.toThrow('conceal control is unavailable');
+  });
+
+  it('allows concealment to no-op when collaboration is disabled', async () => {
+    vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', '');
+    vi.stubEnv('COLLABORATION_GATEWAY_URL', '');
+    vi.stubEnv('NODE_ENV', 'production');
+
+    await expect(
+      createRoomPublisher('').setUserPresenceVisibility('user-9', false, 'hidden-epoch'),
+    ).resolves.toBeUndefined();
+  });
+
+  it('routes the default development control to the standalone localhost gateway', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const fetchMock = vi.fn(async () => respond(202, currentHeaders));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await createRoomPublisher().setUserPresenceVisibility('user-9', false, 'hidden-epoch');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:3012/internal/publish',
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 });

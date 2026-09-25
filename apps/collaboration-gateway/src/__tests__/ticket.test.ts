@@ -23,6 +23,8 @@ const signTicket = async (
 
 const validClaims = {
   actor: { id: 'user-1', kind: 'human', name: 'Ada' },
+  presence_visible: false,
+  presence_visibility_epoch: 'visible-epoch',
   purpose: 'collaboration-room',
   room: 'task:task-1',
   workspace_id: 'ws-1',
@@ -45,6 +47,8 @@ describe('verifyRoomTicket', () => {
 
     expect(ticket).toMatchObject({
       actor: { id: 'user-1', kind: 'human', name: 'Ada' },
+      presenceVisible: false,
+      presenceVisibilityEpoch: 'visible-epoch',
       room: 'task:task-1',
       userId: 'user-1',
       workspaceId: 'ws-1',
@@ -52,10 +56,25 @@ describe('verifyRoomTicket', () => {
     expect(ticket?.expiresAt).toBeGreaterThan(Date.now());
   });
 
+  it('defaults legacy tickets without a visibility claim to visible', async () => {
+    const {
+      presence_visible: _legacyVisibility,
+      presence_visibility_epoch: _legacyEpoch,
+      ...legacyClaims
+    } = validClaims;
+    const token = await signTicket(legacyClaims);
+
+    const ticket = await verifyRoomTicket(token);
+    expect(ticket).toMatchObject({ presenceVisible: true });
+  });
+
   it('rejects a tampered payload', async () => {
     const token = await signTicket(validClaims);
     const [header, payload, signature] = token.split('.');
-    const forged = { ...JSON.parse(Buffer.from(payload, 'base64url').toString()), room: 'task:evil' };
+    const forged = {
+      ...JSON.parse(Buffer.from(payload, 'base64url').toString()),
+      room: 'task:evil',
+    };
     const tampered = `${header}.${Buffer.from(JSON.stringify(forged)).toString('base64url')}.${signature}`;
 
     expect(await verifyRoomTicket(tampered)).toBeNull();

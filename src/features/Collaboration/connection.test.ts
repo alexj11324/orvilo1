@@ -3,13 +3,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getCollaborationStoreState } from '@/store/collaboration';
 
-import { acquireRoomConnection, releaseRoomConnection } from './connection';
+import {
+  acquireRoomConnection,
+  refreshCollaborationConnections,
+  releaseRoomConnection,
+} from './connection';
 
 const { authorize, snapshotQuery, mutateMock } = vi.hoisted(() => ({
   authorize: vi.fn(),
   mutateMock: vi.fn(),
   snapshotQuery: vi.fn(),
 }));
+
+const { userState } = vi.hoisted(() => ({
+  userState: { preference: { showInCollaboration: true } },
+}));
+
+vi.mock('@/store/user', () => ({ getUserStoreState: () => userState }));
 
 vi.mock('@/features/Teammates/api/client', () => ({
   teammatesClient: {
@@ -61,8 +71,7 @@ class MockWebSocket {
     this.readyState = MockWebSocket.CLOSED;
     this.onclose?.();
   };
-  fireMessage = (message: unknown) =>
-    this.onmessage?.({ data: JSON.stringify(message) });
+  fireMessage = (message: unknown) => this.onmessage?.({ data: JSON.stringify(message) });
 }
 
 const sockets: MockWebSocket[] = [];
@@ -101,6 +110,7 @@ describe('room connection authorize failures', () => {
     snapshotQuery.mockReset();
     mutateMock.mockReset();
     sockets.length = 0;
+    userState.preference.showInCollaboration = true;
     vi.stubGlobal('WebSocket', MockWebSocket);
   });
 
@@ -157,6 +167,7 @@ describe('room presence lifecycle', () => {
     snapshotQuery.mockReset().mockResolvedValue({ activities: [], presence: [] });
     mutateMock.mockReset();
     sockets.length = 0;
+    userState.preference.showInCollaboration = true;
     vi.stubGlobal('WebSocket', MockWebSocket);
   });
 
@@ -198,6 +209,46 @@ describe('room presence lifecycle', () => {
     );
     expect(socket.sent.some((raw) => raw.includes('"ping"'))).toBe(false);
   });
+
+  it('keeps receiving while the user hides their issue presence', async () => {
+    userState.preference.showInCollaboration = false;
+    const publish = acquireRoomConnection(room);
+    publish({ selection: { entityId: 'task-1', entityType: 'task' } });
+    await flush();
+    const socket = lastSocket();
+    socket.fireOpen();
+    await vi.advanceTimersByTimeAsync(15_000);
+    socket.fireMessage({
+      actor: { id: 'other-user', kind: 'human' },
+      connectionId: 'other-connection',
+      state: { cursor: { entityId: 'task-2', entityType: 'task', u: 0.5, v: 0.5 } },
+      type: 'presence',
+    });
+
+    expect(socket.sent).toEqual([]);
+    expect(statusOf()).toBe('online');
+    expect(getCollaborationStoreState().rooms[key]?.presence['other-connection']?.actor.id).toBe(
+      'other-user',
+    );
+  });
+
+  it('reauthorizes active rooms after the visibility preference changes', async () => {
+    acquireRoomConnection(room);
+    await flush();
+    const oldSocket = lastSocket();
+    oldSocket.fireOpen();
+
+    userState.preference.showInCollaboration = false;
+    refreshCollaborationConnections();
+    await flush();
+    const hiddenSocket = lastSocket();
+    hiddenSocket.fireOpen();
+
+    expect(oldSocket.readyState).toBe(MockWebSocket.CLOSED);
+    expect(hiddenSocket).not.toBe(oldSocket);
+    expect(hiddenSocket.sent).toEqual([]);
+    expect(authorize).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('server messages', () => {
@@ -216,6 +267,7 @@ describe('server messages', () => {
     snapshotQuery.mockReset().mockResolvedValue({ activities: [], presence: [] });
     mutateMock.mockReset();
     sockets.length = 0;
+    userState.preference.showInCollaboration = true;
     vi.stubGlobal('WebSocket', MockWebSocket);
   });
 

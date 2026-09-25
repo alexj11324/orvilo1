@@ -57,6 +57,7 @@ export function defineConfig() {
     '/webapi',
     '/oidc',
     '/oauth/connector',
+    '/oauth/github',
     '/oauth/linear',
     // The whole `(backend)/market` subtree is Bearer-token API, not SPA. The
     // trailing slash matters: `/market-auth-callback` is an auth SPA page that
@@ -246,6 +247,9 @@ export function defineConfig() {
     // Custom connector OAuth callback — hit via a cross-site redirect from the
     // provider, carries its own code+state, so it must not be session-gated.
     '/oauth/connector/callback',
+    // The GitHub App redirects from another origin with a one-time state.
+    // The callback handler verifies the initiating Orvilo session itself.
+    '/oauth/github/callback',
     // Linear app-install OAuth callback carries a server-issued state and PKCE
     // verifier, so the provider can redirect here before a browser session is
     // re-established.

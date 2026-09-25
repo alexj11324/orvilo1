@@ -34,6 +34,7 @@ import { pullRequestService, type ReviewPageCollection } from '@/services/pullRe
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import CollectionFooter from './CollectionFooter';
+import ConnectGitHubButton from './ConnectGitHubButton';
 import ReviewChecksPanel, { checkSummaryVisual } from './ReviewChecksPanel';
 import ReviewFileCard from './ReviewFileCard';
 import { reviewOperationId } from './reviewOperationId';
@@ -578,9 +579,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
           ) : notConnected ? (
             <Center gap={8} padding={24}>
               <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
-              <Button onClick={() => navigate('/settings/connector')}>
-                {t('reviews.connectGitHubAction')}
-              </Button>
+              <ConnectGitHubButton onConnected={refresh} />
             </Center>
           ) : error ? (
             <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />

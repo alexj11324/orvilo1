@@ -24,6 +24,7 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { mergeWorkQueryGroups } from '../MyWork/workQueryPaging';
 import WorkQueryResults from '../MyWork/WorkQueryResults';
+import ConnectGitHubButton from './ConnectGitHubButton';
 import ReviewPullRequestPage from './ReviewPullRequestPage';
 import {
   inProductReviewsCount,
@@ -458,9 +459,7 @@ const ReviewsPage = memo(() => {
               ) : notConnected ? (
                 <Center gap={8} padding={24}>
                   <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
-                  <Button onClick={() => navigate('/settings/connector')}>
-                    {t('reviews.connectGitHubAction')}
-                  </Button>
+                  <ConnectGitHubButton onConnected={refresh} />
                 </Center>
               ) : queue.error ? (
                 <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
@@ -573,9 +572,7 @@ const ReviewsPage = memo(() => {
   ) : notConnected ? (
     <Center className={styles.detailEmpty} gap={8} padding={24}>
       <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
-      <Button onClick={() => navigate('/settings/connector')}>
-        {t('reviews.connectGitHubAction')}
-      </Button>
+      <ConnectGitHubButton onConnected={refresh} />
     </Center>
   ) : queue.error ? (
     <Center className={styles.detailEmpty} padding={24}>

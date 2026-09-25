@@ -28,6 +28,7 @@ export * from './executionGrant';
 export * from './expertise';
 export * from './file';
 export * from './ftsSearchSyncOutbox';
+export * from './githubOAuth';
 export * from './goal';
 export * from './goalGraph';
 export * from './goalTrace';

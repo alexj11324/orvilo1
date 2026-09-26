@@ -1,5 +1,19 @@
 'use client';
 
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { type MenuProps } from '@lobehub/ui';
 import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import {
@@ -14,7 +28,7 @@ import {
 } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { Hash, LucideCheck, MoreHorizontalIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -30,7 +44,7 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import AllFavoritesDrawer from './AllFavoritesDrawer';
 import { hasMoreFavorites, visibleFavoriteRows } from './favoriteOverflow';
-import { favoriteReorderSwap } from './favoriteReorder';
+import { favoriteKey, favoriteReorderMove } from './favoriteReorder';
 import FavoriteRow from './FavoriteRow';
 
 interface WorkFavoritesProps {
@@ -39,12 +53,25 @@ interface WorkFavoritesProps {
 
 const PAGE_SIZE_OPTIONS = [5, 10, 15, 20] as const;
 
+// The click the browser synthesizes on the dropped row is dispatched to an
+// inner node and follows the row anchor's native activation without ever
+// reaching React's synthetic `onClick` — it can only be cancelled at native
+// capture level. `once` bounds any leaked listener to a single swallowed click.
+const cancelDropClick = (event: MouseEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+};
+
 const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const favoritePageSize = useGlobalStore(systemStatusSelectors.favoritePageSize);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const { data, error, isLoading, isValidating } = useClientDataSWR(
     workAttentionKeys.favorites(workspaceId),
     () => workAttentionService.favoriteList(),
@@ -52,13 +79,14 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
   // A settled response — even an empty list — survives later failed revalidations,
   // so rows keep rendering while the retry affordance stays visible.
   const hasSettled = data !== undefined;
-  // Keep team pins in personal mode too: favoriteReorder CAS rewrites the
-  // full ordered list, so dropping hidden rows would persist an order without them.
+  // Reorder writes the full ordered list, including team pins in personal mode.
   const items = useMemo(() => data?.data ?? [], [data?.data]);
+  const itemKeys = useMemo(() => items.map(favoriteKey), [items]);
   const visibleItems = useMemo(
     () => visibleFavoriteRows(items, favoritePageSize),
     [favoritePageSize, items],
   );
+  const visibleKeys = useMemo(() => visibleItems.map(favoriteKey), [visibleItems]);
   const hasMore = hasMoreFavorites(items.length, favoritePageSize);
 
   const refresh = useCallback(
@@ -67,8 +95,8 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
   );
 
   const move = useCallback(
-    async (index: number, direction: 'down' | 'up') => {
-      const payload = favoriteReorderSwap(items, index, direction);
+    async (from: number, to: number) => {
+      const payload = favoriteReorderMove(items, from, to);
       if (!payload) return;
       try {
         await workAttentionService.favoriteReorder(payload);
@@ -80,6 +108,37 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
       await refresh();
     },
     [items, refresh, t],
+  );
+
+  const moveByDirection = useCallback(
+    (index: number, direction: 'down' | 'up') =>
+      void move(index, index + (direction === 'up' ? -1 : 1)),
+    [move],
+  );
+
+  // The browser fires a click on the dragged row's own anchor right after the
+  // drop lands; suppress it for the rest of the gesture task so a reorder
+  // never navigates. Clearing on the next macrotask keeps ordinary clicks.
+  const suppressClickRef = useRef(false);
+  const releaseClickSuppression = useCallback(() => {
+    setTimeout(() => {
+      suppressClickRef.current = false;
+      document.removeEventListener('click', cancelDropClick, true);
+    }, 0);
+  }, []);
+  const handleDragStart = useCallback(() => {
+    suppressClickRef.current = true;
+    document.addEventListener('click', cancelDropClick, { capture: true, once: true });
+  }, []);
+
+  const handleDragEnd = useCallback(
+    ({ active, over }: DragEndEvent) => {
+      if (over && active.id !== over.id) {
+        void move(itemKeys.indexOf(String(active.id)), itemKeys.indexOf(String(over.id)));
+      }
+      releaseClickSuppression();
+    },
+    [itemKeys, move, releaseClickSuppression],
   );
 
   const unpin = useCallback(
@@ -148,16 +207,29 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
             <AsyncError error={error} retrying={isValidating} variant="inline" onRetry={refresh} />
           ) : (
             <>
-              {visibleItems.map((item, index) => (
-                <FavoriteRow
-                  index={index}
-                  item={item}
-                  itemCount={items.length}
-                  key={`${item.targetType}:${item.targetId}`}
-                  onMove={(rowIndex, direction) => void move(rowIndex, direction)}
-                  onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
-                />
-              ))}
+              <DndContext
+                collisionDetection={closestCenter}
+                sensors={sensors}
+                onDragCancel={releaseClickSuppression}
+                onDragEnd={handleDragEnd}
+                onDragStart={handleDragStart}
+              >
+                <SortableContext items={visibleKeys} strategy={verticalListSortingStrategy}>
+                  <Flexbox gap={1} role="list">
+                    {visibleItems.map((item, index) => (
+                      <FavoriteRow
+                        index={index}
+                        item={item}
+                        itemCount={items.length}
+                        key={favoriteKey(item)}
+                        onMove={moveByDirection}
+                        onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
+                        suppressClickRef={suppressClickRef}
+                      />
+                    ))}
+                  </Flexbox>
+                </SortableContext>
+              </DndContext>
               {items.length === 0 && (
                 <Text
                   fontSize={12}
@@ -189,7 +261,7 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
             items={items}
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
-            onMove={(index, direction) => void move(index, direction)}
+            onMove={moveByDirection}
             onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
           />
         </Flexbox>

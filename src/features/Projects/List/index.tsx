@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, ContextMenuTrigger, Empty, Flexbox, Icon, Input, SearchBar } from '@lobehub/ui';
+import { Center, ContextMenuTrigger, Empty, Flexbox, Icon, Input } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  Layers2Icon,
   MoreHorizontalIcon,
   PlusIcon,
   SearchXIcon,
@@ -307,6 +308,29 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   sortHeaderActive: css`
     color: ${cssVar.colorText};
+  `,
+  headerAction: css`
+    border: 0;
+    color: ${cssVar.colorTextSecondary};
+    background: transparent;
+    box-shadow: none;
+  `,
+  viewChip: css`
+    display: inline-flex;
+    align-items: center;
+
+    height: 28px;
+    padding-inline: 12px;
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 500;
+    color: ${cssVar.colorText};
+
+    background: ${cssVar.colorFillSecondary};
+  `,
+  viewAction: css`
+    border-radius: 50%;
   `,
 }));
 
@@ -726,7 +750,7 @@ export const SortableHeader = memo<{
     >
       {label}
       {active ? (
-        <Icon aria-hidden icon={orderDirection === 'asc' ? ArrowUpIcon : ArrowDownIcon} size={12} />
+        <Icon aria-hidden icon={orderDirection === 'asc' ? ArrowDownIcon : ArrowUpIcon} size={12} />
       ) : null}
     </button>
   );
@@ -832,7 +856,6 @@ ProjectListGroupHeader.displayName = 'ProjectListGroupHeader';
 
 const ProjectListPage = memo(() => {
   const { t } = useTranslation('project');
-  const [keyword, setKeyword] = useState('');
   const enabled = useUserStore(labPreferSelectors.enableProjects);
   const projects = useCurrentProjectList();
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectList)(enabled);
@@ -913,18 +936,10 @@ const ProjectListPage = memo(() => {
     [options.properties],
   );
   const visibleProjects = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLocaleLowerCase();
-    const searched = normalizedKeyword
-      ? projects.filter((project) =>
-          [project.name, project.identifier, project.description]
-            .filter(Boolean)
-            .some((value) => value!.toLocaleLowerCase().includes(normalizedKeyword)),
-        )
-      : projects;
-    const filtered = filterProjectList(searched, filters);
+    const filtered = filterProjectList(projects, filters);
     const open = filterClosedProjects(filtered, options.showClosed);
     return sortProjectList(open, options.orderBy, options.orderDirection);
-  }, [filters, keyword, options.orderBy, options.orderDirection, options.showClosed, projects]);
+  }, [filters, options.orderBy, options.orderDirection, options.showClosed, projects]);
 
   // Board layout always groups by status (the reference's project board is a
   // status kanban); the list layout honors the Grouping option.
@@ -955,13 +970,12 @@ const ProjectListPage = memo(() => {
         left={<Text weight={500}>{t('list.title')}</Text>}
         right={
           <Button
+            className={styles.headerAction}
             icon={PlusIcon}
-            shape={'round'}
             size={'small'}
-            type="primary"
             onClick={() => openCreateProjectModal()}
           >
-            {t('create.action')}
+            {t('create.title')}
           </Button>
         }
       />
@@ -989,12 +1003,14 @@ const ProjectListPage = memo(() => {
               </>
             }
           >
-            <SearchBar
-              allowClear
-              placeholder={t('list.searchPlaceholder')}
-              style={{ maxWidth: 280 }}
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
+            <span className={styles.viewChip}>{t('teams.viewAllProjects', { ns: 'common' })}</span>
+            <ActionIcon
+              aria-label={t('savedViews.newView', { ns: 'common' })}
+              className={styles.viewAction}
+              icon={Layers2Icon}
+              size="small"
+              title={t('savedViews.newView', { ns: 'common' })}
+              onClick={() => setAdvancedFilterOpen(true)}
             />
             <ProjectListFilterChips
               filters={filters}
@@ -1013,13 +1029,9 @@ const ProjectListPage = memo(() => {
         ) : visibleProjects.length === 0 ? (
           <Center flex={1} padding={48}>
             <Empty
-              icon={keyword.trim() || filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON}
+              icon={filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON}
               description={
-                filters.length > 0
-                  ? t('list.filter.noResults')
-                  : keyword.trim()
-                    ? t('list.searchEmpty')
-                    : t('list.emptyDescription')
+                filters.length > 0 ? t('list.filter.noResults') : t('list.emptyDescription')
               }
             />
           </Center>

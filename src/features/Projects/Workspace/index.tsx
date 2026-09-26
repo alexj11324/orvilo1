@@ -68,7 +68,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   page: css`
     box-sizing: border-box;
-    padding-block: 24px 32px;
+
+    /* Leave the same gap below the tabs as Linear's overview body. */
+    padding-block: 72px 32px;
 
     @media (width <= 720px) {
       margin-inline: 20px;

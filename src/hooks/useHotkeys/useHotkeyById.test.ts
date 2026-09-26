@@ -154,7 +154,7 @@ describe('useHotkeyById', () => {
   });
 
   it('should combine scopes from registration and options', () => {
-    const testHotkeyId = HotkeyEnum.ToggleLeftPanel;
+    const testHotkeyId = HotkeyEnum.ToggleRightPanel;
     const registrationItem = HOTKEYS_REGISTRATION.find((item) => item.id === testHotkeyId);
     const options = {
       scopes: ['customScope'],

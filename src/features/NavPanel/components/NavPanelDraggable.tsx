@@ -3,17 +3,14 @@
 import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
-import { Activity, memo, Suspense, useEffect, useMemo, useRef } from 'react';
+import { Activity, memo, Suspense, useMemo, useRef } from 'react';
 
 import NavPanelUpgradeEntry from '@/business/client/features/NavPanelUpgradeEntry';
 import { isDesktop } from '@/const/version';
 import Footer from '@/features/HomeSidebar/Footer';
 import { USER_DROPDOWN_ICON_ID } from '@/features/NavPanel/constants';
-import { TOGGLE_BUTTON_ID } from '@/features/NavPanel/ToggleLeftPanelButton';
 import { useGlobalStore } from '@/store/global';
 import {
-  NAV_PANEL_AUTO_COLLAPSE_BELOW,
-  NAV_PANEL_AUTO_COLLAPSED_KEY,
   NAV_PANEL_MAX_WIDTH,
   NAV_PANEL_MIN_WIDTH,
   systemStatusSelectors,
@@ -68,14 +65,6 @@ const draggableStyles = createStaticStyles(({ css, cssVar }) => ({
       user-select: none;
     }
 
-    #${TOGGLE_BUTTON_ID} {
-      width: 0 !important;
-      opacity: 0;
-      transition:
-        opacity,
-        width 0.2s ${cssVar.motionEaseOut};
-    }
-
     #${USER_DROPDOWN_ICON_ID} {
       width: 0 !important;
       opacity: 0;
@@ -88,11 +77,6 @@ const draggableStyles = createStaticStyles(({ css, cssVar }) => ({
     }
 
     &:hover {
-      #${TOGGLE_BUTTON_ID} {
-        width: 32px !important;
-        opacity: 1;
-      }
-
       #${USER_DROPDOWN_ICON_ID} {
         width: 14px !important;
         opacity: 1;
@@ -116,38 +100,8 @@ const classNames = {
 const hiddenLayerStyle = { display: 'none' };
 
 export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, homeContent }) => {
-  const [expand, togglePanel, isStatusInit] = useGlobalStore((s) => [
-    systemStatusSelectors.showLeftPanel(s),
-    s.toggleLeftPanel,
-    systemStatusSelectors.isStatusInit(s),
-  ]);
+  const isStatusInit = useGlobalStore(systemStatusSelectors.isStatusInit);
   const handleSizeChange = useNavPanelSizeChangeHandler();
-
-  // Narrow windows can't afford a fixed nav column: auto-collapse below the
-  // breakpoint (headers still expose ToggleLeftPanelButton) and restore the
-  // previous state when the window widens again. The session flag separates an
-  // auto-collapse from a deliberate user collapse across reloads.
-  const autoCollapsedRef = useRef(sessionStorage.getItem(NAV_PANEL_AUTO_COLLAPSED_KEY) === '1');
-  useEffect(() => {
-    const media = window.matchMedia(`(max-width: ${NAV_PANEL_AUTO_COLLAPSE_BELOW - 1}px)`);
-    const apply = () => {
-      const store = useGlobalStore.getState();
-      if (media.matches) {
-        if (systemStatusSelectors.showLeftPanel(store)) {
-          autoCollapsedRef.current = true;
-          sessionStorage.setItem(NAV_PANEL_AUTO_COLLAPSED_KEY, '1');
-          store.toggleLeftPanel(false);
-        }
-      } else if (autoCollapsedRef.current) {
-        autoCollapsedRef.current = false;
-        sessionStorage.removeItem(NAV_PANEL_AUTO_COLLAPSED_KEY);
-        store.toggleLeftPanel(true);
-      }
-    };
-    apply();
-    media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
-  }, []);
 
   // Defer DraggablePanel mount until system status hydrates; otherwise defaultSize
   // captures the pre-hydration default and the DOM drifts off NavigationBar's live width.
@@ -174,17 +128,16 @@ export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, 
 
   return (
     <DraggablePanel
+      expand
       className={draggableStyles.panel}
       classNames={classNames}
       defaultSize={defaultSize}
-      expand={expand}
       expandable={false}
       maxWidth={NAV_PANEL_MAX_WIDTH}
       minWidth={NAV_PANEL_MIN_WIDTH}
       placement="left"
       showBorder={false}
       style={styles}
-      onExpandChange={togglePanel}
       onSizeDragging={handleSizeChange}
     >
       <div className={draggableStyles.inner}>

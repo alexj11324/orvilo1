@@ -30,6 +30,24 @@ afterEach(() => {
 });
 
 describe('createPreferenceSlice', () => {
+  describe('toggleLeftPanel', () => {
+    it('keeps the main sidebar open after explicit and implicit close requests', () => {
+      useGlobalStore.setState({
+        isStatusInit: true,
+        status: { ...initialState.status, showLeftPanel: true },
+      });
+
+      useGlobalStore.getState().toggleLeftPanel(false);
+      expect(useGlobalStore.getState().status.showLeftPanel).toBe(true);
+
+      useGlobalStore.getState().toggleLeftPanel();
+      expect(useGlobalStore.getState().status.showLeftPanel).toBe(true);
+
+      useGlobalStore.getState().updateSystemStatus({ showLeftPanel: false });
+      expect(useGlobalStore.getState().status.showLeftPanel).toBe(true);
+    });
+  });
+
   describe('toggleHomeRail', () => {
     it('should persist the Home rail visibility for the next page startup', async () => {
       const previousStatus = localStorage.getItem('ORVILO_SYSTEM_STATUS');

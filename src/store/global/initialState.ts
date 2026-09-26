@@ -681,7 +681,7 @@ export const INITIAL_STATUS = {
   projectListViewOptions: {
     grouping: 'none' as const,
     layout: 'list' as const,
-    orderBy: 'manual' as const,
+    orderBy: 'name' as const,
     orderDirection: 'asc' as const,
     properties: {
       completed: false,
@@ -790,10 +790,7 @@ export const createInitialSystemStatus = (): SystemStatus => {
       typeof persistedStatus.showHomeRail === 'boolean'
         ? persistedStatus.showHomeRail
         : INITIAL_STATUS.showHomeRail,
-    showLeftPanel:
-      typeof persistedStatus.showLeftPanel === 'boolean'
-        ? persistedStatus.showLeftPanel
-        : INITIAL_STATUS.showLeftPanel,
+    showLeftPanel: true,
   };
 };
 

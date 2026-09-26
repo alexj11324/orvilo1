@@ -239,4 +239,35 @@ describe('GitHub OAuth flow', () => {
     expect(db.delete).not.toHaveBeenCalled();
     expect(releaseWhere).toHaveBeenCalledOnce();
   });
+
+  it('keeps a connection when refresh fails on client authentication', async () => {
+    const row = {
+      userId: 'user-one',
+      clientId: 'app-client',
+      tokenVersion: 3,
+      accessTokenCiphertext: 'encrypted:expired',
+      accessTokenExpiresAt: new Date(0),
+      refreshTokenCiphertext: 'encrypted:refresh',
+      refreshTokenExpiresAt: new Date(Date.now() + 60_000),
+    };
+    const claimReturning = vi.fn().mockResolvedValue([{ userId: 'user-one' }]);
+    const claimWhere = vi.fn(() => ({ returning: claimReturning }));
+    const releaseWhere = vi.fn().mockResolvedValue(undefined);
+    const db = {
+      select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: async () => [row] }) }) })),
+      update: vi
+        .fn()
+        .mockImplementationOnce(() => ({ set: () => ({ where: claimWhere }) }))
+        .mockImplementationOnce(() => ({ set: () => ({ where: releaseWhere }) })),
+      delete: vi.fn(),
+    };
+    // A 401 on the token endpoint is the app credential failing, not the
+    // user's grant being revoked — only grant codes may delete the row.
+    refreshToken.mockRejectedValue(new GitHubOAuthTokenError(401, 'unauthorized_client'));
+    await expect(
+      getValidGitHubAccessToken({ db: db as never, userId: 'user-one' }),
+    ).rejects.toThrow('GitHub token exchange failed');
+    expect(db.delete).not.toHaveBeenCalled();
+    expect(releaseWhere).toHaveBeenCalledOnce();
+  });
 });

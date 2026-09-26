@@ -11,6 +11,7 @@ export const useGitHubConnection = (onConnected: () => void | Promise<void>) => 
   const { t } = useTranslation('common');
   const initialGrantRevision = useRef<string | null>(null);
   const completed = useRef(false);
+  const popup = useRef<Window | null>(null);
   const [starting, setStarting] = useState(false);
   const [waiting, setWaiting] = useState(false);
 
@@ -33,9 +34,28 @@ export const useGitHubConnection = (onConnected: () => void | Promise<void>) => 
 
   useEffect(() => {
     if (!waiting) return;
-    const timer = window.setInterval(() => void checkConnection(), 2500);
-    const timeout = window.setTimeout(() => setWaiting(false), 120_000);
-    const onFocus = () => void checkConnection();
+    const timer = window.setInterval(() => {
+      // A closed popup is the web flow's cancel signal; without this the wait
+      // state would linger with nothing able to complete it.
+      if (popup.current?.closed) {
+        popup.current = null;
+        setWaiting(false);
+        return;
+      }
+      void checkConnection();
+    }, 2500);
+    // The fast poll cadence expires, not the watch itself: an authorization
+    // that finishes after the timeout (MFA, app install review) still
+    // reconciles through the focus/message checks below.
+    const timeout = window.setTimeout(() => window.clearInterval(timer), 120_000);
+    const onFocus = () => {
+      if (popup.current?.closed) {
+        popup.current = null;
+        setWaiting(false);
+        return;
+      }
+      void checkConnection();
+    };
     const onMessage = (event: MessageEvent) => {
       if (event.origin === window.location.origin && event.data?.type === 'orvilo-github-oauth') {
         if (event.data.success) {
@@ -57,8 +77,8 @@ export const useGitHubConnection = (onConnected: () => void | Promise<void>) => 
   }, [checkConnection, t, waiting]);
 
   const connect = async () => {
-    const popup = isDesktop ? null : window.open('', '_blank', 'width=600,height=700');
-    if (!isDesktop && !popup) {
+    popup.current = isDesktop ? null : window.open('', '_blank', 'width=600,height=700');
+    if (!isDesktop && !popup.current) {
       toast.error(t('reviews.connectGitHubFailed'));
       return;
     }
@@ -78,11 +98,13 @@ export const useGitHubConnection = (onConnected: () => void | Promise<void>) => 
         return;
       }
       const response = await githubOAuthService.start();
-      if (!popup || popup.closed) throw new Error('GitHub authorization window was closed');
-      popup.location.href = response.data.authorizationUrl;
+      if (!popup.current || popup.current.closed)
+        throw new Error('GitHub authorization window was closed');
+      popup.current.location.href = response.data.authorizationUrl;
       setWaiting(true);
     } catch {
-      popup?.close();
+      popup.current?.close();
+      popup.current = null;
       toast.error(t('reviews.connectGitHubFailed'));
     } finally {
       setStarting(false);

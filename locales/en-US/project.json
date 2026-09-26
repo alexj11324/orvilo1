@@ -345,6 +345,7 @@
   "overview.milestoneIssues_other": "{{count}} issues · {{percent}}%",
   "overview.milestoneMenu": "Open menu",
   "overview.milestoneProgressOf": "{{percent}}% of {{count}}",
+  "overview.milestoneRefreshError": "Saved, but the milestone list may take a moment to update.",
   "overview.milestoneSaveError": "Could not save the milestone. Please try again.",
   "overview.milestoneSeeIssues": "See issues",
   "overview.milestoneSet": "Set milestone",

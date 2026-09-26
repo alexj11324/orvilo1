@@ -246,9 +246,13 @@ export const getValidGitHubAccessToken = async (input: {
     if (!saved) throw new Error('GitHub credential changed during refresh');
     return tokens.access_token;
   } catch (error) {
+    // Only a grant-level rejection proves the user's authorization is gone.
+    // A bare 401 here is a client-authentication failure (misconfigured or
+    // rotating app secret) — deleting the row would force every connected
+    // user to re-authorize once the app config recovers.
     if (
       error instanceof GitHubOAuthTokenError &&
-      (error.status === 401 || error.code === 'invalid_grant' || error.code === 'bad_refresh_token')
+      (error.code === 'invalid_grant' || error.code === 'bad_refresh_token')
     ) {
       await input.db
         .delete(githubUserConnections)

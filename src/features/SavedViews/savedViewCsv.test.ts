@@ -34,6 +34,16 @@ describe('buildSavedViewCsv', () => {
     );
   });
 
+  it('neutralizes formula-leading values so exports stay literal', () => {
+    const csv = buildSavedViewCsv('task', [
+      { id: '=1+1', identifier: '@SUM(1)', name: '=-2+3', status: '-safe' },
+      { id: 't2', identifier: 'ORV-2', name: '\tcmd', status: '+ok' },
+    ]);
+    const lines = csv.split('\n');
+    expect(lines[1]).toBe('"\'=1+1","\'@SUM(1)","\'=-2+3","\'-safe","","",""');
+    expect(lines[2]).toBe('"t2","ORV-2","\'\tcmd","\'+ok","","",""');
+  });
+
   it('uses the project column set for project views', () => {
     const csv = buildSavedViewCsv('project', [
       {
@@ -77,7 +87,8 @@ describe('fetchAllSavedViewRows', () => {
       .mockResolvedValueOnce(page({ queryHash: 'h1', tasks: rows(3, 2), total: 5 }));
 
     const result = await fetchAllSavedViewRows('view-1');
-    expect(result.map((row) => row.id)).toEqual(['t0', 't1', 't2', 't3', 't4']);
+    expect(result.truncated).toBe(false);
+    expect(result.rows.map((row) => row.id)).toEqual(['t0', 't1', 't2', 't3', 't4']);
     expect(evaluate).toHaveBeenCalledTimes(2);
     expect(evaluate).toHaveBeenNthCalledWith(2, {
       afterId: 't2',
@@ -111,7 +122,8 @@ describe('fetchAllSavedViewRows', () => {
       );
 
     const result = await fetchAllSavedViewRows('view-2');
-    expect(result.map((row) => row.id)).toEqual(['a1', 'a2', 'b1']);
+    expect(result.truncated).toBe(false);
+    expect(result.rows.map((row) => row.id)).toEqual(['a1', 'a2', 'b1']);
     // Only the 'todo' group needed a second page — 'done' reported hasMore:false.
     expect(evaluate).toHaveBeenCalledTimes(2);
     expect(evaluate).toHaveBeenNthCalledWith(2, {
@@ -133,7 +145,8 @@ describe('fetchAllSavedViewRows', () => {
       }),
     );
     const result = await fetchAllSavedViewRows('view-3');
-    expect(result).toHaveLength(1);
+    expect(result.truncated).toBe(false);
+    expect(result.rows).toHaveLength(1);
   });
 
   it('respects the hard row cap', async () => {
@@ -147,6 +160,7 @@ describe('fetchAllSavedViewRows', () => {
       }),
     );
     const result = await fetchAllSavedViewRows('view-4');
-    expect(result.length).toBeLessThanOrEqual(SAVED_VIEW_CSV_MAX_ROWS);
+    expect(result.rows.length).toBeLessThanOrEqual(SAVED_VIEW_CSV_MAX_ROWS);
+    expect(result.truncated).toBe(true);
   });
 });

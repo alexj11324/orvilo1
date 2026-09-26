@@ -360,7 +360,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
   const busyRef = useRef(false);
 
   const runMutation = async (
-    fn: () => Promise<unknown>,
+    fn: () => Promise<{ refreshError?: unknown } | void>,
     errorKey: 'overview.milestoneDeleteError' | 'overview.milestoneSaveError',
   ) => {
     // One write at a time: a second save racing the first would land on the
@@ -369,7 +369,10 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
     busyRef.current = true;
     setSaving(true);
     try {
-      await fn();
+      const result = await fn();
+      // The write committed; only the list refresh failed — don't report a
+      // failed save (a retry would duplicate it), just flag the stale view.
+      if (result?.refreshError) toast.warning(t('overview.milestoneRefreshError'));
     } catch (error) {
       console.error('Project milestone mutation failed', error);
       toast.error(t(errorKey));

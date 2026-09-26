@@ -112,11 +112,11 @@ describe('pullRequestRouter write gate', () => {
   });
 
   it('reports the same write capability that the mutation gate enforces', async () => {
-    expect((await createCaller().detail({ id: REVIEW_ID })).data).toMatchObject({
+    expect((await createCaller().detail({ id: REVIEW_ID }))?.data).toMatchObject({
       reviewWritesEnabled: false,
     });
     process.env.ORVILO_PR_REVIEW_WRITE = '1';
-    expect((await createCaller().detail({ id: REVIEW_ID })).data).toMatchObject({
+    expect((await createCaller().detail({ id: REVIEW_ID }))?.data).toMatchObject({
       reviewWritesEnabled: true,
     });
   });

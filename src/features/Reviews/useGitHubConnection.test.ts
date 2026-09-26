@@ -60,4 +60,56 @@ describe('useGitHubConnection', () => {
     expect(toastError).toHaveBeenCalledWith('reviews.connectGitHubFailed');
     expect(result.current.waiting).toBe(false);
   });
+
+  it('keeps reconciling on focus after the fast poll timeout expires', async () => {
+    vi.useFakeTimers();
+    const authorizationUrl = 'https://github.com/login/oauth/authorize?client_id=example';
+    start.mockResolvedValue({ data: { authorizationUrl } });
+    status.mockResolvedValue({ data: { connected: false } });
+    const popup = { closed: false, close: vi.fn(), location: { href: '' } };
+    vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+    const onConnected = vi.fn();
+    const { result } = renderHook(() => useGitHubConnection(onConnected));
+
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(result.current.waiting).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(130_000);
+    });
+    // The watch is still on — only the fast cadence stopped.
+    expect(result.current.waiting).toBe(true);
+
+    status.mockResolvedValue({ data: { connected: true, grantRevision: 'r2' } });
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(onConnected).toHaveBeenCalledOnce();
+    expect(result.current.waiting).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('stops waiting when the authorization popup is closed', async () => {
+    vi.useFakeTimers();
+    const authorizationUrl = 'https://github.com/login/oauth/authorize?client_id=example';
+    start.mockResolvedValue({ data: { authorizationUrl } });
+    status.mockResolvedValue({ data: { connected: false } });
+    const popup = { closed: false, close: vi.fn(), location: { href: '' } };
+    vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+    const { result } = renderHook(() => useGitHubConnection(vi.fn()));
+
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(result.current.waiting).toBe(true);
+
+    popup.closed = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+    expect(result.current.waiting).toBe(false);
+    vi.useRealTimers();
+  });
 });

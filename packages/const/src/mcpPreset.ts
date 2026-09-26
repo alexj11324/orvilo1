@@ -31,6 +31,8 @@ export interface McpPresetConnector {
   id: string;
   /** Display label (brand name, intentionally not localized). */
   label: string;
+  /** Server-managed authorization path used instead of the generic credential form. */
+  managedAuth?: 'github-app';
   /** Official remote MCP endpoint (streamable HTTP). */
   url: string;
 }
@@ -62,14 +64,15 @@ export const matchMcpPresetByConnector = (
 
 export const MCP_PRESET_CONNECTORS: McpPresetConnector[] = [
   {
-    // GitHub's hosted MCP has no dynamic-registration endpoint — a PAT is the
-    // one-click default; OAuth with a self-registered client stays selectable.
+    // Reuses the existing per-user GitHub App grant; tokens never enter the
+    // custom connector credential form or browser state.
     authType: 'bearer',
     description:
       'GitHub is a platform for version control and collaboration, enabling developers to host, review, and manage code repositories.',
     icon: SiGithub,
     id: 'github',
     label: 'GitHub',
+    managedAuth: 'github-app',
     url: 'https://api.githubcopilot.com/mcp/',
   },
   {

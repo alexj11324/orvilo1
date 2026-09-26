@@ -77,6 +77,7 @@
   "connector.add.title": "添加自定义连接器",
   "connector.deleteAccountConfirmContent": "此操作会移除该连接器及其在你账号下的授权。之后任何使用它的助理都需要重新授权。",
   "connector.deleteAgentConfirmContent": "该连接器归属于助理「{{agent}}」。删除它会同时把这个工具从该助理中移除。",
+  "connector.deleteGitHubMcpConfirmContent": "这会移除 GitHub MCP 连接器。GitHub 仍会保持连接，供 Reviews 使用。",
   "connector.manageOnlyCreator": "仅创建者或工作区 Owner 可以管理此连接器",
   "connector.thisAgent": "该助理",
   "dalle.autoGenerate": "自动生成",

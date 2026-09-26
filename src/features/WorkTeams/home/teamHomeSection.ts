@@ -1,5 +1,3 @@
-import type { WorkQuery } from '@orvilo/types';
-
 /**
  * Team Home sub-tab contract (`?tab=home&section=…`).
  *
@@ -49,27 +47,3 @@ export const teamHomeSectionTo = (
   const query = next.toString();
   return `/teams/${teamId}${query ? `?${query}` : ''}`;
 };
-
-/** Preview rows under the overview's activity block. */
-export const TEAM_HOME_RECENT_LIMIT = 5;
-
-/**
- * "Recent issues" — the overview's activity-ish block. Same team scope and
- * untriaged exclusion as the Issues tab, flattened (no `groupBy`) and ordered
- * by `updatedAt` so the freshest work floats up. The page size rides the
- * `workAttentionService.query` `limit` argument, not the query.
- */
-export const teamRecentIssuesQuery = (teamId: string, triageCapable: boolean): WorkQuery => ({
-  entityType: 'task',
-  filter: {
-    all: [
-      { field: 'teamId', op: 'eq', value: teamId },
-      ...(triageCapable
-        ? [{ field: 'triageStatus' as const, op: 'neq' as const, value: 'untriaged' }]
-        : []),
-    ],
-  },
-  layout: 'list',
-  schemaVersion: 1,
-  sort: [{ direction: 'desc', field: 'updatedAt' }],
-});

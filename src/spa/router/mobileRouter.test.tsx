@@ -78,6 +78,13 @@ describe('mobileRouter retired provider routes', () => {
   });
 });
 
+it('redirects the legacy mobile Linear page to workspace settings', () => {
+  const leaf = matchRoutes(mobileRoutes, '/acme/settings/linear')?.at(-1)?.route;
+
+  expect(leaf?.path).toBe('linear');
+  expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe('..');
+});
+
 describe('mobile retired product routes', () => {
   it.each(['/community', '/community/agent/example', '/page', '/page/document-id'])(
     'redirects retired route %s home',

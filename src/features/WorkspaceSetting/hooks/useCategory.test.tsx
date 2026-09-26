@@ -130,6 +130,13 @@ describe('workspace settings useCategory', () => {
     expect(getItemKeys()).not.toContain(WorkspaceSettingsTabs.OAuthApps);
   });
 
+  it('offers the new Imports entry without the retired Linear sync entry', () => {
+    const itemKeys = getItemKeys();
+
+    expect(itemKeys).toContain(WorkspaceSettingsTabs.Imports);
+    expect(itemKeys).not.toContain(WorkspaceSettingsTabs.Linear);
+  });
+
   it('never lists OAuth Apps, even while the retired Labs preference is still set', () => {
     // The workspace tab pointed at the self-built console, which is retired; the
     // stored `enableOAuthApps` preference must not bring the row (and with it a

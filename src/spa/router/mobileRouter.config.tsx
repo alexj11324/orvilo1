@@ -519,10 +519,9 @@ export const mobileRoutes: RouteObject[] = [
                 path: 'provider',
               },
               {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/linear'),
-                  'Mobile > Workspace > Settings > Linear',
-                ),
+                // The legacy sync/import page is retired. Mobile has no
+                // replacement importer route, so return to workspace settings.
+                element: redirectElement('..'),
                 path: 'linear',
               },
               // Legacy `/<slug>/settings/<alias>` deep links, from the same

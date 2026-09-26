@@ -1061,12 +1061,7 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
             path: 'connector',
           },
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/[workspaceSlug]/settings/linear'),
-              'Desktop > Workspace > Settings > Linear',
-              { preloadId: 'settings' },
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
+            element: redirectElement('../imports/linear'),
             path: 'linear',
           },
           {

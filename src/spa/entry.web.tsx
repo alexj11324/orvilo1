@@ -1,4 +1,5 @@
 import '../initialize';
+import '@/app/globals.css';
 
 import { RouterProvider } from 'react-router/dom';
 

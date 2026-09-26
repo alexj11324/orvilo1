@@ -16,7 +16,6 @@ import {
   KeyboardIcon,
   KeyIcon,
   KeyRound,
-  Link2,
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
@@ -206,11 +205,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: McpIcon,
               key: WorkspaceSettingsTabs.Connector,
               label: t('workspaceSetting.tab.connector'),
-            },
-            {
-              icon: Link2,
-              key: WorkspaceSettingsTabs.Linear,
-              label: t('workspaceSetting.tab.linear'),
             },
             canManageWorkspace && {
               icon: Import,

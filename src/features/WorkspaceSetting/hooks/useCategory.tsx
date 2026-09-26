@@ -1,8 +1,8 @@
 import { Avatar } from '@lobehub/ui/base-ui';
+import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
-  Blocks,
   Building2,
   ChartColumnBigIcon,
   Coins,
@@ -19,7 +19,6 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
-  ScrollText,
   TagIcon,
   Users,
 } from 'lucide-react';
@@ -29,7 +28,11 @@ import { useTranslation } from 'react-i18next';
 import { usePermission } from '@/hooks/usePermission';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
+import {
+  featureFlagsSelectors,
+  serverConfigSelectors,
+  useServerConfigStore,
+} from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
@@ -69,6 +72,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
   // immediately 403s.
   const { allowed: canCreateContent } = usePermission('create_content');
   const { hideDocs } = useServerConfigStore(featureFlagsSelectors);
+  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
@@ -146,7 +150,10 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
           key: WorkspaceSettingsGroupKey.General,
           title: t('workspaceSetting.group.workspace'),
         },
-        {
+        // The business settings pages only exist on deployments that ship the
+        // business overlay — the route slots stay registered as its injection
+        // points, but the nav must not offer them where the flag is off.
+        enableBusinessFeatures && {
           items: [
             {
               icon: Map,
@@ -195,7 +202,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               label: t('workspaceSetting.tab.labels'),
             },
             {
-              icon: Blocks,
+              icon: McpIcon,
               key: WorkspaceSettingsTabs.Connector,
               label: t('workspaceSetting.tab.connector'),
             },
@@ -220,11 +227,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: Database,
               key: WorkspaceSettingsTabs.Storage,
               label: t('tab.storage'),
-            },
-            {
-              icon: ScrollText,
-              key: WorkspaceSettingsTabs.AuditLog,
-              label: t('workspaceSetting.tab.auditLog'),
             },
           ].filter(Boolean) as WorkspaceSettingCategoryItem[],
           key: WorkspaceSettingsGroupKey.Admin,
@@ -275,6 +277,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
       canManageWorkspace,
       canViewBilling,
       canCreateContent,
+      enableBusinessFeatures,
       hideDocs,
       avatarUrl,
       username,

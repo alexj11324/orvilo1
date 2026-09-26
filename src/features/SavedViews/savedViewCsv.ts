@@ -17,8 +17,14 @@ export interface SavedViewCsvRow {
   updatedAt?: Date | string | null;
 }
 
+/** First characters a spreadsheet client would evaluate as a formula. */
+const FORMULA_LEADING_CHARS = new Set(['=', '+', '-', '@', '\t', '\r']);
+
 const csvCell = (value: unknown): string => {
-  const text = value === null || value === undefined ? '' : String(value);
+  let text = value === null || value === undefined ? '' : String(value);
+  // Workspace-controlled names can start with = + - @ (or tab/CR): spreadsheet
+  // apps would run them as formulas on open. A leading ' keeps the cell literal.
+  if (FORMULA_LEADING_CHARS.has(text.charAt(0))) text = `'${text}`;
   // Quote always — commas/quotes/newlines in titles then never break columns.
   return `"${text.replaceAll('"', '""')}"`;
 };
@@ -106,13 +112,21 @@ interface EvaluatePage {
   total: number;
 }
 
+export interface SavedViewCsvRowsResult {
+  rows: SavedViewCsvRow[];
+  /** True when the export stopped before collecting every evaluated row. */
+  truncated: boolean;
+}
+
 /**
  * Pulls every page of a view's evaluation — grouped queries paginate per
  * group (`afterId` + `groupKey`), flat queries by `afterId` alone. Rows are
- * deduped by id; the hard cap stops pathological exports.
+ * deduped by id; the hard cap stops pathological exports and is reported via
+ * `truncated` so callers can disclose a partial dataset.
  */
-export const fetchAllSavedViewRows = async (viewId: string): Promise<SavedViewCsvRow[]> => {
+export const fetchAllSavedViewRows = async (viewId: string): Promise<SavedViewCsvRowsResult> => {
   const collected = new Map<string, SavedViewCsvRow>();
+  let truncated = false;
   const push = (items: readonly SavedViewCsvRow[] | undefined) => {
     for (const item of items ?? []) collected.set(item.id, item);
   };
@@ -169,6 +183,8 @@ export const fetchAllSavedViewRows = async (viewId: string): Promise<SavedViewCs
         afterId = items.at(-1)?.id;
         hasMore = nextGroup?.hasMore === true;
       }
+      // The group still reported more rows when the cap stopped paging.
+      truncated ||= hasMore === true;
     }
   } else {
     let afterId = (evaluation.tasks ?? evaluation.projects ?? []).at(-1)?.id ?? undefined;
@@ -190,7 +206,9 @@ export const fetchAllSavedViewRows = async (viewId: string): Promise<SavedViewCs
       if (items.length === 0 || collected.size === before) break;
       afterId = items.at(-1)?.id;
     }
+    // Cap or a stalled cursor left evaluated rows unexported.
+    truncated ||= collected.size < (evaluation.total ?? 0);
   }
 
-  return [...collected.values()];
+  return { rows: [...collected.values()], truncated };
 };

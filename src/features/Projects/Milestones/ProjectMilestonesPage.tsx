@@ -182,7 +182,8 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
         if (busyRef.current) return;
         busyRef.current = true;
         try {
-          await deleteMilestone(project.id, milestone.id);
+          const result = await deleteMilestone(project.id, milestone.id);
+          if (result.refreshError) toast.warning(t('overview.milestoneRefreshError'));
         } catch (error) {
           console.error('Failed to delete project milestone', error);
           toast.error(t('overview.milestoneDeleteError'));

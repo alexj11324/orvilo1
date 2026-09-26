@@ -1,8 +1,8 @@
 import { Avatar } from '@lobehub/ui/base-ui';
+import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
-  Blocks,
   BrainCircuit,
   ChartColumnBigIcon,
   Coins,
@@ -157,7 +157,7 @@ export const useCategory = () => {
       {
         items: [
           {
-            icon: Blocks,
+            icon: McpIcon,
             key: SettingsTabs.Connector,
             label: t('tab.connector'),
           },

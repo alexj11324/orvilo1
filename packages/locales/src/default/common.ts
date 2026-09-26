@@ -902,6 +902,7 @@ export default {
   'savedViews.exportCsv': 'Export as CSV',
   'savedViews.exportCsvDone': 'CSV exported',
   'savedViews.exportCsvFailed': 'Could not export this view',
+  'savedViews.exportCsvTruncated': 'CSV exported with the first {{count}} rows only',
   'savedViews.exportingCsv': 'Exporting…',
   'savedViews.facetNoProject': 'No project',
   'savedViews.facetNoTeam': 'No team',

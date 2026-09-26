@@ -98,7 +98,6 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/connector', 'acme')).toBe('/acme/settings/connector');
     expect(buildWorkspaceAwarePath('/settings/devices', 'acme')).toBe('/acme/settings/devices');
     expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/acme/settings/labels');
-    expect(buildWorkspaceAwarePath('/settings/audit-log', 'acme')).toBe('/acme/settings/audit-log');
     expect(buildWorkspaceAwarePath('/settings/storage', 'acme')).toBe('/acme/settings/storage');
     expect(buildWorkspaceAwarePath('/settings/credential', 'acme')).toBe(
       '/acme/settings/credential',
@@ -115,12 +114,12 @@ describe('buildWorkspaceAwarePath', () => {
     );
   });
 
-  // The OAuth-app console and the skill marketplace both had a workspace
-  // mirror; with their pages and routes gone the sub-path is personal-only,
-  // like every other retired tab. Neither gets a redirect route the way
-  // `provider` / `service-model` did — those had a successor capability to land
-  // on, these have none, so the honest answer is the same not-found the
-  // personal settings render.
+  // The OAuth-app console, the skill marketplace and the audit-log viewer
+  // all had a workspace mirror; with their pages and routes gone the sub-path
+  // is personal-only, like every other retired tab. None gets a redirect
+  // route the way `provider` / `service-model` did — those had a successor
+  // capability to land on, these have none, so the honest answer is the same
+  // not-found the personal settings render.
   it('leaves the retired settings sub-paths unprefixed', () => {
     expect(buildWorkspaceAwarePath('/settings/oauth-apps', 'acme')).toBe('/settings/oauth-apps');
     expect(buildWorkspaceAwarePath('/settings/oauth-apps/client-1', 'acme')).toBe(
@@ -130,6 +129,7 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/skill/anything', 'acme')).toBe(
       '/settings/skill/anything',
     );
+    expect(buildWorkspaceAwarePath('/settings/audit-log', 'acme')).toBe('/settings/audit-log');
   });
 
   // Account-level tabs are mirrored under the workspace so members can reach

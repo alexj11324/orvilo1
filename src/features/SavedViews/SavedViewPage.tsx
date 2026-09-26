@@ -45,7 +45,7 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import SavedViewActionsMenu from './SavedViewActionsMenu';
 import { type SavedViewControl, transitionSavedViewControl } from './savedViewControlState';
-import { buildSavedViewCsv, fetchAllSavedViewRows } from './savedViewCsv';
+import { buildSavedViewCsv, fetchAllSavedViewRows, SAVED_VIEW_CSV_MAX_ROWS } from './savedViewCsv';
 import SavedViewDetailsPanel from './SavedViewDetailsPanel';
 import { savedViewProjectPath } from './savedViewProjectPath';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
@@ -589,7 +589,7 @@ const SavedViewPage = memo(() => {
     if (!viewId || !view || exporting) return;
     setExporting(true);
     try {
-      const rows = await fetchAllSavedViewRows(viewId);
+      const { rows, truncated } = await fetchAllSavedViewRows(viewId);
       const csv = buildSavedViewCsv(view.entityType, rows, {
         priority: (value) => t(`savedViews.values.priority.${value ?? 0}` as never),
         status: (value) =>
@@ -605,7 +605,15 @@ const SavedViewPage = memo(() => {
       anchor.download = filename;
       anchor.click();
       URL.revokeObjectURL(url);
-      toast.success(t('savedViews.exportCsvDone'));
+      if (truncated) {
+        toast.warning(
+          t('savedViews.exportCsvTruncated', {
+            count: SAVED_VIEW_CSV_MAX_ROWS,
+          }),
+        );
+      } else {
+        toast.success(t('savedViews.exportCsvDone'));
+      }
     } catch {
       toast.error(t('savedViews.exportCsvFailed'));
     } finally {

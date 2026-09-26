@@ -37,16 +37,36 @@ vi.mock('@/hooks/usePermission', () => ({
   }),
 }));
 
-// The hook reads feature flags (`hideDocs`) from the server-config store,
-// which only exists behind its Provider.
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <Provider createStore={() => initServerConfigStore({})}>{children}</Provider>
-);
+// The hook reads feature flags (`hideDocs`) and `serverConfig`
+// (`enableBusinessFeatures`) from the server-config store, which only exists
+// behind its Provider.
+const makeWrapper =
+  ({ enableBusinessFeatures = false } = {}) =>
+  ({ children }: { children: ReactNode }) => (
+    <Provider
+      createStore={() =>
+        initServerConfigStore({
+          serverConfig: {
+            aiProvider: {},
+            enableBusinessFeatures,
+            telemetry: {},
+          },
+        })
+      }
+    >
+      {children}
+    </Provider>
+  );
+
+const wrapper = makeWrapper();
+const businessWrapper = makeWrapper({ enableBusinessFeatures: true });
 
 const initialUserStoreState = useUserStore.getState();
 
-const getItemKeys = () => {
-  const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+const getItemKeys = (renderWrapper = wrapper) => {
+  const { result } = renderHook(() => useWorkspaceSettingCategory(), {
+    wrapper: renderWrapper,
+  });
 
   return result.current.flatMap((group) => group.items.map((item) => item.key));
 };
@@ -173,10 +193,45 @@ describe('workspace settings useCategory', () => {
     ]);
   });
 
+  // The business (subscription) pages only exist where the deployment ships
+  // business features; on other deployments the whole group stays out of the
+  // nav — the routes are overlay injection points, not pages to advertise.
+  it('hides the Subscription group when business features are off', () => {
+    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+    const itemKeys = getItemKeys();
+
+    expect(
+      result.current.some((group) => group.key === WorkspaceSettingsGroupKey.Subscription),
+    ).toBe(false);
+    for (const tab of [
+      WorkspaceSettingsTabs.Plans,
+      WorkspaceSettingsTabs.Usage,
+      WorkspaceSettingsTabs.Credits,
+      WorkspaceSettingsTabs.Budget,
+      WorkspaceSettingsTabs.Billing,
+    ]) {
+      expect(itemKeys).not.toContain(tab);
+    }
+  });
+
+  // The audit-log surface was deleted — no page, route or nav entry. The nav
+  // must never offer it again on any build.
+  it('never lists Audit logs', () => {
+    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+    const adminGroup = result.current.find(
+      (group) => group.key === WorkspaceSettingsGroupKey.Admin,
+    );
+
+    expect(adminGroup?.items.map((item) => item.key)).toEqual([WorkspaceSettingsTabs.Storage]);
+
+    const businessItemKeys = getItemKeys(businessWrapper);
+    expect(businessItemKeys).not.toContain(WorkspaceSettingsTabs.AuditLog);
+  });
+
   // Admin-or-higher reads the billing numbers; the pages keep the
   // money-moving controls behind the narrower manage_subscription gate.
   it('shows Credits and Billing to roles that may view billing', () => {
-    const itemKeys = getItemKeys();
+    const itemKeys = getItemKeys(businessWrapper);
 
     expect(itemKeys).toContain(WorkspaceSettingsTabs.Credits);
     expect(itemKeys).toContain(WorkspaceSettingsTabs.Billing);
@@ -185,7 +240,7 @@ describe('workspace settings useCategory', () => {
   it('hides financial settings below Admin', () => {
     mocks.canViewBilling = false;
 
-    const itemKeys = getItemKeys();
+    const itemKeys = getItemKeys(businessWrapper);
 
     expect(itemKeys).not.toContain(WorkspaceSettingsTabs.Credits);
     expect(itemKeys).not.toContain(WorkspaceSettingsTabs.Billing);

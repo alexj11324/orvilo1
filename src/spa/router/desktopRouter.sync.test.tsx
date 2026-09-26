@@ -723,6 +723,19 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
+    '%s redirects the old Linear settings URL to the new importer',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+      const leaf = matchRoutes(routes, '/acme/settings/linear')?.at(-1)?.route;
+
+      expect(leaf?.path).toBe('linear');
+      expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe(
+        '../imports/linear',
+      );
+    },
+  );
+
+  it.each(mainAreaVariants)(
     '%s redirects retired workspace provider deep-links inside the workspace',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);

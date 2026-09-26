@@ -26,16 +26,36 @@ describe('useGitHubMcpConnect desktop', () => {
     status.mockResolvedValue({ data: { connected: false } });
   });
 
-  it('opens the hosted OAuth start route without requiring a second Reviews click', async () => {
+  it('activates an existing Reviews grant without opening a hosted OAuth route', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const onConnected = vi.fn();
+    connectGitHubMcp.mockResolvedValue({ connectorId: 'github-connector', status: 'connected' });
+    const { result } = renderHook(() => useGitHubMcpConnect(onConnected));
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(connectGitHubMcp).toHaveBeenCalledOnce();
+    expect(onConnected).toHaveBeenCalledWith('github-connector');
+    expect(open).not.toHaveBeenCalled();
+    expect(result.current.connecting).toBe(false);
+  });
+
+  it('opens the hosted OAuth start route only when activation requires authorization', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    connectGitHubMcp.mockResolvedValue({
+      authorizationUrl: 'https://github.com/login/oauth/authorize?state=once',
+      status: 'authorization_required',
+    });
     const { result } = renderHook(() => useGitHubMcpConnect(vi.fn()));
 
     await act(async () => {
       await result.current.connect();
     });
 
+    expect(connectGitHubMcp).toHaveBeenCalledOnce();
     expect(open).toHaveBeenCalledWith('https://orvilo.test/oauth/github/start', '_blank');
-    expect(connectGitHubMcp).not.toHaveBeenCalled();
     expect(result.current.connecting).toBe(true);
   });
 });

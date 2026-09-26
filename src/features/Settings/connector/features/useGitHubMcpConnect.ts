@@ -95,10 +95,15 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
     setConnecting(true);
     try {
       if (isDesktop) {
+        const result = await connectGitHubMcp();
+        if (result.status === 'connected') {
+          setGrantConnected(true);
+          onConnected(result.connectorId);
+          return;
+        }
         const serverUrl = electronSyncSelectors.remoteServerUrl(useElectronStore.getState());
         window.open(new URL('/oauth/github/start', serverUrl).toString(), '_blank');
         setWaiting(true);
-        await checkGrant();
         return;
       }
 

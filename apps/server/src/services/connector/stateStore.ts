@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import debug from 'debug';
 
+import type { OIDCConfig } from '@/database/schemas';
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const log = debug('orvilo-server:connector:oauth-state');
@@ -19,6 +20,8 @@ export interface ConnectorOAuthStatePayload {
   codeVerifier: string;
   /** The connector being connected. */
   connectorId: string;
+  /** Resolved client config to promote only after the code exchange succeeds. */
+  oidcConfig: OIDCConfig;
   /** Orvilo user who initiated the connect. */
   orviloUserId: string;
   /** Where to send the user after the callback finishes (relative path). */

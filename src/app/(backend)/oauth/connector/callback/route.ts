@@ -125,8 +125,8 @@ export const GET = async (req: NextRequest) => {
       return renderResultPage({ error: 'workspace_access_denied', success: false });
     }
 
-    const oidc = connector.oidcConfig;
-    if (!oidc?.clientId) {
+    const oidc = payload.oidcConfig;
+    if (!oidc.clientId || !oidc.redirectUri) {
       return renderResultPage({ error: 'connector_missing_client', success: false });
     }
 
@@ -145,7 +145,7 @@ export const GET = async (req: NextRequest) => {
       }),
       codeVerifier: payload.codeVerifier,
       metadata,
-      redirectUri: oidc.redirectUri!,
+      redirectUri: oidc.redirectUri,
       resource: connector.mcpServerUrl ?? undefined,
     });
 
@@ -165,6 +165,7 @@ export const GET = async (req: NextRequest) => {
     await connectorModel.update(payload.connectorId, {
       credentials: JSON.stringify(credentials),
       metadata: { ...connector.metadata, grantEpoch: randomUUID() },
+      oidcConfig: oidc,
       tokenExpiresAt,
     });
 

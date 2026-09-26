@@ -537,9 +537,9 @@ export const connectorRouter = router({
    *
    * Discovers the authorization server (RFC 9728 → RFC 8414), resolves the
    * client (pre-registration when a client_id was provided, otherwise RFC 7591
-   * dynamic registration), persists the resolved OIDC config, and returns the
-   * authorize URL for the client to open. The PKCE verifier is stashed in Redis
-   * keyed by `state`; the callback route completes the exchange.
+   * dynamic registration), and returns the authorize URL for the client to
+   * open. The resolved OIDC config and PKCE verifier are stashed in Redis keyed
+   * by `state`; the callback promotes the config only after token exchange.
    */
   startOAuth: connectorWriteProcedure
     .input(z.object({ id: z.string().uuid(), returnTo: z.string().optional() }))
@@ -595,7 +595,9 @@ export const connectorRouter = router({
         tokenEndpointAuthMethod = reg.token_endpoint_auth_method;
       }
 
-      // 3. Persist the resolved config so the callback + refresh can reuse it.
+      // 3. Keep the resolved config pending until the callback exchanges the
+      // code successfully. Persisting a replacement DCR client here would make
+      // existing refresh tokens unusable when the user abandons consent.
       const resolvedOidc: OIDCConfig = {
         ...existing,
         authorizationEndpoint: metadata.authorization_endpoint,
@@ -609,9 +611,9 @@ export const connectorRouter = router({
         tokenEndpoint: metadata.token_endpoint,
         tokenEndpointAuthMethod,
       };
-      await ctx.connectorModel.update(input.id, { oidcConfig: resolvedOidc });
 
-      // 4. Build the authorize URL (with PKCE) and stash the verifier under `state`.
+      // 4. Build the authorize URL (with PKCE) and stash both the verifier and
+      // pending client config under the single-use state.
       const state = generateConnectorOAuthState();
       const { authorizationUrl, codeVerifier } = await buildAuthorizationUrl({
         authorizationServerUrl,
@@ -631,6 +633,7 @@ export const connectorRouter = router({
         authorizationServerUrl,
         codeVerifier,
         connectorId: input.id,
+        oidcConfig: resolvedOidc,
         orviloUserId: ctx.userId,
         returnTo: input.returnTo,
         workspaceId: ctx.workspaceId ?? undefined,

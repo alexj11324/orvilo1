@@ -79,6 +79,13 @@ beforeEach(() => {
     authorizationServerUrl: 'https://as',
     codeVerifier: 'v',
     connectorId: 'c1',
+    oidcConfig: {
+      clientId: 'pending-cid',
+      clientSecret: 'pending-secret',
+      redirectUri: 'https://app.example.com/oauth/connector/callback',
+      scheme: 'dcr',
+      tokenEndpointAuthMethod: 'client_secret_post',
+    },
     orviloUserId: 'u1',
     workspaceId: 'w1',
   });
@@ -86,10 +93,10 @@ beforeEach(() => {
     id: 'c1',
     mcpServerUrl: 'https://mcp.example.com',
     oidcConfig: {
-      clientId: 'cid',
-      clientSecret: 'secret',
+      clientId: 'active-cid',
+      clientSecret: 'active-secret',
       redirectUri: 'https://app.example.com/oauth/connector/callback',
-      tokenEndpointAuthMethod: 'client_secret_post',
+      tokenEndpointAuthMethod: 'client_secret_basic',
     },
     userId: 'u1',
   });
@@ -120,10 +127,19 @@ describe('connector OAuth callback', () => {
     expect(mockExchange).toHaveBeenCalledWith(
       expect.objectContaining({
         clientInformation: {
-          client_id: 'cid',
-          client_secret: 'secret',
+          client_id: 'pending-cid',
+          client_secret: 'pending-secret',
           token_endpoint_auth_method: 'client_secret_post',
         },
+      }),
+    );
+    expect(mockUpdate).toHaveBeenCalledWith(
+      'c1',
+      expect.objectContaining({
+        oidcConfig: expect.objectContaining({
+          clientId: 'pending-cid',
+          tokenEndpointAuthMethod: 'client_secret_post',
+        }),
       }),
     );
   });

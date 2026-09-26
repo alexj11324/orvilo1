@@ -97,6 +97,11 @@ describe('connectorRouter.startOAuth', () => {
       authorizationServerUrl: 'https://auth.example.com',
       codeVerifier: 'verifier-1',
       connectorId: CONNECTOR_ID,
+      oidcConfig: expect.objectContaining({
+        clientId: 'client-1',
+        redirectUri: 'https://app.example.com/oauth/connector/callback',
+        scheme: 'pre_registration',
+      }),
       orviloUserId: 'user-1',
       returnTo: undefined,
       workspaceId: 'workspace-1',
@@ -146,10 +151,12 @@ describe('connectorRouter.startOAuth', () => {
       .startOAuth({ id: CONNECTOR_ID });
 
     expect(mocks.registerDynamicClient).toHaveBeenCalledOnce();
-    expect(update).toHaveBeenCalledWith(
-      CONNECTOR_ID,
+    expect(update).not.toHaveBeenCalled();
+    expect(mocks.saveConnectorOAuthState).toHaveBeenCalledWith(
+      'state-1',
       expect.objectContaining({
         oidcConfig: expect.objectContaining({
+          clientId: 'replacement-client',
           scheme: 'dcr',
           tokenEndpointAuthMethod: 'client_secret_post',
         }),
@@ -204,10 +211,12 @@ describe('connectorRouter.startOAuth', () => {
       } as any)
       .startOAuth({ id: CONNECTOR_ID });
 
-    expect(update).toHaveBeenCalledWith(
-      CONNECTOR_ID,
+    expect(update).not.toHaveBeenCalled();
+    expect(mocks.saveConnectorOAuthState).toHaveBeenCalledWith(
+      'state-1',
       expect.objectContaining({
         oidcConfig: expect.objectContaining({
+          clientId: 'dcr-client',
           tokenEndpointAuthMethod: 'client_secret_post',
         }),
       }),

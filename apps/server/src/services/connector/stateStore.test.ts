@@ -18,6 +18,12 @@ describe('connector OAuth state', () => {
       authorizationServerUrl: 'https://auth.example.com',
       codeVerifier: 'verifier-1',
       connectorId: 'connector-1',
+      oidcConfig: {
+        clientId: 'pending-client',
+        redirectUri: 'https://app.example.com/oauth/connector/callback',
+        scheme: 'dcr',
+        tokenEndpointAuthMethod: 'client_secret_post',
+      },
       orviloUserId: 'user-1',
       workspaceId: 'workspace-1',
     });
@@ -34,6 +40,12 @@ describe('connector OAuth state', () => {
         authorizationServerUrl: 'https://auth.example.com',
         codeVerifier: 'verifier-1',
         connectorId: 'connector-1',
+        oidcConfig: {
+          clientId: 'pending-client',
+          redirectUri: 'https://app.example.com/oauth/connector/callback',
+          scheme: 'dcr',
+          tokenEndpointAuthMethod: 'client_secret_post',
+        },
         orviloUserId: 'user-1',
         ts: Date.now(),
         workspaceId: 'workspace-1',
@@ -41,6 +53,12 @@ describe('connector OAuth state', () => {
     );
     await expect(consumeConnectorOAuthState('state-1')).resolves.toMatchObject({
       connectorId: 'connector-1',
+      oidcConfig: {
+        clientId: 'pending-client',
+        redirectUri: 'https://app.example.com/oauth/connector/callback',
+        scheme: 'dcr',
+        tokenEndpointAuthMethod: 'client_secret_post',
+      },
       workspaceId: 'workspace-1',
     });
 

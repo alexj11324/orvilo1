@@ -2,15 +2,18 @@ import type { ConnectorModel, DecryptedConnector } from '@/database/models/conne
 import type { ConnectorToolModel } from '@/database/models/connectorTool';
 import type { ConnectorCredentials } from '@/database/schemas';
 import { ConnectorMcpConnectionType, ConnectorStatus } from '@/database/schemas';
+import type { OrviloDatabase } from '@/database/type';
 import type { AuthConfig } from '@/libs/mcp';
 import { inferCrudType } from '@/libs/mcp/utils';
 import { mcpService } from '@/server/services/mcp';
 
+import { buildGitHubMcpParams, isGitHubMcpConnector } from './githubMcp';
 import { ensureFreshConnectorToken } from './tokens';
 
 export interface ConnectorToolSyncContext {
   connectorModel: ConnectorModel;
   connectorToolModel: ConnectorToolModel;
+  serverDB: OrviloDatabase;
 }
 
 /** Build the MCP client connection params (with auth) from a connector row. */
@@ -34,8 +37,7 @@ export const buildConnectorMcpParams = (
   // type. Merge them on top of any header-type credential headers (older rows
   // stored custom headers as a 'header' credential before this split).
   const customHeaders = connector.metadata?.customHeaders as Record<string, string> | undefined;
-  const mergedHeaders =
-    headers || customHeaders ? { ...headers, ...customHeaders } : undefined;
+  const mergedHeaders = headers || customHeaders ? { ...headers, ...customHeaders } : undefined;
   return {
     auth,
     headers: mergedHeaders,
@@ -86,6 +88,24 @@ export const buildHttpAuthFromCredentials = (
   }
 };
 
+/** Resolve machine-managed provider auth at the last responsible moment. */
+export const resolveConnectorMcpParams = async (
+  connector: DecryptedConnector,
+  ctx: Pick<ConnectorToolSyncContext, 'connectorModel' | 'serverDB'>,
+  expectedGitHubGrant?: { githubUserId: string; grantRevision: string },
+): Promise<Parameters<typeof mcpService.listRawTools>[0]> => {
+  if (isGitHubMcpConnector(connector)) {
+    return buildGitHubMcpParams({
+      connector,
+      db: ctx.serverDB,
+      expectedGrant: expectedGitHubGrant,
+    });
+  }
+
+  const fresh = await ensureFreshConnectorToken(connector, ctx.connectorModel);
+  return buildConnectorMcpParams(fresh);
+};
+
 /**
  * Connect to a connector's MCP server, fetch its tool list, and sync it into
  * `user_connector_tools`. Refreshes the OAuth token first when needed, and
@@ -98,17 +118,14 @@ export const syncConnectorToolsById = async (
   connectorId: string,
   ctx: ConnectorToolSyncContext,
 ): Promise<{ toolCount: number }> => {
-  let connector = await ctx.connectorModel.findById(connectorId);
+  const connector = await ctx.connectorModel.findById(connectorId);
   if (!connector) throw new Error('Connector not found');
 
   if (!connector.mcpServerUrl && connector.mcpConnectionType !== ConnectorMcpConnectionType.stdio) {
     throw new Error('Connector has no MCP server URL configured');
   }
 
-  // Refresh the OAuth access token if it has expired before connecting.
-  connector = await ensureFreshConnectorToken(connector, ctx.connectorModel);
-
-  const mcpParams = buildConnectorMcpParams(connector);
+  const mcpParams = await resolveConnectorMcpParams(connector, ctx);
 
   let rawTools: Awaited<ReturnType<typeof mcpService.listRawTools>>;
   try {
@@ -126,6 +143,15 @@ export const syncConnectorToolsById = async (
   }));
 
   await ctx.connectorToolModel.upsertMany(connectorId, syncInputs);
+  if (isGitHubMcpConnector(connector)) {
+    // A row converted from the old PAT preset may still carry write tools from
+    // its previous unrestricted sync. Replace that list with exactly the
+    // provider's read-only pull_requests surface.
+    await ctx.connectorToolModel.deleteToolsNotIn(
+      connectorId,
+      syncInputs.map((tool) => tool.toolName),
+    );
+  }
   await ctx.connectorModel.updateStatus(connectorId, ConnectorStatus.connected);
 
   return { toolCount: syncInputs.length };

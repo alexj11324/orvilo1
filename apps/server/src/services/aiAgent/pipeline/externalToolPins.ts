@@ -46,7 +46,10 @@ export const surfaceSchemaDigests = (
  * account, a new OIDC client, a different MCP server URL. Persisted on the
  * mount so exec re-authorizes the SAME grant, never a re-linked row.
  */
-export const connectorAuthRevision = (connector: DecryptedConnector): string =>
+export const connectorAuthRevision = (
+  connector: DecryptedConnector,
+  providerGrant?: { githubUserId: string; grantRevision: string } | null,
+): string =>
   sha256Hex(
     stableStringify({
       agentId: connector.agentId ?? null,
@@ -56,6 +59,8 @@ export const connectorAuthRevision = (connector: DecryptedConnector): string =>
       // refresh — a same-URL/same-clientId re-authorization to a different
       // account still invalidates old pins.
       grantEpoch: connector.metadata?.grantEpoch ?? null,
+      githubGrantRevision: providerGrant?.grantRevision ?? null,
+      githubUserId: providerGrant?.githubUserId ?? null,
       mcpConnectionType: connector.mcpConnectionType ?? null,
       mcpServerUrl: connector.mcpServerUrl ?? null,
       oidcClientId: connector.oidcConfig?.clientId ?? null,
@@ -85,6 +90,10 @@ export interface ExternalToolPins {
   authRevision?: string;
   /** Connector row id when `source === 'connector'`. */
   connectorId?: string;
+  /** GitHub App user identity bound to this mount. */
+  githubUserId?: string;
+  /** Exact `github_user_connections.grant_revision` bound to this mount. */
+  grantRevision?: string;
   /** Install row id when `source === 'mcp-plugin'`. */
   pluginInstallId?: string;
   /** Per-api `inputSchema` digests at mount time. */

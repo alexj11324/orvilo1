@@ -28,6 +28,7 @@ const {
   mockFindPlugin,
   mockGetReceiptPayload,
   mockGetReceiptState,
+  mockGetGitHubMcpGrantIdentity,
   mockMemberRunner,
   mockMergeReceiptPayload,
   mockOfferReceipt,
@@ -35,6 +36,7 @@ const {
   mockRegisterWork,
   mockRenewApprovalReceipt,
   mockResolveConnectors,
+  mockResolveConnectorMcpParams,
   mockSubAgentRunner,
   mockUpdateToolMessage,
   mockUpsertReceipt,
@@ -49,6 +51,7 @@ const {
   mockFindPlugin: vi.fn(),
   mockGetReceiptPayload: vi.fn(),
   mockGetReceiptState: vi.fn(),
+  mockGetGitHubMcpGrantIdentity: vi.fn(),
   mockMemberRunner: { run: vi.fn() },
   mockMergeReceiptPayload: vi.fn(),
   mockOfferReceipt: vi.fn(),
@@ -56,6 +59,7 @@ const {
   mockRegisterWork: vi.fn(),
   mockRenewApprovalReceipt: vi.fn(),
   mockResolveConnectors: vi.fn(),
+  mockResolveConnectorMcpParams: vi.fn(),
   mockSubAgentRunner: { run: vi.fn() },
   mockUpdateToolMessage: vi.fn(),
   mockUpsertReceipt: vi.fn(),
@@ -76,15 +80,13 @@ vi.mock('@/server/services/toolExecution', () => ({
 vi.mock('@/server/services/mcp', () => ({ mcpService: {} }));
 
 vi.mock('@/server/services/connector/sync', () => ({
-  buildConnectorMcpParams: vi.fn((connector: any) => ({
-    auth: { token: connector.credentials?.token ?? 'none' },
-    type: 'http',
-    url: connector.mcpServerUrl,
-  })),
+  resolveConnectorMcpParams: mockResolveConnectorMcpParams,
 }));
 
-vi.mock('@/server/services/connector/tokens', () => ({
-  ensureFreshConnectorToken: vi.fn(async (connector: any) => connector),
+vi.mock('@/server/services/connector/githubMcp', () => ({
+  getGitHubMcpGrantIdentity: mockGetGitHubMcpGrantIdentity,
+  isGitHubMcpConnector: (connector: any) =>
+    connector.metadata?.githubMcp?.type === 'github_user_connection',
 }));
 
 vi.mock('@/database/models/connector', () => ({
@@ -198,6 +200,11 @@ describe('execAcpBuiltinTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExecute.mockResolvedValue({ content: 'done', success: true });
+    mockResolveConnectorMcpParams.mockImplementation(async (connector: any) => ({
+      auth: { token: connector.credentials?.token ?? 'none' },
+      type: 'http',
+      url: connector.mcpServerUrl,
+    }));
   });
 
   it('runs the builtin executor with a reconstructed context', async () => {
@@ -488,6 +495,36 @@ describe('execAcpBuiltinTool', () => {
             externalInput,
           ),
         ).rejects.toThrow(/re-authorized since dispatch/);
+        expect(mockExecuteTool).not.toHaveBeenCalled();
+      });
+
+      it('refuses a swapped GitHub identity or grant revision before resolving a token', async () => {
+        const githubConnector = {
+          ...pinnedConnector,
+          metadata: {
+            githubMcp: { grantOwnerUserId: 'user_1', type: 'github_user_connection' },
+          },
+        };
+        mockFindConnectorById.mockResolvedValue(githubConnector);
+        mockGetGitHubMcpGrantIdentity.mockResolvedValue({
+          githubUserId: '99',
+          grantRevision: 'grant_2',
+          login: 'replacement',
+        });
+
+        await expect(
+          execAcpBuiltinTool(
+            buildDeps({
+              op: pinnedOp({
+                connectorId: 'conn_row_1',
+                githubUserId: '42',
+                grantRevision: 'grant_1',
+              }),
+            }),
+            externalInput,
+          ),
+        ).rejects.toThrow(/identity or grant changed/);
+        expect(mockResolveConnectorMcpParams).not.toHaveBeenCalled();
         expect(mockExecuteTool).not.toHaveBeenCalled();
       });
 
@@ -782,6 +819,7 @@ describe('execAcpBuiltinTool', () => {
           { executionGeneration: 2 },
           { schemaDigest: 'other-schema' },
           { authRevision: 'other-rev' },
+          { grantRevision: 'other-grant' },
           { identifier: 'other-conn' },
         ];
         for (const variant of variants) {

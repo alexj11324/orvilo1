@@ -133,6 +133,8 @@ export interface AuthConfig {
 
 export interface HttpMCPClientParams {
   auth?: AuthConfig;
+  /** One-shot server-managed auth must never enter the process-wide client cache. */
+  cacheMode?: 'ephemeral';
   headers?: Record<string, string>;
   name: string;
   type: 'http';

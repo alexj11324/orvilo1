@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import type { ConnectorCredentials } from '../../schemas';
-import { agents, userConnectors, users, workspaces } from '../../schemas';
+import { agents, githubUserConnections, userConnectors, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ConnectorModel } from '../connector';
 
@@ -486,6 +486,25 @@ describe('ConnectorModel', () => {
       expect(found?.credentials).toEqual({ token: 'bearer-token', type: 'bearer' });
     });
 
+    it('clears persisted credentials when a provider-backed connector replaces manual auth', async () => {
+      const model = new ConnectorModel(serverDB, userId, undefined, gateKeeper);
+      const created = await model.create({
+        credentials: JSON.stringify({ token: 'legacy-pat', type: 'bearer' }),
+        identifier: 'github-mcp',
+        name: 'GitHub',
+        sourceType: 'custom',
+        status: 'connected',
+      });
+
+      await model.update(created.id, { credentials: null });
+
+      const [row] = await serverDB
+        .select({ credentials: userConnectors.credentials })
+        .from(userConnectors)
+        .where(eq(userConnectors.id, created.id));
+      expect(row.credentials).toBeNull();
+    });
+
     it('does not update connectors owned by another user', async () => {
       const otherModel = new ConnectorModel(serverDB, otherUserId);
       const created = await otherModel.create({
@@ -616,6 +635,36 @@ describe('ConnectorModel', () => {
       await model.delete(created.id);
 
       expect(await model.findById(created.id)).toBeNull();
+    });
+
+    it('deletes GitHub MCP without revoking the independent Reviews grant', async () => {
+      const model = new ConnectorModel(serverDB, userId);
+      const created = await model.create({
+        identifier: 'github-mcp',
+        metadata: {
+          githubMcp: { grantOwnerUserId: userId, type: 'github_user_connection' },
+        },
+        name: 'GitHub',
+        sourceType: 'custom',
+        status: 'connected',
+      });
+      await serverDB.insert(githubUserConnections).values({
+        accessTokenCiphertext: 'encrypted:reviews-token',
+        clientId: 'github-app',
+        githubUserId: '42',
+        grantRevision: '017b0e96-af23-453e-a561-2d969e7b978b',
+        login: 'octocat',
+        userId,
+      });
+
+      await model.delete(created.id);
+
+      const grant = await serverDB
+        .select({ userId: githubUserConnections.userId })
+        .from(githubUserConnections)
+        .where(eq(githubUserConnections.userId, userId));
+      expect(await model.findById(created.id)).toBeNull();
+      expect(grant).toEqual([{ userId }]);
     });
 
     it('does not delete connectors owned by another user', async () => {

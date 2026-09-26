@@ -259,6 +259,20 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
+      # 主机上的 compose 定义不是手工维护的：每次部署先把仓库里的
+      # docker-compose/deploy/ 同步上去，新增服务（如 collaboration-gateway）
+      # 才不会因 "no such service" 卡部署。只同步仓库跟踪的文件；
+      # .env 和 orvilo1-production.override.yml 是主机本地文件，不动。
+      - name: Sync compose files to the host
+        env:
+          SSH_HOST: ${{ secrets.ORACLE_HOST }}
+        run: |
+          set -euo pipefail
+          cd docker-compose/deploy
+          tar czf - docker-compose.yml bucket.config.json searxng-settings.yml elasticsearch |
+            ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+              "sudo tar xzf - -C '$COMPOSE_DIR'"
+
       - name: Deploy
         env:
           SSH_HOST: ${{ secrets.ORACLE_HOST }}

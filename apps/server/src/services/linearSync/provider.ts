@@ -320,15 +320,15 @@ export class LinearIssueNotFoundError extends LinearRemoteResourceError {
 }
 
 const extractGraphQLData = <T>(response: { data: unknown; status: number }): T => {
-  if (response.status < 200 || response.status >= 300) {
-    throw new LinearGraphqlError(`Linear API returned HTTP ${response.status}`, response.status);
-  }
-
   const body = isRecord(response.data) ? response.data : undefined;
   const errors = body?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const message = isRecord(errors[0]) ? stringValue(errors[0].message) : null;
     throw new LinearGraphqlError(message ?? 'Linear API returned a GraphQL error', response.status);
+  }
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new LinearGraphqlError(`Linear API returned HTTP ${response.status}`, response.status);
   }
 
   if (!body || !isRecord(body.data))

@@ -56,25 +56,35 @@ describe('Linear OAuth', () => {
     expect(body.get('code')).toBe('authorization-code');
   });
 
-  it('rejects a token whose viewer belongs to another OAuth client', async () => {
-    const fetcher = vi.fn().mockResolvedValue(
-      new Response(
+  it('validates the app identity using fields accepted by Linear GraphQL', async () => {
+    const fetcher = vi.fn().mockImplementation(async (_url, options: RequestInit) => {
+      const query = JSON.parse(options.body as string).query as string;
+      if (query.includes('oauthClientId')) {
+        return new Response(
+          JSON.stringify({
+            errors: [{ message: 'Cannot query field "oauthClientId" on type "User".' }],
+          }),
+          { status: 400 },
+        );
+      }
+      return new Response(
         JSON.stringify({
           data: {
             organization: { id: 'org-1', name: 'Acme' },
-            viewer: { id: 'app-user-1', name: 'Orvilo', oauthClientId: 'different-client' },
+            viewer: { id: 'app-user-1', name: 'Orvilo' },
           },
         }),
         { status: 200 },
-      ),
-    );
+      );
+    });
 
     await expect(
-      validateLinearOAuthInstallation({
-        accessToken: 'access-token',
-        clientId: 'linear-client',
-        fetcher,
-      }),
-    ).rejects.toThrow('not an app actor');
+      validateLinearOAuthInstallation({ accessToken: 'access-token', fetcher }),
+    ).resolves.toEqual({
+      appActorId: 'app-user-1',
+      appActorName: 'Orvilo',
+      organizationId: 'org-1',
+      organizationName: 'Acme',
+    });
   });
 });

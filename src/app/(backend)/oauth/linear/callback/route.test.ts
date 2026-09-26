@@ -80,7 +80,6 @@ describe('Linear OAuth callback', () => {
     );
     expect(mocks.validate).toHaveBeenCalledWith({
       accessToken: 'access-secret',
-      clientId: 'client-1',
     });
     expect(mocks.upsert).toHaveBeenCalledWith(
       expect.objectContaining({

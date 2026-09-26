@@ -37,10 +37,8 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorPrimary};
   `,
   pointer: css`
-    width: 0;
-    height: 0;
-    border-block-start: 10px solid ${cssVar.colorPrimary};
-    border-inline-end: 8px solid transparent;
+    display: block;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 25%));
   `,
 }));
 
@@ -67,7 +65,23 @@ export const HumanCursor = memo<{ entry: PresenceEntry }>(({ entry }) => {
 
   return (
     <div className={styles.cursor} ref={nodeRef} style={{ opacity: visible ? 0.95 : 0 }}>
-      <div className={styles.pointer} style={color ? { borderTopColor: color } : undefined} />
+      {/* Apple `pointer.arrow.ipad` silhouette: tip at the projected point,
+          per-user fill, white hairline for contrast on any card. */}
+      <svg
+        aria-hidden
+        className={styles.pointer}
+        fill="none"
+        height={20}
+        viewBox="0 0 406.973 550.395"
+        width={15}
+      >
+        <path
+          d="M191.109 403.364L358.748 403.364C402.806 403.364 420.916 363.611 394.638 336.996L72.3808 14.7393C43.81-14.168 0 1.59367 0 43.3101L0 500.412C0 537.942 41.0241 553.112 72.4169 522.056Z"
+          fill={color || cssVar.colorPrimary}
+          stroke="#fff"
+          strokeWidth={28}
+        />
+      </svg>
       <div
         className={styles.label}
         style={color ? { background: color, color: cursorLabelForeground(color) } : undefined}

@@ -66,17 +66,80 @@ describe('createPreferenceSlice', () => {
       });
     });
 
-    it('does not persist a failed preference update', async () => {
-      vi.spyOn(userService, 'updatePreference').mockRejectedValue(new Error('update failed'));
+    it('sends only the requested patch when the local preference cache is stale', async () => {
+      const updatePreferenceSpy = vi
+        .spyOn(userService, 'updatePreference')
+        .mockResolvedValue(undefined as any);
 
       act(() => {
-        useUserStore.setState({ user: { avatar: 'avatar-a', id: 'user-a' } as any });
+        useUserStore.setState({
+          preference: {
+            fontFamily: 'Inter',
+            showInCollaboration: true,
+          },
+        });
       });
 
-      await expect(
-        useUserStore.getState().updatePreference({ lab: { enableProjects: true } }),
-      ).rejects.toThrow('update failed');
+      await act(async () => {
+        await useUserStore.getState().updatePreference({ fontFamily: 'Geist' });
+      });
+
+      expect(updatePreferenceSpy).toHaveBeenCalledWith({ fontFamily: 'Geist' });
+      expect(useUserStore.getState().preference).toMatchObject({
+        fontFamily: 'Geist',
+        showInCollaboration: true,
+      });
+    });
+
+    it('rolls back and does not persist a failed preference update', async () => {
+      let rejectUpdate: ((error: Error) => void) | undefined;
+      vi.spyOn(userService, 'updatePreference').mockImplementation(
+        () =>
+          new Promise((_, reject) => {
+            rejectUpdate = reject;
+          }),
+      );
+
+      act(() => {
+        useUserStore.setState({
+          preference: { showInCollaboration: true },
+          user: { avatar: 'avatar-a', id: 'user-a' } as any,
+        });
+      });
+
+      const update = useUserStore.getState().updatePreference({ showInCollaboration: false });
+      expect(useUserStore.getState().preference.showInCollaboration).toBe(false);
+
+      rejectUpdate?.(new Error('update failed'));
+      await expect(update).rejects.toThrow('update failed');
+      expect(useUserStore.getState().preference.showInCollaboration).toBe(true);
       expect(readUserDisplaySnapshot('user-a')).toBeUndefined();
+    });
+
+    it('does not roll back a newer preference update when an older request fails', async () => {
+      let rejectFirstUpdate: ((error: Error) => void) | undefined;
+      vi.spyOn(userService, 'updatePreference')
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, reject) => {
+              rejectFirstUpdate = reject;
+            }),
+        )
+        .mockResolvedValueOnce(undefined as any);
+
+      act(() => {
+        useUserStore.setState({ preference: { showInCollaboration: true } });
+      });
+
+      const firstUpdate = useUserStore.getState().updatePreference({ showInCollaboration: false });
+      await useUserStore.getState().updatePreference({ hideSyncAlert: true });
+
+      rejectFirstUpdate?.(new Error('first update failed'));
+      await expect(firstUpdate).rejects.toThrow('first update failed');
+      expect(useUserStore.getState().preference).toMatchObject({
+        hideSyncAlert: true,
+        showInCollaboration: false,
+      });
     });
 
     it('persists under the user id captured before an update can switch accounts', async () => {

@@ -110,7 +110,6 @@ export const GET = async (request: NextRequest) => {
     // in the browser callback can choose an organization to install into.
     const identity = await validateLinearOAuthInstallation({
       accessToken: tokens.access_token,
-      clientId: config.clientId,
     });
     const scopes = normalizeLinearScopes(tokens.scope, statePayload.scopes);
     if (!scopes.includes('read') || !scopes.includes('write')) {

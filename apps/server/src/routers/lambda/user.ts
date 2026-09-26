@@ -55,6 +55,7 @@ import {
   mapUnderstandingTRPCError,
 } from '@/server/routers/lambda/_helpers/onboardingError';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
+import { getRoomPublisher } from '@/server/services/collaboration';
 import { FileService } from '@/server/services/file';
 import { OnboardingService } from '@/server/services/onboarding';
 import {
@@ -171,6 +172,8 @@ const OWNER_SETTING_KEYS = ['defaultAgent', 'image', 'memory', 'systemAgent', 't
 const MEMBER_SETTING_KEYS = ['tool'] as const;
 const WORKSPACE_UPDATE_PERMISSION = 'workspace:update:all';
 const WORKSPACE_CONTENT_PERMISSIONS = ['agent:update:all', 'agent:update:owner'] as const;
+
+type CollaborationPreference = UserPreference & { collaborationVisibilityEpoch?: string };
 
 // Accept only: base64 data URL, absolute http(s) URL, empty string,
 // or an internal /webapi/user/avatar/<userId>/... path scoped to the caller.
@@ -847,7 +850,61 @@ export const userRouter = router({
   }),
 
   updatePreference: userProcedure.input(UserPreferenceSchema).mutation(async ({ ctx, input }) => {
-    return ctx.userModel.updatePreference(input);
+    if (input.showInCollaboration === undefined) return ctx.userModel.updatePreference(input);
+
+    const currentPreference = await ctx.userModel.getUserPreference();
+    const currentlyVisible = currentPreference?.showInCollaboration !== false;
+    if (input.showInCollaboration === currentlyVisible)
+      return ctx.userModel.updatePreference(input);
+
+    if (!input.showInCollaboration) {
+      const hiddenEpoch = uuidv4();
+      await getRoomPublisher().setUserPresenceVisibility(ctx.userId, false, hiddenEpoch);
+      try {
+        return await ctx.userModel.updatePreference({
+          ...input,
+          collaborationVisibilityEpoch: hiddenEpoch,
+        } as Partial<CollaborationPreference>);
+      } catch (error) {
+        try {
+          await getRoomPublisher().setUserPresenceVisibility(
+            ctx.userId,
+            true,
+            (currentPreference as CollaborationPreference | undefined)
+              ?.collaborationVisibilityEpoch,
+          );
+        } catch (compensationError) {
+          console.error('Failed to compensate collaboration concealment', compensationError);
+        }
+        throw error;
+      }
+    }
+
+    const pendingEpoch = uuidv4();
+    const visibleEpoch = uuidv4();
+    const result = await ctx.userModel.updatePreference({
+      ...input,
+      collaborationVisibilityEpoch: pendingEpoch,
+    } as Partial<CollaborationPreference>);
+    try {
+      await getRoomPublisher().setUserPresenceVisibility(ctx.userId, true, visibleEpoch);
+      await ctx.userModel.updatePreference({
+        collaborationVisibilityEpoch: visibleEpoch,
+      } as Partial<CollaborationPreference>);
+    } catch (error) {
+      const rollbackEpoch = uuidv4();
+      try {
+        await getRoomPublisher().setUserPresenceVisibility(ctx.userId, false, rollbackEpoch);
+        await ctx.userModel.updatePreference({
+          collaborationVisibilityEpoch: rollbackEpoch,
+          showInCollaboration: false,
+        } as Partial<CollaborationPreference>);
+      } catch (rollbackError) {
+        console.error('Failed to roll back collaboration visibility preference', rollbackError);
+      }
+      throw error;
+    }
+    return result;
   }),
 
   updateSettings: userProcedure.input(UserSettingsSchema).mutation(async ({ ctx, input }) => {

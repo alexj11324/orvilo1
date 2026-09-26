@@ -2034,6 +2034,52 @@ table integration_leases {
   }
 }
 
+table linear_import_jobs {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text [not null]
+  installation_id uuid [not null]
+  team_id text [not null]
+  project_id text [not null]
+  requested_by_user_id text [not null]
+  state_mappings jsonb [not null]
+  status text [not null, default: 'queued']
+  cursor text
+  pages_processed integer [not null, default: 0]
+  issues_imported integer [not null, default: 0]
+  issues_skipped integer [not null, default: 0]
+  issues_failed integer [not null, default: 0]
+  last_error text
+  lease_owner uuid
+  locked_until "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (workspace_id, installation_id, team_id, project_id) [name: 'linear_import_jobs_scope_unique', unique]
+    (workspace_id, status) [name: 'linear_import_jobs_workspace_status_idx']
+  }
+}
+
+table linear_import_receipts {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  workspace_id text [not null]
+  installation_id uuid [not null]
+  job_id uuid [not null]
+  linear_issue_id text [not null]
+  project_id text [not null]
+  task_id text
+  result text [not null]
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (workspace_id, installation_id, linear_issue_id) [name: 'linear_import_receipts_source_unique', unique]
+    job_id [name: 'linear_import_receipts_job_idx']
+  }
+}
+
 table linear_external_comments {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   workspace_id text [not null]

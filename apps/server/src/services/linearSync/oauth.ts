@@ -227,13 +227,12 @@ export interface LinearOAuthInstallationIdentity {
 
 export const validateLinearOAuthInstallation = async (input: {
   accessToken: string;
-  clientId: string;
   fetcher?: typeof fetch;
 }): Promise<LinearOAuthInstallationIdentity> => {
   const response = await (input.fetcher ?? fetch)(LINEAR_GRAPHQL_URL, {
     body: JSON.stringify({
       query: `query ValidateLinearInstallation {
-        viewer { id name oauthClientId }
+        viewer { id name }
         organization { id name }
       }`,
     }),
@@ -267,15 +266,15 @@ export const validateLinearOAuthInstallation = async (input: {
   const organization = isRecord(data.organization) ? data.organization : undefined;
   const appActorId = viewer && typeof viewer.id === 'string' ? viewer.id : null;
   const appActorName = viewer && typeof viewer.name === 'string' ? viewer.name : null;
-  const returnedClientId =
-    viewer && typeof viewer.oauthClientId === 'string' ? viewer.oauthClientId : null;
   const organizationId =
     organization && typeof organization.id === 'string' ? organization.id : null;
   const organizationName =
     organization && typeof organization.name === 'string' ? organization.name : null;
 
-  if (!appActorId || !appActorName || returnedClientId !== input.clientId) {
-    throw new LinearOAuthError('Linear OAuth token is not an app actor for this OAuth client');
+  // The code exchange already binds the token to our client ID, secret, PKCE verifier,
+  // and actor=app authorization. Linear's User GraphQL type has no oauthClientId field.
+  if (!appActorId || !appActorName) {
+    throw new LinearOAuthError('Linear OAuth token did not resolve an app actor');
   }
   if (!organizationId || !organizationName) {
     throw new LinearOAuthError('Linear OAuth token did not resolve an organization');

@@ -1,5 +1,6 @@
 import {
-  COLLABORATION_GATEWAY_PROTOCOL_VERSION,
+  COLLABORATION_GATEWAY_PRESENCE_VISIBILITY_VERSION,
+  COLLABORATION_GATEWAY_SCOPED_KICK_VERSION,
   GATEWAY_PROTOCOL_VERSION_HEADER,
   type PresenceEntry,
   type RoomKickParams,
@@ -22,6 +23,8 @@ export interface RoomPublisher {
   /** Live presence for snapshot fallback; optional (empty when unavailable). */
   presence?: (room: string) => Promise<PresenceEntry[]>;
   publish: (room: string, publish: RoomPublishEnvelope) => Promise<void>;
+  /** Immediately suppress one human user's presence on all existing sockets. */
+  setUserPresenceVisibility: (userId: string, visible: boolean, epoch?: string) => Promise<void>;
 }
 
 /**
@@ -43,17 +46,46 @@ export interface LocalRoomBus {
   kickScoped?: (room: string, params: RoomKickParams) => void;
   presence: (room: string) => PresenceEntry[];
   publish: (room: string, message: unknown) => void;
+  setUserPresenceVisibility?: (userId: string, visible: boolean, epoch?: string) => void;
 }
 
 const getLocalBus = (): LocalRoomBus | null =>
   (globalThis as Record<symbol, unknown>)[LOCAL_ROOM_BUS_KEY] as LocalRoomBus | null;
 
+const setVisibilityOnLocalBus = (userId: string, visible: boolean, epoch?: string) => {
+  const bus = getLocalBus();
+  if (!bus) {
+    // A configured gateway (including the development localhost default)
+    // may hold stale visible sockets. Failing here keeps the setting mutation
+    // truthful; a production deployment with collaboration fully disabled has
+    // no sockets to conceal and can safely persist the preference.
+    if (
+      process.env.COLLABORATION_GATEWAY_PUBLIC_URL ||
+      process.env.COLLABORATION_GATEWAY_URL ||
+      process.env.NODE_ENV === 'development'
+    ) {
+      throw new Error('collaboration gateway conceal control is unavailable');
+    }
+    return;
+  }
+  if (!bus.setUserPresenceVisibility) {
+    throw new Error('local room bus does not support presence visibility control');
+  }
+  bus.setUserPresenceVisibility(userId, visible, epoch);
+};
+
 const localRoomPublisher: RoomPublisher = {
+  setUserPresenceVisibility: async (userId, visible, epoch) =>
+    setVisibilityOnLocalBus(userId, visible, epoch),
   presence: async (room) => getLocalBus()?.presence(room) ?? [],
   publish: async (room, publish) => {
+    if (publish.kind === 'presence-visibility') {
+      setVisibilityOnLocalBus(publish.userId, publish.visible, publish.epoch);
+      return;
+    }
     const bus = getLocalBus();
     if (!bus) return;
-    if (publish.kind !== 'kick') {
+    if (publish.kind === 'broadcast') {
       bus.publish(room, publish.message);
       return;
     }
@@ -84,7 +116,40 @@ const httpRoomPublisher = (gatewayUrl: string): RoomPublisher => {
     'content-type': 'application/json',
   });
 
+  const publish = async (room: string, publish: RoomPublishEnvelope) => {
+    const response = await fetch(publishUrl, {
+      body: JSON.stringify({ publish, room }),
+      headers: await authHeaders(),
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error(`gateway publish failed with HTTP ${response.status}`);
+    }
+
+    const requiredVersion =
+      publish.kind === 'presence-visibility'
+        ? COLLABORATION_GATEWAY_PRESENCE_VISIBILITY_VERSION
+        : publish.kind === 'kick' && publish.scope !== 'workspace'
+          ? COLLABORATION_GATEWAY_SCOPED_KICK_VERSION
+          : null;
+    if (requiredVersion === null) return;
+
+    const raw = response.headers.get(GATEWAY_PROTOCOL_VERSION_HEADER);
+    const version = raw === null ? null : Number(raw);
+    if (version === null || !Number.isInteger(version) || version < requiredVersion) {
+      const operation =
+        publish.kind === 'kick' ? `${publish.scope}-scoped kicks` : 'presence visibility control';
+      throw new Error(
+        `gateway does not support ${operation} (protocol ${
+          version === null ? `pre-v${requiredVersion}` : String(version)
+        })`,
+      );
+    }
+  };
+
   return {
+    setUserPresenceVisibility: (userId, visible, epoch) =>
+      publish('', { epoch, kind: 'presence-visibility', userId, visible }),
     presence: async (room) => {
       try {
         const response = await fetch(`${presenceUrl}?room=${encodeURIComponent(room)}`, {
@@ -98,46 +163,36 @@ const httpRoomPublisher = (gatewayUrl: string): RoomPublisher => {
         return [];
       }
     },
-    publish: async (room, publish) => {
-      const response = await fetch(publishUrl, {
-        body: JSON.stringify({ publish, room }),
-        headers: await authHeaders(),
-        method: 'POST',
-      });
-      if (!response.ok) {
-        throw new Error(`gateway publish failed with HTTP ${response.status}`);
-      }
-      // Capability handshake: pre-v2 gateways ack every envelope but only
-      // execute workspace kicks — a project/task kick acked without the
-      // version marker never fired, so fail it here and let the outbox retry
-      // until the gateway fleet catches up. Workspace kicks keep their
-      // legacy semantics and pass through ungated.
-      if (publish.kind === 'kick' && publish.scope !== 'workspace') {
-        const raw = response.headers.get(GATEWAY_PROTOCOL_VERSION_HEADER);
-        const version = raw === null ? null : Number(raw);
-        if (
-          version === null ||
-          !Number.isInteger(version) ||
-          version < COLLABORATION_GATEWAY_PROTOCOL_VERSION
-        ) {
-          throw new Error(
-            `gateway does not support ${publish.scope}-scoped kicks (protocol ${
-              version === null ? 'pre-v2' : String(version)
-            })`,
-          );
-        }
-      }
-    },
+    publish,
   };
 };
 
 /**
- * Publisher selection: `COLLABORATION_GATEWAY_URL` set → HTTP adapter for the
- * standalone gateway process; unset → the in-process local bus (no-op until a
- * gateway is mounted in this process).
+ * Derives the gateway's internal HTTP base from the client-facing ws URL for
+ * deployments that only set `COLLABORATION_GATEWAY_PUBLIC_URL` — otherwise
+ * server-side publishes (concealment, scoped kicks) could never reach the
+ * standalone gateway. `wss://host[/…/collaboration]` → `https://host[/…]`.
  */
-export const createRoomPublisher = (gatewayUrl = process.env.COLLABORATION_GATEWAY_URL) =>
-  gatewayUrl ? httpRoomPublisher(gatewayUrl) : localRoomPublisher;
+const publicGatewayHttpUrl = (): string | undefined => {
+  const url = process.env.COLLABORATION_GATEWAY_PUBLIC_URL;
+  if (!url || !/^wss?:\/\//.test(url)) return undefined;
+  return url.replace(/^ws/, 'http').replace(/\/collaboration\/?$/, '');
+};
+
+/**
+ * Publisher selection: `COLLABORATION_GATEWAY_URL` set → HTTP adapter for the
+ * standalone gateway process; else the in-process local bus when a gateway is
+ * mounted here; else the public URL converted to its internal HTTP base; else
+ * the standalone localhost gateway in development.
+ */
+export const createRoomPublisher = (gatewayUrl = process.env.COLLABORATION_GATEWAY_URL) => {
+  if (gatewayUrl) return httpRoomPublisher(gatewayUrl);
+  if (getLocalBus()) return localRoomPublisher;
+  const publicHttp = publicGatewayHttpUrl();
+  if (publicHttp) return httpRoomPublisher(publicHttp);
+  if (process.env.NODE_ENV === 'development') return httpRoomPublisher('http://localhost:3012');
+  return localRoomPublisher;
+};
 
 /** Resolved per call so dev env changes (and tests) don't require a reload. */
 export const getRoomPublisher = (): RoomPublisher => createRoomPublisher();

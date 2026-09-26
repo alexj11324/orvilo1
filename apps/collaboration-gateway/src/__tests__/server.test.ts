@@ -13,9 +13,15 @@ let kid: string;
 let gateway: Awaited<ReturnType<typeof listenGateway>>;
 let port: number;
 
-const signRoomTicket = async (params: { room: string; userId: string; jti?: string }) =>
+const signRoomTicket = async (params: {
+  jti?: string;
+  presenceVisible?: boolean;
+  room: string;
+  userId: string;
+}) =>
   new SignJWT({
     actor: { id: params.userId, kind: 'human' },
+    presence_visible: params.presenceVisible ?? true,
     purpose: 'collaboration-room',
     room: params.room,
     workspace_id: 'ws-1',
@@ -156,7 +162,7 @@ describe('gateway protocol', () => {
     expect(broadcastRes.status).toBe(202);
     // The protocol-version marker is what lets the projector distinguish a
     // v2 gateway (executes scoped kicks) from a pre-v2 one (acks but drops).
-    expect(broadcastRes.headers.get('x-orvilo-gateway-protocol-version')).toBe('2');
+    expect(broadcastRes.headers.get('x-orvilo-gateway-protocol-version')).toBe('3');
     await expect(nextMessage(a.messages, 'activity')).resolves.toMatchObject({
       event: { eventId: 'evt-1' },
     });
@@ -171,7 +177,7 @@ describe('gateway protocol', () => {
       method: 'POST',
     });
     expect(kickRes.status).toBe(202);
-    expect(kickRes.headers.get('x-orvilo-gateway-protocol-version')).toBe('2');
+    expect(kickRes.headers.get('x-orvilo-gateway-protocol-version')).toBe('3');
     await expect(nextMessage(b.messages, 'revoked')).resolves.toEqual({
       reason: 'workspace.member.removed',
       type: 'revoked',
@@ -186,6 +192,106 @@ describe('gateway protocol', () => {
     await expect(nextMessage(a.messages, 'pong')).resolves.toEqual({ type: 'pong' });
 
     a.ws.close();
+  });
+
+  it('keeps a hidden human connected without publishing their presence', async () => {
+    const room = 'task:hidden-presence';
+    const observerToken = await signRoomTicket({ room, userId: 'user-observer' });
+    const hiddenToken = await signRoomTicket({
+      presenceVisible: false,
+      room,
+      userId: 'user-hidden',
+    });
+    const observer = await connect(`room=${room}&token=${observerToken}`);
+    const hidden = await connect(`room=${room}&token=${hiddenToken}`);
+    await nextMessage(observer.messages, 'snapshot');
+    await nextMessage(hidden.messages, 'snapshot');
+
+    hidden.ws.send(JSON.stringify({ type: 'presence', state: { typing: true } }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(observer.messages.some((message) => message.type === 'presence')).toBe(false);
+
+    // Suppression changes only outbound presence. The hidden user's read
+    // socket stays healthy and continues participating in the room.
+    hidden.ws.send(JSON.stringify({ type: 'ping' }));
+    await expect(nextMessage(hidden.messages, 'pong')).resolves.toEqual({ type: 'pong' });
+
+    observer.ws.close();
+    hidden.ws.close();
+  });
+
+  it('immediately conceals an old visible ticket and keeps its read socket connected', async () => {
+    const room = 'task:old-visible-ticket';
+    const observerToken = await signRoomTicket({ room, userId: 'user-observer-2' });
+    const oldVisibleToken = await signRoomTicket({ room, userId: 'user-old-visible' });
+    const lateOldVisibleToken = await signRoomTicket({ room, userId: 'user-old-visible' });
+    const observer = await connect(`room=${room}&token=${observerToken}`);
+    const oldVisible = await connect(`room=${room}&token=${oldVisibleToken}`);
+    await nextMessage(observer.messages, 'snapshot');
+    await nextMessage(oldVisible.messages, 'snapshot');
+
+    oldVisible.ws.send(JSON.stringify({ type: 'presence', state: { typing: true } }));
+    await expect(nextMessage(observer.messages, 'presence')).resolves.toMatchObject({
+      actor: { id: 'user-old-visible', kind: 'human' },
+    });
+
+    const concealResponse = await fetch(`http://127.0.0.1:${port}/internal/publish`, {
+      body: JSON.stringify({
+        publish: {
+          epoch: 'hidden-epoch',
+          kind: 'presence-visibility',
+          userId: 'user-old-visible',
+          visible: false,
+        },
+        room: '',
+      }),
+      headers: {
+        'authorization': `Bearer ${await signPublishToken()}`,
+        'content-type': 'application/json',
+      },
+      method: 'POST',
+    });
+    expect(concealResponse.status).toBe(202);
+    expect(concealResponse.headers.get('x-orvilo-gateway-protocol-version')).toBe('3');
+    await expect(nextMessage(observer.messages, 'presence-gone')).resolves.toMatchObject({
+      type: 'presence-gone',
+    });
+
+    // This JWT was minted before conceal but did not connect until afterward.
+    // The user tombstone must suppress it just like an already-open tab.
+    const lateOldVisible = await connect(`room=${room}&token=${lateOldVisibleToken}`);
+    await nextMessage(lateOldVisible.messages, 'snapshot');
+    lateOldVisible.ws.send(JSON.stringify({ type: 'presence', state: { typing: true } }));
+
+    oldVisible.ws.send(JSON.stringify({ type: 'presence', state: { typing: false } }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(observer.messages.some((message) => message.type === 'presence')).toBe(false);
+
+    oldVisible.ws.send(JSON.stringify({ type: 'ping' }));
+    await expect(nextMessage(oldVisible.messages, 'pong')).resolves.toEqual({ type: 'pong' });
+
+    observer.ws.close();
+    oldVisible.ws.close();
+    lateOldVisible.ws.close();
+  });
+
+  it('rejects malformed conceal commands', async () => {
+    const response = await fetch(`http://127.0.0.1:${port}/internal/publish`, {
+      body: JSON.stringify({
+        publish: { kind: 'presence-visibility', userId: ' ', visible: false },
+        room: '',
+      }),
+      headers: {
+        'authorization': `Bearer ${await signPublishToken()}`,
+        'content-type': 'application/json',
+      },
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'invalid presence visibility envelope',
+    });
   });
 
   it('rejects unauthenticated internal publish', async () => {

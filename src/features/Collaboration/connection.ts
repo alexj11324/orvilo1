@@ -13,6 +13,7 @@ import {
   type ServerActivityEvent,
   type ServerMessage,
 } from '@/store/collaboration';
+import { getUserStoreState } from '@/store/user';
 
 /**
  * Refcounted WebSocket lifecycle for collaboration rooms, kept outside React
@@ -49,10 +50,15 @@ interface RoomConnection {
 
 const connections = new Map<string, RoomConnection>();
 
+const sharesPresence = (): boolean => getUserStoreState().preference.showInCollaboration !== false;
+
 const reconnectDelay = (attempt: number): number =>
   Math.min(RECONNECT_CAP_MS, RECONNECT_BASE_MS * 2 ** attempt) + Math.random() * 500;
 
 const send = (record: RoomConnection, message: ClientMessage): void => {
+  // Keep the receive socket alive when the user hides their issue presence.
+  // The server-signed ticket enforces the same choice at the gateway.
+  if (message.type === 'presence' && !sharesPresence()) return;
   const socket = record.socket;
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
   socket.send(JSON.stringify(message));
@@ -157,7 +163,12 @@ const teardown = (key: string, record: RoomConnection): void => {
  * the caller is not a member, or the room is gone. Retrying these just spams
  * the API forever — park the room instead.
  */
-const PERMANENT_AUTHORIZE_CODES = new Set(['BAD_REQUEST', 'FORBIDDEN', 'NOT_FOUND', 'UNAUTHORIZED']);
+const PERMANENT_AUTHORIZE_CODES = new Set([
+  'BAD_REQUEST',
+  'FORBIDDEN',
+  'NOT_FOUND',
+  'UNAUTHORIZED',
+]);
 
 const isPermanentAuthorizeFailure = (error: unknown): boolean => {
   const code = (error as { data?: { code?: string } } | null)?.data?.code;
@@ -340,6 +351,27 @@ export const releaseRoomConnection = (room: CollaborationRoom): void => {
   connections.delete(key);
   teardown(key, record);
   getCollaborationStoreState().clearRoom(key);
+};
+
+/** Reauthorize open rooms after the personal visibility setting is saved. */
+export const refreshCollaborationConnections = (): void => {
+  for (const [key, record] of connections) {
+    if (record.refCount <= 0) continue;
+    record.generation += 1;
+    if (record.reconnectTimer) clearTimeout(record.reconnectTimer);
+    record.reconnectTimer = undefined;
+    const socket = record.socket;
+    record.socket = undefined;
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onclose = null;
+      socket.onerror = null;
+      socket.close();
+    }
+    record.attempt = 0;
+    void connect(key, record);
+  }
 };
 
 /** Escape hatch for tests and the revoked path. */

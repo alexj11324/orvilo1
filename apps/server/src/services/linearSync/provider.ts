@@ -68,7 +68,7 @@ const PAGE_INFO_FIELDS = `pageInfo { endCursor hasNextPage }`;
 const ORGANIZATION_FIELDS = `id name urlKey`;
 const CATALOG_PAGE_SIZE = 100;
 const MEMBER_PAGE_SIZE = 250;
-const PROJECT_FIELDS = `id name state organization { id } teams(first: ${CATALOG_PAGE_SIZE}) { nodes { id visibility organization { id } } ${PAGE_INFO_FIELDS} }`;
+const PROJECT_FIELDS = `id name state teams(first: ${CATALOG_PAGE_SIZE}) { nodes { id visibility organization { id } } ${PAGE_INFO_FIELDS} }`;
 const TEAM_FIELDS = `id key name visibility organization { id } states(first: ${CATALOG_PAGE_SIZE}) { nodes { id name type position } ${PAGE_INFO_FIELDS} } cycles(first: ${CATALOG_PAGE_SIZE}) { nodes { id name number startsAt endsAt } ${PAGE_INFO_FIELDS} }`;
 
 export interface LinearIssueCreateInput {
@@ -657,16 +657,15 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
   }
 
   async listOrganizations(): Promise<LinearOrganizationSnapshot[]> {
-    const data = await this.requestData<{ organizations: { nodes: unknown[] } }>({
-      query: `query ListOrganizations { organizations { nodes { ${ORGANIZATION_FIELDS} } } }`,
+    const data = await this.requestData<{ organization: unknown }>({
+      query: `query ListOrganization { organization { ${ORGANIZATION_FIELDS} } }`,
     });
-    return data.organizations.nodes.flatMap((value) => {
-      if (!isRecord(value)) return [];
-      const id = stringValue(value.id);
-      const name = stringValue(value.name);
-      if (!id || !name || !this.isInstalledOrganization(id)) return [];
-      return [{ id, name, url: typeof value.urlKey === 'string' ? value.urlKey : null }];
-    });
+    const value = data.organization;
+    if (!isRecord(value)) return [];
+    const id = stringValue(value.id);
+    const name = stringValue(value.name);
+    if (!id || !name || !this.isInstalledOrganization(id)) return [];
+    return [{ id, name, url: typeof value.urlKey === 'string' ? value.urlKey : null }];
   }
 
   async listProjects(): Promise<LinearProjectSnapshot[]> {
@@ -687,8 +686,11 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
       if (!isRecord(value)) continue;
       const id = stringValue(value.id);
       const name = stringValue(value.name);
-      const organizationId = nestedId(value.organization);
-      if (!id || !name || !this.isInstalledOrganization(organizationId)) continue;
+      // Linear's GraphQL API is scoped to the OAuth token's organization and
+      // `Project` exposes no `organization` field, so every returned project
+      // belongs to the installation's organization by construction.
+      const organizationId = this.organizationId ?? null;
+      if (!id || !name) continue;
       const teamNodes = isRecord(value.teams)
         ? await collectConnectionNodes(async (after) => {
             const data = await this.requestData<{ project: { teams?: unknown } | null }>({

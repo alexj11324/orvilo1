@@ -88,6 +88,7 @@ import { taskRouter } from './task';
 import { taskDraftRouter } from './taskDraft';
 import { taskLabelRouter } from './taskLabel';
 import { teamRouter } from './team';
+import { teamResourceRouter } from './teamResource';
 import { threadRouter } from './thread';
 import { topicRouter } from './topic';
 import { topicCommentRouter } from './topicComment';
@@ -172,6 +173,7 @@ export const lambdaRouter = router({
   taskDraft: taskDraftRouter,
   taskLabel: taskLabelRouter,
   team: teamRouter,
+  teamResource: teamResourceRouter,
   thread: threadRouter,
   topic: topicRouter,
   topicComment: topicCommentRouter,

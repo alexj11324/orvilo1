@@ -1,11 +1,12 @@
 import type { SQL } from 'drizzle-orm';
-import { and, eq, ne, or, sql } from 'drizzle-orm';
+import { and, eq, exists, ne, or, sql } from 'drizzle-orm';
 
 import { agentDocuments } from '../../schemas/agentDocuments';
 import { documents } from '../../schemas/file';
 import { tasks } from '../../schemas/task';
 import { works } from '../../schemas/work';
 import type { OrviloDatabase } from '../../type';
+import { buildDocumentReadableWhere } from '../../utils/documentAccess';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
 /**
@@ -62,13 +63,46 @@ const taskVisibilityGuard = (ctx: WorkContext): SQL =>
 const documentVisibilityGuard = (ctx: WorkContext): SQL =>
   or(
     ne(works.resourceType, 'document'),
-    eq(works.userId, ctx.userId),
-    sql`exists (select 1 from ${documents} where ${documents.id} = ${works.resourceId} and (${documents.visibility} = 'public' or ${documents.userId} = ${ctx.userId}))`,
+    and(ne(works.visibility, 'team'), eq(works.userId, ctx.userId)),
+    exists(
+      ctx.db
+        .select({ one: sql`1` })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.id, works.resourceId),
+            buildDocumentReadableWhere(ctx.db, {
+              userId: ctx.userId,
+              workspaceId: ctx.workspaceId,
+            }),
+          ),
+        ),
+    ),
   ) as SQL;
 
 export const workOwnership = (ctx: WorkContext) =>
   and(
-    buildWorkspaceWhere({ userId: ctx.userId, workspaceId: ctx.workspaceId }, works),
+    or(
+      buildWorkspaceWhere({ userId: ctx.userId, workspaceId: ctx.workspaceId }, works),
+      and(
+        eq(works.resourceType, 'document'),
+        eq(works.visibility, 'team'),
+        exists(
+          ctx.db
+            .select({ one: sql`1` })
+            .from(documents)
+            .where(
+              and(
+                eq(documents.id, works.resourceId),
+                buildDocumentReadableWhere(ctx.db, {
+                  userId: ctx.userId,
+                  workspaceId: ctx.workspaceId,
+                }),
+              ),
+            ),
+        ),
+      ),
+    ),
     taskVisibilityGuard(ctx),
     documentVisibilityGuard(ctx),
   ) as SQL;
@@ -85,7 +119,7 @@ export const taskOwnership = (ctx: WorkContext) =>
   );
 
 export const documentOwnership = (ctx: WorkContext) =>
-  buildWorkspaceWhere({ userId: ctx.userId, workspaceId: ctx.workspaceId }, documents);
+  buildDocumentReadableWhere(ctx.db, { userId: ctx.userId, workspaceId: ctx.workspaceId });
 
 export const agentDocumentOwnership = (ctx: WorkContext) =>
   buildWorkspaceWhere({ userId: ctx.userId, workspaceId: ctx.workspaceId }, agentDocuments);

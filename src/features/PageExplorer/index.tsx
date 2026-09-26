@@ -1,9 +1,12 @@
 'use client';
 
-import { memo, type ReactNode, useCallback } from 'react';
+import { memo, type ReactNode } from 'react';
 
 import { PageEditor } from '@/features/PageEditor';
-import { pageSelectors, usePageStore } from '@/store/page';
+import {
+  usePageDocumentMetadata,
+  usePageDocumentMetadataActions,
+} from '@/features/PageEditor/usePageDocumentMetadata';
 
 interface PageExplorerProps {
   /** Forwarded to PageEditor. */
@@ -20,27 +23,11 @@ interface PageExplorerProps {
  * Document editor surface shared by Agent Documents and Resource Manager.
  */
 const PageExplorer = memo<PageExplorerProps>(({ pageId, header, fullWidthHeader }) => {
-  const updatePageOptimistically = usePageStore((s) => s.updatePageOptimistically);
-
   // Get document title and emoji from PageStore
-  const document = usePageStore(pageSelectors.getDocumentById(pageId));
-  const title = document?.title;
+  const document = usePageDocumentMetadata(pageId);
+  const title = document?.title ?? undefined;
   const emoji = document?.metadata?.emoji as string | undefined;
-
-  // Optimistic update handlers for title and emoji
-  const handleTitleChange = useCallback(
-    (newTitle: string) => {
-      updatePageOptimistically(pageId, { title: newTitle });
-    },
-    [pageId, updatePageOptimistically],
-  );
-
-  const handleEmojiChange = useCallback(
-    (newEmoji: string | undefined) => {
-      updatePageOptimistically(pageId, { emoji: newEmoji });
-    },
-    [pageId, updatePageOptimistically],
-  );
+  const { updateEmoji, updateTitle } = usePageDocumentMetadataActions(pageId);
 
   return (
     <PageEditor
@@ -50,8 +37,8 @@ const PageExplorer = memo<PageExplorerProps>(({ pageId, header, fullWidthHeader 
       key={pageId}
       pageId={pageId}
       title={title}
-      onEmojiChange={handleEmojiChange}
-      onTitleChange={handleTitleChange}
+      onEmojiChange={updateEmoji}
+      onTitleChange={updateTitle}
     />
   );
 });

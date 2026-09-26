@@ -51,6 +51,14 @@ import {
 } from './listFilters';
 
 const styles = createStaticStyles(({ css }) => ({
+  toolbarAction: css`
+    width: 28px;
+    height: 28px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 50%;
+
+    background: ${cssVar.colorBgContainer};
+  `,
   aiPane: css`
     width: 280px;
     padding: 10px;
@@ -707,6 +715,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
         <ActionIcon
           active={filters.length > 0}
           aria-label={t('list.filter.add')}
+          className={styles.toolbarAction}
           icon={FilterIcon}
           size="small"
           title={t('list.filter.add')}

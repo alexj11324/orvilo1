@@ -15,17 +15,16 @@ import TeamHomeTabs from './home/TeamHomeTabs';
 
 const styles = createStaticStyles(({ css }) => ({
   page: css`
-    width: min(972px, 100%);
-    margin-block-start: 16px;
-    margin-inline: auto;
+    width: 100%;
 
     @container work-surface (max-width: 1000px) {
       width: 100%;
-      margin-block-start: 4px;
     }
   `,
   sectionBody: css`
+    width: min(972px, 100%);
     margin-block-start: 8px;
+    margin-inline: auto;
   `,
 }));
 
@@ -68,7 +67,7 @@ const TeamHome = ({ teamData, teamId, triageCapable, workspaceSlug }: TeamHomePr
             onMembersRetry={() => void membersQuery.mutate()}
           />
         ) : null}
-        {section === 'documents' ? <TeamHomeDocuments /> : null}
+        {section === 'documents' ? <TeamHomeDocuments teamId={teamId} /> : null}
         {section === 'members' ? (
           <TeamHomeMembers
             error={membersQuery.error}

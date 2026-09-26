@@ -144,7 +144,7 @@ export const notebookRouter = router({
       // Same cascade rule as documentRouter.deleteDocument: a non-owner's
       // folder delete must not take teammates' descendants with it.
       await ctx.notebookService.deleteDocument(input.id, {
-        restrictToCreator: isWorkspaceNonOwner(ctx),
+        restrictToCreator: isWorkspaceNonOwner(ctx) && existing.visibility !== 'team',
       });
 
       if (ctx.workspaceId) {

@@ -1,10 +1,10 @@
 'use client';
 
 import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
-import { PanelRightIcon, PlusIcon } from 'lucide-react';
+import { Layers2Icon, PanelRightIcon, PlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -71,6 +71,20 @@ import { enrichTeamProjects, summarizeTeamProjects, teamProjectsWorkQuery } from
 const styles = createStaticStyles(({ css, cssVar }) => ({
   loadMore: css`
     padding-block: 12px;
+  `,
+  headerAction: css`
+    border: 0;
+    color: ${cssVar.colorTextSecondary};
+    background: transparent;
+    box-shadow: none;
+  `,
+  toolbarAction: css`
+    width: 28px;
+    height: 28px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 50%;
+
+    background: ${cssVar.colorBgContainer};
   `,
   separator: css`
     flex: none;
@@ -143,7 +157,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     }
   `,
   viewChipActive: css`
-    border-color: ${cssVar.colorBorderSecondary};
     color: ${cssVar.colorText};
     background: ${cssVar.colorFillSecondary};
   `,
@@ -165,6 +178,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 interface TeamProjectsSurfaceProps {
   teamId: string;
 }
+
+const TEAM_PROJECT_LIST_DEFAULT_OPTIONS: ProjectListDisplayOptions = {
+  ...DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS,
+  orderBy: 'manual',
+};
 
 const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
   const { t } = useTranslation(['project', 'common']);
@@ -273,7 +291,10 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
   // Display options persist per surface — the team tab keeps its own
   // SystemStatus slot so it never clobbers the workspace list's options.
   const rawOptions = useGlobalStore(systemStatusSelectors.teamProjectsViewOptions);
-  const options = useMemo(() => normalizeProjectListDisplayOptions(rawOptions), [rawOptions]);
+  const options = useMemo(
+    () => normalizeProjectListDisplayOptions(rawOptions ?? TEAM_PROJECT_LIST_DEFAULT_OPTIONS),
+    [rawOptions],
+  );
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const updateOptions = useCallback(
     (patch: Partial<ProjectListDisplayOptions>) =>
@@ -286,7 +307,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
   const resetOptions = useCallback(
     () =>
       updateSystemStatus(
-        { teamProjectsViewOptions: DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS },
+        { teamProjectsViewOptions: TEAM_PROJECT_LIST_DEFAULT_OPTIONS },
         'resetTeamProjectsViewOptions',
       ),
     [updateSystemStatus],
@@ -450,21 +471,18 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               ›
             </span>
             <Text weight={500}>{t('list.title', { ns: 'project' })}</Text>
+            <WorkFavoriteButton icon="star" targetId={teamId} targetType="team" variant="icon" />
           </Flexbox>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={8}>
-            <WorkFavoriteButton targetId={teamId} targetType="team" />
-            <Button
-              icon={PlusIcon}
-              shape={'round'}
-              size={'small'}
-              type="primary"
-              onClick={() => openCreateProjectModal({ teamId })}
-            >
-              {t('create.title', { ns: 'project' })}
-            </Button>
-          </Flexbox>
+          <Button
+            className={styles.headerAction}
+            icon={PlusIcon}
+            size={'small'}
+            onClick={() => openCreateProjectModal({ teamId })}
+          >
+            {t('create.title', { ns: 'project' })}
+          </Button>
         }
       />
       {teamError ? (
@@ -492,30 +510,37 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                       onChange={updateOptions}
                       onReset={resetOptions}
                     />
-                    <Button
+                    <ActionIcon
+                      active={sidebarOpen}
+                      className={styles.toolbarAction}
                       icon={PanelRightIcon}
                       size="small"
-                      type={sidebarOpen ? 'primary' : 'default'}
+                      aria-label={
+                        sidebarOpen
+                          ? t('list.sidebar.close', { ns: 'project' })
+                          : t('list.sidebar.open', { ns: 'project' })
+                      }
+                      title={
+                        sidebarOpen
+                          ? t('list.sidebar.close', { ns: 'project' })
+                          : t('list.sidebar.open', { ns: 'project' })
+                      }
                       onClick={() => setSidebarOpen((open) => !open)}
-                    >
-                      {sidebarOpen
-                        ? t('list.sidebar.close', { ns: 'project' })
-                        : t('list.sidebar.open', { ns: 'project' })}
-                    </Button>
+                    />
                   </>
                 }
               >
                 <span className={cx(styles.viewChip, styles.viewChipActive)}>
                   {t('teams.viewAllProjects', { ns: 'common' })}
                 </span>
-                <Button
-                  icon={PlusIcon}
+                <ActionIcon
+                  aria-label={t('savedViews.newView', { ns: 'common' })}
+                  className={styles.toolbarAction}
+                  icon={Layers2Icon}
                   size="small"
-                  type="text"
+                  title={t('savedViews.newView', { ns: 'common' })}
                   onClick={() => setViewBuilderOpen(true)}
-                >
-                  {t('savedViews.newView', { ns: 'common' })}
-                </Button>
+                />
                 <ProjectListFilterChips
                   filters={filters}
                   memberName={memberName}

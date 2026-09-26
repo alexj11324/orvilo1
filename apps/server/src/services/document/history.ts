@@ -8,6 +8,11 @@ import {
   DOCUMENT_HISTORY_QUERY_LIST_LIMIT,
   DOCUMENT_HISTORY_SOURCE_LIMITS,
 } from '@/const/documentHistory';
+import type { OrviloDatabase } from '@/database/type';
+import {
+  buildDocumentReadableWhere,
+  buildDocumentWritableWhere,
+} from '@/database/utils/documentAccess';
 import { isValidEditorData } from '@/libs/editor/isValidEditorData';
 
 import type {
@@ -41,7 +46,16 @@ export class DocumentHistoryService {
   }
 
   private documentsOwnership = () =>
-    buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, documents);
+    buildDocumentReadableWhere(this.db as OrviloDatabase, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+
+  private documentsWritable = () =>
+    buildDocumentWritableWhere(this.db as OrviloDatabase, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
 
   private historiesOwnership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, documentHistories);
@@ -56,7 +70,7 @@ export class DocumentHistoryService {
     const [document] = await this.db
       .select({ id: documents.id })
       .from(documents)
-      .where(and(eq(documents.id, params.documentId), this.documentsOwnership()))
+      .where(and(eq(documents.id, params.documentId), this.documentsWritable()))
       .limit(1);
 
     if (!document) {

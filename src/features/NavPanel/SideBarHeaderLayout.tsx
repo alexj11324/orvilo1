@@ -15,7 +15,6 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { isModifierClick } from '@/utils/navigation';
 
 import BackButton from './components/BackButton';
-import ToggleLeftPanelButton from './ToggleLeftPanelButton';
 
 const prefixCls = 'ant';
 
@@ -54,19 +53,10 @@ interface SideBarHeaderLayoutProps {
   left?: ReactNode;
   right?: ReactNode;
   showBack?: boolean;
-  showTogglePanelButton?: boolean;
 }
 
 const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
-  ({
-    left,
-    right,
-    backTo = '/',
-    showBack = true,
-    breadcrumb = [],
-    homeItem,
-    showTogglePanelButton = true,
-  }) => {
+  ({ left, right, backTo = '/', showBack = true, breadcrumb = [], homeItem }) => {
     const navigate = useWorkspaceAwareNavigate();
     const leftContent = left ? (
       <Flexbox
@@ -126,7 +116,6 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
       >
         {leftContent}
         <Flexbox horizontal align={'center'} gap={2} justify={'flex-end'}>
-          {showTogglePanelButton && <ToggleLeftPanelButton />}
           {right}
         </Flexbox>
       </Flexbox>

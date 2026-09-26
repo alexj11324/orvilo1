@@ -1,10 +1,23 @@
 import type { DocumentCommentJson } from '@orvilo/types';
-import { and, asc, count, eq, getTableColumns, gt, inArray, isNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  getTableColumns,
+  gt,
+  inArray,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import type { DocumentCommentItem } from '../schemas/documentComment';
 import { documentCommentMentions, documentComments } from '../schemas/documentComment';
 import { documents } from '../schemas/file';
 import type { OrviloDatabase } from '../type';
+import { buildDocumentReadableWhere } from '../utils/documentAccess';
 
 export const DOCUMENT_COMMENT_WORKSPACE_REQUIRED =
   'Document comments are workspace-scoped; a workspaceId is required';
@@ -103,6 +116,22 @@ export class DocumentCommentModel {
     return this.workspaceId;
   };
 
+  private documentReadable = (db: OrviloDatabase = this.db) =>
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.id, documentComments.documentId),
+            buildDocumentReadableWhere(db, {
+              userId: this.userId,
+              workspaceId: this.workspaceId ?? undefined,
+            }),
+          ),
+        ),
+    );
+
   async create(params: CreateDocumentCommentParams): Promise<CreateDocumentCommentResult> {
     const workspaceId = this.requireWorkspaceId();
 
@@ -110,7 +139,15 @@ export class DocumentCommentModel {
       const [document] = await tx
         .select({ id: documents.id, userId: documents.userId, workspaceId: documents.workspaceId })
         .from(documents)
-        .where(eq(documents.id, params.documentId))
+        .where(
+          and(
+            eq(documents.id, params.documentId),
+            buildDocumentReadableWhere(tx as OrviloDatabase, {
+              userId: this.userId,
+              workspaceId,
+            }),
+          ),
+        )
         .limit(1)
         .for('update');
 
@@ -260,6 +297,7 @@ export class DocumentCommentModel {
             eq(documentComments.workspaceId, workspaceId),
             eq(documentComments.authorUserId, this.userId),
             isNull(documentComments.deletedAt),
+            this.documentReadable(tx as OrviloDatabase),
           ),
         )
         .returning();
@@ -315,6 +353,7 @@ export class DocumentCommentModel {
       if (!options.overrideAuthorScope) {
         conditions.push(eq(documentComments.authorUserId, this.userId));
       }
+      conditions.push(this.documentReadable(tx as OrviloDatabase));
 
       const [candidate] = await tx
         .select({ id: documentComments.id, parentCommentId: documentComments.parentCommentId })
@@ -390,7 +429,13 @@ export class DocumentCommentModel {
     const [comment] = await this.db
       .select()
       .from(documentComments)
-      .where(and(eq(documentComments.id, id), eq(documentComments.workspaceId, workspaceId)))
+      .where(
+        and(
+          eq(documentComments.id, id),
+          eq(documentComments.workspaceId, workspaceId),
+          this.documentReadable(),
+        ),
+      )
       .limit(1);
     return comment;
   }
@@ -406,6 +451,7 @@ export class DocumentCommentModel {
           eq(documentComments.workspaceId, workspaceId),
           eq(documentComments.parentCommentId, rootCommentId),
           isNull(documentComments.deletedAt),
+          this.documentReadable(),
         ),
       );
     return row?.total ?? 0;
@@ -418,6 +464,7 @@ export class DocumentCommentModel {
       eq(documentComments.documentId, documentId),
       eq(documentComments.workspaceId, workspaceId),
       isNull(documentComments.parentCommentId),
+      this.documentReadable(),
     ];
     const decodedCursor = decodeCursor(cursor);
     if (decodedCursor) {
@@ -473,6 +520,7 @@ export class DocumentCommentModel {
     const conditions = [
       eq(documentComments.parentCommentId, rootCommentId),
       eq(documentComments.workspaceId, workspaceId),
+      this.documentReadable(),
     ];
     const decodedCursor = decodeCursor(cursor);
     if (decodedCursor) {
@@ -502,6 +550,7 @@ export class DocumentCommentModel {
                 eq(documentComments.parentCommentId, rootCommentId),
                 eq(documentComments.workspaceId, workspaceId),
                 isNull(documentComments.deletedAt),
+                this.documentReadable(),
               ),
             )
             .then(([row]) => row.total),
@@ -528,6 +577,7 @@ export class DocumentCommentModel {
           eq(documentComments.documentId, documentId),
           eq(documentComments.workspaceId, workspaceId),
           isNull(documentComments.deletedAt),
+          this.documentReadable(),
         ),
       );
     return { total: row?.total ?? 0 };

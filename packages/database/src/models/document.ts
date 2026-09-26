@@ -13,7 +13,10 @@ import {
   works,
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildDocumentReadableWhere, buildDocumentWritableWhere } from '../utils/documentAccess';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import { TeamModel } from './team';
+import { hasActiveWorkspaceMembership } from './workspace';
 
 export interface QueryDocumentParams {
   current?: number;
@@ -23,6 +26,7 @@ export interface QueryDocumentParams {
    * pagination and totals stay correct.
    */
   excludeKnowledgeBaseIds?: string[];
+  excludeTeamDocuments?: boolean;
   fileTypes?: string[];
   pageSize?: number;
   sourceTypes?: string[];
@@ -58,15 +62,14 @@ export class DocumentModel {
     this.callerAgentVisibility = callerAgentVisibility;
   }
 
-  private ownership = () =>
-    buildWorkspaceWhere(
-      {
-        callerAgentVisibility: this.callerAgentVisibility,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      },
-      documents,
-    );
+  private accessContext = () => ({
+    callerAgentVisibility: this.callerAgentVisibility,
+    userId: this.userId,
+    workspaceId: this.workspaceId,
+  });
+
+  private ownership = () => buildDocumentReadableWhere(this.db, this.accessContext());
+  private writeOwnership = () => buildDocumentWritableWhere(this.db, this.accessContext());
 
   findOrCreateFolder = async (name: string, parentId?: string): Promise<DocumentItem> => {
     const existing = await this.db.query.documents.findFirst({
@@ -94,6 +97,34 @@ export class DocumentModel {
   };
 
   create = async (params: Omit<NewDocument, 'userId'>): Promise<DocumentItem> => {
+    if (params.visibility === 'team') {
+      if (
+        !this.workspaceId ||
+        !params.teamId ||
+        params.sourceType !== 'api' ||
+        params.fileId ||
+        params.knowledgeBaseId ||
+        params.parentId ||
+        this.callerAgentVisibility === 'public'
+      ) {
+        throw new Error('Team documents must be standalone workspace Pages');
+      }
+      const teamModel = new TeamModel(this.db, this.userId, this.workspaceId);
+      const team = await teamModel.findById(params.teamId);
+      if (
+        !team ||
+        team.workspaceId !== this.workspaceId ||
+        !(await hasActiveWorkspaceMembership(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })) ||
+        !(await teamModel.hasWriteAccess(params.teamId))
+      ) {
+        throw new Error('Team document creation requires team write access');
+      }
+    } else if (params.teamId) {
+      throw new Error('Only team-visible documents can have a team owner');
+    }
     // Workspace-mode default for visibility:
     //   - explicit visibility wins
     //   - user-authored Pages (`sourceType: 'api'`) default to
@@ -123,16 +154,29 @@ export class DocumentModel {
   };
 
   delete = async (id: string) => {
-    return this.db.delete(documents).where(and(eq(documents.id, id), this.ownership()));
+    const document = await this.findById(id);
+    if (
+      document?.visibility === 'team' &&
+      document.userId !== this.userId &&
+      !(await new TeamModel(this.db, this.userId, this.workspaceId!).hasAdminAccess(
+        document.teamId!,
+      ))
+    ) {
+      return;
+    }
+    return this.db.delete(documents).where(and(eq(documents.id, id), this.writeOwnership()));
   };
 
   deleteAll = async () => {
-    return this.db.delete(documents).where(this.ownership());
+    // Bulk cleanup retains its original workspace predicate. Team Pages are
+    // removed individually under their own write authorization.
+    return this.db.delete(documents).where(buildWorkspaceWhere(this.accessContext(), documents));
   };
 
   query = async ({
     current = 0,
     pageSize = 9999,
+    excludeTeamDocuments = false,
     excludeKnowledgeBaseIds,
     fileTypes,
     sourceTypes,
@@ -142,6 +186,7 @@ export class DocumentModel {
   }> => {
     const offset = current * pageSize;
     const conditions = [this.ownership()];
+    if (excludeTeamDocuments) conditions.push(ne(documents.visibility, 'team'));
 
     if (fileTypes?.length) {
       conditions.push(inArray(documents.fileType, fileTypes));
@@ -238,6 +283,12 @@ export class DocumentModel {
     });
   };
 
+  findWritableById = async (id: string): Promise<DocumentItem | undefined> => {
+    return this.db.query.documents.findFirst({
+      where: and(this.writeOwnership(), eq(documents.id, id)),
+    });
+  };
+
   findByIds = async (ids: string[]): Promise<DocumentItem[]> => {
     if (ids.length === 0) return [];
     return this.db.query.documents.findMany({
@@ -287,12 +338,12 @@ export class DocumentModel {
     // visibility is intentionally not updatable via this path. The only legal
     // transition is `private → public` via `publishToWorkspace`; strip any
     // incoming value so callers can't sneak around the one-way rule.
-    const { visibility: _ignored, ...patch } = value;
+    const { teamId: _ignoredTeamId, visibility: _ignored, ...patch } = value;
 
     return this.db
       .update(documents)
       .set({ ...patch, updatedAt: new Date() })
-      .where(and(this.ownership(), eq(documents.id, id)));
+      .where(and(this.writeOwnership(), eq(documents.id, id)));
   };
 
   /**
@@ -317,8 +368,15 @@ export class DocumentModel {
     return this.db.transaction(async (trx) => {
       const result = await (trx as OrviloDatabase)
         .update(documents)
-        .set({ updatedAt: new Date(), visibility })
-        .where(and(eq(documents.id, rootId), this.ownership(), eq(documents.userId, this.userId)))
+        .set({ teamId: null, updatedAt: new Date(), visibility })
+        .where(
+          and(
+            eq(documents.id, rootId),
+            this.writeOwnership(),
+            eq(documents.userId, this.userId),
+            ne(documents.visibility, 'team'),
+          ),
+        )
         .returning({ fileId: documents.fileId, id: documents.id });
 
       if (result.length === 0) throw new Error('Document not found');
@@ -503,6 +561,9 @@ export class DocumentModel {
       const scopedTrx = new DocumentModel(trx as OrviloDatabase, this.userId, this.workspaceId);
       const subtree = await scopedTrx.collectSubtree(documentId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Document not found');
+      if (subtree.some((document) => document.visibility === 'team')) {
+        throw new Error('Team documents cannot be transferred between workspaces');
+      }
 
       const ids = subtree.map((d) => d.id);
 

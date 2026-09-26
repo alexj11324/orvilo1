@@ -6,6 +6,7 @@ import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 
 import { usePageEditorStore } from './store';
+import { usePageDocumentMetadata } from './usePageDocumentMetadata';
 import { usePageLockedByOther } from './usePageLockedByOther';
 
 /**
@@ -20,6 +21,9 @@ export const usePageEditable = (): boolean => {
   const { allowed: hasEditPermission } = usePermission('edit_own_content');
   const documentId = usePageEditorStore((s) => s.documentId);
   const isWorkspacePage = usePageEditorStore((s) => s.isWorkspacePage);
+  const lockOwnerId = usePageEditorStore((s) => s.lockOwnerId);
+  const page = usePageDocumentMetadata(documentId);
+  const requiresWorkspaceLock = Boolean(page?.workspaceId && page.visibility !== 'private');
   const isLockedByOther = usePageLockedByOther();
   // Read-only until the lock resolves, so the user can't start typing on a page
   // that turns out to be locked and get bounced mid-edit. Only workspace pages
@@ -30,7 +34,10 @@ export const usePageEditable = (): boolean => {
   const saveBlockedByLock = useDocumentStore((s) =>
     documentId ? editorSelectors.saveBlockedByLock(documentId)(s) : false,
   );
-  const pendingLock = isWorkspacePage && isLockPending;
+  // A page opened by ID can mount before its metadata reaches pageStore. Keep
+  // it read-only until scope is known and the collaborative lock starts.
+  const pendingScope = Boolean(documentId && !page);
+  const pendingLock = requiresWorkspaceLock && (!isWorkspacePage || !lockOwnerId || isLockPending);
   // A workspace member whose General access on this page is view level can't
   // edit it (defaults permissive while loading — server enforces).
   const { canEditResource } = useResourceAccess(
@@ -39,6 +46,11 @@ export const usePageEditable = (): boolean => {
   );
 
   return (
-    hasEditPermission && canEditResource && !isLockedByOther && !pendingLock && !saveBlockedByLock
+    hasEditPermission &&
+    canEditResource &&
+    !isLockedByOther &&
+    !pendingScope &&
+    !pendingLock &&
+    !saveBlockedByLock
   );
 };

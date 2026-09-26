@@ -80,7 +80,6 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
             >
               <SideBarHeaderLayout
                 showBack={false}
-                showTogglePanelButton={false}
                 left={
                   typeof title === 'string' ? (
                     <Text

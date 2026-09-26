@@ -67,6 +67,9 @@ export interface OrviloDocument {
    */
   sourceType: DocumentSourceType;
 
+  /** Owning team when visibility is `team`. */
+  teamId?: string | null;
+
   /**
    * Document title (if available)
    */
@@ -97,7 +100,7 @@ export interface OrviloDocument {
    * mode where visibility is not meaningful. Used to bucket the Pages sidebar
    * into "Private" and "Workspace" accordions.
    */
-  visibility?: 'private' | 'public' | null;
+  visibility?: 'private' | 'public' | 'team' | null;
 
   /**
    * Owning workspace id (null for personal documents). Used client-side to gate

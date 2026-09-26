@@ -49,13 +49,6 @@ export const useOpenHotkeyHelperHotkey = () => {
   );
 };
 
-export const useToggleLeftPanelHotkey = () => {
-  const toggleLeftPanel = useGlobalStore((s) => s.toggleLeftPanel);
-  return useHotkeyById(HotkeyEnum.ToggleLeftPanel, () => toggleLeftPanel(), {
-    enableOnContentEditable: true,
-  });
-};
-
 export const useToggleRightPanelHotkey = () => {
   const { pathname } = useLocation();
   const [toggleAgentBuilderPanel, toggleRightPanel, toggleTaskAgentPanel] = useGlobalStore((s) => [
@@ -163,7 +156,6 @@ export const useRegisterGoToHotkeys = () => {
 
 export const useRegisterGlobalHotkeys = () => {
   // Global auto-registration doesn't need enableScope
-  useToggleLeftPanelHotkey();
   useToggleRightPanelHotkey();
   useNavigateToChatHotkey();
   useOpenHotkeyHelperHotkey();

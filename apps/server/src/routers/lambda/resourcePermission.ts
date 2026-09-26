@@ -19,6 +19,7 @@ import type { ResourceMeta } from '@/server/services/resourcePermission';
 import {
   buildResourcePermissionState,
   canManageResourcePermission,
+  canPerformResourceAction,
   getResourceMeta,
   isAccessLevelAllowed,
   isCollaborativeBuiltinAgent,
@@ -76,6 +77,9 @@ const loadManageableResource = async (
   // still read as NOT_FOUND.
   if (!meta || !isWorkspaceScopedMeta(meta, ctx.workspaceId, ctx.userId)) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
+  }
+  if (input.resourceType === 'document' && meta.visibility === 'team') {
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Team documents use team access' });
   }
   if (meta.visibility === 'private' && meta.userId !== ctx.userId) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
@@ -181,6 +185,27 @@ export const resourcePermissionRouter = router({
     if (meta.visibility === 'private' && meta.userId !== ctx.userId) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
     }
+    if (input.resourceType === 'document' && meta.visibility === 'team') {
+      const base = {
+        db: ctx.serverDB,
+        meta,
+        resourceId: input.resourceId,
+        resourceType: input.resourceType,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      } as const;
+      if (!(await canPerformResourceAction({ ...base, action: 'view' }))) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
+      }
+      return buildResourcePermissionState({
+        accessLevel: (await canPerformResourceAction({ ...base, action: 'edit' }))
+          ? 'edit'
+          : 'view',
+        canManage: false,
+        creatorId: meta.userId,
+        visibility: 'team',
+      });
+    }
 
     const [explicitAccessLevel, canManage] = await Promise.all([
       ctx.permissionModel.getAccessLevel(input.resourceType, input.resourceId),
@@ -210,7 +235,7 @@ export const resourcePermissionRouter = router({
       accessLevel,
       canManage,
       creatorId: meta.userId,
-      visibility: (meta.visibility ?? 'public') as 'private' | 'public',
+      visibility: (meta.visibility ?? 'public') as 'private' | 'public' | 'team',
     });
   }),
 
@@ -286,6 +311,12 @@ export const resourcePermissionRouter = router({
       if (!meta || !isWorkspaceScopedMeta(meta, ctx.workspaceId, ctx.userId)) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
       }
+      if (input.resourceType === 'document' && meta.visibility === 'team') {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Team documents use team access',
+        });
+      }
       // Same private-row existence guard as `getGeneralAccess`.
       if (meta.visibility === 'private' && meta.userId !== ctx.userId) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
@@ -356,7 +387,7 @@ export const resourcePermissionRouter = router({
         accessLevel,
         canManage: true,
         creatorId: meta.userId,
-        visibility: (meta.visibility ?? 'public') as 'private' | 'public',
+        visibility: (meta.visibility ?? 'public') as 'private' | 'public' | 'team',
       });
     }),
 });

@@ -18,7 +18,6 @@ vi.mock('antd-style', async (importOriginal) => ({
   createStaticStyles: () => ({ clock: 'clock' }),
 }));
 
-vi.mock('@/features/NavPanel/ToggleLeftPanelButton', () => ({ default: () => null }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
 }));

@@ -38,7 +38,7 @@ export const readBootShellGeometry = (): BootShellGeometry => {
     return {
       ...base,
       navPanelWidth: systemStatusSelectors.leftPanelWidth(state),
-      showLeftPanel: Boolean(systemStatusSelectors.showLeftPanel(state)),
+      showLeftPanel: systemStatusSelectors.showLeftPanel(state),
     };
   } catch {
     return {

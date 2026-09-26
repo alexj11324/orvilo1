@@ -27,4 +27,20 @@ describe('search document schemas', () => {
       }),
     ).toMatchObject({ fts_search_sync_deleted: true });
   });
+
+  it('accepts team visibility only for document projections', () => {
+    expect(
+      parseFtsSearchDocumentSource('documents', {
+        ...FTS_SEARCH_DOCUMENT_FIXTURES.documents,
+        visibility: 'team',
+      }),
+    ).toMatchObject({ visibility: 'team' });
+
+    expect(() =>
+      parseFtsSearchDocumentSource('agents', {
+        ...FTS_SEARCH_DOCUMENT_FIXTURES.agents,
+        visibility: 'team',
+      }),
+    ).toThrow();
+  });
 });

@@ -8,7 +8,6 @@ import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
@@ -26,15 +25,7 @@ import { useTrayMenuSync } from './TrayMenu/useTrayMenuSync';
 
 const isMac = isMacOS();
 
-// A persistent titlebar toggle must not share the sidebar toggle's id, or it
-// would create a duplicate DOM id and get caught by NavPanelDraggable's hover CSS.
-const NAV_TOGGLE_ID = 'titlebar_toggle_left_panel_button';
-
-const navPanelSelector = (s: GlobalState) => {
-  const showLeftPanel = systemStatusSelectors.showLeftPanel(s);
-  if (!showLeftPanel) return 0;
-  return systemStatusSelectors.leftPanelWidth(s);
-};
+const navPanelSelector = (s: GlobalState) => systemStatusSelectors.leftPanelWidth(s);
 
 const useNavPanelWidth = () => {
   return useGlobalStore(navPanelSelector);
@@ -117,7 +108,6 @@ const NavigationBar = memo(() => {
   // Tooltip content for the clock button
   const tooltipContent = t('navigation.recentView');
 
-  const isLeftPanelVisible = leftPanelWidth > 0;
   const macTrafficLightPadding = getMacTrafficLightPadding(isMac, isWindowFullScreen);
 
   return (
@@ -126,23 +116,13 @@ const NavigationBar = memo(() => {
       align="center"
       data-width={leftPanelWidth}
       gap={8}
-      justify={isMac ? 'space-between' : 'end'}
+      justify="end"
       style={{
         paddingLeft: macTrafficLightPadding,
         paddingRight: 8,
-        // Expanded: span the sidebar width so the right group hugs its right edge.
-        // Collapsed (macOS): shrink to content so the controls cluster at the left edge.
-        width: isLeftPanelVisible ? `${leftPanelWidth - 12}px` : isMac ? 'auto' : '150px',
-        transition: !isLeftPanelVisible ? 'width 0.2s' : 'none',
+        width: `${leftPanelWidth - 12}px`,
       }}
     >
-      {/* The persistent panel toggle is macOS-only; other platforms keep the
-          in-page toggles, so the titlebar shows just the navigation controls. */}
-      {isMac && (
-        <Flexbox horizontal align="center" className={electronStylish.nodrag}>
-          <ToggleLeftPanelButton forceVisible id={NAV_TOGGLE_ID} size="small" />
-        </Flexbox>
-      )}
       <Flexbox horizontal align="center" className={electronStylish.nodrag} gap={2}>
         <ActionIcon disabled={!canGoBack} icon={ArrowLeft} size="small" onClick={goBack} />
         <ActionIcon disabled={!canGoForward} icon={ArrowRight} size="small" onClick={goForward} />

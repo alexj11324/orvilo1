@@ -2,7 +2,9 @@ import type { SQL, SQLWrapper } from 'drizzle-orm';
 import { eq, isNull } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
+import { documents } from '../../../schemas/file';
 import type { OrviloDatabase } from '../../../type';
+import { buildDocumentReadableWhere } from '../../../utils/documentAccess';
 import { buildWorkspaceWhere } from '../../../utils/workspace';
 import type { FtsSearchBackendScope } from '../types';
 
@@ -16,6 +18,7 @@ export interface PgSearchFtsSearchWorkspaceScopedColumns {
 /** Shared state and query-shaping helpers used by the pg_search provider modules. */
 export interface PgSearchFtsSearchContext {
   db: OrviloDatabase;
+  documentScopeWhere: () => SQL;
   liftedScopeWhere: (workspaceIdColumn: SQLWrapper) => SQL | undefined;
   liftsAgentFilter: boolean;
   liftsWorkspaceFilter: boolean;
@@ -72,6 +75,12 @@ export function createPgSearchFtsSearchContext(
 
   return {
     db,
+    documentScopeWhere: () =>
+      normalizedScope.workspaceId
+        ? buildDocumentReadableWhere(db, normalizedScope)
+        : liftsWorkspaceFilter
+          ? eq(documents.userId, normalizedScope.userId)
+          : buildDocumentReadableWhere(db, normalizedScope),
     liftedScopeWhere: (workspaceIdColumn) =>
       liftsWorkspaceFilter ? (isNull(workspaceIdColumn) as SQL) : undefined,
     liftsAgentFilter,

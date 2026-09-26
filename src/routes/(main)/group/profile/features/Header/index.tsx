@@ -7,14 +7,11 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
 import { usePermission } from '@/hooks/usePermission';
 import { parseAsString, useQueryState } from '@/hooks/useQueryParam';
 import AddGroupMemberModal from '@/routes/(main)/group/_layout/Sidebar/AddGroupMemberModal';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
-import { useGlobalStore } from '@/store/global';
-import { systemStatusSelectors } from '@/store/global/selectors';
 
 import AgentBuilderToggle from './AgentBuilderToggle';
 import { type ChromeTabItem } from './ChromeTabs';
@@ -59,7 +56,6 @@ const Header = memo(() => {
   const activeGroupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
   const addAgentsToGroup = useAgentGroupStore((s) => s.addAgentsToGroup);
   const createAgentInGroup = useAgentGroupStore((s) => s.createAgentInGroup);
-  const showLeftPanel = useGlobalStore(systemStatusSelectors.showLeftPanel);
 
   // Use URL query param for selected tab
   const [selectedTabId, setSelectedTabId] = useQueryState(
@@ -129,7 +125,6 @@ const Header = memo(() => {
   return (
     <>
       <Flexbox horizontal align="center" className={styles.header} gap={4} justify="space-between">
-        {!showLeftPanel && <ToggleLeftPanelButton />}
         <div className={styles.tabsWrapper}>
           <ChromeTabs
             activeId={selectedTabId}

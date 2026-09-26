@@ -8,7 +8,6 @@ import AgentSidebar from '@/features/AgentSidebar';
 import ProtocolUrlHandler from '@/features/ProtocolUrlHandler';
 import AgentIdSync from '@/routes/(main)/agent/_layout/AgentIdSync';
 
-import PortalAutoCollapse from './PortalAutoCollapse';
 import RegisterHotkeys from './RegisterHotkeys';
 import { styles } from './style';
 
@@ -26,7 +25,6 @@ const Layout: FC = () => {
       <RegisterHotkeys />
       {isDesktop && <ProtocolUrlHandler />}
       <AgentIdSync />
-      <PortalAutoCollapse />
     </>
   );
 };

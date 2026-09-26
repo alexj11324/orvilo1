@@ -56,12 +56,19 @@ const styles = createStaticStyles(({ css }) => ({
     margin-inline: 8px;
   `,
   teamTrigger: css`
+    flex: 0 1 auto;
+
+    max-width: calc(100% - 32px);
     height: 28px;
     padding-block: 0;
     padding-inline: 4px;
   `,
+  teamAction: css`
+    margin-inline-start: auto;
+  `,
   teamName: css`
     overflow: hidden;
+    min-width: 0;
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
@@ -149,6 +156,7 @@ const TeamItem = memo<TeamItemProps>(({ team, activeTab }) => {
             'accordion-action',
             accordionStyles.action,
             accordionStyles.actionBorderless,
+            styles.teamAction,
           )}
         >
           <DropdownMenu items={menu}>
@@ -280,7 +288,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
       </ContextMenuTrigger>
       <AccordionPanel>
         <AccordionRoot
-          indicatorPlacement="start"
+          indicatorPlacement="end"
           style={{ gap: 1 }}
           value={expandedTeamKeys}
           onValueChange={setExpandedTeamKeys}

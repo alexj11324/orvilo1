@@ -1,7 +1,7 @@
 'use client';
 
 import { Center, Empty, Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Button, Segmented, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Button, Segmented, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import {
@@ -9,8 +9,6 @@ import {
   ChevronLeftIcon,
   CircleDashedIcon,
   ExternalLinkIcon,
-  GitPullRequestArrowIcon,
-  GitPullRequestClosedIcon,
   GitPullRequestIcon,
   MessageSquarePlusIcon,
   PlugIcon,
@@ -24,7 +22,6 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurface, WorkSurfaceReview } from '@/features/WorkSurface';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
@@ -35,9 +32,11 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import CollectionFooter from './CollectionFooter';
 import ConnectGitHubButton from './ConnectGitHubButton';
-import ReviewChecksPanel, { checkSummaryVisual } from './ReviewChecksPanel';
+import ReviewChecksPanel from './ReviewChecksPanel';
+import ReviewDetailSkeleton from './ReviewDetailSkeleton';
 import ReviewFileCard from './ReviewFileCard';
 import { reviewOperationId } from './reviewOperationId';
+import ReviewOverview from './ReviewOverview';
 import {
   applyReviewPagerPage,
   emptyReviewPager,
@@ -45,6 +44,7 @@ import {
   type ReviewPagerPage,
   reviewPagerScope,
 } from './reviewPager';
+import { reviewSubmitScope } from './reviewsSurface';
 import {
   isReviewStale,
   reviewStaleKey,
@@ -54,31 +54,84 @@ import {
 import ReviewSubmitPanel from './ReviewSubmitPanel';
 import ReviewThreadCard from './ReviewThreadCard';
 import type { PullRequestDetail, ReviewThread, WriteOutcome } from './types';
+import { useReviewComposer } from './useReviewComposer';
 
 const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
+  detailBody: css`
+    width: 100%;
+    min-width: 0;
   `,
-  fileNavRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 10px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
+  headerCounter: css`
+    @media (width <= 768px) {
+      display: none;
     }
   `,
-  identifier: css`
-    font-family: ${cssVar.fontFamilyCode};
+  headerCrumb: css`
+    @media (width <= 768px) {
+      display: none;
+    }
+  `,
+  headerTitle: css`
+    overflow: hidden;
+    flex: 1;
+
+    min-width: 0;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `,
+  diffBody: css`
+    width: 100%;
+    max-width: 1500px;
+    margin-inline: auto;
+    padding-block: 16px 48px;
+    padding-inline: 24px;
+
+    @media (width <= 768px) {
+      padding-inline: 8px;
+    }
+  `,
+  modeBar: css`
+    display: flex;
+    flex: none;
+    gap: 8px;
+    align-items: center;
+
+    min-height: 44px;
+    padding-inline: 16px;
+    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
+    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
+  `,
+  modeButton: css`
+    cursor: pointer;
+
+    min-height: 28px;
+    padding-inline: 10px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 500;
     color: ${cssVar.colorTextSecondary};
+
+    background: transparent;
+
+    &[aria-selected='true'] {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillSecondary};
+    }
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+    }
+  `,
+  reviewComposer: css`
+    padding-block: 16px 0;
+    padding-inline: 24px;
   `,
   reviewCard: css`
     padding: 12px;
@@ -137,19 +190,6 @@ const reviewStateVisual = (state: string | null) => {
   }
 };
 
-const prStateVisual = (pullRequest: PullRequestDetail) => {
-  if (pullRequest.state === 'MERGED') {
-    return { color: 'purple', icon: GitPullRequestArrowIcon, labelKey: 'reviews.state.merged' };
-  }
-  if (pullRequest.state === 'CLOSED') {
-    return { color: 'red', icon: GitPullRequestClosedIcon, labelKey: 'reviews.state.closed' };
-  }
-  if (pullRequest.isDraft) {
-    return { color: 'default', icon: GitPullRequestIcon, labelKey: 'reviews.state.draft' };
-  }
-  return { color: 'green', icon: GitPullRequestIcon, labelKey: 'reviews.state.open' };
-};
-
 /** Server write-contract errors arrive as CONFLICT/FORBIDDEN with a `CODE:` prefix. */
 const writeErrorCode = (error: unknown): string | null => {
   const message =
@@ -161,9 +201,8 @@ const writeErrorCode = (error: unknown): string | null => {
 };
 
 /**
- * `/reviews/:reviewId` — a code-review work surface: file navigation on the
- * left, diff + inline threads in the main column, explicit review-submit
- * region at the bottom. Every write is pinned to `snapshotId` +
+ * `/reviews/:reviewId` — Overview and Diff share a real GitHub snapshot.
+ * The review composer is revealed on demand. Every write is pinned to `snapshotId` +
  * `observedHeadSha`; drift and stale pages gate the write instead of landing
  * on a head the reviewer never saw.
  */
@@ -202,7 +241,12 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
     (next: boolean) => setStaleState((current) => updateReviewStaleState(current, staleKey, next)),
     [staleKey],
   );
-  const [viewMode, setViewMode] = useState<'split' | 'unified'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'unified'>('unified');
+  const [detailViewState, setDetailViewState] = useState<{
+    id: string;
+    view: 'overview' | 'diff';
+  }>({ id: reviewId, view: 'overview' });
+  const activeView = detailViewState.id === reviewId ? detailViewState.view : 'overview';
 
   // On-demand collection tails + cursors, bound to the exact snapshot they
   // were fetched against (workspace · PR · snapshotId · head · viewer). When
@@ -352,6 +396,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
     },
     [onWriteError, pullRequest, refresh, reportUnknownOutcome, reviewId, t, workspaceId],
   );
+  const composer = useReviewComposer(reviewId, submit, refresh);
 
   const replyToThread = useCallback(
     async (threadId: string, body: string): Promise<WriteOutcome> => {
@@ -461,15 +506,25 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
     [pullRequest?.checks.items, activePager.checks],
   );
 
-  const state = pullRequest ? prStateVisual(pullRequest) : null;
-  const checksSummary = pullRequest?.checks.summary ?? null;
-  const checksVisual = checksSummary ? checkSummaryVisual(checksSummary.state) : null;
-  const writeDisabled = stale || !pullRequest?.headSha;
+  const writeDisabled = stale || !pullRequest?.headSha || !pullRequest.reviewWritesEnabled;
 
   const scrollToFile = (filename: string) => {
     document
       .getElementById(`file-${encodeURIComponent(filename)}`)
       ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  };
+
+  // The diff tree mounts lazily on first visit, then stays mounted so per-file
+  // comment drafts survive switching back to Overview.
+  const [diffMountedFor, setDiffMountedFor] = useState<string | null>(null);
+  const openDiff = () => {
+    setDiffMountedFor(reviewId);
+    setDetailViewState({ id: reviewId, view: 'diff' });
+  };
+
+  const openFile = (filename: string) => {
+    openDiff();
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => scrollToFile(filename)));
   };
 
   // Threads that anchor on a specific file render under that file's diff;
@@ -486,11 +541,19 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
   }, [allThreads]);
   const unattachedThreads = allThreads.filter((thread) => !thread.path);
 
+  const submitScope = reviewSubmitScope({
+    author: pullRequest?.author,
+    reviewWritesEnabled: pullRequest?.reviewWritesEnabled,
+    viewerLogin: pullRequest?.viewerLogin,
+  });
+  const canSubmitReview = submitScope !== 'none';
+
   return (
     <WorkSurface>
       <NavHeader
+        styles={{ left: { flex: 1, minWidth: 0 }, right: { flex: 'none' } }}
         left={
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+          <Flexbox horizontal align={'center'} gap={8} style={{ flex: 1, minWidth: 0 }}>
             {!embedded || showBack ? (
               <Button
                 aria-label={t('reviews.backToPullRequests')}
@@ -500,82 +563,91 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                 onClick={() => navigate(returnTo)}
               />
             ) : null}
-            <Text ellipsis weight={500}>
+            <Text className={styles.headerCrumb} fontSize={12} type={'secondary'}>
+              {t('tab.reviews')}
+            </Text>
+            <Text className={styles.headerCrumb} fontSize={12} type={'secondary'}>
+              ›
+            </Text>
+            <Icon color={cssVar.colorSuccess} icon={GitPullRequestIcon} size={14} />
+            <Text ellipsis className={styles.headerTitle} fontSize={13} weight={500}>
               {pullRequest?.title ?? t('tab.reviews')}
             </Text>
           </Flexbox>
         }
-      />
-      <WorkSurfaceReview
-        navWidth={240}
-        footer={
+        right={
           pullRequest ? (
-            <ReviewSubmitPanel
-              disabled={writeDisabled}
-              pendingReviewId={pullRequest.reviewSession.pendingReviewId}
-              stale={stale}
-              onSubmit={submit}
-              onVerify={refresh}
-            />
-          ) : undefined
-        }
-        nav={
-          pullRequest && allFiles.length > 0 ? (
-            <Flexbox gap={2} paddingBlock={8}>
+            <Flexbox horizontal align={'center'} gap={8}>
               <Text
+                className={styles.headerCounter}
                 fontSize={12}
-                style={{ paddingBlock: 4, paddingInline: 10 }}
-                type={'secondary'}
-                weight={500}
+                style={{ color: cssVar.colorSuccess }}
               >
-                {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
+                +{pullRequest.additions}
               </Text>
-              {allFiles.map((file) => (
-                <Flexbox
-                  className={styles.fileNavRow}
-                  key={file.filename}
-                  title={file.filename}
-                  onClick={() => scrollToFile(file.filename)}
-                >
-                  <Text ellipsis className={styles.identifier} fontSize={12}>
-                    {file.filename}
-                  </Text>
-                  <Flexbox flex={1} />
-                  <Text fontSize={12} type={'secondary'}>
-                    +{file.additions} −{file.deletions}
-                  </Text>
-                </Flexbox>
-              ))}
-              <CollectionFooter
-                error={filesMore.loadMoreError}
-                hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
-                loaded={allFiles.length}
-                total={activePager.meta.files?.total ?? pullRequest.files.total}
-                onRetry={filesMore.retryLoadMore}
-                onLoadMore={
-                  (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
-                    ? () =>
-                        filesMore.runLoadMore(() =>
-                          loadMore(
-                            'files',
-                            (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
-                          ),
-                        )
-                    : undefined
-                }
+              <Text
+                className={styles.headerCounter}
+                fontSize={12}
+                style={{ color: cssVar.colorError }}
+              >
+                −{pullRequest.deletions}
+              </Text>
+              <Button
+                aria-label={t('reviews.openInGitHub')}
+                icon={<Icon icon={ExternalLinkIcon} />}
+                size={'small'}
+                title={t('reviews.openInGitHub')}
+                type={'text'}
+                onClick={() => window.open(pullRequest.url, '_blank', 'noopener,noreferrer')}
               />
             </Flexbox>
           ) : undefined
         }
-        navLabel={t('reviews.filesChangedTitle', {
-          count: pullRequest?.changedFiles ?? allFiles.length,
-        })}
-      >
-        <Flexbox gap={16} padding={16}>
+      />
+      <div className={styles.modeBar}>
+        <button
+          aria-selected={activeView === 'overview'}
+          className={styles.modeButton}
+          role={'tab'}
+          type={'button'}
+          onClick={() => setDetailViewState({ id: reviewId, view: 'overview' })}
+        >
+          {t('reviews.overview')}
+        </button>
+        <button
+          aria-selected={activeView === 'diff'}
+          className={styles.modeButton}
+          role={'tab'}
+          type={'button'}
+          onClick={openDiff}
+        >
+          {t('reviews.diff')}
+        </button>
+        <Flexbox flex={1} />
+        {pullRequest && canSubmitReview ? (
+          <Button
+            aria-expanded={composer.open}
+            disabled={writeDisabled}
+            size={'small'}
+            type={'primary'}
+            onClick={() => composer.setOpen(!composer.open)}
+          >
+            {t('reviews.submitReviewTitle')}
+          </Button>
+        ) : pullRequest ? (
+          <Button
+            size={'small'}
+            type={'primary'}
+            onClick={() => window.open(pullRequest.url, '_blank', 'noopener,noreferrer')}
+          >
+            {t('reviews.openInGitHub')}
+          </Button>
+        ) : null}
+      </div>
+      <WorkSurfaceReview>
+        <div className={styles.detailBody}>
           {isLoading ? (
-            /* Same skeleton treatment the list pane uses for its loading
-               fallback — a bare "Loading…" reads as unstyled next to it. */
-            <SkeletonList padding={8} rows={5} />
+            <ReviewDetailSkeleton view={activeView} />
           ) : notConnected ? (
             <Center gap={8} padding={24}>
               <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
@@ -593,102 +665,68 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                   </Button>
                 </Flexbox>
               ) : null}
-
-              <Flexbox gap={8}>
-                <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-                  {state ? <Tag color={state.color}>{t(state.labelKey as never)}</Tag> : null}
-                  <Text className={styles.identifier} fontSize={13}>
-                    {pullRequest.headRef ?? ''} → {pullRequest.baseRef ?? ''}
-                  </Text>
-                  <Text className={styles.identifier} fontSize={13}>
-                    {pullRequest.headSha ? pullRequest.headSha.slice(0, 7) : ''}
-                  </Text>
-                  <Flexbox flex={1} />
-                  <Button
-                    icon={<Icon icon={ExternalLinkIcon} />}
-                    size={'small'}
-                    type={'text'}
-                    onClick={() => window.open(pullRequest.url, '_blank', 'noopener,noreferrer')}
-                  >
-                    {t('reviews.openInGitHub')}
-                  </Button>
-                </Flexbox>
-                <Flexbox horizontal align={'center'} gap={12} wrap={'wrap'}>
-                  <Flexbox horizontal align={'center'} gap={6}>
-                    <Avatar
-                      avatar={pullRequest.authorAvatar ?? undefined}
-                      name={pullRequest.author ?? '?'}
-                      size={20}
-                    />
-                    <Text fontSize={13}>{pullRequest.author}</Text>
-                  </Flexbox>
-                  <Text fontSize={13} type={'secondary'}>
-                    +{pullRequest.additions} −{pullRequest.deletions} ·{' '}
-                    {t('reviews.filesChanged', { count: pullRequest.changedFiles })}
-                  </Text>
-                  {checksVisual && checksSummary ? (
-                    <Text fontSize={13} style={{ color: checksVisual.color }}>
-                      {t(checksVisual.labelKey as never, { count: checksSummary.failing })}
-                    </Text>
-                  ) : null}
-                  {pullRequest.rateLimit?.remaining !== null &&
-                  pullRequest.rateLimit?.remaining !== undefined &&
-                  pullRequest.rateLimit.remaining < 500 ? (
-                    <Text fontSize={12} type={'warning'}>
-                      {t('reviews.rateLimit', { remaining: pullRequest.rateLimit.remaining })}
-                    </Text>
-                  ) : null}
-                </Flexbox>
-              </Flexbox>
-
-              {pullRequest.body ? (
-                <Flexbox className={styles.card} padding={12}>
-                  <Markdown fontSize={14} variant={'chat'}>
-                    {pullRequest.body}
-                  </Markdown>
-                </Flexbox>
+              {canSubmitReview ? (
+                <div className={styles.reviewComposer} hidden={!composer.open}>
+                  <ReviewSubmitPanel
+                    commentOnly={submitScope === 'comment-only'}
+                    composer={composer}
+                    disabled={writeDisabled}
+                    pendingReviewId={pullRequest.reviewSession.pendingReviewId}
+                    stale={stale}
+                  />
+                </div>
               ) : null}
-
-              {allChecks.length > 0 ? (
-                <ReviewChecksPanel
-                  checks={{
-                    ...pullRequest.checks,
-                    endCursor: activePager.meta.checks?.endCursor ?? pullRequest.checks.endCursor,
-                    hasMore: activePager.meta.checks?.hasMore ?? pullRequest.checks.hasMore,
-                    items: allChecks,
-                    loaded: allChecks.length,
-                    total: activePager.meta.checks?.total ?? pullRequest.checks.total,
-                  }}
-                  onLoadMore={(cursor) => loadMore('checks', cursor)}
-                />
-              ) : null}
-
-              {allFiles.length > 0 ? (
-                <Flexbox gap={8}>
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text className={styles.sectionTitle} type={'secondary'} weight={500}>
-                      {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
-                    </Text>
-                    <Flexbox flex={1} />
-                    <Segmented
-                      size={'small'}
-                      value={viewMode}
-                      options={[
-                        { label: t('reviews.viewSplit'), value: 'split' },
-                        { label: t('reviews.viewUnified'), value: 'unified' },
-                      ]}
-                      onChange={(value) => setViewMode(value as 'split' | 'unified')}
-                    />
-                  </Flexbox>
-                  {allFiles.map((file) => (
-                    <Flexbox gap={8} key={file.filename}>
-                      <ReviewFileCard
-                        file={file}
-                        viewMode={viewMode}
-                        writeDisabled={writeDisabled}
-                        onComment={addFileComment}
-                      />
-                      {(threadsByFile.get(file.filename) ?? []).map((thread) => (
+              {/* Keep both views mounted — unmounting discards in-progress
+                  comment drafts inside file cards and thread replies. */}
+              <div hidden={activeView !== 'overview'}>
+                <ReviewOverview
+                  files={allFiles}
+                  hasMoreFiles={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
+                  pullRequest={pullRequest}
+                  onFileSelect={openFile}
+                  onViewMoreFiles={openDiff}
+                >
+                  {unattachedThreads.length + allReviews.length > 0 ? (
+                    <Flexbox gap={8} style={{ marginBlockStart: 32 }}>
+                      <Text className={styles.sectionTitle} type={'secondary'} weight={500}>
+                        {t('reviews.conversation')}
+                      </Text>
+                      {allReviews.map((review, index) => {
+                        const visual = reviewStateVisual(review.state);
+                        return (
+                          <Flexbox className={styles.reviewCard} gap={4} key={review.id ?? index}>
+                            <Flexbox horizontal align={'center'} gap={8}>
+                              <Avatar
+                                avatar={review.authorAvatar ?? undefined}
+                                name={review.author ?? '?'}
+                                size={20}
+                              />
+                              <Icon color={visual.color} icon={visual.icon} size={14} />
+                              <Text fontSize={12} weight={500}>
+                                {review.author}
+                              </Text>
+                              <Text fontSize={12} type={'secondary'}>
+                                {t(visual.labelKey as never)}
+                              </Text>
+                              {review.submittedAt ? (
+                                <Text
+                                  fontSize={12}
+                                  title={dayjs(review.submittedAt).format('YYYY-MM-DD HH:mm')}
+                                  type={'secondary'}
+                                >
+                                  {dayjs(review.submittedAt).fromNow()}
+                                </Text>
+                              ) : null}
+                            </Flexbox>
+                            {review.body ? (
+                              <Markdown fontSize={13} variant={'chat'}>
+                                {review.body}
+                              </Markdown>
+                            ) : null}
+                          </Flexbox>
+                        );
+                      })}
+                      {unattachedThreads.map((thread) => (
                         <ReviewThreadCard
                           key={thread.id}
                           stale={stale}
@@ -700,120 +738,125 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                           }
                         />
                       ))}
+                      <CollectionFooter
+                        error={conversationMore.loadMoreError}
+                        loaded={allThreads.length + allReviews.length}
+                        hasMore={
+                          (activePager.meta.threads?.hasMore ?? pullRequest.threads.hasMore) ||
+                          (activePager.meta.reviews?.hasMore ?? pullRequest.reviews.hasMore)
+                        }
+                        total={
+                          (activePager.meta.threads?.total ?? pullRequest.threads.total ?? 0) +
+                          (activePager.meta.reviews?.total ?? pullRequest.reviews.total ?? 0)
+                        }
+                        onRetry={conversationMore.retryLoadMore}
+                        onLoadMore={
+                          (activePager.meta.threads?.endCursor ?? pullRequest.threads.endCursor)
+                            ? () =>
+                                conversationMore.runLoadMore(() =>
+                                  loadMore(
+                                    'threads',
+                                    (activePager.meta.threads?.endCursor ??
+                                      pullRequest.threads.endCursor)!,
+                                  ),
+                                )
+                            : (activePager.meta.reviews?.endCursor ?? pullRequest.reviews.endCursor)
+                              ? () =>
+                                  conversationMore.runLoadMore(() =>
+                                    loadMore(
+                                      'reviews',
+                                      (activePager.meta.reviews?.endCursor ??
+                                        pullRequest.reviews.endCursor)!,
+                                    ),
+                                  )
+                              : undefined
+                        }
+                      />
                     </Flexbox>
-                  ))}
-                  <CollectionFooter
-                    error={filesMore.loadMoreError}
-                    hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
-                    loaded={allFiles.length}
-                    total={activePager.meta.files?.total ?? pullRequest.files.total}
-                    onRetry={filesMore.retryLoadMore}
-                    onLoadMore={
-                      (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
-                        ? () =>
-                            filesMore.runLoadMore(() =>
-                              loadMore(
-                                'files',
-                                (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
-                              ),
-                            )
-                        : undefined
-                    }
-                  />
-                </Flexbox>
-              ) : null}
-
-              {unattachedThreads.length + allReviews.length > 0 ? (
-                <Flexbox gap={8}>
-                  <Text className={styles.sectionTitle} type={'secondary'} weight={500}>
-                    {t('reviews.conversation')}
-                  </Text>
-                  {allReviews.map((review, index) => {
-                    const visual = reviewStateVisual(review.state);
-                    return (
-                      <Flexbox className={styles.reviewCard} gap={4} key={review.id ?? index}>
-                        <Flexbox horizontal align={'center'} gap={8}>
-                          <Avatar
-                            avatar={review.authorAvatar ?? undefined}
-                            name={review.author ?? '?'}
-                            size={20}
+                  ) : null}
+                  {allChecks.length > 0 ? (
+                    <div style={{ marginBlockStart: 32 }}>
+                      <ReviewChecksPanel
+                        checks={{
+                          ...pullRequest.checks,
+                          endCursor:
+                            activePager.meta.checks?.endCursor ?? pullRequest.checks.endCursor,
+                          hasMore: activePager.meta.checks?.hasMore ?? pullRequest.checks.hasMore,
+                          items: allChecks,
+                          loaded: allChecks.length,
+                          total: activePager.meta.checks?.total ?? pullRequest.checks.total,
+                        }}
+                        onLoadMore={(cursor) => loadMore('checks', cursor)}
+                      />
+                    </div>
+                  ) : null}
+                </ReviewOverview>
+              </div>
+              <div hidden={activeView !== 'diff'}>
+                {diffMountedFor === reviewId ? (
+                  <Flexbox className={styles.diffBody} gap={12}>
+                    <Flexbox horizontal align={'center'} gap={8}>
+                      <Text weight={500}>
+                        {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
+                      </Text>
+                      <Flexbox flex={1} />
+                      <Segmented
+                        size={'small'}
+                        value={viewMode}
+                        options={[
+                          { label: t('reviews.viewSplit'), value: 'split' },
+                          { label: t('reviews.viewUnified'), value: 'unified' },
+                        ]}
+                        onChange={(value) => setViewMode(value as 'split' | 'unified')}
+                      />
+                    </Flexbox>
+                    {allFiles.map((file) => (
+                      <Flexbox gap={8} key={file.filename}>
+                        <ReviewFileCard
+                          file={file}
+                          viewMode={viewMode}
+                          writeDisabled={writeDisabled}
+                          onComment={addFileComment}
+                        />
+                        {(threadsByFile.get(file.filename) ?? []).map((thread) => (
+                          <ReviewThreadCard
+                            key={thread.id}
+                            stale={stale}
+                            thread={thread}
+                            writeDisabled={writeDisabled}
+                            onReply={replyToThread}
+                            onLoadMoreComments={(threadId, cursor) =>
+                              loadMore('comments', cursor, threadId)
+                            }
                           />
-                          <Icon color={visual.color} icon={visual.icon} size={14} />
-                          <Text fontSize={12} weight={500}>
-                            {review.author}
-                          </Text>
-                          <Text fontSize={12} type={'secondary'}>
-                            {t(visual.labelKey as never)}
-                          </Text>
-                          {review.submittedAt ? (
-                            <Text
-                              fontSize={12}
-                              title={dayjs(review.submittedAt).format('YYYY-MM-DD HH:mm')}
-                              type={'secondary'}
-                            >
-                              {dayjs(review.submittedAt).fromNow()}
-                            </Text>
-                          ) : null}
-                        </Flexbox>
-                        {review.body ? (
-                          <Markdown fontSize={13} variant={'chat'}>
-                            {review.body}
-                          </Markdown>
-                        ) : null}
+                        ))}
                       </Flexbox>
-                    );
-                  })}
-                  {unattachedThreads.map((thread) => (
-                    <ReviewThreadCard
-                      key={thread.id}
-                      stale={stale}
-                      thread={thread}
-                      writeDisabled={writeDisabled}
-                      onReply={replyToThread}
-                      onLoadMoreComments={(threadId, cursor) =>
-                        loadMore('comments', cursor, threadId)
-                      }
-                    />
-                  ))}
-                  <CollectionFooter
-                    error={conversationMore.loadMoreError}
-                    loaded={allThreads.length + allReviews.length}
-                    hasMore={
-                      (activePager.meta.threads?.hasMore ?? pullRequest.threads.hasMore) ||
-                      (activePager.meta.reviews?.hasMore ?? pullRequest.reviews.hasMore)
-                    }
-                    total={
-                      (activePager.meta.threads?.total ?? pullRequest.threads.total ?? 0) +
-                      (activePager.meta.reviews?.total ?? pullRequest.reviews.total ?? 0)
-                    }
-                    onRetry={conversationMore.retryLoadMore}
-                    onLoadMore={
-                      (activePager.meta.threads?.endCursor ?? pullRequest.threads.endCursor)
-                        ? () =>
-                            conversationMore.runLoadMore(() =>
-                              loadMore(
-                                'threads',
-                                (activePager.meta.threads?.endCursor ??
-                                  pullRequest.threads.endCursor)!,
-                              ),
-                            )
-                        : (activePager.meta.reviews?.endCursor ?? pullRequest.reviews.endCursor)
+                    ))}
+                    <CollectionFooter
+                      error={filesMore.loadMoreError}
+                      hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
+                      loaded={allFiles.length}
+                      total={activePager.meta.files?.total ?? pullRequest.files.total}
+                      onRetry={filesMore.retryLoadMore}
+                      onLoadMore={
+                        (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
                           ? () =>
-                              conversationMore.runLoadMore(() =>
+                              filesMore.runLoadMore(() =>
                                 loadMore(
-                                  'reviews',
-                                  (activePager.meta.reviews?.endCursor ??
-                                    pullRequest.reviews.endCursor)!,
+                                  'files',
+                                  (activePager.meta.files?.endCursor ??
+                                    pullRequest.files.endCursor)!,
                                 ),
                               )
                           : undefined
-                    }
-                  />
-                </Flexbox>
-              ) : null}
+                      }
+                    />
+                  </Flexbox>
+                ) : null}
+              </div>
             </>
           ) : null}
-        </Flexbox>
+        </div>
       </WorkSurfaceReview>
     </WorkSurface>
   );

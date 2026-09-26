@@ -134,7 +134,13 @@ export const pullRequestRouter = router({
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       try {
-        return { data: await ctx.pullRequestReviews.pullRequest(input.id), success: true };
+        return {
+          data: {
+            ...(await ctx.pullRequestReviews.pullRequest(input.id)),
+            reviewWritesEnabled: process.env.ORVILO_PR_REVIEW_WRITE === '1',
+          },
+          success: true,
+        };
       } catch (error) {
         mapError('detail', error);
       }

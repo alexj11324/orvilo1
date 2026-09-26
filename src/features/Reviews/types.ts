@@ -104,6 +104,7 @@ export interface PullRequestDetail {
   id: string;
   isDraft: boolean;
   mergeable: string | null;
+  mergeStateStatus: string | null;
   number: number;
   rateLimit: ReviewRateLimit | null;
   repositoryPermission: string | null;
@@ -113,6 +114,7 @@ export interface PullRequestDetail {
     pendingReviewCreatedAt: string | null;
     pendingReviewId: string | null;
   };
+  reviewWritesEnabled: boolean;
   snapshotId: string;
   state: string | null;
   threads: PullRequestCollection<ReviewThread>;

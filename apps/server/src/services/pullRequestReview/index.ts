@@ -244,6 +244,10 @@ const queueItemSchema = z.object({
   changedFiles: z.number().optional(),
   deletions: z.number().optional(),
   isDraft: z.boolean().optional(),
+  mergeStateStatus: z
+    .enum(['BEHIND', 'BLOCKED', 'CLEAN', 'DIRTY', 'DRAFT', 'HAS_HOOKS', 'UNKNOWN', 'UNSTABLE'])
+    .nullable()
+    .optional(),
   number: z.number(),
   repository: z.object({
     databaseId: z.number().optional(),
@@ -373,6 +377,7 @@ const pullRequestCoreSchema = z.object({
   id: z.string(),
   isDraft: z.boolean().optional(),
   mergeable: z.string().nullable().optional(),
+  mergeStateStatus: z.string().nullable().optional(),
   number: z.number(),
   pendingReviews: z.object({ nodes: z.array(pendingReviewSchema) }).optional(),
   reviewDecision: z
@@ -903,6 +908,7 @@ export class PullRequestReviewService {
         repo: node.repository.nameWithOwner.split('/')[1] ?? node.repository.nameWithOwner,
       }),
       isDraft: node.isDraft ?? false,
+      mergeStateStatus: node.mergeStateStatus ?? null,
       number: node.number,
       remoteRepositoryId: node.repository.databaseId ?? null,
       repository: node.repository.nameWithOwner,
@@ -1039,6 +1045,7 @@ export class PullRequestReviewService {
       id: pullRequest.id,
       isDraft: pullRequest.isDraft ?? false,
       mergeable: pullRequest.mergeable ?? null,
+      mergeStateStatus: pullRequest.mergeStateStatus ?? null,
       number: pullRequest.number,
       rateLimit: toRateLimit(parsed.rateLimit),
       repositoryPermission: parsed.repository?.viewerPermission ?? null,

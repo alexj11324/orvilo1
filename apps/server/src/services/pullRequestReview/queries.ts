@@ -26,6 +26,7 @@ query PullRequestReviewQueue($query: String!, $type: SearchType!, $first: Int!, 
         additions
         deletions
         changedFiles
+        mergeStateStatus
         reviewDecision
         updatedAt
         author { login avatarUrl }
@@ -53,6 +54,7 @@ query PullRequestDetail($owner: String!, $repo: String!, $number: Int!) {
       deletions
       changedFiles
       mergeable
+      mergeStateStatus
       reviewDecision
       baseRefName
       headRefName

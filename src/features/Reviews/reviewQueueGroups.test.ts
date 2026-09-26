@@ -15,6 +15,7 @@ const item = (over: Partial<ReviewQueueItem>): ReviewQueueItem => ({
   deletions: 0,
   id: `gh:github.com:org:repo:${over.number ?? 1}`,
   isDraft: false,
+  mergeStateStatus: null,
   number: 1,
   repository: 'org/repo',
   reviewDecision: null,
@@ -25,6 +26,19 @@ const item = (over: Partial<ReviewQueueItem>): ReviewQueueItem => ({
 });
 
 describe('reviewQueueGroups', () => {
+  it('puts a GitHub CLEAN PR in Ready to merge even without an approval review', () => {
+    const groups = reviewQueueGroups(
+      [
+        item({ author: 'me', mergeStateStatus: 'CLEAN', number: 1, reviewDecision: null }),
+        item({ author: 'me', mergeStateStatus: 'BLOCKED', number: 2, reviewDecision: 'APPROVED' }),
+      ],
+      { tab: 'for-me', viewer: 'me' },
+    );
+    expect(groups.map((group) => group.key)).toEqual(['ready-to-merge', 'created-by-you']);
+    expect(groups[0]?.items.map((row) => row.number)).toEqual([1]);
+    expect(groups[1]?.items.map((row) => row.number)).toEqual([2]);
+  });
+
   it('keeps the created tab under the single Open bucket', () => {
     const groups = reviewQueueGroups(
       [item({ number: 1 }), item({ number: 2, reviewDecision: 'APPROVED' })],
@@ -35,10 +49,10 @@ describe('reviewQueueGroups', () => {
     expect(groups[0]?.items).toHaveLength(2);
   });
 
-  it('buckets the for-me queue into approved / pull-requests / created-by-you', () => {
+  it('buckets the for-me queue into ready / pull-requests / created-by-you', () => {
     const groups = reviewQueueGroups(
       [
-        item({ author: 'me', number: 1, reviewDecision: 'APPROVED' }),
+        item({ author: 'me', mergeStateStatus: 'CLEAN', number: 1, reviewDecision: 'APPROVED' }),
         item({ number: 2, reviewDecision: 'REVIEW_REQUIRED' }),
         item({ number: 3, reviewDecision: 'CHANGES_REQUESTED' }),
         item({ author: 'me', number: 4 }),
@@ -46,11 +60,11 @@ describe('reviewQueueGroups', () => {
       { tab: 'for-me', viewer: 'me' },
     );
     expect(groups.map((group) => group.key)).toEqual([
-      'approved',
+      'ready-to-merge',
       'pull-requests',
       'created-by-you',
     ]);
-    // An approved own PR is approved, not filed under created-by-you.
+    // A merge-ready own PR leads the lane instead of filing under authored PRs.
     expect(groups[0]?.items.map((row) => row.number)).toEqual([1]);
     expect(groups[1]?.items.map((row) => row.number)).toEqual([2, 3]);
     expect(groups[2]?.items.map((row) => row.number)).toEqual([4]);
@@ -72,13 +86,14 @@ describe('reviewQueueGroups', () => {
     expect(groups[1]?.items.map((row) => row.number)).toEqual([1, 2]);
   });
 
-  it('labels the approved bucket honestly — the payload has no mergeable field', () => {
-    // F6: `APPROVED` is a review decision, not mergeability — the label must
-    // not claim "ready to merge" until the payload carries a real field.
-    expect(REVIEW_QUEUE_GROUP_LABEL_KEYS.approved).toBe('reviews.groups.approved');
-    expect(Object.values(REVIEW_QUEUE_GROUP_LABEL_KEYS)).not.toContain(
-      'reviews.groups.readyToMerge',
-    );
+  it('uses the ready label only for a GitHub merge-ready state', () => {
+    expect(REVIEW_QUEUE_GROUP_LABEL_KEYS['ready-to-merge']).toBe('reviews.groups.readyToMerge');
+    expect(
+      reviewQueueGroups([item({ reviewDecision: 'APPROVED', mergeStateStatus: 'UNKNOWN' })], {
+        tab: 'for-me',
+        viewer: 'me',
+      })[0]?.key,
+    ).toBe('pull-requests');
   });
 
   it('drops empty buckets so a uniform queue keeps one header', () => {

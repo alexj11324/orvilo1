@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
+import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import { serverDB } from '@/database/server';
 import { appEnv } from '@/envs/app';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
@@ -94,13 +95,31 @@ export const GET = async (req: NextRequest) => {
     const connectorModel = new ConnectorModel(
       serverDB,
       payload.orviloUserId,
-      undefined,
+      payload.workspaceId,
       gateKeeper,
     );
 
     const connector = await connectorModel.findById(payload.connectorId);
     if (!connector) {
       return renderResultPage({ error: 'connector_not_found', success: false });
+    }
+
+    // State is short-lived, but the initiator's workspace role can change while
+    // the provider consent screen is open. Re-check both the write-level role
+    // and the connector creator/owner rule before exchanging a credential.
+    const canManageConnector = async () => {
+      if (!payload.workspaceId) return true;
+
+      const member = await new WorkspaceMemberModel(serverDB, payload.orviloUserId).getMember(
+        payload.workspaceId,
+        payload.orviloUserId,
+      );
+      if (!member || !['member', 'admin', 'owner'].includes(member.role)) return false;
+
+      return member.role === 'owner' || connector.userId === payload.orviloUserId;
+    };
+    if (!(await canManageConnector())) {
+      return renderResultPage({ error: 'workspace_access_denied', success: false });
     }
 
     const oidc = connector.oidcConfig;
@@ -127,6 +146,12 @@ export const GET = async (req: NextRequest) => {
       clientSecret: oidc.clientSecret,
     });
 
+    // Re-check after the provider exchange so a removal or downgrade that
+    // happened while the request was off-server cannot persist a token.
+    if (!(await canManageConnector())) {
+      return renderResultPage({ error: 'workspace_access_denied', success: false });
+    }
+
     // Re-authorization (or first authorization) rotates the grant epoch —
     // exec-time connector pins minted under the previous grant refuse to run
     // against the new one (SA02-C).
@@ -139,7 +164,11 @@ export const GET = async (req: NextRequest) => {
     // Sync the tool list server-side so the connector is immediately usable —
     // no dependency on the popup/postMessage round-trip. This also sets the
     // connector status (connected on success, error on failure).
-    const connectorToolModel = new ConnectorToolModel(serverDB, payload.orviloUserId);
+    const connectorToolModel = new ConnectorToolModel(
+      serverDB,
+      payload.orviloUserId,
+      payload.workspaceId,
+    );
     let synced = false;
     try {
       const { toolCount } = await syncConnectorToolsById(payload.connectorId, {

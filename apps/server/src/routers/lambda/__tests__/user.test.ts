@@ -40,6 +40,7 @@ const mockUnderstandingService = vi.hoisted(() => ({
 const mockCreateUnderstandingService = vi.hoisted(() => vi.fn());
 const mockTaskRecommendationService = vi.hoisted(() => ({ get: vi.fn() }));
 const mockCreateTaskRecommendationService = vi.hoisted(() => vi.fn());
+const mockSetUserPresenceVisibility = vi.hoisted(() => vi.fn());
 
 // Mock modules
 vi.mock('@/server/utils/scheduleAfterResponse', () => ({
@@ -92,6 +93,9 @@ vi.mock('@/server/services/taskRecommendation/service', () => {
     TaskRecommendationNotFoundError,
   };
 });
+vi.mock('@/server/services/collaboration', () => ({
+  getRoomPublisher: () => ({ setUserPresenceVisibility: mockSetUserPresenceVisibility }),
+}));
 vi.mock('@/server/workflows/onboardingUnderstanding', () => {
   class UnderstandingWorkflowUnavailableError extends Error {}
 
@@ -117,6 +121,8 @@ describe('userRouter', () => {
     mockCreateUnderstandingService.mockReset();
     mockTaskRecommendationService.get.mockReset();
     mockCreateTaskRecommendationService.mockReset();
+    mockSetUserPresenceVisibility.mockReset();
+    mockSetUserPresenceVisibility.mockResolvedValue(undefined);
     vi.mocked(getReferralStatus).mockResolvedValue(undefined);
     vi.mocked(getSubscriptionPlan).mockResolvedValue(Plans.Free);
     vi.mocked(onUserActivityForBusiness).mockResolvedValue(undefined);
@@ -825,6 +831,143 @@ describe('userRouter', () => {
       await userRouter.createCaller({ ...mockCtx }).makeUserOnboarded();
 
       expect(UserModel).toHaveBeenCalledWith(serverDB, mockUserId);
+    });
+  });
+
+  describe('updatePreference', () => {
+    it('conceals all live presence before persisting a personal opt-out', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await userRouter
+        .createCaller({ ...mockCtx })
+        .updatePreference({ showInCollaboration: false });
+
+      expect(updatePreference).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collaborationVisibilityEpoch: expect.any(String),
+          showInCollaboration: false,
+        }),
+      );
+      expect(mockSetUserPresenceVisibility).toHaveBeenCalledWith(
+        mockUserId,
+        false,
+        expect.any(String),
+      );
+      expect(mockSetUserPresenceVisibility.mock.invocationCallOrder[0]).toBeLessThan(
+        updatePreference.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('does not send a control when visibility is already enabled', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: true });
+
+      expect(mockSetUserPresenceVisibility).not.toHaveBeenCalled();
+    });
+
+    it('reveals only after persisting the visibility preference', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: false });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: true });
+
+      expect(mockSetUserPresenceVisibility).toHaveBeenCalledWith(
+        mockUserId,
+        true,
+        expect.any(String),
+      );
+      expect(updatePreference.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSetUserPresenceVisibility.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('rolls the preference back to hidden when reveal control fails', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: false });
+      const updatePreference = vi
+        .fn()
+        .mockResolvedValueOnce({ rowCount: 1 })
+        .mockResolvedValueOnce({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+      mockSetUserPresenceVisibility.mockRejectedValueOnce(new Error('gateway unavailable'));
+
+      await expect(
+        userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: true }),
+      ).rejects.toThrow('gateway unavailable');
+      expect(updatePreference.mock.calls[0]?.[0]).toEqual(
+        expect.objectContaining({
+          collaborationVisibilityEpoch: expect.any(String),
+          showInCollaboration: true,
+        }),
+      );
+      expect(updatePreference.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({
+          collaborationVisibilityEpoch: expect.any(String),
+          showInCollaboration: false,
+        }),
+      );
+    });
+
+    it('does not persist the opt-out when stale sockets cannot be concealed', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+      mockSetUserPresenceVisibility.mockRejectedValueOnce(new Error('gateway unavailable'));
+
+      await expect(
+        userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: false }),
+      ).rejects.toThrow('gateway unavailable');
+      expect(updatePreference).not.toHaveBeenCalled();
+    });
+
+    it('compensates concealment if preference persistence fails afterward', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockRejectedValue(new Error('database unavailable'));
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await expect(
+        userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: false }),
+      ).rejects.toThrow('database unavailable');
+      expect(mockSetUserPresenceVisibility.mock.calls).toEqual([
+        [mockUserId, false, expect.any(String)],
+        [mockUserId, true, undefined],
+      ]);
+    });
+
+    it('does not re-conceal on unrelated saves when the stored preference is already false', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: false });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await userRouter.createCaller({ ...mockCtx }).updatePreference({
+        hideSyncAlert: true,
+        showInCollaboration: false,
+      });
+
+      expect(mockSetUserPresenceVisibility).not.toHaveBeenCalled();
+      expect(updatePreference).toHaveBeenCalledWith({
+        hideSyncAlert: true,
+        showInCollaboration: false,
+      });
     });
   });
 

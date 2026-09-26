@@ -23,6 +23,10 @@ export interface GatewayConnection {
   authzVersion?: number;
   close: (code?: number, reason?: string) => void;
   connectionId: string;
+  /** Signed generation used to reject pre-transition tickets. */
+  presenceVisibilityEpoch?: string;
+  /** False suppresses human presence while leaving the read socket connected. */
+  presenceVisible: boolean;
   /** Project the room's resource belongs to — matches project-scoped kicks. */
   projectId?: string;
   /** Wire room key (`{scope}:{id}`) — immutable for the connection's life. */
@@ -112,6 +116,11 @@ const sanitizePresenceState = (value: unknown): PresenceState | null => {
  * in the server outbox — the gateway never persists.
  */
 export class RoomHub {
+  /** Human user id → current visibility rule. */
+  private readonly humanVisibilityRules = new Map<
+    string,
+    { concealed: boolean; visibleEpoch?: string }
+  >();
   /** room → connectionId → state. Presence rides on the same map. */
   private readonly rooms = new Map<string, Map<string, ConnState>>();
 
@@ -125,9 +134,9 @@ export class RoomHub {
   }
 
   /** Register a socket. Returns the room's current live presence entries. */
-  join = (connection: GatewayConnection): PresenceEntry[] => {
+  join = (connection: GatewayConnection, now = Date.now()): PresenceEntry[] => {
     this.roomConns(connection.room).set(connection.connectionId, { connection });
-    return this.presence(connection.room);
+    return this.presence(connection.room, now);
   };
 
   /**
@@ -142,6 +151,16 @@ export class RoomHub {
 
     const conn = this.roomConns(room).get(connectionId);
     if (!conn) return;
+
+    // Personal visibility is enforced at the trusted gateway boundary. The
+    // socket stays joined so hidden users can keep receiving room updates.
+    // Agent/system actors are never affected by a human preference claim.
+    if (
+      conn.connection.actor.kind === 'human' &&
+      (!conn.connection.presenceVisible || this.isConnectionConcealed(conn.connection, now))
+    ) {
+      return;
+    }
 
     conn.lastPresenceAt = now;
     conn.state = state;
@@ -177,6 +196,9 @@ export class RoomHub {
     const entries: PresenceEntry[] = [];
     for (const [connectionId, conn] of conns) {
       if (
+        (conn.connection.actor.kind !== 'human' || conn.connection.presenceVisible) &&
+        (conn.connection.actor.kind !== 'human' ||
+          !this.isConnectionConcealed(conn.connection, now)) &&
         conn.state !== undefined &&
         conn.lastPresenceAt !== undefined &&
         now - conn.lastPresenceAt <= PRESENCE_TTL_MS
@@ -198,6 +220,41 @@ export class RoomHub {
     for (const conn of conns.values()) {
       this.safeSend(conn, message);
     }
+  };
+
+  /**
+   * Conceal immediately, or reveal only tickets minted after this control.
+   * Sockets stay joined and readable throughout.
+   */
+  setUserPresenceVisibility = (userId: string, visible: boolean, epoch?: string) => {
+    if (visible) {
+      // Only tickets carrying the newly persisted generation may publish.
+      // Pre-conceal and in-flight tickets retain their old generation.
+      this.humanVisibilityRules.set(userId, { concealed: false, visibleEpoch: epoch });
+      return;
+    }
+
+    // Hidden stays fail-closed indefinitely. A later explicit reveal changes
+    // this to a bounded tombstone.
+    this.humanVisibilityRules.set(userId, { concealed: true });
+
+    for (const [room, conns] of this.rooms) {
+      for (const [connectionId, conn] of conns) {
+        if (conn.connection.userId !== userId || conn.connection.actor.kind !== 'human') continue;
+
+        if (conn.lastPresenceAt === undefined) continue;
+
+        conn.lastPresenceAt = undefined;
+        conn.state = undefined;
+        this.broadcastExcept(room, connectionId, { connectionId, type: 'presence-gone' });
+      }
+    }
+  };
+
+  private isConnectionConcealed = (connection: GatewayConnection, _now: number) => {
+    const rule = this.humanVisibilityRules.get(connection.userId);
+    if (!rule) return false;
+    return rule.concealed || connection.presenceVisibilityEpoch !== rule.visibleEpoch;
   };
 
   private broadcastExcept = (

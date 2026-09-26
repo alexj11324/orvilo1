@@ -5,6 +5,7 @@ import {
   COLLABORATION_TICKET_ISSUER,
   COLLABORATION_TICKET_ISSUERS,
   COLLABORATION_TICKET_PURPOSE,
+  COLLABORATION_TICKET_TTL_SECONDS,
   type RoomTicketClaims,
 } from '@orvilo/types';
 import { importJWK, jwtVerify, SignJWT } from 'jose';
@@ -51,7 +52,7 @@ const getVerificationKey = async () => {
   return importJWK(publicKeyJwk, 'RS256');
 };
 
-export const ROOM_TICKET_TTL_SECONDS = 120;
+export const ROOM_TICKET_TTL_SECONDS = COLLABORATION_TICKET_TTL_SECONDS;
 
 /**
  * Mint a short-lived, single-room ticket. `claims` arrives fully
@@ -63,11 +64,14 @@ export const signRoomTicket = async (
   ttlSeconds = ROOM_TICKET_TTL_SECONDS,
 ): Promise<{ expiresAt: number; token: string }> => {
   const { key, kid } = await getSigningKey();
-
   const token = await new SignJWT({
     actor: claims.actor,
     ...(claims.authzVersion !== undefined ? { authz_version: claims.authzVersion } : {}),
     ...(claims.projectId !== undefined ? { project_id: claims.projectId } : {}),
+    presence_visible: claims.presenceVisible,
+    ...(claims.presenceVisibilityEpoch !== undefined
+      ? { presence_visibility_epoch: claims.presenceVisibilityEpoch }
+      : {}),
     purpose: COLLABORATION_TICKET_PURPOSE,
     room: claims.room,
     workspace_id: claims.workspaceId,
@@ -118,6 +122,9 @@ export const verifyRoomTicket = async (token: string): Promise<VerifiedRoomTicke
       typeof payload.workspace_id !== 'string' ||
       !isActor(payload.actor) ||
       (payload.authz_version !== undefined && typeof payload.authz_version !== 'number') ||
+      (payload.presence_visible !== undefined && typeof payload.presence_visible !== 'boolean') ||
+      (payload.presence_visibility_epoch !== undefined &&
+        typeof payload.presence_visibility_epoch !== 'string') ||
       (payload.project_id !== undefined && typeof payload.project_id !== 'string') ||
       typeof payload.jti !== 'string' ||
       typeof payload.exp !== 'number'
@@ -139,6 +146,10 @@ export const verifyRoomTicket = async (token: string): Promise<VerifiedRoomTicke
       authzVersion: payload.authz_version as number | undefined,
       connectionKey: payload.jti,
       expiresAt: payload.exp * 1000,
+      // Tickets minted before this privacy claim existed keep the historical
+      // default-visible behavior until their short expiry.
+      presenceVisible: payload.presence_visible !== false,
+      presenceVisibilityEpoch: payload.presence_visibility_epoch as string | undefined,
       projectId: payload.project_id as string | undefined,
       room: payload.room,
       userId: payload.sub,

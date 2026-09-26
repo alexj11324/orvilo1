@@ -68,7 +68,28 @@ const isPublishRequest = (value: unknown): value is RoomPublishRequest =>
   isRecord(value) &&
   typeof value.room === 'string' &&
   isRecord(value.publish) &&
-  (value.publish.kind === 'broadcast' || value.publish.kind === 'kick');
+  (value.publish.kind === 'broadcast' ||
+    value.publish.kind === 'presence-visibility' ||
+    value.publish.kind === 'kick');
+
+const presenceVisibilityParams = (
+  publish: unknown,
+): { epoch?: string; userId: string; visible: boolean } | null => {
+  if (!isRecord(publish)) return null;
+  if (
+    (publish.epoch !== undefined && typeof publish.epoch !== 'string') ||
+    typeof publish.userId !== 'string' ||
+    typeof publish.visible !== 'boolean'
+  )
+    return null;
+  const userId = publish.userId.trim();
+  return userId === publish.userId &&
+    userId.length > 0 &&
+    userId.length <= 256 &&
+    (publish.epoch === undefined || (publish.epoch.length > 0 && publish.epoch.length <= 128))
+    ? { epoch: publish.epoch as string | undefined, userId, visible: publish.visible }
+    : null;
+};
 
 /**
  * Normalize a kick envelope into hub parameters. New-style kicks carry the
@@ -78,7 +99,8 @@ const isPublishRequest = (value: unknown): value is RoomPublishRequest =>
  * stale projector can never project-kick by accident. Returns null on any
  * malformed field — a kick that cannot be scoped must not fire at all.
  */
-const kickParams = (publish: Record<string, unknown>, room: string) => {
+const kickParams = (publish: unknown, room: string) => {
+  if (!isRecord(publish)) return null;
   if (typeof publish.userId !== 'string' || typeof publish.reason !== 'string') return null;
   if (
     publish.scope !== undefined ||
@@ -169,6 +191,13 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
             return;
           }
           hub.kick(kick);
+        } else if (body.publish.kind === 'presence-visibility') {
+          const visibility = presenceVisibilityParams(body.publish);
+          if (!visibility) {
+            sendJson(res, 400, { error: 'invalid presence visibility envelope' });
+            return;
+          }
+          hub.setUserPresenceVisibility(visibility.userId, visibility.visible, visibility.epoch);
         } else {
           hub.broadcast(body.room, body.publish.message);
         }
@@ -192,6 +221,8 @@ export const createGatewayServer = (options: GatewayOptions = {}) => {
       actor: ticket.actor,
       authzVersion: ticket.authzVersion,
       connectionId,
+      presenceVisible: ticket.presenceVisible,
+      presenceVisibilityEpoch: ticket.presenceVisibilityEpoch,
       projectId: ticket.projectId,
       room: ticket.room,
       ticketExpiresAt: ticket.expiresAt,

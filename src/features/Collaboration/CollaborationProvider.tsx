@@ -5,6 +5,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CollaborationRoom, PresenceCursorState, PresenceState } from '@/store/collaboration';
 import { roomKey as toRoomKey } from '@/store/collaboration';
+import { useUserStore } from '@/store/user';
 
 import { AnchorRegistry } from './anchorRegistry';
 import { collabAnchorFor, parseCollabId, pointToUV } from './anchors';
@@ -119,6 +120,7 @@ export const CollaborationProvider = memo<CollaborationProviderProps>(
   ({ children, enabled = true, room, viewKey }) => {
     const [registry] = useState(() => new AnchorRegistry());
     const presenceEnabled = usePresenceEnabled(enabled);
+    const sharesPresence = useUserStore((s) => s.preference.showInCollaboration !== false);
     const active = presenceEnabled && !!room;
 
     useEffect(() => {
@@ -142,7 +144,7 @@ export const CollaborationProvider = memo<CollaborationProviderProps>(
     }, [active, roomScope, roomId]);
 
     const getSend = useRef(() => sendRef.current).current;
-    useCursorPublisher(active, viewKey, getSend);
+    useCursorPublisher(active && sharesPresence, viewKey, getSend);
 
     const contextValue = useMemo(
       () =>
@@ -151,11 +153,14 @@ export const CollaborationProvider = memo<CollaborationProviderProps>(
               registry,
               room,
               roomKey: key,
-              send: active ? (state: PresenceState) => sendRef.current?.(state) : null,
+              send:
+                active && sharesPresence
+                  ? (state: PresenceState) => sendRef.current?.(state)
+                  : null,
               viewKey,
             }
           : null,
-      [registry, room, key, active, viewKey],
+      [registry, room, key, active, sharesPresence, viewKey],
     );
 
     return <CollaborationContext value={contextValue}>{children}</CollaborationContext>;

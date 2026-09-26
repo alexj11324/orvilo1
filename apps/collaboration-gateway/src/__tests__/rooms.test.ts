@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { type GatewayConnection, PRESENCE_TTL_MS, RoomHub } from '../rooms';
 
 const fakeConnection = (params: {
+  actorKind?: 'agent' | 'human' | 'system';
   connectionId: string;
+  presenceVisible?: boolean;
+  presenceVisibilityEpoch?: string;
   room?: string;
   userId?: string;
   workspaceId?: string;
@@ -13,8 +16,10 @@ const fakeConnection = (params: {
   const sent: CollaborationServerMessage[] = [];
   let closed = false;
   const connection: GatewayConnection = {
-    actor: { id: params.userId ?? 'user-1', kind: 'human' },
+    actor: { id: params.userId ?? 'user-1', kind: params.actorKind ?? 'human' },
     connectionId: params.connectionId,
+    presenceVisible: params.presenceVisible ?? true,
+    presenceVisibilityEpoch: params.presenceVisibilityEpoch,
     room: params.room ?? 'task:task-1',
     userId: params.userId ?? 'user-1',
     workspaceId: params.workspaceId ?? 'ws-1',
@@ -62,6 +67,129 @@ describe('RoomHub', () => {
       },
     ]);
     expect(c.sent).toHaveLength(0); // other rooms never see it
+  });
+
+  it('suppresses hidden human presence while keeping the socket joined', () => {
+    const hub = new RoomHub();
+    const hidden = fakeConnection({ connectionId: 'hidden', presenceVisible: false });
+    const watcher = fakeConnection({ connectionId: 'watcher', userId: 'user-2' });
+    hub.join(hidden.connection);
+    hub.join(watcher.connection);
+
+    hub.updatePresence('hidden', 'task:task-1', { typing: true });
+
+    expect(watcher.sent).toHaveLength(0);
+    expect(hub.presence('task:task-1')).toHaveLength(0);
+    expect(hub.connectionCount).toBe(2);
+  });
+
+  it('does not apply a human visibility preference to agent presence', () => {
+    const hub = new RoomHub();
+    const agent = fakeConnection({
+      actorKind: 'agent',
+      connectionId: 'agent',
+      presenceVisible: false,
+      userId: 'agent-1',
+    });
+    const watcher = fakeConnection({ connectionId: 'watcher', userId: 'user-2' });
+    hub.join(agent.connection);
+    hub.join(watcher.connection);
+
+    hub.updatePresence('agent', 'task:task-1', { typing: true });
+
+    expect(watcher.sent).toEqual([
+      {
+        actor: { id: 'agent-1', kind: 'agent' },
+        connectionId: 'agent',
+        state: { typing: true },
+        type: 'presence',
+      },
+    ]);
+  });
+
+  it('conceals every old human connection across rooms without closing read sockets', () => {
+    const hub = new RoomHub();
+    const tabA = fakeConnection({ connectionId: 'a', room: 'task:task-1', userId: 'user-1' });
+    const tabB = fakeConnection({ connectionId: 'b', room: 'project:project-1', userId: 'user-1' });
+    const taskWatcher = fakeConnection({
+      connectionId: 'task-watcher',
+      room: 'task:task-1',
+      userId: 'user-2',
+    });
+    const projectWatcher = fakeConnection({
+      connectionId: 'project-watcher',
+      room: 'project:project-1',
+      userId: 'user-2',
+    });
+    for (const connection of [tabA, tabB, taskWatcher, projectWatcher]) {
+      hub.join(connection.connection);
+    }
+    hub.updatePresence('a', 'task:task-1', { typing: true });
+    hub.updatePresence('b', 'project:project-1', { typing: true });
+    taskWatcher.sent.length = 0;
+    projectWatcher.sent.length = 0;
+
+    hub.setUserPresenceVisibility('user-1', false);
+
+    expect(taskWatcher.sent).toEqual([{ connectionId: 'a', type: 'presence-gone' }]);
+    expect(projectWatcher.sent).toEqual([{ connectionId: 'b', type: 'presence-gone' }]);
+    expect(hub.presence('task:task-1')).toHaveLength(0);
+    expect(hub.presence('project:project-1')).toHaveLength(0);
+    expect(hub.connectionCount).toBe(4);
+
+    hub.updatePresence('a', 'task:task-1', { typing: false });
+    expect(taskWatcher.sent).toHaveLength(1);
+    hub.broadcast('task:task-1', { type: 'pong' });
+    expect(tabA.sent.at(-1)).toEqual({ type: 'pong' });
+    expect(tabA.wasClosed()).toBe(false);
+    expect(tabB.wasClosed()).toBe(false);
+  });
+
+  it('blocks a pre-minted visible ticket that joins after concealment', () => {
+    const hub = new RoomHub();
+    const now = Date.now();
+    const watcher = fakeConnection({ connectionId: 'watcher', userId: 'user-2' });
+    hub.join(watcher.connection, now);
+    hub.setUserPresenceVisibility('user-1', false, 'hidden-epoch');
+
+    const lateOldTicket = fakeConnection({
+      connectionId: 'late',
+      presenceVisibilityEpoch: 'old-epoch',
+      userId: 'user-1',
+    });
+    hub.join(lateOldTicket.connection, now + 1);
+    hub.updatePresence('late', 'task:task-1', { typing: true }, now + 2);
+
+    expect(watcher.sent).toHaveLength(0);
+    expect(hub.presence('task:task-1', now + 2)).toHaveLength(0);
+    expect(lateOldTicket.wasClosed()).toBe(false);
+  });
+
+  it('re-enables only fresh post-reveal tickets immediately', () => {
+    const hub = new RoomHub();
+    const now = Date.now();
+    const watcher = fakeConnection({ connectionId: 'watcher', userId: 'user-2' });
+    const oldVisibleTicket = fakeConnection({
+      connectionId: 'old',
+      presenceVisibilityEpoch: 'old-epoch',
+      userId: 'user-1',
+    });
+    hub.join(watcher.connection, now);
+    hub.setUserPresenceVisibility('user-1', false, 'hidden-epoch');
+    hub.join(oldVisibleTicket.connection, now + 1);
+
+    hub.setUserPresenceVisibility('user-1', true, 'visible-epoch');
+    hub.updatePresence('old', 'task:task-1', { typing: true }, now + 20);
+    expect(watcher.sent).toHaveLength(0);
+
+    const freshTicket = fakeConnection({
+      connectionId: 'fresh',
+      presenceVisibilityEpoch: 'visible-epoch',
+      userId: 'user-1',
+    });
+    hub.join(freshTicket.connection, now + 12);
+    hub.updatePresence('fresh', 'task:task-1', { typing: true }, now + 13);
+    expect(watcher.sent.at(-1)).toMatchObject({ connectionId: 'fresh', type: 'presence' });
   });
 
   it('expires presence after the TTL and emits presence-gone', () => {

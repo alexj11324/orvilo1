@@ -36,12 +36,22 @@ export class PreferenceActionImpl {
   };
 
   updatePreference = async (preference: Partial<UserPreference>, action?: any): Promise<void> => {
-    const nextPreference = merge(this.#get().preference, preference);
+    const previousPreference = this.#get().preference;
+    const nextPreference = merge(previousPreference, preference);
     const userId = this.#get().user?.id;
 
     this.#set({ preference: nextPreference }, false, action || n('updatePreference'));
 
-    await userService.updatePreference(nextPreference);
+    try {
+      await userService.updatePreference(preference);
+    } catch (error) {
+      // A newer preference update may already be in flight or persisted. Only
+      // undo this request while its exact optimistic object is still current.
+      if (this.#get().preference === nextPreference) {
+        this.#set({ preference: previousPreference }, false, n('updatePreference/rollback'));
+      }
+      throw error;
+    }
 
     writeUserDisplaySnapshot(userId, {
       preference: nextPreference,

@@ -265,6 +265,13 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     tab: SettingsTabs.Appearance,
   },
   {
+    anchor: 'appearance-collaboration-visibility',
+    descKey: 'settingAppearance.collaboration.showInCollaboration.desc',
+    keywords: ['collaboration', 'pointer', 'cursor', 'issue presence', 'privacy', 'teammates'],
+    labelKey: 'settingAppearance.collaboration.showInCollaboration.title',
+    tab: SettingsTabs.Appearance,
+  },
+  {
     anchor: 'appearance-app-tray',
     keywords: ['tray', 'menu bar', 'menubar'],
     labelKey: 'settingAppearance.appTray.title',

@@ -1055,6 +1055,10 @@ export default {
   'settingAppearance.contextMenuMode.desc': 'Enable the right-click menu for some list items.',
   'settingAppearance.contextMenuMode.disabled': 'Disabled',
   'settingAppearance.contextMenuMode.title': 'Right-Click Menu Mode',
+  'settingAppearance.collaboration.showInCollaboration.desc':
+    'Let teammates see your cursor when it points to a visible work item. Turning this off hides your cursor and presence from teammates while you can still see theirs.',
+  'settingAppearance.collaboration.showInCollaboration.title': 'Show My Work Item Cursor',
+  'settingAppearance.collaboration.title': 'Collaboration',
   'settingAppearance.desktop.title': 'Desktop',
   'settingAppearance.font.fontFamily.default': 'System Default',
   'settingAppearance.font.fontFamily.desc':

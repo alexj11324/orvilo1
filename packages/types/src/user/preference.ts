@@ -237,6 +237,8 @@ export interface UserPreference {
    * context. Stored as id (not slug) so workspace renames don't invalidate it.
    */
   lastWorkspaceId?: string | null;
+  /** Whether teammates can see this user's pointer and presence on the issue they are viewing. */
+  showInCollaboration?: boolean;
   /**
    * Personal-mode counterpart of
    * {@link WorkspaceUserPreference.sidebarHiddenAgentIds}: agents/chat-groups
@@ -326,6 +328,7 @@ export const UserPreferenceSchema = z
     lastWorkspaceId: z.string().nullish(),
     sidebarHiddenAgentIds: z.array(z.string()).optional(),
     sidebarHiddenGroupIds: z.array(z.string()).optional(),
+    showInCollaboration: z.boolean().optional(),
     terminalFontFamily: z.string().optional(),
     telemetry: z.boolean().nullable(),
     topicGroupMode: z.enum(['byTime', 'byProject', 'flat', 'byStatus']).optional(),

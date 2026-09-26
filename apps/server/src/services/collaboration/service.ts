@@ -1,4 +1,9 @@
-import type { CollaborationRoom, RoomAuthorization, RoomSnapshotResult } from '@orvilo/types';
+import type {
+  CollaborationRoom,
+  RoomAuthorization,
+  RoomSnapshotResult,
+  UserPreference,
+} from '@orvilo/types';
 import { roomKey } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
@@ -10,6 +15,8 @@ import { actorColorForId, assertRoomAccess } from './roomAuthz';
 import { gatewayConnectUrl } from './roomPublisher';
 import { buildRoomSnapshot } from './snapshot';
 import { signRoomTicket } from './ticket';
+
+type CollaborationPreference = UserPreference & { collaborationVisibilityEpoch?: string };
 
 /**
  * Room authorization and snapshot facade. The router stays thin: it supplies
@@ -51,7 +58,12 @@ export class CollaborationService {
     );
 
     const [profile] = await this.db
-      .select({ avatar: users.avatar, fullName: users.fullName, username: users.username })
+      .select({
+        avatar: users.avatar,
+        fullName: users.fullName,
+        preference: users.preference,
+        username: users.username,
+      })
       .from(users)
       .where(eq(users.id, this.userId))
       .limit(1);
@@ -72,6 +84,10 @@ export class CollaborationService {
           : {}),
       },
       authzVersion: member?.authzVersion ?? undefined,
+      presenceVisible:
+        (profile?.preference as UserPreference | null | undefined)?.showInCollaboration !== false,
+      presenceVisibilityEpoch: (profile?.preference as CollaborationPreference | null | undefined)
+        ?.collaborationVisibilityEpoch,
       projectId: grant.projectId,
       room: roomKey(room),
       workspaceId: this.workspaceId,

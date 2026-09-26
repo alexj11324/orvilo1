@@ -44,6 +44,15 @@ describe('settings search index', () => {
     expect(SETTINGS_SEARCH_ITEMS.some((item) => item.anchor === 'notification-inbox')).toBe(true);
   });
 
+  it('indexes personal collaboration visibility under appearance', () => {
+    expect(SETTINGS_SEARCH_ITEMS).toContainEqual(
+      expect.objectContaining({
+        anchor: 'appearance-collaboration-visibility',
+        tab: SettingsTabs.Appearance,
+      }),
+    );
+  });
+
   it('does not index the retired image-generation settings entry', () => {
     // The /image workbench settings were retired; a stale anchor would degrade
     // to a plain tab switch and keep dead locale keys reachable.

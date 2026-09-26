@@ -84,12 +84,17 @@ export const COLLABORATION_TICKET_ISSUERS: readonly string[] = [
   LEGACY_COLLABORATION_TICKET_ISSUER,
 ];
 export const COLLABORATION_TICKET_AUDIENCE = 'urn:orvilo:collaboration-gateway' as const;
+export const COLLABORATION_TICKET_TTL_SECONDS = 120;
 
 /** Claims the gateway re-verifies after RS256 validation. */
 export interface RoomTicketClaims {
   actor: CollaborationActor;
   /** `workspace_members.authz_version` snapshot at issue time. */
   authzVersion?: number;
+  /** Server-generated generation for privacy-safe visibility transitions. */
+  presenceVisibilityEpoch?: string;
+  /** Whether a human actor may publish presence into collaboration rooms. */
+  presenceVisible: boolean;
   /**
    * Project the room's resource belongs to: the project id for `project:*`
    * rooms and the owning project for `task:*` rooms. Lets a project-scoped
@@ -114,13 +119,18 @@ export interface RoomAuthorization {
 /**
  * Internal publish-protocol version. v1 gateways answered every
  * `/internal/publish` POST with 202 but only executed `workspace`-scoped
- * kicks; v2 additionally honors `project`/`task` scopes. The gateway stamps
+ * kicks; v2 additionally honors `project`/`task` scopes; v3 adds immediate
+ * cross-room presence concealment. The gateway stamps
  * `GATEWAY_PROTOCOL_VERSION_HEADER` on publish responses so a projector can
  * treat a scoped kick delivered to a pre-v2 gateway as retryable instead of
  * silently delivered — a silently-acked kick leaves stale task-room sockets
  * subscribed past the revocation.
  */
-export const COLLABORATION_GATEWAY_PROTOCOL_VERSION = 2;
+export const COLLABORATION_GATEWAY_PROTOCOL_VERSION = 3;
+/** First gateway version that executes project/task scoped kicks. */
+export const COLLABORATION_GATEWAY_SCOPED_KICK_VERSION = 2;
+/** First gateway version that immediately conceals a human across live rooms. */
+export const COLLABORATION_GATEWAY_PRESENCE_VISIBILITY_VERSION = 3;
 export const GATEWAY_PROTOCOL_VERSION_HEADER = 'x-orvilo-gateway-protocol-version';
 
 /**
@@ -150,13 +160,14 @@ export interface RoomKickParams {
 
 /**
  * What the server-side publish hook accepts. `broadcast` fans a room message
- * out verbatim; `kick` tears down the revoked member's live connections for
- * one authorization scope — a workspace revoke drops every room of the
- * tenant, a project revoke drops only that project's room plus its task
- * rooms, a task revoke drops the single task room.
+ * out verbatim; `presence-visibility` suppresses or safely reveals one human
+ * across all rooms while preserving read sockets; `kick` tears down revoked
+ * connections for one authorization scope.
  */
 export type RoomPublishEnvelope =
-  { kind: 'broadcast'; message: CollaborationServerMessage } | (RoomKickParams & { kind: 'kick' });
+  | { kind: 'broadcast'; message: CollaborationServerMessage }
+  | { epoch?: string; kind: 'presence-visibility'; userId: string; visible: boolean }
+  | (RoomKickParams & { kind: 'kick' });
 
 export interface RoomPublishRequest {
   publish: RoomPublishEnvelope;

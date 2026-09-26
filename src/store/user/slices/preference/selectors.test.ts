@@ -42,6 +42,22 @@ describe('preferenceSelectors', () => {
     });
   });
 
+  describe('showInCollaboration', () => {
+    it('defaults to visible when the stored preference is missing', () => {
+      store.preference.showInCollaboration = undefined;
+
+      expect(preferenceSelectors.showInCollaboration(store)).toBe(true);
+    });
+
+    it('returns the configured visibility', () => {
+      store.preference.showInCollaboration = false;
+      expect(preferenceSelectors.showInCollaboration(store)).toBe(false);
+
+      store.preference.showInCollaboration = true;
+      expect(preferenceSelectors.showInCollaboration(store)).toBe(true);
+    });
+  });
+
   describe('hideSettingsMoveGuide', () => {
     it('should return the value of moveSettingsToAvatar guide preference', () => {
       store.preference.guide = { moveSettingsToAvatar: true };

@@ -11,6 +11,8 @@ const topicIncludeCompleted = (s: UserStore): boolean =>
   s.preference.topicIncludeCompleted ?? false;
 
 const hideSyncAlert = (s: UserStore) => s.preference.hideSyncAlert;
+const showInCollaboration = (s: UserStore): boolean =>
+  s.preference.showInCollaboration ?? DEFAULT_PREFERENCE.showInCollaboration ?? true;
 
 const hideSettingsMoveGuide = (s: UserStore) => s.preference.guide?.moveSettingsToAvatar;
 
@@ -33,6 +35,7 @@ export const preferenceSelectors = {
   hideSyncAlert,
   isPreferenceInit,
   shouldTriggerFileInKnowledgeBaseTip,
+  showInCollaboration,
   showUploadFileInKnowledgeBaseTip,
   terminalFontFamily,
   topicGroupMode,

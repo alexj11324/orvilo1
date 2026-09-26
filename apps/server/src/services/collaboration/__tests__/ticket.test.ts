@@ -1,4 +1,4 @@
-import { generateKeyPair, exportJWK } from 'jose';
+import { exportJWK, generateKeyPair } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { signRoomTicket, verifyRoomTicket } from '../ticket';
@@ -22,6 +22,8 @@ afterAll(() => {
 const claims = {
   actor: { color: '#1677ff', id: 'user-1', kind: 'human' as const, name: 'Ada' },
   authzVersion: 3,
+  presenceVisible: false,
+  presenceVisibilityEpoch: 'visible-epoch',
   room: 'task:task_1',
   workspaceId: 'ws-1',
 };
@@ -39,13 +41,18 @@ describe('room tickets', () => {
     expect(verified?.userId).toBe('user-1');
     expect(verified?.actor).toMatchObject({ id: 'user-1', kind: 'human', name: 'Ada' });
     expect(verified?.authzVersion).toBe(3);
+    expect(verified?.presenceVisible).toBe(false);
+    expect(verified?.presenceVisibilityEpoch).toBe('visible-epoch');
   });
 
   it('rejects a tampered ticket', async () => {
     const { token } = await signRoomTicket(claims);
     const [head, payload, signature] = token.split('.');
     const forgedPayload = Buffer.from(
-      JSON.stringify({ ...JSON.parse(Buffer.from(payload, 'base64url').toString()), room: 'workspace:ws-evil' }),
+      JSON.stringify({
+        ...JSON.parse(Buffer.from(payload, 'base64url').toString()),
+        room: 'workspace:ws-evil',
+      }),
     ).toString('base64url');
     const forged = `${head}.${forgedPayload}.${signature}`;
     expect(await verifyRoomTicket(forged)).toBeNull();

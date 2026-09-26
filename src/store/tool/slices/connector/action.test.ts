@@ -6,6 +6,7 @@ import { lambdaClient } from '@/libs/trpc/client';
 
 import { useToolStore } from '../../store';
 import { initialConnectorState } from './initialState';
+import { connectorSelectors } from './selectors';
 
 vi.mock('@/libs/trpc/client', () => ({
   lambdaClient: {
@@ -71,6 +72,84 @@ describe('createConnectorSlice — scope guard', () => {
 
     expect(useToolStore.getState().connectors.map((c) => c.identifier)).toEqual(['workspace-tool']);
     expect(useToolStore.getState().isConnectorsInit).toBe(true);
+    expect(useToolStore.getState().connectorsScopeId).toBe('ws-1');
+  });
+
+  it('keeps a newer authorized connector when an older response arrives last', async () => {
+    vi.spyOn(workspaceHooks, 'getActiveWorkspaceId').mockReturnValue('ws-1');
+    let resolveOlder!: (value: ReturnType<typeof connector>[]) => void;
+    let resolveNewer!: (value: ReturnType<typeof connector>[]) => void;
+    listQuery
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOlder = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNewer = resolve;
+          }),
+      );
+
+    const older = useToolStore.getState().fetchConnectors();
+    const newer = useToolStore.getState().fetchConnectors();
+    resolveNewer([connector('linear-mcp-connected')]);
+    await newer;
+    resolveOlder([connector('linear-mcp-pending')]);
+    await older;
+
+    expect(useToolStore.getState().connectors.map((c) => c.identifier)).toEqual([
+      'linear-mcp-connected',
+    ]);
+  });
+
+  it('accepts an older successful load when the newer refresh failed', async () => {
+    vi.spyOn(workspaceHooks, 'getActiveWorkspaceId').mockReturnValue('ws-1');
+    let resolveOlder!: (value: ReturnType<typeof connector>[]) => void;
+    listQuery
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOlder = resolve;
+          }),
+      )
+      .mockRejectedValueOnce(new Error('temporary network failure'));
+
+    const older = useToolStore.getState().fetchConnectors();
+    await expect(useToolStore.getState().fetchConnectors()).rejects.toThrow(
+      'temporary network failure',
+    );
+    resolveOlder([connector('linear-mcp')]);
+    await older;
+
+    expect(useToolStore.getState().connectors.map((c) => c.identifier)).toEqual(['linear-mcp']);
+    expect(useToolStore.getState().isConnectorsInit).toBe(true);
+  });
+
+  it('keeps preset creation disabled while the next workspace list is delayed', async () => {
+    const wsSpy = vi.spyOn(workspaceHooks, 'getActiveWorkspaceId').mockReturnValue(null);
+    listQuery.mockResolvedValueOnce([connector('personal-tool')]);
+    await useToolStore.getState().fetchConnectors();
+    expect(connectorSelectors.isConnectorListReady(null)(useToolStore.getState())).toBe(true);
+
+    let resolveWorkspace!: (value: ReturnType<typeof connector>[]) => void;
+    listQuery.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveWorkspace = resolve;
+        }),
+    );
+    wsSpy.mockReturnValue('ws-1');
+    const pending = useToolStore.getState().fetchConnectors();
+    expect(useToolStore.getState().isConnectorsInit).toBe(true);
+    expect(connectorSelectors.isConnectorListReady('ws-1')(useToolStore.getState())).toBe(false);
+
+    resolveWorkspace([connector('workspace-tool')]);
+    await pending;
+    expect(connectorSelectors.isConnectorListReady('ws-1')(useToolStore.getState())).toBe(true);
+    expect(useToolStore.getState().connectors.map((c) => c.identifier)).toEqual(['workspace-tool']);
   });
 
   it('drops a fetchAgentBoundConnectors response that resolves after the scope changed', async () => {

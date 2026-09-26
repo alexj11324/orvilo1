@@ -10,7 +10,10 @@ import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import { serverDB } from '@/database/server';
 import { appEnv } from '@/envs/app';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
-import { exchangeConnectorCode } from '@/server/services/connector/oauth';
+import {
+  buildOAuthClientInformation,
+  exchangeConnectorCode,
+} from '@/server/services/connector/oauth';
 import { consumeConnectorOAuthState } from '@/server/services/connector/stateStore';
 import { syncConnectorToolsById } from '@/server/services/connector/sync';
 import { tokensToCredentials } from '@/server/services/connector/tokens';
@@ -135,7 +138,11 @@ export const GET = async (req: NextRequest) => {
     const tokens = await exchangeConnectorCode({
       authorizationCode: code,
       authorizationServerUrl: payload.authorizationServerUrl,
-      clientInformation: { client_id: oidc.clientId, client_secret: oidc.clientSecret },
+      clientInformation: buildOAuthClientInformation({
+        clientId: oidc.clientId,
+        clientSecret: oidc.clientSecret,
+        tokenEndpointAuthMethod: oidc.tokenEndpointAuthMethod,
+      }),
       codeVerifier: payload.codeVerifier,
       metadata,
       redirectUri: oidc.redirectUri!,

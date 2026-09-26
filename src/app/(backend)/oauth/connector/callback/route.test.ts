@@ -33,6 +33,15 @@ vi.mock('@modelcontextprotocol/sdk/client/auth.js', () => ({
     .mockResolvedValue({ token_endpoint: 'https://as/token' }),
 }));
 vi.mock('@/server/services/connector/oauth', () => ({
+  buildOAuthClientInformation: (params: {
+    clientId: string;
+    clientSecret?: string;
+    tokenEndpointAuthMethod?: string;
+  }) => ({
+    client_id: params.clientId,
+    client_secret: params.clientSecret,
+    token_endpoint_auth_method: params.tokenEndpointAuthMethod,
+  }),
   exchangeConnectorCode: mockExchange,
 }));
 vi.mock('@/server/services/connector/tokens', () => ({
@@ -78,7 +87,9 @@ beforeEach(() => {
     mcpServerUrl: 'https://mcp.example.com',
     oidcConfig: {
       clientId: 'cid',
+      clientSecret: 'secret',
       redirectUri: 'https://app.example.com/oauth/connector/callback',
+      tokenEndpointAuthMethod: 'client_secret_post',
     },
     userId: 'u1',
   });
@@ -106,6 +117,15 @@ describe('connector OAuth callback', () => {
 
     expect(body).toContain('"success":true');
     expect(body).toContain('"synced":true');
+    expect(mockExchange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientInformation: {
+          client_id: 'cid',
+          client_secret: 'secret',
+          token_endpoint_auth_method: 'client_secret_post',
+        },
+      }),
+    );
   });
 
   it('rejects a user whose live workspace role no longer permits writes', async () => {

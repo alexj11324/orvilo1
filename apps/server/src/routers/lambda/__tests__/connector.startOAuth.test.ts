@@ -8,6 +8,7 @@ import { connectorRouter } from '../connector';
 const mocks = vi.hoisted(() => ({
   buildAuthorizationUrl: vi.fn(),
   discoverConnectorOAuth: vi.fn(),
+  registerDynamicClient: vi.fn(),
   saveConnectorOAuthState: vi.fn(),
 }));
 
@@ -31,9 +32,18 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
 }));
 vi.mock('@/server/services/connector/oauth', () => ({
   buildAuthorizationUrl: mocks.buildAuthorizationUrl,
+  buildOAuthClientInformation: (params: {
+    clientId: string;
+    clientSecret?: string;
+    tokenEndpointAuthMethod?: string;
+  }) => ({
+    client_id: params.clientId,
+    client_secret: params.clientSecret,
+    token_endpoint_auth_method: params.tokenEndpointAuthMethod,
+  }),
   discoverConnectorOAuth: mocks.discoverConnectorOAuth,
   getConnectorRedirectUri: () => 'https://app.example.com/oauth/connector/callback',
-  registerDynamicClient: vi.fn(),
+  registerDynamicClient: mocks.registerDynamicClient,
 }));
 vi.mock('@/server/services/connector/stateStore', () => ({
   generateConnectorOAuthState: () => 'state-1',
@@ -91,5 +101,116 @@ describe('connectorRouter.startOAuth', () => {
       returnTo: undefined,
       workspaceId: 'workspace-1',
     });
+  });
+
+  it('re-registers a legacy DCR client whose token auth method was not persisted', async () => {
+    const update = vi.fn();
+    vi.mocked(ConnectorModel).mockImplementation(function () {
+      return {
+        findById: vi.fn().mockResolvedValue({
+          id: CONNECTOR_ID,
+          mcpServerUrl: 'https://mcp.example.com',
+          oidcConfig: {
+            clientId: 'dcr-client',
+            clientSecret: 'dcr-secret',
+            scheme: 'dcr',
+          },
+          userId: 'user-1',
+        }),
+        update,
+      } as any;
+    });
+    mocks.discoverConnectorOAuth.mockResolvedValue({
+      authorizationServerUrl: 'https://auth.example.com',
+      metadata: {
+        authorization_endpoint: 'https://auth.example.com/authorize',
+        registration_endpoint: 'https://auth.example.com/register',
+        scopes_supported: ['read'],
+        token_endpoint: 'https://auth.example.com/token',
+      },
+    });
+    mocks.registerDynamicClient.mockResolvedValue({
+      client_id: 'replacement-client',
+      client_secret: 'replacement-secret',
+      redirect_uris: ['https://app.example.com/oauth/connector/callback'],
+      token_endpoint_auth_method: 'client_secret_post',
+    });
+
+    await connectorRouter
+      .createCaller({
+        serverDB: {},
+        userId: 'user-1',
+        workspaceId: 'workspace-1',
+        workspaceRole: 'member',
+      } as any)
+      .startOAuth({ id: CONNECTOR_ID });
+
+    expect(mocks.registerDynamicClient).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledWith(
+      CONNECTOR_ID,
+      expect.objectContaining({
+        oidcConfig: expect.objectContaining({
+          scheme: 'dcr',
+          tokenEndpointAuthMethod: 'client_secret_post',
+        }),
+      }),
+    );
+    expect(mocks.buildAuthorizationUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientInformation: {
+          client_id: 'replacement-client',
+          client_secret: 'replacement-secret',
+          token_endpoint_auth_method: 'client_secret_post',
+        },
+      }),
+    );
+  });
+
+  it('persists the token auth method returned by dynamic registration', async () => {
+    const update = vi.fn();
+    vi.mocked(ConnectorModel).mockImplementation(function () {
+      return {
+        findById: vi.fn().mockResolvedValue({
+          id: CONNECTOR_ID,
+          mcpServerUrl: 'https://mcp.example.com',
+          oidcConfig: { scheme: 'dcr' },
+          userId: 'user-1',
+        }),
+        update,
+      } as any;
+    });
+    mocks.discoverConnectorOAuth.mockResolvedValue({
+      authorizationServerUrl: 'https://auth.example.com',
+      metadata: {
+        authorization_endpoint: 'https://auth.example.com/authorize',
+        registration_endpoint: 'https://auth.example.com/register',
+        scopes_supported: ['read'],
+        token_endpoint: 'https://auth.example.com/token',
+      },
+    });
+    mocks.registerDynamicClient.mockResolvedValue({
+      client_id: 'dcr-client',
+      client_secret: 'dcr-secret',
+      redirect_uris: ['https://app.example.com/oauth/connector/callback'],
+      token_endpoint_auth_method: 'client_secret_post',
+    });
+
+    await connectorRouter
+      .createCaller({
+        serverDB: {},
+        userId: 'user-1',
+        workspaceId: 'workspace-1',
+        workspaceRole: 'member',
+      } as any)
+      .startOAuth({ id: CONNECTOR_ID });
+
+    expect(update).toHaveBeenCalledWith(
+      CONNECTOR_ID,
+      expect.objectContaining({
+        oidcConfig: expect.objectContaining({
+          tokenEndpointAuthMethod: 'client_secret_post',
+        }),
+      }),
+    );
   });
 });

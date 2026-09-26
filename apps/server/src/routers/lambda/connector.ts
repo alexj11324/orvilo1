@@ -29,6 +29,7 @@ import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { callConnectorToolById, ConnectorToolCallError } from '@/server/services/connector/exec';
 import {
   buildAuthorizationUrl,
+  buildOAuthClientInformation,
   discoverConnectorOAuth,
   getConnectorRedirectUri,
   registerDynamicClient,
@@ -78,6 +79,7 @@ const oidcConfigSchema = z.object({
   scheme: z.enum(['pre_registration', 'dcr', 'client_id_metadata_document']),
   scopes: z.array(z.string()).optional(),
   tokenEndpoint: z.string().optional(),
+  tokenEndpointAuthMethod: z.string().optional(),
   usePKCE: z.boolean().optional(),
 });
 
@@ -567,9 +569,14 @@ export const connectorRouter = router({
       // 2. Resolve the OAuth client: pre-registration vs. DCR.
       let clientId = existing.clientId;
       let clientSecret = existing.clientSecret;
-      const scheme: OIDCConfig['scheme'] = clientId ? 'pre_registration' : 'dcr';
+      let tokenEndpointAuthMethod = existing.tokenEndpointAuthMethod;
+      const scheme: OIDCConfig['scheme'] = clientId ? existing.scheme : 'dcr';
 
-      if (!clientId) {
+      // Older DCR rows stored the client id/secret but dropped the registration
+      // response's token auth method. Re-register those clients instead of
+      // guessing: choosing `client_secret_basic` for a `client_secret_post`
+      // client makes the authorization-code exchange fail.
+      if (!clientId || (existing.scheme === 'dcr' && !tokenEndpointAuthMethod)) {
         if (!metadata.registration_endpoint) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
@@ -585,6 +592,7 @@ export const connectorRouter = router({
         });
         clientId = reg.client_id;
         clientSecret = reg.client_secret ?? undefined;
+        tokenEndpointAuthMethod = reg.token_endpoint_auth_method;
       }
 
       // 3. Persist the resolved config so the callback + refresh can reuse it.
@@ -599,6 +607,7 @@ export const connectorRouter = router({
         scheme,
         scopes,
         tokenEndpoint: metadata.token_endpoint,
+        tokenEndpointAuthMethod,
       };
       await ctx.connectorModel.update(input.id, { oidcConfig: resolvedOidc });
 
@@ -606,7 +615,11 @@ export const connectorRouter = router({
       const state = generateConnectorOAuthState();
       const { authorizationUrl, codeVerifier } = await buildAuthorizationUrl({
         authorizationServerUrl,
-        clientInformation: { client_id: clientId, client_secret: clientSecret },
+        clientInformation: buildOAuthClientInformation({
+          clientId,
+          clientSecret,
+          tokenEndpointAuthMethod,
+        }),
         metadata,
         redirectUri,
         resource: connector.mcpServerUrl,

@@ -144,6 +144,17 @@ export class ChatTopicActionImpl {
 
   #summarizingTopicTitleIds = new Set<string>();
 
+  // A topic-list response is authoritative only for the membership revision
+  // at which its request started. Without this ordering, a request that began
+  // before a new topic was confirmed can land afterwards and erase the row
+  // from Zustand even though the database already contains it.
+  #topicListFetchRevisions = new WeakMap<
+    object,
+    { containerKey: string; membershipRevision: number }
+  >();
+
+  #topicListMembershipRevisions = new Map<string, number>();
+
   constructor(set: Setter, get: () => ChatStore, _api?: unknown) {
     void _api;
     this.#set = set;
@@ -930,6 +941,8 @@ export class ChatTopicActionImpl {
         // agentId, groupId, isInbox, pageSize come from the outer scope closure
         if (!agentId && !groupId) return { items: [], total: 0 };
 
+        const membershipRevision = this.#topicListMembershipRevisions.get(containerKey) ?? 0;
+
         const currentData = this.#get().topicDataMap[containerKey];
         const lastPageSize = currentData?.pageSize;
         const hasExistingItems = (currentData?.items?.length || 0) > 0;
@@ -953,6 +966,8 @@ export class ChatTopicActionImpl {
           sortBy,
         });
 
+        this.#topicListFetchRevisions.set(result, { containerKey, membershipRevision });
+
         // Reset expanding state after fetch completes
         if (isExpanding) {
           this.#get().internal_updateTopicData(containerKey, { isExpandingPageSize: false });
@@ -964,6 +979,16 @@ export class ChatTopicActionImpl {
         // onData: responsible for state updates (fires for both cached and fresh data)
         onData: (result) => {
           if (!hasValidContainer) return;
+
+          const fetchRevision = this.#topicListFetchRevisions.get(result);
+          const currentMembershipRevision =
+            this.#topicListMembershipRevisions.get(containerKey) ?? 0;
+          if (
+            fetchRevision?.containerKey === containerKey &&
+            fetchRevision.membershipRevision !== currentMembershipRevision
+          ) {
+            return;
+          }
 
           const { total: totalCount } = result;
 
@@ -1569,6 +1594,16 @@ export class ChatTopicActionImpl {
         groupId: scopedGroupId,
         scope: payload.scope,
       });
+    if (
+      payload.type === 'addTopic' ||
+      payload.type === 'replaceTopicId' ||
+      payload.type === 'deleteTopic'
+    ) {
+      this.#topicListMembershipRevisions.set(
+        key,
+        (this.#topicListMembershipRevisions.get(key) ?? 0) + 1,
+      );
+    }
     const currentData = this.#get().topicDataMap[key];
     const nextItems = topicReducer(currentData?.items, payload);
 

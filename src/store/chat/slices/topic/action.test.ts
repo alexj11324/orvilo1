@@ -649,6 +649,68 @@ describe('topic action', () => {
       ).toEqual(topics);
     });
 
+    it('does not let a list request started before topic confirmation remove the confirmed row', async () => {
+      const agentId = 'stale-topic-list-agent';
+      const key = topicMapKey({ agentId });
+      const existingTopic = { id: 'topic-existing', title: 'Existing' } as ChatTopic;
+      const confirmedTopic = { id: 'topic-confirmed', title: 'Confirmed' } as ChatTopic;
+      let resolveFetch!: (value: { items: ChatTopic[]; total: number }) => void;
+      const staleFetch = new Promise<{ items: ChatTopic[]; total: number }>((resolve) => {
+        resolveFetch = resolve;
+      });
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          creatingTopicIds: [],
+          topicDataMap: {
+            [key]: {
+              currentPage: 0,
+              hasMore: false,
+              items: [existingTopic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+      vi.mocked(topicService.getTopics).mockReturnValue(staleFetch);
+
+      const response = renderHook(() =>
+        useChatStore().useFetchTopics(true, { agentId, pageSize: 20 }),
+      );
+      await waitFor(() => expect(topicService.getTopics).toHaveBeenCalledOnce());
+
+      act(() => {
+        const store = useChatStore.getState();
+        store.internal_dispatchTopic({
+          agentId,
+          optimistic: true,
+          type: 'addTopic',
+          value: confirmedTopic,
+        });
+        // Gateway creation honours the client id, so confirmation can replace
+        // an id with itself. It still marks the row as server-confirmed.
+        store.internal_replaceTopicId({
+          agentId,
+          nextId: confirmedTopic.id,
+          previousId: confirmedTopic.id,
+        });
+      });
+      expect(useChatStore.getState().creatingTopicIds).not.toContain(confirmedTopic.id);
+
+      await act(async () => {
+        resolveFetch({ items: [existingTopic], total: 1 });
+        await staleFetch;
+      });
+      await waitFor(() => expect(response.result.current.data).toBeDefined());
+
+      expect(useChatStore.getState().topicDataMap[key].items.map((topic) => topic.id)).toEqual([
+        confirmedTopic.id,
+        existingTopic.id,
+      ]);
+    });
+
     describe('unread message prefetch', () => {
       // Regression: unread prefetch used to live only in the sidebar item's
       // mount effect, so topics in collapsed groups / outside the virtualized

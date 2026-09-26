@@ -20,9 +20,9 @@ export class ConnectorActionImpl {
   // A later request wins only after it succeeds; a failed refresh must not
   // discard an earlier valid response for the same scope.
   #connectorListRequestId = 0;
-  #connectorListCommittedRequestId = 0;
+  #connectorListCommittedRequestIds = new Map<string | null, number>();
   #agentBoundListRequestId = 0;
-  #agentBoundListCommittedRequestId = 0;
+  #agentBoundListCommittedRequestIds = new Map<string | null, number>();
 
   constructor(set: Setter, get: () => ToolStore, _api?: unknown) {
     void _api;
@@ -56,8 +56,9 @@ export class ConnectorActionImpl {
     const scope = getActiveWorkspaceId();
     const requestId = ++this.#connectorListRequestId;
     const data = await lambdaClient.connector.list.query();
-    if (!this.#isStillInScope(scope) || requestId <= this.#connectorListCommittedRequestId) return;
-    this.#connectorListCommittedRequestId = requestId;
+    const committedRequestId = this.#connectorListCommittedRequestIds.get(scope) ?? 0;
+    if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
+    this.#connectorListCommittedRequestIds.set(scope, requestId);
     this.#set(
       { connectors: data as any, connectorsScopeId: scope, isConnectorsInit: true },
       false,
@@ -88,8 +89,9 @@ export class ConnectorActionImpl {
     const scope = getActiveWorkspaceId();
     const requestId = ++this.#agentBoundListRequestId;
     const data = await lambdaClient.connector.listAgentBound.query();
-    if (!this.#isStillInScope(scope) || requestId <= this.#agentBoundListCommittedRequestId) return;
-    this.#agentBoundListCommittedRequestId = requestId;
+    const committedRequestId = this.#agentBoundListCommittedRequestIds.get(scope) ?? 0;
+    if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
+    this.#agentBoundListCommittedRequestIds.set(scope, requestId);
     this.#set(
       { agentBoundConnectors: data as any, isAgentBoundInit: true },
       false,

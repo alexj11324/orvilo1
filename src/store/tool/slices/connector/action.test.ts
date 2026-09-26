@@ -128,6 +128,33 @@ describe('createConnectorSlice — scope guard', () => {
     expect(useToolStore.getState().isConnectorsInit).toBe(true);
   });
 
+  it('compares committed connector requests within the captured workspace scope', async () => {
+    const wsSpy = vi.spyOn(workspaceHooks, 'getActiveWorkspaceId').mockReturnValue(null);
+    let resolveOlderPersonal!: (value: ReturnType<typeof connector>[]) => void;
+    listQuery
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOlderPersonal = resolve;
+          }),
+      )
+      .mockResolvedValueOnce([connector('workspace-tool')])
+      .mockRejectedValueOnce(new Error('personal refresh failed'));
+
+    const olderPersonal = useToolStore.getState().fetchConnectors();
+    wsSpy.mockReturnValue('ws-1');
+    await useToolStore.getState().fetchConnectors();
+    wsSpy.mockReturnValue(null);
+    await expect(useToolStore.getState().fetchConnectors()).rejects.toThrow(
+      'personal refresh failed',
+    );
+    resolveOlderPersonal([connector('personal-tool')]);
+    await olderPersonal;
+
+    expect(useToolStore.getState().connectors.map((c) => c.identifier)).toEqual(['personal-tool']);
+    expect(useToolStore.getState().connectorsScopeId).toBeNull();
+  });
+
   it('keeps preset creation disabled while the next workspace list is delayed', async () => {
     const wsSpy = vi.spyOn(workspaceHooks, 'getActiveWorkspaceId').mockReturnValue(null);
     listQuery.mockResolvedValueOnce([connector('personal-tool')]);
@@ -166,6 +193,34 @@ describe('createConnectorSlice — scope guard', () => {
 
     expect(useToolStore.getState().agentBoundConnectors).toEqual([]);
     expect(useToolStore.getState().isAgentBoundInit).toBe(false);
+  });
+
+  it('compares committed agent-bound requests within the captured workspace scope', async () => {
+    const wsSpy = vi.spyOn(workspaceHooks, 'getActiveWorkspaceId').mockReturnValue(null);
+    let resolveOlderPersonal!: (value: ReturnType<typeof connector>[]) => void;
+    listAgentBoundQuery
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOlderPersonal = resolve;
+          }),
+      )
+      .mockResolvedValueOnce([connector('workspace-agent-tool')])
+      .mockRejectedValueOnce(new Error('personal agent refresh failed'));
+
+    const olderPersonal = useToolStore.getState().fetchAgentBoundConnectors();
+    wsSpy.mockReturnValue('ws-1');
+    await useToolStore.getState().fetchAgentBoundConnectors();
+    wsSpy.mockReturnValue(null);
+    await expect(useToolStore.getState().fetchAgentBoundConnectors()).rejects.toThrow(
+      'personal agent refresh failed',
+    );
+    resolveOlderPersonal([connector('personal-agent-tool')]);
+    await olderPersonal;
+
+    expect(useToolStore.getState().agentBoundConnectors.map((c) => c.identifier)).toEqual([
+      'personal-agent-tool',
+    ]);
   });
 
   it('drops a fetchAgentConnectors response that resolves after the scope changed', async () => {

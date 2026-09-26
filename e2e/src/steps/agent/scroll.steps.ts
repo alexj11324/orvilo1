@@ -38,6 +38,14 @@ interface ScrollSnapshot {
   scrollTop: number;
 }
 
+interface AutoScrollSettingsSnapshot {
+  activeAgentId: string | null;
+  agentSetting: boolean | null;
+  effective: boolean;
+  globalSetting: boolean;
+  rawGlobalSetting: boolean | null;
+}
+
 // ---------------------------------------------------------------------------
 // DOM helpers (executed inside the page)
 // ---------------------------------------------------------------------------
@@ -131,8 +139,51 @@ async function getChatQueueSnapshot(world: CustomWorld): Promise<unknown> {
     .catch(() => null);
 }
 
+async function getAutoScrollSettingsSnapshot(
+  world: CustomWorld,
+): Promise<AutoScrollSettingsSnapshot | null> {
+  return world.page
+    .evaluate(() => {
+      const stores = (globalThis as { __ORVILO_STORES?: Record<string, () => unknown> })
+        .__ORVILO_STORES;
+      const user = stores?.user?.() as
+        | {
+            defaultSettings?: { general?: { enableAutoScrollOnStreaming?: boolean } };
+            settings?: { general?: { enableAutoScrollOnStreaming?: boolean } };
+          }
+        | undefined;
+      const agent = stores?.agent?.() as
+        | {
+            activeAgentId?: string;
+            agentMap?: Record<string, { chatConfig?: { enableAutoScrollOnStreaming?: boolean } }>;
+          }
+        | undefined;
+      if (!user) return null;
+
+      const activeAgentId = agent?.activeAgentId ?? null;
+      const agentValue = activeAgentId
+        ? agent?.agentMap?.[activeAgentId]?.chatConfig?.enableAutoScrollOnStreaming
+        : undefined;
+      const rawGlobalValue = user.settings?.general?.enableAutoScrollOnStreaming;
+      const globalValue =
+        rawGlobalValue ?? user.defaultSettings?.general?.enableAutoScrollOnStreaming ?? true;
+
+      return {
+        activeAgentId,
+        agentSetting: agentValue ?? null,
+        effective: agentValue ?? globalValue,
+        globalSetting: globalValue,
+        rawGlobalSetting: rawGlobalValue ?? null,
+      };
+    })
+    .catch(() => null);
+}
+
 async function dumpScrollDiagnostics(world: CustomWorld): Promise<void> {
   console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(world))}`);
+  console.log(
+    `   📍 auto-scroll settings: ${JSON.stringify(await getAutoScrollSettingsSnapshot(world))}`,
+  );
   const scrollDiag = await getScrollDiag(world);
   if (scrollDiag.length > 0)
     console.log(`   📍 scroll hook diag: ${JSON.stringify(scrollDiag.slice(-40))}`);
@@ -217,6 +268,19 @@ async function fetchLatestUserMessageId(
 }
 
 async function sendPrompt(world: CustomWorld, prompt: string, response: string): Promise<void> {
+  const expectedAutoScroll = world.testContext.expectedAutoScrollEnabled as boolean | undefined;
+  if (expectedAutoScroll !== undefined && !world.testContext.autoScrollSettingVerifiedInChat) {
+    await expect
+      .poll(async () => (await getAutoScrollSettingsSnapshot(world))?.effective, {
+        message: 'chat did not apply the auto-scroll setting selected by this scenario',
+        timeout: 15_000,
+      })
+      .toBe(expectedAutoScroll);
+    const snapshot = await getAutoScrollSettingsSnapshot(world);
+    console.log(`   📍 auto-scroll settings: ${JSON.stringify(snapshot)}`);
+    world.testContext.autoScrollSettingVerifiedInChat = true;
+  }
+
   llmMockManager.setResponse(prompt, response);
 
   const input = world.page
@@ -404,24 +468,15 @@ async function setAutoScrollEnabled(world: CustomWorld, desired: boolean): Promi
   const title = world.page.getByText(/Auto-scroll During AI Response|AI 回复时自动滚动/);
   await expect(title).toBeVisible({ timeout: 45_000 });
 
-  // The switch lives inside the same FormGroup as the title.
-  const switcher = world.page
-    .locator('[role="switch"], button.ant-switch')
-    .filter({
-      has: title,
-    })
-    .or(
-      world.page
-        .locator('div')
-        .filter({ has: title })
-        .last()
-        .locator('[role="switch"], button.ant-switch')
-        .first(),
-    );
-
-  // Fall back: the switch is the nearest role=switch sibling of the title node.
-  const nearestSwitch = world.page.locator('[role="switch"]').first();
-  const target = (await switcher.count()) > 0 ? switcher.first() : nearestSwitch;
+  // The label and switch are siblings inside one Ant Form item. Scope through
+  // that row so additions above Chat Appearance cannot redirect this scenario
+  // to an unrelated preference.
+  const row = title.locator(
+    'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-form-item ")][1]',
+  );
+  await expect(row, 'auto-scroll setting row must be unique').toHaveCount(1);
+  const target = row.locator('[role="switch"], button.ant-switch');
+  await expect(target, 'auto-scroll setting row must contain exactly one switch').toHaveCount(1);
 
   const currentChecked = (await target.getAttribute('aria-checked')) === 'true';
   if (currentChecked !== desired) {
@@ -431,10 +486,25 @@ async function setAutoScrollEnabled(world: CustomWorld, desired: boolean): Promi
     // Navigating while the async settings request is still in flight can
     // abort it and make the next page reload the previous value. Wait for the
     // UI's save-state contract instead of relying on a fixed delay.
-    await expect(world.page.getByText(/Saved|\u5DF2\u4FDD\u5B58/).last()).toBeVisible({
+    await expect(row.getByText(/Saved|\u5DF2\u4FDD\u5B58/)).toBeVisible({
       timeout: 15_000,
     });
   }
+
+  // Prove persistence through the same user path. An aria change before the
+  // save request finishes is not enough because the chat page reloads state.
+  await world.page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(title).toBeVisible({ timeout: 45_000 });
+  await expect(target).toHaveAttribute('aria-checked', String(desired));
+  await expect
+    .poll(async () => (await getAutoScrollSettingsSnapshot(world))?.globalSetting, {
+      message: 'reloaded user settings did not resolve the selected auto-scroll value',
+      timeout: 15_000,
+    })
+    .toBe(desired);
+
+  world.testContext.expectedAutoScrollEnabled = desired;
+  world.testContext.autoScrollSettingVerifiedInChat = false;
 }
 
 // ---------------------------------------------------------------------------

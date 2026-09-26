@@ -25,6 +25,8 @@ export interface ConnectorOAuthStatePayload {
   returnTo?: string;
   /** Issuance timestamp (ms epoch) for diagnostics. */
   ts: number;
+  /** Workspace selected when authorization began; absent for personal connectors. */
+  workspaceId?: string;
 }
 
 /** Generate an opaque, single-use state value to embed in the authorize URL. */
@@ -64,10 +66,14 @@ export const consumeConnectorOAuthState = async (
   const redis = getAgentRuntimeRedisClient();
   if (!redis) return null;
 
-  const raw = await redis.get(stateKey(state));
-  if (!raw) return null;
-
-  await redis.del(stateKey(state));
+  const raw = await redis.eval(
+    `local value = redis.call('get', KEYS[1]);
+     if value then redis.call('del', KEYS[1]); end;
+     return value;`,
+    1,
+    stateKey(state),
+  );
+  if (typeof raw !== 'string') return null;
 
   try {
     return JSON.parse(raw) as ConnectorOAuthStatePayload;

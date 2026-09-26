@@ -4,7 +4,6 @@ import {
   nextTeamHomeSectionNavigation,
   resolveTeamHomeSection,
   teamHomeSectionTo,
-  teamRecentIssuesQuery,
 } from './teamHomeSection';
 
 describe('resolveTeamHomeSection', () => {
@@ -56,26 +55,5 @@ describe('teamHomeSectionTo', () => {
     expect(teamHomeSectionTo('team-42', current, 'members')).toBe(
       '/teams/team-42?tab=home&scope=active&section=members',
     );
-  });
-});
-
-describe('teamRecentIssuesQuery', () => {
-  it('scopes to the team, newest activity first, no grouping', () => {
-    expect(teamRecentIssuesQuery('team-42', false)).toEqual({
-      entityType: 'task',
-      filter: { all: [{ field: 'teamId', op: 'eq', value: 'team-42' }] },
-      layout: 'list',
-      schemaVersion: 1,
-      sort: [{ direction: 'desc', field: 'updatedAt' }],
-    });
-  });
-
-  it('excludes untriaged rows for triage-capable teams', () => {
-    const query = teamRecentIssuesQuery('team-42', true);
-    expect(query.filter?.all).toContainEqual({
-      field: 'triageStatus',
-      op: 'neq',
-      value: 'untriaged',
-    });
   });
 });

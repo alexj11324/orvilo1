@@ -2,30 +2,21 @@
 
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import type { TaskListItem, TeamItem } from '@orvilo/types';
+import type { TeamItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import dayjs from 'dayjs';
 import { InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import { resolveTaskStatus } from '@/components/ExecutionStatus';
-import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
-import { useTaskWorkflowGlyph } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { useClientDataSWR } from '@/libs/swr';
-import { workAttentionService } from '@/services/workAttention';
 
 import { type TeamHomeDestination, teamHomeDestinations } from '../teamHomeDestinations';
 import TeamIdentity from '../TeamIdentity';
-import { teamTaskDetailPath } from '../teamTaskDetailPath';
 import type { TeamHomeMember } from './teamHomeMembersModel';
-import { TEAM_HOME_RECENT_LIMIT, teamRecentIssuesQuery } from './teamHomeSection';
 
 const styles = createStaticStyles(({ css }) => ({
   description: css`
@@ -128,44 +119,6 @@ const styles = createStaticStyles(({ css }) => ({
     grid-area: rest;
     min-width: 0;
   `,
-  recentIdentifier: css`
-    flex: none;
-
-    font-size: 12px;
-    font-weight: 450;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextDescription};
-    text-align: end;
-  `,
-  recentLink: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 5px;
-    padding-inline: 6px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  recentList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-inline: 6px;
-  `,
-  recentMeta: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
   resourcesCopy: css`
     padding-inline: 12px;
     font-size: 13px;
@@ -215,27 +168,6 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-/**
- * One status mark per row, the same one the board and list draw: the
- * workflow state when the task has one, else the execution-status glyph.
- */
-const RecentTaskStatus = ({
-  task,
-}: {
-  task: Pick<TaskListItem, 'status' | 'workflowCategory' | 'workflowStateId'>;
-}) => {
-  const glyph = useTaskWorkflowGlyph({
-    executionStatus: task.status,
-    workflowCategory: task.workflowCategory,
-    workflowStateId: task.workflowStateId,
-  });
-  return glyph ? (
-    <Icon color={glyph.color} icon={glyph.icon} size={14} />
-  ) : (
-    <TaskStatusIcon size={14} status={resolveTaskStatus(task.status)} />
-  );
-};
-
 // The rail destinations draw the same entity marks the sidebar's team
 // sub-navigation uses — triage is the inbox tray, not a generic arrow.
 const destinationIcons = {
@@ -264,8 +196,8 @@ interface TeamHomeOverviewProps {
 }
 
 /**
- * Linear's Overview: identity + description, the Team resources section, a
- * recent-issues activity block, and the Members / Go to rail. Every block is
+ * Linear's Overview: identity + description, the Team resources section,
+ * and the Members / Go to rail. Every block is
  * backed by a real source — resources stays an honest empty line until a team
  * documents/links domain exists, and the rail keeps the four real team
  * destinations (no channel integration or team-settings route exists yet).
@@ -283,17 +215,6 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
   }) => {
     const { t } = useTranslation('common');
     const { t: tProject } = useTranslation('project');
-    const workspaceId = useActiveWorkspaceId();
-    const recentQuery = useClientDataSWR(
-      teamId && workspaceId ? ['team-recent', workspaceId, teamId, triageCapable] : null,
-      () =>
-        workAttentionService.query({
-          limit: TEAM_HOME_RECENT_LIMIT,
-          query: teamRecentIssuesQuery(teamId, triageCapable),
-        }),
-    );
-    const recentTasks =
-      recentQuery.data?.data && 'tasks' in recentQuery.data.data ? recentQuery.data.data.tasks : [];
     const destinations = teamHomeDestinations(teamId, workspaceSlug, triageCapable);
 
     return (
@@ -353,53 +274,6 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
               {t('teams.resourcesEmpty')}
             </Text>
           </section>
-
-          {recentQuery.isLoading ? (
-            <section aria-label={t('teams.recentIssues')} className={styles.section}>
-              <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
-              <SkeletonList aria-label={t('teams.loading')} rows={3} />
-            </section>
-          ) : recentQuery.error ? (
-            <section aria-label={t('teams.recentIssues')} className={styles.section}>
-              <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
-              <AsyncError
-                error={recentQuery.error}
-                variant="inline"
-                onRetry={() => void recentQuery.mutate()}
-              />
-            </section>
-          ) : recentTasks.length > 0 ? (
-            <section aria-label={t('teams.recentIssues')} className={styles.section}>
-              <div className={styles.sectionTitle}>{t('teams.recentIssues')}</div>
-              <div className={styles.recentList}>
-                {recentTasks.map((task) => (
-                  <WorkspaceLink
-                    className={styles.recentLink}
-                    key={task.id}
-                    to={teamTaskDetailPath(task)}
-                  >
-                    <RecentTaskStatus task={task} />
-                    <Flexbox flex={1} style={{ minWidth: 0 }}>
-                      <Text ellipsis weight={500}>
-                        {task.name ?? task.instruction}
-                      </Text>
-                    </Flexbox>
-                    {task.identifier ? (
-                      <Text className={styles.recentIdentifier}>{task.identifier}</Text>
-                    ) : null}
-                    {task.updatedAt ? (
-                      <Text
-                        className={styles.recentMeta}
-                        title={dayjs(task.updatedAt).format('YYYY-MM-DD HH:mm')}
-                      >
-                        {dayjs(task.updatedAt).fromNow()}
-                      </Text>
-                    ) : null}
-                  </WorkspaceLink>
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
       </div>
     );

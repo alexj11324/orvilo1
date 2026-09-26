@@ -187,4 +187,36 @@ describe('GitHub MCP provider connector', () => {
     });
     expect(JSON.stringify(patch)).not.toMatch(/legacy-pat|legacy-header-token/);
   });
+
+  it('restores a legacy PAT connector when managed synchronization fails', async () => {
+    const ctx = context();
+    const existing = {
+      ...providerConnector,
+      credentials: { token: 'legacy-pat', type: 'bearer' },
+      identifier: 'my-github',
+      isEnabled: true,
+      mcpConnectionType: 'http',
+      mcpServerUrl: GITHUB_MCP_SERVER_URL,
+      metadata: { customHeaders: { Authorization: 'Bearer legacy-header-token' } },
+      oidcConfig: null,
+      sourceType: 'custom',
+      status: 'connected',
+      tokenExpiresAt: null,
+    };
+    syncTools.mockRejectedValueOnce(new Error('hosted MCP unavailable'));
+
+    await expect(
+      activateGitHubMcpConnector({ ctx: ctx as any, existing, userId: 'user-1' }),
+    ).rejects.toThrow('hosted MCP unavailable');
+
+    expect(ctx.connectorModel.update).toHaveBeenCalledTimes(2);
+    expect(ctx.connectorModel.update.mock.calls[1]).toEqual([
+      'connector-1',
+      expect.objectContaining({
+        credentials: { token: 'legacy-pat', type: 'bearer' },
+        metadata: existing.metadata,
+        status: 'connected',
+      }),
+    ]);
+  });
 });

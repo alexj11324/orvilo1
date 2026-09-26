@@ -56,7 +56,7 @@ export const activateGitHubMcpConnector = async (input: {
   let connectorId: string;
   if (input.existing) {
     connectorId = input.existing.id;
-    await input.ctx.connectorModel.update(connectorId, {
+    const managedPatch = {
       credentials: null,
       isEnabled: true,
       mcpConnectionType: ConnectorMcpConnectionType.http,
@@ -68,7 +68,27 @@ export const activateGitHubMcpConnector = async (input: {
       sourceType: ConnectorSourceType.custom,
       status: ConnectorStatus.disconnected,
       tokenExpiresAt: null,
-    });
+    };
+    await input.ctx.connectorModel.update(connectorId, managedPatch);
+    try {
+      const { toolCount } = await syncConnectorToolsById(connectorId, input.ctx);
+      return { connectorId, status: 'connected', toolCount };
+    } catch (error) {
+      await input.ctx.connectorModel.update(connectorId, {
+        credentials: input.existing.credentials,
+        isEnabled: input.existing.isEnabled,
+        mcpConnectionType: input.existing.mcpConnectionType,
+        mcpServerUrl: input.existing.mcpServerUrl,
+        mcpStdioConfig: input.existing.mcpStdioConfig,
+        metadata: input.existing.metadata,
+        name: input.existing.name,
+        oidcConfig: input.existing.oidcConfig,
+        sourceType: input.existing.sourceType,
+        status: input.existing.status,
+        tokenExpiresAt: input.existing.tokenExpiresAt,
+      });
+      throw error;
+    }
   } else {
     const created = await input.ctx.connectorModel.create({
       credentials: null,

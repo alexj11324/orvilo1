@@ -12,6 +12,8 @@ export interface ConnectorState {
   agentConnectorsInit: Record<string, boolean>;
   connectorCreating: boolean;
   connectors: ConnectorWithTools[];
+  /** Scope of the last accepted base connector list. Undefined means no list has loaded. */
+  connectorsScopeId: string | null | undefined;
   connectorSyncing: Record<string, boolean>;
   isAgentBoundInit: boolean;
   isConnectorsInit: boolean;
@@ -24,6 +26,7 @@ export const initialConnectorState: ConnectorState = {
   connectorCreating: false,
   connectors: [],
   connectorSyncing: {},
+  connectorsScopeId: undefined,
   isAgentBoundInit: false,
   isConnectorsInit: false,
 };

@@ -3737,6 +3737,16 @@ export default {
   'tools.legacyConnector.configure': 'Configure',
   'tools.legacyConnector.upgradeDesc':
     'This connector still uses the legacy plugin format. Configure it to finish upgrading, then manage its tool permissions here.',
+  'tools.mcpPreset.authError': 'Authorization failed: {{reason}}',
+  'tools.mcpPreset.cancelled': 'Authorization was not completed',
+  'tools.mcpPreset.externalAuthPending':
+    'Finish authorization in your browser, then return to Connectors.',
+  'tools.mcpPreset.popupBlocked': 'Please allow popups for this site and try again.',
+  'tools.mcpPreset.refreshFailed': 'Could not refresh connectors. Reload this page to retry.',
+  'tools.mcpPreset.success': 'Connector connected',
+  'tools.mcpPreset.syncFailed': 'Authorized, but tools could not be synced. Click Sync to retry.',
+  'tools.mcpPreset.tokenSetup': 'Set up token',
+  'tools.mcpPreset.unknownError': 'unknown error',
   'tools.builtins.groupName': 'Built-ins',
   'tools.builtins.install': 'Install',
   'tools.builtins.installed': 'Installed',

@@ -2,6 +2,21 @@
 
 Verified source revision: `de2d7098eecc0aa2c493274c89bbbf2c93654179` on 26 September 2026. This revision combines the catalog query split with the page-continuation fix, on top of the OAuth refresh fix.
 
+## Source traceability
+
+The exact tested commit is retained by the [acceptance/linear-import-20260926 tag](https://github.com/alexj11324/orvilo1/tree/acceptance/linear-import-20260926). Reviewers can fetch this tag to inspect `de2d7098eecc0aa2c493274c89bbbf2c93654179` directly.
+
+The importer stack was subsequently rebased onto the merged UI fixes. At delivery head `69ff0b1902426fd9152662286b10932b2279da0d`, both the Linear sync service directory and import workflow directory are byte-for-byte identical to the tested revision. This comparison exits successfully with no diff:
+
+```bash
+git fetch origin tag acceptance/linear-import-20260926
+git diff --exit-code de2d7098eecc0aa2c493274c89bbbf2c93654179 \
+  69ff0b1902426fd9152662286b10932b2279da0d -- \
+  apps/server/src/services/linearSync apps/server/src/workflows/linearImport
+```
+
+The later traceability documentation commit does not change product code or invalidate this evidence.
+
 ## Environment and flow
 
 The candidate ran in Electron with an isolated profile against a dedicated local PostgreSQL database, `orvilo_linear_parity_20260922`. A temporary embedded Hatchet `v0.107.0` tenant and worker dispatched the production Linear import workflow. The worker and backend used loopback endpoints; no shared cloud Hatchet token was used.

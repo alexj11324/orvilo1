@@ -17,7 +17,7 @@ import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { topicMapKey } from '@/store/chat/utils/topicMapKey';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
-import { type ChatTopic } from '@/types/topic';
+import { type ChatTopic, type CreateTopicParams } from '@/types/topic';
 
 import { useChatStore } from '../../store';
 
@@ -653,7 +653,10 @@ describe('topic action', () => {
       const agentId = 'stale-topic-list-agent';
       const key = topicMapKey({ agentId });
       const existingTopic = { id: 'topic-existing', title: 'Existing' } as ChatTopic;
-      const confirmedTopic = { id: 'topic-confirmed', title: 'Confirmed' } as ChatTopic;
+      const confirmedTopic = {
+        id: 'topic-confirmed',
+        title: 'Confirmed',
+      } satisfies CreateTopicParams & { id: string };
       let resolveFetch!: (value: { items: ChatTopic[]; total: number }) => void;
       const staleFetch = new Promise<{ items: ChatTopic[]; total: number }>((resolve) => {
         resolveFetch = resolve;

@@ -5,6 +5,7 @@ import {
   findExistingGitHubMcpConnector,
   GITHUB_MCP_SERVER_URL,
   GITHUB_MCP_TRUSTED_HEADERS,
+  reconcileGitHubMcpAvailability,
 } from './githubMcp';
 import { activateGitHubMcpConnector } from './githubMcpActivation';
 
@@ -36,6 +37,7 @@ const providerConnector = {
     githubMcp: { grantOwnerUserId: 'user-1', type: 'github_user_connection' },
   },
   name: 'GitHub',
+  status: 'connected',
 } as any;
 
 const context = () => ({
@@ -114,6 +116,15 @@ describe('GitHub MCP provider connector', () => {
     } as any;
 
     expect(findExistingGitHubMcpConnector([renamed, canonical])).toBe(canonical);
+  });
+
+  it('reports a shared connector as disconnected when its recorded owner grant is gone', async () => {
+    getGrantIdentity.mockResolvedValueOnce(null);
+
+    await expect(
+      reconcileGitHubMcpAvailability({ connectors: [providerConnector], db: {} as never }),
+    ).resolves.toEqual([{ ...providerConnector, status: 'disconnected' }]);
+    expect(getGrantIdentity).toHaveBeenCalledWith({ db: {}, userId: 'user-1' });
   });
 
   it('starts the existing GitHub OAuth flow when no Reviews grant exists', async () => {

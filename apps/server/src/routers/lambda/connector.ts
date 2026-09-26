@@ -27,7 +27,10 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { callConnectorToolById, ConnectorToolCallError } from '@/server/services/connector/exec';
-import { findExistingGitHubMcpConnector } from '@/server/services/connector/githubMcp';
+import {
+  findExistingGitHubMcpConnector,
+  reconcileGitHubMcpAvailability,
+} from '@/server/services/connector/githubMcp';
 import { activateGitHubMcpConnector } from '@/server/services/connector/githubMcpActivation';
 import {
   buildAuthorizationUrl,
@@ -145,7 +148,10 @@ export const connectorRouter = router({
   // ── Queries ──────────────────────────────────────────────────────────────
 
   list: connectorProcedure.query(async ({ ctx }) => {
-    const connectors = await ctx.connectorModel.query();
+    const connectors = await reconcileGitHubMcpAvailability({
+      connectors: await ctx.connectorModel.query(),
+      db: ctx.serverDB,
+    });
 
     // Attribution — resolve the member who authorized each connector (workspace
     // dimension), so the profile can tag "authorized by X". The ids come from
@@ -183,7 +189,10 @@ export const connectorRouter = router({
   listByAgent: connectorProcedure
     .input(z.object({ agentId: z.string() }))
     .query(async ({ input, ctx }) => {
-      const connectors = await ctx.connectorModel.queryByAgent(input.agentId);
+      const connectors = await reconcileGitHubMcpAvailability({
+        connectors: await ctx.connectorModel.queryByAgent(input.agentId),
+        db: ctx.serverDB,
+      });
 
       // Attribution — the member who authorized each agent-scoped connector, so
       // a teammate viewing the agent sees "authorized by X" on each chip.
@@ -221,7 +230,10 @@ export const connectorRouter = router({
    * that workspace's agent connectors ( /).
    */
   listAgentBound: connectorProcedure.query(async ({ ctx }) => {
-    const connectors = await ctx.connectorModel.queryAllAgentScoped();
+    const connectors = await reconcileGitHubMcpAvailability({
+      connectors: await ctx.connectorModel.queryAllAgentScoped(),
+      db: ctx.serverDB,
+    });
 
     // Resolve owning-agent display info in one scoped query (workspace-aware),
     // instead of loading each agent's config client-side from a page that isn't

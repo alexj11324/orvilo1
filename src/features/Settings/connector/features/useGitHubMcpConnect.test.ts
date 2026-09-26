@@ -23,6 +23,7 @@ vi.mock('@/store/tool', () => ({
 describe('useGitHubMcpConnect', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     status.mockResolvedValue({ data: { connected: false } });
   });
 
@@ -55,5 +56,39 @@ describe('useGitHubMcpConnect', () => {
 
     expect(toastError).toHaveBeenCalledWith('connector.actionFailed');
     expect(result.current.connecting).toBe(false);
+  });
+
+  it('reconciles OAuth completion after fast polling times out', async () => {
+    vi.useFakeTimers();
+    connectGitHubMcp
+      .mockResolvedValueOnce({
+        authorizationUrl: 'https://github.com/login/oauth/authorize?state=once',
+        status: 'authorization_required',
+      })
+      .mockResolvedValueOnce({ connectorId: 'github-connector', status: 'connected' });
+    const popup = { closed: false, close: vi.fn(), location: { href: '' } };
+    vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+    const onConnected = vi.fn();
+    const { result } = renderHook(() => useGitHubMcpConnect(onConnected));
+
+    await act(async () => {
+      await result.current.connect();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_001);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: { success: true, type: 'orvilo-github-oauth' },
+          origin: window.location.origin,
+        }),
+      );
+      await Promise.resolve();
+    });
+
+    expect(connectGitHubMcp).toHaveBeenCalledTimes(2);
+    expect(onConnected).toHaveBeenCalledWith('github-connector');
   });
 });

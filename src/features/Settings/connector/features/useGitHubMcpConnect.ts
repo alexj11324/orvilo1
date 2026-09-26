@@ -82,7 +82,7 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
     };
     window.addEventListener('focus', onFocus);
     window.addEventListener('message', onMessage);
-    const timeout = window.setTimeout(() => setWaiting(false), 120_000);
+    const timeout = window.setTimeout(() => window.clearInterval(timer), 120_000);
     return () => {
       window.clearInterval(timer);
       window.clearTimeout(timeout);

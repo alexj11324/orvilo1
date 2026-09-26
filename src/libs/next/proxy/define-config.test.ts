@@ -59,6 +59,15 @@ describe('defineConfig locale path-traversal hardening', () => {
     expect(response?.headers.get('x-middleware-next')).toBe('1');
     expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
   });
+
+  it('passes the GitHub OAuth callback through to the Next route handler', async () => {
+    const response = await middleware(
+      new NextRequest('http://localhost:3010/oauth/github/callback?code=code&state=state'),
+    );
+
+    expect(response?.headers.get('x-middleware-next')).toBe('1');
+    expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
+  });
 });
 
 describe('defineConfig Workbench SPA rewrite', () => {

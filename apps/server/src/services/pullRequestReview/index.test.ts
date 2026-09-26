@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PullRequestReviewReceiptScope } from '@/database/models/pullRequestReviewReceipt';
 import type { PullRequestReviewReceiptItem } from '@/database/schemas/pullRequestReview';
+import type { OrviloDatabase } from '@/database/type';
 
 import {
   formatPullRequestReviewId,
@@ -12,16 +13,12 @@ import {
 } from './index';
 import { computeReviewSnapshotId } from './snapshot';
 
-const githubStatus = vi.hoisted(() => ({
-  getStatus: vi.fn<(id: string) => Promise<{ connected: boolean; success: boolean }>>(),
+const githubOAuth = vi.hoisted(() => ({
+  getValidGitHubAccessToken: vi.fn<() => Promise<string | null>>(),
 }));
 
-// `clients()` only constructs MarketService when deps are not injected — most
-// tests inject both, so this mock only engages for the connection-probe tests.
-vi.mock('@/server/services/market', () => ({
-  MarketService: class {
-    market = { skills: { getStatus: githubStatus.getStatus } };
-  },
+vi.mock('@/server/services/githubOAuth', () => ({
+  getValidGitHubAccessToken: githubOAuth.getValidGitHubAccessToken,
 }));
 
 const HEAD = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -465,21 +462,61 @@ describe('pullRequest detail (RV01/RV05/RV06)', () => {
 });
 
 describe('reviewQueue (RV05)', () => {
-  it('maps a market status-probe failure to GITHUB_NOT_CONNECTED', async () => {
-    githubStatus.getStatus.mockRejectedValue(new Error('connect ECONNREFUSED'));
-    const probe = new PullRequestReviewService('user-1', 'ws-1');
+  it('reports an absent personal GitHub grant as disconnected', async () => {
+    githubOAuth.getValidGitHubAccessToken.mockResolvedValue(null);
+    const probe = new PullRequestReviewService('user-1', 'ws-1', {
+      db: {} as OrviloDatabase,
+    });
     await expect(probe.reviewQueue({ tab: 'for-me' })).rejects.toMatchObject({
       code: 'GITHUB_NOT_CONNECTED',
       name: 'PullRequestReviewError',
     });
   });
 
-  it('maps a disconnected status to GITHUB_NOT_CONNECTED', async () => {
-    githubStatus.getStatus.mockResolvedValue({ connected: false, success: true });
-    const probe = new PullRequestReviewService('user-1', 'ws-1');
-    await expect(probe.reviewQueue({ tab: 'for-me' })).rejects.toMatchObject({
-      code: 'GITHUB_NOT_CONNECTED',
+  it('loads a real queue through the GitHub App token without Market', async () => {
+    githubOAuth.getValidGitHubAccessToken.mockResolvedValue('github-user-token');
+    const fetchMock = vi.fn(async (url: URL) => {
+      if (url.pathname === '/user') return Response.json({ id: 7, login: VIEWER });
+      if (url.pathname === '/graphql') {
+        return Response.json({
+          data: {
+            rateLimit,
+            search: {
+              issueCount: 1,
+              nodes: [
+                {
+                  additions: 1,
+                  author: { avatarUrl: null, login: VIEWER },
+                  changedFiles: 1,
+                  deletions: 0,
+                  isDraft: true,
+                  number: 7,
+                  repository: { databaseId: 9, nameWithOwner: 'octo-org/octo-repo' },
+                  reviewDecision: null,
+                  title: 'open draft',
+                  updatedAt: '2030-01-01T00:00:00Z',
+                  url: 'https://github.com/octo-org/octo-repo/pull/7',
+                },
+              ],
+              pageInfo: { endCursor: null, hasNextPage: false },
+            },
+          },
+        });
+      }
+      throw new Error(`unexpected GitHub API path: ${url.pathname}`);
     });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const probe = new PullRequestReviewService('user-1', 'ws-1', {
+        db: {} as OrviloDatabase,
+      });
+      const result = await probe.reviewQueue({ tab: 'created' });
+      expect(result.items[0]).toMatchObject({ isDraft: true, number: 7 });
+      expect(result.viewer).toBe(VIEWER);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('returns the cursor and totals so a truncated list is never silent', async () => {

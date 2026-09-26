@@ -227,6 +227,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   file: rw('file:read', 'file:write'),
   followUpAction: rw('chat:read', 'chat:write'),
   goal: rw('agent:read', 'agent:write'),
+  // user GitHub App grant lifecycle — external credential management, same
+  // class as connector/composio
+  githubOAuth: 'blocked',
   group: rw('agent:read', 'agent:write'),
   healthcheck: 'open',
   home: rw('chat:read', 'chat:write'),

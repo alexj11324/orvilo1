@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle
 
 import { DOCUMENT_FOLDER_TYPE, documents, knowledgeBaseFiles } from '../../../schemas';
 import { sanitizeBm25Query } from '../../../utils/bm25';
+import { buildDocumentReadableWhere } from '../../../utils/documentAccess';
 import { buildWorkspaceWhere } from '../../../utils/workspace';
 import type {
   FtsSearchBackendResponse,
@@ -38,7 +39,7 @@ export async function searchFolders(
     .from(documents)
     .where(
       and(
-        context.scanScopeWhere(documents),
+        context.documentScopeWhere(),
         eq(documents.fileType, DOCUMENT_FOLDER_TYPE),
         sql`(${documents.title} @@@ ${bm25Query} OR ${documents.slug} @@@ ${bm25Query} OR ${documents.description} @@@ ${bm25Query})`,
       ),
@@ -112,7 +113,7 @@ export async function searchPages(
     .from(documents)
     .where(
       and(
-        context.scanScopeWhere(documents),
+        context.documentScopeWhere(),
         eq(documents.fileType, 'custom/document'),
         sql`(${documents.title} @@@ ${bm25Query} OR ${documents.slug} @@@ ${bm25Query} OR ${documents.content} @@@ ${bm25Query})`,
       ),
@@ -191,7 +192,7 @@ export async function searchKnowledgeBaseDocuments(
   const { db } = context;
   const matchClause = sql`(${documents.title} @@@ ${bm25Query} OR ${documents.slug} @@@ ${bm25Query} OR ${documents.content} @@@ ${bm25Query})`;
   const folderClause = ne(documents.fileType, DOCUMENT_FOLDER_TYPE);
-  const userClause = buildWorkspaceWhere(context.scope, documents);
+  const userClause = buildDocumentReadableWhere(db, context.scope);
 
   const inlineRowsPromise = db
     .select({

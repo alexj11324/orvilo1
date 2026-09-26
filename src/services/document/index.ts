@@ -142,6 +142,7 @@ export class DocumentService {
 
   async queryDocuments(params?: {
     current?: number;
+    excludeTeamDocuments?: boolean;
     fileTypes?: string[];
     pageSize?: number;
     sourceTypes?: string[];
@@ -185,6 +186,7 @@ export class DocumentService {
   async getPageDocuments(pageSize: number = 20): Promise<DocumentItem[]> {
     const result = await this.queryDocuments({
       current: 0,
+      excludeTeamDocuments: true,
       fileTypes: PAGE_DOCUMENT_FILE_TYPES,
       pageSize,
       sourceTypes: PAGE_DOCUMENT_SOURCE_TYPES,

@@ -17,6 +17,7 @@ import {
   topics,
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildDocumentReadableWhere } from '../utils/documentAccess';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
@@ -232,7 +233,7 @@ export class RecentModel {
         requestedTypes && !requestedTypes.has('document')
           ? sql`false`
           : and(
-              buildWorkspaceWhere(scope, documents),
+              buildDocumentReadableWhere(this.db, scope),
               mineDocumentWhere,
               not(inArray(documents.sourceType, TOOL_DOCUMENT_SOURCE_TYPES)),
               isNull(documents.knowledgeBaseId),

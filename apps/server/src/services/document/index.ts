@@ -131,7 +131,8 @@ export class DocumentService {
     rawData?: string;
     slug?: string;
     title: string;
-    visibility?: 'private' | 'public';
+    teamId?: string;
+    visibility?: 'private' | 'public' | 'team';
   }): Promise<DocumentItem> {
     const {
       content,
@@ -142,6 +143,7 @@ export class DocumentService {
       knowledgeBaseId,
       parentId,
       slug,
+      teamId,
       visibility,
     } = params;
 
@@ -154,7 +156,16 @@ export class DocumentService {
     // parent documents remain navigation-only and do not pass visibility or
     // ACL to children. Personal mode leaves it undefined — the ownership
     // filter ignores the column there.
-    let resolvedVisibility: 'private' | 'public' | undefined = visibility;
+    let resolvedVisibility: 'private' | 'public' | 'team' | undefined = visibility;
+    if (
+      (teamId && (visibility !== 'team' || knowledgeBaseId || parentId)) ||
+      (visibility === 'team' && !teamId)
+    ) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Team documents must be standalone team-visible Pages',
+      });
+    }
     if (this.workspaceId && knowledgeBaseId) {
       const knowledgeBase = await this.knowledgeBaseModel.findById(
         knowledgeBaseId,
@@ -166,6 +177,12 @@ export class DocumentService {
       resolvedVisibility = knowledgeBase.visibility;
     }
     if (!resolvedVisibility && this.workspaceId) resolvedVisibility = 'private';
+    if (knowledgeBaseId && resolvedVisibility === 'team') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Team documents cannot be in a library',
+      });
+    }
 
     let fileId: string | null = null;
 
@@ -181,7 +198,9 @@ export class DocumentService {
           parentId,
           size: totalCharCount,
           url: `internal://document/placeholder`, // Placeholder URL
-          ...(resolvedVisibility ? { visibility: resolvedVisibility } : {}),
+          ...(resolvedVisibility && resolvedVisibility !== 'team'
+            ? { visibility: resolvedVisibility }
+            : {}),
         },
         false, // Do not insert to global files
       );
@@ -205,6 +224,7 @@ export class DocumentService {
       pages: undefined,
       parentId,
       slug,
+      teamId,
       source: 'document',
       sourceType: 'api',
       title,
@@ -277,6 +297,7 @@ export class DocumentService {
    */
   async queryDocuments(params?: {
     current?: number;
+    excludeTeamDocuments?: boolean;
     excludeKnowledgeBaseIds?: string[];
     fileTypes?: string[];
     pageSize?: number;
@@ -311,7 +332,8 @@ export class DocumentService {
     // Creator-only (private-visibility) documents never take a lease — see
     // isCollaborativeDocument. Refusing here keeps a stale client from minting
     // a lock the write guards would then trip over.
-    const doc = await this.documentModel.findById(id);
+    const doc = await this.documentModel.findWritableById(id);
+    if (!doc) throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot edit document' });
     if (!this.isCollaborativeDocument(doc))
       return { expiresAt: null, holderId: null, lockedByOther: false, ownerId: null };
 
@@ -352,7 +374,8 @@ export class DocumentService {
     // Private-visibility documents always read as unlocked (no lease can be
     // taken on them), so a viewer of a just-unpublished page is never stranded
     // read-only behind a leftover lease.
-    const doc = await this.documentModel.findById(id);
+    const doc = await this.documentModel.findWritableById(id);
+    if (!doc) throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot edit document' });
     if (!this.isCollaborativeDocument(doc))
       return { expiresAt: null, holderId: null, lockedByOther: false, ownerId: null };
     const holder = await this.editLockService.getActiveLock('document', id);
@@ -415,7 +438,8 @@ export class DocumentService {
 
     // Creator-only (private-visibility) documents have no collaborators to
     // serialize against — run without a lease, same as personal mode.
-    const targetDoc = await this.documentModel.findById(id);
+    const targetDoc = await this.documentModel.findWritableById(id);
+    if (!targetDoc) throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot edit document' });
     if (!this.isCollaborativeDocument(targetDoc)) {
       log('runWithDocumentLock skip: non-collaborative doc (id=%s userId=%s)', id, this.userId);
       return fn();
@@ -640,9 +664,15 @@ export class DocumentService {
         this.workspaceId,
       );
 
-      const currentDocument = await documentModel.findById(id);
+      const currentDocument = await documentModel.findWritableById(id);
       if (!currentDocument) {
         throw new Error(`Document not found: ${id}`);
+      }
+      if (currentDocument.visibility === 'team' && params.parentId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Team documents must remain standalone Pages',
+        });
       }
 
       // Optimistic-concurrency predicate for the client's CONFLICT recovery:

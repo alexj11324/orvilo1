@@ -41,8 +41,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   tabs: css`
     display: flex;
-    gap: 4px;
+    gap: 8px;
     align-items: center;
+    padding-inline: 8px;
 
     @container work-surface (max-width: 1000px) {
       padding-inline: 6px;

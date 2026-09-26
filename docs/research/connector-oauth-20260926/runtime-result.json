@@ -1,0 +1,32 @@
+{
+  "oauth": {
+    "callback": "success",
+    "connectorCount": 1,
+    "credentialsPersisted": true,
+    "identifier": "linear-mcp",
+    "status": "connected"
+  },
+  "outcome": "pass",
+  "readOnlyProbe": {
+    "hasNextPage": false,
+    "resultCount": 2,
+    "success": true,
+    "tool": "list_teams"
+  },
+  "sourceRevision": "469d3aa67e47d07f88938975ad727a634fc25b28",
+  "surface": "electron",
+  "tools": {
+    "create": 25,
+    "delete": 4,
+    "read": 38,
+    "total": 68,
+    "update": 1
+  },
+  "verification": {
+    "focusedLint": "pass",
+    "independentReview": "approve",
+    "serverTypeCheck": "unverified_node_heap_oom_exit_134",
+    "vitestFilesPassed": 3,
+    "vitestTestsPassed": 10
+  }
+}

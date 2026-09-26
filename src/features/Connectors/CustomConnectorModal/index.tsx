@@ -8,6 +8,7 @@ import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
 import { executeLegacyMigrationSave } from './legacyPluginMigration';
+import { waitForOAuthPopup } from './oauthPopup';
 
 interface CustomConnectorModalProps {
   connectorId?: string;
@@ -32,49 +33,6 @@ interface CustomConnectorModalProps {
    */
   presetPlugin?: OrviloToolCustomPlugin;
 }
-
-interface OAuthPopupResult {
-  error?: string;
-  status: 'success' | 'error' | 'dismissed';
-  synced?: boolean;
-}
-
-/**
- * Wait for an already-opened popup to report the OAuth result. The popup MUST be
- * opened synchronously from the user's click (see DevModal) and then navigated
- * to the authorize URL. The callback page posts a message before attempting
- * `window.close()`, so the message signal is reliable even when the browser
- * refuses to close a cross-origin-navigated popup.
- */
-const waitForOAuthPopup = (popup: Window, connectorId: string): Promise<OAuthPopupResult> =>
-  new Promise((resolve) => {
-    const cleanup = () => {
-      window.removeEventListener('message', onMessage);
-      clearInterval(timer);
-    };
-
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data;
-      if (!data || data.type !== 'orvilo-connector-oauth') return;
-      if (data.connectorId && data.connectorId !== connectorId) return;
-      cleanup();
-      resolve(
-        data.success
-          ? { status: 'success', synced: data.synced }
-          : { error: data.error, status: 'error' },
-      );
-    };
-
-    window.addEventListener('message', onMessage);
-
-    const timer = setInterval(() => {
-      if (popup.closed) {
-        cleanup();
-        resolve({ status: 'dismissed' });
-      }
-    }, 800);
-  });
 
 /** Drop empty key/value pairs a user may have left behind in an editor. */
 const cleanRecord = (record?: Record<string, string>): Record<string, string> | undefined => {

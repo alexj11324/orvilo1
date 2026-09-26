@@ -1,4 +1,6 @@
+import { toast } from '@lobehub/ui/base-ui';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useToolStore } from '@/store/tool';
@@ -10,11 +12,13 @@ import { useToolStore } from '@/store/tool';
  * in the request scope; a fetch that completes while the id is still
  * resolving returns personal-scope rows yet latches the init flags, so the
  * page would stay stale until something else refetches. Keying the effects on
- * the workspace id re-issues both fetches when the real scope lands — the
- * slice's in-scope guard already drops responses that resolve after a scope
- * change, so an extra run is safe.
+ * the workspace id re-issues both fetches when the real scope lands. A focus
+ * refresh also reconciles server-side OAuth callbacks completed in an external
+ * browser. The slice's in-scope guard already drops responses that resolve
+ * after a scope change, so an extra run is safe.
  */
 export const useScopeAwareConnectorFetch = () => {
+  const { t } = useTranslation('setting');
   const activeWorkspaceId = useActiveWorkspaceId();
   const fetchConnectors = useToolStore((s) => s.fetchConnectors);
   const fetchAgentBoundConnectors = useToolStore((s) => s.fetchAgentBoundConnectors);
@@ -26,4 +30,15 @@ export const useScopeAwareConnectorFetch = () => {
   useEffect(() => {
     fetchAgentBoundConnectors();
   }, [activeWorkspaceId, fetchAgentBoundConnectors]);
+
+  useEffect(() => {
+    const refetch = () => {
+      void Promise.all([fetchConnectors(), fetchAgentBoundConnectors()]).catch(() => {
+        toast.error(t('tools.mcpPreset.refreshFailed'));
+      });
+    };
+
+    window.addEventListener('focus', refetch);
+    return () => window.removeEventListener('focus', refetch);
+  }, [fetchAgentBoundConnectors, fetchConnectors, t]);
 };

@@ -138,9 +138,7 @@ const httpRoomPublisher = (gatewayUrl: string): RoomPublisher => {
     const version = raw === null ? null : Number(raw);
     if (version === null || !Number.isInteger(version) || version < requiredVersion) {
       const operation =
-        publish.kind === 'presence-visibility'
-          ? 'presence visibility control'
-          : `${publish.scope}-scoped kicks`;
+        publish.kind === 'kick' ? `${publish.scope}-scoped kicks` : 'presence visibility control';
       throw new Error(
         `gateway does not support ${operation} (protocol ${
           version === null ? `pre-v${requiredVersion}` : String(version)

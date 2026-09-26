@@ -204,7 +204,11 @@ export const getRoomPublisher = (): RoomPublisher => createRoomPublisher();
  * a production browser to a WebSocket on the user's own machine. Callers must
  * treat `null` as "collaboration unavailable", not as a URL to ship.
  */
-export const gatewayConnectUrl = (): string | null =>
-  process.env.COLLABORATION_GATEWAY_PUBLIC_URL ||
-  process.env.COLLABORATION_GATEWAY_URL ||
-  (process.env.NODE_ENV === 'development' ? 'ws://localhost:3012/collaboration' : null);
+export const gatewayConnectUrl = (): string | null => {
+  const url = process.env.COLLABORATION_GATEWAY_PUBLIC_URL || process.env.COLLABORATION_GATEWAY_URL;
+  // Only ws(s) endpoints are client-dialable: deployments also point
+  // COLLABORATION_GATEWAY_URL at the gateway's internal http base for
+  // publish-side traffic, and handing that to a browser is not a WebSocket.
+  if (url && /^wss?:\/\//.test(url)) return url;
+  return process.env.NODE_ENV === 'development' ? 'ws://localhost:3012/collaboration' : null;
+};

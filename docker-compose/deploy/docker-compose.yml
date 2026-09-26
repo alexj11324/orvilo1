@@ -37,10 +37,37 @@ services:
       - 'REDIS_PREFIX=orvilo'
       - 'REDIS_TLS=0'
       - 'HATCHET_WORKER_ENABLED=0'
+      # Presence/cursor rooms: the app publishes to the gateway over internal
+      # HTTP; browsers dial COLLABORATION_GATEWAY_PUBLIC_URL (wss). Without a
+      # public URL the app fails closed — collaboration stays off, no crash.
+      - 'COLLABORATION_GATEWAY_URL=http://collaboration-gateway:3012'
+      - 'COLLABORATION_GATEWAY_PUBLIC_URL=${COLLABORATION_GATEWAY_PUBLIC_URL:-}'
     env_file:
       - .env
     volumes:
       - 'fts-search-reindex-state:/app/.elasticsearch-reindex'
+    restart: always
+    networks:
+      - orvilo-network
+
+  collaboration-gateway:
+    image: ${ORVILO_IMAGE_TAG:-orvilo:local}
+    container_name: orvilo-collaboration-gateway
+    ports:
+      - '${COLLABORATION_GATEWAY_PORT:-3012}:3012'
+    environment:
+      - 'COLLABORATION_GATEWAY_PORT=3012'
+      # Same JWKS_KEY as the app: it verifies room tickets and internal publish
+      # tokens signed by the server. The gateway only imports the public part.
+      - 'JWKS_KEY=${JWKS_KEY}'
+    env_file:
+      - .env
+    entrypoint: ['/bin/node', '/app/collaboration-gateway/index.cjs']
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3012/health >/dev/null 2>&1 || exit 1']
+      interval: 10s
+      timeout: 3s
+      retries: 5
     restart: always
     networks:
       - orvilo-network

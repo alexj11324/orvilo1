@@ -65,6 +65,7 @@ COPY package.json pnpm-workspace.yaml ./
 COPY .npmrc ./
 COPY packages ./packages
 # workspace manifests must exist before pnpm i so --filter can resolve them
+COPY apps/collaboration-gateway/package.json ./apps/collaboration-gateway/package.json
 COPY apps/desktop/src/main/package.json ./apps/desktop/src/main/package.json
 COPY apps/share/package.json ./apps/share/package.json
 COPY apps/workbench/package.json ./apps/workbench/package.json
@@ -110,6 +111,11 @@ RUN pnpm exec esbuild scripts/pgSearchCleanup/index.ts --bundle --platform=node 
 # relative to its installed package directory.
 RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --external:@hatchet-dev/typescript-sdk --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
 
+# Standalone collaboration gateway (presence/cursor rooms) — pure TS, no native deps.
+# CJS like the fts scripts: ws is CommonJS, so an esm bundle would break its
+# dynamic `require` calls at boot.
+RUN pnpm exec esbuild apps/collaboration-gateway/src/index.ts --bundle --platform=node --format=cjs --outfile=/app/collaboration-gateway/index.cjs
+
 # Preserve SWC helpers referenced through pnpm virtual-store symlinks by Next.js.
 RUN mkdir -p /runtime-deps && cp -a node_modules/.pnpm/@swc+helpers@* /runtime-deps/
 
@@ -135,6 +141,7 @@ COPY --from=builder /app/fts-search-elasticsearch-sync.cjs /app/fts-search-elast
 COPY --from=builder /app/fts-search-ineligible-message-cleanup.cjs /app/fts-search-ineligible-message-cleanup.cjs
 COPY --from=builder /app/fts-search-pg-search-cleanup.cjs /app/fts-search-pg-search-cleanup.cjs
 COPY --from=builder /app/hatchet-worker /app/hatchet-worker
+COPY --from=builder /app/collaboration-gateway/index.cjs /app/collaboration-gateway/index.cjs
 
 # copy dependencies
 COPY --from=builder /deps/node_modules/.pnpm /app/node_modules/.pnpm

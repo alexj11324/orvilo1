@@ -16,6 +16,8 @@ import { today } from '@/utils/time';
 
 import type { NewUser, UserItem, UserSettingsItem } from '../schemas';
 import {
+  documentHistories,
+  documents,
   messages,
   nextauthAccounts,
   projects,
@@ -23,6 +25,8 @@ import {
   topics,
   users,
   userSettings,
+  works,
+  workspaces,
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { AGENT_TRANSFER_PENDING_OWNER_DELETE, AgentTransferJobModel } from './agentTransferJob';
@@ -472,6 +476,43 @@ export class UserModel {
     return db.transaction(async (tx) => {
       // Purge share-visitor topics authored by this user under any creator.
       await tx.delete(topics).where(eq(topics.senderId, id));
+      // Team Pages belong to the workspace, so deleting a non-owner creator
+      // must not let creator FKs cascade away the shared Page or its version
+      // history. Move only that retained team-owned state to the workspace's
+      // durable primary owner; personal and ordinary workspace documents keep
+      // their existing deletion behavior.
+      await tx.execute(sql`
+        UPDATE ${documentHistories}
+        SET "user_id" = ${workspaces.primaryOwnerId}
+        FROM ${documents}, ${workspaces}
+        WHERE ${documentHistories.userId} = ${id}
+          AND ${documentHistories.documentId} = ${documents.id}
+          AND ${documents.visibility} = 'team'
+          AND ${documents.workspaceId} = ${workspaces.id}
+          AND ${workspaces.primaryOwnerId} <> ${id}
+      `);
+      await tx.execute(sql`
+        UPDATE ${works}
+        SET "user_id" = ${workspaces.primaryOwnerId},
+            "updated_at" = now()
+        FROM ${documents}, ${workspaces}
+        WHERE ${works.userId} = ${id}
+          AND ${works.resourceType} = 'document'
+          AND ${works.resourceId} = ${documents.id}
+          AND ${documents.visibility} = 'team'
+          AND ${documents.workspaceId} = ${workspaces.id}
+          AND ${workspaces.primaryOwnerId} <> ${id}
+      `);
+      await tx.execute(sql`
+        UPDATE ${documents}
+        SET "user_id" = ${workspaces.primaryOwnerId},
+            "updated_at" = now()
+        FROM ${workspaces}
+        WHERE ${documents.userId} = ${id}
+          AND ${documents.visibility} = 'team'
+          AND ${documents.workspaceId} = ${workspaces.id}
+          AND ${workspaces.primaryOwnerId} <> ${id}
+      `);
       // Personal projects belong to the account: `projects.user_id` now
       // set-nulls on user delete so workspace projects survive, but personal
       // rows (workspace_id IS NULL) would otherwise linger ownerless with

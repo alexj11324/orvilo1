@@ -11,6 +11,7 @@ import { useConversationStore } from '../../store';
 import {
   calculateConversationSpacerHeight,
   CONVERSATION_SPACER_ID,
+  CONVERSATION_SPACER_TRANSITION_MS,
   getConversationSpacerScrollEffect,
   useConversationScroll,
 } from './useConversationScroll';
@@ -696,9 +697,22 @@ describe('useConversationScroll — pin behavior', () => {
       isSecondLastMessageFromUser: true,
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersToNextTimerAsync();
+    });
+    scrollToIndex.mockClear();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(CONVERSATION_SPACER_TRANSITION_MS - 1);
+    });
+    expect(result.current.spacerActive).toBe(true);
+    expect(scrollToIndex).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
     });
     expect(result.current.spacerActive).toBe(false);
+    expect(scrollToIndex).toHaveBeenCalledTimes(1);
+    expect(scrollToIndex).toHaveBeenLastCalledWith(2, { align: 'start', smooth: false });
     expect(scrollToBottom).not.toHaveBeenCalled();
   });
 

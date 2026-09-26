@@ -356,7 +356,7 @@ const usePinController = ({
   const pinRef = useRef<PinState>(null);
 
   const scrollToPinned = useCallback(
-    (reason: string) => {
+    (reason: string, smoothOverride?: boolean) => {
       const pin = pinRef.current;
       if (!pin) return;
 
@@ -366,7 +366,7 @@ const usePinController = ({
         return;
       }
 
-      const smooth = Date.now() - pin.sentAt < SEND_SCROLL_ANIMATION_WINDOW_MS;
+      const smooth = smoothOverride ?? Date.now() - pin.sentAt < SEND_SCROLL_ANIMATION_WINDOW_MS;
 
       diag(`scrollToPinned (${reason}) index=${pin.index} smooth=${smooth}`);
       // pin.index is a message index; the header slot row shifts virtua rows.
@@ -758,6 +758,13 @@ export const useConversationScroll = ({
     // Once the spacer has been seen mounted and is now gone, the pin window
     // closes — either we've reached the target or the user scrolled away.
     if (pin.seenActive && !mounted) {
+      // Removing the spacer lets virtua correct its offset for the shorter
+      // list. Preserve the pinned user row after that correction when the user
+      // disabled streaming auto-scroll; otherwise the viewport can fall back
+      // to the bottom and virtualize the user row out of view.
+      if (!autoScrollEnabled) {
+        scrollToPinned('spacer unmounted after activation', false);
+      }
       clearPin('spacer unmounted after activation');
       // The pin anchored the viewport to the user row for the whole stream,
       // keeping `atBottom` false — so AutoScroll's streaming follower never

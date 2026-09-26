@@ -78,7 +78,10 @@ Use Brave with a copy of the currently used Brave profile when comparing Orvilo 
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
 - Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
-- **GitHub API credentials (Devin sessions)**: `gh` is authenticated via `GH_TOKEN` read from `~/.devin/.devin-integration-gh-credentials` — this file is Devin's own token location, written by the platform for the Devin agent. Use `GH_TOKEN=$(awk '{print $2}' ~/.devin/.devin-integration-gh-credentials) gh <cmd> -R alexj11324/orvilo1`. Remotes point at the git proxy host, so always pass `-R alexj11324/orvilo1` (or run commands that don't derive the repo from the remote). The token is short-lived and refreshed by the platform — read it fresh per command, never copy it into files or logs.
+- **GitHub API credentials (Devin sessions)** — **DO NOT hunt for another token**: the only GitHub credential on a Devin machine is the platform-issued file below. Stop searching elsewhere; if an endpoint fails, report the permission gap instead of looking for a second credential.
+  - **File**: `~/.devin/.devin-integration-gh-credentials` (absolute path; line 1 = `github.com/<owner>` + space + token). `gh` is authenticated via `GH_TOKEN` read from it: `GH_TOKEN=$(awk '{print $2}' ~/.devin/.devin-integration-gh-credentials) gh <cmd> -R alexj11324/orvilo1`. Remotes point at the git proxy host, so always pass `-R alexj11324/orvilo1` (or run commands that don't derive the repo from the remote). The token is short-lived and refreshed by the platform — read it fresh per command, never copy it into files or logs.
+  - **Scope**: the `devin-ai-integration[bot]` GitHub App installation token — `contents`/`pull_requests` write (push, PRs, comments, merge-async), `actions`/`checks` **read only**. `actions:write` is **not** granted, so `POST .../dispatches`, `rerun-failed-jobs`, and `cancel` all 403 — those clicks are human-only; ask the user to rerun/dispatch in the GitHub UI or hand them a PAT.
+  - **Git protocol credentials** live separately in `~/.devin/.devin-integration-git-credentials` (`https://devin:<token>@git-manager.devin.ai`) — they authenticate the git proxy remote only, not the GitHub API.
 
 ### Cutting a Release
 

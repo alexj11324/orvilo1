@@ -103,7 +103,7 @@ const fileArmColumns = {
   uploaderUsername: sql<string | null>`${users.username}`.as('uploader_username'),
   url: f.url,
   userId: f.userId,
-  visibility: f.visibility,
+  visibility: sql<'private' | 'public' | 'team' | null>`${f.visibility}`.as('visibility'),
 };
 
 const fileArmSummaryColumns = (includeContentPreview: boolean) => ({
@@ -142,7 +142,7 @@ const documentArmColumns = {
   uploaderUsername: sql<string | null>`${users.username}`.as('uploader_username'),
   url: sql<string>`${d.source}`.as('url'),
   userId: d.userId,
-  visibility: d.visibility,
+  visibility: sql<'private' | 'public' | 'team' | null>`${d.visibility}`.as('visibility'),
 };
 
 const documentArmSummaryColumns = (includeContentPreview: boolean) => ({
@@ -182,7 +182,7 @@ interface KnowledgeRow {
   uploaderUsername: string | null;
   url: string | null;
   userId: string | null;
-  visibility: 'private' | 'public' | null;
+  visibility: 'private' | 'public' | 'team' | null;
 }
 
 /** Sort keys the client may pass, mapped to the UNION's output column names. */
@@ -225,7 +225,7 @@ export interface KnowledgeItem {
    * ignored). UI uses this together with `userId` to surface the lock icon
    * and the publish-to-workspace affordance.
    */
-  visibility?: 'private' | 'public' | null;
+  visibility?: 'private' | 'public' | 'team' | null;
 }
 
 /**

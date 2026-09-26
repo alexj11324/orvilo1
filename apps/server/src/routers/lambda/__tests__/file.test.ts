@@ -501,6 +501,32 @@ describe('fileRouter', () => {
       expect(mockFileModelCreate).not.toHaveBeenCalled();
     });
 
+    it('keeps a file uploaded under a team Page creator-private', async () => {
+      ({ caller } = createCallerWithCtx({ workspaceId: 'workspace-1' }));
+      mockDocumentModelFindById.mockResolvedValue({
+        id: 'team-page',
+        visibility: 'team',
+      });
+      mockFileModelCheckHash.mockResolvedValue({ isExist: false });
+      mockFileModelCreate.mockResolvedValue({ id: 'new-file-id' });
+
+      await caller.createFile({
+        fileType: 'text/plain',
+        hash: 'test-hash',
+        metadata: {},
+        name: 'team-note.txt',
+        parentId: 'team-page',
+        size: 100,
+        url: 'files/team-note.txt',
+      });
+
+      expect(mockFileModelCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ parentId: 'team-page', visibility: 'private' }),
+        true,
+        routerMocks.transactionClient,
+      );
+    });
+
     it('should return proxy URL format ${APP_URL}/f/:id', async () => {
       mockFileModelCheckHash.mockResolvedValue({ isExist: false });
       mockFileModelCreate.mockResolvedValue({ id: 'new-file-id' });

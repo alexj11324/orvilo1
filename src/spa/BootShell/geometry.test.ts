@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { useGlobalStore } from '@/store/global';
-import { INITIAL_STATUS } from '@/store/global/initialState';
+import { INITIAL_STATUS, type SystemStatus } from '@/store/global/initialState';
 
 import { readBootShellGeometry } from './geometry';
 
-const setStatus = (status: Partial<typeof INITIAL_STATUS>) =>
+const setStatus = (status: Partial<SystemStatus>) =>
   useGlobalStore.setState({ status: { ...INITIAL_STATUS, ...status } });
 
 beforeEach(() => {

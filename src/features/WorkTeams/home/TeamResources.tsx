@@ -408,7 +408,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
       {error && !data ? (
         <AsyncError error={error} variant="inline" onRetry={() => void refresh()} />
       ) : null}
-      {writeError && (
+      {writeError !== undefined && (
         <div className={styles.error}>
           <AsyncError error={writeError} variant="inline" onRetry={() => void refresh()} />
         </div>

@@ -1,5 +1,29 @@
 # Connector catalog and Linear MCP OAuth acceptance
 
+## Review remediation verification
+
+Source revision: `8a3ab61fd` on `fix/connector-oauth-entry`. The sanitized
+result is available in
+[`review-remediation-result.json`](./review-remediation-result.json).
+
+Focused failure injection verified three review fixes:
+
+1. A successful popup callback followed by a rejected connector-list refresh
+   remains an OAuth success and reports the refresh failure separately.
+2. Base and agent-bound connector responses are ordered within their captured
+   workspace scope, so a committed response from another scope cannot suppress
+   a valid response after switching back.
+3. A replacement DCR client remains in the single-use OAuth state until token
+   exchange succeeds. The callback promotes the pending client configuration in
+   the same database update as the new credentials; abandoned consent leaves
+   the active client untouched.
+
+The combined focused suite passed 23 tests across 5 files. Per-commit lint and
+format hooks passed, and an independent review found no release-blocking issue.
+These checks inject the failure and race conditions deterministically. The
+earlier real provider runtime result below remains the evidence for the Linear
+OAuth callback, tool sync, and read-only MCP call.
+
 ## Connected runtime acceptance
 
 Source revision: `469d3aa67e47d07f88938975ad727a634fc25b28` on

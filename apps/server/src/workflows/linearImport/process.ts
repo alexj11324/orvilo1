@@ -95,7 +95,10 @@ export const processLinearImportWorkflow = async (context: { requestPayload: unk
     });
     if (page.hasNextPage) {
       try {
-        await LinearImportWorkflow.trigger({ workspaceId, jobId });
+        await LinearImportWorkflow.trigger(
+          { workspaceId, jobId },
+          { workflowRunId: `linear-import:${jobId}:page:${updated.pagesProcessed + 1}` },
+        );
       } catch (error) {
         await model.failQueued(
           jobId,

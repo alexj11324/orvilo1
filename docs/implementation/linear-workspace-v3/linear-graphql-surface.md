@@ -17,6 +17,16 @@ the catalog can ask for — both were verified against the official schema
 - `Team.organization { id }` does exist and remains the authoritative org
   filter for teams (public/private/restricted visibility aside).
 - Members paginate through `organization { users(first:after:) { nodes } }`.
+- **Nested catalog connections must stay small.** Linear scores request cost
+  per query and multiplies nested `first:` arguments — `first: 100` on both
+  levels asks for tens of thousands of nodes and is rejected with
+  `Query too complex`. `NESTED_PAGE_SIZE` keeps inline pages cheap; the
+  per-item follow-up queries (`ListProjectTeams`, `ListTeamStates`,
+  `ListTeamCycles`) page through the remainder.
+- **`id: { eq: ... }` comparators take `ID`, not `String`.** Filter variables
+  in `issues(filter: { project|team: { id: { eq: $var } } })` must be declared
+  `$var: ID!` or Linear answers `used in position expecting type "ID"`.
+  Identifier arguments like `issue(id:)` and `team(id:)` still take `String`.
 
 Anything else the catalog selects — `projects`, `teams`, `team(id:)`,
 `issues(filter:)`, `Team.visibility/states/cycles`, `Cycle.startsAt/endsAt`,

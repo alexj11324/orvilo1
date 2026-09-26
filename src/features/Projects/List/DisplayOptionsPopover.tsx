@@ -38,6 +38,14 @@ import {
 } from './displayOptions';
 
 const styles = createStaticStyles(({ css }) => ({
+  toolbarAction: css`
+    width: 28px;
+    height: 28px;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 50%;
+
+    background: ${cssVar.colorBgContainer};
+  `,
   chip: css`
     cursor: pointer;
 
@@ -342,6 +350,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
     >
       <ActionIcon
         aria-label={t('list.display.options')}
+        className={styles.toolbarAction}
         icon={Settings2Icon}
         size="small"
         title={t('list.display.options')}

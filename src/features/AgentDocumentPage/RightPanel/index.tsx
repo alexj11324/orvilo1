@@ -12,7 +12,6 @@ import { isDesktop } from '@/const/version';
 import AgentDocumentsGroup from '@/features/Conversation/WorkingSidebar/ResourcesSection/AgentDocumentsGroup';
 import { appNavigate } from '@/features/Electron/navigation/appNavigate';
 import SideBarLayout from '@/features/NavPanel/SideBarLayout';
-import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useIsGatewayModeEnabled } from '@/helpers/gatewayMode';
@@ -102,7 +101,6 @@ const AgentDocumentSidebarContent = memo(() => {
         <Icon icon={ChevronLeftIcon} size={14} />
         {t('agentDocument.backToAgent', { name: agentTitle })}
       </a>
-      <ToggleLeftPanelButton />
     </Flexbox>
   );
 

@@ -63,12 +63,6 @@ export const systemStatus = (s: GlobalState) => s.status;
 // returns the floor and nothing downstream can tell the parity value was rejected.
 export const NAV_PANEL_MIN_WIDTH = 240;
 export const NAV_PANEL_MAX_WIDTH = 400;
-// Viewport width below which the nav panel auto-collapses into the header
-// toggle instead of pinning a fixed column.
-export const NAV_PANEL_AUTO_COLLAPSE_BELOW = 960;
-// Session flag marking that the current collapsed nav state was set by the
-// narrow-viewport auto-collapse (not by the user), so a wide relaunch restores.
-export const NAV_PANEL_AUTO_COLLAPSED_KEY = 'nav-panel-auto-collapsed';
 
 const normalizeNavPanelWidth = (width: number | string | undefined): number => {
   const parsed = typeof width === 'string' ? Number.parseInt(width) : width;
@@ -404,7 +398,7 @@ const homeGoalsCollapsed = (s: GlobalState): boolean => s.status.homeGoalsCollap
 const homeRecentsCount = (s: GlobalState): number => s.status.homeRecentsCount ?? 8;
 const homeTaskCount = (s: GlobalState): number => s.status.homeTaskCount ?? 8;
 const showRightPanel = (s: GlobalState) => s.status.showRightPanel;
-const showLeftPanel = (s: GlobalState) => s.status.showLeftPanel;
+const showLeftPanel = (_s: GlobalState) => true;
 const showPageAgentPanel = (s: GlobalState) => s.status.showPageAgentPanel;
 const showTaskAgentPanel = (s: GlobalState) => s.status.showTaskAgentPanel;
 const showTerminalPanel = (s: GlobalState) => s.status.showTerminalPanel;

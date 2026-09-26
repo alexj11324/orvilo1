@@ -27,6 +27,11 @@ describe('readBootShellGeometry', () => {
     expect(geometry.showLeftPanel).toBe(true);
   });
 
+  it('keeps the sidebar open in a shell with legacy collapsed status', () => {
+    setStatus({ showLeftPanel: false });
+    expect(readBootShellGeometry().showLeftPanel).toBe(true);
+  });
+
   it('clamps the panel width to the draggable range', () => {
     setStatus({ leftPanelWidth: 9999 });
     expect(readBootShellGeometry().navPanelWidth).toBe(400);

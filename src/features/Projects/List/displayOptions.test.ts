@@ -27,6 +27,8 @@ const pick = (record: Record<string, string>, key: string) => record[key];
 
 describe('normalizeProjectListDisplayOptions', () => {
   it('returns the defaults for empty or absent input', () => {
+    expect(DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS.orderBy).toBe('name');
+    expect(DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS.orderDirection).toBe('asc');
     expect(normalizeProjectListDisplayOptions(undefined)).toEqual(
       DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS,
     );
@@ -45,8 +47,12 @@ describe('normalizeProjectListDisplayOptions', () => {
     expect(options.layout).toBe('board');
     expect(options.orderDirection).toBe('desc');
     expect(options.grouping).toBe('none');
-    expect(options.orderBy).toBe('manual');
+    expect(options.orderBy).toBe('name');
     expect(options.showClosed).toBe('all');
+  });
+
+  it('respects a persisted manual ordering', () => {
+    expect(normalizeProjectListDisplayOptions({ orderBy: 'manual' }).orderBy).toBe('manual');
   });
 
   it('persists the timeline layout once the surface exists (T6)', () => {

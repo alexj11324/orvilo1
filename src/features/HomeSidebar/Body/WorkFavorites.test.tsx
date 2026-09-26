@@ -1,11 +1,34 @@
 import { AccordionRoot } from '@lobehub/ui/base-ui';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import WorkFavorites from './WorkFavorites';
 
 const mocks = vi.hoisted(() => ({
   favorites: [] as { targetId: string; targetType: string }[],
+  reorder: vi.fn(),
+}));
+
+vi.mock('@dnd-kit/core', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  DndContext: ({
+    children,
+    onDragEnd,
+  }: {
+    children: ReactNode;
+    onDragEnd: (event: { active: { id: string }; over: { id: string } }) => void;
+  }) => (
+    <div>
+      <button
+        data-testid="drop-first-on-last"
+        onClick={() =>
+          onDragEnd({ active: { id: 'task:favorite-0' }, over: { id: 'task:favorite-6' } })
+        }
+      />
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -29,13 +52,17 @@ vi.mock('@/libs/swr', () => ({
   useClientDataSWR: () => ({ data: { data: mocks.favorites } }),
 }));
 
+vi.mock('@/services/workAttention', () => ({
+  workAttentionService: {
+    favoriteList: vi.fn(),
+    favoriteReorder: mocks.reorder,
+    favoriteUnpin: vi.fn(),
+  },
+}));
+
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: unknown) => unknown) =>
     selector({ status: {}, updateSystemStatus: vi.fn() }),
-}));
-
-vi.mock('./AllFavoritesDrawer', () => ({
-  default: () => null,
 }));
 
 vi.mock('./FavoriteRow', () => ({
@@ -47,6 +74,7 @@ vi.mock('./FavoriteRow', () => ({
 afterEach(() => {
   cleanup();
   mocks.favorites = [];
+  mocks.reorder.mockReset();
 });
 
 describe('WorkFavorites', () => {
@@ -76,5 +104,52 @@ describe('WorkFavorites', () => {
 
     expect(screen.getByTestId('favorite-view-1')).toBeInTheDocument();
     expect(screen.getByTestId('favorite-project-1')).toBeInTheDocument();
+  });
+
+  it('renders every favorite inline without an overflow drawer or More row', () => {
+    mocks.favorites = Array.from({ length: 7 }, (_, index) => ({
+      targetId: `favorite-${index}`,
+      targetType: 'task',
+    }));
+
+    render(
+      <AccordionRoot value={['favorites']}>
+        <WorkFavorites itemKey="favorites" />
+      </AccordionRoot>,
+    );
+
+    expect(screen.getAllByTestId(/^favorite-favorite-/)).toHaveLength(7);
+    expect(screen.queryByText('more')).not.toBeInTheDocument();
+    expect(screen.queryByText('navPanel.manageFavorites')).not.toBeInTheDocument();
+  });
+
+  it('persists a sidebar drop using the full ordered favorite list', async () => {
+    mocks.favorites = Array.from({ length: 7 }, (_, index) => ({
+      rank: index,
+      targetId: `favorite-${index}`,
+      targetType: 'task',
+      version: index + 1,
+    }));
+    mocks.reorder.mockResolvedValue({ success: true });
+
+    render(
+      <AccordionRoot value={['favorites']}>
+        <WorkFavorites itemKey="favorites" />
+      </AccordionRoot>,
+    );
+    fireEvent.click(screen.getByTestId('drop-first-on-last'));
+
+    await waitFor(() => expect(mocks.reorder).toHaveBeenCalledOnce());
+    expect(
+      mocks.reorder.mock.calls[0][0].items.map((item: { targetId: string }) => item.targetId),
+    ).toEqual([
+      'favorite-1',
+      'favorite-2',
+      'favorite-3',
+      'favorite-4',
+      'favorite-5',
+      'favorite-6',
+      'favorite-0',
+    ]);
   });
 });

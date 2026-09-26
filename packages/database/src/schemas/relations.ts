@@ -3,7 +3,7 @@ import { index, pgTable, primaryKey, text, uuid, varchar } from 'drizzle-orm/pg-
 
 import { createdAt } from './_helpers';
 import { actionApprovals } from './actionApproval';
-import { agents, agentsFiles, agentsKnowledgeBases } from './agent';
+import { agents } from './agent';
 import {
   agentEvalBenchmarks,
   agentEvalDatasets,
@@ -11,6 +11,7 @@ import {
   agentEvalRunTopics,
   agentEvalTestCases,
 } from './agentEvals';
+import { agentsFiles, agentsKnowledgeBases } from './agentResource';
 import { agentShares } from './agentShare';
 import { asyncTasks } from './asyncTask';
 import { chatGroups, chatGroupsAgents } from './chatGroup';

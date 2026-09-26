@@ -33,12 +33,12 @@ import {
   projectAgents,
   projectCompletionReviews,
   projectDependencies,
-  projectKnowledgeBases,
   projectLabelBindings,
   projectLabels,
   projectMilestones,
   projects,
 } from '../schemas/project';
+import { projectKnowledgeBases } from '../schemas/projectKnowledgeBase';
 import { projectLinks } from '../schemas/projectLink';
 import { projectMembers } from '../schemas/projectMember';
 import { projectUpdates } from '../schemas/projectUpdate';

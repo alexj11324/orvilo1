@@ -827,6 +827,30 @@ describe('execAcpBuiltinTool', () => {
         }
       });
 
+      it('SA02-A: preserves the pre-grant scope hash for non-GitHub approvals', () => {
+        const scope = gateScope();
+        const legacyHash = sha256Hex(
+          stableStringify({
+            agentId: scope.agentId ?? null,
+            apiName: scope.apiName,
+            argsHash: scope.argsHash,
+            authRevision: scope.authRevision ?? null,
+            connectorId: scope.connectorId ?? null,
+            executionGeneration: scope.executionGeneration ?? null,
+            identifier: scope.identifier,
+            kind: scope.kind,
+            operationId: scope.operationId,
+            pluginInstallId: scope.pluginInstallId ?? null,
+            schemaDigest: scope.schemaDigest ?? null,
+            toolCallId: scope.toolCallId,
+            userId: scope.userId,
+            workspaceId: scope.workspaceId,
+          }),
+        );
+
+        expect(toolApprovalScopeHash(scope)).toBe(legacyHash);
+      });
+
       it('SA02-B: a read-back approved that never wins the consume CAS is refused', async () => {
         // consume CAS keeps losing (a racing invocation owns the grant); the
         // read-back still classifies approved — the loop re-runs the full CAS

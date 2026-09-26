@@ -80,7 +80,7 @@ export const toolApprovalScopeHash = (scope: ToolApprovalScope): string =>
       connectorId: scope.connectorId ?? null,
       executionGeneration: scope.executionGeneration ?? null,
       identifier: scope.identifier,
-      grantRevision: scope.grantRevision ?? null,
+      ...(scope.grantRevision === undefined ? {} : { grantRevision: scope.grantRevision }),
       kind: scope.kind,
       operationId: scope.operationId,
       pluginInstallId: scope.pluginInstallId ?? null,

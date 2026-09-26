@@ -35,11 +35,13 @@ const styles = createStaticStyles(({ css }) => ({
  * on-demand panel cannot discard a draft or an unknown-outcome retry intent.
  */
 const ReviewSubmitPanel = memo<{
+  /** The viewer authored this PR — GitHub only allows them a COMMENT review. */
+  commentOnly?: boolean;
   composer: ReviewComposerController;
   disabled?: boolean;
   pendingReviewId: string | null;
   stale?: boolean;
-}>(({ composer, disabled, pendingReviewId, stale }) => {
+}>(({ commentOnly, composer, disabled, pendingReviewId, stale }) => {
   const { t } = useTranslation('common');
   const { body, busy, setBody, submitting, unknownIntent, verifying } = composer;
 
@@ -88,16 +90,18 @@ const ReviewSubmitPanel = memo<{
           {t('reviews.submitComment')}
         </Button>
         <Button
-          disabled={disabled || stale || busy}
+          disabled={disabled || stale || busy || commentOnly}
           loading={submitting === 'APPROVE'}
+          title={commentOnly ? t('reviews.authorReviewCommentOnly') : undefined}
           onClick={() => void composer.submit('APPROVE', body.trim())}
         >
           {t('reviews.submitApprove')}
         </Button>
         <Button
           danger
-          disabled={disabled || stale || busy}
+          disabled={disabled || stale || busy || commentOnly}
           loading={submitting === 'REQUEST_CHANGES'}
+          title={commentOnly ? t('reviews.authorReviewCommentOnly') : undefined}
           onClick={() => void composer.submit('REQUEST_CHANGES', body.trim())}
         >
           {t('reviews.submitRequestChanges')}

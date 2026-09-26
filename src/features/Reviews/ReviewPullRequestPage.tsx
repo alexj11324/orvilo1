@@ -44,6 +44,7 @@ import {
   type ReviewPagerPage,
   reviewPagerScope,
 } from './reviewPager';
+import { reviewSubmitScope } from './reviewsSurface';
 import {
   isReviewStale,
   reviewStaleKey,
@@ -513,8 +514,16 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
       ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
 
-  const openFile = (filename: string) => {
+  // The diff tree mounts lazily on first visit, then stays mounted so per-file
+  // comment drafts survive switching back to Overview.
+  const [diffMountedFor, setDiffMountedFor] = useState<string | null>(null);
+  const openDiff = () => {
+    setDiffMountedFor(reviewId);
     setDetailViewState({ id: reviewId, view: 'diff' });
+  };
+
+  const openFile = (filename: string) => {
+    openDiff();
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => scrollToFile(filename)));
   };
 
@@ -532,11 +541,12 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
   }, [allThreads]);
   const unattachedThreads = allThreads.filter((thread) => !thread.path);
 
-  const canSubmitReview = Boolean(
-    pullRequest?.reviewWritesEnabled &&
-    pullRequest.viewerLogin &&
-    pullRequest.viewerLogin.toLowerCase() !== pullRequest.author?.toLowerCase(),
-  );
+  const submitScope = reviewSubmitScope({
+    author: pullRequest?.author,
+    reviewWritesEnabled: pullRequest?.reviewWritesEnabled,
+    viewerLogin: pullRequest?.viewerLogin,
+  });
+  const canSubmitReview = submitScope !== 'none';
 
   return (
     <WorkSurface>
@@ -609,7 +619,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
           className={styles.modeButton}
           role={'tab'}
           type={'button'}
-          onClick={() => setDetailViewState({ id: reviewId, view: 'diff' })}
+          onClick={openDiff}
         >
           {t('reviews.diff')}
         </button>
@@ -658,6 +668,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
               {canSubmitReview ? (
                 <div className={styles.reviewComposer} hidden={!composer.open}>
                   <ReviewSubmitPanel
+                    commentOnly={submitScope === 'comment-only'}
                     composer={composer}
                     disabled={writeDisabled}
                     pendingReviewId={pullRequest.reviewSession.pendingReviewId}
@@ -665,13 +676,15 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                   />
                 </div>
               ) : null}
-              {activeView === 'overview' ? (
+              {/* Keep both views mounted — unmounting discards in-progress
+                  comment drafts inside file cards and thread replies. */}
+              <div hidden={activeView !== 'overview'}>
                 <ReviewOverview
                   files={allFiles}
                   hasMoreFiles={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
                   pullRequest={pullRequest}
                   onFileSelect={openFile}
-                  onViewMoreFiles={() => setDetailViewState({ id: reviewId, view: 'diff' })}
+                  onViewMoreFiles={openDiff}
                 >
                   {unattachedThreads.length + allReviews.length > 0 ? (
                     <Flexbox gap={8} style={{ marginBlockStart: 32 }}>
@@ -778,65 +791,69 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                     </div>
                   ) : null}
                 </ReviewOverview>
-              ) : (
-                <Flexbox className={styles.diffBody} gap={12}>
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text weight={500}>
-                      {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
-                    </Text>
-                    <Flexbox flex={1} />
-                    <Segmented
-                      size={'small'}
-                      value={viewMode}
-                      options={[
-                        { label: t('reviews.viewSplit'), value: 'split' },
-                        { label: t('reviews.viewUnified'), value: 'unified' },
-                      ]}
-                      onChange={(value) => setViewMode(value as 'split' | 'unified')}
+              </div>
+              <div hidden={activeView !== 'diff'}>
+                {diffMountedFor === reviewId ? (
+                  <Flexbox className={styles.diffBody} gap={12}>
+                    <Flexbox horizontal align={'center'} gap={8}>
+                      <Text weight={500}>
+                        {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
+                      </Text>
+                      <Flexbox flex={1} />
+                      <Segmented
+                        size={'small'}
+                        value={viewMode}
+                        options={[
+                          { label: t('reviews.viewSplit'), value: 'split' },
+                          { label: t('reviews.viewUnified'), value: 'unified' },
+                        ]}
+                        onChange={(value) => setViewMode(value as 'split' | 'unified')}
+                      />
+                    </Flexbox>
+                    {allFiles.map((file) => (
+                      <Flexbox gap={8} key={file.filename}>
+                        <ReviewFileCard
+                          file={file}
+                          viewMode={viewMode}
+                          writeDisabled={writeDisabled}
+                          onComment={addFileComment}
+                        />
+                        {(threadsByFile.get(file.filename) ?? []).map((thread) => (
+                          <ReviewThreadCard
+                            key={thread.id}
+                            stale={stale}
+                            thread={thread}
+                            writeDisabled={writeDisabled}
+                            onReply={replyToThread}
+                            onLoadMoreComments={(threadId, cursor) =>
+                              loadMore('comments', cursor, threadId)
+                            }
+                          />
+                        ))}
+                      </Flexbox>
+                    ))}
+                    <CollectionFooter
+                      error={filesMore.loadMoreError}
+                      hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
+                      loaded={allFiles.length}
+                      total={activePager.meta.files?.total ?? pullRequest.files.total}
+                      onRetry={filesMore.retryLoadMore}
+                      onLoadMore={
+                        (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
+                          ? () =>
+                              filesMore.runLoadMore(() =>
+                                loadMore(
+                                  'files',
+                                  (activePager.meta.files?.endCursor ??
+                                    pullRequest.files.endCursor)!,
+                                ),
+                              )
+                          : undefined
+                      }
                     />
                   </Flexbox>
-                  {allFiles.map((file) => (
-                    <Flexbox gap={8} key={file.filename}>
-                      <ReviewFileCard
-                        file={file}
-                        viewMode={viewMode}
-                        writeDisabled={writeDisabled}
-                        onComment={addFileComment}
-                      />
-                      {(threadsByFile.get(file.filename) ?? []).map((thread) => (
-                        <ReviewThreadCard
-                          key={thread.id}
-                          stale={stale}
-                          thread={thread}
-                          writeDisabled={writeDisabled}
-                          onReply={replyToThread}
-                          onLoadMoreComments={(threadId, cursor) =>
-                            loadMore('comments', cursor, threadId)
-                          }
-                        />
-                      ))}
-                    </Flexbox>
-                  ))}
-                  <CollectionFooter
-                    error={filesMore.loadMoreError}
-                    hasMore={activePager.meta.files?.hasMore ?? pullRequest.files.hasMore}
-                    loaded={allFiles.length}
-                    total={activePager.meta.files?.total ?? pullRequest.files.total}
-                    onRetry={filesMore.retryLoadMore}
-                    onLoadMore={
-                      (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)
-                        ? () =>
-                            filesMore.runLoadMore(() =>
-                              loadMore(
-                                'files',
-                                (activePager.meta.files?.endCursor ?? pullRequest.files.endCursor)!,
-                              ),
-                            )
-                        : undefined
-                    }
-                  />
-                </Flexbox>
-              )}
+                ) : null}
+              </div>
             </>
           ) : null}
         </div>

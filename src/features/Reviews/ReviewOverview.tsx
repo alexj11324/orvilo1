@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 
 import { checkSummaryVisual } from './ReviewChecksPanel';
+import { reviewBranchState } from './reviewsSurface';
 import type { PullRequestDetail, ReviewFile } from './types';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -165,10 +166,11 @@ const ReviewOverview = memo<{
   const { t } = useTranslation('common');
   const state = stateVisual(pullRequest);
   const checks = checkSummaryVisual(pullRequest.checks.summary.state);
+  const branchState = reviewBranchState(pullRequest.mergeStateStatus);
   const branchLabel =
-    pullRequest.mergeStateStatus === 'CLEAN' || pullRequest.mergeStateStatus === 'HAS_HOOKS'
-      ? t('reviews.branchUpToDate', { branch: pullRequest.baseRef ?? '' })
-      : pullRequest.mergeStateStatus === 'BEHIND'
+    branchState === 'no-conflicts'
+      ? t('reviews.branchNoConflicts', { branch: pullRequest.baseRef ?? '' })
+      : branchState === 'behind'
         ? t('reviews.branchBehind', { branch: pullRequest.baseRef ?? '' })
         : `${pullRequest.headRef ?? ''} → ${pullRequest.baseRef ?? ''}`;
 

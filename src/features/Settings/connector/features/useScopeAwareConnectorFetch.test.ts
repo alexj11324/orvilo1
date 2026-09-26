@@ -69,7 +69,9 @@ describe('useScopeAwareConnectorFetch', () => {
   });
 
   it('reports a failed return refresh instead of leaving an unhandled rejection', async () => {
-    const errorToast = vi.spyOn(toast, 'error').mockImplementation(() => undefined);
+    const errorToast = vi
+      .spyOn(toast, 'error')
+      .mockReturnValue({} as ReturnType<typeof toast.error>);
     renderHook(() => useScopeAwareConnectorFetch());
     vi.clearAllMocks();
     mocks.fetchConnectors.mockRejectedValueOnce(new Error('network unavailable'));

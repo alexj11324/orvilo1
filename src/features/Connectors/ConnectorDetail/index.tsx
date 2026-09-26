@@ -73,6 +73,9 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
     const updateToolPermission = useToolStore((s) => s.updateToolPermission);
 
     const isMcpConnector = connector?.sourceType === ConnectorSourceType.custom;
+    const isGitHubMcp =
+      (connector?.metadata?.githubMcp as { type?: string } | undefined)?.type ===
+      'github_user_connection';
     const isBuiltin = connector?.sourceType === ConnectorSourceType.builtin;
     const isMarketplace = connector?.sourceType === ConnectorSourceType.marketplace;
 
@@ -89,16 +92,18 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
     // Deleting/uninstalling revokes the user's authorization; spell out the
     // consequence. For an agent-owned connector it ALSO unpins the tool from
     // that agent (server-side, see `connector.delete`) — surface that instead.
-    const deleteConfirmContent = connector?.agentId
-      ? t('connector.deleteAgentConfirmContent', {
-          agent: agentTitle || t('connector.thisAgent', 'this agent'),
-          defaultValue:
-            'This connector belongs to the agent “{{agent}}”. Deleting it will also remove this tool from that agent.',
-        })
-      : t('connector.deleteAccountConfirmContent', {
-          defaultValue:
-            'This removes the connector and its authorization from your account. Any agent that uses it will need to be re-authorized afterwards.',
-        });
+    const deleteConfirmContent = isGitHubMcp
+      ? t('connector.deleteGitHubMcpConfirmContent')
+      : connector?.agentId
+        ? t('connector.deleteAgentConfirmContent', {
+            agent: agentTitle || t('connector.thisAgent', 'this agent'),
+            defaultValue:
+              'This connector belongs to the agent “{{agent}}”. Deleting it will also remove this tool from that agent.',
+          })
+        : t('connector.deleteAccountConfirmContent', {
+            defaultValue:
+              'This removes the connector and its authorization from your account. Any agent that uses it will need to be re-authorized afterwards.',
+          });
 
     const notifyActionError = useCallback(
       (error: unknown) => {
@@ -256,7 +261,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
               </Button>
             </ManageTooltip>
             {/* Edit button for custom MCP connectors — only http type has a server URL to edit */}
-            {isMcpConnector && connector?.mcpConnectionType === 'http' && (
+            {isMcpConnector && !isGitHubMcp && connector?.mcpConnectionType === 'http' && (
               <ManageTooltip title={manageTooltip}>
                 <Button
                   disabled={!canManage}
@@ -401,7 +406,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
           )}
 
           {/* Edit modal — only http connectors have a server URL to edit */}
-          {isMcpConnector && connector?.mcpConnectionType === 'http' && (
+          {isMcpConnector && !isGitHubMcp && connector?.mcpConnectionType === 'http' && (
             <CustomConnectorModal
               connectorId={connectorId}
               open={customModalOpen}

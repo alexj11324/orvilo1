@@ -64,6 +64,18 @@ const assertCanCreateUnderParent = async (
   ) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Parent document not found' });
   }
+  if (
+    meta.visibility === 'team' &&
+    !(await canViewDocumentContent({
+      db: ctx.serverDB,
+      meta,
+      resourceId: parentId,
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+    }))
+  ) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Parent document not found' });
+  }
   await assertContentsNotInRestrictedKnowledgeBase(ctx, [parentId]);
 };
 
@@ -270,6 +282,22 @@ export const documentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const document = await ctx.documentModel.findById(input.id);
       if (!document) throw new TRPCError({ code: 'NOT_FOUND', message: 'Document not found' });
+      if (document.visibility === 'team' && ctx.workspaceId) {
+        await assertCanPerformResourceAction({
+          action: 'delete',
+          db: ctx.serverDB,
+          meta: {
+            teamId: document.teamId,
+            userId: document.userId,
+            visibility: document.visibility,
+            workspaceId: document.workspaceId,
+          },
+          resourceId: document.id,
+          resourceType: 'document',
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        });
+      }
       await assertContentsNotInRestrictedKnowledgeBase(ctx, [input.id]);
       await assertDocumentsNotPinnedToTasks(ctx, [input.id]);
 
@@ -294,6 +322,23 @@ export const documentRouter = router({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'One or more documents were not found or are not accessible',
+        });
+      }
+      for (const document of documents) {
+        if (document.visibility !== 'team' || !ctx.workspaceId) continue;
+        await assertCanPerformResourceAction({
+          action: 'delete',
+          db: ctx.serverDB,
+          meta: {
+            teamId: document.teamId,
+            userId: document.userId,
+            visibility: document.visibility,
+            workspaceId: document.workspaceId,
+          },
+          resourceId: document.id,
+          resourceType: 'document',
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
         });
       }
       await assertContentsNotInRestrictedKnowledgeBase(ctx, ids);
@@ -440,6 +485,7 @@ export const documentRouter = router({
       z
         .object({
           current: z.number().optional(),
+          excludeTeamDocuments: z.boolean().optional(),
           fileTypes: z.array(z.string()).optional(),
           pageSize: z.number().max(100).optional(),
           sourceTypes: z.array(z.string()).optional(),
@@ -660,6 +706,7 @@ export const documentRouter = router({
           grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
             .workspacePermissionCodes,
           meta: {
+            teamId: doc.teamId,
             userId: doc.userId,
             visibility: doc.visibility,
             workspaceId: doc.workspaceId,
@@ -718,6 +765,7 @@ export const documentRouter = router({
         grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
           .workspacePermissionCodes,
         meta: {
+          teamId: doc.teamId,
           userId: doc.userId,
           visibility: doc.visibility,
           workspaceId: doc.workspaceId,

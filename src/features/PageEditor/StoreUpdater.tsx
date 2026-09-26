@@ -6,12 +6,12 @@ import { createStoreUpdater } from 'zustand-utils';
 import { hasMeaningfulEditorContent } from '@/libs/editor/hasMeaningfulEditorContent';
 import { documentHistoryQueueService } from '@/services/documentHistoryQueue';
 import { useDocumentStore } from '@/store/document';
-import { pageSelectors, usePageStore } from '@/store/page';
 import { pageAgentRuntime } from '@/store/tool/slices/builtin/executors/pageAgentRuntime';
 
 import { type PublicState } from './store';
 import { usePageEditorStore, useStoreApi } from './store';
 import { useDocumentLock } from './useDocumentLock';
+import { usePageDocumentMetadata } from './usePageDocumentMetadata';
 import { usePageDraft } from './usePageDraft';
 import { useResourceEvents } from './useResourceEvents';
 
@@ -52,19 +52,15 @@ const StoreUpdater = memo<StoreUpdaterProps>(
     // a single source of truth. Private-visibility pages are creator-only —
     // no other member can open them — so they stay outside the lock lifecycle
     // (mirrors DocumentService.isCollaborativeDocument on the server).
-    const isWorkspacePage = usePageStore((s) => {
-      const doc = pageSelectors.getDocumentById(pageId)(s);
-      return Boolean(doc?.workspaceId) && doc?.visibility !== 'private';
-    });
+    const page = usePageDocumentMetadata(pageId);
+    const isWorkspacePage = Boolean(page?.workspaceId) && page?.visibility !== 'private';
 
     // Every page that lives in a workspace, private drafts included. Naming a
     // member is about who exists in the workspace, not who can already open the
     // page — and a page created from the sidebar starts as 私人, so gating on
     // `isWorkspacePage` would hide `@` exactly where most pages begin. The
     // server still drops the ping for anyone without view access.
-    const isWorkspaceScopedPage = usePageStore((s) =>
-      Boolean(pageSelectors.getDocumentById(pageId)(s)?.workspaceId),
-    );
+    const isWorkspaceScopedPage = Boolean(page?.workspaceId);
 
     // Drive the collaborative edit lock for workspace pages
     useDocumentLock();

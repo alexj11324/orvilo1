@@ -1,8 +1,9 @@
-import { and, desc, eq, lt, or } from 'drizzle-orm';
+import { and, desc, eq, exists, lt, or, sql } from 'drizzle-orm';
 
 import type { DocumentHistoryItem, NewDocumentHistory } from '../schemas';
 import { documentHistories, documents } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildDocumentReadableWhere, buildDocumentWritableWhere } from '../utils/documentAccess';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export interface QueryDocumentHistoryParams {
@@ -23,10 +24,32 @@ export class DocumentHistoryModel {
     this.db = db;
   }
 
-  private ownership() {
+  private workspaceOwnership() {
     return buildWorkspaceWhere(
       { userId: this.userId, workspaceId: this.workspaceId },
       documentHistories,
+    );
+  }
+
+  private ownership(mode: 'read' | 'write' = 'read') {
+    const documentWhere =
+      mode === 'read'
+        ? buildDocumentReadableWhere(this.db, {
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          })
+        : buildDocumentWritableWhere(this.db, {
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          });
+    return and(
+      this.workspaceOwnership(),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(documents)
+          .where(and(eq(documents.id, documentHistories.documentId), documentWhere)),
+      ),
     );
   }
 
@@ -37,7 +60,10 @@ export class DocumentHistoryModel {
       .where(
         and(
           eq(documents.id, params.documentId),
-          buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, documents),
+          buildDocumentWritableWhere(this.db, {
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          }),
         ),
       )
       .limit(1);
@@ -57,17 +83,17 @@ export class DocumentHistoryModel {
   delete = async (id: string) => {
     return this.db
       .delete(documentHistories)
-      .where(and(eq(documentHistories.id, id), this.ownership()));
+      .where(and(eq(documentHistories.id, id), this.ownership('write')));
   };
 
   deleteByDocumentId = async (documentId: string) => {
     return this.db
       .delete(documentHistories)
-      .where(and(eq(documentHistories.documentId, documentId), this.ownership()));
+      .where(and(eq(documentHistories.documentId, documentId), this.ownership('write')));
   };
 
   deleteAll = async () => {
-    return this.db.delete(documentHistories).where(this.ownership());
+    return this.db.delete(documentHistories).where(this.workspaceOwnership());
   };
 
   findById = async (id: string): Promise<DocumentHistoryItem | undefined> => {

@@ -35,7 +35,7 @@ vi.mock('@/business/server/document-mention/notifyActivity', () => ({
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...((await importOriginal()) as object),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 vi.mock('@/database/models/rbac', () => ({
@@ -344,6 +344,46 @@ describe('documentRouter createDocument under a knowledge-base folder', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     expect(mocks.assertContentsNotInRestrictedKnowledgeBase).not.toHaveBeenCalled();
     expect(mocks.createDocument).not.toHaveBeenCalled();
+  });
+
+  it('rejects a private team Page as a parent when the caller cannot read it', async () => {
+    mocks.getResourceMeta.mockResolvedValue({
+      teamId: 'private-team',
+      userId: 'creator-1',
+      visibility: 'team',
+      workspaceId: 'ws-1',
+    });
+    mocks.canPerformResourceAction.mockResolvedValue(false);
+
+    await expect(
+      caller().createDocument({ parentId: 'team-page', title: 'Child' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      caller().createDocuments({
+        documents: [{ editorData: '{}', parentId: 'team-page', title: 'Child' }],
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(mocks.createDocument).not.toHaveBeenCalled();
+    expect(mocks.canPerformResourceAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'view',
+        resourceId: 'team-page',
+        resourceType: 'document',
+      }),
+    );
+  });
+
+  it('allows a readable team Page as a parent', async () => {
+    mocks.getResourceMeta.mockResolvedValue({
+      teamId: 'private-team',
+      userId: 'creator-1',
+      visibility: 'team',
+      workspaceId: 'ws-1',
+    });
+    mocks.canPerformResourceAction.mockResolvedValue(true);
+
+    await caller().createDocument({ parentId: 'team-page', title: 'Child' });
+    expect(mocks.createDocument).toHaveBeenCalled();
   });
 
   it('authorizes a move into a KB folder through the KB as well', async () => {

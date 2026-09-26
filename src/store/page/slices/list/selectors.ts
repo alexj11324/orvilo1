@@ -52,14 +52,13 @@ const getFilteredDocumentsLimited = (s: PageState): OrviloDocument[] => {
   return allDocs.slice(0, pageSize);
 };
 
-// Workspace-mode sidebar buckets: split filtered docs into "private" (creator
-// only) and "workspace-shared". Personal-mode `visibility` is meaningless — the
-// caller decides whether to render the flat list or the dual accordion.
+// Workspace-mode sidebar buckets: team documents live in Team Home resources,
+// not the workspace-shared Pages bucket. Personal mode renders a flat list.
 const getPrivateFilteredDocuments = (s: PageState): OrviloDocument[] =>
   getFilteredDocuments(s).filter((doc) => doc.visibility === 'private');
 
 const getWorkspaceFilteredDocuments = (s: PageState): OrviloDocument[] =>
-  getFilteredDocuments(s).filter((doc) => doc.visibility !== 'private');
+  getFilteredDocuments(s).filter((doc) => doc.visibility === 'public' || doc.visibility == null);
 
 // Bucket-scoped, sidebar-sized page slices — mirror the Limited helper for the
 // dual-accordion Pages sidebar so each bucket paginates independently.

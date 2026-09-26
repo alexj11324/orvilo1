@@ -2,6 +2,7 @@ import { isNotNull, sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -28,6 +29,7 @@ import {
   updatedAt,
 } from './_helpers';
 import { asyncTasks } from './asyncTask';
+import { teams } from './team';
 import { users } from './user';
 import { workspaces } from './workspace';
 
@@ -131,6 +133,8 @@ export const documents = pgTable(
     slug: varchar('slug', { length: 255 }).$defaultFn(() => randomSlug(3)),
 
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+    /** Team-owned Pages have a single ACL owner; placement in Team Home is separate. */
+    teamId: text('team_id').references(() => teams.id, { onDelete: 'restrict' }),
 
     /**
      * Visibility within the owning workspace. `public` (default) means every
@@ -142,7 +146,8 @@ export const documents = pgTable(
      * bidirectionally with the library. Ignored in personal mode where the row
      * is implicitly private to its owner.
      */
-    visibility: text('visibility', { enum: ['private', 'public'] })
+    visibility: text('visibility')
+      .$type<'private' | 'public' | 'team'>()
       .default('public')
       .notNull(),
 
@@ -168,6 +173,12 @@ export const documents = pgTable(
       table.workspaceId,
       table.visibility,
       table.userId,
+    ),
+    index('documents_workspace_team_idx').on(table.workspaceId, table.teamId),
+    check(
+      'documents_team_visibility_pair',
+      sql`(${table.visibility} = 'team' AND ${table.teamId} IS NOT NULL AND ${table.workspaceId} IS NOT NULL)
+        OR (${table.visibility} <> 'team' AND ${table.teamId} IS NULL)`,
     ),
     uniqueIndex('documents_slug_workspace_id_unique')
       .on(table.workspaceId, table.slug)

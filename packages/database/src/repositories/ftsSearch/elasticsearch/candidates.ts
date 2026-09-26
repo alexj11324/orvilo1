@@ -147,6 +147,7 @@ const buildScopeClauses = (
                 { bool: { must_not: [{ exists: { field: 'visibility' } }] } },
                 { term: { visibility: 'public' } },
                 { term: { user_id: scope.userId } },
+                ...(entity === 'documents' ? [{ term: { visibility: 'team' } }] : []),
               ],
             },
           },

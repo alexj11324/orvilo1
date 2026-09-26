@@ -75,7 +75,9 @@ export const activateGitHubMcpConnector = async (input: {
       return { connectorId, status: 'connected', toolCount };
     } catch (error) {
       await input.ctx.connectorModel.update(connectorId, {
-        credentials: input.existing.credentials,
+        credentials: input.existing.credentials
+          ? JSON.stringify(input.existing.credentials)
+          : input.existing.credentials,
         isEnabled: input.existing.isEnabled,
         mcpConnectionType: input.existing.mcpConnectionType,
         mcpServerUrl: input.existing.mcpServerUrl,

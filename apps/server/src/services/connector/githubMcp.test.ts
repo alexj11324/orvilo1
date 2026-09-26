@@ -224,7 +224,7 @@ describe('GitHub MCP provider connector', () => {
     expect(ctx.connectorModel.update.mock.calls[1]).toEqual([
       'connector-1',
       expect.objectContaining({
-        credentials: { token: 'legacy-pat', type: 'bearer' },
+        credentials: JSON.stringify({ token: 'legacy-pat', type: 'bearer' }),
         metadata: existing.metadata,
         status: 'connected',
       }),

@@ -23,6 +23,8 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 - **Heavy domain features**: When splitting a fat Viewer/Page into reusable pieces (page vs portal vs share vs micro-app), read the `compose-atoms` skill. Split on mountable capabilities, not visual sections, and do not hide unused work behind `readOnly` / `mode` flags.
 
+- **Implementation simplicity**: Apply Ponytail before code work: trace the affected flow, reuse existing code and platform features, then make the smallest correct change. Preserve the safety and verification requirements below. The repo marketplace pins the plugin, and the repo Codex config enables it for this project.
+
 ## Code Ownership
 
 For the full repository map or help locating a code layer, read the `project-overview` skill.

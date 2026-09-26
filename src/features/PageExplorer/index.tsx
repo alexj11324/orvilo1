@@ -25,7 +25,7 @@ interface PageExplorerProps {
 const PageExplorer = memo<PageExplorerProps>(({ pageId, header, fullWidthHeader }) => {
   // Get document title and emoji from PageStore
   const document = usePageDocumentMetadata(pageId);
-  const title = document?.title;
+  const title = document?.title ?? undefined;
   const emoji = document?.metadata?.emoji as string | undefined;
   const { updateEmoji, updateTitle } = usePageDocumentMetadataActions(pageId);
 

@@ -18,7 +18,8 @@ import type {
   NewPullRequestReviewReceipt,
   PullRequestReviewReceiptItem,
 } from '@/database/schemas/pullRequestReview';
-import { MarketService } from '@/server/services/market';
+import type { OrviloDatabase } from '@/database/type';
+import { getValidGitHubAccessToken } from '@/server/services/githubOAuth';
 
 import {
   aggregateChecks,
@@ -27,6 +28,7 @@ import {
   type NormalizedCheck,
   type RawCheckContext,
 } from './checks';
+import { createGitHubOAuthProxy } from './githubOAuthProxy';
 import {
   ADD_THREAD_MUTATION,
   CHECKS_PAGE_QUERY,
@@ -49,8 +51,8 @@ import {
 } from './snapshot';
 
 /**
- * Real PR review surface backed by the user's GitHub OAuth connection (Market
- * proxy). A pull request's canonical id is `gh:<host>:<owner>/<repo>#<number>`
+ * Real PR review surface backed by the user's GitHub App OAuth connection.
+ * A pull request's canonical id is `gh:<host>:<owner>/<repo>#<number>`
  * — it never depends on a local Task row, so a PR with no task link still lists
  * and completes review (F02).
  *
@@ -67,7 +69,7 @@ import {
  */
 
 const GITHUB_HOST = 'github.com';
-/** The Market transport speaks GitHub only — any other host is rejected here. */
+/** The OAuth transport speaks GitHub only — any other host is rejected here. */
 const SUPPORTED_REVIEW_HOSTS = new Set([GITHUB_HOST]);
 
 const QUEUE_PAGE_SIZE = 30;
@@ -618,8 +620,9 @@ interface GraphQLTransport {
   }) => Promise<unknown>;
 }
 
-/** Injectable clients — tests provide fakes; production uses Market. */
+/** Injectable clients — tests provide fakes; production uses the user's GitHub App grant. */
 export interface PullRequestReviewServiceDeps {
+  db?: OrviloDatabase;
   market?: GitHubMarketClient;
   /**
    * Durable store for write receipts (the `PullRequestReviewReceiptModel` in
@@ -811,30 +814,16 @@ export class PullRequestReviewService {
     if (this.deps.market && this.deps.transport) {
       return { market: this.deps.market, transport: this.deps.transport };
     }
-    const market = new MarketService({
-      userInfo: { userId: this.userId, workspaceId: this.workspaceId ?? undefined },
-    });
-    let status;
-    try {
-      status = await market.market.skills.getStatus('github');
-    } catch (error) {
-      // The probe only answers "is GitHub connected". When the market backend
-      // is absent or unreachable (self-hosted installs), a transport failure
-      // reads the same to the user as "not connected" — surface the connect
-      // path instead of an opaque provider error.
+    const accessToken = this.deps.db
+      ? await getValidGitHubAccessToken({ db: this.deps.db, userId: this.userId })
+      : null;
+    if (!accessToken) {
       throw new PullRequestReviewError(
         'GITHUB_NOT_CONNECTED',
-        `GitHub connection status could not be determined: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        'Connect your GitHub account in Reviews to load pull requests.',
       );
     }
-    if (!status.success || !status.connected) {
-      throw new PullRequestReviewError(
-        'GITHUB_NOT_CONNECTED',
-        'Connect GitHub in Settings → Integrations to review pull requests.',
-      );
-    }
+    const market = createGitHubOAuthProxy(accessToken);
     return {
       market,
       transport: createGitHubMarketTransport({ market }),

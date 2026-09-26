@@ -25,6 +25,12 @@ interface CustomConnectorModalProps {
   onClose: () => void;
   onEditSuccess?: () => void;
   open: boolean;
+  /**
+   * Create-mode seed (a curated hosted-MCP preset). When set the form opens
+   * pre-filled with the preset's identifier, endpoint and auth type; the user
+   * can still edit everything before saving.
+   */
+  presetPlugin?: OrviloToolCustomPlugin;
 }
 
 interface OAuthPopupResult {
@@ -95,7 +101,7 @@ const cleanRecord = (record?: Record<string, string>): Record<string, string> | 
  * - Clears credentials when the server URL changes
  */
 const CustomConnectorModal = memo<CustomConnectorModalProps>(
-  ({ open, onClose, connectorId, legacyPlugin, onEditSuccess }) => {
+  ({ open, onClose, connectorId, legacyPlugin, presetPlugin, onEditSuccess }) => {
     const createConnector = useToolStore((s) => s.createConnector);
     const deleteConnector = useToolStore((s) => s.deleteConnector);
     const updateConnector = useToolStore((s) => s.updateConnector);
@@ -150,9 +156,11 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
     //
     // Migration mode skips the fetch — the legacy `customParams.mcp` blob is
     // already in the shape DevModal expects, so we hand it through unchanged.
+    // Create mode simply hands through the optional preset seed.
     const editValue = useMemo((): OrviloToolCustomPlugin | undefined => {
       if (isMigrationMode) return legacyPlugin;
-      if (!isEditMode || !connector || editFetchedData === null) return undefined;
+      if (!isEditMode) return presetPlugin;
+      if (!connector || editFetchedData === null) return undefined;
 
       const c = connector as typeof connector & {
         mcpStdioConfig?: { args?: string[]; command?: string; env?: Record<string, string> };
@@ -199,7 +207,7 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
         identifier: connector.identifier,
         type: 'customPlugin' as const,
       };
-    }, [isEditMode, isMigrationMode, legacyPlugin, connector, editFetchedData]);
+    }, [isEditMode, isMigrationMode, legacyPlugin, presetPlugin, connector, editFetchedData]);
 
     const handleSave = async (
       value: OrviloToolCustomPlugin,

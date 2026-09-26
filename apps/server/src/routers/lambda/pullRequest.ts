@@ -9,6 +9,7 @@ import {
   PullRequestReviewError,
   PullRequestReviewService,
 } from '@/server/services/pullRequestReview';
+import { GitHubAuthorizationExpiredError } from '@/server/services/pullRequestReview/githubOAuthProxy';
 
 import { assertPullRequestReviewWriteEnabled } from './_helpers/pullRequestReviewWriteGate';
 
@@ -17,6 +18,7 @@ const reviewProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
   return opts.next({
     ctx: {
       pullRequestReviews: new PullRequestReviewService(ctx.userId, ctx.workspaceId ?? undefined, {
+        db: ctx.serverDB,
         receipts: new PullRequestReviewReceiptModel(ctx.serverDB),
       }),
     },
@@ -54,6 +56,9 @@ const observedHeadShaSchema = z
 const snapshotIdSchema = z.string().min(8).max(128).optional();
 
 const mapError = (procedure: string, error: unknown): never => {
+  if (error instanceof GitHubAuthorizationExpiredError) {
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+  }
   if (error instanceof PullRequestReviewError) {
     if (error.code === 'GITHUB_NOT_CONNECTED') {
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });

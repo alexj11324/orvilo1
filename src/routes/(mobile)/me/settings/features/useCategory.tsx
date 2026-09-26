@@ -1,5 +1,5 @@
+import { McpIcon } from '@lobehub/ui/icons';
 import {
-  Blocks,
   BrainCircuit,
   ChartColumnBigIcon,
   Coins,
@@ -110,7 +110,7 @@ export const useCategory = (): CategoryGroup[] => {
 
     const tools: CategoryItem[] = [
       makeItem({ icon: TagIcon, key: SettingsTabs.Labels, label: t('setting:tab.labels') }),
-      makeItem({ icon: Blocks, key: SettingsTabs.Connector, label: t('setting:tab.connector') }),
+      makeItem({ icon: McpIcon, key: SettingsTabs.Connector, label: t('setting:tab.connector') }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
     // The API Key entry used to appear twice — once here under dev mode and once

@@ -1787,6 +1787,24 @@ table fts_search_sync_outbox {
   }
 }
 
+table github_user_connections {
+  user_id text [pk, not null]
+  client_id text [not null]
+  github_user_id text [not null]
+  grant_revision uuid [not null, default: `gen_random_uuid()`]
+  login text [not null]
+  avatar_url text
+  access_token_ciphertext text [not null]
+  refresh_token_ciphertext text
+  access_token_expires_at "timestamp with time zone"
+  refresh_token_expires_at "timestamp with time zone"
+  token_version integer [not null, default: 0]
+  refresh_owner text
+  refresh_lease_until "timestamp with time zone"
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+}
+
 table goals {
   id text [pk, not null]
   user_id text [not null]

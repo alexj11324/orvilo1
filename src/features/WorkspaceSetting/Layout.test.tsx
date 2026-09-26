@@ -32,7 +32,6 @@ vi.mock('./hooks/useCategory', () => ({
         { key: 'statistics', label: 'Statistics' },
         { key: 'storage', label: 'Storage' },
         { key: 'usage', label: 'Usage' },
-        { key: 'audit-log', label: 'Audit Log' },
         { key: 'profile', label: 'Jane Doe' },
         { key: 'appearance', label: 'Appearance' },
         { key: 'hotkey', label: 'Hotkeys' },
@@ -84,7 +83,7 @@ describe('WorkspaceSettingsContentLayout', () => {
     expect(html).toContain('<main><div>Page content</div></main>');
   });
 
-  it.each(['audit-log', 'advanced'])('keeps the %s tab on the content-only layout', (tab) => {
+  it.each(['advanced'])('keeps the %s tab on the content-only layout', (tab) => {
     const html = renderLayout(tab);
 
     expect(html).not.toContain('<header>');

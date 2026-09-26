@@ -39,7 +39,6 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   // mirrored under the workspace so members can reach them without leaving
   // the workspace.
   'appearance',
-  'audit-log',
   'billing',
   'budget',
   'connector',

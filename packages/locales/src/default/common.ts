@@ -810,6 +810,9 @@ export default {
   'reviews.connectGitHub':
     'Connect GitHub to review pull requests. A disconnected account is not an empty queue.',
   'reviews.connectGitHubAction': 'Connect GitHub',
+  'reviews.connectGitHubFailed': 'Could not start GitHub authorization. Try again.',
+  'reviews.connectGitHubInBrowser': 'Connect GitHub in browser',
+  'reviews.connectGitHubWaiting': 'Waiting for GitHub authorization…',
   'reviews.conversation': 'Conversation',
   'reviews.decision.approved': 'Approved',
   'reviews.decision.changesRequested': 'Changes requested',

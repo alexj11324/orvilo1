@@ -56,6 +56,7 @@ import { expertiseRouter } from './expertise';
 import { exporterRouter } from './exporter';
 import { fileRouter } from './file';
 import { followUpActionRouter } from './followUpAction';
+import { githubOAuthRouter } from './githubOAuth';
 import { goalRouter } from './goal';
 import { homeRouter } from './home';
 import { importerRouter } from './importer';
@@ -134,6 +135,7 @@ export const lambdaRouter = router({
   file: fileRouter,
   followUpAction: followUpActionRouter,
   goal: goalRouter,
+  githubOAuth: githubOAuthRouter,
   group: agentGroupRouter,
   healthcheck: publicProcedure.query(() => "i'm live!"),
   home: homeRouter,

@@ -1441,6 +1441,7 @@ export default {
   'skillGroup.communityTools': 'Community Tools',
   'skillGroup.customConnectors': 'Custom Connectors',
   'skillGroup.customSkills': 'Custom Skills',
+  'skillGroup.mcp': 'MCP',
   'skillStore.tabs.community': 'Community',
   'skillStore.tabs.custom': 'Custom',
   'skillStore.tabs.orvilo': 'Orvilo',

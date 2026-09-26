@@ -34,10 +34,26 @@ See `docs/research/linear/runtime-acceptance/team-home-20260924/README.md`.
 Focused checks passed: Team Home navigation tests (6), workspace settings and
 desktop router tests (79), mobile router tests (21), plus scoped lint.
 The production Vite SPA build succeeded and its entry HTML links the CSS
-containing ReUI utility rules. This proves packaging, not visual appearance.
+containing ReUI utility rules.
 
-An authenticated deployed Web/Electron comparison is still required before
-claiming the importer and Team Home visually accepted. The browser session
-available during this fix was signed out. PR #282 remains draft until that
-runtime check and its exact-head CI gates pass. The separate Linear catalog
-GraphQL correction is owned by PR #281.
+On 2026-09-26, commit `233ea32af5302131bf8a34be2ade604ba0ed9f08`
+was run in Electron with the populated local seed workspace at 2400 × 1600.
+The local seed user was authenticated in both renderer and backend
+(`user.getUserState` returned 200). CDP navigation opened
+`app://renderer/ws-useragenttes/settings/imports/linear`. The step list,
+project field and footer rendered with their intended styles; a real CDP mouse
+click opened a styled list of five projects. The settings sidebar had only the
+Imports entry, and loading the old `/settings/linear` URL redirected to
+`/settings/imports/linear`. The populated Parity Test Team overview rendered
+without the Recent issues block.
+
+Screenshots from that run:
+
+- [Linear importer](runtime-acceptance/import-ui-team-home-20260926/orvilo-linear-import-pr282.png)
+- [Open project picker](runtime-acceptance/import-ui-team-home-20260926/orvilo-linear-import-picker-pr282.png)
+- [Team overview](runtime-acceptance/import-ui-team-home-20260926/orvilo-team-home-pr282.png)
+
+This local server had no Linear OAuth configuration, so the screenshot shows
+the configuration warning and does not prove later importer steps or a completed
+import. PR #282 remains draft while its CI gates are red; the separate Linear
+catalog GraphQL correction is owned by PR #281.

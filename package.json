@@ -75,6 +75,8 @@
     "dev": "tsx scripts/devStartupSequence.mts",
     "dev:bun": "bun --bun next dev -p 3010",
     "dev:desktop": "cd apps/desktop && pnpm run dev",
+    "dev:desktop:login-local": "node scripts/dev/electron-seed-login.mjs",
+    "dev:desktop:skip-login": "node scripts/dev/desktop-with-seed-login.mjs",
     "dev:docker": "docker compose -f docker-compose/dev/docker-compose.yml up -d --wait postgresql redis rustfs searxng",
     "dev:docker:down": "docker compose -f docker-compose/dev/docker-compose.yml down",
     "dev:docker:reset": "docker compose -f docker-compose/dev/docker-compose.yml down -v && rm -rf docker-compose/dev/data && npm run dev:docker && pnpm db:migrate",

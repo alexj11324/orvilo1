@@ -222,16 +222,11 @@ describe('normalizeLinearIssue', () => {
 
   it('exposes the installed organization catalog including private teams for the worker policy', async () => {
     const request = vi.fn().mockImplementation(async (_token, body: { query: string }) => {
-      if (body.query.includes('ListOrganizations')) {
+      if (body.query.includes('ListOrganization ')) {
         return {
           data: {
             data: {
-              organizations: {
-                nodes: [
-                  { id: 'org-1', name: 'Installed', urlKey: 'installed' },
-                  { id: 'org-2', name: 'Other', urlKey: 'other' },
-                ],
-              },
+              organization: { id: 'org-1', name: 'Installed', urlKey: 'installed' },
             },
           },
           status: 200,
@@ -338,6 +333,13 @@ describe('normalizeLinearIssue', () => {
         organizationId: 'org-1',
         state: null,
         teamIds: ['team-public'],
+      },
+      {
+        id: 'project-2',
+        name: 'Other project',
+        organizationId: 'org-1',
+        state: null,
+        teamIds: [],
       },
     ]);
     await expect(provider.listTeams()).resolves.toEqual([

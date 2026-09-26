@@ -840,7 +840,7 @@ describe('execAcpBuiltinTool', () => {
             identifier: scope.identifier,
             kind: scope.kind,
             operationId: scope.operationId,
-            pluginInstallId: scope.pluginInstallId ?? null,
+            pluginInstallId: null,
             schemaDigest: scope.schemaDigest ?? null,
             toolCallId: scope.toolCallId,
             userId: scope.userId,

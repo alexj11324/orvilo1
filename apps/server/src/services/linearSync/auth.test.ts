@@ -57,6 +57,50 @@ beforeEach(() => {
 });
 
 describe('LinearInstallationAuth', () => {
+  it('shares one refresh across concurrent catalog reads', async () => {
+    model.findInstallationForAuth.mockResolvedValue(expiredInstallation);
+    model.claimTokenRefresh
+      .mockResolvedValueOnce({ refreshFence: 8, tokenVersion: 3 })
+      .mockResolvedValue(null);
+    model.persistTokenRefresh.mockResolvedValue({ tokenVersion: 4 });
+    let resolveRefresh!: (tokens: {
+      access_token: string;
+      expires_in: number;
+      refresh_token: string;
+      scope: string;
+    }) => void;
+    refresh.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+
+    const auth = new LinearInstallationAuth('db' as never, 'workspace-1', 'installation-1', {
+      gateKeeper,
+      now: () => 100_000,
+      refresh,
+    });
+
+    const result = Promise.all([
+      auth.getAccessToken(),
+      auth.getAccessToken(),
+      auth.getAccessToken(),
+      auth.getAccessToken(),
+    ]);
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    resolveRefresh({
+      access_token: 'new-access',
+      expires_in: 3600,
+      refresh_token: 'new-refresh',
+      scope: 'read write',
+    });
+
+    await expect(result).resolves.toEqual(['new-access', 'new-access', 'new-access', 'new-access']);
+    expect(model.claimTokenRefresh).toHaveBeenCalledTimes(1);
+    expect(model.persistTokenRefresh).toHaveBeenCalledTimes(1);
+  });
+
   it('refreshes once and persists the rotated refresh token behind the CAS fence', async () => {
     model.findInstallationForAuth.mockResolvedValue(expiredInstallation);
     model.claimTokenRefresh.mockResolvedValue({ refreshFence: 8, tokenVersion: 3 });

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "linear_import_jobs" (
+CREATE TABLE "linear_import_jobs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" text NOT NULL,
 	"installation_id" uuid NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS "linear_import_jobs" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "linear_import_receipts" (
+CREATE TABLE "linear_import_receipts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" text NOT NULL,
 	"installation_id" uuid NOT NULL,
@@ -42,7 +42,7 @@ ALTER TABLE "linear_import_receipts" ADD CONSTRAINT "linear_import_receipts_inst
 ALTER TABLE "linear_import_receipts" ADD CONSTRAINT "linear_import_receipts_job_id_linear_import_jobs_id_fk" FOREIGN KEY ("job_id") REFERENCES "public"."linear_import_jobs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "linear_import_receipts" ADD CONSTRAINT "linear_import_receipts_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "linear_import_receipts" ADD CONSTRAINT "linear_import_receipts_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "linear_import_jobs_scope_unique" ON "linear_import_jobs" USING btree ("workspace_id","installation_id","team_id","project_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "linear_import_jobs_workspace_status_idx" ON "linear_import_jobs" USING btree ("workspace_id","status");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "linear_import_receipts_source_unique" ON "linear_import_receipts" USING btree ("workspace_id","installation_id","linear_issue_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "linear_import_receipts_job_idx" ON "linear_import_receipts" USING btree ("job_id");
+CREATE UNIQUE INDEX "linear_import_jobs_scope_unique" ON "linear_import_jobs" USING btree ("workspace_id","installation_id","team_id","project_id");--> statement-breakpoint
+CREATE INDEX "linear_import_jobs_workspace_status_idx" ON "linear_import_jobs" USING btree ("workspace_id","status");--> statement-breakpoint
+CREATE UNIQUE INDEX "linear_import_receipts_source_unique" ON "linear_import_receipts" USING btree ("workspace_id","installation_id","linear_issue_id");--> statement-breakpoint
+CREATE INDEX "linear_import_receipts_job_idx" ON "linear_import_receipts" USING btree ("job_id");

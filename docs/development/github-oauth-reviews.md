@@ -49,3 +49,24 @@ refresh token. Review write procedures remain disabled unless
 
 Do not enable review writes from a passing read-only check. Validate a review
 submission and its GitHub attribution separately before enabling that flag.
+
+## Hosted GitHub MCP
+
+The GitHub connector reuses this same per-user grant for GitHub's hosted MCP
+server. Its `user_connectors` row stores only a server-owned provider reference;
+access and refresh tokens remain encrypted in `github_user_connections` and are
+resolved into memory for each tool sync or call. Deleting or disabling the MCP
+connector does not revoke the Reviews grant.
+
+The server fixes the remote endpoint to `https://api.githubcopilot.com/mcp/`
+and sends GitHub's documented `X-MCP-Toolsets: pull_requests` and
+`X-MCP-Readonly: true` headers. The resulting MCP surface is therefore limited
+to read-only pull request tools. Provider authentication uses an ephemeral MCP
+client that is disconnected after the request and excluded from the shared
+client cache.
+
+The GitHub App installation still defines the upstream data boundary. The
+current app permissions are Pull requests read/write and Checks read, and only
+repositories included in the user's App installation are visible. MCP read-only
+headers prevent mutation through this connector; they do not grant repository
+or organization access that the App installation does not already have.

@@ -5,6 +5,12 @@ import type { AgentBoundConnector, ConnectorTool, ConnectorWithTools } from './t
 // the real store always seeds `connectors: []` via initialState.
 const connectorList = (s: ToolStore): ConnectorWithTools[] => s.connectors ?? [];
 
+/** A preset may create a connector only after the list for this scope has loaded. */
+const isConnectorListReady =
+  (activeWorkspaceId: string | null) =>
+  (s: ToolStore): boolean =>
+    s.isConnectorsInit && s.connectorsScopeId === activeWorkspaceId;
+
 /** All agent-owned connectors across agents, for the unified settings page. */
 const agentBoundConnectors = (s: ToolStore): AgentBoundConnector[] => s.agentBoundConnectors ?? [];
 
@@ -116,6 +122,7 @@ export const connectorSelectors = {
   connectorByIdentifier,
   connectorList,
   isAgentConnectorsInit,
+  isConnectorListReady,
   connectorToolsGrouped,
   customConnectors,
   connectorToolsGroupedByIdentifier:

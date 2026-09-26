@@ -51,6 +51,9 @@ export interface OIDCConfig {
   scopes?: string[];
   tokenEndpoint?: string;
 
+  /** OAuth client authentication method selected during DCR. */
+  tokenEndpointAuthMethod?: string;
+
   /** Recommended for public clients */
   usePKCE?: boolean;
 }

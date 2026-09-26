@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComposioAppType, McpPresetConnector, OrviloSkillProviderType } from '@orvilo/const';
+import type { McpPresetConnector } from '@orvilo/const';
 import {
   getConnectorCatalog,
   matchMcpPresetByConnector,
@@ -31,6 +31,10 @@ import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import AgentConnectorItem from './AgentConnectorItem';
 import ComposioSkillItem from './ComposioSkillItem';
+import {
+  type ConnectorCatalogItem,
+  getVisibleConnectorCatalog,
+} from './connectorCatalogVisibility';
 import type { ConnectorDetailType } from './ConnectorDetail';
 import McpPresetItem from './McpPresetItem';
 import McpSkillItem from './McpSkillItem';
@@ -63,6 +67,12 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     }
   `,
 }));
+
+// Keep the preset catalog focused while preserving any previously installed
+// connectors for the other services in the Custom Connectors section.
+const visibleMcpPresets = MCP_PRESET_CONNECTORS.filter((preset) =>
+  ['github', 'linear'].includes(preset.id),
+);
 
 interface ConnectorListProps {
   /** Opens the custom-connector form pre-filled with a preset's URL and auth. */
@@ -127,11 +137,7 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
   // 3. Community MCP Tools (type === 'plugin')
   // 4. Custom MCP Tools (type === 'customPlugin') and custom connectors
   const { communitySkillItems, communityMCPs, customMCPs } = useMemo(() => {
-    type ConnectorItem =
-      | { provider: OrviloSkillProviderType; type: 'orvilo' }
-      | { serverType: ComposioAppType; type: 'composio' };
-
-    const connectorItems: ConnectorItem[] = [];
+    const connectorItems: ConnectorCatalogItem[] = [];
 
     const addedConnectorIds = new Set<string>();
     const connectorAvailability = {
@@ -167,7 +173,7 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
     }
 
     // Sort connectors: connected ones first
-    const getIsConnected = (item: ConnectorItem) => {
+    const getIsConnected = (item: ConnectorCatalogItem) => {
       switch (item.type) {
         case 'orvilo': {
           return (
@@ -190,6 +196,13 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
       if (!isConnectedA && isConnectedB) return 1;
       return 0;
     });
+    // Keep existing grants reachable in every status, but offer only GitHub
+    // and Linear as new OAuth connections.
+    const visibleConnectorItems = getVisibleConnectorCatalog(
+      connectorItems,
+      new Set(allOrviloSkillServers.map((server) => server.identifier)),
+      new Set(allComposioServers.map((server) => server.identifier)),
+    );
 
     // Separate installed plugins into community and custom
     const communityPlugins = installedPluginList.filter((plugin) => plugin.type === 'plugin');
@@ -197,7 +210,7 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
 
     return {
       communityMCPs: communityPlugins,
-      communitySkillItems: connectorItems,
+      communitySkillItems: visibleConnectorItems,
       customMCPs: customPlugins,
     };
   }, [
@@ -206,6 +219,8 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
     isComposioEnabled,
     getOrviloSkillServerByProvider,
     getComposioServerByIdentifier,
+    allOrviloSkillServers,
+    allComposioServers,
   ]);
 
   // A preset that already has a connector shows Connected in the MCP section
@@ -214,14 +229,14 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
   const presetConnectorMap = useMemo(() => {
     const map = new Map<string, ConnectorWithTools>();
     for (const connector of customConnectors) {
-      const preset = matchMcpPresetByConnector(connector);
+      const preset = matchMcpPresetByConnector(connector, visibleMcpPresets);
       if (preset && !map.has(preset.id)) map.set(preset.id, connector);
     }
     return map;
   }, [customConnectors]);
 
   const otherCustomConnectors = useMemo(
-    () => customConnectors.filter((c) => !matchMcpPresetByConnector(c)),
+    () => customConnectors.filter((c) => !matchMcpPresetByConnector(c, visibleMcpPresets)),
     [customConnectors],
   );
 
@@ -321,7 +336,7 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
       {renderSection(
         'mcpPresets',
         t('skillGroup.mcp', 'MCP'),
-        MCP_PRESET_CONNECTORS.map((preset) => {
+        visibleMcpPresets.map((preset) => {
           const connector = presetConnectorMap.get(preset.id);
           return (
             <McpPresetItem

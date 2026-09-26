@@ -39,6 +39,16 @@ export interface DiscoveredOAuth {
   metadata: AuthorizationServerMetadata;
 }
 
+export const buildOAuthClientInformation = (params: {
+  clientId: string;
+  clientSecret?: string;
+  tokenEndpointAuthMethod?: string;
+}): OAuthClientInformationMixed => ({
+  client_id: params.clientId,
+  client_secret: params.clientSecret,
+  token_endpoint_auth_method: params.tokenEndpointAuthMethod,
+});
+
 /**
  * Discover the OAuth authorization server backing a remote MCP resource.
  *

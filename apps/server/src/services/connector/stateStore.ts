@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import debug from 'debug';
 
+import type { OIDCConfig } from '@/database/schemas';
 import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const log = debug('orvilo-server:connector:oauth-state');
@@ -19,12 +20,16 @@ export interface ConnectorOAuthStatePayload {
   codeVerifier: string;
   /** The connector being connected. */
   connectorId: string;
+  /** Resolved client config to promote only after the code exchange succeeds. */
+  oidcConfig: OIDCConfig;
   /** Orvilo user who initiated the connect. */
   orviloUserId: string;
   /** Where to send the user after the callback finishes (relative path). */
   returnTo?: string;
   /** Issuance timestamp (ms epoch) for diagnostics. */
   ts: number;
+  /** Workspace selected when authorization began; absent for personal connectors. */
+  workspaceId?: string;
 }
 
 /** Generate an opaque, single-use state value to embed in the authorize URL. */
@@ -64,10 +69,14 @@ export const consumeConnectorOAuthState = async (
   const redis = getAgentRuntimeRedisClient();
   if (!redis) return null;
 
-  const raw = await redis.get(stateKey(state));
-  if (!raw) return null;
-
-  await redis.del(stateKey(state));
+  const raw = await redis.eval(
+    `local value = redis.call('get', KEYS[1]);
+     if value then redis.call('del', KEYS[1]); end;
+     return value;`,
+    1,
+    stateKey(state),
+  );
+  if (typeof raw !== 'string') return null;
 
   try {
     return JSON.parse(raw) as ConnectorOAuthStatePayload;

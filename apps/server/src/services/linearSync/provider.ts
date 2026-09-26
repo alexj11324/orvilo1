@@ -68,13 +68,14 @@ const PAGE_INFO_FIELDS = `pageInfo { endCursor hasNextPage }`;
 const ORGANIZATION_FIELDS = `id name urlKey`;
 const CATALOG_PAGE_SIZE = 100;
 const MEMBER_PAGE_SIZE = 250;
-// Linear scores GraphQL cost per request and multiplies nested connections —
-// `first: 100` on both levels asks for ~20k nodes and is rejected with
-// "Query too complex". Nested lists page through the per-item follow-up
-// queries below, so a small inline page keeps the catalog request cheap.
+// Linear scores GraphQL cost per request and multiplies nested connections.
+// Keep project team previews small, then paginate the remainder separately.
 const NESTED_PAGE_SIZE = 25;
 const PROJECT_FIELDS = `id name state teams(first: ${NESTED_PAGE_SIZE}) { nodes { id visibility organization { id } } ${PAGE_INFO_FIELDS} }`;
-const TEAM_FIELDS = `id key name visibility organization { id } states(first: ${NESTED_PAGE_SIZE}) { nodes { id name type position } ${PAGE_INFO_FIELDS} } cycles(first: ${NESTED_PAGE_SIZE}) { nodes { id name number startsAt endsAt } ${PAGE_INFO_FIELDS} }`;
+// Team states and cycles are deliberately fetched after organization filtering.
+// Embedding both connections under `teams(first: 100)` exceeds Linear's query
+// complexity limit even with smaller nested page sizes.
+const TEAM_FIELDS = `id key name visibility organization { id }`;
 
 export interface LinearIssueCreateInput {
   description?: string | null;
@@ -752,10 +753,10 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
       // `privateTeamPolicy` (import_restricted | skip) decides whether they
       // are mirrored; the provider reports what the organization contains.
       if (!id || !key || !name || !this.isInstalledOrganization(organizationId)) continue;
-      const stateNodes = isRecord(value.states)
-        ? await collectConnectionNodes(async (after) => {
-            const data = await this.requestData<{ team: { states?: unknown } | null }>({
-              query: `query ListTeamStates($teamId: String!, $after: String) {
+      const [stateNodes, cycleNodes] = await Promise.all([
+        collectConnectionNodes(async (after) => {
+          const data = await this.requestData<{ team: { states?: unknown } | null }>({
+            query: `query ListTeamStates($teamId: String!, $after: String) {
                   team(id: $teamId) {
                     states(first: ${CATALOG_PAGE_SIZE}, after: $after) {
                       nodes { id name type position }
@@ -763,15 +764,13 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
                     }
                   }
                 }`,
-              variables: { after, teamId: id },
-            });
-            return data.team?.states;
-          }, value.states)
-        : [];
-      const cycleNodes = isRecord(value.cycles)
-        ? await collectConnectionNodes(async (after) => {
-            const data = await this.requestData<{ team: { cycles?: unknown } | null }>({
-              query: `query ListTeamCycles($teamId: String!, $after: String) {
+            variables: { after, teamId: id },
+          });
+          return data.team?.states;
+        }),
+        collectConnectionNodes(async (after) => {
+          const data = await this.requestData<{ team: { cycles?: unknown } | null }>({
+            query: `query ListTeamCycles($teamId: String!, $after: String) {
                   team(id: $teamId) {
                     cycles(first: ${CATALOG_PAGE_SIZE}, after: $after) {
                       nodes { id name number startsAt endsAt }
@@ -779,11 +778,11 @@ export class LinearGraphqlIssueProvider implements LinearIssueProvider {
                     }
                   }
                 }`,
-              variables: { after, teamId: id },
-            });
-            return data.team?.cycles;
-          }, value.cycles)
-        : [];
+            variables: { after, teamId: id },
+          });
+          return data.team?.cycles;
+        }),
+      ]);
       teams.push({
         cycles: cycleNodes.flatMap((cycle) => {
           if (!isRecord(cycle)) return [];

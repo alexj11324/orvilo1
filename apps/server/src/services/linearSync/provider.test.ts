@@ -99,6 +99,130 @@ describe('normalizeLinearIssue', () => {
     );
   });
 
+  it('splits team metadata from workflow states and cycles when the nested catalog is too complex', async () => {
+    const request = vi.fn().mockImplementation(
+      async (
+        _token,
+        body: {
+          query: string;
+          variables?: Record<string, unknown>;
+        },
+      ) => {
+        if (body.query.includes('query ListTeams')) {
+          if (body.query.includes('states(') || body.query.includes('cycles(')) {
+            return {
+              data: { errors: [{ message: 'Query too complex' }] },
+              status: 400,
+            };
+          }
+          return {
+            data: {
+              data: {
+                teams: {
+                  nodes: [
+                    {
+                      id: 'team-1',
+                      key: 'ENG',
+                      name: 'Engineering',
+                      organization: { id: 'org-1' },
+                      visibility: 'public',
+                    },
+                    {
+                      id: 'team-other',
+                      key: 'OPS',
+                      name: 'Other organization',
+                      organization: { id: 'org-2' },
+                      visibility: 'public',
+                    },
+                  ],
+                  pageInfo: { endCursor: null, hasNextPage: false },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        if (body.query.includes('ListTeamStates')) {
+          return {
+            data: {
+              data: {
+                team: {
+                  states: {
+                    nodes: [{ id: 'state-1', name: 'Todo', position: 1, type: 'unstarted' }],
+                    pageInfo: { endCursor: null, hasNextPage: false },
+                  },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        if (body.query.includes('ListTeamCycles')) {
+          return {
+            data: {
+              data: {
+                team: {
+                  cycles: {
+                    nodes: [
+                      {
+                        endsAt: '2026-10-12T00:00:00.000Z',
+                        id: 'cycle-1',
+                        name: 'Cycle 1',
+                        number: 1,
+                        startsAt: '2026-09-28T00:00:00.000Z',
+                      },
+                    ],
+                    pageInfo: { endCursor: null, hasNextPage: false },
+                  },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        throw new Error(`Unexpected Linear query: ${body.query}`);
+      },
+    );
+    const provider = new LinearGraphqlIssueProvider(
+      { getAccessToken: vi.fn().mockResolvedValue('access-token') },
+      request,
+      'org-1',
+    );
+
+    await expect(provider.listTeams()).resolves.toEqual([
+      {
+        cycles: [
+          {
+            endsAt: '2026-10-12T00:00:00.000Z',
+            id: 'cycle-1',
+            name: 'Cycle 1',
+            number: 1,
+            startsAt: '2026-09-28T00:00:00.000Z',
+            teamId: 'team-1',
+          },
+        ],
+        id: 'team-1',
+        key: 'ENG',
+        name: 'Engineering',
+        organizationId: 'org-1',
+        visibility: 'public',
+        workflowStates: [
+          {
+            id: 'state-1',
+            name: 'Todo',
+            position: 1,
+            teamId: 'team-1',
+            type: 'unstarted',
+          },
+        ],
+      },
+    ]);
+    expect(request).not.toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({ variables: expect.objectContaining({ teamId: 'team-other' }) }),
+    );
+  });
+
   it('passes a preallocated UUID and preserves the issue description', async () => {
     const request = vi.fn().mockResolvedValue({
       data: {
@@ -221,6 +345,7 @@ describe('normalizeLinearIssue', () => {
   });
 
   it('exposes the installed organization catalog including private teams for the worker policy', async () => {
+    let teamStateRequestCount = 0;
     const request = vi.fn().mockImplementation(async (_token, body: { query: string }) => {
       if (body.query.includes('ListOrganization ')) {
         return {
@@ -263,6 +388,31 @@ describe('normalizeLinearIssue', () => {
               },
             },
           },
+          status: 200,
+        };
+      }
+      if (body.query.includes('ListTeamStates')) {
+        const privateTeam = teamStateRequestCount++ === 1;
+        return {
+          data: {
+            data: {
+              team: {
+                states: {
+                  nodes: [
+                    privateTeam
+                      ? { id: 'state-private', name: 'Todo', position: 1 }
+                      : { id: 'state-1', name: 'Todo', position: 1, type: 'unstarted' },
+                  ],
+                },
+              },
+            },
+          },
+          status: 200,
+        };
+      }
+      if (body.query.includes('ListTeamCycles')) {
+        return {
+          data: { data: { team: { cycles: { nodes: [] } } } },
           status: 200,
         };
       }
@@ -409,13 +559,57 @@ describe('normalizeLinearIssue', () => {
           };
         }
         if (body.query.includes('ListTeamStates')) {
+          const secondPage = after === 'states-cursor';
+          const secondTeam = body.variables?.teamId === 'team-2';
           return {
             data: {
               data: {
                 team: {
                   states: {
-                    nodes: [{ id: 'state-2', name: 'Done', position: 2, type: 'completed' }],
-                    pageInfo: { endCursor: null, hasNextPage: false },
+                    nodes: [
+                      secondTeam
+                        ? { id: 'state-3', name: 'Todo', position: 1, type: 'unstarted' }
+                        : secondPage
+                          ? { id: 'state-2', name: 'Done', position: 2, type: 'completed' }
+                          : {
+                              id: 'state-1',
+                              name: 'In Progress',
+                              position: 1,
+                              type: 'started',
+                            },
+                    ],
+                    pageInfo:
+                      secondTeam || secondPage
+                        ? { endCursor: null, hasNextPage: false }
+                        : { endCursor: 'states-cursor', hasNextPage: true },
+                  },
+                },
+              },
+            },
+            status: 200,
+          };
+        }
+        if (body.query.includes('ListTeamCycles')) {
+          const secondPage = after === 'cycles-cursor';
+          const secondTeam = body.variables?.teamId === 'team-2';
+          return {
+            data: {
+              data: {
+                team: {
+                  cycles: {
+                    nodes: secondTeam
+                      ? []
+                      : [
+                          {
+                            id: secondPage ? 'cycle-2' : 'cycle-1',
+                            name: secondPage ? 'Cycle 2' : 'Cycle 1',
+                            number: secondPage ? 2 : 1,
+                          },
+                        ],
+                    pageInfo:
+                      secondTeam || secondPage
+                        ? { endCursor: null, hasNextPage: false }
+                        : { endCursor: 'cycles-cursor', hasNextPage: true },
                   },
                 },
               },
@@ -466,14 +660,6 @@ describe('normalizeLinearIssue', () => {
                       key: secondPage ? 'OPS' : 'ENG',
                       name: secondPage ? 'Operations' : 'Engineering',
                       organization: { id: 'org-1' },
-                      states: {
-                        nodes: secondPage
-                          ? [{ id: 'state-3', name: 'Todo', position: 1, type: 'unstarted' }]
-                          : [{ id: 'state-1', name: 'In Progress', position: 1, type: 'started' }],
-                        pageInfo: secondPage
-                          ? { endCursor: null, hasNextPage: false }
-                          : { endCursor: 'states-cursor', hasNextPage: true },
-                      },
                       visibility: 'public',
                     },
                   ],
@@ -521,6 +707,10 @@ describe('normalizeLinearIssue', () => {
     ]);
     await expect(provider.listTeams()).resolves.toEqual([
       expect.objectContaining({
+        cycles: [
+          expect.objectContaining({ id: 'cycle-1' }),
+          expect.objectContaining({ id: 'cycle-2' }),
+        ],
         id: 'team-1',
         workflowStates: expect.arrayContaining([
           expect.objectContaining({ id: 'state-1' }),
@@ -543,6 +733,10 @@ describe('normalizeLinearIssue', () => {
     expect(request).toHaveBeenCalledWith(
       'access-token',
       expect.objectContaining({ variables: { after: 'states-cursor', teamId: 'team-1' } }),
+    );
+    expect(request).toHaveBeenCalledWith(
+      'access-token',
+      expect.objectContaining({ variables: { after: 'cycles-cursor', teamId: 'team-1' } }),
     );
     expect(request).toHaveBeenCalledWith(
       'access-token',

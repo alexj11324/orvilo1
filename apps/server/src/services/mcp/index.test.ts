@@ -249,6 +249,39 @@ describe('MCPService', () => {
       expect(JSON.stringify(result.state)).not.toContain('server-only-token');
     });
 
+    it('preserves control-header values in successful tool results', async () => {
+      mockClient.callTool.mockResolvedValue({
+        content: [
+          {
+            text: JSON.stringify({
+              draft: true,
+              tokenEcho: 'server-only-token',
+              toolset: 'pull_requests',
+            }),
+            type: 'text',
+          },
+        ],
+        isError: false,
+      });
+
+      const result = await mcpService.callTool({
+        argsStr: '{}',
+        clientParams: {
+          auth: { accessToken: 'server-only-token', type: 'oauth2' },
+          cacheMode: 'ephemeral',
+          headers: { 'X-MCP-Readonly': 'true', 'X-MCP-Toolsets': 'pull_requests' },
+          name: 'github-mcp',
+          type: 'http',
+          url: 'https://api.githubcopilot.com/mcp/',
+        },
+        toolName: 'pull_request_read',
+      });
+
+      expect(result.content).toContain('"draft":true');
+      expect(result.content).toContain('"toolset":"pull_requests"');
+      expect(result.content).toContain('"tokenEcho":"[REDACTED]"');
+    });
+
     it('should parse args string correctly', async () => {
       const argsObject = { param1: 'value1', param2: 'value2' };
       const argsString = JSON.stringify(argsObject);

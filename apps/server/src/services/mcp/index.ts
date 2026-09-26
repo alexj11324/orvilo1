@@ -27,6 +27,17 @@ import { mcpSystemDepsCheckService } from './deps';
 
 const log = debug('orvilo-mcp:service');
 
+const isCredentialHeader = (name: string): boolean => {
+  const normalized = name.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
+  return (
+    normalized === 'authorization' ||
+    normalized === 'cookie' ||
+    normalized === 'proxyauthorization' ||
+    normalized === 'setcookie' ||
+    /apikey|auth|credential|secret|token/.test(normalized)
+  );
+};
+
 /**
  * MCP Tool call raw result type
  */
@@ -114,7 +125,9 @@ export class MCPService {
         params.auth?.clientSecret,
         params.auth?.refreshToken,
         params.auth?.token,
-        ...Object.values(params.headers ?? {}),
+        ...Object.entries(params.headers ?? {})
+          .filter(([name]) => isCredentialHeader(name))
+          .map(([, headerValue]) => headerValue),
       ].filter((value): value is string => Boolean(value));
       for (const secret of secrets) redacted = redacted.replaceAll(secret, '[REDACTED]');
     }

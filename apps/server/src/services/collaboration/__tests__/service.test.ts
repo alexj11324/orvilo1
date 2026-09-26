@@ -35,9 +35,10 @@ describe('gatewayConnectUrl', () => {
     vi.stubEnv('COLLABORATION_GATEWAY_URL', 'http://gateway-internal:3012');
     expect(gatewayConnectUrl()).toBe('wss://gw.example.com/collab');
 
-    // An empty-string env counts as unset, not as a URL.
+    // An empty-string env counts as unset, not as a URL — and the internal
+    // http publish base is never dialable by browsers, so it fails closed.
     vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', '');
-    expect(gatewayConnectUrl()).toBe('http://gateway-internal:3012');
+    expect(gatewayConnectUrl()).toBeNull();
   });
 
   it('falls back to localhost only in development', () => {

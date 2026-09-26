@@ -8,6 +8,8 @@ import type { LinearImportMapping } from '../schemas/linearImport';
 import type { OrviloDatabase } from '../type';
 import { TaskModel } from './task';
 
+const LEASE_MS = 5 * 60_000;
+
 export class LinearImportModel {
   constructor(
     private readonly db: OrviloDatabase,
@@ -63,6 +65,10 @@ export class LinearImportModel {
         'This team and destination already have an import job with different state mappings',
       );
     }
+    // Re-confirming a failed scope must requeue it — returning the failed row
+    // untouched leaves the caller's trigger condition (`status === 'queued'`)
+    // false and the confirm action dead.
+    if (existing.status === 'failed') return this.queue(existing.id);
     return existing;
   }
 
@@ -101,7 +107,7 @@ export class LinearImportModel {
       .set({
         status: 'running',
         leaseOwner: owner,
-        lockedUntil: new Date(Date.now() + 5 * 60_000),
+        lockedUntil: new Date(Date.now() + LEASE_MS),
         updatedAt: new Date(),
       })
       .where(
@@ -132,9 +138,13 @@ export class LinearImportModel {
     workflowCategory: TaskWorkflowCategory;
   }): Promise<'imported' | 'skipped_sync' | 'already_imported'> {
     return this.db.transaction(async (tx) => {
+      // Each recorded issue also renews the lease: a page slower than the
+      // claim window must not expire mid-write, and the renewal is guarded by
+      // the same owner/status predicates so a reclaimed job cannot extend
+      // itself.
       const [job] = await tx
-        .select({ id: linearImportJobs.id })
-        .from(linearImportJobs)
+        .update(linearImportJobs)
+        .set({ lockedUntil: new Date(Date.now() + LEASE_MS), updatedAt: new Date() })
         .where(
           and(
             eq(linearImportJobs.id, input.jobId),
@@ -144,8 +154,7 @@ export class LinearImportModel {
             gt(linearImportJobs.lockedUntil, new Date()),
           ),
         )
-        .for('update')
-        .limit(1);
+        .returning({ id: linearImportJobs.id });
       if (!job) throw new Error('Linear import lease was lost');
       const [existing] = await tx
         .select()
@@ -255,9 +264,44 @@ export class LinearImportModel {
             },
           },
           mutation: { source: 'linear', suppressDomainEvent: true, suppressLinearOutbox: true },
-          maxRetries: 1,
         },
       );
+      // Claim the issue identity for live sync too: without a link row, a
+      // later inbound delivery would create a second task for the same Linear
+      // issue. Team/binding stay null — this import is independent of sync
+      // bindings; the link only fixes issue→task identity.
+      const [link] = await tx
+        .insert(linearIssueLinks)
+        .values({
+          aliasIdentifiers: input.issue.identifier ? [input.issue.identifier] : [],
+          installationId: input.installationId,
+          lastConfirmedSnapshot: input.issue,
+          linearIdentifier: input.issue.identifier,
+          linearIssueId: input.issue.id,
+          organizationId: input.organizationId,
+          remoteSnapshot: input.issue,
+          remoteUpdatedAt: input.issue.updatedAt ? new Date(input.issue.updatedAt) : undefined,
+          taskId: task.id,
+          workspaceId: this.workspaceId,
+        })
+        .onConflictDoNothing()
+        .returning({ id: linearIssueLinks.id, taskId: linearIssueLinks.taskId });
+      if (!link) {
+        const [racedLink] = await tx
+          .select({ taskId: linearIssueLinks.taskId })
+          .from(linearIssueLinks)
+          .where(
+            and(
+              eq(linearIssueLinks.workspaceId, this.workspaceId),
+              eq(linearIssueLinks.linearIssueId, input.issue.id),
+            ),
+          )
+          .limit(1);
+        if (racedLink && racedLink.taskId !== task.id)
+          throw new Error(
+            `Linear issue ${input.issue.identifier} is already linked to another task`,
+          );
+      }
       await tx
         .update(linearImportReceipts)
         .set({ taskId: task.id })

@@ -23,7 +23,7 @@ export const linearImportJobs = pgTable(
       .notNull(),
     teamId: text('team_id').notNull(),
     projectId: text('project_id')
-      .references(() => projects.id, { onDelete: 'restrict' })
+      .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
     requestedByUserId: text('requested_by_user_id').notNull(),
     stateMappings: jsonb('state_mappings').$type<LinearImportMapping[]>().notNull(),
@@ -65,7 +65,7 @@ export const linearImportReceipts = pgTable(
       .notNull(),
     linearIssueId: text('linear_issue_id').notNull(),
     projectId: text('project_id')
-      .references(() => projects.id, { onDelete: 'restrict' })
+      .references(() => projects.id, { onDelete: 'cascade' })
       .notNull(),
     taskId: text('task_id').references(() => tasks.id, { onDelete: 'set null' }),
     result: text('result').$type<'imported' | 'skipped_sync'>().notNull(),

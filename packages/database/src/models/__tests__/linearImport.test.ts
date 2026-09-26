@@ -7,6 +7,7 @@ import {
   linearImportJobs,
   linearImportReceipts,
   linearInstallations,
+  projects,
   tasks,
   users,
   workspaces,
@@ -199,5 +200,82 @@ describe('LinearImportModel', () => {
     await model.queue(job.id);
     const retry = await model.claim(job.id);
     expect(retry?.job.cursor).toBe('page-2');
+  });
+
+  it('requeues a failed job when the same scope is confirmed again', async () => {
+    const project = await createProject('IMPA');
+    const { job, owner } = await startAndClaim(project.id);
+    await model.fail(job.id, owner, 'issue conversion failed', true);
+    const restarted = await model.start({
+      installationId,
+      teamId: 'team-1',
+      projectId: project.id,
+      requestedByUserId: userId,
+      stateMappings: [{ linearStateId: 'state-1', workflowCategory: 'todo' }],
+    });
+    expect(restarted).toMatchObject({ id: job.id, status: 'queued', leaseOwner: null });
+  });
+
+  it('renews the claim lease while recording each issue', async () => {
+    const project = await createProject('IMPA');
+    const { job, owner } = await startAndClaim(project.id);
+    await db
+      .update(linearImportJobs)
+      .set({ lockedUntil: new Date(Date.now() + 1000) })
+      .where(eq(linearImportJobs.id, job.id));
+    expect(await record(job.id, owner, project.id)).toBe('imported');
+    expect((await model.findJob(job.id))?.lockedUntil?.getTime()).toBeGreaterThan(
+      Date.now() + 60_000,
+    );
+  });
+
+  it('claims the imported issue identity for live sync', async () => {
+    const project = await createProject('IMPA');
+    const { job, owner } = await startAndClaim(project.id);
+    await record(job.id, owner, project.id);
+    const [importedTask] = await db.select().from(tasks).where(eq(tasks.workspaceId, workspaceId));
+    const link = await new LinearSyncModel(db, workspaceId).findIssueLinkByExternalId(
+      sourceIssue.id,
+    );
+    expect(link?.taskId).toBe(importedTask.id);
+    // A later live-sync create for the same issue must fail instead of
+    // producing a second task.
+    const [other] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'IMPA-2',
+        seq: 2,
+        name: 'Duplicate sync task',
+        instruction: 'Duplicate sync task',
+        projectId: project.id,
+        workspaceId,
+      })
+      .returning();
+    await expect(
+      new LinearSyncModel(db, workspaceId).createIssueLink({
+        installationId,
+        linearIdentifier: sourceIssue.identifier,
+        linearIssueId: sourceIssue.id,
+        organizationId: 'org-1',
+        taskId: other.id,
+      }),
+    ).rejects.toThrow('identity conflicts');
+  });
+
+  it('deleting the destination project clears its import job and receipts', async () => {
+    const project = await createProject('IMPA');
+    const { job, owner } = await startAndClaim(project.id);
+    await record(job.id, owner, project.id);
+    await db.delete(projects).where(eq(projects.id, project.id));
+    expect(
+      await db.select().from(linearImportJobs).where(eq(linearImportJobs.id, job.id)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(linearImportReceipts)
+        .where(eq(linearImportReceipts.workspaceId, workspaceId)),
+    ).toHaveLength(0);
   });
 });

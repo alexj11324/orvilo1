@@ -330,6 +330,15 @@ export const linearSyncRouter = router({
         if (existing) {
           throw new TRPCError({ code: 'CONFLICT', message: 'Task is already linked to Linear' });
         }
+        const linkedIssue = await ctx.linearSyncModel.findIssueLinkByExternalId(
+          input.linearIssueId,
+        );
+        if (linkedIssue) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Linear issue is already linked to a task',
+          });
+        }
 
         const provider = createLinearGraphqlIssueProvider({
           db: ctx.serverDB,

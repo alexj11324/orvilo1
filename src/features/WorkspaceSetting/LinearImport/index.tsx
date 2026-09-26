@@ -834,7 +834,10 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                         <p className={styles.description}>
                           {t('workspaceSetting.import.desktopOAuthHelp')}
                         </p>
-                        <Button disabled={busy || loading} onClick={() => void refresh()}>
+                        <Button
+                          disabled={busy || loading}
+                          onClick={() => void refresh(installationId || undefined)}
+                        >
                           {t('workspaceSetting.import.refreshConnections')}
                         </Button>
                       </div>

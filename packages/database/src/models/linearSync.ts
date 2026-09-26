@@ -1450,6 +1450,19 @@ export class LinearSyncModel {
       )
       .limit(1);
     if (!existing) throw new Error('Failed to create Linear issue link');
+    // The unique indexes cover both (workspace, task) and (workspace,
+    // linearIssue) — a conflict can also mean the issue was claimed by another
+    // path (e.g. the one-time import) pointing at a different task. Callers
+    // create the task inside the same transaction, so throwing here rolls back
+    // the would-be duplicate instead of leaving an unlinked task behind.
+    if (
+      existing.taskId !== input.taskId ||
+      existing.linearIssueId !== input.linearIssueId ||
+      existing.installationId !== input.installationId ||
+      existing.organizationId !== input.organizationId
+    ) {
+      throw new Error('Linear issue link identity conflicts with an existing link');
+    }
     return existing;
   }
 

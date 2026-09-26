@@ -369,7 +369,6 @@ export const refreshCollaborationConnections = (): void => {
       socket.onerror = null;
       socket.close();
     }
-    record.pendingPresence = undefined;
     record.attempt = 0;
     void connect(key, record);
   }

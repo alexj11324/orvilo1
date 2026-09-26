@@ -168,13 +168,28 @@ const httpRoomPublisher = (gatewayUrl: string): RoomPublisher => {
 };
 
 /**
+ * Derives the gateway's internal HTTP base from the client-facing ws URL for
+ * deployments that only set `COLLABORATION_GATEWAY_PUBLIC_URL` — otherwise
+ * server-side publishes (concealment, scoped kicks) could never reach the
+ * standalone gateway. `wss://host[/…/collaboration]` → `https://host[/…]`.
+ */
+const publicGatewayHttpUrl = (): string | undefined => {
+  const url = process.env.COLLABORATION_GATEWAY_PUBLIC_URL;
+  if (!url || !/^wss?:\/\//.test(url)) return undefined;
+  return url.replace(/^ws/, 'http').replace(/\/collaboration\/?$/, '');
+};
+
+/**
  * Publisher selection: `COLLABORATION_GATEWAY_URL` set → HTTP adapter for the
- * standalone gateway process; unset → the in-process local bus (no-op until a
- * gateway is mounted in this process).
+ * standalone gateway process; else the in-process local bus when a gateway is
+ * mounted here; else the public URL converted to its internal HTTP base; else
+ * the standalone localhost gateway in development.
  */
 export const createRoomPublisher = (gatewayUrl = process.env.COLLABORATION_GATEWAY_URL) => {
   if (gatewayUrl) return httpRoomPublisher(gatewayUrl);
   if (getLocalBus()) return localRoomPublisher;
+  const publicHttp = publicGatewayHttpUrl();
+  if (publicHttp) return httpRoomPublisher(publicHttp);
   if (process.env.NODE_ENV === 'development') return httpRoomPublisher('http://localhost:3012');
   return localRoomPublisher;
 };

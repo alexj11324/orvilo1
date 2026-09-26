@@ -249,6 +249,25 @@ describe('room presence lifecycle', () => {
     expect(hiddenSocket.sent).toEqual([]);
     expect(authorize).toHaveBeenCalledTimes(2);
   });
+
+  it('replays the last presence state on the refreshed socket', async () => {
+    // Toggling visibility on must not strand the cursor until the next
+    // pointermove — the refreshed socket republishes the last pushed state.
+    const publish = acquireRoomConnection(room);
+    publish({ typing: true });
+    await flush();
+    lastSocket().fireOpen();
+
+    refreshCollaborationConnections();
+    await flush();
+    const freshSocket = lastSocket();
+    freshSocket.sent.length = 0;
+    freshSocket.fireOpen();
+
+    expect(freshSocket.sent).toContainEqual(
+      JSON.stringify({ state: { typing: true }, type: 'presence' }),
+    );
+  });
 });
 
 describe('server messages', () => {

@@ -188,8 +188,25 @@ describe('localRoomPublisher scoped kicks', () => {
     ).rejects.toThrow('does not support presence visibility control');
   });
 
-  it('fails concealment without a local bus when a public gateway may hold sockets', async () => {
+  it('conceals through the public gateway URL when no internal URL is set', async () => {
+    // Deployments that expose only COLLABORATION_GATEWAY_PUBLIC_URL must still
+    // deliver concealment — otherwise the toggle save rolls back every time.
     vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', 'wss://gateway.example/collaboration');
+    const fetchMock = vi.fn(async () => respond(202, currentHeaders));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      createRoomPublisher('').setUserPresenceVisibility('user-9', false, 'hidden-epoch'),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://gateway.example/internal/publish',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('still fails concealment when the public gateway URL is not a ws endpoint', async () => {
+    vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', 'gateway.example/collaboration');
 
     await expect(
       createRoomPublisher('').setUserPresenceVisibility('user-9', false, 'hidden-epoch'),

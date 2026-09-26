@@ -8,9 +8,15 @@ import type { OrviloDatabase } from '@/database/type';
 import { getGitHubOAuthGrantIdentity, startGitHubOAuth } from '@/server/services/githubOAuth';
 
 import { GITHUB_MCP_CONNECTOR_IDENTIFIER, GITHUB_MCP_SERVER_URL } from './githubMcp';
-import { type ConnectorToolSyncContext, syncConnectorToolsById } from './sync';
+import {
+  type ConnectorToolSyncContext,
+  fetchConnectorToolSyncInputs,
+  persistConnectorToolSyncInputs,
+  syncConnectorToolsById,
+} from './sync';
 
 interface GitHubMcpActivationContext extends ConnectorToolSyncContext {
+  runInTransaction: <T>(callback: (ctx: ConnectorToolSyncContext) => Promise<T>) => Promise<T>;
   serverDB: OrviloDatabase;
 }
 
@@ -69,28 +75,13 @@ export const activateGitHubMcpConnector = async (input: {
       status: ConnectorStatus.disconnected,
       tokenExpiresAt: null,
     };
-    await input.ctx.connectorModel.update(connectorId, managedPatch);
-    try {
-      const { toolCount } = await syncConnectorToolsById(connectorId, input.ctx);
-      return { connectorId, status: 'connected', toolCount };
-    } catch (error) {
-      await input.ctx.connectorModel.update(connectorId, {
-        credentials: input.existing.credentials
-          ? JSON.stringify(input.existing.credentials)
-          : input.existing.credentials,
-        isEnabled: input.existing.isEnabled,
-        mcpConnectionType: input.existing.mcpConnectionType,
-        mcpServerUrl: input.existing.mcpServerUrl,
-        mcpStdioConfig: input.existing.mcpStdioConfig,
-        metadata: input.existing.metadata,
-        name: input.existing.name,
-        oidcConfig: input.existing.oidcConfig,
-        sourceType: input.existing.sourceType,
-        status: input.existing.status,
-        tokenExpiresAt: input.existing.tokenExpiresAt,
-      });
-      throw error;
-    }
+    const managedConnector = { ...input.existing, ...managedPatch } as DecryptedConnector;
+    const syncInputs = await fetchConnectorToolSyncInputs(managedConnector, input.ctx);
+    await input.ctx.runInTransaction(async (txCtx) => {
+      await txCtx.connectorModel.update(connectorId, managedPatch);
+      await persistConnectorToolSyncInputs(connectorId, managedConnector, syncInputs, txCtx);
+    });
+    return { connectorId, status: 'connected', toolCount: syncInputs.length };
   } else {
     const created = await input.ctx.connectorModel.create({
       credentials: null,

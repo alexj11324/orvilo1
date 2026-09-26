@@ -9,9 +9,18 @@ import {
 } from './githubMcp';
 import { activateGitHubMcpConnector } from './githubMcpActivation';
 
-const { getGrantIdentity, getValidGrant, startOAuth, syncTools } = vi.hoisted(() => ({
+const {
+  fetchSyncInputs,
+  getGrantIdentity,
+  getValidGrant,
+  persistSyncInputs,
+  startOAuth,
+  syncTools,
+} = vi.hoisted(() => ({
+  fetchSyncInputs: vi.fn(),
   getGrantIdentity: vi.fn(),
   getValidGrant: vi.fn(),
+  persistSyncInputs: vi.fn(),
   startOAuth: vi.fn(),
   syncTools: vi.fn(),
 }));
@@ -21,7 +30,11 @@ vi.mock('@/server/services/githubOAuth', () => ({
   getValidGitHubAccessGrant: getValidGrant,
   startGitHubOAuth: startOAuth,
 }));
-vi.mock('./sync', () => ({ syncConnectorToolsById: syncTools }));
+vi.mock('./sync', () => ({
+  fetchConnectorToolSyncInputs: fetchSyncInputs,
+  persistConnectorToolSyncInputs: persistSyncInputs,
+  syncConnectorToolsById: syncTools,
+}));
 
 const identity = {
   githubUserId: '42',
@@ -40,14 +53,35 @@ const providerConnector = {
   status: 'connected',
 } as any;
 
-const context = () => ({
-  connectorModel: {
+const context = () => {
+  const connectorModel = {
     create: vi.fn().mockResolvedValue({ id: 'connector-1' }),
     update: vi.fn(),
-  },
-  connectorToolModel: {},
-  serverDB: {},
-});
+    updateStatus: vi.fn(),
+  };
+  const connectorToolModel = {};
+  const txConnectorModel = {
+    create: vi.fn(),
+    update: vi.fn(),
+    updateStatus: vi.fn(),
+  };
+  const txConnectorToolModel = {};
+  const ctx = {
+    connectorModel,
+    connectorToolModel,
+    runInTransaction: vi.fn(async (callback) =>
+      callback({
+        connectorModel: txConnectorModel,
+        connectorToolModel: txConnectorToolModel,
+        serverDB: {},
+      }),
+    ),
+    serverDB: {},
+    txConnectorModel,
+    txConnectorToolModel,
+  };
+  return ctx;
+};
 
 describe('GitHub MCP provider connector', () => {
   beforeEach(() => {
@@ -55,6 +89,8 @@ describe('GitHub MCP provider connector', () => {
     getGrantIdentity.mockResolvedValue(identity);
     getValidGrant.mockResolvedValue({ ...identity, accessToken: 'server-only-access-token' });
     startOAuth.mockResolvedValue('https://github.com/login/oauth/authorize?state=once');
+    fetchSyncInputs.mockResolvedValue([{ crudType: 'read', toolName: 'pull_request_read' }]);
+    persistSyncInputs.mockResolvedValue(undefined);
     syncTools.mockResolvedValue({ toolCount: 4 });
   });
 
@@ -187,8 +223,10 @@ describe('GitHub MCP provider connector', () => {
     });
 
     expect(ctx.connectorModel.create).not.toHaveBeenCalled();
-    expect(ctx.connectorModel.update).toHaveBeenCalledWith('connector-1', expect.any(Object));
-    const patch = ctx.connectorModel.update.mock.calls[0][1];
+    expect(ctx.runInTransaction).toHaveBeenCalledOnce();
+    expect(ctx.connectorModel.update).not.toHaveBeenCalled();
+    expect(ctx.txConnectorModel.update).toHaveBeenCalledWith('connector-1', expect.any(Object));
+    const patch = ctx.txConnectorModel.update.mock.calls[0][1];
     expect(patch.credentials).toBeNull();
     expect(patch.tokenExpiresAt).toBeNull();
     expect(patch.metadata.customHeaders).toBeUndefined();
@@ -214,20 +252,20 @@ describe('GitHub MCP provider connector', () => {
       status: 'connected',
       tokenExpiresAt: null,
     };
-    syncTools.mockRejectedValueOnce(new Error('hosted MCP unavailable'));
+    persistSyncInputs.mockRejectedValueOnce(new Error('tool replacement failed'));
 
     await expect(
       activateGitHubMcpConnector({ ctx: ctx as any, existing, userId: 'user-1' }),
-    ).rejects.toThrow('hosted MCP unavailable');
+    ).rejects.toThrow('tool replacement failed');
 
-    expect(ctx.connectorModel.update).toHaveBeenCalledTimes(2);
-    expect(ctx.connectorModel.update.mock.calls[1]).toEqual([
+    expect(ctx.runInTransaction).toHaveBeenCalledOnce();
+    expect(ctx.connectorModel.update).not.toHaveBeenCalled();
+    expect(ctx.txConnectorModel.update).toHaveBeenCalledOnce();
+    expect(persistSyncInputs).toHaveBeenCalledWith(
       'connector-1',
-      expect.objectContaining({
-        credentials: JSON.stringify({ token: 'legacy-pat', type: 'bearer' }),
-        metadata: existing.metadata,
-        status: 'connected',
-      }),
-    ]);
+      expect.objectContaining({ credentials: null, status: 'disconnected' }),
+      expect.any(Array),
+      expect.objectContaining({ connectorModel: ctx.txConnectorModel }),
+    );
   });
 });

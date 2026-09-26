@@ -324,7 +324,32 @@ export const connectorRouter = router({
     if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'connector');
 
     try {
-      return await activateGitHubMcpConnector({ ctx, existing, userId: ctx.userId });
+      const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+      return await activateGitHubMcpConnector({
+        ctx: {
+          ...ctx,
+          runInTransaction: (callback) =>
+            ctx.serverDB.transaction(async (tx) => {
+              const serverDB = tx as unknown as OrviloDatabase;
+              return callback({
+                connectorModel: new ConnectorModel(
+                  serverDB,
+                  ctx.userId,
+                  ctx.workspaceId ?? undefined,
+                  gateKeeper,
+                ),
+                connectorToolModel: new ConnectorToolModel(
+                  serverDB,
+                  ctx.userId,
+                  ctx.workspaceId ?? undefined,
+                ),
+                serverDB,
+              });
+            }),
+        },
+        existing,
+        userId: ctx.userId,
+      });
     } catch (error) {
       console.error(
         '[connector:connectGitHubMcp] failed:',

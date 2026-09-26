@@ -22,7 +22,6 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurface, WorkSurfaceReview } from '@/features/WorkSurface';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
@@ -34,6 +33,7 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 import CollectionFooter from './CollectionFooter';
 import ConnectGitHubButton from './ConnectGitHubButton';
 import ReviewChecksPanel from './ReviewChecksPanel';
+import ReviewDetailSkeleton from './ReviewDetailSkeleton';
 import ReviewFileCard from './ReviewFileCard';
 import { reviewOperationId } from './reviewOperationId';
 import ReviewOverview from './ReviewOverview';
@@ -637,7 +637,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
       <WorkSurfaceReview>
         <div className={styles.detailBody}>
           {isLoading ? (
-            <SkeletonList padding={8} rows={5} />
+            <ReviewDetailSkeleton view={activeView} />
           ) : notConnected ? (
             <Center gap={8} padding={24}>
               <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />

@@ -46,6 +46,7 @@ export class LinearInstallationAuth {
   private readonly model: LinearSyncModel;
   private readonly now: () => number;
   private readonly refresh: typeof refreshLinearAccessToken;
+  private accessTokenPromise: Promise<string> | undefined;
   private gateKeeperPromise: Promise<LinearCredentialGateKeeper> | undefined;
 
   constructor(
@@ -101,7 +102,7 @@ export class LinearInstallationAuth {
     throw error;
   };
 
-  async getAccessToken(): Promise<string> {
+  private async resolveAccessToken(): Promise<string> {
     const config = getLinearOAuthConfig();
     const installation = await this.model.findInstallationForAuth(this.installationId);
     if (!installation || installation.workspaceId !== this.workspaceId) {
@@ -190,6 +191,13 @@ export class LinearInstallationAuth {
       throw new LinearTokenRefreshInProgressError();
     }
     return tokens.access_token;
+  }
+
+  getAccessToken(): Promise<string> {
+    this.accessTokenPromise ??= this.resolveAccessToken().finally(() => {
+      this.accessTokenPromise = undefined;
+    });
+    return this.accessTokenPromise;
   }
 
   async markProviderFailure(input: { message: string; status?: number }): Promise<void> {

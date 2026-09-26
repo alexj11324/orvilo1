@@ -66,6 +66,7 @@ vi.mock('@/database/models/connector', () => ({
 
 const OWNER = 'me';
 const WORKSPACE = 'ws-1';
+const db = {} as OrviloDatabase;
 
 describe('McpServerService row-level manage checks', () => {
   beforeEach(() => {
@@ -75,7 +76,7 @@ describe('McpServerService row-level manage checks', () => {
     hasAnyPermissionMock.mockResolvedValue(false);
   });
 
-  const service = () => new McpServerService({} as OrviloDatabase, OWNER, WORKSPACE);
+  const service = () => new McpServerService(db, OWNER, WORKSPACE);
 
   it.each(['updateServer', 'deleteServer', 'syncServer'] as const)(
     'refuses %s on a row created by another workspace member',
@@ -111,6 +112,21 @@ describe('McpServerService row-level manage checks', () => {
     );
 
     await expect(svc.deleteServer('mcp-1')).resolves.toEqual({ id: 'mcp-1' });
+  });
+
+  it('passes the service database to connector tool sync', async () => {
+    hasAnyPermissionMock.mockResolvedValue(true);
+    syncConnectorToolsByIdMock.mockResolvedValue({ toolCount: 3 });
+
+    await expect(service().syncServer('mcp-1')).resolves.toEqual({
+      id: 'mcp-1',
+      status: 'connected',
+      toolCount: 3,
+    });
+    expect(syncConnectorToolsByIdMock).toHaveBeenCalledWith(
+      'mcp-1',
+      expect.objectContaining({ serverDB: db }),
+    );
   });
 
   // The list route only surfaces base connectors (`agent_id IS NULL`), and the

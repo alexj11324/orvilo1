@@ -21,9 +21,16 @@ interface ConnectorAttributionRow {
 
 /** The user id whose credentials a connector runs under. `null` when unknown. */
 export const resolveConnectorAuthorizerId = (connector: ConnectorAttributionRow): string | null => {
-  const composio = (connector.metadata as { composio?: { linkedByUserId?: string } } | null)
-    ?.composio;
-  return composio?.linkedByUserId ?? connector.userId ?? null;
+  const metadata = connector.metadata as {
+    composio?: { linkedByUserId?: string };
+    githubMcp?: { grantOwnerUserId?: string };
+  } | null;
+  return (
+    metadata?.githubMcp?.grantOwnerUserId ??
+    metadata?.composio?.linkedByUserId ??
+    connector.userId ??
+    null
+  );
 };
 
 /**

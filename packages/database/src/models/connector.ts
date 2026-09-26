@@ -450,13 +450,15 @@ export class ConnectorModel {
     gateKeeper: GateKeeper | undefined = this.gateKeeper,
   ): Promise<void> => {
     const credentials =
-      patch.credentials !== undefined && patch.credentials !== null
-        ? await encryptCredentials(patch.credentials, gateKeeper)
-        : undefined;
+      patch.credentials === null
+        ? null
+        : patch.credentials !== undefined
+          ? await encryptCredentials(patch.credentials, gateKeeper)
+          : undefined;
 
     const set = {
       ...patch,
-      ...(credentials !== undefined ? { credentials } : {}),
+      ...(patch.credentials !== undefined ? { credentials } : {}),
       updatedAt: new Date(),
     };
 

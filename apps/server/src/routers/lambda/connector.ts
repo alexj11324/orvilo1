@@ -27,6 +27,8 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { callConnectorToolById, ConnectorToolCallError } from '@/server/services/connector/exec';
+import { findExistingGitHubMcpConnector } from '@/server/services/connector/githubMcp';
+import { activateGitHubMcpConnector } from '@/server/services/connector/githubMcpActivation';
 import {
   buildAuthorizationUrl,
   discoverConnectorOAuth,
@@ -91,6 +93,15 @@ const connectorCredentialsInputSchema = z.discriminatedUnion('type', [
   z.object({ apiKey: z.string().min(1), type: z.literal('apikey') }),
   z.object({ headers: z.record(z.string(), z.string()), type: z.literal('header') }),
 ]);
+
+/** Keep the GitHub provider binding server-owned on generic create/update paths. */
+const withTrustedGitHubMcpBinding = (
+  candidate: Record<string, unknown> | null | undefined,
+  existing: ConnectorMetadata | null | undefined,
+): ConnectorMetadata => {
+  const { githubMcp: _untrustedGitHubMcp, ...rest } = candidate ?? {};
+  return existing?.githubMcp ? { ...rest, githubMcp: existing.githubMcp } : rest;
+};
 
 const createConnectorSchema = z.object({
   /**
@@ -288,6 +299,30 @@ export const connectorRouter = router({
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
+  /** Connect GitHub's hosted MCP through the existing per-user GitHub App grant. */
+  connectGitHubMcp: connectorWriteProcedure.mutation(async ({ ctx }) => {
+    const existingReference = findExistingGitHubMcpConnector(
+      await ctx.connectorModel.queryPublic(),
+    );
+    const existing = existingReference
+      ? await ctx.connectorModel.findById(existingReference.id)
+      : null;
+    if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'connector');
+
+    try {
+      return await activateGitHubMcpConnector({ ctx, existing, userId: ctx.userId });
+    } catch (error) {
+      console.error(
+        '[connector:connectGitHubMcp] failed:',
+        error instanceof Error ? error.name : 'UnknownError',
+      );
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Could not connect GitHub MCP',
+      });
+    }
+  }),
+
   create: connectorWriteProcedure.input(createConnectorSchema).mutation(async ({ input, ctx }) => {
     const { agentId } = input;
 
@@ -314,7 +349,10 @@ export const connectorRouter = router({
       // field is simply removed. `grantEpoch` mints a fresh grant generation
       // for every create/re-add so exec pins never outlive the credential set.
       metadata: {
-        ...withTrustedLinkedByUserId(input.metadata, undefined),
+        ...withTrustedGitHubMcpBinding(
+          withTrustedLinkedByUserId(input.metadata, undefined),
+          undefined,
+        ),
         grantEpoch: randomUUID(),
       },
       name: input.name,
@@ -650,7 +688,10 @@ export const connectorRouter = router({
       // and ignore whatever the client sent, so an edit can never spoof (or
       // silently clear) the connector's authorizer. Untouched when the patch
       // omits metadata.
-      const metadata = withTrustedLinkedByUserId(patch.metadata, target.metadata);
+      const metadata = withTrustedGitHubMcpBinding(
+        withTrustedLinkedByUserId(patch.metadata, target.metadata),
+        target.metadata,
+      );
       // Any credential patch — set, replace, or clear — is a new grant epoch,
       // so exec-time pins minted under the old credentials refuse to execute
       // (SA02-C). Plain OAuth token refresh never reaches this procedure.

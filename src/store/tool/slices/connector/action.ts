@@ -180,6 +180,13 @@ export class ConnectorActionImpl {
     return authorizationUrl;
   };
 
+  /** Connect the official GitHub MCP through the server-held GitHub App grant. */
+  connectGitHubMcp = async () => {
+    const result = await lambdaClient.connector.connectGitHubMcp.mutate();
+    if (result.status === 'connected') await this.#refreshConnectorLists();
+    return result;
+  };
+
   deleteConnector = async (id: string): Promise<void> => {
     await lambdaClient.connector.delete.mutate({ id });
     await this.#refreshConnectorLists();

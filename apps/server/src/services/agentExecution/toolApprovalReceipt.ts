@@ -54,6 +54,8 @@ export interface ToolApprovalScope {
   authRevision?: string;
   connectorId?: string;
   executionGeneration?: number;
+  /** Provider grant generation, when the connector resolves credentials externally. */
+  grantRevision?: string;
   identifier: string;
   kind: 'connector_tool' | 'plugin_tool';
   operationId: string;
@@ -78,6 +80,7 @@ export const toolApprovalScopeHash = (scope: ToolApprovalScope): string =>
       connectorId: scope.connectorId ?? null,
       executionGeneration: scope.executionGeneration ?? null,
       identifier: scope.identifier,
+      grantRevision: scope.grantRevision ?? null,
       kind: scope.kind,
       operationId: scope.operationId,
       pluginInstallId: scope.pluginInstallId ?? null,
@@ -106,6 +109,7 @@ export interface ToolApprovalReceiptPayload {
   decision?: ToolApprovalDecision;
   executionGeneration?: number;
   expiresAt: number;
+  grantRevision?: string;
   identifier: string;
   kind: 'connector_tool' | 'plugin_tool';
   operationId: string;
@@ -148,6 +152,7 @@ export const buildToolApprovalEvent = (
     expiresAt: params.expiresAt,
     executionGeneration: params.executionGeneration,
     identifier: params.identifier,
+    grantRevision: params.grantRevision,
     kind: params.kind,
     operationId: params.operationId,
     pluginInstallId: params.pluginInstallId,

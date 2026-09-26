@@ -82,6 +82,8 @@ export default {
     'This removes the connector and its authorization from your account. Any agent that uses it will need to be re-authorized afterwards.',
   'connector.deleteAgentConfirmContent':
     'This connector belongs to the agent “{{agent}}”. Deleting it will also remove this tool from that agent.',
+  'connector.deleteGitHubMcpConfirmContent':
+    'This removes the GitHub MCP connector. GitHub stays connected for Reviews.',
   'connector.manageOnlyCreator': 'Only the creator or a workspace owner can manage this connector',
   'connector.thisAgent': 'this agent',
   'dalle.autoGenerate': 'Auto Generate',

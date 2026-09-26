@@ -14,35 +14,44 @@ import {
 } from '@/business/client/hooks/useActiveWorkspaceId';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePermission } from '@/hooks/usePermission';
+import { useResourceManageable } from '@/hooks/useResourceManageable';
 import { electronSystemService } from '@/services/electron/system';
 import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 import type { ConnectorWithTools } from '@/store/tool/slices/connector/types';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { connectLinearMcpPreset } from './connectLinearMcpPreset';
+import { isMcpPresetConnected } from './githubMcpDisplayState';
 
 interface McpPresetItemProps {
+  connecting?: boolean;
   /**
    * The custom connector already pointing at this preset's endpoint, when one
-   * exists. Linear starts OAuth from the row; GitHub opens token setup.
+   * exists. Linear and GitHub start their respective OAuth flows from the row.
    */
   connector?: ConnectorWithTools;
   isSelected?: boolean;
   onAdd: () => void;
   onSelect: () => void;
   preset: McpPresetConnector;
+  providerConnected?: boolean;
 }
 
 /**
  * A row for a curated hosted MCP server (GitHub, Linear, Notion, …) in the
- * Connector settings list. Linear uses the connector's OAuth flow directly;
- * GitHub requires a user-provided token for its hosted MCP endpoint.
+ * Connector settings list. Linear uses MCP OAuth directly; GitHub reuses the
+ * existing GitHub App grant. Other presets retain the custom connector form.
  */
 const McpPresetItem = memo<McpPresetItemProps>(
-  ({ preset, connector, isSelected, onAdd, onSelect }) => {
+  ({ preset, connector, connecting, isSelected, onAdd, onSelect, providerConnected }) => {
     const { t } = useTranslation('setting');
+    const { t: tt } = useTranslation('tool');
     const { allowed: canCreate, reason: createReason } = usePermission('create_content');
     const { allowed: canEdit, reason: editReason } = usePermission('edit_own_content');
+    const canManage = useResourceManageable(connector?.userId);
+    const currentUserId = useUserStore(userProfileSelectors.userId);
     const [isConnecting, setIsConnecting] = useState(false);
     const activeWorkspaceId = useActiveWorkspaceId();
     const isListReady = useToolStore(connectorSelectors.isConnectorListReady(activeWorkspaceId));
@@ -51,9 +60,20 @@ const McpPresetItem = memo<McpPresetItemProps>(
     const fetchConnectors = useToolStore((s) => s.fetchConnectors);
 
     const isAdded = Boolean(connector);
-    const isConnected = connector?.status === 'connected';
+    const isConnected = isMcpPresetConnected({
+      connector,
+      currentUserId,
+      managedAuth: preset.managedAuth,
+      providerConnected,
+    });
+    const canConnect = canCreate && canEdit && canManage;
 
     const handleConnect = async () => {
+      if (preset.id !== 'linear') {
+        onAdd();
+        return;
+      }
+
       // Recheck at click time as well as render time: a workspace switch can
       // happen before React commits the disabled state for the new scope.
       const currentState = useToolStore.getState();
@@ -62,11 +82,6 @@ const McpPresetItem = memo<McpPresetItemProps>(
         .customConnectors(currentState)
         .find((candidate) => matchMcpPresetByConnector(candidate, [preset]));
       if (currentConnector?.status === 'connected') return;
-      if (preset.id !== 'linear') {
-        onAdd();
-        return;
-      }
-
       setIsConnecting(true);
       try {
         const result = await connectLinearMcpPreset(preset, currentConnector?.id, {
@@ -115,19 +130,26 @@ const McpPresetItem = memo<McpPresetItemProps>(
         );
       }
       return (
-        <Tooltip title={!canCreate ? createReason : editReason}>
+        <Tooltip
+          title={
+            !canManage ? tt('connector.manageOnlyCreator') : !canCreate ? createReason : editReason
+          }
+        >
           <Button
-            disabled={!canCreate || !canEdit || !isListReady || isConnecting}
             size="small"
             type="text"
+            disabled={
+              !canConnect || (preset.id === 'linear' && !isListReady) || isConnecting || connecting
+            }
             icon={
-              <Icon icon={isConnecting ? Loader2 : SquareArrowOutUpRight} spin={isConnecting} />
+              <Icon
+                icon={isConnecting || connecting ? Loader2 : SquareArrowOutUpRight}
+                spin={isConnecting || connecting}
+              />
             }
             onClick={handleConnect}
           >
-            {preset.id === 'github'
-              ? t('tools.mcpPreset.tokenSetup')
-              : t('tools.orviloSkill.connect')}
+            {t('tools.orviloSkill.connect')}
           </Button>
         </Tooltip>
       );

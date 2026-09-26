@@ -195,7 +195,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         title,
       });
       await refresh();
-      createDocumentModal(result.data.document.id);
+      createDocumentModal(result.data.document.id, () => void refresh());
     } catch (failure) {
       setWriteError(failure);
     } finally {
@@ -255,7 +255,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
             className={styles.resourceLink}
             style={{ flex: 1 }}
             type="button"
-            onClick={() => createDocumentModal(resource.document.id)}
+            onClick={() => createDocumentModal(resource.document.id, () => void refresh())}
           >
             <Icon icon={FileTextIcon} size={16} />
             <span className={styles.text}>

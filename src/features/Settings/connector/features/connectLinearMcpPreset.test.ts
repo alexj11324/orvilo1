@@ -70,6 +70,46 @@ describe('connectLinearMcpPreset', () => {
     expect(createConnector).not.toHaveBeenCalled();
   });
 
+  it('preserves OAuth success when the connector refresh fails', async () => {
+    const popup = {
+      closed: false,
+      close: vi.fn(),
+      location: { href: 'about:blank' },
+    } as unknown as Window;
+    vi.spyOn(window, 'open').mockReturnValue(popup);
+    const fetchConnectors = vi.fn().mockRejectedValue(new Error('refresh failed'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = connectLinearMcpPreset(linear, 'connector-1', {
+      createConnector: vi.fn(),
+      fetchConnectors,
+      startConnectorOAuth: vi.fn().mockResolvedValue('https://linear.app/oauth/authorize'),
+    });
+    await vi.waitFor(() => expect(popup.location.href).toBe('https://linear.app/oauth/authorize'));
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          connectorId: 'connector-1',
+          success: true,
+          synced: true,
+          type: 'orvilo-connector-oauth',
+        },
+        origin: window.location.origin,
+      }),
+    );
+
+    await expect(result).resolves.toEqual({
+      refreshFailed: true,
+      status: 'success',
+      synced: true,
+    });
+    expect(fetchConnectors).toHaveBeenCalledOnce();
+    expect(consoleError).toHaveBeenCalledWith(
+      '[Connector] Failed to refresh connectors after OAuth:',
+      expect.any(Error),
+    );
+  });
+
   it('opens Electron OAuth externally without creating an in-app popup', async () => {
     const openPopup = vi.spyOn(window, 'open');
     const createConnector = vi.fn().mockResolvedValue({ id: 'connector-1', isNew: true });

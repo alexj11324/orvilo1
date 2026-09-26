@@ -84,6 +84,7 @@ const McpPresetItem = memo<McpPresetItemProps>(
         } else if (result.status === 'success') {
           if (result.synced === false) toast.warning(t('tools.mcpPreset.syncFailed'));
           else toast.success(t('tools.mcpPreset.success'));
+          if (result.refreshFailed) toast.error(t('tools.mcpPreset.refreshFailed'));
         } else if (result.status === 'error') {
           toast.error(
             t('tools.mcpPreset.authError', {

@@ -25,7 +25,9 @@ export const connectLinearMcpPreset = async (
   preset: McpPresetConnector,
   existingConnectorId: string | undefined,
   actions: ConnectorOAuthActions,
-): Promise<OAuthPopupResult | { status: 'blocked' | 'external' }> => {
+): Promise<
+  (OAuthPopupResult & { refreshFailed?: boolean }) | { status: 'blocked' | 'external' }
+> => {
   const popup = actions.openExternalLink
     ? null
     : window.open('about:blank', 'orvilo-connector-oauth', 'width=600,height=720');
@@ -52,7 +54,12 @@ export const connectLinearMcpPreset = async (
 
     popup!.location.href = authorizationUrl;
     const result = await waitForOAuthPopup(popup!, id);
-    await actions.fetchConnectors();
+    try {
+      await actions.fetchConnectors();
+    } catch (error) {
+      console.error('[Connector] Failed to refresh connectors after OAuth:', error);
+      return result.status === 'success' ? { ...result, refreshFailed: true } : result;
+    }
     return result;
   } catch (error) {
     if (popup && !popup.closed) popup.close();

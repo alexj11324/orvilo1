@@ -4,7 +4,7 @@ import {
 } from '@orvilo/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createRoomPublisher, LOCAL_ROOM_BUS_KEY } from '../roomPublisher';
+import { createRoomPublisher, gatewayConnectUrl, LOCAL_ROOM_BUS_KEY } from '../roomPublisher';
 
 vi.mock('../ticket', () => ({
   signGatewayPublishToken: vi.fn(async () => 'publish-token'),
@@ -234,5 +234,26 @@ describe('localRoomPublisher scoped kicks', () => {
       'http://localhost:3012/internal/publish',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+});
+
+describe('gatewayConnectUrl', () => {
+  it('fails closed when only the internal http publish URL is configured', () => {
+    // Deployments point COLLABORATION_GATEWAY_URL at the gateway's internal
+    // HTTP base; that hostname is not dialable by browsers, so it must not be
+    // minted into room tickets.
+    vi.stubEnv('COLLABORATION_GATEWAY_URL', 'http://collaboration-gateway:3012');
+    vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', '');
+    vi.stubEnv('NODE_ENV', 'production');
+
+    expect(gatewayConnectUrl()).toBeNull();
+  });
+
+  it('returns the public ws endpoint when configured', () => {
+    vi.stubEnv('COLLABORATION_GATEWAY_PUBLIC_URL', 'wss://orvilo.example.com/collaboration');
+    vi.stubEnv('COLLABORATION_GATEWAY_URL', 'http://collaboration-gateway:3012');
+    vi.stubEnv('NODE_ENV', 'production');
+
+    expect(gatewayConnectUrl()).toBe('wss://orvilo.example.com/collaboration');
   });
 });

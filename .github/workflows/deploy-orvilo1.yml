@@ -279,10 +279,10 @@ jobs:
             'sudo docker stop orvilo-hatchet-worker 2>/dev/null || true'
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_REF' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull orvilo hatchet-worker"
+             sudo ORVILO_IMAGE_TAG='$IMAGE_REF' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull orvilo hatchet-worker collaboration-gateway"
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_REF' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d orvilo"
+             sudo ORVILO_IMAGE_TAG='$IMAGE_REF' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d orvilo collaboration-gateway"
 
       - name: Verify
         env:
@@ -316,3 +316,7 @@ jobs:
           done
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             'curl -fsS --max-time 20 http://127.0.0.1:3210/api/version'
+          # The cursor gateway is optional at runtime but must not be left
+          # crash-looping after a deploy.
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            'sudo docker inspect -f "{{.State.Running}}" orvilo-collaboration-gateway | grep -qx true'

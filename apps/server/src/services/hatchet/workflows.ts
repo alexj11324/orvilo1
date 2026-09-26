@@ -37,6 +37,7 @@ export const HATCHET_WORKFLOW_PATHS = [
   '/api/workflows/onboarding/understanding/process-detailed-persona',
   '/api/workflows/onboarding/understanding/process-providers',
   '/api/workflows/linear-sync/process',
+  '/api/workflows/linear-import/process',
   '/api/workflows/linear-sync/execute',
   '/api/workflows/task/on-creator-complete',
   '/api/workflows/task/on-topic-complete',

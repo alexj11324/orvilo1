@@ -60,6 +60,7 @@ import {
 } from '@/server/workflows/context';
 import { runExpertiseHistoryWorkflow } from '@/server/workflows/expertiseHistory';
 import { runExpertiseHistoryTopicWorkflow } from '@/server/workflows/expertiseHistory/topic';
+import { processLinearImportWorkflow } from '@/server/workflows/linearImport/process';
 import { executeLinearSyncWorkflow } from '@/server/workflows/linearSync/execute';
 import { processLinearSyncWorkflow } from '@/server/workflows/linearSync/process';
 import { OnboardingTaskRecommendationWorkflow } from '@/server/workflows/onboardingTaskRecommendation';
@@ -488,6 +489,8 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
     ),
   '/api/workflows/linear-sync/process': (input, stepStore) =>
     invoke(processLinearSyncWorkflow, input, stepStore),
+  '/api/workflows/linear-import/process': (input, stepStore) =>
+    invoke(processLinearImportWorkflow, input, stepStore),
   '/api/workflows/linear-sync/execute': (input, stepStore) =>
     invoke(executeLinearSyncWorkflow, input, stepStore),
   '/api/workflows/task/on-creator-complete': (input) => invokeHonoHandler(onCreatorComplete, input),

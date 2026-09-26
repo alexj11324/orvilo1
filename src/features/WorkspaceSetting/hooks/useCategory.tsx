@@ -11,6 +11,7 @@ import {
   EllipsisIcon,
   FlaskConical,
   HandCoins,
+  Import,
   Info,
   KeyboardIcon,
   KeyIcon,
@@ -210,6 +211,11 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: Link2,
               key: WorkspaceSettingsTabs.Linear,
               label: t('workspaceSetting.tab.linear'),
+            },
+            canManageWorkspace && {
+              icon: Import,
+              key: WorkspaceSettingsTabs.Imports,
+              label: t('workspaceSetting.tab.imports'),
             },
             {
               icon: KeyRound,

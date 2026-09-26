@@ -706,6 +706,23 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
+    '%s resolves the Linear import catalog and wizard inside workspace settings',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+      for (const [url, path] of [
+        ['/acme/settings/imports', 'imports'],
+        ['/acme/settings/imports/linear', 'imports/linear'],
+      ]) {
+        const matches = matchRoutes(routes, url);
+        expect(matches?.at(-1)?.route.path).toBe(path);
+        expect(
+          resolveRouteSkeleton(matches?.map(({ route }) => ({ handle: route.handle })) ?? []),
+        ).toBeDefined();
+      }
+    },
+  );
+
+  it.each(mainAreaVariants)(
     '%s redirects retired workspace provider deep-links inside the workspace',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);

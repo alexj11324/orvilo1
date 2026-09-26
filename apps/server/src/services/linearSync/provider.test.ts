@@ -85,6 +85,20 @@ describe('normalizeLinearIssue', () => {
     );
   });
 
+  it('reports Linear schema errors even when GraphQL responds with HTTP 400', async () => {
+    const provider = new LinearGraphqlIssueProvider(
+      { getAccessToken: vi.fn().mockResolvedValue('access-token') },
+      vi.fn().mockResolvedValue({
+        data: { errors: [{ message: 'Cannot query field "unknownField" on type "Team".' }] },
+        status: 400,
+      }),
+    );
+
+    await expect(provider.listTeams()).rejects.toThrow(
+      'Cannot query field "unknownField" on type "Team".',
+    );
+  });
+
   it('passes a preallocated UUID and preserves the issue description', async () => {
     const request = vi.fn().mockResolvedValue({
       data: {

@@ -241,6 +241,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   invitation: 'blocked',
   knowledge: rw('knowledge:read', 'knowledge:write'),
   knowledgeBase: rw('knowledge:read', 'knowledge:write'),
+  // A one-time workspace import can create many tasks and requires an interactive admin decision.
+  linearImport: 'blocked',
   linearSync: rw('workspace:read', 'workspace:write'),
   llmGenerationTracing: 'blocked',
   market: rw('agent:read', 'agent:write'),

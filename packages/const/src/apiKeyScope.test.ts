@@ -132,6 +132,9 @@ describe('requiredApiKeyScopeForTrpc', () => {
     expect(requiredApiKeyScopeForTrpc('apiKey.createApiKey', 'mutation')).toEqual({
       blocked: true,
     });
+    expect(requiredApiKeyScopeForTrpc('linearImport.start', 'mutation')).toEqual({
+      blocked: true,
+    });
     expect(requiredApiKeyScopeForTrpc('subscription.getSubscription', 'query')).toEqual({
       blocked: true,
     });

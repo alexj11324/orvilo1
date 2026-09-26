@@ -2,10 +2,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveExternalToolSurface } from '../pipeline/resolveExternalToolSurface';
 
-const { mockConnectorTools, mockFindPlugin, mockResolveConnectors } = vi.hoisted(() => ({
-  mockConnectorTools: vi.fn(),
-  mockFindPlugin: vi.fn(),
-  mockResolveConnectors: vi.fn(),
+const { mockConnectorTools, mockFindPlugin, mockGetGitHubGrant, mockResolveConnectors } =
+  vi.hoisted(() => ({
+    mockConnectorTools: vi.fn(),
+    mockFindPlugin: vi.fn(),
+    mockGetGitHubGrant: vi.fn(),
+    mockResolveConnectors: vi.fn(),
+  }));
+
+vi.mock('@/server/services/connector/githubMcp', () => ({
+  getGitHubMcpGrantIdentity: mockGetGitHubGrant,
+  isGitHubMcpConnector: (connector: any) =>
+    connector.metadata?.githubMcp?.type === 'github_user_connection',
 }));
 
 vi.mock('@/database/models/connector', () => ({
@@ -84,6 +92,42 @@ describe('resolveExternalToolSurface', () => {
     });
     expect(surface['my-conn']).toBeUndefined();
     expect(mockConnectorTools).not.toHaveBeenCalled();
+  });
+
+  it('pins a GitHub provider connector to the exact user identity and grant revision', async () => {
+    mockResolveConnectors.mockResolvedValue([
+      {
+        id: 'github-connector',
+        identifier: 'github-mcp',
+        isEnabled: true,
+        metadata: {
+          githubMcp: { grantOwnerUserId: 'user_1', type: 'github_user_connection' },
+        },
+      },
+    ]);
+    mockConnectorTools.mockResolvedValue([
+      { toolName: 'pull_request_read', userConnectorId: 'github-connector' },
+    ]);
+    mockGetGitHubGrant.mockResolvedValue({
+      githubUserId: '42',
+      grantRevision: 'grant_1',
+      login: 'octocat',
+    });
+
+    const surface = await resolveExternalToolSurface({
+      ...baseInput,
+      candidateIds: ['github-mcp'],
+    });
+
+    expect(surface['github-mcp']).toMatchObject({
+      callable: true,
+      pins: {
+        authRevision: expect.any(String),
+        connectorId: 'github-connector',
+        githubUserId: '42',
+        grantRevision: 'grant_1',
+      },
+    });
   });
 
   it('mounts an installed MCP plugin only when it has transport params', async () => {

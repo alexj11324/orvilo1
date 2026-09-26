@@ -1,6 +1,8 @@
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { MCPClient } from '@/libs/mcp';
+
 // Mock 依赖
 vi.mock('@/libs/mcp');
 
@@ -18,6 +20,7 @@ describe('MCPService', () => {
     // 创建 mock 客户端
     mockClient = {
       callTool: vi.fn(),
+      disconnect: vi.fn(),
       listTools: vi.fn(),
     };
 
@@ -196,6 +199,56 @@ describe('MCPService', () => {
       ).rejects.toThrow(TRPCError);
     });
 
+    it('redacts token-bearing upstream failures from the thrown error and cause', async () => {
+      mockClient.callTool.mockRejectedValue(
+        new Error('request failed Authorization: Bearer server-only-token'),
+      );
+
+      let thrown: any;
+      try {
+        await mcpService.callTool({
+          argsStr: '{}',
+          clientParams: {
+            auth: { accessToken: 'server-only-token', type: 'oauth2' },
+            cacheMode: 'ephemeral',
+            name: 'github-mcp',
+            type: 'http',
+            url: 'https://api.githubcopilot.com/mcp/',
+          },
+          toolName: 'pull_request_read',
+        });
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(TRPCError);
+      expect(JSON.stringify(thrown)).not.toContain('server-only-token');
+      expect(thrown.message).toContain('[REDACTED]');
+      expect(thrown.cause?.message).toContain('[REDACTED]');
+    });
+
+    it('redacts token material echoed inside an MCP error result', async () => {
+      mockClient.callTool.mockResolvedValue({
+        content: [{ text: 'Authorization failed for server-only-token', type: 'text' }],
+        isError: true,
+      });
+
+      const result = await mcpService.callTool({
+        argsStr: '{}',
+        clientParams: {
+          auth: { accessToken: 'server-only-token', type: 'oauth2' },
+          cacheMode: 'ephemeral',
+          name: 'github-mcp',
+          type: 'http',
+          url: 'https://api.githubcopilot.com/mcp/',
+        },
+        toolName: 'pull_request_read',
+      });
+
+      expect(result.content).toBe('Authorization failed for [REDACTED]');
+      expect(JSON.stringify(result.state)).not.toContain('server-only-token');
+    });
+
     it('should parse args string correctly', async () => {
       const argsObject = { param1: 'value1', param2: 'value2' };
       const argsString = JSON.stringify(argsObject);
@@ -212,6 +265,83 @@ describe('MCPService', () => {
       });
 
       expect(mockClient.callTool).toHaveBeenCalledWith('testTool', argsObject);
+    });
+
+    it('disconnects an ephemeral token-bearing client after the call', async () => {
+      mockClient.callTool.mockResolvedValue({ content: [], isError: false });
+
+      await mcpService.callTool({
+        argsStr: '{}',
+        clientParams: {
+          auth: { accessToken: 'server-only-token', type: 'oauth2' },
+          cacheMode: 'ephemeral',
+          headers: { 'X-MCP-Readonly': 'true' },
+          name: 'github-mcp',
+          type: 'http',
+          url: 'https://api.githubcopilot.com/mcp/',
+        },
+        toolName: 'pull_request_read',
+      });
+
+      expect(mockClient.disconnect).toHaveBeenCalledOnce();
+    });
+
+    it('redacts MCP authentication and header values from log payloads', () => {
+      const safe = (mcpService as any).sanitizeForLogging({
+        auth: { accessToken: 'server-only-token', refreshToken: 'refresh-token', type: 'oauth2' },
+        headers: { 'Authorization': 'Bearer secret', 'X-MCP-Readonly': 'true' },
+        name: 'github-mcp',
+        type: 'http',
+        url: 'https://api.githubcopilot.com/mcp/',
+      });
+
+      expect(safe).toEqual({
+        auth: { type: 'oauth2' },
+        headerNames: ['Authorization', 'X-MCP-Readonly'],
+        name: 'github-mcp',
+        type: 'http',
+        url: 'https://api.githubcopilot.com/mcp/',
+      });
+      expect(JSON.stringify(safe)).not.toMatch(/server-only-token|refresh-token|Bearer secret/);
+
+      const safeError = (mcpService as any).sanitizeErrorForLogging(
+        new Error('request failed with server-only-token and Bearer secret'),
+        {
+          auth: { accessToken: 'server-only-token', type: 'oauth2' },
+          headers: { Authorization: 'Bearer secret' },
+          name: 'github-mcp',
+          type: 'http',
+          url: 'https://api.githubcopilot.com/mcp/',
+        },
+      );
+      expect(safeError.message).toBe('request failed with [REDACTED] and [REDACTED]');
+    });
+  });
+
+  describe('ephemeral client lifecycle', () => {
+    it('disconnects a token-bearing client when initialization fails', async () => {
+      (mcpService.getClient as ReturnType<typeof vi.fn>).mockRestore();
+      const disconnect = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(MCPClient).mockImplementation(function () {
+        return {
+          disconnect,
+          initialize: vi
+            .fn()
+            .mockRejectedValue(new Error('initialization failed with server-only-token')),
+        } as any;
+      } as any);
+
+      await expect(
+        mcpService.getClient({
+          auth: { accessToken: 'server-only-token', type: 'oauth2' },
+          cacheMode: 'ephemeral',
+          name: 'github-mcp',
+          type: 'http',
+          url: 'https://api.githubcopilot.com/mcp/',
+        }),
+      ).rejects.toThrow('initialization failed with [REDACTED]');
+
+      expect(disconnect).toHaveBeenCalledOnce();
     });
   });
 

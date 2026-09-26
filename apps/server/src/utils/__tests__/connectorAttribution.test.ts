@@ -29,6 +29,16 @@ describe('resolveConnectorAuthorizerId', () => {
     expect(id).toBe('owner');
   });
 
+  it('uses the GitHub grant owner for provider-backed MCP connectors', () => {
+    const id = resolveConnectorAuthorizerId({
+      metadata: {
+        githubMcp: { grantOwnerUserId: 'github-owner', type: 'github_user_connection' },
+      },
+      userId: 'row-creator',
+    });
+    expect(id).toBe('github-owner');
+  });
+
   it('falls back to the row creator when no linker is recorded', () => {
     expect(resolveConnectorAuthorizerId({ metadata: { composio: {} }, userId: 'creator' })).toBe(
       'creator',

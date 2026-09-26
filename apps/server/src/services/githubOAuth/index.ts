@@ -29,6 +29,46 @@ const decrypt = async (ciphertext: string): Promise<string> => {
   return result.plaintext;
 };
 
+export interface GitHubOAuthGrantIdentity {
+  githubUserId: string;
+  grantRevision: string;
+  login: string;
+}
+
+export interface GitHubOAuthAccessGrant extends GitHubOAuthGrantIdentity {
+  /** Plaintext is returned only to server-side callers and must never cross tRPC. */
+  accessToken: string;
+}
+
+export class GitHubOAuthGrantChangedError extends Error {
+  constructor() {
+    super('GitHub authorization changed; reconnect the tool and retry');
+    this.name = 'GitHubOAuthGrantChangedError';
+  }
+}
+
+const grantIdentity = (row: {
+  githubUserId: string;
+  grantRevision: string;
+  login: string;
+}): GitHubOAuthGrantIdentity => ({
+  githubUserId: row.githubUserId,
+  grantRevision: row.grantRevision,
+  login: row.login,
+});
+
+const assertExpectedGrant = (
+  row: { githubUserId: string; grantRevision: string },
+  expected?: Pick<GitHubOAuthGrantIdentity, 'githubUserId' | 'grantRevision'>,
+) => {
+  if (
+    expected &&
+    (row.githubUserId !== expected.githubUserId || row.grantRevision !== expected.grantRevision)
+  ) {
+    throw new GitHubOAuthGrantChangedError();
+  }
+};
+
 export const startGitHubOAuth = async (userId: string): Promise<string> => {
   const config = getConfig();
   const state = randomBytes(32).toString('base64url');
@@ -141,6 +181,36 @@ export const getGitHubOAuthStatus = async (input: { db: OrviloDatabase; userId: 
   };
 };
 
+/** Non-secret identity used to pin agent mounts to one GitHub grant. */
+export const getGitHubOAuthGrantIdentity = async (input: {
+  db: OrviloDatabase;
+  userId: string;
+}): Promise<GitHubOAuthGrantIdentity | null> => {
+  const [row] = await input.db
+    .select({
+      clientId: githubUserConnections.clientId,
+      githubUserId: githubUserConnections.githubUserId,
+      grantRevision: githubUserConnections.grantRevision,
+      login: githubUserConnections.login,
+      accessTokenExpiresAt: githubUserConnections.accessTokenExpiresAt,
+      refreshTokenCiphertext: githubUserConnections.refreshTokenCiphertext,
+      refreshTokenExpiresAt: githubUserConnections.refreshTokenExpiresAt,
+    })
+    .from(githubUserConnections)
+    .where(eq(githubUserConnections.userId, input.userId))
+    .limit(1);
+  if (!row || row.clientId !== getConfig().clientId) return null;
+  if (
+    row.accessTokenExpiresAt &&
+    row.accessTokenExpiresAt.getTime() <= Date.now() &&
+    (!row.refreshTokenCiphertext ||
+      (row.refreshTokenExpiresAt && row.refreshTokenExpiresAt.getTime() <= Date.now()))
+  ) {
+    return null;
+  }
+  return grantIdentity(row);
+};
+
 export const disconnectGitHubOAuth = async (input: { db: OrviloDatabase; userId: string }) => {
   await input.db
     .delete(githubUserConnections)
@@ -148,10 +218,11 @@ export const disconnectGitHubOAuth = async (input: { db: OrviloDatabase; userId:
 };
 
 /** Returns plaintext only inside the server process; never expose this through tRPC. */
-export const getValidGitHubAccessToken = async (input: {
+export const getValidGitHubAccessGrant = async (input: {
   db: OrviloDatabase;
+  expected?: Pick<GitHubOAuthGrantIdentity, 'githubUserId' | 'grantRevision'>;
   userId: string;
-}): Promise<string | null> => {
+}): Promise<GitHubOAuthAccessGrant | null> => {
   const [row] = await input.db
     .select()
     .from(githubUserConnections)
@@ -159,11 +230,12 @@ export const getValidGitHubAccessToken = async (input: {
     .limit(1);
   if (!row) return null;
   if (row.clientId !== getConfig().clientId) return null;
+  assertExpectedGrant(row, input.expected);
   if (
     !row.accessTokenExpiresAt ||
     row.accessTokenExpiresAt.getTime() > Date.now() + REFRESH_SKEW_MS
   ) {
-    return decrypt(row.accessTokenCiphertext);
+    return { ...grantIdentity(row), accessToken: await decrypt(row.accessTokenCiphertext) };
   }
   if (
     !row.refreshTokenCiphertext ||
@@ -204,11 +276,15 @@ export const getValidGitHubAccessToken = async (input: {
       if (!latest) return null;
       if (latest.tokenVersion !== row.tokenVersion) {
         if (latest.clientId !== getConfig().clientId) return null;
+        assertExpectedGrant(latest, input.expected);
         if (
           !latest.accessTokenExpiresAt ||
           latest.accessTokenExpiresAt.getTime() > Date.now() + REFRESH_SKEW_MS
         )
-          return decrypt(latest.accessTokenCiphertext);
+          return {
+            ...grantIdentity(latest),
+            accessToken: await decrypt(latest.accessTokenCiphertext),
+          };
         return null;
       }
       if (!latest.refreshOwner) break;
@@ -244,7 +320,7 @@ export const getValidGitHubAccessToken = async (input: {
       )
       .returning({ userId: githubUserConnections.userId });
     if (!saved) throw new Error('GitHub credential changed during refresh');
-    return tokens.access_token;
+    return { ...grantIdentity(row), accessToken: tokens.access_token };
   } catch (error) {
     // Only a grant-level rejection proves the user's authorization is gone.
     // A bare 401 here is a client-authentication failure (misconfigured or
@@ -277,3 +353,8 @@ export const getValidGitHubAccessToken = async (input: {
     throw error;
   }
 };
+
+export const getValidGitHubAccessToken = async (input: {
+  db: OrviloDatabase;
+  userId: string;
+}): Promise<string | null> => (await getValidGitHubAccessGrant(input))?.accessToken ?? null;

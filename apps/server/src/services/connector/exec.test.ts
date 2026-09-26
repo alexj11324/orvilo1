@@ -6,11 +6,11 @@ import { mcpService } from '@/server/services/mcp';
 
 import { callConnectorToolById } from './exec';
 import { scheduleStaleConnectorToolsRefresh } from './refresh';
-import { ensureFreshConnectorToken } from './tokens';
+import { resolveConnectorMcpParams } from './sync';
 
 vi.mock('@/server/services/mcp', () => ({ mcpService: { callTool: vi.fn() } }));
 vi.mock('@/server/services/deviceGateway', () => ({ deviceGateway: { isConfigured: false } }));
-vi.mock('./tokens', () => ({ ensureFreshConnectorToken: vi.fn(async (c) => c) }));
+vi.mock('./sync', () => ({ resolveConnectorMcpParams: vi.fn() }));
 // The background tool-list refresh is exercised in refresh.test.ts. Here we only
 // verify the call site wires it up and stays isolated from it.
 vi.mock('./refresh', () => ({
@@ -44,7 +44,12 @@ const makeCtx = (connectors: any[], tools: any[]) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(ensureFreshConnectorToken).mockImplementation(async (c: any) => c);
+  vi.mocked(resolveConnectorMcpParams).mockImplementation(async (c: any) => ({
+    auth: { accessToken: c.credentials?.accessToken, type: 'oauth2' },
+    name: c.name,
+    type: 'http',
+    url: c.mcpServerUrl,
+  }));
   (deviceGateway as any).isConfigured = false;
 });
 
@@ -103,10 +108,12 @@ describe('callConnectorToolById', () => {
   });
 
   it('uses the refreshed token when the connector token was refreshed', async () => {
-    vi.mocked(ensureFreshConnectorToken).mockResolvedValueOnce({
-      ...connector,
-      credentials: { accessToken: 'refreshed', type: 'oauth2' },
-    } as any);
+    vi.mocked(resolveConnectorMcpParams).mockResolvedValueOnce({
+      auth: { accessToken: 'refreshed', type: 'oauth2' },
+      name: connector.name,
+      type: 'http',
+      url: connector.mcpServerUrl,
+    });
     vi.mocked(mcpService.callTool).mockResolvedValue({ ok: true });
     const ctx = makeCtx([connector], [tool()]);
 

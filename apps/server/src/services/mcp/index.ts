@@ -81,11 +81,60 @@ export class MCPService {
     return { content, state, success: true };
   }
 
-  private sanitizeForLogging = <T extends Record<string, any>>(obj: T): Omit<T, 'env'> => {
+  private sanitizeForLogging = <T extends Record<string, any>>(obj: T): Record<string, unknown> => {
     if (!obj) return obj;
 
-    const { env: _, ...rest } = obj;
-    return rest as Omit<T, 'env'>;
+    const { auth, env: _, headers, ...rest } = obj;
+    return {
+      ...rest,
+      ...(auth ? { auth: { type: auth.type } } : {}),
+      ...(headers ? { headerNames: Object.keys(headers) } : {}),
+    };
+  };
+
+  private sanitizeErrorForLogging = (
+    error: unknown,
+    params?: MCPClientParams,
+  ): Record<string, unknown> => {
+    const message = this.redactMcpSecrets(
+      error instanceof Error ? error.message : String(error),
+      params,
+    );
+    return {
+      message,
+      ...(error instanceof Error ? { name: error.name } : {}),
+    };
+  };
+
+  private redactMcpSecrets = (value: string, params?: MCPClientParams): string => {
+    let redacted = value;
+    if (params?.type === 'http') {
+      const secrets = [
+        params.auth?.accessToken,
+        params.auth?.clientSecret,
+        params.auth?.refreshToken,
+        params.auth?.token,
+        ...Object.values(params.headers ?? {}),
+      ].filter((value): value is string => Boolean(value));
+      for (const secret of secrets) redacted = redacted.replaceAll(secret, '[REDACTED]');
+    }
+    return redacted;
+  };
+
+  private redactMcpSecretsFromValue = (value: unknown, params?: MCPClientParams): unknown => {
+    if (typeof value === 'string') return this.redactMcpSecrets(value, params);
+    if (Array.isArray(value)) {
+      return value.map((item) => this.redactMcpSecretsFromValue(item, params));
+    }
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [
+          key,
+          this.redactMcpSecretsFromValue(item, params),
+        ]),
+      );
+    }
+    return value;
   };
 
   // --- MCP Interaction ---
@@ -115,14 +164,19 @@ export class MCPService {
             parameters: item.inputSchema as ToolManifestSettings,
           }));
         } catch (error) {
+          const safeMessage = this.redactMcpSecrets((error as Error).message, params);
           // Only retry for NoValidSessionId errors
           if ((error as Error).message !== 'NoValidSessionId') {
-            console.error(`Error listing tools for params %O:`, loggableParams, error);
+            console.error(
+              `Error listing tools for params %O:`,
+              loggableParams,
+              this.sanitizeErrorForLogging(error, params),
+            );
             bail(
               new TRPCError({
-                cause: error,
+                cause: new Error(safeMessage),
                 code: 'INTERNAL_SERVER_ERROR',
-                message: `Error listing tools from MCP server: ${(error as Error).message}`,
+                message: `Error listing tools from MCP server: ${safeMessage}`,
               }),
             );
             return []; // This line will never be reached due to bail, but needed for type safety
@@ -149,13 +203,26 @@ export class MCPService {
       );
       return result;
     } catch (error) {
-      console.error(`Error listing tools for params %O:`, loggableParams, error);
+      const safeMessage = this.redactMcpSecrets((error as Error).message, params);
+      console.error(
+        `Error listing tools for params %O:`,
+        loggableParams,
+        this.sanitizeErrorForLogging(error, params),
+      );
       // Propagate a TRPCError for better handling upstream
       throw new TRPCError({
-        cause: error,
+        cause: new Error(safeMessage),
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Error listing tools from MCP server: ${(error as Error).message}`,
+        message: `Error listing tools from MCP server: ${safeMessage}`,
       });
+    } finally {
+      if (params.type === 'http' && params.cacheMode === 'ephemeral') {
+        try {
+          await client.disconnect();
+        } catch {
+          // The request is already complete; cleanup failure must not replace it.
+        }
+      }
     }
   }
 
@@ -174,12 +241,17 @@ export class MCPService {
       );
       return result;
     } catch (error) {
-      console.error(`Error listing resources for params %O:`, loggableParams, error);
+      const safeMessage = this.redactMcpSecrets((error as Error).message, params);
+      console.error(
+        `Error listing resources for params %O:`,
+        loggableParams,
+        this.sanitizeErrorForLogging(error, params),
+      );
       // Propagate a TRPCError for better handling upstream
       throw new TRPCError({
-        cause: error,
+        cause: new Error(safeMessage),
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Error listing resources from MCP server: ${(error as Error).message}`,
+        message: `Error listing resources from MCP server: ${safeMessage}`,
       });
     }
   }
@@ -199,12 +271,17 @@ export class MCPService {
       );
       return result;
     } catch (error) {
-      console.error(`Error listing prompts for params %O:`, loggableParams, error);
+      const safeMessage = this.redactMcpSecrets((error as Error).message, params);
+      console.error(
+        `Error listing prompts for params %O:`,
+        loggableParams,
+        this.sanitizeErrorForLogging(error, params),
+      );
       // Propagate a TRPCError for better handling upstream
       throw new TRPCError({
-        cause: error,
+        cause: new Error(safeMessage),
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Error listing prompts from MCP server: ${(error as Error).message}`,
+        message: `Error listing prompts from MCP server: ${safeMessage}`,
       });
     }
   }
@@ -243,71 +320,108 @@ export class MCPService {
         result,
         processContentBlocksFn,
       );
+      const safeResult = {
+        ...processedResult,
+        content: this.redactMcpSecrets(processedResult.content, clientParams),
+        state: this.redactMcpSecretsFromValue(
+          processedResult.state,
+          clientParams,
+        ) as typeof processedResult.state,
+      };
 
       log(
         `Tool "${toolName}" called successfully for params: %O, result: %O`,
         loggableParams,
-        processedResult.state,
+        safeResult.state,
       );
 
-      return processedResult;
+      return safeResult;
     } catch (error) {
       if (error instanceof McpError) {
         const mcpError = error as McpError;
+        const safeMessage = this.redactMcpSecrets(mcpError.message, clientParams);
 
         return {
-          content: mcpError.message,
-          error,
+          content: safeMessage,
+          error: new Error(safeMessage),
           state: {
-            content: [{ text: mcpError.message, type: 'text' }],
+            content: [{ text: safeMessage, type: 'text' }],
             isError: true,
           },
           success: false,
         };
       }
 
+      const safeMessage = this.redactMcpSecrets((error as Error).message, clientParams);
       console.error(
         `Error calling tool "${toolName}" for params %O:`,
         this.sanitizeForLogging(clientParams),
-        error,
+        this.sanitizeErrorForLogging(error, clientParams),
       );
       // Propagate a TRPCError
       throw new TRPCError({
-        cause: error,
+        cause: new Error(safeMessage),
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Error calling tool "${toolName}" on MCP server: ${(error as Error).message}`,
+        message: `Error calling tool "${toolName}" on MCP server: ${safeMessage}`,
       });
+    } finally {
+      if (clientParams.type === 'http' && clientParams.cacheMode === 'ephemeral') {
+        try {
+          await client.disconnect();
+        } catch {
+          // The request is already complete; cleanup failure must not replace it.
+        }
+      }
     }
   }
 
   // Private method to get or initialize a client based on parameters
   private async getClient(params: MCPClientParams, skipCache = false): Promise<MCPClient> {
-    const key = this.serializeParams(params); // Use custom serialization
+    const ephemeral = params.type === 'http' && params.cacheMode === 'ephemeral';
+    const key = ephemeral ? undefined : this.serializeParams(params);
 
-    if (!skipCache && this.clients.has(key)) {
+    if (key && !skipCache && this.clients.has(key)) {
       return this.clients.get(key)!;
     }
 
     log(`No cached client found, Initializing new client.`);
+    let client: MCPClient | undefined;
     try {
-      const client = new MCPClient(params);
+      client = new MCPClient(params);
       await client.initialize({
         onProgress: (progress) => {
           log(`New client initializing... ${progress.progress}/${progress.total}`);
         },
       }); // Initialization logic should be within MCPClient
-      this.clients.set(key, client);
-      log(`New client initialized and cached for key: ${key.slice(0, 20)}`);
+      if (key) {
+        this.clients.set(key, client);
+        log('New client initialized and cached.');
+      } else {
+        log('New ephemeral client initialized.');
+      }
       return client;
     } catch (error) {
-      console.error(`Failed to initialize MCP client:`, error);
+      if (ephemeral && client) {
+        try {
+          await client.disconnect();
+        } catch {
+          // Initialization already failed; cleanup remains best-effort.
+        }
+      }
+      console.error(
+        `Failed to initialize MCP client:`,
+        this.sanitizeErrorForLogging(error, params),
+      );
 
       // Preserve complete error information, especially detailed stderr output
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = this.redactMcpSecrets(
+        error instanceof Error ? error.message : String(error),
+        params,
+      );
 
       if (typeof error === 'object' && !!error && 'data' in error) {
         throw new TRPCError({
-          cause: error,
+          cause: new Error(errorMessage),
           code: 'SERVICE_UNAVAILABLE',
           message: errorMessage,
         });
@@ -317,11 +431,14 @@ export class MCPService {
       log('Detailed initialization error: %O', {
         error: errorMessage,
         params: this.sanitizeForLogging(params),
-        stack: error instanceof Error ? error.stack : undefined,
+        stack:
+          error instanceof Error && error.stack
+            ? this.redactMcpSecrets(error.stack, params)
+            : undefined,
       });
 
       throw new TRPCError({
-        cause: error,
+        cause: new Error(errorMessage),
         code: 'INTERNAL_SERVER_ERROR',
         message: errorMessage, // Use complete error message directly
       });

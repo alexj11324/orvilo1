@@ -28,8 +28,11 @@ import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
 } from '@/server/services/agentExecution/types';
-import { buildConnectorMcpParams } from '@/server/services/connector/sync';
-import { ensureFreshConnectorToken } from '@/server/services/connector/tokens';
+import {
+  getGitHubMcpGrantIdentity,
+  isGitHubMcpConnector,
+} from '@/server/services/connector/githubMcp';
+import { resolveConnectorMcpParams } from '@/server/services/connector/sync';
 import { mcpService } from '@/server/services/mcp';
 import { ToolExecutionService } from '@/server/services/toolExecution';
 import { BuiltinToolsExecutor } from '@/server/services/toolExecution/builtin';
@@ -504,7 +507,24 @@ const execAcpExternalTool = async (input: {
     if (!connector.isEnabled) {
       throw new AcpBuiltinToolForbiddenError(`Connector '${identifier}' is disabled`);
     }
-    authRevision = connectorAuthRevision(connector);
+    const githubGrant = isGitHubMcpConnector(connector)
+      ? await getGitHubMcpGrantIdentity({ connector, db })
+      : null;
+    if (isGitHubMcpConnector(connector) && !githubGrant) {
+      throw new AcpBuiltinToolForbiddenError(
+        `GitHub authorization for connector '${identifier}' is unavailable`,
+      );
+    }
+    if (
+      githubGrant &&
+      ((pins?.grantRevision && pins.grantRevision !== githubGrant.grantRevision) ||
+        (pins?.githubUserId && pins.githubUserId !== githubGrant.githubUserId))
+    ) {
+      throw new AcpBuiltinToolForbiddenError(
+        `Connector '${identifier}' GitHub identity or grant changed since dispatch; remount required`,
+      );
+    }
+    authRevision = connectorAuthRevision(connector, githubGrant);
     if (pins?.authRevision && authRevision !== pins.authRevision) {
       throw new AcpBuiltinToolForbiddenError(
         `Connector '${identifier}' was re-authorized since dispatch; remount required`,
@@ -538,6 +558,7 @@ const execAcpExternalTool = async (input: {
         authRevision,
         connectorId: connector.id,
         db,
+        grantRevision: githubGrant?.grantRevision,
         identifier,
         kind: 'connector_tool',
         operation,
@@ -549,7 +570,6 @@ const execAcpExternalTool = async (input: {
       if (refused) return refused;
     }
 
-    const fresh = await ensureFreshConnectorToken(connector, connectorModel);
     manifest = {
       api: tools.map((item) => ({
         description: item.description ?? undefined,
@@ -558,7 +578,16 @@ const execAcpExternalTool = async (input: {
       })),
       identifier,
       meta: {},
-      mcpParams: buildConnectorMcpParams(fresh),
+      mcpParams: await resolveConnectorMcpParams(
+        connector,
+        { connectorModel, serverDB: db },
+        githubGrant
+          ? {
+              githubUserId: githubGrant.githubUserId,
+              grantRevision: githubGrant.grantRevision,
+            }
+          : undefined,
+      ),
       type: 'mcp',
     } as unknown as OrviloToolManifest;
   } else {
@@ -656,6 +685,7 @@ const gateAcpExternalToolApproval = async (params: {
   connectorId?: string;
   db: OrviloDatabase;
   identifier: string;
+  grantRevision?: string;
   kind: 'connector_tool' | 'plugin_tool';
   operation: OperationRow;
   pluginInstallId?: string;
@@ -693,6 +723,7 @@ const gateAcpExternalToolApproval = async (params: {
     connectorId: params.connectorId,
     executionGeneration: (appContext.executionGeneration as number | undefined) ?? undefined,
     identifier: params.identifier,
+    grantRevision: params.grantRevision,
     kind: params.kind,
     operationId: operation.id,
     pluginInstallId: params.pluginInstallId,

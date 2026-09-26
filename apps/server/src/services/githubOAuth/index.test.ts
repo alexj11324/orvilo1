@@ -41,8 +41,13 @@ vi.mock('@/server/modules/KeyVaultsEncrypt', () => ({
 }));
 
 const { GitHubOAuthTokenError } = await import('./provider');
-const { startGitHubOAuth, completeGitHubOAuth, getGitHubOAuthStatus, getValidGitHubAccessToken } =
-  await import('./index');
+const {
+  startGitHubOAuth,
+  completeGitHubOAuth,
+  getGitHubOAuthStatus,
+  getValidGitHubAccessGrant,
+  getValidGitHubAccessToken,
+} = await import('./index');
 
 describe('GitHub OAuth flow', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -130,7 +135,7 @@ describe('GitHub OAuth flow', () => {
       login: 'owner',
       avatarUrl: null,
       grantRevision: '017b0e96-af23-453e-a561-2d969e7b978b',
-      accessTokenExpiresAt: new Date(Date.now() + 60_000),
+      accessTokenExpiresAt: new Date(Date.now() + 120_000),
       refreshTokenCiphertext: 'encrypted:secret',
       refreshTokenExpiresAt: null,
     };
@@ -143,6 +148,54 @@ describe('GitHub OAuth flow', () => {
       avatarUrl: undefined,
       grantRevision: row.grantRevision,
     });
+  });
+
+  it('returns the server-only token with its exact identity and grant revision', async () => {
+    const row = {
+      clientId: 'app-client',
+      githubUserId: '42',
+      grantRevision: '017b0e96-af23-453e-a561-2d969e7b978b',
+      login: 'owner',
+      accessTokenCiphertext: 'encrypted:access',
+      accessTokenExpiresAt: new Date(Date.now() + 120_000),
+    };
+    const db = {
+      select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: async () => [row] }) }) })),
+    };
+
+    await expect(
+      getValidGitHubAccessGrant({ db: db as never, expected: row, userId: 'user-one' }),
+    ).resolves.toEqual({
+      accessToken: 'access',
+      githubUserId: row.githubUserId,
+      grantRevision: row.grantRevision,
+      login: row.login,
+    });
+  });
+
+  it('refuses a stale grant pin before returning token material', async () => {
+    const row = {
+      clientId: 'app-client',
+      githubUserId: '99',
+      grantRevision: '117b0e96-af23-453e-a561-2d969e7b978b',
+      login: 'replacement',
+      accessTokenCiphertext: 'encrypted:replacement-token',
+      accessTokenExpiresAt: new Date(Date.now() + 60_000),
+    };
+    const db = {
+      select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: async () => [row] }) }) })),
+    };
+
+    await expect(
+      getValidGitHubAccessGrant({
+        db: db as never,
+        expected: {
+          githubUserId: '42',
+          grantRevision: '017b0e96-af23-453e-a561-2d969e7b978b',
+        },
+        userId: 'user-one',
+      }),
+    ).rejects.toThrow('authorization changed');
   });
 
   it('rejects a callback opened in a different signed-in browser before token exchange', async () => {

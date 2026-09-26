@@ -240,6 +240,31 @@ export class MCPClient {
     }
   }
 
+  private safeErrorMessage(error: unknown): string {
+    let message = error instanceof Error ? error.message : String(error);
+    if (this.params.type === 'http') {
+      const secrets = [
+        this.params.auth?.accessToken,
+        this.params.auth?.clientSecret,
+        this.params.auth?.refreshToken,
+        this.params.auth?.token,
+        ...Object.values(this.params.headers ?? {}),
+      ].filter((value): value is string => Boolean(value));
+      for (const secret of secrets) message = message.replaceAll(secret, '[REDACTED]');
+    }
+    return message;
+  }
+
+  private throwSanitizedError(message: string, exposedMessage = message): never {
+    throw new Error(exposedMessage, { cause: new Error(message) });
+  }
+
+  private throwSanitizedAuthorizationError(message: string): never {
+    const authorizationError = createMCPError('AUTHORIZATION_ERROR', message);
+    (authorizationError as Error & { cause?: unknown }).cause = new Error(message);
+    throw authorizationError;
+  }
+
   async initialize(options: { onProgress?: (progress: Progress) => void } = {}) {
     log('Initializing MCP connection...');
 
@@ -247,14 +272,12 @@ export class MCPClient {
       await this.mcp.connect(this.transport, { onprogress: options.onProgress });
       log('MCP connection initialized.');
     } catch (e) {
-      log('MCP connection failed:', e);
+      const safeMessage = this.safeErrorMessage(e);
+      log('MCP connection failed: %s', safeMessage);
 
       if (this.params.type === 'http') {
-        const error = e as Error;
-        if (error.message.includes('401'))
-          throw createMCPError('AUTHORIZATION_ERROR', error.message);
-
-        throw e;
+        if (safeMessage.includes('401')) this.throwSanitizedAuthorizationError(safeMessage);
+        this.throwSanitizedError(safeMessage);
       }
 
       // For stdio connection failure, attempt to pre-check command to get detailed error information
@@ -326,12 +349,16 @@ export class MCPClient {
       log('Listed tools: %O', tools);
       return tools as McpTool[];
     } catch (e) {
-      console.error('Listed tools error: %O', e);
+      const safeMessage = this.safeErrorMessage(e);
+      console.error('Listed tools error:', safeMessage);
 
-      if ((e as Error).message.includes('No valid session ID provided')) {
-        throw new Error('NoValidSessionId', { cause: e });
+      if (safeMessage.includes('No valid session ID provided')) {
+        this.throwSanitizedError(safeMessage, 'NoValidSessionId');
       }
 
+      if (this.params.type === 'http') {
+        this.throwSanitizedError(safeMessage);
+      }
       return [];
     }
   }
@@ -343,7 +370,7 @@ export class MCPClient {
       log('Listed resources: %O', resources);
       return resources as McpResource[];
     } catch (e) {
-      log('Listed resources: %O', e);
+      log('List resources failed: %s', this.safeErrorMessage(e));
       return [];
     }
   }
@@ -355,7 +382,7 @@ export class MCPClient {
       log('Listed prompts: %O', prompts);
       return prompts as McpPrompt[];
     } catch (e) {
-      log('Listed prompts: %O', e);
+      log('List prompts failed: %s', this.safeErrorMessage(e));
       return [];
     }
   }

@@ -4,6 +4,10 @@ import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
 import { PluginModel } from '@/database/models/plugin';
 import type { OrviloDatabase } from '@/database/type';
+import {
+  getGitHubMcpGrantIdentity,
+  isGitHubMcpConnector,
+} from '@/server/services/connector/githubMcp';
 
 import {
   connectorAuthRevision,
@@ -73,12 +77,22 @@ export const resolveExternalToolSurface = async (input: {
       // Pin the exact authorized connection + grant revision + per-api schema
       // digests so exec re-authorizes THIS row — a re-linked, re-synced or
       // re-authorized same-identifier connection is refused, not substituted.
+      const githubGrant = isGitHubMcpConnector(connector)
+        ? await getGitHubMcpGrantIdentity({ connector, db })
+        : null;
       const pins: ExternalToolPins = {
-        authRevision: connectorAuthRevision(connector),
+        authRevision: connectorAuthRevision(connector, githubGrant),
         connectorId: connector.id,
+        githubUserId: githubGrant?.githubUserId,
+        grantRevision: githubGrant?.grantRevision,
         schemaDigests: surfaceSchemaDigests(apis),
       };
-      result[connector.identifier] = { apis, callable: true, pins, source: 'connector' };
+      result[connector.identifier] = {
+        apis,
+        callable: !isGitHubMcpConnector(connector) || Boolean(githubGrant),
+        pins,
+        source: 'connector',
+      };
     }
   }
 

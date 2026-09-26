@@ -28,6 +28,11 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { callConnectorToolById, ConnectorToolCallError } from '@/server/services/connector/exec';
 import {
+  findExistingGitHubMcpConnector,
+  reconcileGitHubMcpAvailability,
+} from '@/server/services/connector/githubMcp';
+import { activateGitHubMcpConnector } from '@/server/services/connector/githubMcpActivation';
+import {
   buildAuthorizationUrl,
   buildOAuthClientInformation,
   discoverConnectorOAuth,
@@ -94,6 +99,15 @@ const connectorCredentialsInputSchema = z.discriminatedUnion('type', [
   z.object({ headers: z.record(z.string(), z.string()), type: z.literal('header') }),
 ]);
 
+/** Keep the GitHub provider binding server-owned on generic create/update paths. */
+const withTrustedGitHubMcpBinding = (
+  candidate: Record<string, unknown> | null | undefined,
+  existing: ConnectorMetadata | null | undefined,
+): ConnectorMetadata => {
+  const { githubMcp: _untrustedGitHubMcp, ...rest } = candidate ?? {};
+  return existing?.githubMcp ? { ...rest, githubMcp: existing.githubMcp } : rest;
+};
+
 const createConnectorSchema = z.object({
   /**
    * Bind this connector to a specific agent (Agent > Workspace/Personal). When
@@ -134,7 +148,10 @@ export const connectorRouter = router({
   // ── Queries ──────────────────────────────────────────────────────────────
 
   list: connectorProcedure.query(async ({ ctx }) => {
-    const connectors = await ctx.connectorModel.query();
+    const connectors = await reconcileGitHubMcpAvailability({
+      connectors: await ctx.connectorModel.query(),
+      db: ctx.serverDB,
+    });
 
     // Attribution — resolve the member who authorized each connector (workspace
     // dimension), so the profile can tag "authorized by X". The ids come from
@@ -172,7 +189,10 @@ export const connectorRouter = router({
   listByAgent: connectorProcedure
     .input(z.object({ agentId: z.string() }))
     .query(async ({ input, ctx }) => {
-      const connectors = await ctx.connectorModel.queryByAgent(input.agentId);
+      const connectors = await reconcileGitHubMcpAvailability({
+        connectors: await ctx.connectorModel.queryByAgent(input.agentId),
+        db: ctx.serverDB,
+      });
 
       // Attribution — the member who authorized each agent-scoped connector, so
       // a teammate viewing the agent sees "authorized by X" on each chip.
@@ -210,7 +230,10 @@ export const connectorRouter = router({
    * that workspace's agent connectors ( /).
    */
   listAgentBound: connectorProcedure.query(async ({ ctx }) => {
-    const connectors = await ctx.connectorModel.queryAllAgentScoped();
+    const connectors = await reconcileGitHubMcpAvailability({
+      connectors: await ctx.connectorModel.queryAllAgentScoped(),
+      db: ctx.serverDB,
+    });
 
     // Resolve owning-agent display info in one scoped query (workspace-aware),
     // instead of loading each agent's config client-side from a page that isn't
@@ -290,6 +313,55 @@ export const connectorRouter = router({
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
+  /** Connect GitHub's hosted MCP through the existing per-user GitHub App grant. */
+  connectGitHubMcp: connectorWriteProcedure.mutation(async ({ ctx }) => {
+    const existingReference = findExistingGitHubMcpConnector(
+      await ctx.connectorModel.queryPublic(),
+    );
+    const existing = existingReference
+      ? await ctx.connectorModel.findById(existingReference.id)
+      : null;
+    if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'connector');
+
+    try {
+      const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+      return await activateGitHubMcpConnector({
+        ctx: {
+          ...ctx,
+          runInTransaction: (callback) =>
+            ctx.serverDB.transaction(async (tx) => {
+              const serverDB = tx as unknown as OrviloDatabase;
+              return callback({
+                connectorModel: new ConnectorModel(
+                  serverDB,
+                  ctx.userId,
+                  ctx.workspaceId ?? undefined,
+                  gateKeeper,
+                ),
+                connectorToolModel: new ConnectorToolModel(
+                  serverDB,
+                  ctx.userId,
+                  ctx.workspaceId ?? undefined,
+                ),
+                serverDB,
+              });
+            }),
+        },
+        existing,
+        userId: ctx.userId,
+      });
+    } catch (error) {
+      console.error(
+        '[connector:connectGitHubMcp] failed:',
+        error instanceof Error ? error.name : 'UnknownError',
+      );
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Could not connect GitHub MCP',
+      });
+    }
+  }),
+
   create: connectorWriteProcedure.input(createConnectorSchema).mutation(async ({ input, ctx }) => {
     const { agentId } = input;
 
@@ -316,7 +388,10 @@ export const connectorRouter = router({
       // field is simply removed. `grantEpoch` mints a fresh grant generation
       // for every create/re-add so exec pins never outlive the credential set.
       metadata: {
-        ...withTrustedLinkedByUserId(input.metadata, undefined),
+        ...withTrustedGitHubMcpBinding(
+          withTrustedLinkedByUserId(input.metadata, undefined),
+          undefined,
+        ),
         grantEpoch: randomUUID(),
       },
       name: input.name,
@@ -666,7 +741,10 @@ export const connectorRouter = router({
       // and ignore whatever the client sent, so an edit can never spoof (or
       // silently clear) the connector's authorizer. Untouched when the patch
       // omits metadata.
-      const metadata = withTrustedLinkedByUserId(patch.metadata, target.metadata);
+      const metadata = withTrustedGitHubMcpBinding(
+        withTrustedLinkedByUserId(patch.metadata, target.metadata),
+        target.metadata,
+      );
       // Any credential patch — set, replace, or clear — is a new grant epoch,
       // so exec-time pins minted under the old credentials refuse to execute
       // (SA02-C). Plain OAuth token refresh never reaches this procedure.

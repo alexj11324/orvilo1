@@ -75,8 +75,11 @@ const visibleMcpPresets = MCP_PRESET_CONNECTORS.filter((preset) =>
 );
 
 interface ConnectorListProps {
+  githubConnecting?: boolean;
+  githubGrantConnected?: boolean;
   /** Opens the custom-connector form pre-filled with a preset's URL and auth. */
   onAddPreset: (preset: McpPresetConnector) => void;
+  onConnectGitHub: () => void;
   onSelect: (identifier: string, type: ConnectorDetailType) => void;
   selectedIdentifier?: string;
 }
@@ -89,7 +92,15 @@ interface ConnectorListProps {
  * connectors. Builtin tools are intentionally absent — they always run with
  * allow-all permissions and are not user-configurable on this page.
  */
-const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selectedIdentifier }) => {
+const ConnectorList = memo<ConnectorListProps>((props) => {
+  const {
+    onSelect,
+    onAddPreset,
+    onConnectGitHub,
+    githubConnecting,
+    githubGrantConnected,
+    selectedIdentifier,
+  } = props;
   const { t } = useTranslation('setting');
   const [collapsed, setCollapsed] = useState(() => new Set<string>());
 
@@ -340,12 +351,18 @@ const ConnectorList = memo<ConnectorListProps>(({ onSelect, onAddPreset, selecte
           const connector = presetConnectorMap.get(preset.id);
           return (
             <McpPresetItem
+              connecting={preset.managedAuth === 'github-app' && githubConnecting}
               connector={connector}
               isSelected={Boolean(connector) && selectedIdentifier === connector?.identifier}
               key={preset.id}
               preset={preset}
-              onAdd={() => onAddPreset(preset)}
+              providerConnected={
+                preset.managedAuth === 'github-app' ? githubGrantConnected : undefined
+              }
               onSelect={() => connector && onSelect(connector.identifier, 'mcp-connector')}
+              onAdd={() =>
+                preset.managedAuth === 'github-app' ? onConnectGitHub() : onAddPreset(preset)
+              }
             />
           );
         }),

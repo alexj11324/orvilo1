@@ -6,13 +6,14 @@ import { getMcpPresetConnectorIdentifier, type McpPresetConnector } from '@orvil
 import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Grid2x2Plus } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CustomConnectorModal } from '@/features/Connectors';
 
 import { type ConnectorDetailType } from './ConnectorDetail';
 import ConnectorList from './ConnectorList';
+import { useGitHubMcpConnect } from './useGitHubMcpConnect';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   body: css`
@@ -69,6 +70,15 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
   const { t } = useTranslation('setting');
   const [presetPlugin, setPresetPlugin] = useState<OrviloToolCustomPlugin | undefined>(undefined);
   const [showAddConnector, setShowAddConnector] = useState(false);
+  const selectGitHub = useCallback(
+    (identifier: string) => onSelect(identifier, 'mcp-connector'),
+    [onSelect],
+  );
+  const {
+    connect: connectGitHub,
+    connecting: githubConnecting,
+    grantConnected: githubGrantConnected,
+  } = useGitHubMcpConnect(selectGitHub);
 
   const closeModal = () => {
     setShowAddConnector(false);
@@ -99,7 +109,10 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
 
         <div className={styles.body}>
           <ConnectorList
+            githubConnecting={githubConnecting}
+            githubGrantConnected={githubGrantConnected}
             selectedIdentifier={selectedIdentifier}
+            onConnectGitHub={() => void connectGitHub()}
             onSelect={onSelect}
             onAddPreset={(preset) => {
               setPresetPlugin(presetToPluginValue(preset));

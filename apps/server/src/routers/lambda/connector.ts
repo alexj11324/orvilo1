@@ -27,7 +27,7 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { callConnectorToolById, ConnectorToolCallError } from '@/server/services/connector/exec';
-import { GITHUB_MCP_CONNECTOR_IDENTIFIER } from '@/server/services/connector/githubMcp';
+import { findExistingGitHubMcpConnector } from '@/server/services/connector/githubMcp';
 import { activateGitHubMcpConnector } from '@/server/services/connector/githubMcpActivation';
 import {
   buildAuthorizationUrl,
@@ -301,9 +301,12 @@ export const connectorRouter = router({
 
   /** Connect GitHub's hosted MCP through the existing per-user GitHub App grant. */
   connectGitHubMcp: connectorWriteProcedure.mutation(async ({ ctx }) => {
-    const existing = await ctx.connectorModel.findScopedByIdentifier(
-      GITHUB_MCP_CONNECTOR_IDENTIFIER,
+    const existingReference = findExistingGitHubMcpConnector(
+      await ctx.connectorModel.queryPublic(),
     );
+    const existing = existingReference
+      ? await ctx.connectorModel.findById(existingReference.id)
+      : null;
     if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'connector');
 
     try {

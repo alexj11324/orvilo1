@@ -1,3 +1,5 @@
+import { normalizeMcpServerUrl } from '@orvilo/const';
+
 import type { DecryptedConnector } from '@/database/models/connector';
 import type { OrviloDatabase } from '@/database/type';
 import type { HttpMCPClientParams } from '@/libs/mcp';
@@ -15,6 +17,19 @@ export const GITHUB_MCP_TRUSTED_HEADERS = {
   'X-MCP-Readonly': 'true',
   'X-MCP-Toolsets': 'pull_requests',
 } as const;
+
+/** Resolve renamed legacy preset rows before creating the canonical identifier. */
+export const findExistingGitHubMcpConnector = <
+  T extends Pick<DecryptedConnector, 'identifier' | 'mcpServerUrl'>,
+>(
+  connectors: T[],
+): T | undefined =>
+  connectors.find((connector) => connector.identifier === GITHUB_MCP_CONNECTOR_IDENTIFIER) ??
+  connectors.find(
+    (connector) =>
+      normalizeMcpServerUrl(connector.mcpServerUrl) ===
+      normalizeMcpServerUrl(GITHUB_MCP_SERVER_URL),
+  );
 
 export const isGitHubMcpConnector = (connector: Pick<DecryptedConnector, 'metadata'>): boolean =>
   connector.metadata?.githubMcp?.type === 'github_user_connection';

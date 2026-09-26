@@ -22,9 +22,8 @@ import type { ConnectorWithTools } from '@/store/tool/slices/connector/types';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-import { isMcpPresetConnected } from './githubMcpDisplayState';
-
 import { connectLinearMcpPreset } from './connectLinearMcpPreset';
+import { isMcpPresetConnected } from './githubMcpDisplayState';
 
 interface McpPresetItemProps {
   connecting?: boolean;
@@ -137,11 +136,11 @@ const McpPresetItem = memo<McpPresetItemProps>(
           }
         >
           <Button
+            size="small"
+            type="text"
             disabled={
               !canConnect || (preset.id === 'linear' && !isListReady) || isConnecting || connecting
             }
-            size="small"
-            type="text"
             icon={
               <Icon
                 icon={isConnecting || connecting ? Loader2 : SquareArrowOutUpRight}

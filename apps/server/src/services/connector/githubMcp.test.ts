@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildGitHubMcpParams,
+  findExistingGitHubMcpConnector,
   GITHUB_MCP_SERVER_URL,
   GITHUB_MCP_TRUSTED_HEADERS,
 } from './githubMcp';
@@ -92,6 +93,29 @@ describe('GitHub MCP provider connector', () => {
     );
   });
 
+  it('resolves a renamed legacy preset row by the official GitHub endpoint', () => {
+    const renamed = {
+      id: 'legacy-row',
+      identifier: 'my-github',
+      mcpServerUrl: 'HTTPS://API.GITHUBCOPILOT.COM/mcp',
+    } as any;
+
+    expect(findExistingGitHubMcpConnector([renamed])).toBe(renamed);
+  });
+
+  it('prefers the canonical connector when a legacy duplicate already exists', () => {
+    const renamed = {
+      identifier: 'my-github',
+      mcpServerUrl: GITHUB_MCP_SERVER_URL,
+    } as any;
+    const canonical = {
+      identifier: 'github-mcp',
+      mcpServerUrl: GITHUB_MCP_SERVER_URL,
+    } as any;
+
+    expect(findExistingGitHubMcpConnector([renamed, canonical])).toBe(canonical);
+  });
+
   it('starts the existing GitHub OAuth flow when no Reviews grant exists', async () => {
     getGrantIdentity.mockResolvedValueOnce(null);
     const ctx = context();
@@ -138,6 +162,7 @@ describe('GitHub MCP provider connector', () => {
     const existing = {
       ...providerConnector,
       credentials: { token: 'legacy-pat', type: 'bearer' },
+      identifier: 'my-github',
       metadata: {
         customHeaders: { Authorization: 'Bearer legacy-header-token' },
         description: 'GitHub connector',
@@ -150,6 +175,8 @@ describe('GitHub MCP provider connector', () => {
       userId: 'user-1',
     });
 
+    expect(ctx.connectorModel.create).not.toHaveBeenCalled();
+    expect(ctx.connectorModel.update).toHaveBeenCalledWith('connector-1', expect.any(Object));
     const patch = ctx.connectorModel.update.mock.calls[0][1];
     expect(patch.credentials).toBeNull();
     expect(patch.tokenExpiresAt).toBeNull();

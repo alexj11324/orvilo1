@@ -77,6 +77,28 @@ const record = (jobId: string, owner: string, projectId: string) =>
     issue: sourceIssue,
     workflowCategory: 'todo',
   });
+const linkSourceIssue = async (projectId: string, identifier: string) => {
+  const [task] = await db
+    .insert(tasks)
+    .values({
+      createdByUserId: userId,
+      identifier,
+      seq: 1,
+      name: 'Live synced',
+      instruction: 'Live synced',
+      projectId,
+      workspaceId,
+    })
+    .returning();
+  await new LinearSyncModel(db, workspaceId).createIssueLink({
+    installationId,
+    linearIdentifier: sourceIssue.identifier,
+    linearIssueId: sourceIssue.id,
+    organizationId: 'org-1',
+    taskId: task.id,
+  });
+  return task;
+};
 
 describe('LinearImportModel', () => {
   it('creates one task and receipt for a projectless source issue, then survives repeated page work', async () => {
@@ -115,29 +137,82 @@ describe('LinearImportModel', () => {
 
   it('skips a source issue already linked through live sync', async () => {
     const project = await createProject('IMPA');
-    const [liveTask] = await db
-      .insert(tasks)
-      .values({
-        createdByUserId: userId,
-        identifier: 'IMPA-1',
-        seq: 1,
-        name: 'Live synced',
-        instruction: 'Live synced',
-        projectId: project.id,
-        workspaceId,
-      })
-      .returning();
-    await new LinearSyncModel(db, workspaceId).createIssueLink({
-      installationId,
-      linearIdentifier: sourceIssue.identifier,
-      linearIssueId: sourceIssue.id,
-      organizationId: 'org-1',
-      taskId: liveTask.id,
-    });
+    await linkSourceIssue(project.id, 'IMPA-1');
     const { job, owner } = await startAndClaim(project.id);
     expect(await record(job.id, owner, project.id)).toBe('skipped_sync');
     expect(await model.findJob(job.id)).toMatchObject({ issuesImported: 0, issuesSkipped: 1 });
+    await model.completePage({ id: job.id, owner, nextCursor: null, hasNextPage: false });
+    const replay = await startAndClaim(project.id);
+    expect(await record(job.id, replay.owner, project.id)).toBe('already_imported');
+    expect(await model.findJob(job.id)).toMatchObject({ issuesImported: 0, issuesSkipped: 1 });
     expect(await db.select().from(tasks).where(eq(tasks.workspaceId, workspaceId))).toHaveLength(1);
+  });
+
+  it('copies a live-linked issue from another project without moving its sync link', async () => {
+    const original = await createProject('IMPA');
+    const destination = await createProject('IMPB');
+    const liveTask = await linkSourceIssue(original.id, 'IMPA-1');
+    const { job, owner } = await startAndClaim(destination.id);
+
+    expect(await record(job.id, owner, destination.id)).toBe('imported');
+    const imported = await db.select().from(tasks).where(eq(tasks.projectId, destination.id));
+    expect(imported).toHaveLength(1);
+    expect(await model.findJob(job.id)).toMatchObject({ issuesImported: 1, issuesSkipped: 0 });
+    expect(
+      (await new LinearSyncModel(db, workspaceId).findIssueLinkByExternalId(sourceIssue.id))
+        ?.taskId,
+    ).toBe(liveTask.id);
+    const [receipt] = await db
+      .select()
+      .from(linearImportReceipts)
+      .where(eq(linearImportReceipts.jobId, job.id));
+    expect(receipt).toMatchObject({ result: 'imported', taskId: imported[0].id });
+  });
+
+  it('replays a completed job and converts earlier cross-project skips into copies', async () => {
+    const original = await createProject('IMPA');
+    const destination = await createProject('IMPB');
+    const liveTask = await linkSourceIssue(original.id, 'IMPA-1');
+    const { job, owner } = await startAndClaim(destination.id);
+    // Historical jobs skipped every live-linked issue regardless of its project.
+    await db.insert(linearImportReceipts).values({
+      workspaceId,
+      installationId,
+      jobId: job.id,
+      linearIssueId: sourceIssue.id,
+      projectId: destination.id,
+      result: 'skipped_sync',
+    });
+    await db
+      .update(linearImportJobs)
+      .set({ issuesSkipped: 1 })
+      .where(eq(linearImportJobs.id, job.id));
+    await model.completePage({ id: job.id, owner, nextCursor: null, hasNextPage: false });
+
+    const replay = await model.start({
+      installationId,
+      teamId: 'team-1',
+      projectId: destination.id,
+      requestedByUserId: userId,
+      stateMappings: [{ linearStateId: 'state-1', workflowCategory: 'todo' }],
+    });
+    expect(replay).toMatchObject({ id: job.id, status: 'queued', cursor: null, pagesProcessed: 0 });
+    const claimed = await model.claim(job.id);
+    expect(claimed).not.toBeNull();
+    expect(await record(job.id, claimed!.owner, destination.id)).toBe('imported');
+    expect(await record(job.id, claimed!.owner, destination.id)).toBe('already_imported');
+    expect(await model.findJob(job.id)).toMatchObject({ issuesImported: 1, issuesSkipped: 0 });
+    expect(await db.select().from(tasks).where(eq(tasks.workspaceId, workspaceId))).toHaveLength(2);
+    const [receipt] = await db
+      .select()
+      .from(linearImportReceipts)
+      .where(eq(linearImportReceipts.jobId, job.id));
+    expect(receipt).toMatchObject({ result: 'imported', projectId: destination.id });
+    expect(receipt.taskId).not.toBe(liveTask.id);
+    expect(
+      (await new LinearSyncModel(db, workspaceId).findIssueLinkByExternalId(sourceIssue.id))
+        ?.taskId,
+    ).toBe(liveTask.id);
   });
 
   it('does not silently replace a job’s frozen state mappings', async () => {

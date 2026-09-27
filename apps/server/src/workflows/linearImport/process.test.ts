@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { processLinearImportWorkflow } from './process';
 
 const state = vi.hoisted(() => ({
+  activeWorkflowRunId: 'linear-import-active-dispatch',
   cursor: null as string | null,
   status: 'queued',
   imported: [] as string[],
   pages: 0,
-  trigger: vi.fn(),
+  scheduledContexts: [] as Array<{ requestPayload: object; workflowRunId: string }>,
+  triggerHatchetWorkflow: vi.fn(),
   listTeams: vi.fn(),
   listTeamIssues: vi.fn(),
 }));
@@ -66,8 +68,8 @@ vi.mock('@/server/services/linearSync/provider', () => ({
     listTeamIssues: state.listTeamIssues,
   }),
 }));
-vi.mock('@/server/workflows/linearImport', () => ({
-  LinearImportWorkflow: { trigger: state.trigger },
+vi.mock('@/server/services/hatchet/workflows', () => ({
+  triggerHatchetWorkflow: state.triggerHatchetWorkflow,
 }));
 
 const requestPayload = {
@@ -88,7 +90,18 @@ beforeEach(() => {
   state.status = 'queued';
   state.imported = [];
   state.pages = 0;
-  state.trigger.mockReset();
+  state.scheduledContexts = [];
+  state.triggerHatchetWorkflow
+    .mockReset()
+    .mockImplementation(
+      async (_path: string, payload: object, options?: { workflowRunId?: string }) => {
+        const workflowRunId = options?.workflowRunId ?? state.activeWorkflowRunId;
+        if (workflowRunId !== state.activeWorkflowRunId) {
+          state.scheduledContexts.push({ requestPayload: payload, workflowRunId });
+        }
+        return { workflowRunId: `hatchet-dispatch:${workflowRunId}` };
+      },
+    );
   state.listTeams.mockReset().mockResolvedValue([
     {
       id: 'team-1',
@@ -100,20 +113,32 @@ beforeEach(() => {
 });
 
 describe('processLinearImportWorkflow', () => {
-  it('continues past the first team page, including projectless issues, before completing', async () => {
+  it('enqueues a distinct dispatch to import more than one team page', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) => issue(`issue-${index + 1}`));
     state.listTeamIssues
-      .mockResolvedValueOnce({ issues: [issue('issue-1')], endCursor: 'page-2', hasNextPage: true })
-      .mockResolvedValueOnce({ issues: [issue('issue-2')], endCursor: null, hasNextPage: false });
+      .mockResolvedValueOnce({ issues: firstPage, endCursor: 'page-2', hasNextPage: true })
+      .mockResolvedValueOnce({ issues: [issue('issue-51')], endCursor: null, hasNextPage: false });
     expect(await processLinearImportWorkflow({ requestPayload })).toMatchObject({
       status: 'queued',
       pagesProcessed: 1,
     });
-    expect(state.trigger).toHaveBeenCalledOnce();
-    expect(await processLinearImportWorkflow({ requestPayload })).toMatchObject({
+    expect(state.scheduledContexts).toHaveLength(1);
+    expect(state.triggerHatchetWorkflow).toHaveBeenCalledWith(
+      '/api/workflows/linear-import/process',
+      requestPayload,
+      {
+        concurrencyKey: requestPayload.jobId,
+        workflowRunId: `linear-import:${requestPayload.jobId}:page:2`,
+      },
+    );
+    expect(state.scheduledContexts[0]?.workflowRunId).toBe(
+      `linear-import:${requestPayload.jobId}:page:2`,
+    );
+    expect(await processLinearImportWorkflow(state.scheduledContexts[0]!)).toMatchObject({
       status: 'completed',
       pagesProcessed: 2,
     });
-    expect(state.imported).toEqual(['issue-1', 'issue-2']);
+    expect(state.imported).toEqual([...firstPage.map(({ id }) => id), 'issue-51']);
     expect(state.listTeamIssues.mock.calls[1][2]).toBe('page-2');
   });
 
@@ -123,7 +148,7 @@ describe('processLinearImportWorkflow', () => {
       'invalid pagination cursor',
     );
     expect(state.status).toBe('failed');
-    expect(state.trigger).not.toHaveBeenCalled();
+    expect(state.triggerHatchetWorkflow).not.toHaveBeenCalled();
   });
 
   it('stops before fetching or writing when the selected team becomes private', async () => {
@@ -144,7 +169,7 @@ describe('processLinearImportWorkflow', () => {
       endCursor: 'page-2',
       hasNextPage: true,
     });
-    state.trigger.mockRejectedValue(new Error('Hatchet unavailable'));
+    state.triggerHatchetWorkflow.mockRejectedValue(new Error('Hatchet unavailable'));
     await expect(processLinearImportWorkflow({ requestPayload })).rejects.toThrow(
       'Hatchet unavailable',
     );

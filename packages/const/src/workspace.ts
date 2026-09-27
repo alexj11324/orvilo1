@@ -39,3 +39,19 @@ export const WORKSPACE_SLUG_PATTERN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 /** Format-only check against {@link WORKSPACE_SLUG_PATTERN}; no length check. */
 export const isWorkspaceSlugFormatValid = (slug: string): boolean =>
   WORKSPACE_SLUG_PATTERN.test(slug);
+
+/**
+ * Derive a slug candidate from a free-form workspace name — e.g. the auto-fill
+ * the onboarding wizard applies to the URL field until the user overrides it.
+ * Runs of unusable characters collapse to one inner hyphen so the result always
+ * satisfies {@link WORKSPACE_SLUG_PATTERN} and {@link WORKSPACE_SLUG_MAX}; it
+ * may still come back empty or below {@link WORKSPACE_SLUG_MIN} (name carries
+ * no usable characters), in which case the caller leaves the field to the user.
+ */
+export const slugifyWorkspaceName = (name: string): string =>
+  name
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '')
+    .slice(0, WORKSPACE_SLUG_MAX)
+    .replaceAll(/-+$/g, '');

@@ -66,6 +66,7 @@ import {
 import { ImageUploadField } from './image-upload-field';
 import { OnboardingHeader } from './onboarding-header';
 import { OnboardingStepper } from './onboarding-stepper';
+import { useWorkspaceSlug } from './useWorkspaceSlug';
 
 /** A selectable timezone: the IANA id is the stable value, the label is display-only. */
 type TimezoneOption = { label: string; value: string };
@@ -709,8 +710,8 @@ export function Onboarding({
   const [role, setRole] = useState<RoleValue>('developer');
   const [discoverySource, setDiscoverySource] = useState<DiscoverySourceValue>('linkedin');
   const [discoveryOther, setDiscoveryOther] = useState('');
-  const [workspaceName, setWorkspaceName] = useState('');
-  const [workspaceSlug, setWorkspaceSlug] = useState('');
+  const { onWorkspaceNameChange, onWorkspaceSlugChange, workspaceName, workspaceSlug } =
+    useWorkspaceSlug();
   const [teamSize, setTeamSize] = useState<TeamSizeValue>('team');
   const [goals, setGoals] = useState<GoalValue[]>(['roadmaps', 'sprints']);
   const [invites, setInvites] = useState<InviteRow[]>(DEFAULT_INVITES);
@@ -1034,8 +1035,8 @@ export function Onboarding({
                           workspaceName={workspaceName}
                           workspaceSlug={workspaceSlug}
                           onTeamSizeChange={setTeamSize}
-                          onWorkspaceNameChange={setWorkspaceName}
-                          onWorkspaceSlugChange={setWorkspaceSlug}
+                          onWorkspaceNameChange={onWorkspaceNameChange}
+                          onWorkspaceSlugChange={onWorkspaceSlugChange}
                         />
                       ) : null}
 

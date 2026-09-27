@@ -13,6 +13,7 @@ import {
   sharedRendererDedupe,
   sharedRendererDefine,
 } from '../../plugins/vite/sharedRendererConfig';
+import { staticCssAliases } from '../../plugins/vite/staticCssAliases';
 import { DEFAULT_PRERENDER_LOCALE } from './app/lib/prerender';
 
 interface StaticCssOptions {
@@ -210,6 +211,7 @@ export const createAuthRrConfig = ({
       viteMarkdownImport(),
       viteNodeModuleStub(),
       vitePlatformResolve('web'),
+      staticCssAliases(),
       lobeStaticCssPlugin({ antd: staticCss.antd, themeVars: staticCss.themeVars }),
       staticCssDevServe(),
       reactRouter(),

@@ -5,12 +5,16 @@ import {
   resolveDocumentLocale,
   SPA_FALLBACK_DOCUMENT,
 } from '../app/lib/prerender';
-import { injectServerConfig, withDocumentLocale } from './document';
+import { AUTH_CONTRACT, authContractResponseHeaders } from '../app/portal/contract';
+import { injectPortalConfig, injectServerConfig, withDocumentLocale } from './document';
 
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
   AUTH_API_BASE?: string;
   AUTH_APP_HOME?: string;
+  CLERK_PROXY_URL?: string;
+  CLERK_PUBLISHABLE_KEY?: string;
+  PORTAL_PRODUCT_ORIGIN?: string;
 }
 
 const API_PREFIXES = ['/api', '/oidc', '/trpc', '/webapi'];
@@ -23,7 +27,11 @@ const AUTH_PATH_PREFIXES = [
   '/auth-error',
   '/market-auth-callback',
   '/oauth',
+  '/login',
+  '/sign-in',
 ];
+
+const HEALTH_PATHS = ['/healthz', '/readyz'];
 
 const CONFIG_ENDPOINT = '/webapi/auth/spa-config';
 
@@ -70,6 +78,12 @@ const serveDocument = async (request: Request, env: Env, pathname: string) => {
   if (!document.ok) return document;
 
   let html = injectServerConfig(await document.text(), serverConfig);
+  html = injectPortalConfig(html, {
+    clerkProxyUrl: env.CLERK_PROXY_URL ?? '',
+    clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY ?? '',
+    productOrigin:
+      env.PORTAL_PRODUCT_ORIGIN || env.AUTH_APP_HOME || 'https://orvilo.aspectlylabs.com',
+  });
 
   if (documentPath === SPA_FALLBACK_DOCUMENT) html = withDocumentLocale(html, locale);
 
@@ -94,7 +108,18 @@ export default {
       return fetch(new Request(target, request));
     }
 
+    if (HEALTH_PATHS.includes(pathname))
+      return new Response('ok', { headers: { 'cache-control': 'no-store' } });
+
+    // Programmatic contract discovery — JSON over the wire, not a document.
+    if (pathname === '/v1/contract')
+      return new Response(JSON.stringify(AUTH_CONTRACT), {
+        headers: { ...authContractResponseHeaders(), 'content-type': 'application/json' },
+      });
+
     if (isAssetPath(pathname)) return env.ASSETS.fetch(request);
+
+    if (pathname === '/') return Response.redirect(new URL('/login', url.origin).href, 302);
 
     if (!matchesPrefix(pathname, AUTH_PATH_PREFIXES))
       return Response.redirect(env.AUTH_APP_HOME || 'https://orvilo.aspectlylabs.com', 302);

@@ -19,6 +19,12 @@
   },
   "vars": {
     "AUTH_API_BASE": "https://orvilo.aspectlylabs.com",
-    "AUTH_APP_HOME": "https://orvilo.aspectlylabs.com"
-  }
+    "AUTH_APP_HOME": "https://orvilo.aspectlylabs.com",
+    // Clerk publishable key — public by design (embedded in every Clerk client bundle).
+    "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuYXNwZWN0bHlsYWJzLmNvbSQ",
+    "PORTAL_PRODUCT_ORIGIN": "https://orvilo.aspectlylabs.com"
+  },
+  "routes": [
+    { "pattern": "accounts.aspectlylabs.com", "zone_name": "aspectlylabs.com", "custom_domain": true }
+  ]
 }

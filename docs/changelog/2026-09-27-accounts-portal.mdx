@@ -1,0 +1,20 @@
+---
+title: 'Accounts Portal Moves to Orvilo'
+description: >-
+  The accounts sign-in portal at accounts.aspectlylabs.com is now served by
+  Orvilo's own auth app, replacing the retired standalone auth broker while
+  keeping Clerk as the identity provider.
+tags:
+  - Accounts
+  - Authentication
+---
+
+# Accounts Portal Moves to Orvilo
+
+The sign-in portal behind `accounts.aspectlylabs.com` now runs on Orvilo's own `apps/auth` worker instead of the retired Cordy auth broker. The experience is unchanged — email + verification code, password sign-in, and Google sign-in all stay — but the portal now ships, builds, and deploys with the rest of the product.
+
+## Improvements and fixes
+
+- **One portal, one repo.** The accounts sign-in surface (email code, password, Google OAuth, return-URL handling, and the `/v1/contract` service contract) is ported into `apps/auth` with matching English and Chinese copy.
+- **Deployable on push.** A `Deploy Auth` workflow ships the worker and its CDN assets from `canary`, gated by the same build-inputs manifest the workbench deploy uses.
+- **Unblocked app builds.** Static-CSS virtual modules renamed during the rebrand now resolve again, and locale prerender passes no longer race a shared typegen directory — both fixes apply to the auth, share, and workbench builds.

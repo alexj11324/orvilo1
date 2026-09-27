@@ -14,6 +14,7 @@ import {
   sharedRendererDedupe,
   sharedRendererDefine,
 } from '../../plugins/vite/sharedRendererConfig';
+import { staticCssAliases } from '../../plugins/vite/staticCssAliases';
 
 interface StaticCssOptions {
   hrefTemplate: (hash: string) => string;
@@ -224,6 +225,7 @@ export const createShareRrConfig = ({
       viteNodeModuleStub(),
       vitePlatformResolve('web'),
       cloudflare({ viteEnvironment: { name: 'ssr' } }),
+      staticCssAliases(),
       lobeStaticCssPlugin({ antd: staticCss.antd, themeVars: staticCss.themeVars }),
       staticCssDevServe(),
       reactRouter(),

@@ -168,7 +168,7 @@ export const useAccountsSignIn = (messages: PortalMessages) => {
 
   const runGoogle = async (onGoogleLogin: () => Promise<void> | void) => {
     if (loading) return;
-    await run(() => onGoogleLogin(), messages.startFailed);
+    await run(async () => onGoogleLogin(), messages.startFailed);
   };
 
   const supportsEmailCode =

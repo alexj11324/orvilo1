@@ -1,4 +1,4 @@
-import { createContext, type PropsWithChildren } from 'react';
+import { createContext, type PropsWithChildren, use } from 'react';
 
 import { resolveAuthLocale } from '../lib/locale';
 import type { PortalLocale } from './locale';

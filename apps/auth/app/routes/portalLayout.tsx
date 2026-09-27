@@ -17,6 +17,7 @@ export default function PortalLayout() {
       <PortalMessagesProvider locale={locale}>
         <RuntimeClerkProvider
           productOrigin={config.productOrigin}
+          proxyUrl={config.clerkProxyUrl}
           publishableKey={config.clerkPublishableKey}
         >
           <Outlet />

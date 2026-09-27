@@ -1,5 +1,5 @@
 import { ClerkProvider } from '@clerk/react-router';
-import { createContext, type PropsWithChildren } from 'react';
+import { createContext, type PropsWithChildren, use } from 'react';
 
 import { AuthShell } from './AuthShell';
 import { AUTH_CONTRACT } from './contract';
@@ -12,8 +12,9 @@ export const useProductOrigin = (): string => use(ProductOriginContext);
 export const RuntimeClerkProvider = ({
   children,
   productOrigin,
+  proxyUrl,
   publishableKey,
-}: PropsWithChildren<{ productOrigin: string; publishableKey: string }>) => {
+}: PropsWithChildren<{ productOrigin: string; proxyUrl: string; publishableKey: string }>) => {
   const messages = usePortalMessages();
 
   if (!publishableKey) {
@@ -25,7 +26,7 @@ export const RuntimeClerkProvider = ({
   }
 
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <ClerkProvider proxyUrl={proxyUrl || undefined} publishableKey={publishableKey}>
       <ProductOriginContext value={productOrigin}>{children}</ProductOriginContext>
     </ClerkProvider>
   );

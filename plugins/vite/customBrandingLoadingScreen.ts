@@ -45,7 +45,7 @@ export const customBrandingLoadingScreen = (): Plugin => ({
 
       return html.replace(
         EMPTY_LOADING_SCREEN,
-        `<div id="loading-screen"><div id="loading-brand" aria-label="Loading" role="status" style="font-size: 26px; font-weight: 700; letter-spacing: 0.02em;">${escapeHtml(
+        `<div id="loading-screen"><div id="loading-brand" aria-label="Loading" role="status" style="font-size: 26px; font-weight: 700; letter-spacing: 0.02em; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;">${escapeHtml(
           BRANDING_NAME,
         )}</div></div>`,
       );

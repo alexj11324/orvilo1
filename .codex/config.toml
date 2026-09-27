@@ -1,2 +1,5 @@
+[plugins."ponytail@ponytail"]
+enabled = false
+
 [plugins."ponytail@orvilo"]
 enabled = true

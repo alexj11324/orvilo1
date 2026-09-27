@@ -3,7 +3,13 @@ import { randomUUID } from 'node:crypto';
 import type { LinearIssueSnapshot, TaskWorkflowCategory } from '@orvilo/types';
 import { and, eq, gt, lt, or, sql } from 'drizzle-orm';
 
-import { linearImportJobs, linearImportReceipts, linearIssueLinks, projects } from '../schemas';
+import {
+  linearImportJobs,
+  linearImportReceipts,
+  linearIssueLinks,
+  projects,
+  tasks,
+} from '../schemas';
 import type { LinearImportMapping } from '../schemas/linearImport';
 import type { OrviloDatabase } from '../type';
 import { TaskModel } from './task';
@@ -69,6 +75,27 @@ export class LinearImportModel {
     // untouched leaves the caller's trigger condition (`status === 'queued'`)
     // false and the confirm action dead.
     if (existing.status === 'failed') return this.queue(existing.id);
+    if (existing.status === 'completed') {
+      const [restarted] = await this.db
+        .update(linearImportJobs)
+        .set({
+          cursor: null,
+          pagesProcessed: 0,
+          status: 'queued',
+          leaseOwner: null,
+          lockedUntil: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(linearImportJobs.id, existing.id),
+            eq(linearImportJobs.workspaceId, this.workspaceId),
+            eq(linearImportJobs.status, 'completed'),
+          ),
+        )
+        .returning();
+      return restarted ?? this.findJob(existing.id);
+    }
     return existing;
   }
 
@@ -167,13 +194,10 @@ export class LinearImportModel {
           ),
         )
         .limit(1);
-      if (existing) {
-        if (existing.projectId !== input.projectId)
-          throw new Error(
-            `Linear issue ${input.issue.identifier} was already imported into another project`,
-          );
-        return 'already_imported';
-      }
+      if (existing && existing.projectId !== input.projectId)
+        throw new Error(
+          `Linear issue ${input.issue.identifier} was already imported into another project`,
+        );
       const [project] = await tx
         .select({ id: projects.id, identifier: projects.identifier })
         .from(projects)
@@ -188,29 +212,39 @@ export class LinearImportModel {
         .limit(1);
       if (!project) throw new Error('Destination project is unavailable');
       const [liveLink] = await tx
-        .select({ id: linearIssueLinks.id })
+        .select({ projectId: tasks.projectId })
         .from(linearIssueLinks)
+        .innerJoin(tasks, eq(tasks.id, linearIssueLinks.taskId))
         .where(
           and(
             eq(linearIssueLinks.workspaceId, this.workspaceId),
             eq(linearIssueLinks.linearIssueId, input.issue.id),
+            eq(tasks.workspaceId, this.workspaceId),
           ),
         )
         .limit(1);
+      const skipLinkedTask = liveLink?.projectId === input.projectId;
+      if (
+        existing &&
+        (existing.result === 'imported' || existing.jobId !== input.jobId || skipLinkedTask)
+      )
+        return 'already_imported';
       // Reserve the source identity before creating a task. The reservation and
       // TaskModel create share one outer transaction; a failed create rolls both back.
-      const [receipt] = await tx
-        .insert(linearImportReceipts)
-        .values({
-          workspaceId: this.workspaceId,
-          installationId: input.installationId,
-          jobId: input.jobId,
-          linearIssueId: input.issue.id,
-          projectId: input.projectId,
-          result: liveLink ? 'skipped_sync' : 'imported',
-        })
-        .onConflictDoNothing()
-        .returning();
+      const [receipt] = existing
+        ? [existing]
+        : await tx
+            .insert(linearImportReceipts)
+            .values({
+              workspaceId: this.workspaceId,
+              installationId: input.installationId,
+              jobId: input.jobId,
+              linearIssueId: input.issue.id,
+              projectId: input.projectId,
+              result: skipLinkedTask ? 'skipped_sync' : 'imported',
+            })
+            .onConflictDoNothing()
+            .returning();
       if (!receipt) {
         const [raced] = await tx
           .select()
@@ -229,7 +263,7 @@ export class LinearImportModel {
           );
         return 'already_imported';
       }
-      if (liveLink) {
+      if (skipLinkedTask) {
         await tx
           .update(linearImportJobs)
           .set({ issuesSkipped: sql`${linearImportJobs.issuesSkipped} + 1` })
@@ -266,49 +300,54 @@ export class LinearImportModel {
           mutation: { source: 'linear', suppressDomainEvent: true, suppressLinearOutbox: true },
         },
       );
-      // Claim the issue identity for live sync too: without a link row, a
-      // later inbound delivery would create a second task for the same Linear
-      // issue. Team/binding stay null — this import is independent of sync
-      // bindings; the link only fixes issue→task identity.
-      const [link] = await tx
-        .insert(linearIssueLinks)
-        .values({
-          aliasIdentifiers: input.issue.identifier ? [input.issue.identifier] : [],
-          installationId: input.installationId,
-          lastConfirmedSnapshot: input.issue,
-          linearIdentifier: input.issue.identifier,
-          linearIssueId: input.issue.id,
-          organizationId: input.organizationId,
-          remoteSnapshot: input.issue,
-          remoteUpdatedAt: input.issue.updatedAt ? new Date(input.issue.updatedAt) : undefined,
-          taskId: task.id,
-          workspaceId: this.workspaceId,
-        })
-        .onConflictDoNothing()
-        .returning({ id: linearIssueLinks.id, taskId: linearIssueLinks.taskId });
-      if (!link) {
-        const [racedLink] = await tx
-          .select({ taskId: linearIssueLinks.taskId })
-          .from(linearIssueLinks)
-          .where(
-            and(
-              eq(linearIssueLinks.workspaceId, this.workspaceId),
-              eq(linearIssueLinks.linearIssueId, input.issue.id),
-            ),
-          )
-          .limit(1);
-        if (racedLink && racedLink.taskId !== task.id)
-          throw new Error(
-            `Linear issue ${input.issue.identifier} is already linked to another task`,
-          );
+      // An existing live link keeps pointing at its original task. This import
+      // is a separate copy when that task belongs to another project.
+      if (!liveLink) {
+        const [link] = await tx
+          .insert(linearIssueLinks)
+          .values({
+            aliasIdentifiers: input.issue.identifier ? [input.issue.identifier] : [],
+            installationId: input.installationId,
+            lastConfirmedSnapshot: input.issue,
+            linearIdentifier: input.issue.identifier,
+            linearIssueId: input.issue.id,
+            organizationId: input.organizationId,
+            remoteSnapshot: input.issue,
+            remoteUpdatedAt: input.issue.updatedAt ? new Date(input.issue.updatedAt) : undefined,
+            taskId: task.id,
+            workspaceId: this.workspaceId,
+          })
+          .onConflictDoNothing()
+          .returning({ id: linearIssueLinks.id, taskId: linearIssueLinks.taskId });
+        if (!link) {
+          const [racedLink] = await tx
+            .select({ taskId: linearIssueLinks.taskId })
+            .from(linearIssueLinks)
+            .where(
+              and(
+                eq(linearIssueLinks.workspaceId, this.workspaceId),
+                eq(linearIssueLinks.linearIssueId, input.issue.id),
+              ),
+            )
+            .limit(1);
+          if (racedLink && racedLink.taskId !== task.id)
+            throw new Error(
+              `Linear issue ${input.issue.identifier} is already linked to another task`,
+            );
+        }
       }
       await tx
         .update(linearImportReceipts)
-        .set({ taskId: task.id })
+        .set({ taskId: task.id, result: 'imported' })
         .where(eq(linearImportReceipts.id, receipt.id));
       await tx
         .update(linearImportJobs)
-        .set({ issuesImported: sql`${linearImportJobs.issuesImported} + 1` })
+        .set({
+          issuesImported: sql`${linearImportJobs.issuesImported} + 1`,
+          ...(existing?.result === 'skipped_sync'
+            ? { issuesSkipped: sql`${linearImportJobs.issuesSkipped} - 1` }
+            : {}),
+        })
         .where(eq(linearImportJobs.id, input.jobId));
       return 'imported';
     });

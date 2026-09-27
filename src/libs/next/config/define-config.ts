@@ -261,6 +261,43 @@ export function defineConfig(config: CustomNextConfig) {
           ],
           source: '/.well-known/assetlinks.json',
         },
+        // The debug-proxy page injects the local dev bundle into the prod origin;
+        // it must never be cached. Mirrors the vercel.json rules for self-hosted
+        // deployments, where vercel.json does not apply.
+        {
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+            },
+            {
+              key: 'Pragma',
+              value: 'no-cache',
+            },
+            {
+              key: 'Expires',
+              value: '0',
+            },
+          ],
+          source: '/_dangerous_local_dev_proxy/:path*',
+        },
+        {
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+            },
+            {
+              key: 'Pragma',
+              value: 'no-cache',
+            },
+            {
+              key: 'Expires',
+              value: '0',
+            },
+          ],
+          source: '/_dangerous_local_dev_proxy.html',
+        },
         ...(config.headers ?? []),
       ];
     },
@@ -327,6 +364,16 @@ export function defineConfig(config: CustomNextConfig) {
         source: '/login',
       },
       ...(config.redirects ?? []),
+    ],
+    // The debug-proxy entry is a public .html file; the extensionless URL that
+    // `dev:spa` prints only resolves on Vercel (vercel.json rewrites), not on
+    // self-hosted builds. Rewrite it (and its subpaths, which the SPA router
+    // mounts under that basename) here so the URL works on every deployment.
+    rewrites: async () => [
+      {
+        destination: '/_dangerous_local_dev_proxy.html',
+        source: '/_dangerous_local_dev_proxy/:path*',
+      },
     ],
     // when external packages in dev mode with turbopack, this config will lead to bundle error
     serverExternalPackages: config.serverExternalPackages ?? [

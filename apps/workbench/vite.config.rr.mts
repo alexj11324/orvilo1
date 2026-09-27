@@ -11,6 +11,7 @@ import { viteNodeModuleStub } from '../../plugins/vite/nodeModuleStub';
 import { orviloIconImports } from '../../plugins/vite/orviloIconImports';
 import { vitePlatformResolve } from '../../plugins/vite/platformResolve';
 import { sharedRendererDefine } from '../../plugins/vite/sharedRendererConfig';
+import { staticCssAliases } from '../../plugins/vite/staticCssAliases';
 import { shikiCdnUrl } from './app/stubs/shikiCdn';
 import { isShikiSource } from './app/stubs/shikiSource';
 import { reportStubSurfaceGaps } from './app/stubs/surface';
@@ -318,6 +319,7 @@ export default defineConfig({
     viteNodeModuleStub(),
     vitePlatformResolve('mobile'),
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
+    staticCssAliases(),
     lobeStaticCssPlugin({ antd: antdStaticCssOptions, themeVars: themeVarsCssOptions }),
     staticCssDevServe(),
     reactRouter(),

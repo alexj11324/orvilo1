@@ -10,10 +10,14 @@
     "preview": "wrangler dev",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@clerk/react-router": "^3.6.27"
+  },
   "devDependencies": {
     "@ant-design/cssinjs": "^2.1.2",
     "@react-router/dev": "^8.3.0",
     "isbot": "^5.1.32",
+    "vite": "8.0.16",
     "vite-tsconfig-paths": "^6.1.1",
     "wrangler": "^4.123.0"
   }

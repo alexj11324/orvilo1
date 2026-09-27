@@ -1,0 +1,19 @@
+---
+title: '账户门户迁入 Orvilo'
+description: >-
+  accounts.aspectlylabs.com 的登录门户现在由 Orvilo 自己的 auth 应用提供，
+  取代已废弃的独立 auth broker，Clerk 继续作为身份提供方。
+tags:
+  - 账户
+  - 认证
+---
+
+# 账户门户迁入 Orvilo
+
+`accounts.aspectlylabs.com` 背后的登录门户现在运行在 Orvilo 自己的 `apps/auth` worker 上，取代了已废弃的 Cordy auth broker。体验不变 —— 邮箱验证码、密码登录、Google 登录全部保留 —— 但门户现在与产品其他部分一起开发、构建和部署。
+
+## 体验优化与修复
+
+- **门户收归一个仓库。** 账户登录界面（邮箱验证码、密码、Google OAuth、return-URL 处理以及 `/v1/contract` 服务契约）已移植进 `apps/auth`，中英文案齐备。
+- **推送即可部署。** 新增 `Deploy Auth` 工作流，从 `canary` 构建并发布 worker 与 CDN 资源，复用 workbench 部署同款 build-inputs 清单门控。
+- **应用构建恢复。** 品牌更名中被改名的 static-css 虚拟模块重新可解析，多语言预渲染也不再因共享类型目录而相互竞争 —— 这两个修复同时作用于 auth、share 与 workbench 的构建。

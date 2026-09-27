@@ -1,4 +1,4 @@
-import { index, route, type RouteConfig } from '@react-router/dev/routes';
+import { index, layout, route, type RouteConfig } from '@react-router/dev/routes';
 
 export default [
   index('routes/homeRedirect.tsx'),
@@ -15,5 +15,14 @@ export default [
   route('oauth/callback/success', 'routes/oauthCallbackSuccess.tsx'),
   route('oauth/callback/social', 'routes/oauthCallbackSocial.tsx'),
   route('oauth/callback/error', 'routes/oauthCallbackError.tsx'),
+  // accounts.aspectlylabs.com portal surface (Clerk sign-in)
+  layout('routes/portalLayout.tsx', [
+    route('login', 'routes/portalLogin.tsx'),
+    route('sign-in', 'routes/portalSignInAlias.tsx'),
+    route('oauth/google', 'routes/portalOauthGoogle.tsx'),
+    route('oauth/google/callback', 'routes/portalOauthGoogleCallback.tsx'),
+  ]),
+  route('v1/contract', 'routes/portalContract.tsx'),
+  route('healthz', 'routes/portalHealth.tsx'),
   route('*', 'routes/catchall.tsx'),
 ] satisfies RouteConfig;

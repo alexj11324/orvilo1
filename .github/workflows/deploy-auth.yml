@@ -16,6 +16,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # CLOUDFLARE_API_TOKEN and ASSET_S3_* are environment secrets.
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4

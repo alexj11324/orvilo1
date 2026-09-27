@@ -5,6 +5,7 @@ import {
   resolveDocumentLocale,
   SPA_FALLBACK_DOCUMENT,
 } from '../app/lib/prerender';
+import { AUTH_CONTRACT, authContractResponseHeaders } from '../app/portal/contract';
 import { injectPortalConfig, injectServerConfig, withDocumentLocale } from './document';
 
 interface Env {
@@ -28,7 +29,6 @@ const AUTH_PATH_PREFIXES = [
   '/oauth',
   '/login',
   '/sign-in',
-  '/v1',
 ];
 
 const HEALTH_PATHS = ['/healthz', '/readyz'];
@@ -110,6 +110,12 @@ export default {
 
     if (HEALTH_PATHS.includes(pathname))
       return new Response('ok', { headers: { 'cache-control': 'no-store' } });
+
+    // Programmatic contract discovery — JSON over the wire, not a document.
+    if (pathname === '/v1/contract')
+      return new Response(JSON.stringify(AUTH_CONTRACT), {
+        headers: { ...authContractResponseHeaders(), 'content-type': 'application/json' },
+      });
 
     if (isAssetPath(pathname)) return env.ASSETS.fetch(request);
 

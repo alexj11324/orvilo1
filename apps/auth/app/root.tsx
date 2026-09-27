@@ -1,5 +1,13 @@
 import type { CSSProperties, PropsWithChildren } from 'react';
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useRouteError } from 'react-router';
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useMatches,
+  useRouteError,
+} from 'react-router';
 import { isRtlLang } from 'rtl-detect';
 import { href as antdStaticCssHref } from 'virtual:aspectlylabs/antd-static-css';
 import { href as themeVarsCssHref } from 'virtual:aspectlylabs/theme-vars-css';
@@ -57,6 +65,11 @@ export const Layout = ({ children }: PropsWithChildren) => {
 
 export default function Root() {
   const locale = resolveAuthLocale();
+  // Bare routes (the accounts portal) own their chrome end-to-end —
+  // AuthAppShell's header, i18n stack and container do not apply.
+  const bare = useMatches().some((match) => (match.handle as { bare?: boolean } | undefined)?.bare);
+
+  if (bare) return <Outlet />;
 
   return (
     <NextThemeProvider>

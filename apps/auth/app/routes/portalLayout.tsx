@@ -8,6 +8,10 @@ import { PortalMessagesProvider } from '../portal/messagesContext';
 import { readPortalConfig } from '../portal/portalConfig';
 import { RuntimeClerkProvider } from '../portal/RuntimeClerkProvider';
 
+// Bare: skips AuthAppShell — the portal owns its chrome (matches the Cordy
+// portal's full-bleed two-panel layout).
+export const handle = { bare: true };
+
 export default function PortalLayout() {
   const { locale } = resolvePortalLocale(resolveAuthLocale());
   const config = readPortalConfig();

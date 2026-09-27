@@ -93,6 +93,7 @@ vi.mock('@/routes/(main)/_layout/DesktopAutoOidcOnFirstOpen', () => ({ default: 
 vi.mock('@/routes/(main)/_layout/RegisterHotkeys', () => ({ default: nullComponent }));
 vi.mock('@/routes/(main)/_layout/style', () => ({ styles: {} }));
 vi.mock('@/hooks/useSyncRecents', () => ({ useSyncRecents: vi.fn() }));
+vi.mock('@/features/Workspace/useWorkspaceUrlSync', () => ({ useWorkspaceUrlSync: vi.fn() }));
 
 /**
  * The `<Outlet/>` stands in for the page the layout resolves. Rendering a plain

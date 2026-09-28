@@ -273,6 +273,44 @@ jobs:
             ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
               "sudo tar xzf - -C '$COMPOSE_DIR'"
 
+      # .env 仍是主机本地文件（手工配置保留），但 GitHub 里配置的部署变量
+      # 必须能让容器读到 —— env_file: .env 会把文件内所有键注入容器。
+      # 这里把 secrets/vars 渲染成一个带标记的受管块追加进 .env（旧块先删再
+      # 追加，同键更新、不影响块外任何手工配置）。值为空则整体跳过该键。
+      # 新增部署变量：在下方列表加键名 + 配同名 GitHub secret/var 即可。
+      - name: Sync deploy env vars into host .env
+        env:
+          SSH_HOST: ${{ secrets.ORACLE_HOST }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          # vars 留空时用 prod 默认值；覆盖只需在 repo/environment 配同名 var。
+          CLERK_ISSUER: ${{ vars.CLERK_ISSUER || 'https://clerk.aspectlylabs.com' }}
+          CLERK_AUTHORIZED_PARTIES: ${{ vars.CLERK_AUTHORIZED_PARTIES || 'https://accounts.aspectlylabs.com,https://orvilo.aspectlylabs.com' }}
+          AUTH_ACCOUNTS_URL: ${{ vars.AUTH_ACCOUNTS_URL || 'https://accounts.aspectlylabs.com' }}
+          AUTH_COOKIE_DOMAIN: ${{ vars.AUTH_COOKIE_DOMAIN || '.aspectlylabs.com' }}
+        run: |
+          set -euo pipefail
+          {
+            echo '# BEGIN deploy-managed-env (written by deploy-orvilo1.yml — do not edit)'
+            for k in CLERK_SECRET_KEY CLERK_ISSUER CLERK_AUTHORIZED_PARTIES AUTH_ACCOUNTS_URL AUTH_COOKIE_DOMAIN; do
+              v="${!k}"
+              if [ -n "$v" ]; then
+                printf '%s=%s\n' "$k" "$v"
+              else
+                echo "::warning::$k 未配置（GitHub secret/var 为空），跳过" >&2
+              fi
+            done
+            echo '# END deploy-managed-env'
+          } > /tmp/deploy.env
+          if ! grep -qE '^[A-Z_]+=' /tmp/deploy.env; then
+            echo "没有配置任何部署变量，主机 .env 保持不变"
+            exit 0
+          fi
+          scp -i ~/.ssh/deploy_key -o BatchMode=yes /tmp/deploy.env "ubuntu@$SSH_HOST:/tmp/orvilo-deploy.env"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            "sudo sh -c 'cd \"$COMPOSE_DIR\" && touch .env && cp .env .env.pre-deploy.bak && \
+             sed -i \"/# BEGIN deploy-managed-env/,/# END deploy-managed-env/d\" .env && \
+             cat /tmp/orvilo-deploy.env >> .env && rm -f /tmp/orvilo-deploy.env'"
+
       - name: Deploy
         env:
           SSH_HOST: ${{ secrets.ORACLE_HOST }}

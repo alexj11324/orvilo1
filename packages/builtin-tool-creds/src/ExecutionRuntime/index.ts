@@ -57,7 +57,7 @@ export interface ICredsService {
    * List all user credentials
    */
   listCreds: () => Promise<{
-    data?: Array<{ id: number; key: string }>;
+    data?: Array<{ id: string; key: string }>;
   }>;
 
   /**
@@ -69,7 +69,7 @@ export interface ICredsService {
     name: string;
     type: 'kv-env' | 'kv-header';
     values: Record<string, string>;
-  }) => Promise<{ id: number }>;
+  }) => Promise<{ id: string }>;
 }
 
 /**

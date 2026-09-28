@@ -439,6 +439,9 @@ export const TRPC_BLOCKED_PATH_PREFIXES: string[] = [
   // marketplace credential management: list/decrypt/create/delete/share/inject
   // of external credentials — same class as the blocked connector/composio surfaces
   'market.creds.',
+  // own-DB credential management: same class as `market.creds.` —
+  // decrypt/inject of credentials must never be reachable with a restricted key
+  'creds.',
   // marketplace OIDC auth flows carry tokens
   'market.oidc.',
   // Inbox decide consumes live ACP permits, review requests, and ownership

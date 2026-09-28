@@ -3,6 +3,7 @@
  */
 import { accountDeletionRouter } from '@/business/server/lambda-routers/accountDeletion';
 import { artifactShareRouter } from '@/business/server/lambda-routers/artifactShare';
+import { credsRouter } from '@/business/server/lambda-routers/creds';
 import { invitationRouter } from '@/business/server/lambda-routers/invitation';
 import { pageShareRouter } from '@/business/server/lambda-routers/pageShare';
 import { projectMemberRouter } from '@/business/server/lambda-routers/projectMember';
@@ -127,6 +128,7 @@ export const lambdaRouter = router({
   collaboration: collaborationRouter,
   config: configRouter,
   connector: connectorRouter,
+  creds: credsRouter,
   device: deviceRouter,
   document: documentRouter,
   documentComment: documentCommentRouter,

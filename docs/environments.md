@@ -12,6 +12,32 @@
 | PR preview  | `pull_request_target` → `.github/workflows/vercel-preview.yml`: `gate` waits for the required checks (Test CI, E2E CI, GitGuardian) on the exact head SHA, then `deploy` creates the deployment through the Vercel API; requires repo variable `VERCEL_PREVIEW_DEPLOYMENT_GATE=open` (quota circuit breaker) | `vercel.json` (`buildCommand: bun run build:vercel`; Git deployments disabled for PR branches so only this gated workflow deploys); Vercel project env vars (Preview scope); secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`                                                                                                                                                                                                                             | Not provisioned by the workflow — whatever the Vercel project's Preview-scope env vars point at                                                                                                                                   | `https://<deployment>.vercel.app`, emitted as `deployment_url` in the job summary and on the `preview` GitHub Environment                                                          | None seeded by the repo                                                                                                                                                      |
 | Production  | Push to `canary` builds `ghcr.io/<repo>:sha-<commit>`; `promote` repoints the `:canary` / `:main` floating tags only after that commit's Required Quality Gate is green; deployment is a manual `workflow_dispatch` with `deploy: true`                                                                      | `.github/workflows/deploy-orvilo1.yml`; secrets `ORACLE_SSH_KEY`, `ORACLE_HOST`; host compose dir `/var/lib/orvilo1/docker-compose/deploy` — the deploy job syncs the repo-tracked files (`docker-compose.yml`, `bucket.config.json`, `searxng-settings.yml`, `elasticsearch/`) from `docker-compose/deploy/` to the host before pulling, so new services never hit `no such service`; `.env` and `orvilo1-production.override.yml` are host-local and left untouched | Production Postgres/Redis on the deploy host — a shared machine that also runs 20+ other products' containers                                                                                                                     | `https://orvilo.aspectlylabs.com`; the deploy verifies `http://127.0.0.1:3210/api/version` on the host                                                                             | None — real user data; DB migrations run at container start and the deploy waits for `migration pass` in the logs before starting `hatchet-worker`                           |
 
+## Cloudflare Worker deploys
+
+Auth and Workbench deploy through `.github/workflows/deploy-auth.yml` and
+`.github/workflows/deploy-workbench.yml`. Each workflow uses GitHub's
+`production` environment and runs on a push to `canary` or a manual dispatch.
+The Share deploy script uses the same R2 settings, and
+`.github/workflows/verify-share.yml` uploads its PR preview. All three Wrangler
+configs target Cloudflare account `d8f6630c7869111a5139bc5ed4d24ace`, which
+owns `aspectlylabs.com`.
+
+Each deploy uploads the app's built assets to the `web-assets` R2 bucket using
+the S3-compatible endpoint `https://d8f6630c7869111a5139bc5ed4d24ace.r2.cloudflarestorage.com`
+and region `auto`, then deploys the Worker. The public asset domain is
+`https://web-assets.aspectlylabs.com`.
+
+The GitHub `production` environment must contain `CLOUDFLARE_API_TOKEN` and
+these six `ASSET_S3_*` secrets: `ASSET_S3_ACCESS_KEY_ID`,
+`ASSET_S3_SECRET_ACCESS_KEY`, `ASSET_S3_BUCKET`, `ASSET_S3_ENDPOINT`,
+`ASSET_S3_PUBLIC_DOMAIN`, and `ASSET_S3_REGION`. Keep credential values in
+Google Secret Manager and GitHub environment secrets; do not commit them.
+The Cloudflare API token is stored in Google Secret Manager as
+`orvilo-auth-cloudflare-api-token`. The R2 key pair belongs to the
+`orvilo-web-assets-uploader-rotated-20260928` account token, scoped to
+`web-assets` with Object Read & Write permission, and is stored in Google Secret Manager as
+`orvilo-asset-s3-access-key-id` and `orvilo-asset-s3-secret-access-key`.
+
 ## Production deploy units
 
 A production deploy runs three services from the same `sha-<commit>` image (`docker-compose/deploy/`):

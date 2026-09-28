@@ -115,4 +115,24 @@ describe('session cookie readers', () => {
     expect(readAuthSessionTokenFromHeaders(headersFor(undefined))).toBeNull();
     expect(readAuthSessionTokenFromHeaders(headersFor('a=1'))).toBeNull();
   });
+
+  // Better Auth signed the session cookie as `token.hmacSignature`; the table
+  // stores the bare token.
+  it('strips the HMAC signature from legacy cookie values', () => {
+    const getter = (name: string) =>
+      name === 'better-auth.session_token' ? 'legacy-token.c2lnbmF0dXJl' : undefined;
+
+    expect(readAuthSessionToken(getter)).toBe('legacy-token');
+    expect(
+      readAuthSessionTokenFromHeaders(
+        headersFor('better-auth.session_token=legacy-token.c2lnbmF0dXJl'),
+      ),
+    ).toBe('legacy-token');
+    // unsigned values (older cookies) still resolve unchanged
+    expect(
+      readAuthSessionToken((name) =>
+        name === 'better-auth.session_token' ? 'unsigned' : undefined,
+      ),
+    ).toBe('unsigned');
+  });
 });

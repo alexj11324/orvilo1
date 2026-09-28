@@ -24,12 +24,20 @@ const REFRESH_BELOW_FRACTION = 0.5;
 export type AuthSessionItem = typeof authSessionTable.$inferSelect;
 
 /**
- * Better Auth stored the raw session token in `<prefix>.session_token`; those
- * rows share this table, so reading the legacy cookie keeps pre-migration
- * sessions valid until they expire.
+ * Better Auth stored the session token in `<prefix>.session_token`; those rows
+ * share this table, so reading the legacy cookie keeps pre-migration sessions
+ * valid until they expire. The cookie value is HMAC-signed
+ * (`token.signature`), while the table holds the bare token — strip the
+ * signature segment before lookup.
  */
 export const legacySessionCookieName = (cookiePrefix?: string) =>
   `${cookiePrefix || 'better-auth'}.session_token`;
+
+const stripLegacySignature = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const separator = value.lastIndexOf('.');
+  return separator === -1 ? value : value.slice(0, separator);
+};
 
 export type CookieGetter = (name: string) => string | null | undefined;
 
@@ -38,7 +46,8 @@ export const readAuthSessionToken = (
   getCookie: CookieGetter,
   legacyCookiePrefix?: string,
 ): string | null =>
-  getCookie(AUTH_SESSION_COOKIE) ?? getCookie(legacySessionCookieName(legacyCookiePrefix)) ?? null;
+  getCookie(AUTH_SESSION_COOKIE) ??
+  stripLegacySignature(getCookie(legacySessionCookieName(legacyCookiePrefix)));
 
 const parseCookieHeader = (header: string): Record<string, string> => {
   const cookies: Record<string, string> = {};
@@ -61,7 +70,8 @@ export const readAuthSessionTokenFromHeaders = (
   if (!cookieHeader) return null;
   const cookies = parseCookieHeader(cookieHeader);
   return (
-    cookies[AUTH_SESSION_COOKIE] ?? cookies[legacySessionCookieName(legacyCookiePrefix)] ?? null
+    cookies[AUTH_SESSION_COOKIE] ??
+    stripLegacySignature(cookies[legacySessionCookieName(legacyCookiePrefix)])
   );
 };
 

@@ -1,0 +1,16 @@
+---
+title: 'Consistent Loading Screen Font'
+description: >-
+  The startup loading screen now renders the brand name in the app font from
+  the first paint instead of flashing a serif fallback first.
+tags:
+  - Polish
+---
+
+# Consistent Loading Screen Font
+
+The brand name on the startup loading screen briefly appeared in the browser's default serif font and then snapped into the product's sans-serif once the app stylesheet arrived. The loading screen now carries the product's font stack itself, so it looks the same at first paint as it does a moment later.
+
+## Improvements and fixes
+
+- **Loading brand uses the app font stack.** The injected loading-screen markup now sets `font-family` explicitly, eliminating the serif flash before styles load.

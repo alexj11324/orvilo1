@@ -176,11 +176,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     width: ${COLUMN_WIDTH}px;
     max-height: 100%;
-
-    /* Linear columns are frameless — cards sit straight on the panel. The
-       transparent border keeps the drop-target highlight's footprint. */
-    border: 1px solid transparent;
+    border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadiusLG};
+
+    background: ${cssVar.colorBgContainer};
 
     transition:
       box-shadow 0.2s,

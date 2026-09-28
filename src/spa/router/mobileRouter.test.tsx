@@ -78,11 +78,13 @@ describe('mobileRouter retired provider routes', () => {
   });
 });
 
-it('redirects the legacy mobile Linear page to workspace settings', () => {
+it('redirects the legacy mobile Linear page to the Linear import tab', () => {
   const leaf = matchRoutes(mobileRoutes, '/acme/settings/linear')?.at(-1)?.route;
 
   expect(leaf?.path).toBe('linear');
-  expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe('..');
+  expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe(
+    '../imports/linear',
+  );
 });
 
 describe('mobile retired product routes', () => {

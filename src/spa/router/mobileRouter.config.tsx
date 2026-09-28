@@ -429,60 +429,56 @@ export const mobileRoutes: RouteObject[] = [
           ...sharedMainAreaChildren,
           // Workspace settings — `/:slug/settings/*`. Mobile reuses the mobile
           // settings chrome (header + content wrapper) for now; a dedicated
-          // mobile workspace sidebar is follow-up work.
+          // mobile workspace sidebar is follow-up work. The leaf set mirrors
+          // the desktop table: every tab the workspace settings nav links to
+          // must resolve here, or the root catch-all bounces it home.
           {
             children: [
               { element: redirectElement('general'), index: true },
+              // Legacy `/<slug>/settings/<alias>` deep links, from the same
+              // registry the desktop router reads.
+              ...WORKSPACE_SETTINGS_ALIASES.flatMap(
+                ({ alias, subPaths, target }): RouteObject[] => {
+                  const element = redirectElement(target === 'root' ? '..' : `../${target}`);
+                  return [
+                    { element, path: alias },
+                    ...(subPaths ? [{ element, path: `${alias}/:sub` }] : []),
+                  ];
+                },
+              ),
+              // Full-bleed tabs own their internal layout (see the desktop
+              // router, which renders them outside the padded content layout).
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/connector'),
+                  'Mobile > Workspace > Settings > Connector',
+                ),
+                path: 'connector',
+              },
+              {
+                element: redirectElement('../imports/linear'),
+                path: 'linear',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/imports'),
+                  'Mobile > Workspace > Settings > Imports',
+                ),
+                path: 'imports',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/imports/linear'),
+                  'Mobile > Workspace > Settings > Linear Import',
+                ),
+                path: 'imports/linear',
+              },
               {
                 element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/general'),
                   'Mobile > Workspace > Settings > General',
                 ),
                 path: 'general',
-              },
-              // Account-level tabs mirrored inside the workspace (see the
-              // desktop router); the pages are the personal settings pages.
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/profile'),
-                  'Mobile > Workspace > Settings > Profile',
-                ),
-                path: 'profile',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/appearance'),
-                  'Mobile > Workspace > Settings > Appearance',
-                ),
-                path: 'appearance',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/hotkey'),
-                  'Mobile > Workspace > Settings > Hotkey',
-                ),
-                path: 'hotkey',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/advanced'),
-                  'Mobile > Workspace > Settings > Advanced',
-                ),
-                path: 'advanced',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/labs'),
-                  'Mobile > Workspace > Settings > Labs',
-                ),
-                path: 'labs',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/about'),
-                  'Mobile > Workspace > Settings > About',
-                ),
-                path: 'about',
               },
               {
                 element: dynamicElement(
@@ -509,32 +505,11 @@ export const mobileRoutes: RouteObject[] = [
               },
               {
                 element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/labels'),
-                  'Mobile > Workspace > Settings > Labels',
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/statistics'),
+                  'Mobile > Workspace > Settings > Statistics',
                 ),
-                path: 'labels',
+                path: 'statistics',
               },
-              {
-                element: redirectElement('..'),
-                path: 'provider',
-              },
-              {
-                // The legacy sync/import page is retired. Mobile has no
-                // replacement importer route, so return to workspace settings.
-                element: redirectElement('..'),
-                path: 'linear',
-              },
-              // Legacy `/<slug>/settings/<alias>` deep links, from the same
-              // registry the desktop router reads.
-              ...WORKSPACE_SETTINGS_ALIASES.flatMap(
-                ({ alias, subPaths, target }): RouteObject[] => {
-                  const element = redirectElement(target === 'root' ? '..' : `../${target}`);
-                  return [
-                    { element, path: alias },
-                    ...(subPaths ? [{ element, path: `${alias}/:sub` }] : []),
-                  ];
-                },
-              ),
               {
                 element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/plans'),
@@ -569,6 +544,86 @@ export const mobileRoutes: RouteObject[] = [
                   'Mobile > Workspace > Settings > Usage',
                 ),
                 path: 'usage',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/credential'),
+                  'Mobile > Workspace > Settings > Credential',
+                ),
+                path: 'credential',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/apikey'),
+                  'Mobile > Workspace > Settings > API Key',
+                ),
+                path: 'apikey',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/labels'),
+                  'Mobile > Workspace > Settings > Labels',
+                ),
+                path: 'labels',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/storage'),
+                  'Mobile > Workspace > Settings > Storage',
+                ),
+                path: 'storage',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/devices'),
+                  'Mobile > Workspace > Settings > Devices',
+                ),
+                path: 'devices',
+              },
+              // Account-level tabs mirrored inside the workspace (see the
+              // desktop router); the pages are the personal settings pages.
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/profile'),
+                  'Mobile > Workspace > Settings > Profile',
+                ),
+                path: 'profile',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/appearance'),
+                  'Mobile > Workspace > Settings > Appearance',
+                ),
+                path: 'appearance',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/hotkey'),
+                  'Mobile > Workspace > Settings > Hotkey',
+                ),
+                path: 'hotkey',
+              },
+              // Developer tools mirrored inside the workspace (user preferences).
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/advanced'),
+                  'Mobile > Workspace > Settings > Advanced',
+                ),
+                path: 'advanced',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/labs'),
+                  'Mobile > Workspace > Settings > Labs',
+                ),
+                path: 'labs',
+              },
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(main)/[workspaceSlug]/settings/about'),
+                  'Mobile > Workspace > Settings > About',
+                ),
+                path: 'about',
               },
             ],
             element: dynamicLayout(

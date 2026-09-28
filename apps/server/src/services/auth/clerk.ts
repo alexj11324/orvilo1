@@ -1,6 +1,6 @@
 import { type OrviloDatabase } from '@orvilo/database';
 import debug from 'debug';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { createRemoteJWKSet, importSPKI, jwtVerify } from 'jose';
 
 import { type UserItem, users } from '@/database/schemas';
@@ -148,6 +148,12 @@ export const assertClerkUserUsable = (user: ClerkApiUser) => {
  * Map the Clerk user onto the `users` row, creating it (and running the new-user
  * bootstrap) on first sign-in. Identity fields (id, email) track Clerk; display
  * fields are only filled when empty so in-app edits survive.
+ *
+ * Accounts created before the Clerk switch carry a non-Clerk `users.id`, so the
+ * lookup falls back to the (normalized) email and keeps that row's id — the row
+ * is referenced by user data all over the schema, and re-keying it would orphan
+ * it. Clerk's id never lands on the migrated row; every later sign-in re-takes
+ * the email path.
  */
 export const provisionClerkUser = async (
   db: OrviloDatabase,
@@ -157,8 +163,18 @@ export const provisionClerkUser = async (
   const emailVerified = email?.verification?.status === 'verified';
   const fullName =
     [clerkUser.first_name, clerkUser.last_name].filter(Boolean).join(' ').trim() || null;
+  const normalizedEmail = email?.email_address?.toLowerCase() ?? null;
 
-  const existing = await db.query.users.findFirst({ where: eq(users.id, clerkUser.id) });
+  const existing =
+    (await db.query.users.findFirst({ where: eq(users.id, clerkUser.id) })) ??
+    (normalizedEmail || email?.email_address
+      ? await db.query.users.findFirst({
+          where: or(
+            normalizedEmail ? eq(users.normalizedEmail, normalizedEmail) : undefined,
+            email?.email_address ? eq(users.email, email.email_address) : undefined,
+          ),
+        })
+      : undefined);
   if (!existing) {
     const [created] = await db
       .insert(users)
@@ -201,6 +217,9 @@ export const provisionClerkUser = async (
   if (!existing.emailVerified && emailVerified) {
     patch.emailVerified = true;
     patch.emailVerifiedAt = new Date();
+  }
+  if (!existing.clerkCreatedAt && clerkUser.created_at) {
+    patch.clerkCreatedAt = new Date(clerkUser.created_at);
   }
 
   if (Object.keys(patch).length > 0) {

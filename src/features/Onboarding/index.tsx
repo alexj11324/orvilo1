@@ -12,6 +12,7 @@ import {
   ONBOARDING_INVITES_FAILED,
   type OnboardingFormValues,
 } from '@/components/blocks/onboarding-2/components/onboarding';
+import { OnboardingHeader } from '@/components/blocks/onboarding-2/components/onboarding-header';
 import { Spinner } from '@/components/ui/spinner';
 import { isDesktop } from '@/const/version';
 import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
@@ -154,9 +155,20 @@ const OnboardingPage = memo(() => {
   };
 
   if (!userStateReady) {
+    // Keep the wizard's chrome on screen while the user record loads — a bare
+    // centered spinner reads as a blank white page on mobile.
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Spinner className="size-6" />
+      <div className="flex min-h-screen flex-col">
+        <OnboardingHeader
+          canGoBack={false}
+          currentStep={0}
+          statusLabel={''}
+          totalSteps={0}
+          onBack={() => {}}
+        />
+        <div className="flex flex-1 items-center justify-center">
+          <Spinner className="size-6" />
+        </div>
       </div>
     );
   }

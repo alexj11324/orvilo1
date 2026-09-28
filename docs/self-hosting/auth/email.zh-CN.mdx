@@ -1,17 +1,15 @@
 ---
 title: 邮件服务配置
-description: 配置 Orvilo 的邮件服务，用于邮箱验证、密码重置和魔法链接登录。
+description: 配置 Orvilo 的事务性邮件服务，用于工作区邀请、通知等邮件。
 tags:
   - 邮件服务
   - SMTP
   - Resend
-  - 邮箱验证
-  - 魔法链接
 ---
 
 # 邮件服务配置
 
-邮件服务用于邮箱验证、密码重置和魔法链接发送。Orvilo 支持两种邮件服务提供商。
+Orvilo 通过两种提供商之一发送事务性邮件（工作区邀请、通知）。登录相关的邮件流程（验证、魔法链接）由账户门户完成，在 Clerk 中配置，不在此处。
 
 ## Nodemailer（SMTP）
 
@@ -45,26 +43,6 @@ tags:
   使用 Resend 前需先 [验证发件域名](https://resend.com/docs/dashboard/domains/introduction)，否则只能发送到自己的邮箱。
 </Callout>
 
-## 邮箱验证
+## 门户登录邮件流程
 
-启用邮箱验证以确保用户拥有其注册的邮箱地址（默认关闭）：
-
-| 环境变量                      | 类型 | 描述                   |
-| ------------------------- | -- | -------------------- |
-| `AUTH_EMAIL_VERIFICATION` | 可选 | 设置为 `1` 以要求注册后进行邮箱验证 |
-
-<Callout type={'info'}>
-  邮箱验证需要上方已配置好的邮件服务（SMTP 或 Resend）。启用后，用户必须验证其邮箱地址才能登录。
-</Callout>
-
-## 魔法链接（免密）登录
-
-启用魔法链接登录（依赖上方已配置好的邮件服务，默认关闭）：
-
-| 环境变量                     | 类型 | 描述                      |
-| ------------------------ | -- | ----------------------- |
-| `AUTH_ENABLE_MAGIC_LINK` | 可选 | 设置为 `1` 以启用魔法链接登录（默认关闭） |
-
-<Callout type={'tip'}>
-  前往 [环境变量](/zh/docs/self-hosting/environment-variables/auth#better-auth) 可查阅所有 Better Auth 相关变量详情。
-</Callout>
+邮箱验证（`AUTH_EMAIL_VERIFICATION`）与魔法链接登录（`AUTH_ENABLE_MAGIC_LINK`）是门户侧特性：开关会转发给账户门户，相关邮件由 Clerk 发送，不使用上方 SMTP/Resend 配置。

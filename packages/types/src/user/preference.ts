@@ -312,7 +312,7 @@ export const OAuthAccountSchema = z.object({
  */
 export interface SSOProvider {
   email?: string;
-  /** Expiration time - Date for better-auth */
+  /** Expiration time */
   expiresAt?: Date | number | null;
   provider: string;
   providerAccountId: string;

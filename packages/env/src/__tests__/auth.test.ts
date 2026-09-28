@@ -17,12 +17,4 @@ describe('getAuthConfig', () => {
 
     expect(getAuthConfig().AUTH_COOKIE_PREFIX).toBe('orvilo-oss');
   });
-
-  it('should expose additional trusted origins', async () => {
-    vi.stubEnv('AUTH_ADDITIONAL_TRUSTED_ORIGINS', 'https://gateway.example.com');
-
-    const { getAuthConfig } = await import('../auth');
-
-    expect(getAuthConfig().AUTH_ADDITIONAL_TRUSTED_ORIGINS).toBe('https://gateway.example.com');
-  });
 });

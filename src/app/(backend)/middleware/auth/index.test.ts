@@ -21,7 +21,7 @@ vi.mock('@orvilo/types', () => ({
   },
 }));
 
-const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+vi.spyOn(console, 'error').mockImplementation(() => undefined);
 const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
 vi.mock('@/utils/errorResponse', () => ({
@@ -201,7 +201,7 @@ describe('checkAuth', () => {
     });
   });
 
-  it('should not log OIDC auth info for better-auth session failures', async () => {
+  it('should not log OIDC auth info for cookie session failures', async () => {
     await checkAuth(mockHandler)(mockRequest, mockOptions);
 
     expect(consoleInfoSpy).not.toHaveBeenCalled();

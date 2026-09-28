@@ -1,7 +1,7 @@
 import { INVITATION_EXPIRY_DAYS } from '@orvilo/const';
 
 import { appEnv } from '@/envs/app';
-import { getWorkspaceInviteEmailTemplate } from '@/libs/better-auth/email-templates/workspace-invite';
+import { getWorkspaceInviteEmailTemplate } from '@/libs/email/workspace-invite';
 import { EmailService } from '@/server/services/email';
 
 /**

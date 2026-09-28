@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type * as PermissionCheck from '../middleware/permission-check';
 
 // The route module pulls in the db graph (via the permission middleware) and the
-// better-auth graph (via `requireAuth`) at import time; this test is only about
+// session graph (via `requireAuth`) at import time; this test is only about
 // which gates the route itself declares.
 vi.mock('@/database/core/db-adaptor', () => ({ getServerDB: vi.fn() }));
 vi.mock('@/database/models/rbac', () => ({

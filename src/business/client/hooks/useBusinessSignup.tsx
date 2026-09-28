@@ -1,4 +1,8 @@
-import type { BaseSignUpFormValues } from '@/features/Auth/SignUp/types';
+interface BaseSignUpFormValues {
+  confirmPassword: string;
+  email: string;
+  password: string;
+}
 
 export interface BusinessSignupFomData {}
 

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
  * The console let a user mint OIDC clients of their own — an object with no
  * task / run / project behind it — so the router and every write path into the
  * `oidcClients` table were withdrawn. The *capabilities* that were never built
- * on it stay: sign-in is better-auth, GitHub goes through the Market OAuth
+ * on it stay: sign-in bounces to the accounts portal, GitHub goes through the Market OAuth
  * proxy, Linear runs its own PKCE flow, and the device flow the CLI uses comes
  * from the static `defaultClients` in `src/libs/oidc-provider/config.ts`.
  *

@@ -127,7 +127,7 @@ export interface GlobalServerConfig {
   enableUploadFileToServer?: boolean;
   memory?: GlobalMemoryConfig;
   multimodalUnderstanding?: MultimodalUnderstandingConfig;
-  oAuthSSOProviders?: string[];
+
   systemAgent?: PartialDeep<UserServiceModelConfig>;
   telemetry: {
     langfuse?: boolean;

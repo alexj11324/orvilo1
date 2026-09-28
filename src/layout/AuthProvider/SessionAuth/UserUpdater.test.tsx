@@ -277,7 +277,7 @@ describe('UserUpdater', () => {
     unmount();
   });
 
-  it('preserves user fields populated by useInitUserState (e.g. interests) when better-auth re-emits the session on tab focus', () => {
+  it('preserves user fields populated by useInitUserState (e.g. interests) when the session refetches on tab focus', () => {
     // Simulate the post-init state: useInitUserState has loaded interests etc.
     useUserStore.setState({
       user: {
@@ -297,7 +297,7 @@ describe('UserUpdater', () => {
     expect(useUserStore.getState().user?.interests).toEqual(['内容创作', '编程']);
     expect(useUserStore.getState().user?.firstName).toBe('A');
 
-    // Simulate better-auth refetching on visibilitychange: same logical user,
+    // Simulate the session refetching on visibilitychange: same logical user,
     // but `data` (and therefore `user`) is a fresh object reference.
     useSessionMock.mockReturnValue(sampleSession());
     rerender(<UserUpdater />);

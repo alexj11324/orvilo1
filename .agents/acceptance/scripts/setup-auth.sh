@@ -10,7 +10,7 @@
 #   setup-auth.sh cli-seed      # configure CLI API-key auth from seeded local env
 #   setup-auth.sh cli           # interactive CLI device-code login (run by a human)
 #   setup-auth.sh open-chrome   # open SERVER_URL in Chrome and show DevTools
-#   setup-auth.sh web-seed      # sign in seeded user and inject cookies automatically
+#   setup-auth.sh web-seed      # insert an auth_sessions row for the seeded user and inject the orvilo_auth cookie
 #   setup-auth.sh web           # stdin = Cookie header -> inject into agent-browser session
 #   setup-auth.sh web-verify    # live-check the agent-browser session is authenticated
 #
@@ -18,7 +18,8 @@
 #   SERVER_URL  (default from test-env.sh)        dev server under test
 #   SESSION     (default orvilo-dev)             agent-browser session name
 #   AUTH_DIR    (default ~/.orvilo-agent-testing) where web state is persisted
-#   SEED_EMAIL / SEED_PASSWORD                    seeded better-auth login
+#   DATABASE_URL                                  Postgres the dev server uses (web-seed inserts into auth_sessions)
+#   SEED_EMAIL                                    seeded user (session owner; id resolved from users.email)
 
 set -euo pipefail
 
@@ -86,7 +87,6 @@ CLI_HOME_NAME="${ORVILO_CLI_HOME:-.orvilo-dev}"
 CLI_HOME="$HOME/${CLI_HOME_NAME#/}"
 CLI_CREDENTIALS_FILE="$CLI_HOME/credentials.json"
 SEED_EMAIL="${SEED_EMAIL:-agent-testing@orvilo.aspectlylabs.com}"
-SEED_PASSWORD="${SEED_PASSWORD:-TestPassword123!}"
 SEED_API_KEY="${SEED_API_KEY:-${AGENT_TESTING_API_KEY:-sk-ov-agenttesting0001}}"
 CLI_ENV_FILE="${CLI_ENV_FILE:-$REPO_ROOT/.records/env/agent-testing-cli.env}"
 
@@ -378,28 +378,8 @@ OSA
   ok "opened Chrome at $SERVER_URL/ and requested DevTools Network panel"
 }
 
-cookie_header_from_jar() {
-  local jar="$1"
-  awk '
-    BEGIN { first = 1 }
-    /^$/ { next }
-    /^#/ {
-      if ($0 !~ /^#HttpOnly_/) next
-      sub(/^#HttpOnly_/, "")
-    }
-    NF >= 7 {
-      if (!first) printf "; "
-      printf "%s=%s", $6, $7
-      first = 0
-    }
-    END {
-      if (!first) printf "\n"
-    }
-  ' "$jar"
-}
-
 # Build a Playwright storageState file from a raw Cookie header on stdin,
-# keeping only the better-auth cookies. See references/auth.md for why the
+# keeping only the session cookies. See references/auth.md for why the
 # header must come from a Network request (HttpOnly) and why httpOnly=false.
 cmd_web() {
   mkdir -p "$AUTH_DIR"
@@ -421,7 +401,9 @@ for line in raw.splitlines():
 
 raw = "; ".join(cookie_lines)
 
-WANTED = {"better-auth.session_token", "better-auth.session_data", "better-auth.state"}
+# orvilo_auth is the Clerk-era session cookie; the better-auth.* names stay
+# accepted while the dual-read transition exists.
+WANTED = {"orvilo_auth", "better-auth.session_token", "better-auth.session_data", "better-auth.state"}
 exp = int(time.time()) + 30 * 24 * 3600  # 30 days
 
 cookies = []
@@ -444,7 +426,7 @@ for pair in raw.split(";"):
     })
 
 if not cookies:
-    sys.stderr.write("no better-auth cookies found in input — paste the raw Cookie header from a Network request\n")
+    sys.stderr.write("no session cookies found in input — paste the raw Cookie header from a Network request\n")
     sys.exit(1)
 
 with open(sys.argv[1], "w") as f:
@@ -458,48 +440,52 @@ cmd_web_seed() {
   check_server || return 1
   mkdir -p "$AUTH_DIR"
 
-  local cookie_jar="$AUTH_DIR/web-seed-cookie.jar"
-  local response_body="$AUTH_DIR/web-seed-response.json"
-  local payload code
-  payload="$(
-    SEED_EMAIL="$SEED_EMAIL" SEED_PASSWORD="$SEED_PASSWORD" python3 - << 'PY'
-import json
-import os
-
-print(json.dumps({
-    "callbackURL": "/",
-    "email": os.environ["SEED_EMAIL"],
-    "password": os.environ["SEED_PASSWORD"],
-}))
-PY
-  )"
-
-  code=$(curl -sS -o "$response_body" -w '%{http_code}' \
-    -c "$cookie_jar" \
-    -H 'Content-Type: application/json' \
-    -X POST "$SERVER_URL/api/auth/sign-in/email" \
-    --data "$payload" 2> /dev/null || true)
-
-  if [[ ! "$code" =~ ^[23] ]]; then
-    bad "seed user sign-in failed at $SERVER_URL/api/auth/sign-in/email (http_code='$code')"
-    if [[ -f "$ROOT_ENV_FILE" ]]; then
-      note "root .env exists; do not seed or modify this DB for Web auth."
-      note "Use Chrome Cookie injection instead: $0 open-chrome, then pbpaste | $0 web"
-    else
-      note "make sure the seed user exists:"
-      note "./.agents/acceptance/scripts/init-dev-env.sh seed-user"
-    fi
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    bad "DATABASE_URL is required to seed a web session (sessions live in auth_sessions now)"
+    note "load the dev env first: source .records/env/dev.env — or use Chrome cookie injection: $0 open-chrome, then pbpaste | $0 web"
     return 1
   fi
 
-  local cookie_header
-  cookie_header="$(cookie_header_from_jar "$cookie_jar")"
-  if [[ -z "$cookie_header" ]]; then
-    bad "seed sign-in succeeded but no cookies were written to $cookie_jar"
-    return 1
-  fi
+  local session_token
+  session_token="$(
+    DATABASE_URL="$DATABASE_URL" SEED_EMAIL="$SEED_EMAIL" node - << 'NODE'
+const crypto = require('node:crypto');
+const pg = require('pg');
 
-  printf '%s\n' "$cookie_header" | cmd_web
+const run = async () => {
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const { rows } = await client.query('SELECT id FROM users WHERE email = $1', [
+      process.env.SEED_EMAIL,
+    ]);
+    if (!rows.length) throw new Error('no users row for seed email');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const token = crypto.randomBytes(24).toString('base64url');
+    await client.query(
+      'INSERT INTO auth_sessions (id, token, user_id, expires_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)',
+      [crypto.randomBytes(9).toString('base64url'), token, rows[0].id, expiresAt.toISOString(), now.toISOString()],
+    );
+    process.stdout.write(token);
+  } finally {
+    await client.end();
+  }
+};
+
+run().catch((err) => {
+  console.error(err.message);
+  process.exit(1);
+});
+NODE
+  )" || {
+    bad "failed to insert an auth_sessions row for $SEED_EMAIL"
+    note "make sure the seed user exists:"
+    note "./.agents/acceptance/scripts/init-dev-env.sh seed-user"
+    return 1
+  }
+
+  printf 'orvilo_auth=%s\n' "$session_token" | cmd_web
 }
 
 cmd_web_verify() {
@@ -530,9 +516,11 @@ cmd_web_verify() {
     bad "agent-browser session '$SESSION' did not report a current URL"
     return 1
   fi
-  if [[ "$url" == *"/signin"* || "$url" == *"/login"* ]]; then
+  # Unauthenticated sessions bounce to the accounts portal login page.
+  if [[ "$url" == *"/signin"* || "$url" == *"/login"* || "$url" == *"accounts."* ]]; then
     bad "agent-browser session '$SESSION' NOT authenticated (landed on $url)"
-    note "re-copy the Cookie header and re-run: pbpaste | $0 web"
+    note "re-seed a session (DATABASE_URL set): $0 web-seed"
+    note "or re-copy the Cookie header and re-run: pbpaste | $0 web"
     return 1
   fi
   ok "agent-browser session '$SESSION' authenticated (at $url)"

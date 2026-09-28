@@ -1,60 +1,42 @@
 import { Given, When } from '@cucumber/cucumber';
-import { expect, request } from '@playwright/test';
+import { expect } from '@playwright/test';
 
-import { TEST_USER } from '../../support/seedTestUser';
+import { createTestSession } from '../../support/seedTestUser';
 import type { CustomWorld } from '../../support/world';
 
-/**
- * Login via UI - fills in the login form and submits
- */
-Given('I am logged in as the test user', async function (this: CustomWorld) {
-  // Navigate to signin page
-  await this.page.goto('/signin');
-
-  // Wait for the login form to be visible
-  await this.page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 30_000 });
-
-  // Fill in email
-  await this.page.fill('input[type="email"], input[name="email"]', TEST_USER.email);
-
-  // Fill in password
-  await this.page.fill('input[type="password"], input[name="password"]', TEST_USER.password);
-
-  // Click submit button
-  await this.page.click('button[type="submit"]');
-
-  // Wait for navigation away from signin page
-  await this.page.waitForURL((url) => !url.pathname.includes('/signin'), { timeout: 30_000 });
-
-  console.log('✅ Logged in as test user via UI');
-});
+/** Mirrors AUTH_SESSION_COOKIE in packages/database/src/models/authSession.ts. */
+const AUTH_SESSION_COOKIE = 'orvilo_auth';
 
 /**
- * Login via the auth API - faster than UI and uses real better-auth cookies.
+ * Install an `orvilo_auth` session cookie for the seeded test user.
+ * Web sign-in lives on the accounts portal (Clerk); e2e seeds the app-issued
+ * session row directly instead of driving the portal UI.
  */
-Given('I am logged in with a session', async function (this: CustomWorld) {
+
+const loginWithSession = async (world: CustomWorld) => {
   const PORT = process.env.PORT ? Number(process.env.PORT) : 3006;
   const baseURL = process.env.BASE_URL || `http://localhost:${PORT}`;
-  const api = await request.newContext({ baseURL });
 
-  try {
-    const response = await api.post('/api/auth/sign-in/email', {
-      data: {
-        email: TEST_USER.email,
-        password: TEST_USER.password,
-      },
-    });
+  const sessionToken = await createTestSession();
+  if (!sessionToken) throw new Error('Failed to create a test session (is DATABASE_URL set?)');
 
-    if (!response.ok()) {
-      throw new Error(`Auth API sign-in failed: ${response.status()} ${await response.text()}`);
-    }
-
-    await this.browserContext.addCookies((await api.storageState()).cookies);
-  } finally {
-    await api.dispose();
-  }
+  await world.browserContext.addCookies([
+    {
+      name: AUTH_SESSION_COOKIE,
+      url: baseURL,
+      value: sessionToken,
+    },
+  ]);
 
   console.log('✅ Session cookies set for test user');
+};
+
+Given('I am logged in as the test user', async function (this: CustomWorld) {
+  await loginWithSession(this);
+});
+
+Given('I am logged in with a session', async function (this: CustomWorld) {
+  await loginWithSession(this);
 });
 
 /**
@@ -66,28 +48,12 @@ When('I navigate to the signin page', async function (this: CustomWorld) {
 });
 
 /**
- * Fill in login credentials
- */
-When('I enter the test user credentials', async function (this: CustomWorld) {
-  await this.page.fill('input[type="email"], input[name="email"]', TEST_USER.email);
-  await this.page.fill('input[type="password"], input[name="password"]', TEST_USER.password);
-});
-
-/**
- * Submit the login form
- */
-When('I submit the login form', async function (this: CustomWorld) {
-  await this.page.click('button[type="submit"]');
-});
-
-/**
  * Verify login was successful
  */
 Given('I should be logged in', async function (this: CustomWorld) {
   // Check we're not on signin page anymore
   await expect(this.page).not.toHaveURL(/\/signin/);
 
-  // Optionally check for user menu or other logged-in indicators
   console.log('✅ User is logged in');
 });
 

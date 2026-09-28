@@ -20,7 +20,7 @@ import { createRouteMatcher } from './createRouteMatcher';
 
 // Create debug logger instances
 const logDefault = debug('middleware:default');
-const logBetterAuth = debug('middleware:better-auth');
+const logSession = debug('middleware:session');
 
 // Dev-only debug proxy route should bypass all middleware rewrites.
 const dangerousLocalDevProxyRoute = '/_dangerous_local_dev_proxy';
@@ -222,7 +222,7 @@ export function defineConfig() {
 
   const isPublicRoute = createRouteMatcher([
     // backend api
-    '/api/v1(.*)', // OpenAPI routes should use OpenAPI auth (API Key/OIDC), not BetterAuth session
+    '/api/v1(.*)', // OpenAPI routes should use OpenAPI auth (API Key/OIDC), not the session cookie
     '/api/auth(.*)',
     '/api/webhooks(.*)',
     '/api/agent(.*)',
@@ -236,7 +236,7 @@ export function defineConfig() {
     // after Composio-managed auth; only renders a popup-closing page, so it must
     // not be session-gated.
     '/api/composio/oauth/callback',
-    // better auth
+    // sign-in bounces (each forwards to the accounts portal)
     '/signin',
     '/signup',
     '/auth-error',
@@ -264,8 +264,8 @@ export function defineConfig() {
     // market
     '/market-auth-callback',
     // `(backend)/market` API subtree — auth is Bearer/trusted-client-token in
-    // the handlers (`MarketService.createFromRequest`), never the better-auth
-    // session, so session-gating would 302 API clients to /signin. The
+    // the handlers (`MarketService.createFromRequest`), never the session
+    // cookie, so session-gating would 302 API clients to /signin. The
     // matcher's workspace-slug lookahead keeps `/market/*` unmatched today;
     // the explicit exemption is the safety net for a matcher regression.
     '/market/(.*)',
@@ -273,15 +273,15 @@ export function defineConfig() {
     '/share(.*)',
   ]);
 
-  const betterAuthMiddleware = async (req: NextRequest) => {
-    logBetterAuth('BetterAuth middleware processing request: %s %s', req.method, req.url);
+  const sessionAuthMiddleware = async (req: NextRequest) => {
+    logSession('BetterAuth middleware processing request: %s %s', req.method, req.url);
 
     const response = defaultMiddleware(req);
 
     // when enable auth protection, only public route is not protected, others are all protected
     const isProtected = !isPublicRoute(req);
 
-    logBetterAuth('Route protection status: %s, %s', req.url, isProtected ? 'protected' : 'public');
+    logSession('Route protection status: %s, %s', req.url, isProtected ? 'protected' : 'public');
 
     // Skip session lookup for public routes to reduce latency
     if (!isProtected) return response;
@@ -293,7 +293,7 @@ export function defineConfig() {
 
     const isLoggedIn = !!session;
 
-    logBetterAuth('Session status: %O', {
+    logSession('Session status: %O', {
       isLoggedIn,
       userId: session?.userId,
     });
@@ -301,7 +301,7 @@ export function defineConfig() {
     if (!isLoggedIn) {
       // If request a protected route, redirect to sign-in page
       if (isProtected) {
-        logBetterAuth('Request a protected route, redirecting to sign-in page');
+        logSession('Request a protected route, redirecting to sign-in page');
 
         const callbackUrl = `${appEnv.APP_URL}${req.nextUrl.pathname}${req.nextUrl.search}`;
         const signInUrl = new URL('/signin', appEnv.APP_URL);
@@ -309,18 +309,18 @@ export function defineConfig() {
         const hl = req.nextUrl.searchParams.get('hl');
         if (hl) {
           signInUrl.searchParams.set('hl', hl);
-          logBetterAuth('Preserving locale to sign-in: hl=%s', hl);
+          logSession('Preserving locale to sign-in: hl=%s', hl);
         }
         // Preserve marketing attribution (e.g. sign-ups originating from Market)
         // so it survives the auth detour and reaches the sign-up page.
         const utmSource = req.nextUrl.searchParams.get('utm_source');
         if (utmSource) {
           signInUrl.searchParams.set('utm_source', utmSource);
-          logBetterAuth('Preserving utm_source to sign-in: %s', utmSource);
+          logSession('Preserving utm_source to sign-in: %s', utmSource);
         }
         return Response.redirect(signInUrl);
       }
-      logBetterAuth('Request a free route but not login, allow visit without auth header');
+      logSession('Request a free route but not login, allow visit without auth header');
     }
 
     return response;
@@ -328,5 +328,5 @@ export function defineConfig() {
 
   logDefault('Middleware configuration: %O', { enableOIDC: authEnv.ENABLE_OIDC });
 
-  return { middleware: betterAuthMiddleware };
+  return { middleware: sessionAuthMiddleware };
 }

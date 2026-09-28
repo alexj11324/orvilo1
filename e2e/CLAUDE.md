@@ -312,7 +312,6 @@ BASE_URL=http://localhost:3006                                      # 测试服�
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres # 数据库连接
 DATABASE_DRIVER=node                                                # 数据库驱动
 KEY_VAULTS_SECRET=...                                               # 密钥
-AUTH_SECRET=...                                                     # Auth 密钥
 
 # Dockerless（brew）路径：
 # BASE_URL=http://localhost:3010

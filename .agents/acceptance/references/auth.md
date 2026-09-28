@@ -26,17 +26,17 @@ Quick reference after initialization:
 | `pbpaste \| $SCRIPT web`       | Inject a copied Cookie header into agent-browser   |
 | `$SCRIPT web-verify`           | Live-check agent-browser session auth              |
 
-Use `localhost` for Web auth; better-auth cookies are stored for `localhost`,
-not `127.0.0.1`.
+Use `localhost` for Web auth; the `orvilo_auth` session cookie is stored for
+`localhost`, not `127.0.0.1`.
 
 ## Per-surface overview
 
-| Surface  | Mechanism                                | Persistence                                                      | Human interaction                              |
-| -------- | ---------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
-| CLI      | Seeded API key or OIDC Device Code Flow  | `.records/env/agent-testing-cli.env` + `$HOME/.orvilo-dev`       | No for seed path; yes for device-code fallback |
-| Web      | Seeded better-auth login or cookie copy  | `~/.orvilo-agent-testing/web-state.json` + agent-browser session | No for seed path; copy cookie only as fallback |
-| Electron | App's own login state                    | `~/.orvilo/agent-testing/electron-login` (snapshot on `stop`)    | No — the agent drives the sign-in itself       |
-| Bot      | Native apps (Discord/WeChat/…) logged in | Each app's own session                                           | Once per app                                   |
+| Surface  | Mechanism                                 | Persistence                                                      | Human interaction                              |
+| -------- | ----------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
+| CLI      | Seeded API key or OIDC Device Code Flow   | `.records/env/agent-testing-cli.env` + `$HOME/.orvilo-dev`       | No for seed path; yes for device-code fallback |
+| Web      | Seeded `auth_sessions` row or cookie copy | `~/.orvilo-agent-testing/web-state.json` + agent-browser session | No for seed path; copy cookie only as fallback |
+| Electron | App's own login state                     | `~/.orvilo/agent-testing/electron-login` (snapshot on `stop`)    | No — the agent drives the sign-in itself       |
+| Bot      | Native apps (Discord/WeChat/…) logged in  | Each app's own session                                           | Once per app                                   |
 
 ## CLI — Seeded API key
 
@@ -78,25 +78,30 @@ cd apps/cli && ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts login --server http:
   `ORVILO_CLI_API_KEY` when present, otherwise checks the stored server URL).
 - `UNAUTHORIZED` on API calls means the token expired — re-run login.
 
-## Web — seeded better-auth login
+## Web — seeded session
 
 The Web test surface is `agent-browser --session orvilo-dev`. The user's
 ordinary Chrome is only a cookie source; Chrome screenshots, Chrome Network
 records, and Chrome logged-in state do not prove the agent-browser test session
 is authenticated.
 
-For the seeded local dev environment, use the automatic path:
+Sign-in lives on the Clerk accounts portal — there is no local sign-in endpoint
+to post credentials to, and completing the portal flow locally requires Clerk
+secrets (`CLERK_SECRET_KEY`) that a dev box does not have. For the seeded local
+dev environment, seed the session directly instead:
 
 ```bash
 .agents/acceptance/scripts/init-dev-env.sh seed-user
+source .records/env/dev.env # provides DATABASE_URL
 .agents/acceptance/scripts/setup-auth.sh web-seed
 ```
 
-`web-seed` posts the seeded email/password to
-`/api/auth/sign-in/email`, stores the returned cookie jar under
-`~/.orvilo-agent-testing/`, converts it to Playwright `storageState`, loads it
-into the `agent-browser` session, and verifies the session does not land on
-`/signin`.
+`web-seed` inserts a row into `auth_sessions` for the seeded user (the same
+table `POST /api/auth/clerk` writes after a real portal sign-in), converts the
+`orvilo_auth` cookie to Playwright `storageState`, loads it into the
+`agent-browser` session, and verifies the session does not bounce to the portal
+login page. Unauthenticated sessions are redirected to
+`accounts.aspectlylabs.com/login?return_url=…`, not a local `/signin` form.
 
 ## Web — manual cookie injection fallback
 
@@ -104,6 +109,8 @@ into the `agent-browser` session, and verifies the session does not land on
 the user can't see or interact with it, so manual login inside the agent-browser
 session fails. Instead, copy the **better-auth session cookie** out of the
 user's own logged-in Chrome and inject it as a Playwright-style state file.
+The cookie to copy is `orvilo_auth` (legacy `better-auth.session_token` is
+still accepted while the dual-read transition exists).
 
 Do **not** use this on production URLs — only local dev. Treat the cookie as a
 secret: don't paste it into shared logs, PRs, or commit it anywhere.
@@ -115,10 +122,10 @@ secret: don't paste it into shared logs, PRs, or commit it anywhere.
 3. If repo-root `.env` exists and `web-seed` fails, do **not** seed or modify the current DB; treat it as an existing local environment and use Cookie injection.
 4. Still not green or not using the seed env → `$SCRIPT open-chrome` opens Chrome at `SERVER_URL` with DevTools.
 5. User copies the `Cookie:` header from Network tab → any same-origin request → Request Headers → right-click `Cookie:` → **Copy value**. Must be from Network, NOT `document.cookie` (HttpOnly cookies are invisible to `document.cookie`).
-6. `pbpaste | $SCRIPT web` — filters to better-auth cookies (`session_token`, `session_data`, `state`), builds Playwright `storageState`, loads it into the `agent-browser` session (`orvilo-dev`), opens `SERVER_URL`, and asserts the URL is not `/signin`.
+6. `pbpaste | $SCRIPT web` — filters to the session cookies (`orvilo_auth`, plus legacy `better-auth.*` during the transition), builds Playwright `storageState`, loads it into the `agent-browser` session (`orvilo-dev`), opens `SERVER_URL`, and asserts the URL is not `/signin` or the portal login.
 
 `ENABLE_MOCK_DEV_USER` is not Web auth. It only affects server-side API context
-and does not satisfy Better Auth or stop the SPA from redirecting to `/signin`.
+and does not satisfy the session layer or stop the SPA from bouncing to the portal.
 Do not use it as a substitute for `status --surface web` or Cookie injection.
 
 ### Using the authenticated session
@@ -138,12 +145,12 @@ agent-browser --session orvilo-dev snapshot -i | head -20
 
 ### Common failure modes
 
-| Symptom                                       | Cause                                                                     | Fix                                                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Still redirects to `/signin` after injection  | User pasted from `document.cookie` → missed HttpOnly session              | Re-pull from Network request Headers, not console                                              |
-| Script reports `no better-auth cookies found` | User pasted the wrong value, or the cookie parser regressed               | Keep the raw `Cookie:` header as-is; run `scripts/setup-auth.test.sh` if the input looks valid |
-| Login works briefly then expires              | `better-auth.session_token` rotated (user logged out / signed in again)   | Re-copy and re-inject                                                                          |
-| Domain mismatch                               | Cookie domain must be `localhost` literally, no leading dot for local dev | —                                                                                              |
+| Symptom                                                  | Cause                                                                     | Fix                                                                                            |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Still bounces to `/signin` or the portal after injection | User pasted from `document.cookie` → missed HttpOnly session              | Re-pull from Network request Headers, not console                                              |
+| Script reports `no session cookies found`                | User pasted the wrong value, or the cookie parser regressed               | Keep the raw `Cookie:` header as-is; run `scripts/setup-auth.test.sh` if the input looks valid |
+| Login works briefly then expires                         | Session row expired or deleted (user logged out / signed in again)        | Re-copy and re-inject, or re-run `web-seed`                                                    |
+| Domain mismatch                                          | Cookie domain must be `localhost` literally, no leading dot for local dev | —                                                                                              |
 
 ## Electron
 
@@ -187,7 +194,7 @@ Login state must be **injected directly**, never acquired through a login page:
    previous instance was killed instead of stopped (see the traps below) — a
    `save-login <id>` from any still-live signed-in instance repairs it.
 2. **Mint the state via CLI/API** — the same philosophy as `web-seed`: create
-   the session server-side (seeded better-auth session / dev token issuance)
+   the session server-side (seeded `auth_sessions` row / dev token issuance)
    and inject it into the app's storage, with zero UI login. Prefer building on
    `setup-auth.sh` seeding over anything that renders a sign-in page.
 3. **Neither works → report auth as ❌ Blocked and stop.** Tell the user the
@@ -207,7 +214,7 @@ Three traps behind a signed-out instance:
   signed out is a **missing `refreshToken`**: the app calls `clearTokens()` (deleting
   the whole `encryptedTokens` key) when a refresh fails non-retryably
   (`invalid_grant` \&co), and preserves it on transient failures.
-- **Even a missing token does not always mean signed out.** A better-auth cookie can
+- **Even a missing token does not always mean signed out.** An `orvilo_auth` cookie can
   outlive it. `stop` / `save-login` probe the _running renderer_ for a user id, so a
   live cookie-only session is captured too; the on-disk token alone would miss it.
 

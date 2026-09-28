@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 
 // the route module pulls in the db graph (via `requirePermission`) and the
-// better-auth graph (via `requireAuth`) at import time; this test is only
+// session graph (via `requireAuth`) at import time; this test is only
 // about which gates the route itself declares
 vi.mock('@/database/core/db-adaptor', () => ({ getServerDB: vi.fn() }));
 vi.mock('@/database/models/rbac', () => ({ RbacModel: class {} }));

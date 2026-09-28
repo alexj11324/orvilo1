@@ -1,22 +1,23 @@
 ---
-title: Legacy Authentication (NextAuth & Clerk)
+title: Legacy Authentication (NextAuth & Better Auth)
 description: >-
-  Historical reference for legacy authentication methods NextAuth and Clerk,
-  both of which have been removed from Orvilo. Use Better Auth instead.
+  Historical reference for legacy authentication methods NextAuth and Better
+  Auth, both of which have been removed from Orvilo. Sign-in is delegated to
+  the Clerk accounts portal.
 tags:
   - Authentication Service
   - Next Auth
-  - Clerk
+  - Better Auth
   - Legacy
 ---
 
 # Legacy Authentication
 
 <Callout type={'warning'}>
-  **Legacy Notice**: NextAuth and Clerk have been fully removed from Orvilo. Setting removed NextAuth/Clerk variables (`NEXT_AUTH*` / `NEXTAUTH*`, Clerk keys, `AUTH_URL`, `NEXT_PUBLIC_AUTH_URL`, `ACCESS_CODE`, etc.) fails the deployment at build/startup. **`AUTH_SECRET` is not deprecated** — it is still required by [Better Auth](/docs/self-hosting/auth). This page is historical migration reference only.
+  **Legacy Notice**: NextAuth and Better Auth have been fully removed from Orvilo. Sign-in runs through the Clerk accounts portal — see [Authentication Service](/docs/self-hosting/auth). Removed Better Auth variables (`AUTH_SECRET`, `AUTH_SSO_PROVIDERS`, `AUTH_*_ID`/`AUTH_*_SECRET`, `AUTH_TRUSTED_ORIGINS`, `AUTH_ALLOWED_EMAILS`, etc.) no longer have any effect. This page is historical migration reference only.
 </Callout>
 
-This page documents the legacy authentication methods (NextAuth and Clerk), which have been removed from Orvilo, for historical migration reference only.
+This page documents the legacy authentication methods (NextAuth, the v1-era Clerk integration, and Better Auth), which have been removed from Orvilo, for historical migration reference only.
 
 ## Clerk
 
@@ -31,7 +32,7 @@ By setting the environment variables `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CL
 </Callout>
 
 <Callout type={'tip'}>
-  To migrate from Clerk to Better Auth, see the [Clerk Migration Guide](/docs/self-hosting/migration/v2/auth/clerk-to-betterauth).
+  This section describes the v1-era in-app Clerk integration. Orvilo now uses Clerk through the accounts portal instead — see [Authentication Service](/docs/self-hosting/auth). The [Clerk to Better Auth migration guide](/docs/self-hosting/migration/v2/auth/clerk-to-betterauth) is also historical.
 </Callout>
 
 ## Next Auth
@@ -42,13 +43,13 @@ By setting the environment variables `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CL
 
 Before using NextAuth, please set the following variables in Orvilo's environment variables:
 
-| Environment Variable             | Type                   | Description                                                                                                                                                                                                                    |
-| -------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_ENABLE_NEXT_AUTH`   | *(Deprecated)*         | Used to enable the NextAuth service. NextAuth has been removed from Orvilo — setting this variable will cause the deployment to fail at build/startup.                                                                         |
-| `AUTH_SECRET`                    | Required (Better Auth) | Still required by Better Auth (not a removed NextAuth-only var). Session encryption secret — generate with `openssl rand -base64 32` or `https://generate-secret.vercel.app/32`. See [Better Auth](/docs/self-hosting/auth).   |
-| `AUTH_URL`                       | *(Deprecated)*         | Previously specified the callback address for Auth.js when performing OAuth verification. Setting this variable will now cause the deployment to fail at build/startup.                                                        |
-| `NEXT_AUTH_SSO_PROVIDERS`        | *(Deprecated)*         | Previously used to enable multiple identity verification sources simultaneously, separated by commas, e.g. `auth0,microsoft-entra-id,authentik`. Setting this variable will now cause the deployment to fail at build/startup. |
-| `NEXT_AUTH_SSO_SESSION_STRATEGY` | *(Deprecated)*         | The session strategy for Auth.js. Setting this variable will now cause the deployment to fail at build/startup.                                                                                                                |
+| Environment Variable             | Type           | Description                                                                                                                                                                                                                    |
+| -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_ENABLE_NEXT_AUTH`   | *(Deprecated)* | Used to enable the NextAuth service. NextAuth has been removed from Orvilo — setting this variable will cause the deployment to fail at build/startup.                                                                         |
+| `AUTH_SECRET`                    | *(Removed)*    | Was required by Better Auth for session encryption. Better Auth has been removed; this variable no longer has any effect.                                                                                                      |
+| `AUTH_URL`                       | *(Deprecated)* | Previously specified the callback address for Auth.js when performing OAuth verification. Setting this variable will now cause the deployment to fail at build/startup.                                                        |
+| `NEXT_AUTH_SSO_PROVIDERS`        | *(Deprecated)* | Previously used to enable multiple identity verification sources simultaneously, separated by commas, e.g. `auth0,microsoft-entra-id,authentik`. Setting this variable will now cause the deployment to fail at build/startup. |
+| `NEXT_AUTH_SSO_SESSION_STRATEGY` | *(Deprecated)* | The session strategy for Auth.js. Setting this variable will now cause the deployment to fail at build/startup.                                                                                                                |
 
 Currently supported identity verification services include:
 

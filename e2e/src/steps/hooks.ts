@@ -1,9 +1,9 @@
 import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@cucumber/cucumber';
-import { type Cookie, request } from 'playwright';
+import type { Cookie } from 'playwright';
 
 import { clearMockLLMWorkerState } from '../mocks/llm/registry';
 import { bindTestUserExecutionDevice } from '../support/bindExecutionDevice';
-import { seedTestUser, TEST_USER } from '../support/seedTestUser';
+import { createTestSession, seedTestUser } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
 
@@ -14,6 +14,9 @@ setDefaultTimeout(30_000);
 // Store base URL and cached session cookies
 let baseUrl: string;
 let sessionCookies: Cookie[] = [];
+
+/** Mirrors AUTH_SESSION_COOKIE in packages/database/src/models/authSession.ts. */
+const AUTH_SESSION_COOKIE = 'orvilo_auth';
 
 BeforeAll({ timeout: 600_000 }, async function () {
   console.log('🚀 Starting E2E test suite...');
@@ -65,27 +68,23 @@ BeforeAll({ timeout: 600_000 }, async function () {
     });
   }
 
-  console.log('🔐 Signing in once through the auth API...');
-  const api = await request.newContext({ baseURL: baseUrl });
+  // Web sign-in lives on the accounts portal (Clerk); e2e seeds the app-issued
+  // `orvilo_auth` session row directly and installs the cookie on each context.
+  console.log('🔐 Creating a test session in the database...');
+  const sessionToken = await createTestSession();
 
-  try {
-    const response = await api.post('/api/auth/sign-in/email', {
-      data: {
-        email: TEST_USER.email,
-        password: TEST_USER.password,
+  if (sessionToken) {
+    sessionCookies = [
+      {
+        name: AUTH_SESSION_COOKIE,
+        url: baseUrl,
+        value: sessionToken,
       },
-    });
-
-    if (!response.ok()) {
-      throw new Error(`Auth API sign-in failed: ${response.status()} ${await response.text()}`);
-    }
-
-    sessionCookies = (await api.storageState()).cookies;
-  } finally {
-    await api.dispose();
+    ];
+    console.log(`✅ Test session created, cached ${sessionCookies.length} cookies`);
+  } else {
+    console.warn('⚠️ Could not create a test session (is DATABASE_URL set?)');
   }
-
-  console.log(`✅ Auth API login successful, cached ${sessionCookies.length} cookies`);
 });
 
 Before(async function (this: CustomWorld, { pickle }) {

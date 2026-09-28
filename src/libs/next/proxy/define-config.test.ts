@@ -145,8 +145,8 @@ describe('defineConfig backend subtree pass-through', () => {
   // untouched and an unauthenticated API client must never see a 302 to
   // /signin.
   it('passes /market/agent and /api/agent through without rewrite or session gate', async () => {
-    const { auth } = await import('@/auth');
-    vi.mocked(auth.api.getSession).mockClear();
+    const { resolveAuthSessionFromHeaders } = await import('@/server/services/auth');
+    vi.mocked(resolveAuthSessionFromHeaders).mockClear();
 
     for (const pathname of ['/market/agent', '/market/agent/agent-1', '/api/agent/abc']) {
       const response = await middleware(new NextRequest(`http://localhost:3010${pathname}`));
@@ -156,7 +156,7 @@ describe('defineConfig backend subtree pass-through', () => {
       expect(response?.headers.get('location'), pathname).toBeNull();
     }
 
-    expect(auth.api.getSession).not.toHaveBeenCalled();
+    expect(resolveAuthSessionFromHeaders).not.toHaveBeenCalled();
   });
 });
 

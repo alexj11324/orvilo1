@@ -23,7 +23,7 @@ const log = debug('orvilo-oidc:clear-session');
  */
 export async function POST() {
   try {
-    // Ensure the caller is authenticated (still has a valid better-auth session)
+    // Ensure the caller is authenticated (has a valid orvilo_auth session)
     const { userId } = await getUserAuth();
     if (!userId) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });

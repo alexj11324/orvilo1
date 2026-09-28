@@ -55,7 +55,6 @@ const CONFIG = {
   // 2 minutes
   // Secrets (for e2e testing only)
   secrets: {
-    betterAuthSecret: 'e2e-test-secret-key-for-better-auth-32chars!',
     keyVaultsSecret: 'LA7n9k3JdEcbSgml2sxfw+4TV1AzaaFU5+R176aQz4s=',
     oidcJwks: createTestOidcJwks(),
   },
@@ -273,7 +272,6 @@ async function buildApp(port: number): Promise<void> {
 
   await execAsync('bun', ['run', 'build'], {
     APP_URL: `http://localhost:${port}`,
-    AUTH_SECRET: CONFIG.secrets.betterAuthSecret,
     DATABASE_DRIVER: CONFIG.databaseDriver,
     DATABASE_URL: CONFIG.databaseUrl,
     JWKS_KEY: CONFIG.secrets.oidcJwks,
@@ -301,7 +299,6 @@ function getServerEnv(port: number): Record<string, string> {
   return {
     APP_URL: `http://localhost:${port}`,
     AUTH_EMAIL_VERIFICATION: '0',
-    AUTH_SECRET: CONFIG.secrets.betterAuthSecret,
     DATABASE_DRIVER: CONFIG.databaseDriver,
     DATABASE_URL: CONFIG.databaseUrl,
     // Agent sends run through the server-side runtime in gateway mode (the

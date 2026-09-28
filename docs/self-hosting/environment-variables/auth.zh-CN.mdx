@@ -1,251 +1,181 @@
 ---
-title: Orvilo 身份验证服务设置
-description: 了解如何配置 Orvilo 的身份验证服务环境变量，包括 Better Auth、OAuth SSO 等。
+title: Orvilo 身份验证服务环境变量
+description: 用于将 Orvilo 接入 Clerk 账户门户、配置应用会话 Cookie 以及调整门户特性开关的环境变量。
 tags:
-  - Orvilo
   - 身份验证服务
-  - Better Auth
-  - 单点登录
+  - Clerk
+  - 会话 Cookie
 ---
 
 # 身份验证服务
 
-Orvilo 在部署时提供了完善的身份验证服务能力，以下是相关的环境变量，你可以使用这些环境变量轻松定义需要在 Orvilo 中开启的身份验证服务。
+Orvilo 将登录委托给由 Clerk 提供支持的账户门户。以下环境变量用于配置应用与 Clerk 的交互以及会话 Cookie 的签发方式。
 
-## Better Auth
+## 账户门户与会话
 
-### 通用设置
+#### `AUTH_ACCOUNTS_URL`
 
-#### `AUTH_SECRET`
+- 类型：必填
+- 说明：账户门户的源地址，承载 Clerk 登录。未认证的请求会跳转到 `${AUTH_ACCOUNTS_URL}/login?return_url=…`。
+- 默认值：`https://accounts.aspectlylabs.com`
+- 示例：`https://accounts.example.com`
 
-- 类型：必选
-- 描述：用于加密会话令牌的密钥。使用以下命令生成：`openssl rand -base64 32`
+#### `AUTH_COOKIE_DOMAIN`
+
+- 类型：可选
+- 说明：`orvilo_auth` 会话 Cookie 的父域名，使门户交换可以落到同级子域名。不设置则为仅当前域名可用（本地开发）。
 - 默认值：`-`
-- 示例：`Tfhi2t2pelSMEA8eaV61KaqPNEndFFdMIxDaJnS1CUI=`
+- 示例：`.aspectlylabs.com`
 
 #### `AUTH_COOKIE_PREFIX`
 
 - 类型：可选
-- 描述：应用于所有 Better Auth cookie 名称的前缀。当多个部署可能在同一父域名下写入 cookie 时，应为每个部署配置唯一值。修改此值会使当前部署的已有会话失效，除非另行迁移这些会话。
+- 说明：迁移窗口内仍会读取的旧版 Better Auth Cookie 命名空间（`<prefix>.session_token`）。对新的 `orvilo_auth` Cookie 无影响。
 - 默认值：`better-auth`
 - 示例：`my-orvilo`
 
-#### `AUTH_EMAIL_VERIFICATION`
+#### `AUTH_SESSION_TTL_SECONDS`
 
 - 类型：可选
-- 描述：设置为 `1` 以要求用户在登录前验证邮箱。用户注册后必须验证邮箱地址。
-- 默认值：`0`
-- 示例：`1`
-
-#### `AUTH_SSO_PROVIDERS`
-
-- 类型：可选
-- 描述：启用的 SSO 提供商列表，以逗号分隔。顺序决定了登录页面上提供商的显示顺序。
-- 默认值：`-`
-- 示例：`google,github,microsoft,cognito`
-
-#### `AUTH_TRUSTED_ORIGINS`
-
-- 类型：可选
-- 描述：使用逗号分隔的列表完全替换 Better Auth 自动生成的可信来源。仅在需要完整控制时使用，并确保包含所有必需的网页来源和移动端自定义协议。URL 中的路径会被归一化为来源。请使用精确来源，不要使用通配符。
-- 默认值：根据 `APP_URL`、Vercel 部署地址、移动端应用协议、Expo 开发协议自动生成；启用 Apple SSO 时还会包含 Apple 来源。
-- 示例：`https://orvilo.example.com,com.example.app://`
-
-#### `AUTH_ADDITIONAL_TRUSTED_ORIGINS`
-
-- 类型：可选
-- 描述：以逗号分隔，追加到 Better Auth 最终可信来源列表。适用于需要增加额外回调或重定向来源、但不希望替换应用、Vercel、移动端及认证提供商默认值的场景。URL 中的路径会被归一化为来源，重复来源会被去除，自定义协议会保留。请使用精确来源，不要使用通配符。
-- 默认值：`-`
-- 示例：`https://gateway.example.com`
-
-#### `AUTH_ALLOWED_EMAILS`
-
-- 类型：可选
-- 描述：允许注册的邮箱或域名白名单，以逗号分隔。支持完整邮箱地址（如 `user@example.com`）或域名（如 `example.com`）。留空表示允许所有邮箱。
-- 默认值：`-`
-- 示例：`example.com,admin@other.com`
+- 说明：应用签发的会话（`auth_sessions` 行）有效期，单位秒。会话过半后活动会顺延过期时间。
+- 默认值：`2592000`（30 天）
+- 示例：`604800`
 
 #### `AUTH_DISABLE_EMAIL_PASSWORD`
 
 - 类型：可选
-- 描述：设置为 `1` 以禁用邮箱密码登录，强制用户使用 SSO 登录。启用后，登录页面将隐藏邮箱输入框，注册页面将重定向到登录页。
+- 说明：设为 `1` 时在门户登录页隐藏邮箱 / 密码表单。
 - 默认值：`0`
 - 示例：`1`
 
+#### `AUTH_EMAIL_VERIFICATION`
+
+- 类型：可选
+- 说明：设为 `1` 时在门户要求邮箱验证。
+- 默认值：`0`
+- 示例：`1`
+
+#### `AUTH_ENABLE_MAGIC_LINK`
+
+- 类型：可选
+- 说明：设为 `1` 时在门户启用魔法链接登录。
+- 默认值：`0`
+- 示例：`1`
+
+## Clerk
+
+#### `CLERK_SECRET_KEY`
+
+- 类型：必填
+- 说明：Clerk Backend API 密钥（`sk_*`）。`POST /api/auth/clerk` 依赖它确认会话有效并获取 / 创建用户记录。
+- 默认值：`-`
+- 示例：`sk_live_xxxxxxxxxxxxxxxx`
+
+#### `CLERK_ISSUER`
+
+- 类型：可选
+- 说明：Clerk 签发者，即 Clerk 实例的前端 API 源地址（同时作为 JWKS 基础地址）。不设置时默认生产 Clerk 地址。
+- 默认值：`https://clerk.aspectlylabs.com`
+- 示例：`https://clerk.example.com`
+
+#### `CLERK_AUTHORIZED_PARTIES`
+
+- 类型：可选
+- 说明：会话令牌交换时校验的 `azp`（授权方）白名单，逗号分隔。
+- 默认值：`-`
+- 示例：`https://accounts.aspectlylabs.com`
+
+#### `CLERK_JWT_KEY`
+
+- 类型：可选
+- 说明：PEM 编码的 RS256 公钥。设置后会话 JWT 在本地校验，无需向签发者拉取 JWKS。
+- 默认值：`-`
+
+#### `CLERK_API_URL`
+
+- 类型：可选
+- 说明：Clerk Backend API 基础地址覆盖（仅用于测试 / 代理）。
+- 默认值：`https://api.clerk.com`
+
+## 内部 JWT
+
 #### `JWKS_KEY`
 
-- 类型：必选
-- 描述：用于签名和验证 JWT 的 JWKS（JSON Web Key Set）密钥。用于 OIDC JWT token 签名和内部服务调用认证 token。必须是包含 RS256 RSA 密钥对的 JWKS JSON 字符串。
-- 默认值：`-`
+- 类型：必填
+- 说明：用于签发和验证 JWT 的 JWKS（JSON Web Key Set）密钥。供内置 OIDC Provider（桌面端 / CLI 授权）与内部服务调用认证使用。必须是包含 RS256 RSA 密钥对的 JWKS JSON 字符串。
 
 <GenerateJWKSKey />
 
 #### `INTERNAL_JWT_EXPIRATION`
 
 - 类型：可选
-- 描述：内部 JWT 令牌的过期时间，用于 lambda → async 调用。格式：数字后跟单位（s = 秒，m = 分钟，h = 小时）。为了安全性应尽可能短，但需要足够长以应对网络延迟和服务器处理时间。
+- 说明：lambda → async 内部调用的 JWT 过期时间，格式 `<数字><单位>`（`s`、`m`、`h`）。
 - 默认值：`30s`
-- 示例：`30s`、`1m`、`1h`
+- 示例：`1m`
 
-### 邮件服务（SMTP）
+## Webhooks
 
-启用邮箱验证和密码重置功能需要配置以下设置。
+#### `CASDOOR_WEBHOOK_SECRET`
+
+- 类型：可选
+- 说明：校验 Casdoor 用户同步 Webhook 的共享密钥（仅旧版部署）。
+- 默认值：`-`
+
+#### `LOGTO_WEBHOOK_SIGNING_KEY`
+
+- 类型：可选
+- 说明：校验 Logto 用户同步 Webhook 的签名密钥（仅旧版部署）。
+- 默认值：`-`
+
+## 邮件服务
+
+事务性邮件（工作区邀请、通知）支持两种发送方式：Nodemailer SMTP（默认）和 Resend。
+
+#### `EMAIL_SERVICE_PROVIDER`
+
+- 类型：可选
+- 说明：`nodemailer`（默认）或 `resend`。
+- 默认值：`nodemailer`
+- 示例：`resend`
 
 #### `SMTP_HOST`
 
-- 类型：必选（用于邮件功能）
-- 描述：SMTP 服务器主机名。
-- 默认值：`-`
+- 类型：`nodemailer` 时必填
+- 说明：SMTP 服务器主机名。
 - 示例：`smtp.gmail.com`
 
 #### `SMTP_PORT`
 
-- 类型：必选（用于邮件功能）
-- 描述：SMTP 服务器端口。TLS 通常为 `587`，SSL 为 `465`。
-- 默认值：`-`
-- 示例：`587`
+- 类型：可选
+- 说明：SMTP 服务器端口。TLS 通常为 `587`，SSL 为 `465`。
 
 #### `SMTP_SECURE`
 
 - 类型：可选
-- 描述：是否使用安全连接。端口 465（SSL）设置为 `true`，端口 587（TLS）设置为 `false`。
+- 说明：设为 `true` 使用 SSL。
 - 默认值：`false`
-- 示例：`false`
 
 #### `SMTP_USER`
 
-- 类型：必选（用于邮件功能）
-- 描述：SMTP 认证用户名，通常是您的邮箱地址。
-- 默认值：`-`
-- 示例：`your-email@example.com`
+- 类型：可选
+- 说明：SMTP 认证用户名，通常为你的邮箱地址。
 
 #### `SMTP_PASS`
 
-- 类型：必选（用于邮件功能）
-- 描述：SMTP 认证密码。Gmail 需使用应用专用密码。
-- 默认值：`-`
-- 示例：`your-app-specific-password`
+- 类型：可选
+- 说明：SMTP 认证密码或应用专用密码。
 
 #### `SMTP_FROM`
 
 - 类型：可选
-- 描述：发件人邮箱地址。AWS SES 等服务需要此配置（因为 `SMTP_USER` 不是有效邮箱地址）。若未设置，默认使用 `SMTP_USER`。
-- 默认值：`SMTP_USER` 的值
-- 示例：`noreply@example.com`
+- 说明：SMTP 外发邮件的发件人地址。
 
-### Google
+#### `RESEND_API_KEY`
 
-#### `AUTH_GOOGLE_ID`
+- 类型：`resend` 时必填
+- 说明：Resend API 密钥。
 
-- 类型：必选
-- 描述：Google OAuth 应用的 Client ID。在 [Google Cloud Console](https://console.cloud.google.com/apis/credentials) 获取。
-- 默认值：`-`
-- 示例：`123456789.apps.googleusercontent.com`
-
-#### `AUTH_GOOGLE_SECRET`
-
-- 类型：必选
-- 描述：Google OAuth 应用的 Client Secret。
-- 默认值：`-`
-- 示例：`GOCSPX-xxxxxxxxxxxxxxxxxxxx`
-
-### GitHub
-
-#### `AUTH_GITHUB_ID`
-
-- 类型：必选
-- 描述：GitHub OAuth 应用的 Client ID。在 [GitHub Developer Settings](https://github.com/settings/developers) 获取。
-- 默认值：`-`
-- 示例：`Ov23xxxxxxxxxxxxx`
-
-#### `AUTH_GITHUB_SECRET`
-
-- 类型：必选
-- 描述：GitHub OAuth 应用的 Client Secret。
-- 默认值：`-`
-- 示例：`xxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
-### Microsoft
-
-#### `AUTH_MICROSOFT_ID`
-
-- 类型：必选
-- 描述：Microsoft Entra ID（Azure AD）应用的 Client ID。在 [Azure 门户](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) 获取。
-- 默认值：`-`
-- 示例：`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
-
-#### `AUTH_MICROSOFT_SECRET`
-
-- 类型：必选
-- 描述：Microsoft Entra ID 应用的 Client Secret。
-- 默认值：`-`
-- 示例：`xxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
-#### `AUTH_MICROSOFT_AUTHORITY_URL`
+#### `RESEND_FROM`
 
 - 类型：可选
-- 描述：Microsoft Entra ID 的 Authority URL。
-- 默认值：`https://login.microsoftonline.com`
-- 示例：`https://login.partner.microsoftonline.cn`
-
-#### `AUTH_MICROSOFT_TENANT_ID`
-
-- 类型：可选
-- 描述：单租户 Microsoft Entra ID 应用的 Directory (tenant) ID。
-- 默认值：`common`
-- 示例：`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
-
-### AWS Cognito
-
-#### `AUTH_COGNITO_ID`
-
-- 类型：必选
-- 描述：AWS Cognito 用户池应用客户端的 Client ID。在 [AWS Cognito 控制台](https://console.aws.amazon.com/cognito) 获取。
-- 默认值：`-`
-- 示例：`xxxxxxxxxxxxxxxxxxxxx`
-
-#### `AUTH_COGNITO_SECRET`
-
-- 类型：必选
-- 描述：AWS Cognito 应用客户端的 Client Secret。
-- 默认值：`-`
-- 示例：`xxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
-#### `AUTH_COGNITO_ISSUER`
-
-- 类型：必选
-- 描述：Cognito 用户池的颁发者 URL。格式：`https://cognito-idp.{region}.amazonaws.com/{userPoolId}`
-- 默认值：`-`
-- 示例：`https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xxxxxxxxx`
-
-### 飞书
-
-#### `AUTH_FEISHU_APP_ID`
-
-- 类型：必选
-- 描述：飞书应用的 App ID。在 [飞书开放平台](https://open.feishu.cn/app) 获取。
-- 默认值：`-`
-- 示例：`cli_xxxxxxxxxxxxxxxx`
-
-#### `AUTH_FEISHU_APP_SECRET`
-
-- 类型：必选
-- 描述：飞书应用的 App Secret。
-- 默认值：`-`
-- 示例：`xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-
-### 微信
-
-#### `AUTH_WECHAT_ID`
-
-- 类型：必选
-- 描述：微信开放平台应用的 App ID。在 [微信开放平台](https://open.weixin.qq.com/) 获取。
-- 默认值：`-`
-- 示例：`wxxxxxxxxxxxxxxxxxxx`
-
-#### `AUTH_WECHAT_SECRET`
-
-- 类型：必选
-- 描述：微信应用的 App Secret。
-- 默认值：`-`
-- 示例：`xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+- 说明：Resend 外发邮件的发件人地址。

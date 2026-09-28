@@ -119,7 +119,7 @@ export const ErrorBoundary = () => {
           style={buttonStyle}
           type={'button'}
           onClick={() => {
-            window.location.href = '/signin';
+            window.location.href = '/login';
           }}
         >
           Back to sign in

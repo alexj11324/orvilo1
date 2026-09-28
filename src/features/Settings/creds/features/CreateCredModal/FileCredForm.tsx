@@ -1,10 +1,12 @@
 'use client';
 
 import { InboxOutlined } from '@ant-design/icons';
-import { Button, toast } from '@lobehub/ui/base-ui';
+import { Flexbox } from '@lobehub/ui';
+import { ActionIcon, Button, toast, UploadDragger } from '@lobehub/ui/base-ui';
 import { useMutation } from '@tanstack/react-query';
-import { Form, Input, Upload } from 'antd';
+import { Form, Input } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { X } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -108,16 +110,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
   return (
     <Form<FormValues> form={form} layout="vertical" onFinish={handleSubmit}>
       <Form.Item required label={t('creds.form.file')}>
-        <Upload.Dragger
-          beforeUpload={handleUpload}
-          disabled={isUploading || disabled}
-          maxCount={1}
-          showUploadList={fileName ? { showRemoveIcon: true } : false}
-          onRemove={() => {
-            setFileHashId(null);
-            setFileName('');
-          }}
-        >
+        <UploadDragger beforeUpload={handleUpload} disabled={isUploading || disabled} maxCount={1}>
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
@@ -125,11 +118,21 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
             {isUploading ? t('creds.file.uploading') : t('creds.form.uploadHint')}
           </p>
           <p className="ant-upload-hint">{t('creds.form.uploadDesc')}</p>
-        </Upload.Dragger>
+        </UploadDragger>
         {fileName && (
-          <div style={{ marginTop: 8 }}>
-            {t('creds.form.selectedFile')}: {fileName}
-          </div>
+          <Flexbox horizontal align={'center'} gap={4} style={{ marginTop: 8 }}>
+            <span>
+              {t('creds.form.selectedFile')}: {fileName}
+            </span>
+            <ActionIcon
+              icon={X}
+              size={'small'}
+              onClick={() => {
+                setFileHashId(null);
+                setFileName('');
+              }}
+            />
+          </Flexbox>
         )}
       </Form.Item>
 

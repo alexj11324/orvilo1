@@ -1,7 +1,6 @@
 import { Icon, Tooltip } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
+import { toast, Upload } from '@lobehub/ui/base-ui';
 import { validateVideoFileSize } from '@orvilo/utils/client';
-import { Upload } from 'antd';
 import { css, cx } from 'antd-style';
 import { FileUp, FolderUp, ImageUp, Paperclip } from 'lucide-react';
 import { memo, Suspense, useState } from 'react';
@@ -90,7 +89,7 @@ const FileUpload = memo(() => {
         <Upload
           multiple
           accept={'image/*'}
-          showUploadList={false}
+
           beforeUpload={async (file) => {
             setDropdownOpen(false);
             editor?.focus();
@@ -114,7 +113,7 @@ const FileUpload = memo(() => {
       label: (
         <Upload
           multiple
-          showUploadList={false}
+
           beforeUpload={async (file) => {
             if (
               (file.type.startsWith('image') && !canUploadImage) ||
@@ -154,7 +153,7 @@ const FileUpload = memo(() => {
         <Upload
           directory
           multiple={true}
-          showUploadList={false}
+
           beforeUpload={async (file) => {
             if (
               (file.type.startsWith('image') && !canUploadImage) ||

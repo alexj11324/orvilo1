@@ -71,7 +71,7 @@ describe('StatisticCard', () => {
     );
 
     expect(screen.queryByText('More')).toBeNull();
-    expect(container.querySelector('.ant-spin')).not.toBeNull();
+    expect(container.querySelector('[role="status"]')).not.toBeNull();
   });
 
   it('applies valueStyle to the statistic content', () => {

@@ -1,9 +1,8 @@
 'use client';
 
 import { Flexbox, Icon, Image } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
+import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
-import { Upload } from 'antd';
 import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 import { type ClipboardEvent, memo, useCallback, useState } from 'react';
@@ -254,7 +253,7 @@ export const AttachmentUploadButton = memo<AttachmentUploadButtonProps>(({ disab
       accept={'image/*'}
       className={styles.flushUpload}
       disabled={disabled}
-      showUploadList={false}
+
       beforeUpload={(file, fileList) => {
         // beforeUpload fires per file — fire the batch once, on the first item.
         if (file === fileList[0]) onFiles(fileList as unknown as File[]);

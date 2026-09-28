@@ -1,9 +1,8 @@
 'use client';
 
 import { Center, Flexbox, Icon, Input, TextArea, Tooltip } from '@lobehub/ui';
-import { confirmModal, Text, toast } from '@lobehub/ui/base-ui';
-import { type UploadProps } from 'antd';
-import { Form, Upload } from 'antd';
+import { confirmModal, Text, toast, Upload } from '@lobehub/ui/base-ui';
+import { Form } from 'antd';
 import { cssVar } from 'antd-style';
 import { CircleHelp, Globe, ImagePlus, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
@@ -178,13 +177,10 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
     }, []);
 
     // Handle banner upload
-    const handleBannerUpload: UploadProps['customRequest'] = useCallback(
-      async (options: Parameters<NonNullable<UploadProps['customRequest']>>[0]) => {
-        const file = options.file as File;
-
+    const handleBannerUpload = useCallback(
+      async (file: File) => {
         if (file.size > MAX_FILE_SIZE) {
           toast.error(t('profileSetup.errors.fileTooLarge'));
-          options.onError?.(new Error('File too large'));
           return;
         }
 
@@ -193,12 +189,10 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
           const result = await uploadWithProgress({ file });
           if (result?.url) {
             setBannerUrl(result.url);
-            options.onSuccess?.(result);
           }
         } catch (error) {
           console.error('[ProfileSetupModal] Banner upload failed:', error);
           toast.error(t('profileSetup.errors.uploadFailed'));
-          options.onError?.(error as Error);
         } finally {
           setBannerUploading(false);
         }
@@ -459,9 +453,8 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                 <Flexbox gap={8} width="100%">
                   <Upload
                     accept="image/*"
-                    customRequest={handleBannerUpload}
+                    beforeUpload={handleBannerUpload}
                     maxCount={1}
-                    showUploadList={false}
                     style={{ display: 'block', width: '100%' }}
                   >
                     <div

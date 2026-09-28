@@ -34,8 +34,8 @@ these six `ASSET_S3_*` secrets: `ASSET_S3_ACCESS_KEY_ID`,
 Google Secret Manager and GitHub environment secrets; do not commit them.
 The Cloudflare API token is stored in Google Secret Manager as
 `orvilo-auth-cloudflare-api-token`. The R2 key pair belongs to the
-`orvilo-web-assets-uploader` account token, scoped to `web-assets` with Object
-Read & Write permission, and is stored in Google Secret Manager as
+`orvilo-web-assets-uploader-rotated-20260928` account token, scoped to
+`web-assets` with Object Read & Write permission, and is stored in Google Secret Manager as
 `orvilo-asset-s3-access-key-id` and `orvilo-asset-s3-secret-access-key`.
 
 ## Production deploy units

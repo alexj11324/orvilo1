@@ -1,0 +1,11 @@
+---
+title: Debug Proxy URL 在所有部署上可用
+description: `dev:spa` 打印的无扩展名 `/_dangerous_local_dev_proxy` 地址现在能在自托管部署上正常访问，不再返回 404。
+tags:
+  - 开发者体验
+  - Bug 修复
+---
+
+## 修复
+
+- **Debug Proxy 路由**：`/_dangerous_local_dev_proxy`（及其子路径）现在通过 Next.js rewrite 提供调试代理页面，`bun run dev:spa` 打印的 URL 在自托管部署上可用 —— 此前它只能通过 `vercel.json` 在 Vercel 上解析。同时该页面在非 Vercel 环境也会携带 no-store 缓存头。

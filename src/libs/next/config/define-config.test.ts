@@ -31,6 +31,34 @@ describe('defineConfig', () => {
         { key: 'x-robots-tag', value: 'noindex, nofollow' },
       ]);
     });
+
+    it('never caches the debug-proxy page on self-hosted deployments', async () => {
+      const config = defineConfig({});
+      const rules = await config.headers!();
+
+      for (const source of [
+        '/_dangerous_local_dev_proxy/:path*',
+        '/_dangerous_local_dev_proxy.html',
+      ]) {
+        const rule = rules.find((r) => r.source === source);
+        expect(rule?.headers).toContainEqual({
+          key: 'Cache-Control',
+          value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        });
+      }
+    });
+  });
+
+  describe('rewrites', () => {
+    it('serves the debug-proxy .html at the extensionless path and subpaths', async () => {
+      const config = defineConfig({});
+      expect(await config.rewrites!()).toEqual([
+        {
+          destination: '/_dangerous_local_dev_proxy.html',
+          source: '/_dangerous_local_dev_proxy/:path*',
+        },
+      ]);
+    });
   });
 
   it('disables Next.js agent rule injection', () => {

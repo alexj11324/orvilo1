@@ -18,6 +18,7 @@ export * from './asyncTask';
 export * from './betterAuth';
 export * from './chatGroup';
 export * from './connector';
+export * from './credential';
 export * from './device';
 export * from './documentComment';
 export * from './documentHistory';

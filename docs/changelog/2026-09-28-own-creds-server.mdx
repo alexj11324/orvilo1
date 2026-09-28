@@ -1,0 +1,15 @@
+---
+title: Credentials move to Orvilo's own storage
+description: Credential records now live in Orvilo's own database instead of the external Market service, with encrypted payloads and the same workspace sharing model.
+---
+
+## Features
+
+- **Own credentials store**: `credentials` are now stored in Orvilo's own database. Each credential keeps a single encrypted payload column (key–value envs/headers, file references, OAuth connection pointers) sealed with the same `KeyVaultsGateKeeper` at-rest encryption used by API keys and connectors.
+- **Same sharing model, locally**: personal credentials can be linked to a workspace as a private draft or a published share, and workspace-owned credentials behave like the previous organization-scoped rows — the workspace tab merges org rows with members' shared credentials, including owner attribution.
+- **Runtime injection preserved**: `creds.inject` still writes `~/.creds/env` inside the topic sandbox and masks values in the response, so agent runs keep working without exposing plaintext.
+- **What stays on Market**: the agents marketplace, the OAuth connect broker (token custody and connection health), and skill credential declarations. OAuth credential values therefore remain metadata-only and are not injected.
+
+## Improvements
+
+- **API shape unchanged**: the new `creds` and `workspaceCreds` routers keep the existing procedure names and input/output shapes so the client swap is small; credential ids become `cred_`-prefixed strings.

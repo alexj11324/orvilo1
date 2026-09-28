@@ -9,6 +9,11 @@
   ],
   "community": [
     {
+      "id": "2026-09-28-own-creds-server",
+      "date": "2026-09-28",
+      "versionRange": ["2.3.0"]
+    },
+    {
       "id": "2026-09-28-clerk-legacy-user-link",
       "date": "2026-09-28",
       "versionRange": ["2.3.0"]

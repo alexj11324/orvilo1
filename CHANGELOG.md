@@ -2,13 +2,38 @@
 
 # Changelog
 
+### [Version 2.3.1](https://github.com/alexj11324/orvilo1/compare/v2.3.0...v2.3.1)
+
+<sup>Released on **2026-09-28**</sup>
+
+#### 🐛 Bug Fixes
+
+- **auth**: link pre-Clerk users by email in session exchange.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **auth**: link pre-Clerk users by email in session exchange, closes [#314](https://github.com/alexj11324/orvilo1/issues/314) ([79c009a](https://github.com/alexj11324/orvilo1/commit/79c009a))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
 ## [Version 2.3.0](https://github.com/alexj11324/orvilo1/compare/v0.0.0-nightly.pr196.1086...v2.3.0)
 
 <sup>Released on **2026-09-28**</sup>
 
 #### 🐛 Bug Fixes
 
-- **deploy**: stop flagging CLERK\_SECRET\_KEY as deprecated.
+- **deploy**: stop flagging CLERK_SECRET_KEY as deprecated.
 - **auth**: align Google return-target fallback test with product-home default.
 - **auth**: strip Better Auth HMAC signature from legacy session cookie.
 - **memory**: keep ProgressIcon segments visible in info layout.
@@ -18,7 +43,7 @@
 - **cloudflare**: target owned account.
 - **ci**: run worker deploy jobs in the production environment.
 - **auth**: answer /v1/contract at the worker, bare portal chrome.
-- **auth**: pass CLERK\_PROXY\_URL through the worker document injection.
+- **auth**: pass CLERK_PROXY_URL through the worker document injection.
 - **auth**: wire clerk proxyUrl knob + hook-test the sign-in flow.
 - **onboarding**: seed one blank invite row on the invite step.
 - **dev**: serve debug-proxy page via next.config rewrite on self-hosted deploys.
@@ -70,7 +95,7 @@
 - **slimming**: repair ORV-104 typecheck collateral — restore live mcp locale keys, drop dead marketPlugin lookup, fix tests.
 - **db**: renumber remediation migrations contiguously 0177–0185 + restore canary 0176 snapshot.
 - **types**: CreateTopicParams.agentId drops null — wire schema is z.string().optional().
-- **topic**: create topics via agentId — sessionId=\<agt\_\*> violates topics\_session\_id FK for agent-first agents.
+- **topic**: create topics via agentId — sessionId=\<agt\_\*> violates topics_session_id FK for agent-first agents.
 - **reviews**: intent-derived operationIds, unknown-outcome UX, generation-bound pager.
 - **reviews**: claim-based write dedup with remoteId-pinned reconcile.
 - **connect-agent**: persist executionTarget=local + boundDeviceId on local hetero agent creation.
@@ -99,8 +124,8 @@
 - **misc**: bind approval decisions and consumes to their claim/dispatch (SC03+SC05).
 - **cli**: childResultInbox repairTail — byte-boundary tail scan + cross-process file lock.
 - **conversation**: resolve desktop agent coordinate from chat store when route has no aid.
-- **judgment**: keep unconfirmed launches in cancel\_requested; reconcile failed launches before throwing.
-- **database**: null-safe fence\_seq definition check in 0182.
+- **judgment**: keep unconfirmed launches in cancel_requested; reconcile failed launches before throwing.
+- **database**: null-safe fence_seq definition check in 0182.
 - **titlebar**: resolve common-namespace titleKeys in tab/document titles.
 - **aiGeneration**: return the never-typed failAndTrace.
 - **ai-generation**: trace judgment abort/timeout legs (53eb73fa onto merged tree).
@@ -121,24 +146,24 @@
 - **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state.
 - **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state.
 - **ci**: SB12 residual — global diagnostics parsed, unknown categories block, tree-sha bound to HEAD^{tree}.
-- **misc**: receipt workspace\_id FK + renew argsHash rebind (E2E follow-up).
+- **misc**: receipt workspace_id FK + renew argsHash rebind (E2E follow-up).
 - **ci**: typecheckDiff — unindented runner noise no longer extends last diagnostic (phantom hard-new).
 - **conversation**: settle at bottom when a pinned stream ends naturally.
 - **conversation**: settle at bottom when a pinned stream ends naturally.
 - **conversation**: settle at bottom when a pinned stream ends naturally.
 - **conversation**: settle at bottom when a pinned stream ends naturally.
-- **chat**: narrow session\_complete union before reading status.
-- **chat**: narrow session\_complete union before reading status.
-- **chat**: narrow session\_complete union before reading status.
-- **chat**: narrow session\_complete union before reading status.
+- **chat**: narrow session_complete union before reading status.
+- **chat**: narrow session_complete union before reading status.
+- **chat**: narrow session_complete union before reading status.
+- **chat**: narrow session_complete union before reading status.
 - **chat**: reuse live local op on gateway reconnect.
 - **chat**: reuse live local op on gateway reconnect.
 - **chat**: reuse live local op on gateway reconnect.
 - **chat**: reuse live local op on gateway reconnect.
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue.
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue.
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue.
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue.
 - **deps**: pin @hugeicons/core-free-icons to 4.3.3 — 4.3.4 ships broken esm index.
 - **chat**: arm send detection on list mount, not just context switches.
 - **chat**: arm send detection on list mount, not just context switches.
@@ -177,7 +202,7 @@
 - **ci**: one psql -c per ALTER SYSTEM statement.
 - **ci**: one psql -c per ALTER SYSTEM statement.
 - **ci**: one psql -c per ALTER SYSTEM statement.
-- **migrations**: strict-monotonic journal — 0179 when inverted past 0178 skipped fence\_seq on staged upgrades (X01).
+- **migrations**: strict-monotonic journal — 0179 when inverted past 0178 skipped fence_seq on staged upgrades (X01).
 - **chat**: pin detection tolerates split/extra-row send commits.
 - **chat**: pin detection tolerates split/extra-row send commits.
 - **chat**: pin detection tolerates split/extra-row send commits.
@@ -203,7 +228,7 @@
 - **e2e**: read persisted user row from pg directly; measure pin by text.
 - **e2e**: read persisted user row from pg directly; measure pin by text.
 - **e2e**: read persisted user row from pg directly; measure pin by text.
-- **database**: coalesce jsonb null tests — pg\_search planner crash guard.
+- **database**: coalesce jsonb null tests — pg_search planner crash guard.
 - **e2e**: settle scroll tests on terminal op state, not running-window observation.
 - **e2e**: settle scroll tests on terminal op state, not running-window observation.
 - **e2e**: settle scroll tests on terminal op state, not running-window observation.
@@ -341,7 +366,7 @@
 - **auth**: emit undefined workspaceRole in personal mode for WorkspaceRowCtx compat.
 - **member**: detach task slots in one update + one domain event per task.
 - **delegation**: coerce nullable task workspaceId for outbox event params.
-- **teammates**: make task\_inputs workspace anchor nullable and fix ProjectMemberModel arity.
+- **teammates**: make task_inputs workspace anchor nullable and fix ProjectMemberModel arity.
 - **teammates**: emit workspaceRole as undefined and use admin membership in linearSync tests.
 - **teammates**: align frontend with base-ui APIs and server contracts.
 - **teammates**: align collab/delegation code with drizzle schema + test keys.
@@ -402,7 +427,7 @@
 - **goal-experience**: P17 — surface per-node integration state and parallelism control.
 - **task-integration**: P15 — serialize same repo/ref integrations and re-baseline stale merges.
 - **task-workspace**: P14 — preflight device repo and recover interrupted provisioning.
-- **goal**: P13 — re-verify depends\_on readiness under the dispatch claim lock.
+- **goal**: P13 — re-verify depends_on readiness under the dispatch claim lock.
 - **task-runner**: P11 — persist versioned TaskExecutionContract on run rows.
 - **tool-surface**: P09 — explicit per-tool mount outcomes for ACP runs.
 - **task-dispatch**: P16 — goal-stop dispatch fences and bounded verification polls.
@@ -427,7 +452,7 @@
 - **agent**: ACP-only execution binding + shared-type detach (P70a + P70b core).
 - **acp**: retire builtin orvilo-browser tool chain (P60).
 - **tasks**: enforce PR-first delivery review lifecycle.
-- **ops**: stamp execution-engine provenance on agent\_operations.
+- **ops**: stamp execution-engine provenance on agent_operations.
 - **workspace**: real workspace context in OSS business layer.
 - **client-parity**: unify web/desktop control plane and execution contract.
 - **misc**: consent-based ownership transfer + member roster workload.
@@ -486,7 +511,7 @@
 
 #### What's fixed
 
-- **deploy**: stop flagging CLERK\_SECRET\_KEY as deprecated ([a2b522b](https://github.com/alexj11324/orvilo1/commit/a2b522b))
+- **deploy**: stop flagging CLERK_SECRET_KEY as deprecated ([a2b522b](https://github.com/alexj11324/orvilo1/commit/a2b522b))
 - **auth**: align Google return-target fallback test with product-home default ([a066a22](https://github.com/alexj11324/orvilo1/commit/a066a22))
 - **auth**: strip Better Auth HMAC signature from legacy session cookie ([afef55a](https://github.com/alexj11324/orvilo1/commit/afef55a))
 - **memory**: keep ProgressIcon segments visible in info layout ([d53500f](https://github.com/alexj11324/orvilo1/commit/d53500f))
@@ -496,7 +521,7 @@
 - **cloudflare**: target owned account ([9d0b1a6](https://github.com/alexj11324/orvilo1/commit/9d0b1a6))
 - **ci**: run worker deploy jobs in the production environment ([76344e4](https://github.com/alexj11324/orvilo1/commit/76344e4))
 - **auth**: answer /v1/contract at the worker, bare portal chrome ([40a0988](https://github.com/alexj11324/orvilo1/commit/40a0988))
-- **auth**: pass CLERK\_PROXY\_URL through the worker document injection ([3426993](https://github.com/alexj11324/orvilo1/commit/3426993))
+- **auth**: pass CLERK_PROXY_URL through the worker document injection ([3426993](https://github.com/alexj11324/orvilo1/commit/3426993))
 - **auth**: wire clerk proxyUrl knob + hook-test the sign-in flow ([14b8b9c](https://github.com/alexj11324/orvilo1/commit/14b8b9c))
 - **onboarding**: seed one blank invite row on the invite step ([503d2b4](https://github.com/alexj11324/orvilo1/commit/503d2b4))
 - **dev**: serve debug-proxy page via next.config rewrite on self-hosted deploys ([f9150eb](https://github.com/alexj11324/orvilo1/commit/f9150eb))
@@ -548,7 +573,7 @@
 - **slimming**: repair ORV-104 typecheck collateral — restore live mcp locale keys, drop dead marketPlugin lookup, fix tests ([bb7bbe4](https://github.com/alexj11324/orvilo1/commit/bb7bbe4))
 - **db**: renumber remediation migrations contiguously 0177–0185 + restore canary 0176 snapshot ([ddf8b22](https://github.com/alexj11324/orvilo1/commit/ddf8b22))
 - **types**: CreateTopicParams.agentId drops null — wire schema is z.string().optional() ([b908a8d](https://github.com/alexj11324/orvilo1/commit/b908a8d))
-- **topic**: create topics via agentId — sessionId=\<agt\_\*> violates topics\_session\_id FK for agent-first agents ([ff57c4a](https://github.com/alexj11324/orvilo1/commit/ff57c4a))
+- **topic**: create topics via agentId — sessionId=\<agt\_\*> violates topics_session_id FK for agent-first agents ([ff57c4a](https://github.com/alexj11324/orvilo1/commit/ff57c4a))
 - **reviews**: intent-derived operationIds, unknown-outcome UX, generation-bound pager ([dbbfb3f](https://github.com/alexj11324/orvilo1/commit/dbbfb3f))
 - **reviews**: claim-based write dedup with remoteId-pinned reconcile ([255f359](https://github.com/alexj11324/orvilo1/commit/255f359))
 - **connect-agent**: persist executionTarget=local + boundDeviceId on local hetero agent creation ([f52a691](https://github.com/alexj11324/orvilo1/commit/f52a691))
@@ -577,8 +602,8 @@
 - **misc**: bind approval decisions and consumes to their claim/dispatch (SC03+SC05) ([3bf901f](https://github.com/alexj11324/orvilo1/commit/3bf901f))
 - **cli**: childResultInbox repairTail — byte-boundary tail scan + cross-process file lock ([2fe34fe](https://github.com/alexj11324/orvilo1/commit/2fe34fe))
 - **conversation**: resolve desktop agent coordinate from chat store when route has no aid ([eb8110d](https://github.com/alexj11324/orvilo1/commit/eb8110d))
-- **judgment**: keep unconfirmed launches in cancel\_requested; reconcile failed launches before throwing ([a4299f6](https://github.com/alexj11324/orvilo1/commit/a4299f6))
-- **database**: null-safe fence\_seq definition check in 0182 ([d0ae158](https://github.com/alexj11324/orvilo1/commit/d0ae158))
+- **judgment**: keep unconfirmed launches in cancel_requested; reconcile failed launches before throwing ([a4299f6](https://github.com/alexj11324/orvilo1/commit/a4299f6))
+- **database**: null-safe fence_seq definition check in 0182 ([d0ae158](https://github.com/alexj11324/orvilo1/commit/d0ae158))
 - **titlebar**: resolve common-namespace titleKeys in tab/document titles ([9a2ca20](https://github.com/alexj11324/orvilo1/commit/9a2ca20))
 - **aiGeneration**: return the never-typed failAndTrace ([9ac1590](https://github.com/alexj11324/orvilo1/commit/9ac1590))
 - **ai-generation**: trace judgment abort/timeout legs (53eb73fa onto merged tree) ([dd7be7b](https://github.com/alexj11324/orvilo1/commit/dd7be7b))
@@ -599,24 +624,24 @@
 - **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state ([5a6f3f0](https://github.com/alexj11324/orvilo1/commit/5a6f3f0))
 - **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state ([c90f46d](https://github.com/alexj11324/orvilo1/commit/c90f46d))
 - **ci**: SB12 residual — global diagnostics parsed, unknown categories block, tree-sha bound to HEAD^{tree} ([33ccd47](https://github.com/alexj11324/orvilo1/commit/33ccd47))
-- **misc**: receipt workspace\_id FK + renew argsHash rebind (E2E follow-up) ([e48df97](https://github.com/alexj11324/orvilo1/commit/e48df97))
+- **misc**: receipt workspace_id FK + renew argsHash rebind (E2E follow-up) ([e48df97](https://github.com/alexj11324/orvilo1/commit/e48df97))
 - **ci**: typecheckDiff — unindented runner noise no longer extends last diagnostic (phantom hard-new) ([66389af](https://github.com/alexj11324/orvilo1/commit/66389af))
 - **conversation**: settle at bottom when a pinned stream ends naturally ([9e357d4](https://github.com/alexj11324/orvilo1/commit/9e357d4))
 - **conversation**: settle at bottom when a pinned stream ends naturally ([032c770](https://github.com/alexj11324/orvilo1/commit/032c770))
 - **conversation**: settle at bottom when a pinned stream ends naturally ([633330a](https://github.com/alexj11324/orvilo1/commit/633330a))
 - **conversation**: settle at bottom when a pinned stream ends naturally ([d5aa09c](https://github.com/alexj11324/orvilo1/commit/d5aa09c))
-- **chat**: narrow session\_complete union before reading status ([8b7de9d](https://github.com/alexj11324/orvilo1/commit/8b7de9d))
-- **chat**: narrow session\_complete union before reading status ([7935f30](https://github.com/alexj11324/orvilo1/commit/7935f30))
-- **chat**: narrow session\_complete union before reading status ([bd8ccfe](https://github.com/alexj11324/orvilo1/commit/bd8ccfe))
-- **chat**: narrow session\_complete union before reading status ([03db7ef](https://github.com/alexj11324/orvilo1/commit/03db7ef))
+- **chat**: narrow session_complete union before reading status ([8b7de9d](https://github.com/alexj11324/orvilo1/commit/8b7de9d))
+- **chat**: narrow session_complete union before reading status ([7935f30](https://github.com/alexj11324/orvilo1/commit/7935f30))
+- **chat**: narrow session_complete union before reading status ([bd8ccfe](https://github.com/alexj11324/orvilo1/commit/bd8ccfe))
+- **chat**: narrow session_complete union before reading status ([03db7ef](https://github.com/alexj11324/orvilo1/commit/03db7ef))
 - **chat**: reuse live local op on gateway reconnect ([87c4d33](https://github.com/alexj11324/orvilo1/commit/87c4d33))
 - **chat**: reuse live local op on gateway reconnect ([a61a7a3](https://github.com/alexj11324/orvilo1/commit/a61a7a3))
 - **chat**: reuse live local op on gateway reconnect ([aa1b3f9](https://github.com/alexj11324/orvilo1/commit/aa1b3f9))
 - **chat**: reuse live local op on gateway reconnect ([18a08c4](https://github.com/alexj11324/orvilo1/commit/18a08c4))
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([6375a21](https://github.com/alexj11324/orvilo1/commit/6375a21))
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([b53e04c](https://github.com/alexj11324/orvilo1/commit/b53e04c))
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([adccfd4](https://github.com/alexj11324/orvilo1/commit/adccfd4))
-- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([6b4c566](https://github.com/alexj11324/orvilo1/commit/6b4c566))
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue ([6375a21](https://github.com/alexj11324/orvilo1/commit/6375a21))
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue ([b53e04c](https://github.com/alexj11324/orvilo1/commit/b53e04c))
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue ([adccfd4](https://github.com/alexj11324/orvilo1/commit/adccfd4))
+- **agentRun**: never drop agent_runtime_end at MAX_INFLIGHT — strands client op running + queue ([6b4c566](https://github.com/alexj11324/orvilo1/commit/6b4c566))
 - **deps**: pin @hugeicons/core-free-icons to 4.3.3 — 4.3.4 ships broken esm index, closes [#159](https://github.com/alexj11324/orvilo1/issues/159) ([a54f781](https://github.com/alexj11324/orvilo1/commit/a54f781))
 - **chat**: arm send detection on list mount, not just context switches ([e388e5d](https://github.com/alexj11324/orvilo1/commit/e388e5d))
 - **chat**: arm send detection on list mount, not just context switches ([e1a8b36](https://github.com/alexj11324/orvilo1/commit/e1a8b36))
@@ -655,7 +680,7 @@
 - **ci**: one psql -c per ALTER SYSTEM statement ([d83a553](https://github.com/alexj11324/orvilo1/commit/d83a553))
 - **ci**: one psql -c per ALTER SYSTEM statement ([34d8ce9](https://github.com/alexj11324/orvilo1/commit/34d8ce9))
 - **ci**: one psql -c per ALTER SYSTEM statement ([677815a](https://github.com/alexj11324/orvilo1/commit/677815a))
-- **migrations**: strict-monotonic journal — 0179 when inverted past 0178 skipped fence\_seq on staged upgrades (X01) ([490ff12](https://github.com/alexj11324/orvilo1/commit/490ff12))
+- **migrations**: strict-monotonic journal — 0179 when inverted past 0178 skipped fence_seq on staged upgrades (X01) ([490ff12](https://github.com/alexj11324/orvilo1/commit/490ff12))
 - **chat**: pin detection tolerates split/extra-row send commits ([aed2d11](https://github.com/alexj11324/orvilo1/commit/aed2d11))
 - **chat**: pin detection tolerates split/extra-row send commits ([bfe6b3d](https://github.com/alexj11324/orvilo1/commit/bfe6b3d))
 - **chat**: pin detection tolerates split/extra-row send commits ([775cb91](https://github.com/alexj11324/orvilo1/commit/775cb91))
@@ -681,7 +706,7 @@
 - **e2e**: read persisted user row from pg directly; measure pin by text ([f97d247](https://github.com/alexj11324/orvilo1/commit/f97d247))
 - **e2e**: read persisted user row from pg directly; measure pin by text ([346e8de](https://github.com/alexj11324/orvilo1/commit/346e8de))
 - **e2e**: read persisted user row from pg directly; measure pin by text ([e817f6a](https://github.com/alexj11324/orvilo1/commit/e817f6a))
-- **database**: coalesce jsonb null tests — pg\_search planner crash guard ([4bddcbe](https://github.com/alexj11324/orvilo1/commit/4bddcbe))
+- **database**: coalesce jsonb null tests — pg_search planner crash guard ([4bddcbe](https://github.com/alexj11324/orvilo1/commit/4bddcbe))
 - **e2e**: settle scroll tests on terminal op state, not running-window observation ([80c64aa](https://github.com/alexj11324/orvilo1/commit/80c64aa))
 - **e2e**: settle scroll tests on terminal op state, not running-window observation ([7fa2be8](https://github.com/alexj11324/orvilo1/commit/7fa2be8))
 - **e2e**: settle scroll tests on terminal op state, not running-window observation ([cc1f20f](https://github.com/alexj11324/orvilo1/commit/cc1f20f))
@@ -819,7 +844,7 @@
 - **auth**: emit undefined workspaceRole in personal mode for WorkspaceRowCtx compat ([c9fa1e0](https://github.com/alexj11324/orvilo1/commit/c9fa1e0))
 - **member**: detach task slots in one update + one domain event per task ([1c17304](https://github.com/alexj11324/orvilo1/commit/1c17304))
 - **delegation**: coerce nullable task workspaceId for outbox event params ([66a7d24](https://github.com/alexj11324/orvilo1/commit/66a7d24))
-- **teammates**: make task\_inputs workspace anchor nullable and fix ProjectMemberModel arity ([3c59e8f](https://github.com/alexj11324/orvilo1/commit/3c59e8f))
+- **teammates**: make task_inputs workspace anchor nullable and fix ProjectMemberModel arity ([3c59e8f](https://github.com/alexj11324/orvilo1/commit/3c59e8f))
 - **teammates**: emit workspaceRole as undefined and use admin membership in linearSync tests ([1eff4ff](https://github.com/alexj11324/orvilo1/commit/1eff4ff))
 - **teammates**: align frontend with base-ui APIs and server contracts ([97f3e0e](https://github.com/alexj11324/orvilo1/commit/97f3e0e))
 - **teammates**: align collab/delegation code with drizzle schema + test keys ([a36ccfa](https://github.com/alexj11324/orvilo1/commit/a36ccfa))
@@ -880,7 +905,7 @@
 - **goal-experience**: P17 — surface per-node integration state and parallelism control ([2f34aab](https://github.com/alexj11324/orvilo1/commit/2f34aab))
 - **task-integration**: P15 — serialize same repo/ref integrations and re-baseline stale merges ([45bad74](https://github.com/alexj11324/orvilo1/commit/45bad74))
 - **task-workspace**: P14 — preflight device repo and recover interrupted provisioning ([6511fda](https://github.com/alexj11324/orvilo1/commit/6511fda))
-- **goal**: P13 — re-verify depends\_on readiness under the dispatch claim lock ([571f55f](https://github.com/alexj11324/orvilo1/commit/571f55f))
+- **goal**: P13 — re-verify depends_on readiness under the dispatch claim lock ([571f55f](https://github.com/alexj11324/orvilo1/commit/571f55f))
 - **task-runner**: P11 — persist versioned TaskExecutionContract on run rows ([b68f9ff](https://github.com/alexj11324/orvilo1/commit/b68f9ff))
 - **tool-surface**: P09 — explicit per-tool mount outcomes for ACP runs ([62df9e1](https://github.com/alexj11324/orvilo1/commit/62df9e1))
 - **task-dispatch**: P16 — goal-stop dispatch fences and bounded verification polls ([c4052e4](https://github.com/alexj11324/orvilo1/commit/c4052e4))
@@ -905,7 +930,7 @@
 - **agent**: ACP-only execution binding + shared-type detach (P70a + P70b core), closes [#90](https://github.com/alexj11324/orvilo1/issues/90) ([5d3f0b8](https://github.com/alexj11324/orvilo1/commit/5d3f0b8))
 - **acp**: retire builtin orvilo-browser tool chain (P60), closes [#76](https://github.com/alexj11324/orvilo1/issues/76) ([8a59e82](https://github.com/alexj11324/orvilo1/commit/8a59e82))
 - **tasks**: enforce PR-first delivery review lifecycle, closes [#88](https://github.com/alexj11324/orvilo1/issues/88) ([94a71e4](https://github.com/alexj11324/orvilo1/commit/94a71e4))
-- **ops**: stamp execution-engine provenance on agent\_operations, closes [#87](https://github.com/alexj11324/orvilo1/issues/87) ([bdd048f](https://github.com/alexj11324/orvilo1/commit/bdd048f))
+- **ops**: stamp execution-engine provenance on agent_operations, closes [#87](https://github.com/alexj11324/orvilo1/issues/87) ([bdd048f](https://github.com/alexj11324/orvilo1/commit/bdd048f))
 - **workspace**: real workspace context in OSS business layer, closes [#85](https://github.com/alexj11324/orvilo1/issues/85) ([277b5a8](https://github.com/alexj11324/orvilo1/commit/277b5a8))
 - **client-parity**: unify web/desktop control plane and execution contract ([20cee71](https://github.com/alexj11324/orvilo1/commit/20cee71))
 - **misc**: consent-based ownership transfer + member roster workload, closes [#81](https://github.com/alexj11324/orvilo1/issues/81) ([5498a06](https://github.com/alexj11324/orvilo1/commit/5498a06))
@@ -1246,7 +1271,7 @@
 - **agent-runtime**: persist agent operations to `agent_operations` table.
 - **misc**: support slack mpim and fix discord dm problem.
 - **database**: add `agent_operations` table.
-- **markdown**: user\_feedback card + task card polish + Run now context menu.
+- **markdown**: user_feedback card + task card polish + Run now context menu.
 - **documents**: add optimistic create/delete and inline rename for document tree.
 - **devtools**: add dev-only feature flag override panel.
 - **misc**: add service model assignments settings.
@@ -1303,7 +1328,7 @@
 - **misc**: first inject the cloudecc runtime session should use the existingStatus.
 - **misc**: slack connect error & slash commands.
 - **misc**: polish task agent manager.
-- **agent-runtime**: recover malformed tool\_call names instead of finishing silently.
+- **agent-runtime**: recover malformed tool_call names instead of finishing silently.
 - **misc**: remove signin captcha flow.
 - **misc**: add temporary email auth error locale.
 - **misc**: add bot callback service.
@@ -1344,7 +1369,7 @@
 - **agent-runtime**: persist agent operations to `agent_operations` table
 - **misc**: support slack mpim and fix discord dm problem
 - **database**: add `agent_operations` table
-- **markdown**: user\_feedback card + task card polish + Run now context menu
+- **markdown**: user_feedback card + task card polish + Run now context menu
 - **documents**: add optimistic create/delete and inline rename for document tree
 - **devtools**: add dev-only feature flag override panel
 - **misc**: add service model assignments settings
@@ -1401,7 +1426,7 @@
 - **misc**: first inject the cloudecc runtime session should use the existingStatus
 - **misc**: slack connect error & slash commands
 - **misc**: polish task agent manager
-- **agent-runtime**: recover malformed tool\_call names instead of finishing silently
+- **agent-runtime**: recover malformed tool_call names instead of finishing silently
 - **misc**: remove signin captcha flow
 - **misc**: add temporary email auth error locale
 - **misc**: add bot callback service
@@ -1916,7 +1941,7 @@
 
 #### 🐛 Bug Fixes
 
-- **misc**: Fix multimodal content\_part images rendered as base64 text.
+- **misc**: Fix multimodal content_part images rendered as base64 text.
 
 <br/>
 
@@ -1925,7 +1950,7 @@
 
 #### What's
 
-- **misc**: Fix multimodal content\_part images rendered as base64 text
+- **misc**: Fix multimodal content_part images rendered as base64 text
 
 </details>
 
@@ -2632,7 +2657,7 @@
 
 #### 🐛 Bug Fixes
 
-- **misc**: Hide password features when AUTH\_DISABLE\_EMAIL\_PASSWORD is set.
+- **misc**: Hide password features when AUTH_DISABLE_EMAIL_PASSWORD is set.
 
 <br/>
 
@@ -2641,7 +2666,7 @@
 
 #### What's
 
-- **misc**: Hide password features when AUTH\_DISABLE\_EMAIL\_PASSWORD is set
+- **misc**: Hide password features when AUTH_DISABLE_EMAIL_PASSWORD is set
 
 </details>
 
@@ -2807,7 +2832,7 @@
 
 #### 🐛 Bug Fixes
 
-- **stream**: Update event handling to use 'text' instead of 'content\_part' in gemini 2.5 models.
+- **stream**: Update event handling to use 'text' instead of 'content_part' in gemini 2.5 models.
 
 #### 💄 Styles
 
@@ -2820,7 +2845,7 @@
 
 #### What's
 
-- **stream**: Update event handling to use 'text' instead of 'content\_part' in gemini 2.5 models
+- **stream**: Update event handling to use 'text' instead of 'content_part' in gemini 2.5 models
 
 #### Styles
 
@@ -2841,7 +2866,7 @@
 
 #### 🐛 Bug Fixes
 
-- **auth**: Add AUTH\_DISABLE\_EMAIL\_PASSWORD env to enable SSO-only mode.
+- **auth**: Add AUTH_DISABLE_EMAIL_PASSWORD env to enable SSO-only mode.
 
 <br/>
 
@@ -2850,7 +2875,7 @@
 
 #### What's
 
-- **auth**: Add AUTH\_DISABLE\_EMAIL\_PASSWORD env to enable SSO-only mode
+- **auth**: Add AUTH_DISABLE_EMAIL_PASSWORD env to enable SSO-only mode
 
 </details>
 
@@ -3091,7 +3116,7 @@
 
 #### 🐛 Bug Fixes
 
-- **model-runtime**: Include tool\_calls in speed metrics & add getActiveTraceId.
+- **model-runtime**: Include tool_calls in speed metrics & add getActiveTraceId.
 
 <br/>
 
@@ -3100,7 +3125,7 @@
 
 #### What's
 
-- **model-runtime**: Include tool\_calls in speed metrics & add getActiveTraceId
+- **model-runtime**: Include tool_calls in speed metrics & add getActiveTraceId
 
 </details>
 

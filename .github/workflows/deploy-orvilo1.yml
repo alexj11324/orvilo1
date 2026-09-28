@@ -282,10 +282,11 @@ jobs:
         env:
           SSH_HOST: ${{ secrets.ORACLE_HOST }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          CLERK_ISSUER: ${{ vars.CLERK_ISSUER }}
-          CLERK_AUTHORIZED_PARTIES: ${{ vars.CLERK_AUTHORIZED_PARTIES }}
-          AUTH_ACCOUNTS_URL: ${{ vars.AUTH_ACCOUNTS_URL }}
-          AUTH_COOKIE_DOMAIN: ${{ vars.AUTH_COOKIE_DOMAIN }}
+          # vars 留空时用 prod 默认值；覆盖只需在 repo/environment 配同名 var。
+          CLERK_ISSUER: ${{ vars.CLERK_ISSUER || 'https://clerk.aspectlylabs.com' }}
+          CLERK_AUTHORIZED_PARTIES: ${{ vars.CLERK_AUTHORIZED_PARTIES || 'https://accounts.aspectlylabs.com,https://orvilo.aspectlylabs.com' }}
+          AUTH_ACCOUNTS_URL: ${{ vars.AUTH_ACCOUNTS_URL || 'https://accounts.aspectlylabs.com' }}
+          AUTH_COOKIE_DOMAIN: ${{ vars.AUTH_COOKIE_DOMAIN || '.aspectlylabs.com' }}
         run: |
           set -euo pipefail
           {

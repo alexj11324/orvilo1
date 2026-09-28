@@ -2,6 +2,969 @@
 
 # Changelog
 
+## [Version 2.3.0](https://github.com/alexj11324/orvilo1/compare/v0.0.0-nightly.pr196.1086...v2.3.0)
+
+<sup>Released on **2026-09-28**</sup>
+
+#### 🐛 Bug Fixes
+
+- **deploy**: stop flagging CLERK\_SECRET\_KEY as deprecated.
+- **auth**: align Google return-target fallback test with product-home default.
+- **auth**: strip Better Auth HMAC signature from legacy session cookie.
+- **memory**: keep ProgressIcon segments visible in info layout.
+- **lint**: migrate banned antd components to @lobehub/ui.
+- **board**: restore column surface frame on task board.
+- **auth**: serve portal assets same-origin, fold legacy auth pages into /login.
+- **cloudflare**: target owned account.
+- **ci**: run worker deploy jobs in the production environment.
+- **auth**: answer /v1/contract at the worker, bare portal chrome.
+- **auth**: pass CLERK\_PROXY\_URL through the worker document injection.
+- **auth**: wire clerk proxyUrl knob + hook-test the sign-in flow.
+- **onboarding**: seed one blank invite row on the invite step.
+- **dev**: serve debug-proxy page via next.config rewrite on self-hosted deploys.
+- **boot**: pin sans font stack on loading brand.
+- **onboarding**: auto-fill workspace URL from workspace name.
+- **linear**: copy synced issues into selected import project.
+- **linear**: dispatch every import page and verify Electron flow.
+- **linear**: split team catalog query below complexity limit.
+- **linear**: share concurrent catalog token refresh.
+- **linear**: use organization-scoped GraphQL fields in sync catalog.
+- **imports**: style the Linear importer and retire the old entry.
+- **deploy**: sync repo compose files to the host before pull/up.
+- **collaboration**: deploy the gateway service; fail closed on non-ws client URL.
+- **collaboration**: conceal via the public gateway URL and replay presence on refresh.
+- **reviews**: keep both detail views mounted so drafts survive; author comment-only scope; honest branch label.
+- **collaboration**: narrow publish union before reading kick scope in gateway handshake error.
+- **linear-import**: close review findings — cascade project FK, lease renewal, failed-job requeue, link-claim dedup, install refresh.
+- **reviews**: narrow the detail response in the write-gate capability test.
+- **reviews**: keep OAuth watch past the poll timeout; only revoke grants on grant errors.
+- **linear**: stop querying unsupported oauthClientId and surface GraphQL errors.
+- **reviews**: group merge-ready PRs by GitHub state.
+- **misc**: classify Linear import API key access.
+- **misc**: open Linear import OAuth in desktop browser.
+- **reviews**: open GitHub authorization before async work.
+- **misc**: satisfy Linear importer typecheck.
+- **settings**: hide Subscription nav group when business features are off.
+- **projects**: stop rejecting committed milestone writes on refresh errors and harden CSV export.
+- **api-keys**: categorize the githubOAuth namespace as blocked for restricted keys.
+- **tasks**: match Linear issue-detail rail and body type scale.
+- **e2e**: align task-prerequisites locators with renamed related-issue copy.
+- **teams**: group the Team Issues list by workflow state like the board.
+- **tasks**: one Status row on the issue rail — the workflow state, like Linear.
+- **issue**: keep Related links nonblocking and symmetric.
+- **issue**: align detail geometry and workflow status marks.
+- **teams**: align Recent issues icons and right rail.
+- **desktop**: run pre-app-init before main-app captures userData.
+- **chat**: settle at bottom promptly after a reply; poll for it in AGENT-SCROLL-001.
+- **desktop**: reject non-builtin externals in pre-app-init guard.
+- **desktop**: run pre-app-init before main-app captures userData.
+- **scripts**: correct container name in setup-test-postgres-db.sh.
+- **misc**: narrow agencyConfig before deleting heterogeneousProvider.
+- **misc**: bind the inbox builtin agent to the builtin orvilo harness at creation.
+- **locales**: drop orphaned orvilo-message builtin keys.
+- **desktop**: regenerate pnpm-lock after chat-adapter-imessage dep removal.
+- **topic**: normalize agentId null→undefined for createTopic mutation input.
+- **slimming**: repair ORV-106 typecheck collateral — replace retired image/video model types in tests, drop parameters card case.
+- **slimming**: repair ORV-105 typecheck collateral — delete bot-metadata icon readers, platformIcon lib, dead message runtime test ref.
+- **slimming**: restore skills.categories.\* locale keys still used by useSkillCategory (ORV-104).
+- **slimming**: repair ORV-104 typecheck collateral — restore live mcp locale keys, drop dead marketPlugin lookup, fix tests.
+- **db**: renumber remediation migrations contiguously 0177–0185 + restore canary 0176 snapshot.
+- **types**: CreateTopicParams.agentId drops null — wire schema is z.string().optional().
+- **topic**: create topics via agentId — sessionId=\<agt\_\*> violates topics\_session\_id FK for agent-first agents.
+- **reviews**: intent-derived operationIds, unknown-outcome UX, generation-bound pager.
+- **reviews**: claim-based write dedup with remoteId-pinned reconcile.
+- **connect-agent**: persist executionTarget=local + boundDeviceId on local hetero agent creation.
+- **projects**: scope Issues count to caller-readable tasks.
+- **review**: read diff side from thread fields, not comment nodes.
+- **reviews**: persist review receipts with atomic replay re-authorization.
+- **locales**: flatten project list/overview/properties keys to match source.
+- **views**: literal-key typing for visibility label resolver.
+- **server-test**: supply required observedHeadSha in write-gate inputs.
+- **server-test**: supply required observedHeadSha in write-gate inputs.
+- **server-test**: supply required observedHeadSha in write-gate inputs.
+- **e2e**: resend second message when the topic-switch remount swallows Enter.
+- **board**: field-sorted views must not write manual position.
+- **server**: predicate-first workQuery filter schema + PR review write gate.
+- **views**: private saved views no longer labeled Workspace; project tabs match by section.
+- **project**: typecheck — Flexbox wrap prop + preserve taskCount on cached list updates.
+- **git,cli**: fail closed on leftover .reclaim tickets — never check-then-unlink residue (SC02).
+- **aiAgent**: require claim-pinned window/scope on token-path approvals (SC03).
+- **misc**: serialize dead-lock reclaim through a single-writer ticket (SC02).
+- **taskRunner**: park retryable prepare-stage failures so same-key retry re-adopts the bound approval (SC05).
+- **device-control**: satisfy addGitWorktreeClaimed required claimToken contract (SC01).
+- **project**: Avatar title accepts string|undefined — coerce null.
+- **desktop**: load entry script with an absolute path.
+- **taskWorkspace**: negotiate claim capability before add — never delete without credential (SC01).
+- **git**: make the repo-file mutex owner-verified and liveness-based (SC02).
+- **misc**: bind approval decisions and consumes to their claim/dispatch (SC03+SC05).
+- **cli**: childResultInbox repairTail — byte-boundary tail scan + cross-process file lock.
+- **conversation**: resolve desktop agent coordinate from chat store when route has no aid.
+- **judgment**: keep unconfirmed launches in cancel\_requested; reconcile failed launches before throwing.
+- **database**: null-safe fence\_seq definition check in 0182.
+- **titlebar**: resolve common-namespace titleKeys in tab/document titles.
+- **aiGeneration**: return the never-typed failAndTrace.
+- **ai-generation**: trace judgment abort/timeout legs (53eb73fa onto merged tree).
+- **route-meta**: resolve titleKeys across electron + common namespaces.
+- **router**: register project conversation route — composer send no longer drops the message.
+- **db**: never let a nullable first column null out a joined object.
+- **db**: never let a nullable first column null out a joined object.
+- **db**: never let a nullable first column null out a joined object.
+- **db**: never let a nullable first column null out a joined object.
+- **aiGeneration**: register durable judgment launches before dispatch (SB10).
+- **taskRunner**: explicit run intent + authorized replan via approval grants (SB08).
+- **device-control**: verify worktree claim tokens against host registry (SB01).
+- **git**: SB05 — cross-process push-fence mutex + persisted remote-write intent.
+- **reviews**: drop duplicated probe tests merged alongside wave contract.
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state.
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state.
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state.
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state.
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state.
+- **ci**: SB12 residual — global diagnostics parsed, unknown categories block, tree-sha bound to HEAD^{tree}.
+- **misc**: receipt workspace\_id FK + renew argsHash rebind (E2E follow-up).
+- **ci**: typecheckDiff — unindented runner noise no longer extends last diagnostic (phantom hard-new).
+- **conversation**: settle at bottom when a pinned stream ends naturally.
+- **conversation**: settle at bottom when a pinned stream ends naturally.
+- **conversation**: settle at bottom when a pinned stream ends naturally.
+- **conversation**: settle at bottom when a pinned stream ends naturally.
+- **chat**: narrow session\_complete union before reading status.
+- **chat**: narrow session\_complete union before reading status.
+- **chat**: narrow session\_complete union before reading status.
+- **chat**: narrow session\_complete union before reading status.
+- **chat**: reuse live local op on gateway reconnect.
+- **chat**: reuse live local op on gateway reconnect.
+- **chat**: reuse live local op on gateway reconnect.
+- **chat**: reuse live local op on gateway reconnect.
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue.
+- **deps**: pin @hugeicons/core-free-icons to 4.3.3 — 4.3.4 ships broken esm index.
+- **chat**: arm send detection on list mount, not just context switches.
+- **chat**: arm send detection on list mount, not just context switches.
+- **chat**: arm send detection on list mount, not just context switches.
+- **chat**: arm send detection on list mount, not just context switches.
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded.
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded.
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded.
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded.
+- **e2e**: settle the first turn before creating the second topic.
+- **e2e**: settle the first turn before creating the second topic.
+- **e2e**: settle the first turn before creating the second topic.
+- **e2e**: settle the first turn before creating the second topic.
+- **task-runner**: dep-blocked claims release to backlog; manual completion is a valid delivery.
+- **scroll**: resolve tail-appended ids whose role map lags a commit.
+- **scroll**: resolve tail-appended ids whose role map lags a commit.
+- **scroll**: resolve tail-appended ids whose role map lags a commit.
+- **scroll**: resolve tail-appended ids whose role map lags a commit.
+- **misc**: approval scope CAS, window rotation + grant epoch, durable child-result ACK.
+- **database**: tool-approval decision window CAS + delivery receipt state reader.
+- **dispatch**: persist origin + verified settlement grants + final admission recheck (SA05-B).
+- **taskRunner**: run intents + immutable source contracts + fail-closed dependency reads (SA05-A).
+- **server**: tri-state merge outcomes keep the write-ahead intent on lost responses (SA03-A).
+- **workspace**: bind worktree claims to canonical physical identity (SA01-A).
+- **scroll**: keep spacer armed while the reply outgrows the viewport.
+- **scroll**: keep spacer armed while the reply outgrows the viewport.
+- **scroll**: keep spacer armed while the reply outgrows the viewport.
+- **scroll**: keep spacer armed while the reply outgrows the viewport.
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs.
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs.
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs.
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs.
+- **ci**: SB12 — mandatory head-log envelope, untruncated multi-line diagnostic matching, checkout-bound live runs.
+- **ai-generation**: SB10+SB11 — physical cancel authority, total-budget dispatch, intentKey reconcile, honest judgment traces.
+- **ci**: one psql -c per ALTER SYSTEM statement.
+- **ci**: one psql -c per ALTER SYSTEM statement.
+- **ci**: one psql -c per ALTER SYSTEM statement.
+- **ci**: one psql -c per ALTER SYSTEM statement.
+- **migrations**: strict-monotonic journal — 0179 when inverted past 0178 skipped fence\_seq on staged upgrades (X01).
+- **chat**: pin detection tolerates split/extra-row send commits.
+- **chat**: pin detection tolerates split/extra-row send commits.
+- **chat**: pin detection tolerates split/extra-row send commits.
+- **chat**: pin detection tolerates split/extra-row send commits.
+- **e2e**: always re-press Enter on persist miss + pin-failure dump.
+- **e2e**: always re-press Enter on persist miss + pin-failure dump.
+- **e2e**: always re-press Enter on persist miss + pin-failure dump.
+- **e2e**: always re-press Enter on persist miss + pin-failure dump.
+- **e2e**: raise cucumber step budgets past inner poll windows.
+- **e2e**: raise cucumber step budgets past inner poll windows.
+- **e2e**: raise cucumber step budgets past inner poll windows.
+- **e2e**: raise cucumber step budgets past inner poll windows.
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching.
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching.
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching.
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching.
+- **server**: SA02 follow-up — external-surface pins expectation; drop retired-provider title test.
+- **e2e**: make pin-delta measure null-safe so expect.poll retries.
+- **e2e**: make pin-delta measure null-safe so expect.poll retries.
+- **e2e**: make pin-delta measure null-safe so expect.poll retries.
+- **e2e**: make pin-delta measure null-safe so expect.poll retries.
+- **e2e**: read persisted user row from pg directly; measure pin by text.
+- **e2e**: read persisted user row from pg directly; measure pin by text.
+- **e2e**: read persisted user row from pg directly; measure pin by text.
+- **e2e**: read persisted user row from pg directly; measure pin by text.
+- **database**: coalesce jsonb null tests — pg\_search planner crash guard.
+- **e2e**: settle scroll tests on terminal op state, not running-window observation.
+- **e2e**: settle scroll tests on terminal op state, not running-window observation.
+- **e2e**: settle scroll tests on terminal op state, not running-window observation.
+- **e2e**: settle scroll tests on terminal op state, not running-window observation.
+- **database**: type integration lease context column as RepoRefLeaseOutcomeContext.
+- **acceptance**: SA08 — longest-first root normalization in typecheck diff (/tmp before /private/tmp).
+- **quota-identity**: SA07 — revoke confirmation on unidentifiable live sample, scope trust to principal+workspace (F11).
+- **agent-execution**: SA06 — durable status wins + hardened judgment contract (F09/F10).
+- **task-integration**: SA03 — preserve unknown lease outcomes, remote fence + write-ahead merge intent (F03/F08).
+- **task-workspace**: durable workspace claim + orphan recovery queue (SA01 F01/F02/F07).
+- **hetero-agents**: drop stale providerBinding exports — module retired in P05.
+- **task-integration**: fence remaining repoPath/deviceId reads, type test resolvers.
+- **task-integration**: hoist narrowed fields into fenced closures.
+- **task-integration**: durable re-drive + in-flight lease heartbeats for R02 review.
+- **misc**: fail closed start-intent contract — no success-no-op on idle (R05/F09).
+- **task-integration**: R02 — short-lived repo/ref lease with owner fencing (F03).
+- **e2e**: re-open agents context menu when target item has not resolved.
+- **permissions**: admit caller's own unfiled rows in workspace scope.
+- **e2e**: re-open agents context menu when target item has not resolved.
+- **permissions**: admit caller's own unfiled rows in workspace scope.
+- **permissions**: admit caller's own unfiled rows in workspace scope.
+- **permissions**: admit caller's own unfiled rows in workspace scope.
+- **test**: satisfy zero-arg getLatestReadings mock signature.
+- **task-runner**: immutable contract content + pinned base SHA provenance (F07).
+- **quota**: bind quota observation to confirmed execution identity (R09/F11).
+- **agent-execution**: terminal-status whitelist + durable child-result delivery ledger (F06).
+- **agent**: builtin slug guard treats unfiled rows as in-scope.
+- **agent**: builtin slug guard treats unfiled rows as in-scope.
+- **agent**: builtin slug guard treats unfiled rows as in-scope.
+- **task-workspace**: import GitWorktreePathInspection type where used.
+- **task-workspace**: prove worktree ownership via device inspection, never force-remove (F01/F02).
+- **test**: satisfy ProcessEnv required keys in extension contract fixture.
+- **test**: satisfy ProcessEnv required keys in extension contract fixture.
+- **test**: satisfy ProcessEnv required keys in extension contract fixture.
+- **test**: satisfy ProcessEnv required keys in extension contract fixture.
+- **task-delivery-review**: guard null topicId before integration patch.
+- **hetero-agents**: update gatewayEventHandler test to createLiveAdapter.
+- **hetero-agents**: widen historicalDecoderRegistry to Record for string-keyed lookup.
+- **task**: admit own unfiled rows in raw-SQL ownership clause.
+- **task**: admit own unfiled rows in raw-SQL ownership clause.
+- **task**: admit own unfiled rows in raw-SQL ownership clause.
+- **task**: admit own unfiled rows in raw-SQL ownership clause.
+- **agent**: expose workspaceId on builtin-agent payload type.
+- **agent**: expose workspaceId on builtin-agent payload type.
+- **agent**: expose workspaceId on builtin-agent payload type.
+- **agent**: expose workspaceId on builtin-agent payload type.
+- **store**: drop retired showSidebarHidden from persisted view-options type.
+- **permission**: move isWorkspaceScopedMeta to a leaf module.
+- **permission**: move isWorkspaceScopedMeta to a leaf module.
+- **permission**: move isWorkspaceScopedMeta to a leaf module.
+- **permission**: move isWorkspaceScopedMeta to a leaf module.
+- **agent**: never cache a builtin row under the wrong workspace scope.
+- **agent**: never cache a builtin row under the wrong workspace scope.
+- **agent**: never cache a builtin row under the wrong workspace scope.
+- **permission**: admit own unfiled rows inside workspace scope.
+- **permission**: admit own unfiled rows inside workspace scope.
+- **permission**: admit own unfiled rows inside workspace scope.
+- **permission**: admit own unfiled rows inside workspace scope.
+- **retire**: put back the three locale keys live UI still reads.
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak.
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak.
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak.
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak.
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak.
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak.
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak.
+- **notification**: lookahead over-fetch past the 50-row feed cap so hasMore can be true.
+- **WorkInbox**: scope feed tail, drafts and decision ops to request identity; split detail on IssueContent.
+- **members**: ActionIcon title → aria-label inside popup triggers; extract directoryRows.
+- **reviews**: synthesize file headers on hunk-only patches; advance queue load-more cursor.
+- **reviews**: v6 repair — schema-valid queries, review sessions, write binding, paging, checks rollup, Linear work surface.
+- **work-attention**: keep predicate nodes through saved-view save; stream project picker pages.
+- **work-attention**: v6 data/query repairs — OR round-trip, board sortMode, scoped pickers, real activity.
+- **inbox**: keep relative-time helper in InboxModal until L4 deletes its consumer.
+- **work-attention**: keep predicate nodes through saved-view save; stream project picker pages.
+- **members**: ActionIcon title → aria-label inside popup triggers; extract directoryRows.
+- **work-attention**: v6 data/query repairs — OR round-trip, board sortMode, scoped pickers, real activity.
+- **inbox**: keep relative-time helper in InboxModal until L4 deletes its consumer.
+- **desktop**: drop session-auth-expired during the pre-init window.
+- **desktop**: send sessionless clients to login instead of the expired modal.
+- **onboarding**: wait for user-state hydration before mounting the wizard.
+- **workspaces**: map Drizzle-wrapped unique violations to CONFLICT.
+- **security**: close the N01–N10 audit findings and retire N11–N13.
+- **delegation**: fence delegated commits on live grant state, not just the epoch.
+- **tasks**: stop the board/list surface from following the task count.
+- **server-tests**: declare explicit execution targets in device/workspace provisioning tests.
+- **quota**: keep focus revalidation that lands mid-request.
+- **client-parity**: address review feedback and align tests with explicit execution targets.
+- **branding**: drop the upstream loading wordmark, route desktop deep links.
+- **client-parity**: resolve CI typecheck errors.
+- **connector**: repair the type errors the retirement left in the release build.
+- **retirement**: close the entry points the surface deletion left behind.
+- **teammates**: leave must not refresh the departed roster.
+- **release**: repair the release-cut script for the canary branch.
+- **misc**: harden delegated-run and eval-timeout seams after facade migration.
+- **p30**: close sub-agent contract gaps from independent review.
+- **p30**: satisfy ExecAgentResult contract in lifecycle gateway mocks.
+- **p30**: restore sub-agent spawn contract + supervisor routing, retire stale client-runtime tests.
+- **database**: association revoke ordering, quad serialization, test-DB host guard.
+- **proxy**: keep asset-dir names routable as workspace slugs.
+- **proxy**: exclude backend/framework/asset namespaces from workspace slug.
+- **database**: serialize same-quad association apply/revoke.
+- **proxy**: cover workspace-scoped and missing root SPA routes in matcher.
+- **database**: remove relation rows leaked by out-of-order decision revokes.
+- **p30**: restore run-lifecycle fields and aiModel wrapper lost in rebase.
+- **test**: drop orphaned describe closer in aiModel action test.
+- **onboarding**: persist setup and address review findings.
+- **infra**: S3 presign via public endpoint + GHCR tag hygiene.
+- **workspace**: reserve /invite first segment in slug guards.
+- **teammates**: widen test arg type and sort relative imports.
+- **branding**: restore LobeChatProps npm export name (over-broad rename).
+- **teammates**: accessible scrolling for member tables + keyboard-operable workspace switcher.
+- **collab**: overlapping snapshot replay, fail-closed gateway URL, strict presence payloads, no workspace-as-task targets.
+- **delegation**: bind delegated runs to grant.agentId with epoch fencing, durable approval expiry, atomic revoke.
+- **teammates**: gate member UI on authorization ceilings.
+- **collaboration**: anchor cursors correctly and keep private tasks off the wire.
+- **collaboration**: gate top-bar presence on the feature flag.
+- **collaboration**: harden room connection lifecycle.
+- **auth**: let global RBAC grants pass the workspace membership gate.
+- **database**: project grant reads a private workspace project.
+- **membership**: gate task reassignment and private roster reads.
+- **invite**: harden invitation lifecycle edges.
+- **teammates**: close workspaceAgent roster visibility/aggregation gaps.
+- **teammates**: honor suspension + workspace binding in authz predicates.
+- **teammates**: declare route skeleton meta on invite landing.
+- **teammates**: drop antd-style active prop from base-ui SkeletonText.
+- **teammates**: whitelist /invite in proxy middleware matcher.
+- **collab-ui**: refresh authz data on permanent authorize failure (N2).
+- **invite**: no-op project-member role change skips audit/event (N1).
+- **collab-ui**: stop infinite authorize retry on permanent failures; project rooms require workspace context; send expectedAuthzVersion.
+- **collab**: member.left kicks sockets, kick emits presence-gone, claimed outbox drain, required approval base echo.
+- **invite**: no-op project-member removal skips audit; removal preview reads suspended members.
+- **database**: claim outbox rows with visibility timeout before publishing.
+- **database**: revoke project memberships on workspace-member removal.
+- **auth**: emit undefined workspaceRole in personal mode for WorkspaceRowCtx compat.
+- **member**: detach task slots in one update + one domain event per task.
+- **delegation**: coerce nullable task workspaceId for outbox event params.
+- **teammates**: make task\_inputs workspace anchor nullable and fix ProjectMemberModel arity.
+- **teammates**: emit workspaceRole as undefined and use admin membership in linearSync tests.
+- **teammates**: align frontend with base-ui APIs and server contracts.
+- **teammates**: align collab/delegation code with drizzle schema + test keys.
+- **teammates**: return wrapInternal in catches, scope new namespaces, align audit taxonomy.
+- **teammates**: narrow workspace ctx types and mock membership seam in tests.
+- **database**: export standalone insertOutboxEvent for tx-executor call sites.
+- **collaboration**: route outbox drain through EventOutboxModel lifecycle, ISO ticket expiry.
+- **teammates**: align invitation lifecycle with audit taxonomy and room-scoped outbox.
+- **tasks**: capture model contract before dispatch.
+- **linear**: preserve database retry CAS precision.
+- **linear**: persist signed removal tombstones.
+- **tasks**: resume integration recovery states.
+- **misc**: expose project orchestration settings.
+- **misc**: group Linear tasks by business workflow.
+- **misc**: harden Linear planning and dispatch recovery.
+- **linear**: pass label baseline to merge.
+- **linear**: bound task issue link queries.
+- **linear**: trust signed issue removals.
+- **linear**: enforce outbound public scope.
+- **linear**: preserve archived issue tombstones.
+- **linear**: validate mapped organization members.
+- **linear**: refresh workspace sync status.
+- **linear**: lock complete planning read set.
+- **tasks**: persist run ownership before dispatch.
+- **linear**: guard replanning proposal application.
+- **tasks**: stabilize automated run identities.
+- **tasks**: fence dispatch lifecycle transitions.
+- **linear**: apply persisted planning proposals.
+- **linear**: register workspace settings route.
+- **linear**: categorize API key scope.
+- **linear**: satisfy CI typecheck.
+
+#### ✨ Features
+
+- **auth**: Clerk-backed session layer + portal sign-in redirect.
+- **auth**: port accounts portal onto apps/auth worker.
+- **connectors**: authorize GitHub MCP with existing GitHub App.
+- **connectors**: add direct Linear OAuth entry.
+- **collaboration**: render human cursors as the SF pointer arrowhead.
+- **reviews**: add layout-matching skeleton for review detail.
+- **reviews**: align overview and diff with Linear layout.
+- **collaboration**: show human issue cursors with personal visibility control.
+- **settings**: replace builtin tools with MCP preset catalog on Connectors page.
+- **misc**: add Linear team import wizard.
+- **parity**: issue-row and surface alignment base.
+- **tasks**: one canonical Linear-shaped status mark per issue row.
+- **auth**: adopt ReUI login and onboarding layouts.
+- **project**: Linear-shaped overview + projects table — title/properties/resources rows, milestone goals, issue counts.
+- **project**: status pill + member avatars in project header.
+- **project**: Linear-style properties rail on project overview.
+- **project**: Linear-shaped project surface — tabs header + overview body.
+- **project**: land /project/:id on the issue collection.
+- **task-run**: pass explicit intent from UI/CLI/tool callers (SB08).
+- **task-runner**: SA05 — contract identity chain, current-delivery gates + CAID admission at the shared claim boundary (F07/F12).
+- **task-dispatch**: CAID admission rollout gate (R10).
+- **task-delivery-review**: per-stage poll-failure budgets + merge-accepted reconcile (R07).
+- **tool-surface**: mount external connector/MCP tools + strict required-tool admission (F04/F05).
+- **goal-experience**: P17 — surface per-node integration state and parallelism control.
+- **task-integration**: P15 — serialize same repo/ref integrations and re-baseline stale merges.
+- **task-workspace**: P14 — preflight device repo and recover interrupted provisioning.
+- **goal**: P13 — re-verify depends\_on readiness under the dispatch claim lock.
+- **task-runner**: P11 — persist versioned TaskExecutionContract on run rows.
+- **tool-surface**: P09 — explicit per-tool mount outcomes for ACP runs.
+- **task-dispatch**: P16 — goal-stop dispatch fences and bounded verification polls.
+- **goal-manager**: P12 — CAID incremental plan patches with revision CAS.
+- **branding**: P03 — Orvilo self-brand surface (ACP clientInfo, release feed, allowlist).
+- **notification**: feedCard by-id read endpoint for deep links and decide reconcile.
+- **pages**: apply WorkSurface collection skeleton to my issues, teams, projects, views.
+- **work-surface**: shared page-frame skeletons, members directory table, IssueContent extraction.
+- **nav**: fixed Linear IA hook — inbox/my-issues/reviews/agent rows.
+- **sidebar**: Linear sidebar IA + locales + frozen v4 packet docs.
+- **surfaces**: Linear-style work surfaces — Inbox, My issues, Reviews, Views, Teams, Members.
+- **work-surface**: shared page-frame skeletons, members directory table, IssueContent extraction.
+- **nav**: fixed Linear IA hook — inbox/my-issues/reviews/agent rows.
+- **sidebar**: Linear sidebar IA + locales + frozen v4 packet docs.
+- **surfaces**: Linear-style work surfaces — Inbox, My issues, Reviews, Views, Teams, Members.
+- **workspace**: client activation chain — URL sync, workspace store, X-Workspace-Id.
+- **sidebar**: Linear sidebar IA + locales + frozen v4 packet docs.
+- **surfaces**: Linear-style work surfaces — Inbox, My issues, Reviews, Views, Teams, Members.
+- **workspace**: client activation chain — URL sync, workspace store, X-Workspace-Id.
+- **db,server**: work-attention data contract — scoped models, routers, and services.
+- **acp**: P70d — delete the retired in-process agent engine.
+- **agent**: ACP-only execution binding + shared-type detach (P70a + P70b core).
+- **acp**: retire builtin orvilo-browser tool chain (P60).
+- **tasks**: enforce PR-first delivery review lifecycle.
+- **ops**: stamp execution-engine provenance on agent\_operations.
+- **workspace**: real workspace context in OSS business layer.
+- **client-parity**: unify web/desktop control plane and execution contract.
+- **misc**: consent-based ownership transfer + member roster workload.
+- **teammates**: self-serve workspace leave entry.
+- **acp**: remote-run admission ledger and cancellation fencing.
+- **linear**: workspace-scope sync, teams and repository associations.
+- **teammates**: flag invites whose email failed to send.
+- **convergence**: task-first convergence — retire community social backend, workbench, guest execution, memory profiling.
+- **teammates**: add /invite/:token landing page for invitation accept.
+- **teammates**: workspaceAgent roster router and final lambda wiring.
+- **misc**: teammates workspace collaboration frontend.
+- **teammates**: invitation, membership and project-member APIs.
+- **misc**: add agent delegation + realtime collaboration backend.
+- **database**: add teammates collaboration data layer.
+- **linear**: sync external comments and relations.
+- **linear**: add independent sync rollout controls.
+- **linear**: harden OAuth and integration sync boundary.
+- **projects**: add bounded orchestration policy settings.
+- **linear**: scope incremental replanning ownership.
+- **linear**: add sync visibility wizard.
+- **tasks**: enforce durable dispatch ownership.
+- **tasks**: add orchestration domain contract.
+- **linear**: complete workspace sync workflow.
+- **linear**: apply versioned planning proposals.
+- **linear**: add durable incremental replanning.
+- **linear**: enqueue local task changes.
+- **linear**: process issue sync inbox.
+- **linear**: add workspace sync foundation.
+
+#### ♻️ Code Refactoring
+
+- **settings**: delete the Audit logs settings surface.
+- **agent-execution**: P21 — physically delete legacy agent-runtime tails, migrate consumers to agentExecution.
+- **hetero-agents**: P07 — split live ACP registry from historical trace decoders.
+- **quota**: P06 — retire managed quota accounts and quota-driven routing.
+- **provider**: P05 — retire provider binding, server-default relay and orphan model entry points.
+- **sidebar**: retire per-item sidebar-visibility subsystem.
+- **inbox**: move shared relative-time helper next to its surviving consumer.
+- **favorites**: move favorite button+toggle to surfaces layer.
+- **inbox**: move shared relative-time helper next to its surviving consumer.
+- **favorites**: move favorite button+toggle to surfaces layer.
+- **task**: retire the fork's task steering layer.
+- **app**: retire provider settings UI and client-side inference runtime (P30).
+- **invite**: follow OrviloDatabase rename after canary merge.
+- **tasks**: retire the /tasks empty-state hero, empty list renders the board.
+- **linear**: run sync workflows through Hatchet.
+
+#### 💄 Styles
+
+- **teammates**: order workspaceAgent imports per repo convention.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **deploy**: stop flagging CLERK\_SECRET\_KEY as deprecated ([a2b522b](https://github.com/alexj11324/orvilo1/commit/a2b522b))
+- **auth**: align Google return-target fallback test with product-home default ([a066a22](https://github.com/alexj11324/orvilo1/commit/a066a22))
+- **auth**: strip Better Auth HMAC signature from legacy session cookie ([afef55a](https://github.com/alexj11324/orvilo1/commit/afef55a))
+- **memory**: keep ProgressIcon segments visible in info layout ([d53500f](https://github.com/alexj11324/orvilo1/commit/d53500f))
+- **lint**: migrate banned antd components to @lobehub/ui ([0cafd97](https://github.com/alexj11324/orvilo1/commit/0cafd97))
+- **board**: restore column surface frame on task board ([6cc7c0e](https://github.com/alexj11324/orvilo1/commit/6cc7c0e))
+- **auth**: serve portal assets same-origin, fold legacy auth pages into /login ([5e825eb](https://github.com/alexj11324/orvilo1/commit/5e825eb))
+- **cloudflare**: target owned account ([9d0b1a6](https://github.com/alexj11324/orvilo1/commit/9d0b1a6))
+- **ci**: run worker deploy jobs in the production environment ([76344e4](https://github.com/alexj11324/orvilo1/commit/76344e4))
+- **auth**: answer /v1/contract at the worker, bare portal chrome ([40a0988](https://github.com/alexj11324/orvilo1/commit/40a0988))
+- **auth**: pass CLERK\_PROXY\_URL through the worker document injection ([3426993](https://github.com/alexj11324/orvilo1/commit/3426993))
+- **auth**: wire clerk proxyUrl knob + hook-test the sign-in flow ([14b8b9c](https://github.com/alexj11324/orvilo1/commit/14b8b9c))
+- **onboarding**: seed one blank invite row on the invite step ([503d2b4](https://github.com/alexj11324/orvilo1/commit/503d2b4))
+- **dev**: serve debug-proxy page via next.config rewrite on self-hosted deploys ([f9150eb](https://github.com/alexj11324/orvilo1/commit/f9150eb))
+- **boot**: pin sans font stack on loading brand ([8e687c0](https://github.com/alexj11324/orvilo1/commit/8e687c0))
+- **onboarding**: auto-fill workspace URL from workspace name ([f918b04](https://github.com/alexj11324/orvilo1/commit/f918b04))
+- **linear**: copy synced issues into selected import project, closes [#296](https://github.com/alexj11324/orvilo1/issues/296) ([9566846](https://github.com/alexj11324/orvilo1/commit/9566846))
+- **linear**: dispatch every import page and verify Electron flow, closes [#292](https://github.com/alexj11324/orvilo1/issues/292) ([5718651](https://github.com/alexj11324/orvilo1/commit/5718651))
+- **linear**: split team catalog query below complexity limit, closes [#291](https://github.com/alexj11324/orvilo1/issues/291) ([6f70e8f](https://github.com/alexj11324/orvilo1/commit/6f70e8f))
+- **linear**: share concurrent catalog token refresh, closes [#289](https://github.com/alexj11324/orvilo1/issues/289) ([7657d44](https://github.com/alexj11324/orvilo1/commit/7657d44))
+- **linear**: use organization-scoped GraphQL fields in sync catalog, closes [#281](https://github.com/alexj11324/orvilo1/issues/281) ([f3b055d](https://github.com/alexj11324/orvilo1/commit/f3b055d))
+- **imports**: style the Linear importer and retire the old entry, closes [#282](https://github.com/alexj11324/orvilo1/issues/282) ([fa9ea13](https://github.com/alexj11324/orvilo1/commit/fa9ea13))
+- **deploy**: sync repo compose files to the host before pull/up, closes [#279](https://github.com/alexj11324/orvilo1/issues/279) ([5951f37](https://github.com/alexj11324/orvilo1/commit/5951f37))
+- **collaboration**: deploy the gateway service; fail closed on non-ws client URL ([25d81b5](https://github.com/alexj11324/orvilo1/commit/25d81b5))
+- **collaboration**: conceal via the public gateway URL and replay presence on refresh ([f1f6245](https://github.com/alexj11324/orvilo1/commit/f1f6245))
+- **reviews**: keep both detail views mounted so drafts survive; author comment-only scope; honest branch label ([9fa9160](https://github.com/alexj11324/orvilo1/commit/9fa9160))
+- **collaboration**: narrow publish union before reading kick scope in gateway handshake error ([bbc715f](https://github.com/alexj11324/orvilo1/commit/bbc715f))
+- **linear-import**: close review findings — cascade project FK, lease renewal, failed-job requeue, link-claim dedup, install refresh ([977f91b](https://github.com/alexj11324/orvilo1/commit/977f91b))
+- **reviews**: narrow the detail response in the write-gate capability test ([0b5fe96](https://github.com/alexj11324/orvilo1/commit/0b5fe96))
+- **reviews**: keep OAuth watch past the poll timeout; only revoke grants on grant errors ([3de6a28](https://github.com/alexj11324/orvilo1/commit/3de6a28))
+- **linear**: stop querying unsupported oauthClientId and surface GraphQL errors ([cd9e106](https://github.com/alexj11324/orvilo1/commit/cd9e106))
+- **reviews**: group merge-ready PRs by GitHub state ([f99aa33](https://github.com/alexj11324/orvilo1/commit/f99aa33))
+- **misc**: classify Linear import API key access ([93ae8c8](https://github.com/alexj11324/orvilo1/commit/93ae8c8))
+- **misc**: open Linear import OAuth in desktop browser ([09144f2](https://github.com/alexj11324/orvilo1/commit/09144f2))
+- **reviews**: open GitHub authorization before async work ([89f3816](https://github.com/alexj11324/orvilo1/commit/89f3816))
+- **misc**: satisfy Linear importer typecheck ([ab292b7](https://github.com/alexj11324/orvilo1/commit/ab292b7))
+- **settings**: hide Subscription nav group when business features are off, closes [#269](https://github.com/alexj11324/orvilo1/issues/269) ([5076f16](https://github.com/alexj11324/orvilo1/commit/5076f16))
+- **projects**: stop rejecting committed milestone writes on refresh errors and harden CSV export, closes [#267](https://github.com/alexj11324/orvilo1/issues/267) ([b632e5d](https://github.com/alexj11324/orvilo1/commit/b632e5d))
+- **api-keys**: categorize the githubOAuth namespace as blocked for restricted keys ([ecaf920](https://github.com/alexj11324/orvilo1/commit/ecaf920))
+- **tasks**: match Linear issue-detail rail and body type scale, closes [#244](https://github.com/alexj11324/orvilo1/issues/244) ([3771232](https://github.com/alexj11324/orvilo1/commit/3771232))
+- **e2e**: align task-prerequisites locators with renamed related-issue copy, closes [#260](https://github.com/alexj11324/orvilo1/issues/260) ([0e6ccc8](https://github.com/alexj11324/orvilo1/commit/0e6ccc8))
+- **teams**: group the Team Issues list by workflow state like the board, closes [#240](https://github.com/alexj11324/orvilo1/issues/240), closes [#258](https://github.com/alexj11324/orvilo1/issues/258) ([9084a52](https://github.com/alexj11324/orvilo1/commit/9084a52))
+- **tasks**: one Status row on the issue rail — the workflow state, like Linear, closes [#241](https://github.com/alexj11324/orvilo1/issues/241) ([fcfaca6](https://github.com/alexj11324/orvilo1/commit/fcfaca6))
+- **issue**: keep Related links nonblocking and symmetric, closes [#229](https://github.com/alexj11324/orvilo1/issues/229) ([bd2eace](https://github.com/alexj11324/orvilo1/commit/bd2eace))
+- **issue**: align detail geometry and workflow status marks, closes [#227](https://github.com/alexj11324/orvilo1/issues/227) ([566c490](https://github.com/alexj11324/orvilo1/commit/566c490))
+- **teams**: align Recent issues icons and right rail, closes [#226](https://github.com/alexj11324/orvilo1/issues/226) ([09b9ecd](https://github.com/alexj11324/orvilo1/commit/09b9ecd))
+- **desktop**: run pre-app-init before main-app captures userData, closes [#236](https://github.com/alexj11324/orvilo1/issues/236) ([049c900](https://github.com/alexj11324/orvilo1/commit/049c900))
+- **chat**: settle at bottom promptly after a reply; poll for it in AGENT-SCROLL-001, closes [#242](https://github.com/alexj11324/orvilo1/issues/242) ([d8e6344](https://github.com/alexj11324/orvilo1/commit/d8e6344))
+- **desktop**: reject non-builtin externals in pre-app-init guard ([fb211b9](https://github.com/alexj11324/orvilo1/commit/fb211b9))
+- **desktop**: run pre-app-init before main-app captures userData ([99ccf19](https://github.com/alexj11324/orvilo1/commit/99ccf19))
+- **scripts**: correct container name in setup-test-postgres-db.sh ([aa852bd](https://github.com/alexj11324/orvilo1/commit/aa852bd))
+- **misc**: narrow agencyConfig before deleting heterogeneousProvider ([3793a91](https://github.com/alexj11324/orvilo1/commit/3793a91))
+- **misc**: bind the inbox builtin agent to the builtin orvilo harness at creation ([404ccce](https://github.com/alexj11324/orvilo1/commit/404ccce))
+- **locales**: drop orphaned orvilo-message builtin keys ([7923002](https://github.com/alexj11324/orvilo1/commit/7923002))
+- **desktop**: regenerate pnpm-lock after chat-adapter-imessage dep removal ([6c42de2](https://github.com/alexj11324/orvilo1/commit/6c42de2))
+- **topic**: normalize agentId null→undefined for createTopic mutation input ([5b3dc13](https://github.com/alexj11324/orvilo1/commit/5b3dc13))
+- **slimming**: repair ORV-106 typecheck collateral — replace retired image/video model types in tests, drop parameters card case ([5cc4d28](https://github.com/alexj11324/orvilo1/commit/5cc4d28))
+- **slimming**: repair ORV-105 typecheck collateral — delete bot-metadata icon readers, platformIcon lib, dead message runtime test ref ([cab766f](https://github.com/alexj11324/orvilo1/commit/cab766f))
+- **slimming**: restore skills.categories.\* locale keys still used by useSkillCategory (ORV-104) ([e4da9bf](https://github.com/alexj11324/orvilo1/commit/e4da9bf))
+- **slimming**: repair ORV-104 typecheck collateral — restore live mcp locale keys, drop dead marketPlugin lookup, fix tests ([bb7bbe4](https://github.com/alexj11324/orvilo1/commit/bb7bbe4))
+- **db**: renumber remediation migrations contiguously 0177–0185 + restore canary 0176 snapshot ([ddf8b22](https://github.com/alexj11324/orvilo1/commit/ddf8b22))
+- **types**: CreateTopicParams.agentId drops null — wire schema is z.string().optional() ([b908a8d](https://github.com/alexj11324/orvilo1/commit/b908a8d))
+- **topic**: create topics via agentId — sessionId=\<agt\_\*> violates topics\_session\_id FK for agent-first agents ([ff57c4a](https://github.com/alexj11324/orvilo1/commit/ff57c4a))
+- **reviews**: intent-derived operationIds, unknown-outcome UX, generation-bound pager ([dbbfb3f](https://github.com/alexj11324/orvilo1/commit/dbbfb3f))
+- **reviews**: claim-based write dedup with remoteId-pinned reconcile ([255f359](https://github.com/alexj11324/orvilo1/commit/255f359))
+- **connect-agent**: persist executionTarget=local + boundDeviceId on local hetero agent creation ([f52a691](https://github.com/alexj11324/orvilo1/commit/f52a691))
+- **projects**: scope Issues count to caller-readable tasks ([99c196b](https://github.com/alexj11324/orvilo1/commit/99c196b))
+- **review**: read diff side from thread fields, not comment nodes ([d828d99](https://github.com/alexj11324/orvilo1/commit/d828d99))
+- **reviews**: persist review receipts with atomic replay re-authorization ([b20ab93](https://github.com/alexj11324/orvilo1/commit/b20ab93))
+- **locales**: flatten project list/overview/properties keys to match source ([1a6c3d4](https://github.com/alexj11324/orvilo1/commit/1a6c3d4))
+- **views**: literal-key typing for visibility label resolver ([3a198cd](https://github.com/alexj11324/orvilo1/commit/3a198cd))
+- **server-test**: supply required observedHeadSha in write-gate inputs ([3e28901](https://github.com/alexj11324/orvilo1/commit/3e28901))
+- **server-test**: supply required observedHeadSha in write-gate inputs ([a76f2be](https://github.com/alexj11324/orvilo1/commit/a76f2be))
+- **server-test**: supply required observedHeadSha in write-gate inputs ([78492e4](https://github.com/alexj11324/orvilo1/commit/78492e4))
+- **e2e**: resend second message when the topic-switch remount swallows Enter ([0d9f9cf](https://github.com/alexj11324/orvilo1/commit/0d9f9cf))
+- **board**: field-sorted views must not write manual position ([cf458c9](https://github.com/alexj11324/orvilo1/commit/cf458c9))
+- **server**: predicate-first workQuery filter schema + PR review write gate ([1bbb608](https://github.com/alexj11324/orvilo1/commit/1bbb608))
+- **views**: private saved views no longer labeled Workspace; project tabs match by section ([efa3ba2](https://github.com/alexj11324/orvilo1/commit/efa3ba2))
+- **project**: typecheck — Flexbox wrap prop + preserve taskCount on cached list updates ([73def8a](https://github.com/alexj11324/orvilo1/commit/73def8a))
+- **git,cli**: fail closed on leftover .reclaim tickets — never check-then-unlink residue (SC02) ([f01b745](https://github.com/alexj11324/orvilo1/commit/f01b745))
+- **aiAgent**: require claim-pinned window/scope on token-path approvals (SC03) ([8e2f419](https://github.com/alexj11324/orvilo1/commit/8e2f419))
+- **misc**: serialize dead-lock reclaim through a single-writer ticket (SC02) ([eefa077](https://github.com/alexj11324/orvilo1/commit/eefa077))
+- **taskRunner**: park retryable prepare-stage failures so same-key retry re-adopts the bound approval (SC05) ([b49c972](https://github.com/alexj11324/orvilo1/commit/b49c972))
+- **device-control**: satisfy addGitWorktreeClaimed required claimToken contract (SC01) ([a85968c](https://github.com/alexj11324/orvilo1/commit/a85968c))
+- **project**: Avatar title accepts string|undefined — coerce null ([cd6a94a](https://github.com/alexj11324/orvilo1/commit/cd6a94a))
+- **desktop**: load entry script with an absolute path ([ebc4be6](https://github.com/alexj11324/orvilo1/commit/ebc4be6))
+- **taskWorkspace**: negotiate claim capability before add — never delete without credential (SC01) ([6064671](https://github.com/alexj11324/orvilo1/commit/6064671))
+- **git**: make the repo-file mutex owner-verified and liveness-based (SC02) ([3078b59](https://github.com/alexj11324/orvilo1/commit/3078b59))
+- **misc**: bind approval decisions and consumes to their claim/dispatch (SC03+SC05) ([3bf901f](https://github.com/alexj11324/orvilo1/commit/3bf901f))
+- **cli**: childResultInbox repairTail — byte-boundary tail scan + cross-process file lock ([2fe34fe](https://github.com/alexj11324/orvilo1/commit/2fe34fe))
+- **conversation**: resolve desktop agent coordinate from chat store when route has no aid ([eb8110d](https://github.com/alexj11324/orvilo1/commit/eb8110d))
+- **judgment**: keep unconfirmed launches in cancel\_requested; reconcile failed launches before throwing ([a4299f6](https://github.com/alexj11324/orvilo1/commit/a4299f6))
+- **database**: null-safe fence\_seq definition check in 0182 ([d0ae158](https://github.com/alexj11324/orvilo1/commit/d0ae158))
+- **titlebar**: resolve common-namespace titleKeys in tab/document titles ([9a2ca20](https://github.com/alexj11324/orvilo1/commit/9a2ca20))
+- **aiGeneration**: return the never-typed failAndTrace ([9ac1590](https://github.com/alexj11324/orvilo1/commit/9ac1590))
+- **ai-generation**: trace judgment abort/timeout legs (53eb73fa onto merged tree) ([dd7be7b](https://github.com/alexj11324/orvilo1/commit/dd7be7b))
+- **route-meta**: resolve titleKeys across electron + common namespaces ([6269fd2](https://github.com/alexj11324/orvilo1/commit/6269fd2))
+- **router**: register project conversation route — composer send no longer drops the message ([591148f](https://github.com/alexj11324/orvilo1/commit/591148f))
+- **db**: never let a nullable first column null out a joined object ([bd9a39f](https://github.com/alexj11324/orvilo1/commit/bd9a39f))
+- **db**: never let a nullable first column null out a joined object ([8733150](https://github.com/alexj11324/orvilo1/commit/8733150))
+- **db**: never let a nullable first column null out a joined object ([86ea85e](https://github.com/alexj11324/orvilo1/commit/86ea85e))
+- **db**: never let a nullable first column null out a joined object ([ae72eb4](https://github.com/alexj11324/orvilo1/commit/ae72eb4))
+- **aiGeneration**: register durable judgment launches before dispatch (SB10) ([f79b2e8](https://github.com/alexj11324/orvilo1/commit/f79b2e8))
+- **taskRunner**: explicit run intent + authorized replan via approval grants (SB08) ([d69221c](https://github.com/alexj11324/orvilo1/commit/d69221c))
+- **device-control**: verify worktree claim tokens against host registry (SB01) ([f375998](https://github.com/alexj11324/orvilo1/commit/f375998))
+- **git**: SB05 — cross-process push-fence mutex + persisted remote-write intent ([4ab5d9a](https://github.com/alexj11324/orvilo1/commit/4ab5d9a))
+- **reviews**: drop duplicated probe tests merged alongside wave contract ([75da07e](https://github.com/alexj11324/orvilo1/commit/75da07e))
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state ([e375623](https://github.com/alexj11324/orvilo1/commit/e375623))
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state ([fab55df](https://github.com/alexj11324/orvilo1/commit/fab55df))
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state ([818d627](https://github.com/alexj11324/orvilo1/commit/818d627))
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state ([5a6f3f0](https://github.com/alexj11324/orvilo1/commit/5a6f3f0))
+- **attention**: favorites resolve task titles by route identifier; reviews degrade probe failure to connect-state ([c90f46d](https://github.com/alexj11324/orvilo1/commit/c90f46d))
+- **ci**: SB12 residual — global diagnostics parsed, unknown categories block, tree-sha bound to HEAD^{tree} ([33ccd47](https://github.com/alexj11324/orvilo1/commit/33ccd47))
+- **misc**: receipt workspace\_id FK + renew argsHash rebind (E2E follow-up) ([e48df97](https://github.com/alexj11324/orvilo1/commit/e48df97))
+- **ci**: typecheckDiff — unindented runner noise no longer extends last diagnostic (phantom hard-new) ([66389af](https://github.com/alexj11324/orvilo1/commit/66389af))
+- **conversation**: settle at bottom when a pinned stream ends naturally ([9e357d4](https://github.com/alexj11324/orvilo1/commit/9e357d4))
+- **conversation**: settle at bottom when a pinned stream ends naturally ([032c770](https://github.com/alexj11324/orvilo1/commit/032c770))
+- **conversation**: settle at bottom when a pinned stream ends naturally ([633330a](https://github.com/alexj11324/orvilo1/commit/633330a))
+- **conversation**: settle at bottom when a pinned stream ends naturally ([d5aa09c](https://github.com/alexj11324/orvilo1/commit/d5aa09c))
+- **chat**: narrow session\_complete union before reading status ([8b7de9d](https://github.com/alexj11324/orvilo1/commit/8b7de9d))
+- **chat**: narrow session\_complete union before reading status ([7935f30](https://github.com/alexj11324/orvilo1/commit/7935f30))
+- **chat**: narrow session\_complete union before reading status ([bd8ccfe](https://github.com/alexj11324/orvilo1/commit/bd8ccfe))
+- **chat**: narrow session\_complete union before reading status ([03db7ef](https://github.com/alexj11324/orvilo1/commit/03db7ef))
+- **chat**: reuse live local op on gateway reconnect ([87c4d33](https://github.com/alexj11324/orvilo1/commit/87c4d33))
+- **chat**: reuse live local op on gateway reconnect ([a61a7a3](https://github.com/alexj11324/orvilo1/commit/a61a7a3))
+- **chat**: reuse live local op on gateway reconnect ([aa1b3f9](https://github.com/alexj11324/orvilo1/commit/aa1b3f9))
+- **chat**: reuse live local op on gateway reconnect ([18a08c4](https://github.com/alexj11324/orvilo1/commit/18a08c4))
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([6375a21](https://github.com/alexj11324/orvilo1/commit/6375a21))
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([b53e04c](https://github.com/alexj11324/orvilo1/commit/b53e04c))
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([adccfd4](https://github.com/alexj11324/orvilo1/commit/adccfd4))
+- **agentRun**: never drop agent\_runtime\_end at MAX\_INFLIGHT — strands client op running + queue ([6b4c566](https://github.com/alexj11324/orvilo1/commit/6b4c566))
+- **deps**: pin @hugeicons/core-free-icons to 4.3.3 — 4.3.4 ships broken esm index, closes [#159](https://github.com/alexj11324/orvilo1/issues/159) ([a54f781](https://github.com/alexj11324/orvilo1/commit/a54f781))
+- **chat**: arm send detection on list mount, not just context switches ([e388e5d](https://github.com/alexj11324/orvilo1/commit/e388e5d))
+- **chat**: arm send detection on list mount, not just context switches ([e1a8b36](https://github.com/alexj11324/orvilo1/commit/e1a8b36))
+- **chat**: arm send detection on list mount, not just context switches ([f5e8aeb](https://github.com/alexj11324/orvilo1/commit/f5e8aeb))
+- **chat**: arm send detection on list mount, not just context switches ([fd68bfc](https://github.com/alexj11324/orvilo1/commit/fd68bfc))
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded ([a4e4804](https://github.com/alexj11324/orvilo1/commit/a4e4804))
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded ([4fdef51](https://github.com/alexj11324/orvilo1/commit/4fdef51))
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded ([ab4fcec](https://github.com/alexj11324/orvilo1/commit/ab4fcec))
+- **chat**: pin the just-sent row when topic adoption lands it pre-seeded ([bb3eed5](https://github.com/alexj11324/orvilo1/commit/bb3eed5))
+- **e2e**: settle the first turn before creating the second topic ([9af10af](https://github.com/alexj11324/orvilo1/commit/9af10af))
+- **e2e**: settle the first turn before creating the second topic ([8a7de3f](https://github.com/alexj11324/orvilo1/commit/8a7de3f))
+- **e2e**: settle the first turn before creating the second topic ([45a1f64](https://github.com/alexj11324/orvilo1/commit/45a1f64))
+- **e2e**: settle the first turn before creating the second topic ([4864840](https://github.com/alexj11324/orvilo1/commit/4864840))
+- **task-runner**: dep-blocked claims release to backlog; manual completion is a valid delivery ([b7410ac](https://github.com/alexj11324/orvilo1/commit/b7410ac))
+- **scroll**: resolve tail-appended ids whose role map lags a commit ([7075f94](https://github.com/alexj11324/orvilo1/commit/7075f94))
+- **scroll**: resolve tail-appended ids whose role map lags a commit ([f9dd807](https://github.com/alexj11324/orvilo1/commit/f9dd807))
+- **scroll**: resolve tail-appended ids whose role map lags a commit ([6511a75](https://github.com/alexj11324/orvilo1/commit/6511a75))
+- **scroll**: resolve tail-appended ids whose role map lags a commit ([ef0301b](https://github.com/alexj11324/orvilo1/commit/ef0301b))
+- **misc**: approval scope CAS, window rotation + grant epoch, durable child-result ACK ([a199bf6](https://github.com/alexj11324/orvilo1/commit/a199bf6))
+- **database**: tool-approval decision window CAS + delivery receipt state reader ([b6106d2](https://github.com/alexj11324/orvilo1/commit/b6106d2))
+- **dispatch**: persist origin + verified settlement grants + final admission recheck (SA05-B) ([aeb48fe](https://github.com/alexj11324/orvilo1/commit/aeb48fe))
+- **taskRunner**: run intents + immutable source contracts + fail-closed dependency reads (SA05-A) ([3971a48](https://github.com/alexj11324/orvilo1/commit/3971a48))
+- **server**: tri-state merge outcomes keep the write-ahead intent on lost responses (SA03-A) ([d9b62b1](https://github.com/alexj11324/orvilo1/commit/d9b62b1))
+- **workspace**: bind worktree claims to canonical physical identity (SA01-A) ([fd01e85](https://github.com/alexj11324/orvilo1/commit/fd01e85))
+- **scroll**: keep spacer armed while the reply outgrows the viewport ([8377690](https://github.com/alexj11324/orvilo1/commit/8377690))
+- **scroll**: keep spacer armed while the reply outgrows the viewport ([cefd905](https://github.com/alexj11324/orvilo1/commit/cefd905))
+- **scroll**: keep spacer armed while the reply outgrows the viewport ([bd675e5](https://github.com/alexj11324/orvilo1/commit/bd675e5))
+- **scroll**: keep spacer armed while the reply outgrows the viewport ([fc5eed9](https://github.com/alexj11324/orvilo1/commit/fc5eed9))
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs ([acc314b](https://github.com/alexj11324/orvilo1/commit/acc314b))
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs ([c5677ed](https://github.com/alexj11324/orvilo1/commit/c5677ed))
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs ([0f17923](https://github.com/alexj11324/orvilo1/commit/0f17923))
+- **e2e**: gate new-topic click on in-flight send; emit scroll hook debug logs ([d5f94b6](https://github.com/alexj11324/orvilo1/commit/d5f94b6))
+- **ci**: SB12 — mandatory head-log envelope, untruncated multi-line diagnostic matching, checkout-bound live runs ([3ad30f5](https://github.com/alexj11324/orvilo1/commit/3ad30f5))
+- **ai-generation**: SB10+SB11 — physical cancel authority, total-budget dispatch, intentKey reconcile, honest judgment traces ([65ac55f](https://github.com/alexj11324/orvilo1/commit/65ac55f))
+- **ci**: one psql -c per ALTER SYSTEM statement ([81f661d](https://github.com/alexj11324/orvilo1/commit/81f661d))
+- **ci**: one psql -c per ALTER SYSTEM statement ([d83a553](https://github.com/alexj11324/orvilo1/commit/d83a553))
+- **ci**: one psql -c per ALTER SYSTEM statement ([34d8ce9](https://github.com/alexj11324/orvilo1/commit/34d8ce9))
+- **ci**: one psql -c per ALTER SYSTEM statement ([677815a](https://github.com/alexj11324/orvilo1/commit/677815a))
+- **migrations**: strict-monotonic journal — 0179 when inverted past 0178 skipped fence\_seq on staged upgrades (X01) ([490ff12](https://github.com/alexj11324/orvilo1/commit/490ff12))
+- **chat**: pin detection tolerates split/extra-row send commits ([aed2d11](https://github.com/alexj11324/orvilo1/commit/aed2d11))
+- **chat**: pin detection tolerates split/extra-row send commits ([bfe6b3d](https://github.com/alexj11324/orvilo1/commit/bfe6b3d))
+- **chat**: pin detection tolerates split/extra-row send commits ([775cb91](https://github.com/alexj11324/orvilo1/commit/775cb91))
+- **chat**: pin detection tolerates split/extra-row send commits ([1d1556e](https://github.com/alexj11324/orvilo1/commit/1d1556e))
+- **e2e**: always re-press Enter on persist miss + pin-failure dump ([00187f8](https://github.com/alexj11324/orvilo1/commit/00187f8))
+- **e2e**: always re-press Enter on persist miss + pin-failure dump ([f5e5cf0](https://github.com/alexj11324/orvilo1/commit/f5e5cf0))
+- **e2e**: always re-press Enter on persist miss + pin-failure dump ([54778d5](https://github.com/alexj11324/orvilo1/commit/54778d5))
+- **e2e**: always re-press Enter on persist miss + pin-failure dump ([079e4ac](https://github.com/alexj11324/orvilo1/commit/079e4ac))
+- **e2e**: raise cucumber step budgets past inner poll windows ([8a8091f](https://github.com/alexj11324/orvilo1/commit/8a8091f))
+- **e2e**: raise cucumber step budgets past inner poll windows ([4f50042](https://github.com/alexj11324/orvilo1/commit/4f50042))
+- **e2e**: raise cucumber step budgets past inner poll windows ([cc27a9d](https://github.com/alexj11324/orvilo1/commit/cc27a9d))
+- **e2e**: raise cucumber step budgets past inner poll windows ([d8e4927](https://github.com/alexj11324/orvilo1/commit/d8e4927))
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching ([3cbf8e0](https://github.com/alexj11324/orvilo1/commit/3cbf8e0))
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching ([cdbd37f](https://github.com/alexj11324/orvilo1/commit/cdbd37f))
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching ([44ffebe](https://github.com/alexj11324/orvilo1/commit/44ffebe))
+- **e2e**: retry swallowed Enter; poll sidebar topics before switching ([9c71c6c](https://github.com/alexj11324/orvilo1/commit/9c71c6c))
+- **server**: SA02 follow-up — external-surface pins expectation; drop retired-provider title test ([110f3c3](https://github.com/alexj11324/orvilo1/commit/110f3c3))
+- **e2e**: make pin-delta measure null-safe so expect.poll retries ([c772c2e](https://github.com/alexj11324/orvilo1/commit/c772c2e))
+- **e2e**: make pin-delta measure null-safe so expect.poll retries ([0fafd4e](https://github.com/alexj11324/orvilo1/commit/0fafd4e))
+- **e2e**: make pin-delta measure null-safe so expect.poll retries ([d61ea0c](https://github.com/alexj11324/orvilo1/commit/d61ea0c))
+- **e2e**: make pin-delta measure null-safe so expect.poll retries ([19c3770](https://github.com/alexj11324/orvilo1/commit/19c3770))
+- **e2e**: read persisted user row from pg directly; measure pin by text ([0019648](https://github.com/alexj11324/orvilo1/commit/0019648))
+- **e2e**: read persisted user row from pg directly; measure pin by text ([f97d247](https://github.com/alexj11324/orvilo1/commit/f97d247))
+- **e2e**: read persisted user row from pg directly; measure pin by text ([346e8de](https://github.com/alexj11324/orvilo1/commit/346e8de))
+- **e2e**: read persisted user row from pg directly; measure pin by text ([e817f6a](https://github.com/alexj11324/orvilo1/commit/e817f6a))
+- **database**: coalesce jsonb null tests — pg\_search planner crash guard ([4bddcbe](https://github.com/alexj11324/orvilo1/commit/4bddcbe))
+- **e2e**: settle scroll tests on terminal op state, not running-window observation ([80c64aa](https://github.com/alexj11324/orvilo1/commit/80c64aa))
+- **e2e**: settle scroll tests on terminal op state, not running-window observation ([7fa2be8](https://github.com/alexj11324/orvilo1/commit/7fa2be8))
+- **e2e**: settle scroll tests on terminal op state, not running-window observation ([cc1f20f](https://github.com/alexj11324/orvilo1/commit/cc1f20f))
+- **e2e**: settle scroll tests on terminal op state, not running-window observation ([48796d4](https://github.com/alexj11324/orvilo1/commit/48796d4))
+- **database**: type integration lease context column as RepoRefLeaseOutcomeContext ([ef8ae31](https://github.com/alexj11324/orvilo1/commit/ef8ae31))
+- **acceptance**: SA08 — longest-first root normalization in typecheck diff (/tmp before /private/tmp) ([69bdba3](https://github.com/alexj11324/orvilo1/commit/69bdba3))
+- **quota-identity**: SA07 — revoke confirmation on unidentifiable live sample, scope trust to principal+workspace (F11) ([03b7e0f](https://github.com/alexj11324/orvilo1/commit/03b7e0f))
+- **agent-execution**: SA06 — durable status wins + hardened judgment contract (F09/F10) ([c3c1cd5](https://github.com/alexj11324/orvilo1/commit/c3c1cd5))
+- **task-integration**: SA03 — preserve unknown lease outcomes, remote fence + write-ahead merge intent (F03/F08) ([a1846d9](https://github.com/alexj11324/orvilo1/commit/a1846d9))
+- **task-workspace**: durable workspace claim + orphan recovery queue (SA01 F01/F02/F07) ([ad9333f](https://github.com/alexj11324/orvilo1/commit/ad9333f))
+- **hetero-agents**: drop stale providerBinding exports — module retired in P05 ([0750d82](https://github.com/alexj11324/orvilo1/commit/0750d82))
+- **task-integration**: fence remaining repoPath/deviceId reads, type test resolvers ([f28f270](https://github.com/alexj11324/orvilo1/commit/f28f270))
+- **task-integration**: hoist narrowed fields into fenced closures ([88c314d](https://github.com/alexj11324/orvilo1/commit/88c314d))
+- **task-integration**: durable re-drive + in-flight lease heartbeats for R02 review ([24cad7c](https://github.com/alexj11324/orvilo1/commit/24cad7c))
+- **misc**: fail closed start-intent contract — no success-no-op on idle (R05/F09) ([925d612](https://github.com/alexj11324/orvilo1/commit/925d612))
+- **task-integration**: R02 — short-lived repo/ref lease with owner fencing (F03) ([d629ec6](https://github.com/alexj11324/orvilo1/commit/d629ec6))
+- **e2e**: re-open agents context menu when target item has not resolved ([ab17923](https://github.com/alexj11324/orvilo1/commit/ab17923))
+- **permissions**: admit caller's own unfiled rows in workspace scope ([621955c](https://github.com/alexj11324/orvilo1/commit/621955c))
+- **e2e**: re-open agents context menu when target item has not resolved ([b8fb69c](https://github.com/alexj11324/orvilo1/commit/b8fb69c))
+- **permissions**: admit caller's own unfiled rows in workspace scope ([f1783d6](https://github.com/alexj11324/orvilo1/commit/f1783d6))
+- **permissions**: admit caller's own unfiled rows in workspace scope ([9ff4f8d](https://github.com/alexj11324/orvilo1/commit/9ff4f8d))
+- **permissions**: admit caller's own unfiled rows in workspace scope ([237fbc3](https://github.com/alexj11324/orvilo1/commit/237fbc3))
+- **test**: satisfy zero-arg getLatestReadings mock signature ([bc85827](https://github.com/alexj11324/orvilo1/commit/bc85827))
+- **task-runner**: immutable contract content + pinned base SHA provenance (F07) ([c21b6f2](https://github.com/alexj11324/orvilo1/commit/c21b6f2))
+- **quota**: bind quota observation to confirmed execution identity (R09/F11) ([e77bb68](https://github.com/alexj11324/orvilo1/commit/e77bb68))
+- **agent-execution**: terminal-status whitelist + durable child-result delivery ledger (F06) ([79d5f9b](https://github.com/alexj11324/orvilo1/commit/79d5f9b))
+- **agent**: builtin slug guard treats unfiled rows as in-scope ([2b76779](https://github.com/alexj11324/orvilo1/commit/2b76779))
+- **agent**: builtin slug guard treats unfiled rows as in-scope ([0caaea8](https://github.com/alexj11324/orvilo1/commit/0caaea8))
+- **agent**: builtin slug guard treats unfiled rows as in-scope ([4b4ff3b](https://github.com/alexj11324/orvilo1/commit/4b4ff3b))
+- **task-workspace**: import GitWorktreePathInspection type where used ([946e5d9](https://github.com/alexj11324/orvilo1/commit/946e5d9))
+- **task-workspace**: prove worktree ownership via device inspection, never force-remove (F01/F02) ([23ec725](https://github.com/alexj11324/orvilo1/commit/23ec725))
+- **test**: satisfy ProcessEnv required keys in extension contract fixture ([2fc8943](https://github.com/alexj11324/orvilo1/commit/2fc8943))
+- **test**: satisfy ProcessEnv required keys in extension contract fixture ([9d1a490](https://github.com/alexj11324/orvilo1/commit/9d1a490))
+- **test**: satisfy ProcessEnv required keys in extension contract fixture ([318017a](https://github.com/alexj11324/orvilo1/commit/318017a))
+- **test**: satisfy ProcessEnv required keys in extension contract fixture ([51a2b7e](https://github.com/alexj11324/orvilo1/commit/51a2b7e))
+- **task-delivery-review**: guard null topicId before integration patch ([b027ff3](https://github.com/alexj11324/orvilo1/commit/b027ff3))
+- **hetero-agents**: update gatewayEventHandler test to createLiveAdapter ([3489302](https://github.com/alexj11324/orvilo1/commit/3489302))
+- **hetero-agents**: widen historicalDecoderRegistry to Record for string-keyed lookup ([d264bea](https://github.com/alexj11324/orvilo1/commit/d264bea))
+- **task**: admit own unfiled rows in raw-SQL ownership clause ([42334b5](https://github.com/alexj11324/orvilo1/commit/42334b5))
+- **task**: admit own unfiled rows in raw-SQL ownership clause ([656b1a8](https://github.com/alexj11324/orvilo1/commit/656b1a8))
+- **task**: admit own unfiled rows in raw-SQL ownership clause ([7f92a0a](https://github.com/alexj11324/orvilo1/commit/7f92a0a))
+- **task**: admit own unfiled rows in raw-SQL ownership clause ([5c323aa](https://github.com/alexj11324/orvilo1/commit/5c323aa))
+- **agent**: expose workspaceId on builtin-agent payload type ([4594c65](https://github.com/alexj11324/orvilo1/commit/4594c65))
+- **agent**: expose workspaceId on builtin-agent payload type ([fb23930](https://github.com/alexj11324/orvilo1/commit/fb23930))
+- **agent**: expose workspaceId on builtin-agent payload type ([f033c4d](https://github.com/alexj11324/orvilo1/commit/f033c4d))
+- **agent**: expose workspaceId on builtin-agent payload type ([a9ef5a1](https://github.com/alexj11324/orvilo1/commit/a9ef5a1))
+- **store**: drop retired showSidebarHidden from persisted view-options type ([9d5f3e2](https://github.com/alexj11324/orvilo1/commit/9d5f3e2))
+- **permission**: move isWorkspaceScopedMeta to a leaf module ([9c61d8e](https://github.com/alexj11324/orvilo1/commit/9c61d8e))
+- **permission**: move isWorkspaceScopedMeta to a leaf module ([5f309ef](https://github.com/alexj11324/orvilo1/commit/5f309ef))
+- **permission**: move isWorkspaceScopedMeta to a leaf module ([3788d75](https://github.com/alexj11324/orvilo1/commit/3788d75))
+- **permission**: move isWorkspaceScopedMeta to a leaf module ([818688e](https://github.com/alexj11324/orvilo1/commit/818688e))
+- **agent**: never cache a builtin row under the wrong workspace scope ([333f532](https://github.com/alexj11324/orvilo1/commit/333f532))
+- **agent**: never cache a builtin row under the wrong workspace scope ([9875fe7](https://github.com/alexj11324/orvilo1/commit/9875fe7))
+- **agent**: never cache a builtin row under the wrong workspace scope ([a0eb8b0](https://github.com/alexj11324/orvilo1/commit/a0eb8b0))
+- **permission**: admit own unfiled rows inside workspace scope ([518ccc3](https://github.com/alexj11324/orvilo1/commit/518ccc3))
+- **permission**: admit own unfiled rows inside workspace scope ([a7f22ad](https://github.com/alexj11324/orvilo1/commit/a7f22ad))
+- **permission**: admit own unfiled rows inside workspace scope ([b5c10fb](https://github.com/alexj11324/orvilo1/commit/b5c10fb))
+- **permission**: admit own unfiled rows inside workspace scope ([3fc7bb8](https://github.com/alexj11324/orvilo1/commit/3fc7bb8))
+- **retire**: put back the three locale keys live UI still reads ([0256a04](https://github.com/alexj11324/orvilo1/commit/0256a04))
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak ([0529416](https://github.com/alexj11324/orvilo1/commit/0529416))
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak ([e5f10c5](https://github.com/alexj11324/orvilo1/commit/e5f10c5))
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak ([b0a9512](https://github.com/alexj11324/orvilo1/commit/b0a9512))
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak ([5231bbc](https://github.com/alexj11324/orvilo1/commit/5231bbc))
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak ([dbabb1f](https://github.com/alexj11324/orvilo1/commit/dbabb1f))
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak ([aa849ea](https://github.com/alexj11324/orvilo1/commit/aa849ea))
+- **deps,db**: pin hugeicons 4.3.3 + deterministic recent-order tiebreak ([7670d39](https://github.com/alexj11324/orvilo1/commit/7670d39))
+- **notification**: lookahead over-fetch past the 50-row feed cap so hasMore can be true ([a83d721](https://github.com/alexj11324/orvilo1/commit/a83d721))
+- **WorkInbox**: scope feed tail, drafts and decision ops to request identity; split detail on IssueContent ([a69e710](https://github.com/alexj11324/orvilo1/commit/a69e710))
+- **members**: ActionIcon title → aria-label inside popup triggers; extract directoryRows ([7b83160](https://github.com/alexj11324/orvilo1/commit/7b83160))
+- **reviews**: synthesize file headers on hunk-only patches; advance queue load-more cursor ([bf8f05c](https://github.com/alexj11324/orvilo1/commit/bf8f05c))
+- **reviews**: v6 repair — schema-valid queries, review sessions, write binding, paging, checks rollup, Linear work surface ([8b64020](https://github.com/alexj11324/orvilo1/commit/8b64020))
+- **work-attention**: keep predicate nodes through saved-view save; stream project picker pages ([453de10](https://github.com/alexj11324/orvilo1/commit/453de10))
+- **work-attention**: v6 data/query repairs — OR round-trip, board sortMode, scoped pickers, real activity ([aa0d514](https://github.com/alexj11324/orvilo1/commit/aa0d514))
+- **inbox**: keep relative-time helper in InboxModal until L4 deletes its consumer ([59ff0e9](https://github.com/alexj11324/orvilo1/commit/59ff0e9))
+- **work-attention**: keep predicate nodes through saved-view save; stream project picker pages ([0f148d3](https://github.com/alexj11324/orvilo1/commit/0f148d3))
+- **members**: ActionIcon title → aria-label inside popup triggers; extract directoryRows ([a52e252](https://github.com/alexj11324/orvilo1/commit/a52e252))
+- **work-attention**: v6 data/query repairs — OR round-trip, board sortMode, scoped pickers, real activity ([e047cd3](https://github.com/alexj11324/orvilo1/commit/e047cd3))
+- **inbox**: keep relative-time helper in InboxModal until L4 deletes its consumer ([cebf5bf](https://github.com/alexj11324/orvilo1/commit/cebf5bf))
+- **desktop**: drop session-auth-expired during the pre-init window ([bd46886](https://github.com/alexj11324/orvilo1/commit/bd46886))
+- **desktop**: send sessionless clients to login instead of the expired modal ([f9668d8](https://github.com/alexj11324/orvilo1/commit/f9668d8))
+- **onboarding**: wait for user-state hydration before mounting the wizard, closes [#104](https://github.com/alexj11324/orvilo1/issues/104) ([f919466](https://github.com/alexj11324/orvilo1/commit/f919466))
+- **workspaces**: map Drizzle-wrapped unique violations to CONFLICT, closes [#103](https://github.com/alexj11324/orvilo1/issues/103) ([72eb9d5](https://github.com/alexj11324/orvilo1/commit/72eb9d5))
+- **security**: close the N01–N10 audit findings and retire N11–N13, closes [#97](https://github.com/alexj11324/orvilo1/issues/97) ([9843b85](https://github.com/alexj11324/orvilo1/commit/9843b85))
+- **delegation**: fence delegated commits on live grant state, not just the epoch, closes [#84](https://github.com/alexj11324/orvilo1/issues/84) ([f8431d3](https://github.com/alexj11324/orvilo1/commit/f8431d3))
+- **tasks**: stop the board/list surface from following the task count, closes [#83](https://github.com/alexj11324/orvilo1/issues/83) ([9fced30](https://github.com/alexj11324/orvilo1/commit/9fced30))
+- **server-tests**: declare explicit execution targets in device/workspace provisioning tests ([6bb4537](https://github.com/alexj11324/orvilo1/commit/6bb4537))
+- **quota**: keep focus revalidation that lands mid-request, closes [#80](https://github.com/alexj11324/orvilo1/issues/80) ([73257df](https://github.com/alexj11324/orvilo1/commit/73257df))
+- **client-parity**: address review feedback and align tests with explicit execution targets ([2a2f43f](https://github.com/alexj11324/orvilo1/commit/2a2f43f))
+- **branding**: drop the upstream loading wordmark, route desktop deep links ([22801d6](https://github.com/alexj11324/orvilo1/commit/22801d6))
+- **client-parity**: resolve CI typecheck errors ([987c169](https://github.com/alexj11324/orvilo1/commit/987c169))
+- **connector**: repair the type errors the retirement left in the release build ([6d085c2](https://github.com/alexj11324/orvilo1/commit/6d085c2))
+- **retirement**: close the entry points the surface deletion left behind ([a9c8397](https://github.com/alexj11324/orvilo1/commit/a9c8397))
+- **teammates**: leave must not refresh the departed roster ([ae29e02](https://github.com/alexj11324/orvilo1/commit/ae29e02))
+- **release**: repair the release-cut script for the canary branch ([285f40e](https://github.com/alexj11324/orvilo1/commit/285f40e))
+- **misc**: harden delegated-run and eval-timeout seams after facade migration ([244db00](https://github.com/alexj11324/orvilo1/commit/244db00))
+- **p30**: close sub-agent contract gaps from independent review ([11bde7a](https://github.com/alexj11324/orvilo1/commit/11bde7a))
+- **p30**: satisfy ExecAgentResult contract in lifecycle gateway mocks ([f48e128](https://github.com/alexj11324/orvilo1/commit/f48e128))
+- **p30**: restore sub-agent spawn contract + supervisor routing, retire stale client-runtime tests ([ab7a6ea](https://github.com/alexj11324/orvilo1/commit/ab7a6ea))
+- **database**: association revoke ordering, quad serialization, test-DB host guard ([b0a1f54](https://github.com/alexj11324/orvilo1/commit/b0a1f54))
+- **proxy**: keep asset-dir names routable as workspace slugs, closes [#71](https://github.com/alexj11324/orvilo1/issues/71) ([66925ab](https://github.com/alexj11324/orvilo1/commit/66925ab))
+- **proxy**: exclude backend/framework/asset namespaces from workspace slug, closes [#70](https://github.com/alexj11324/orvilo1/issues/70) ([08ff59f](https://github.com/alexj11324/orvilo1/commit/08ff59f))
+- **database**: serialize same-quad association apply/revoke ([ef20318](https://github.com/alexj11324/orvilo1/commit/ef20318))
+- **proxy**: cover workspace-scoped and missing root SPA routes in matcher, closes [#66](https://github.com/alexj11324/orvilo1/issues/66) ([9efc6a5](https://github.com/alexj11324/orvilo1/commit/9efc6a5))
+- **database**: remove relation rows leaked by out-of-order decision revokes ([dd4fd07](https://github.com/alexj11324/orvilo1/commit/dd4fd07))
+- **p30**: restore run-lifecycle fields and aiModel wrapper lost in rebase ([aa0ab1a](https://github.com/alexj11324/orvilo1/commit/aa0ab1a))
+- **test**: drop orphaned describe closer in aiModel action test ([59b43e3](https://github.com/alexj11324/orvilo1/commit/59b43e3))
+- **onboarding**: persist setup and address review findings ([678a1c9](https://github.com/alexj11324/orvilo1/commit/678a1c9))
+- **infra**: S3 presign via public endpoint + GHCR tag hygiene, closes [#52](https://github.com/alexj11324/orvilo1/issues/52) ([dc5e471](https://github.com/alexj11324/orvilo1/commit/dc5e471))
+- **workspace**: reserve /invite first segment in slug guards ([d300475](https://github.com/alexj11324/orvilo1/commit/d300475))
+- **teammates**: widen test arg type and sort relative imports ([3b0cc48](https://github.com/alexj11324/orvilo1/commit/3b0cc48))
+- **branding**: restore LobeChatProps npm export name (over-broad rename) ([fd9d8bf](https://github.com/alexj11324/orvilo1/commit/fd9d8bf))
+- **teammates**: accessible scrolling for member tables + keyboard-operable workspace switcher ([a26a4e4](https://github.com/alexj11324/orvilo1/commit/a26a4e4))
+- **collab**: overlapping snapshot replay, fail-closed gateway URL, strict presence payloads, no workspace-as-task targets ([af8164a](https://github.com/alexj11324/orvilo1/commit/af8164a))
+- **delegation**: bind delegated runs to grant.agentId with epoch fencing, durable approval expiry, atomic revoke ([d1f8ecc](https://github.com/alexj11324/orvilo1/commit/d1f8ecc))
+- **teammates**: gate member UI on authorization ceilings ([3ba4775](https://github.com/alexj11324/orvilo1/commit/3ba4775))
+- **collaboration**: anchor cursors correctly and keep private tasks off the wire ([d45996a](https://github.com/alexj11324/orvilo1/commit/d45996a))
+- **collaboration**: gate top-bar presence on the feature flag ([4a12c48](https://github.com/alexj11324/orvilo1/commit/4a12c48))
+- **collaboration**: harden room connection lifecycle ([f92116d](https://github.com/alexj11324/orvilo1/commit/f92116d))
+- **auth**: let global RBAC grants pass the workspace membership gate ([cf4a700](https://github.com/alexj11324/orvilo1/commit/cf4a700))
+- **database**: project grant reads a private workspace project ([29aa894](https://github.com/alexj11324/orvilo1/commit/29aa894))
+- **membership**: gate task reassignment and private roster reads ([56aaaf9](https://github.com/alexj11324/orvilo1/commit/56aaaf9))
+- **invite**: harden invitation lifecycle edges ([4024b60](https://github.com/alexj11324/orvilo1/commit/4024b60))
+- **teammates**: close workspaceAgent roster visibility/aggregation gaps ([35860fd](https://github.com/alexj11324/orvilo1/commit/35860fd))
+- **teammates**: honor suspension + workspace binding in authz predicates ([d11733e](https://github.com/alexj11324/orvilo1/commit/d11733e))
+- **teammates**: declare route skeleton meta on invite landing ([9cd766c](https://github.com/alexj11324/orvilo1/commit/9cd766c))
+- **teammates**: drop antd-style active prop from base-ui SkeletonText ([4713809](https://github.com/alexj11324/orvilo1/commit/4713809))
+- **teammates**: whitelist /invite in proxy middleware matcher ([fadf23b](https://github.com/alexj11324/orvilo1/commit/fadf23b))
+- **collab-ui**: refresh authz data on permanent authorize failure (N2) ([2257eb0](https://github.com/alexj11324/orvilo1/commit/2257eb0))
+- **invite**: no-op project-member role change skips audit/event (N1) ([e70e171](https://github.com/alexj11324/orvilo1/commit/e70e171))
+- **collab-ui**: stop infinite authorize retry on permanent failures; project rooms require workspace context; send expectedAuthzVersion ([78426ea](https://github.com/alexj11324/orvilo1/commit/78426ea))
+- **collab**: member.left kicks sockets, kick emits presence-gone, claimed outbox drain, required approval base echo ([884ea60](https://github.com/alexj11324/orvilo1/commit/884ea60))
+- **invite**: no-op project-member removal skips audit; removal preview reads suspended members ([d1bf4bd](https://github.com/alexj11324/orvilo1/commit/d1bf4bd))
+- **database**: claim outbox rows with visibility timeout before publishing ([ff7a572](https://github.com/alexj11324/orvilo1/commit/ff7a572))
+- **database**: revoke project memberships on workspace-member removal ([0a373a1](https://github.com/alexj11324/orvilo1/commit/0a373a1))
+- **auth**: emit undefined workspaceRole in personal mode for WorkspaceRowCtx compat ([c9fa1e0](https://github.com/alexj11324/orvilo1/commit/c9fa1e0))
+- **member**: detach task slots in one update + one domain event per task ([1c17304](https://github.com/alexj11324/orvilo1/commit/1c17304))
+- **delegation**: coerce nullable task workspaceId for outbox event params ([66a7d24](https://github.com/alexj11324/orvilo1/commit/66a7d24))
+- **teammates**: make task\_inputs workspace anchor nullable and fix ProjectMemberModel arity ([3c59e8f](https://github.com/alexj11324/orvilo1/commit/3c59e8f))
+- **teammates**: emit workspaceRole as undefined and use admin membership in linearSync tests ([1eff4ff](https://github.com/alexj11324/orvilo1/commit/1eff4ff))
+- **teammates**: align frontend with base-ui APIs and server contracts ([97f3e0e](https://github.com/alexj11324/orvilo1/commit/97f3e0e))
+- **teammates**: align collab/delegation code with drizzle schema + test keys ([a36ccfa](https://github.com/alexj11324/orvilo1/commit/a36ccfa))
+- **teammates**: return wrapInternal in catches, scope new namespaces, align audit taxonomy ([13ffd12](https://github.com/alexj11324/orvilo1/commit/13ffd12))
+- **teammates**: narrow workspace ctx types and mock membership seam in tests ([ec62a2c](https://github.com/alexj11324/orvilo1/commit/ec62a2c))
+- **database**: export standalone insertOutboxEvent for tx-executor call sites ([034abb6](https://github.com/alexj11324/orvilo1/commit/034abb6))
+- **collaboration**: route outbox drain through EventOutboxModel lifecycle, ISO ticket expiry ([c18a0c0](https://github.com/alexj11324/orvilo1/commit/c18a0c0))
+- **teammates**: align invitation lifecycle with audit taxonomy and room-scoped outbox ([75a79a9](https://github.com/alexj11324/orvilo1/commit/75a79a9))
+- **tasks**: capture model contract before dispatch ([0a94480](https://github.com/alexj11324/orvilo1/commit/0a94480))
+- **linear**: preserve database retry CAS precision ([95a0d9f](https://github.com/alexj11324/orvilo1/commit/95a0d9f))
+- **linear**: persist signed removal tombstones ([9c04804](https://github.com/alexj11324/orvilo1/commit/9c04804))
+- **tasks**: resume integration recovery states ([71f062b](https://github.com/alexj11324/orvilo1/commit/71f062b))
+- **misc**: expose project orchestration settings ([ee74974](https://github.com/alexj11324/orvilo1/commit/ee74974))
+- **misc**: group Linear tasks by business workflow ([8218ff7](https://github.com/alexj11324/orvilo1/commit/8218ff7))
+- **misc**: harden Linear planning and dispatch recovery ([58c09e1](https://github.com/alexj11324/orvilo1/commit/58c09e1))
+- **linear**: pass label baseline to merge ([dfa99b9](https://github.com/alexj11324/orvilo1/commit/dfa99b9))
+- **linear**: bound task issue link queries ([a257d99](https://github.com/alexj11324/orvilo1/commit/a257d99))
+- **linear**: trust signed issue removals ([881f055](https://github.com/alexj11324/orvilo1/commit/881f055))
+- **linear**: enforce outbound public scope ([dc5f857](https://github.com/alexj11324/orvilo1/commit/dc5f857))
+- **linear**: preserve archived issue tombstones ([b4b9b77](https://github.com/alexj11324/orvilo1/commit/b4b9b77))
+- **linear**: validate mapped organization members ([5e1bd46](https://github.com/alexj11324/orvilo1/commit/5e1bd46))
+- **linear**: refresh workspace sync status ([95fa5f7](https://github.com/alexj11324/orvilo1/commit/95fa5f7))
+- **linear**: lock complete planning read set ([65924f2](https://github.com/alexj11324/orvilo1/commit/65924f2))
+- **tasks**: persist run ownership before dispatch ([6e6d544](https://github.com/alexj11324/orvilo1/commit/6e6d544))
+- **linear**: guard replanning proposal application ([30d82c6](https://github.com/alexj11324/orvilo1/commit/30d82c6))
+- **tasks**: stabilize automated run identities ([1ff1407](https://github.com/alexj11324/orvilo1/commit/1ff1407))
+- **tasks**: fence dispatch lifecycle transitions ([9a3a2e8](https://github.com/alexj11324/orvilo1/commit/9a3a2e8))
+- **linear**: apply persisted planning proposals ([f91515d](https://github.com/alexj11324/orvilo1/commit/f91515d))
+- **linear**: register workspace settings route ([5581bdd](https://github.com/alexj11324/orvilo1/commit/5581bdd))
+- **linear**: categorize API key scope ([13d3da0](https://github.com/alexj11324/orvilo1/commit/13d3da0))
+- **linear**: satisfy CI typecheck ([4e7b1b3](https://github.com/alexj11324/orvilo1/commit/4e7b1b3))
+
+#### What's improved
+
+- **auth**: Clerk-backed session layer + portal sign-in redirect ([065e7f1](https://github.com/alexj11324/orvilo1/commit/065e7f1))
+- **auth**: port accounts portal onto apps/auth worker ([4f68d91](https://github.com/alexj11324/orvilo1/commit/4f68d91))
+- **connectors**: authorize GitHub MCP with existing GitHub App, closes [#287](https://github.com/alexj11324/orvilo1/issues/287) ([f6f9c77](https://github.com/alexj11324/orvilo1/commit/f6f9c77))
+- **connectors**: add direct Linear OAuth entry, closes [#284](https://github.com/alexj11324/orvilo1/issues/284) ([951d69a](https://github.com/alexj11324/orvilo1/commit/951d69a))
+- **collaboration**: render human cursors as the SF pointer arrowhead ([0dd7833](https://github.com/alexj11324/orvilo1/commit/0dd7833))
+- **reviews**: add layout-matching skeleton for review detail ([a4c77ab](https://github.com/alexj11324/orvilo1/commit/a4c77ab))
+- **reviews**: align overview and diff with Linear layout ([ce1fa60](https://github.com/alexj11324/orvilo1/commit/ce1fa60))
+- **collaboration**: show human issue cursors with personal visibility control ([5bdd081](https://github.com/alexj11324/orvilo1/commit/5bdd081))
+- **settings**: replace builtin tools with MCP preset catalog on Connectors page, closes [#271](https://github.com/alexj11324/orvilo1/issues/271) ([0b6422f](https://github.com/alexj11324/orvilo1/commit/0b6422f))
+- **misc**: add Linear team import wizard ([80b8125](https://github.com/alexj11324/orvilo1/commit/80b8125))
+- **parity**: issue-row and surface alignment base, closes [#228](https://github.com/alexj11324/orvilo1/issues/228) ([9b08ec1](https://github.com/alexj11324/orvilo1/commit/9b08ec1))
+- **tasks**: one canonical Linear-shaped status mark per issue row, closes [#225](https://github.com/alexj11324/orvilo1/issues/225) ([a8968f6](https://github.com/alexj11324/orvilo1/commit/a8968f6))
+- **auth**: adopt ReUI login and onboarding layouts, closes [#206](https://github.com/alexj11324/orvilo1/issues/206) ([4b37d31](https://github.com/alexj11324/orvilo1/commit/4b37d31))
+- **project**: Linear-shaped overview + projects table — title/properties/resources rows, milestone goals, issue counts ([dbe7c23](https://github.com/alexj11324/orvilo1/commit/dbe7c23))
+- **project**: status pill + member avatars in project header ([6ffcbdb](https://github.com/alexj11324/orvilo1/commit/6ffcbdb))
+- **project**: Linear-style properties rail on project overview ([020b475](https://github.com/alexj11324/orvilo1/commit/020b475))
+- **project**: Linear-shaped project surface — tabs header + overview body ([e2465c4](https://github.com/alexj11324/orvilo1/commit/e2465c4))
+- **project**: land /project/:id on the issue collection ([e0b1113](https://github.com/alexj11324/orvilo1/commit/e0b1113))
+- **task-run**: pass explicit intent from UI/CLI/tool callers (SB08) ([6f258c9](https://github.com/alexj11324/orvilo1/commit/6f258c9))
+- **task-runner**: SA05 — contract identity chain, current-delivery gates + CAID admission at the shared claim boundary (F07/F12) ([510dfd7](https://github.com/alexj11324/orvilo1/commit/510dfd7))
+- **task-dispatch**: CAID admission rollout gate (R10) ([6147986](https://github.com/alexj11324/orvilo1/commit/6147986))
+- **task-delivery-review**: per-stage poll-failure budgets + merge-accepted reconcile (R07) ([32af62b](https://github.com/alexj11324/orvilo1/commit/32af62b))
+- **tool-surface**: mount external connector/MCP tools + strict required-tool admission (F04/F05) ([250fd52](https://github.com/alexj11324/orvilo1/commit/250fd52))
+- **goal-experience**: P17 — surface per-node integration state and parallelism control ([2f34aab](https://github.com/alexj11324/orvilo1/commit/2f34aab))
+- **task-integration**: P15 — serialize same repo/ref integrations and re-baseline stale merges ([45bad74](https://github.com/alexj11324/orvilo1/commit/45bad74))
+- **task-workspace**: P14 — preflight device repo and recover interrupted provisioning ([6511fda](https://github.com/alexj11324/orvilo1/commit/6511fda))
+- **goal**: P13 — re-verify depends\_on readiness under the dispatch claim lock ([571f55f](https://github.com/alexj11324/orvilo1/commit/571f55f))
+- **task-runner**: P11 — persist versioned TaskExecutionContract on run rows ([b68f9ff](https://github.com/alexj11324/orvilo1/commit/b68f9ff))
+- **tool-surface**: P09 — explicit per-tool mount outcomes for ACP runs ([62df9e1](https://github.com/alexj11324/orvilo1/commit/62df9e1))
+- **task-dispatch**: P16 — goal-stop dispatch fences and bounded verification polls ([c4052e4](https://github.com/alexj11324/orvilo1/commit/c4052e4))
+- **goal-manager**: P12 — CAID incremental plan patches with revision CAS ([024d3f8](https://github.com/alexj11324/orvilo1/commit/024d3f8))
+- **branding**: P03 — Orvilo self-brand surface (ACP clientInfo, release feed, allowlist) ([848ca84](https://github.com/alexj11324/orvilo1/commit/848ca84))
+- **notification**: feedCard by-id read endpoint for deep links and decide reconcile ([0b10826](https://github.com/alexj11324/orvilo1/commit/0b10826))
+- **pages**: apply WorkSurface collection skeleton to my issues, teams, projects, views ([424110c](https://github.com/alexj11324/orvilo1/commit/424110c))
+- **work-surface**: shared page-frame skeletons, members directory table, IssueContent extraction ([19f600b](https://github.com/alexj11324/orvilo1/commit/19f600b))
+- **nav**: fixed Linear IA hook — inbox/my-issues/reviews/agent rows ([1b0f34a](https://github.com/alexj11324/orvilo1/commit/1b0f34a))
+- **sidebar**: Linear sidebar IA + locales + frozen v4 packet docs ([12c2656](https://github.com/alexj11324/orvilo1/commit/12c2656))
+- **surfaces**: Linear-style work surfaces — Inbox, My issues, Reviews, Views, Teams, Members ([78fb8de](https://github.com/alexj11324/orvilo1/commit/78fb8de))
+- **work-surface**: shared page-frame skeletons, members directory table, IssueContent extraction ([f33a69e](https://github.com/alexj11324/orvilo1/commit/f33a69e))
+- **nav**: fixed Linear IA hook — inbox/my-issues/reviews/agent rows ([49bb36b](https://github.com/alexj11324/orvilo1/commit/49bb36b))
+- **sidebar**: Linear sidebar IA + locales + frozen v4 packet docs ([04d5469](https://github.com/alexj11324/orvilo1/commit/04d5469))
+- **surfaces**: Linear-style work surfaces — Inbox, My issues, Reviews, Views, Teams, Members ([60ca42f](https://github.com/alexj11324/orvilo1/commit/60ca42f))
+- **workspace**: client activation chain — URL sync, workspace store, X-Workspace-Id ([7e4c888](https://github.com/alexj11324/orvilo1/commit/7e4c888))
+- **sidebar**: Linear sidebar IA + locales + frozen v4 packet docs ([a63f578](https://github.com/alexj11324/orvilo1/commit/a63f578))
+- **surfaces**: Linear-style work surfaces — Inbox, My issues, Reviews, Views, Teams, Members ([bb9df89](https://github.com/alexj11324/orvilo1/commit/bb9df89))
+- **workspace**: client activation chain — URL sync, workspace store, X-Workspace-Id ([d130068](https://github.com/alexj11324/orvilo1/commit/d130068))
+- **db,server**: work-attention data contract — scoped models, routers, and services ([9a546fb](https://github.com/alexj11324/orvilo1/commit/9a546fb))
+- **acp**: P70d — delete the retired in-process agent engine, closes [#107](https://github.com/alexj11324/orvilo1/issues/107) ([34b05cd](https://github.com/alexj11324/orvilo1/commit/34b05cd))
+- **agent**: ACP-only execution binding + shared-type detach (P70a + P70b core), closes [#90](https://github.com/alexj11324/orvilo1/issues/90) ([5d3f0b8](https://github.com/alexj11324/orvilo1/commit/5d3f0b8))
+- **acp**: retire builtin orvilo-browser tool chain (P60), closes [#76](https://github.com/alexj11324/orvilo1/issues/76) ([8a59e82](https://github.com/alexj11324/orvilo1/commit/8a59e82))
+- **tasks**: enforce PR-first delivery review lifecycle, closes [#88](https://github.com/alexj11324/orvilo1/issues/88) ([94a71e4](https://github.com/alexj11324/orvilo1/commit/94a71e4))
+- **ops**: stamp execution-engine provenance on agent\_operations, closes [#87](https://github.com/alexj11324/orvilo1/issues/87) ([bdd048f](https://github.com/alexj11324/orvilo1/commit/bdd048f))
+- **workspace**: real workspace context in OSS business layer, closes [#85](https://github.com/alexj11324/orvilo1/issues/85) ([277b5a8](https://github.com/alexj11324/orvilo1/commit/277b5a8))
+- **client-parity**: unify web/desktop control plane and execution contract ([20cee71](https://github.com/alexj11324/orvilo1/commit/20cee71))
+- **misc**: consent-based ownership transfer + member roster workload, closes [#81](https://github.com/alexj11324/orvilo1/issues/81) ([5498a06](https://github.com/alexj11324/orvilo1/commit/5498a06))
+- **teammates**: self-serve workspace leave entry ([da9ed89](https://github.com/alexj11324/orvilo1/commit/da9ed89))
+- **acp**: remote-run admission ledger and cancellation fencing, closes [#61](https://github.com/alexj11324/orvilo1/issues/61) ([798f314](https://github.com/alexj11324/orvilo1/commit/798f314))
+- **linear**: workspace-scope sync, teams and repository associations ([aa9e8c9](https://github.com/alexj11324/orvilo1/commit/aa9e8c9))
+- **teammates**: flag invites whose email failed to send ([c41401f](https://github.com/alexj11324/orvilo1/commit/c41401f))
+- **convergence**: task-first convergence — retire community social backend, workbench, guest execution, memory profiling, closes [#44](https://github.com/alexj11324/orvilo1/issues/44) ([7a40f70](https://github.com/alexj11324/orvilo1/commit/7a40f70))
+- **teammates**: add /invite/:token landing page for invitation accept ([fe0b884](https://github.com/alexj11324/orvilo1/commit/fe0b884))
+- **teammates**: workspaceAgent roster router and final lambda wiring ([44a22cb](https://github.com/alexj11324/orvilo1/commit/44a22cb))
+- **misc**: teammates workspace collaboration frontend ([13d61b1](https://github.com/alexj11324/orvilo1/commit/13d61b1))
+- **teammates**: invitation, membership and project-member APIs ([f515260](https://github.com/alexj11324/orvilo1/commit/f515260))
+- **misc**: add agent delegation + realtime collaboration backend ([9ed8640](https://github.com/alexj11324/orvilo1/commit/9ed8640))
+- **database**: add teammates collaboration data layer ([369cf27](https://github.com/alexj11324/orvilo1/commit/369cf27))
+- **linear**: sync external comments and relations ([c00e7cd](https://github.com/alexj11324/orvilo1/commit/c00e7cd))
+- **linear**: add independent sync rollout controls ([3e38f63](https://github.com/alexj11324/orvilo1/commit/3e38f63))
+- **linear**: harden OAuth and integration sync boundary ([acf75a4](https://github.com/alexj11324/orvilo1/commit/acf75a4))
+- **projects**: add bounded orchestration policy settings ([7406eb0](https://github.com/alexj11324/orvilo1/commit/7406eb0))
+- **linear**: scope incremental replanning ownership ([0e2c90e](https://github.com/alexj11324/orvilo1/commit/0e2c90e))
+- **linear**: add sync visibility wizard ([7174af2](https://github.com/alexj11324/orvilo1/commit/7174af2))
+- **tasks**: enforce durable dispatch ownership ([cab4268](https://github.com/alexj11324/orvilo1/commit/cab4268))
+- **tasks**: add orchestration domain contract ([8c10871](https://github.com/alexj11324/orvilo1/commit/8c10871))
+- **linear**: complete workspace sync workflow ([fe81ed7](https://github.com/alexj11324/orvilo1/commit/fe81ed7))
+- **linear**: apply versioned planning proposals ([b2ecc92](https://github.com/alexj11324/orvilo1/commit/b2ecc92))
+- **linear**: add durable incremental replanning ([baf7635](https://github.com/alexj11324/orvilo1/commit/baf7635))
+- **linear**: enqueue local task changes ([2b50ccf](https://github.com/alexj11324/orvilo1/commit/2b50ccf))
+- **linear**: process issue sync inbox ([0dda337](https://github.com/alexj11324/orvilo1/commit/0dda337))
+- **linear**: add workspace sync foundation ([99976a5](https://github.com/alexj11324/orvilo1/commit/99976a5))
+
+#### Code Refactoring
+
+- **settings**: delete the Audit logs settings surface, closes [#272](https://github.com/alexj11324/orvilo1/issues/272) ([f5f8463](https://github.com/alexj11324/orvilo1/commit/f5f8463))
+- **agent-execution**: P21 — physically delete legacy agent-runtime tails, migrate consumers to agentExecution ([5955c4c](https://github.com/alexj11324/orvilo1/commit/5955c4c))
+- **hetero-agents**: P07 — split live ACP registry from historical trace decoders ([576cde1](https://github.com/alexj11324/orvilo1/commit/576cde1))
+- **quota**: P06 — retire managed quota accounts and quota-driven routing ([84482e8](https://github.com/alexj11324/orvilo1/commit/84482e8))
+- **provider**: P05 — retire provider binding, server-default relay and orphan model entry points ([c3ce5c9](https://github.com/alexj11324/orvilo1/commit/c3ce5c9))
+- **sidebar**: retire per-item sidebar-visibility subsystem ([9519ddd](https://github.com/alexj11324/orvilo1/commit/9519ddd))
+- **inbox**: move shared relative-time helper next to its surviving consumer ([0dea9aa](https://github.com/alexj11324/orvilo1/commit/0dea9aa))
+- **favorites**: move favorite button+toggle to surfaces layer ([ddd5722](https://github.com/alexj11324/orvilo1/commit/ddd5722))
+- **inbox**: move shared relative-time helper next to its surviving consumer ([29a52c9](https://github.com/alexj11324/orvilo1/commit/29a52c9))
+- **favorites**: move favorite button+toggle to surfaces layer ([81bf079](https://github.com/alexj11324/orvilo1/commit/81bf079))
+- **task**: retire the fork's task steering layer ([d15a9a2](https://github.com/alexj11324/orvilo1/commit/d15a9a2))
+- **app**: retire provider settings UI and client-side inference runtime (P30) ([f1846bc](https://github.com/alexj11324/orvilo1/commit/f1846bc))
+- **invite**: follow OrviloDatabase rename after canary merge ([20ff287](https://github.com/alexj11324/orvilo1/commit/20ff287))
+- **tasks**: retire the /tasks empty-state hero, empty list renders the board, closes [#46](https://github.com/alexj11324/orvilo1/issues/46) ([9af568f](https://github.com/alexj11324/orvilo1/commit/9af568f))
+- **linear**: run sync workflows through Hatchet ([218ec80](https://github.com/alexj11324/orvilo1/commit/218ec80))
+
+#### Styles
+
+- **teammates**: order workspaceAgent imports per repo convention ([4835be4](https://github.com/alexj11324/orvilo1/commit/4835be4))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
 ### Version 2.2.17
 
 <sup>Released on **2026-09-11**</sup>

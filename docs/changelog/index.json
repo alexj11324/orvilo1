@@ -14,6 +14,11 @@
       "versionRange": ["2.2.17"]
     },
     {
+      "id": "2026-09-28-clerk-session-layer",
+      "date": "2026-09-28",
+      "versionRange": ["2.2.17"]
+    },
+    {
       "id": "2026-09-28-board-column-surface",
       "date": "2026-09-28",
       "versionRange": ["2.2.17"]

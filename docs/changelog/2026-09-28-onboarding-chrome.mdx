@@ -1,0 +1,28 @@
+---
+title: 'Cleaner Onboarding Header and Loading State'
+description: >-
+  The onboarding wizard drops the stray language and theme controls from
+  its header, and the page keeps its chrome while your profile loads
+  instead of showing a blank screen.
+tags:
+  - Interface
+  - Improvements
+---
+
+# Cleaner Onboarding Header and Loading State
+
+The onboarding wizard's header no longer shows the app's language selector
+and theme toggle — controls that belong to the signed-in shell, not the
+setup flow. The step counter stays so you can still see where you are in
+the flow.
+
+While your profile loads at the start of onboarding, the page now keeps its
+header and brand in view with a loading indicator, instead of showing a
+bare spinner on a blank screen.
+
+## Improvements and fixes
+
+- Removed the language and theme controls from the onboarding header; the
+  step counter remains.
+- The onboarding loading state now renders the page header around the
+  spinner, so the screen never looks empty on slower connections.

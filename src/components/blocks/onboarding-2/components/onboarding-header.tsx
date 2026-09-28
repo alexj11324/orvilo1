@@ -2,8 +2,6 @@ import { ArrowLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import LangButton from '@/features/User/UserPanel/LangButton';
-import ThemeButton from '@/features/User/UserPanel/ThemeButton';
 
 import { OnboardingLogo } from './onboarding-logo';
 
@@ -41,8 +39,6 @@ export function OnboardingHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
-        <LangButton compact placement="bottomRight" />
-        <ThemeButton placement="bottomRight" size={18} />
         <span className="text-muted-foreground ml-1 hidden text-sm font-medium sm:inline">
           {statusLabel ?? t('reui.stepper.counter', { current: currentStep, total: totalSteps })}
         </span>

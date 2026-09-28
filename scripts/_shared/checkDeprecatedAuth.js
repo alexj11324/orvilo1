@@ -30,11 +30,15 @@ const DEPRECATED_CHECKS = [
   },
   {
     docUrl: `${MIGRATION_DOC_BASE}/clerk-to-betterauth`,
+    // The v1 in-app Clerk integration is gone; sign-in lives on the accounts
+    // portal. CLERK_SECRET_KEY is NOT deprecated — it backs the Clerk session
+    // exchange (POST /api/auth/clerk).
     getVars: () =>
-      ['NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'CLERK_SECRET_KEY', 'CLERK_WEBHOOK_SECRET'].filter(
+      ['NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'CLERK_WEBHOOK_SECRET'].filter(
         (key) => process.env[key],
       ),
-    message: 'Clerk has been removed from Orvilo. Please migrate to Better Auth.',
+    message:
+      'The in-app Clerk integration has been removed from Orvilo. Sign-in runs on the accounts portal; only CLERK_SECRET_KEY/CLERK_ISSUER/CLERK_AUTHORIZED_PARTIES are used server-side.',
     name: 'Clerk',
   },
   {

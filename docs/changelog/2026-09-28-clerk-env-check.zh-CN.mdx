@@ -1,0 +1,8 @@
+---
+title: 修复拦截 Clerk 会话密钥的启动校验
+description: 部署时的环境变量校验不再拒绝 Clerk 会话交换所需的 CLERK_SECRET_KEY。
+---
+
+## 问题修复
+
+- **启动校验**：`CLERK_SECRET_KEY` 仍在 v1 Clerk 移除时的废弃变量名单里，设置了它的部署会启动崩溃。现在只拦截真正删除的 v1 变量（`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`、`CLERK_WEBHOOK_SECRET`）。

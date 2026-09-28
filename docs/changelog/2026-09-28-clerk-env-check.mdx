@@ -1,0 +1,8 @@
+---
+title: Fix startup check blocking Clerk session key
+description: The deploy-time environment validation no longer rejects CLERK_SECRET_KEY, which the Clerk session exchange needs.
+---
+
+## Bug Fixes
+
+- **Startup check**: `CLERK_SECRET_KEY` was still on the deprecated-variable blocklist from the v1 Clerk removal, crash-looping any deployment that sets it. The check now only flags the truly removed v1 variables (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_WEBHOOK_SECRET`).

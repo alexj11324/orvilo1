@@ -19,16 +19,17 @@ interface Env {
 
 const API_PREFIXES = ['/api', '/oidc', '/trpc', '/webapi'];
 
-const AUTH_PATH_PREFIXES = [
+const AUTH_PATH_PREFIXES = ['/oauth', '/login', '/sign-in'];
+
+// The portal is the only sign-in surface — the inherited lobehub-style pages
+// all fold into /login (Cordy parity).
+const LEGACY_AUTH_PATHS = [
   '/signin',
   '/signup',
   '/verify-email',
   '/reset-password',
   '/auth-error',
   '/market-auth-callback',
-  '/oauth',
-  '/login',
-  '/sign-in',
 ];
 
 const HEALTH_PATHS = ['/healthz', '/readyz'];
@@ -120,6 +121,9 @@ export default {
     if (isAssetPath(pathname)) return env.ASSETS.fetch(request);
 
     if (pathname === '/') return Response.redirect(new URL('/login', url.origin).href, 302);
+
+    if (matchesPrefix(pathname, LEGACY_AUTH_PATHS))
+      return Response.redirect(new URL(`/login${url.search}`, url.origin).href, 302);
 
     if (!matchesPrefix(pathname, AUTH_PATH_PREFIXES))
       return Response.redirect(env.AUTH_APP_HOME || 'https://orvilo.aspectlylabs.com', 302);

@@ -2,7 +2,7 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { Segmented, Switch, Text, toast } from '@lobehub/ui/base-ui';
-import { type UserCredSummary } from '@orvilo/types';
+import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { lambdaClient } from '@/libs/trpc/client';
 
 interface ShareToggleProps {
-  cred: UserCredSummary;
+  cred: OwnCredSummary;
   /**
    * Called after a share/unshare/visibility change lands — may be async.
    * The mutation waits for it to settle before releasing its optimistic
@@ -23,25 +23,24 @@ interface ShareToggleProps {
 /**
  * Per-row control for the workspace creds page's "your personal credentials"
  * section. Lets the owner share one of their own personal credentials into
- * the current workspace's Market organization (or unshare it), and — once
+ * the current workspace (or unshare it), and — once
  * shared — flip its visibility between 'private' (draft, only the owner can
  * see it's linked) and 'public' (visible to the rest of the workspace).
  *
- * Always targets the *active* workspace: the underlying `market.creds.share`
- * procedure resolves the org from `ctx.workspaceId` server-side (verified
- * membership), never from client input — this component never needs to know
- * the workspace's Market org id.
+ * Always targets the *active* workspace: the underlying `creds.share`
+ * procedure resolves the workspace from `ctx.workspaceId` server-side
+ * (verified membership), never from client input.
  */
 const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
   const { t } = useTranslation('setting');
 
-  // A personal credential can only be linked to one organization at a time,
-  // so `organizationAccountId != null` alone can't tell "shared to *this*
+  // A personal credential can only be shared to one workspace at a time,
+  // so `sharedWorkspaceId != null` alone can't tell "shared to *this*
   // workspace" apart from "shared to some other workspace previously" — the
   // list procedure resolves that distinction server-side. Defaults to false
   // (safe: never surfaces an unshare/visibility control for a link that
   // actually belongs to a different workspace) when unset, e.g. outside a
-  // workspace context or when the active workspace's org isn't set up yet.
+  // workspace context.
   const isShared = cred.sharedToActiveWorkspace ?? false;
 
   // `cred` only reflects the real server state once the parent's list(s)
@@ -60,7 +59,7 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
 
   const shareMutation = useMutation({
     mutationFn: async (visibility: 'private' | 'public') => {
-      await lambdaClient.market.creds.share.mutate({ id: cred.id, visibility });
+      await lambdaClient.creds.share.mutate({ id: cred.id, visibility });
     },
     onError: () => {
       toast.error(t('creds.share.error'));
@@ -76,7 +75,7 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
 
   const unshareMutation = useMutation({
     mutationFn: async () => {
-      await lambdaClient.market.creds.unshare.mutate({ id: cred.id });
+      await lambdaClient.creds.unshare.mutate({ id: cred.id });
     },
     onError: () => {
       toast.error(t('creds.share.error'));

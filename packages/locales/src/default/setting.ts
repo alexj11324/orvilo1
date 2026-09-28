@@ -528,12 +528,9 @@ export default {
   'creds.createModal.title': 'Create Credential',
   'creds.edit.title': 'Edit Credential',
   'creds.empty': 'No credentials configured yet',
-  'creds.file.authRequired': 'Please sign in to the Market first',
   'creds.file.uploadFailed': 'File upload failed',
   'creds.file.uploadSuccess': 'File uploaded successfully',
   'creds.file.uploading': 'Uploading...',
-  'creds.orgSetupRequired':
-    'Community Profile not set up yet. Please complete the workspace Community Profile setup to manage credentials.',
   'creds.owner.sharedBy': 'Shared by {{name}}',
   'creds.personalSection.desc':
     'These are your own credentials. Turn on sharing to make one available to this workspace.',
@@ -541,8 +538,6 @@ export default {
   'creds.share.toggle': 'Share to workspace',
   'creds.share.visibility.private': 'Private',
   'creds.share.visibility.public': 'Public',
-  'creds.signIn': 'Sign In to Market',
-  'creds.signInRequired': 'Please sign in to the Market to manage your credentials',
   'creds.tabs.personal': 'Personal',
   'creds.tabs.workspace': 'Workspace',
   'creds.workspaceSection.desc':

@@ -1,0 +1,14 @@
+---
+title: Credentials work without a Market sign-in
+description: The credentials settings pages and agent credential flows now read and write Orvilo's own database, and the "sign in to Market" wall is gone.
+---
+
+## Features
+
+- **No Market sign-in required**: the credential pages no longer gate behind Market authentication — credentials load, create, edit, share, and delete as soon as you are signed in to Orvilo.
+- **All credential surfaces rewired**: the personal settings page, the workspace settings page (工作区 / 个人 tabs and the share toggle), agent cloud-configuration credential checks, and the builtin creds executor's `inject`/`createKV` calls all talk to the new `creds` / `workspaceCreds` routers instead of `market.creds`.
+- **Dead Market creds wiring removed**: the server no longer mounts the `market.creds` proxy router; the OAuth connect broker, marketplace browsing, and desktop bridge flows that genuinely belong to Market are untouched.
+
+## Improvements
+
+- **Cleaner states**: the removed sign-in and organization-setup empty states are gone along with their locale strings — the only empty state left is "no credentials yet".

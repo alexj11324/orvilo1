@@ -30,7 +30,7 @@ export const useHeteroAgentCloudConfig = (agentId: string): HeteroAgentCloudConf
   const needsCredCheck = !isDesktop && isClaudeCode;
 
   // Only fetch credentials when actually needed
-  const { data: credsData, isLoading: isCredsLoading } = lambdaQuery.market.creds.list.useQuery(
+  const { data: credsData, isLoading: isCredsLoading } = lambdaQuery.creds.list.useQuery(
     undefined,
     { enabled: needsCredCheck },
   );

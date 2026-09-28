@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@lobehub/ui/base-ui';
-import { type UserCredSummary } from '@orvilo/types';
+import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
 import { Form, Input } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -22,7 +22,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 interface EditMetaFormProps {
-  cred: UserCredSummary;
+  cred: OwnCredSummary;
   credsApi: CredsApi;
   onCancel: () => void;
   onSuccess: () => void;

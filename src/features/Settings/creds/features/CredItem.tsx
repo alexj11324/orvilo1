@@ -2,7 +2,7 @@
 
 import { DropdownMenu, Flexbox, Icon, stopPropagation } from '@lobehub/ui';
 import { Avatar, Button, confirmModal, Tag } from '@lobehub/ui/base-ui';
-import { type UserCredSummary } from '@orvilo/types';
+import { type OwnCredSummary } from '@orvilo/types';
 import {
   Eye,
   File,
@@ -21,7 +21,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { styles } from './style';
 
 interface CredItemProps {
-  cred: UserCredSummary;
+  cred: OwnCredSummary;
   /**
    * Extra content rendered before the "..." menu — used by the workspace
    * credential page to slot in the personal-credential share toggle without
@@ -35,9 +35,9 @@ interface CredItemProps {
    * shouldn't answer to, so the menu would only ever render disabled. CRUD
    * for those rows lives on the personal settings page instead.
    */
-  onDelete?: (id: number) => void;
-  onEdit?: (cred: UserCredSummary) => void;
-  onView?: (cred: UserCredSummary) => void;
+  onDelete?: (id: string) => void;
+  onEdit?: (cred: OwnCredSummary) => void;
+  onView?: (cred: OwnCredSummary) => void;
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -135,8 +135,8 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
           <Flexbox horizontal align="center" gap={8}>
             <span className={styles.title}>{cred.name}</span>
             <Tag color={typeColors[cred.type]}>{t(`creds.types.${cred.type}`)}</Tag>
-            {/* Only populated by organization-scoped list responses (workspaceCreds.list) —
-                distinguishes a member's shared personal credential from one the org owns directly. */}
+            {/* Only populated by workspace-scoped list responses (workspaceCreds.list) —
+                distinguishes a member's shared personal credential from one the workspace owns directly. */}
             {cred.ownerType === 'user' && (
               <Tag>{t('creds.owner.sharedBy', { name: cred.ownerDisplayName })}</Tag>
             )}

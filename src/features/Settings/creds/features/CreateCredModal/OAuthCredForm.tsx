@@ -1,7 +1,7 @@
 'use client';
 
 import { Empty, Flexbox } from '@lobehub/ui';
-import { Avatar, Button, Select, Spin } from '@lobehub/ui/base-ui';
+import { Button, Select, Spin } from '@lobehub/ui/base-ui';
 import { useMutation } from '@tanstack/react-query';
 import { Form, Input } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -51,14 +51,15 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
   const { data: connectionsData, isLoading } = credsApi.query.listOAuthConnections.useQuery();
 
   const connections = connectionsData?.connections ?? [];
+  // The SDK's OAuthConnection type omits `id`, but the response carries the
+  // numeric connection id `createOAuth` needs — `any` it is.
   const connectionOptions = connections.map((conn: any) => {
     const provider = conn.providerId || 'OAuth';
-    const displayName = conn.providerName || conn.providerUserName || conn.email || conn.name;
+    const displayName = conn.providerUsername || conn.providerEmail || conn.providerName;
 
     return {
       label: (
         <span className={styles.connectionOption}>
-          {conn.avatar && <Avatar avatar={conn.avatar} size={24} />}
           <span>
             <span className={styles.provider}>{provider}</span>
             {displayName && <span className={styles.username}> - {displayName}</span>}

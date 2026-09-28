@@ -9,11 +9,14 @@
   ],
   "community": [
     {
+<<<<<<< HEAD
       "id": "2026-09-28-onboarding-chrome",
       "date": "2026-09-28",
       "versionRange": ["2.3.0"]
     },
     {
+=======
+>>>>>>> origin/main
       "id": "2026-09-28-clerk-legacy-user-link",
       "date": "2026-09-28",
       "versionRange": ["2.3.0"]

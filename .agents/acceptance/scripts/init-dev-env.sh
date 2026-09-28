@@ -221,7 +221,6 @@ apply_env() {
   export AGENT_RUNTIME_MODE="${AGENT_RUNTIME_MODE:-queue}"
   export APP_URL="${APP_URL:-http://localhost:${SERVER_PORT}}"
   export AUTH_EMAIL_VERIFICATION="${AUTH_EMAIL_VERIFICATION:-0}"
-  export AUTH_SECRET="${AUTH_SECRET:-agent-testing-local-auth-secret-32chars}"
   export DATABASE_DRIVER="${DATABASE_DRIVER:-node}"
   export DATABASE_URL
   export DEVICE_GATEWAY_SERVICE_TOKEN="${DEVICE_GATEWAY_SERVICE_TOKEN:-agent-testing-local-device-gateway-token}"
@@ -279,7 +278,6 @@ env_keys() {
     APP_URL \
     AGENT_RUNTIME_MODE \
     AUTH_EMAIL_VERIFICATION \
-    AUTH_SECRET \
     DATABASE_DRIVER \
     DATABASE_URL \
     DEVICE_GATEWAY_SERVICE_TOKEN \

@@ -1,6 +1,34 @@
 [
   {
     "children": {
+      "fixes": [
+        "classify Linear import API key access.",
+        "open Linear import OAuth in desktop browser.",
+        "satisfy Linear importer typecheck.",
+        "narrow agencyConfig before deleting heterogeneousProvider.",
+        "bind the inbox builtin agent to the builtin orvilo harness at creation.",
+        "serialize dead-lock reclaim through a single-writer ticket (SC02).",
+        "bind approval decisions and consumes to their claim/dispatch (SC03+SC05).",
+        "receipt workspace_id FK + renew argsHash rebind (E2E follow-up).",
+        "approval scope CAS, window rotation + grant epoch, durable child-result ACK.",
+        "fail closed start-intent contract — no success-no-op on idle (R05/F09).",
+        "harden delegated-run and eval-timeout seams after facade migration.",
+        "expose project orchestration settings.",
+        "group Linear tasks by business workflow.",
+        "harden Linear planning and dispatch recovery."
+      ],
+      "features": [
+        "add Linear team import wizard.",
+        "consent-based ownership transfer + member roster workload.",
+        "teammates workspace collaboration frontend.",
+        "add agent delegation + realtime collaboration backend."
+      ]
+    },
+    "date": "2026-09-28",
+    "version": "2.3.0"
+  },
+  {
+    "children": {
       "fixes": ["preserve flat JSON provider errors."]
     },
     "date": "2026-09-11",

@@ -15,7 +15,6 @@ export interface UserAuthState {
   isLoadedAuthProviders?: boolean;
 
   isSignedIn?: boolean;
-  oAuthSSOProviders?: string[];
   user?: OrviloUser;
 }
 

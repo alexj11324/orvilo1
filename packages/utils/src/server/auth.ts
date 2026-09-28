@@ -1,18 +1,21 @@
 import { headers } from 'next/headers';
 
-import { auth } from '@/auth';
-
+/**
+ * Resolve the signed-in user for the current request.
+ *
+ * Web sessions live in `auth_sessions` behind the `orvilo_auth` cookie
+ * (minted by POST /api/auth/clerk after the accounts portal verifies a Clerk
+ * session); the legacy better-auth `*.session_token` cookie is also read while
+ * pre-migration sessions remain valid.
+ */
 export const getUserAuth = async () => {
+  const { getServerDB } = await import('@/database/core/db-adaptor');
+  const { resolveAuthSessionFromHeaders } = await import('@/server/services/auth');
+
   const currentHeaders = await headers();
-  const requestHeaders = Object.fromEntries(currentHeaders.entries());
+  const session = await resolveAuthSessionFromHeaders(await getServerDB(), currentHeaders);
 
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
-
-  const userId = session?.user?.id;
-
-  return { betterAuth: session, userId };
+  return { session, userId: session?.userId };
 };
 
 /**

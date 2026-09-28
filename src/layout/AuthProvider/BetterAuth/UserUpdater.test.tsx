@@ -9,8 +9,8 @@ import UserUpdater from './UserUpdater';
 
 const useSessionMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@/libs/better-auth/auth-client', () => ({
-  useSession: useSessionMock,
+vi.mock('@/libs/auth/session', () => ({
+  useAuthSession: useSessionMock,
 }));
 
 const sampleSession = (overrides?: Record<string, unknown>) => ({

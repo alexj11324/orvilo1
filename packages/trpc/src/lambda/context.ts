@@ -6,7 +6,6 @@ import { parse } from 'cookie';
 import debug from 'debug';
 import { type NextRequest } from 'next/server';
 
-import { auth } from '@/auth';
 import { canUseWorkspaceApiKeys } from '@/business/server/workspaceApiKey';
 import { getServerDB } from '@/database/core/db-adaptor';
 import { ApiKeyModel } from '@/database/models/apiKey';
@@ -15,6 +14,7 @@ import { authEnv, ORVILO_OIDC_AUTH_HEADER } from '@/envs/auth';
 import { extractTraceContext } from '@/libs/observability/traceparent';
 import { assertOIDCUserActive, isOIDCUserInactiveError } from '@/libs/oidc-provider/access-control';
 import { validateOIDCJWT } from '@/libs/oidc-provider/jwt';
+import { resolveAuthSessionFromHeaders } from '@/server/services/auth';
 import { isApiKeyExpired, validateApiKeyFormat } from '@/utils/apiKey';
 
 import { describeOIDCAuthFailure, setAuthFailureHeader } from '../utils/authFailure';
@@ -377,18 +377,18 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
     }
   }
 
-  // If OIDC is not enabled or validation fails, try Better Auth authentication
-  log('Attempting Better Auth authentication');
+  // If OIDC is not enabled or validation fails, try the `orvilo_auth` web
+  // session cookie (minted by /api/auth/clerk; legacy better-auth cookies
+  // are also honored until they expire).
+  log('Attempting cookie session authentication');
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
+    const session = await resolveAuthSessionFromHeaders(await getServerDB(), request.headers);
 
-    if (session && session?.user?.id) {
-      userId = session.user.id;
-      log('Better Auth authentication successful, userId: %s', userId);
+    if (session?.userId) {
+      userId = session.userId;
+      log('Cookie session authentication successful, userId: %s', userId);
     } else {
-      log('Better Auth authentication failed, no valid session');
+      log('Cookie session authentication failed, no valid session');
     }
 
     return createContextInner({
@@ -398,8 +398,8 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
       userId,
     });
   } catch (e) {
-    log('Better Auth authentication error: %O', e);
-    console.error('better auth err', e);
+    log('Cookie session authentication error: %O', e);
+    console.error('session auth err', e);
   }
 
   // Final return, userId may be undefined

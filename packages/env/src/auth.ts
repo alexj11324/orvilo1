@@ -118,6 +118,15 @@ export const getAuthConfig = () => {
       AUTH_SSO_PROVIDERS: z.string().optional().default(''),
       AUTH_ADDITIONAL_TRUSTED_ORIGINS: z.string().optional(),
       AUTH_TRUSTED_ORIGINS: z.string().optional(),
+      AUTH_ACCOUNTS_URL: z.string().optional(),
+      AUTH_COOKIE_DOMAIN: z.string().optional(),
+      AUTH_SESSION_TTL_SECONDS: z.number().optional(),
+
+      CLERK_API_URL: z.string().optional(),
+      CLERK_AUTHORIZED_PARTIES: z.string().optional(),
+      CLERK_ISSUER: z.string().optional(),
+      CLERK_JWT_KEY: z.string().optional(),
+      CLERK_SECRET_KEY: z.string().optional(),
       AUTH_EMAIL_VERIFICATION: z.boolean().optional().default(false),
       AUTH_ENABLE_MAGIC_LINK: z.boolean().optional().default(false),
       AUTH_ALLOWED_EMAILS: z.string().optional(),
@@ -205,8 +214,19 @@ export const getAuthConfig = () => {
     },
 
     runtimeEnv: {
+      AUTH_ACCOUNTS_URL: process.env.AUTH_ACCOUNTS_URL,
       AUTH_ADDITIONAL_TRUSTED_ORIGINS: process.env.AUTH_ADDITIONAL_TRUSTED_ORIGINS,
+      AUTH_COOKIE_DOMAIN: process.env.AUTH_COOKIE_DOMAIN,
       AUTH_COOKIE_PREFIX: process.env.AUTH_COOKIE_PREFIX,
+      AUTH_SESSION_TTL_SECONDS: process.env.AUTH_SESSION_TTL_SECONDS
+        ? Number.parseInt(process.env.AUTH_SESSION_TTL_SECONDS, 10)
+        : undefined,
+
+      CLERK_API_URL: process.env.CLERK_API_URL,
+      CLERK_AUTHORIZED_PARTIES: process.env.CLERK_AUTHORIZED_PARTIES,
+      CLERK_ISSUER: process.env.CLERK_ISSUER,
+      CLERK_JWT_KEY: process.env.CLERK_JWT_KEY,
+      CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
       AUTH_EMAIL_VERIFICATION: process.env.AUTH_EMAIL_VERIFICATION === '1',
       AUTH_ENABLE_MAGIC_LINK: process.env.AUTH_ENABLE_MAGIC_LINK === '1',
       AUTH_SECRET: process.env.AUTH_SECRET,

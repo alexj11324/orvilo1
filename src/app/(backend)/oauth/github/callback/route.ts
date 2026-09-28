@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@/auth';
 import { serverDB } from '@/database/server';
 import { appEnv } from '@/envs/app';
+import { resolveAuthSessionFromHeaders } from '@/server/services/auth/session';
 import { completeGitHubOAuth } from '@/server/services/githubOAuth';
 
 const scriptValue = (value: unknown): string =>
@@ -32,9 +32,9 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
     return resultPage(request, false, 'authorization_denied');
   if (!code) return resultPage(request, false, 'missing_code');
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session?.user?.id) return resultPage(request, false, 'session_required');
-    await completeGitHubOAuth({ code, db: serverDB, sessionUserId: session.user.id, state });
+    const session = await resolveAuthSessionFromHeaders(serverDB, request.headers);
+    if (!session?.userId) return resultPage(request, false, 'session_required');
+    await completeGitHubOAuth({ code, db: serverDB, sessionUserId: session.userId, state });
     return resultPage(request, true);
   } catch (error) {
     console.error(

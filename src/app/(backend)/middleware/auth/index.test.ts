@@ -28,12 +28,8 @@ vi.mock('@/utils/errorResponse', () => ({
   createErrorResponse: vi.fn(),
 }));
 
-vi.mock('@/auth', () => ({
-  auth: {
-    api: {
-      getSession: vi.fn().mockResolvedValue(null),
-    },
-  },
+vi.mock('@/server/services/auth', () => ({
+  resolveAuthSessionFromHeaders: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@/database/core/db-adaptor', () => ({

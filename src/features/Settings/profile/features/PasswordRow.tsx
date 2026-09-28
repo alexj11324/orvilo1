@@ -1,45 +1,43 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
-import { cssVar } from 'antd-style';
-import { CheckCircle2Icon } from 'lucide-react';
+import { Icon } from '@lobehub/ui';
+import { Text } from '@lobehub/ui/base-ui';
+import { ExternalLinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { useServerConfigStore } from '@/store/serverConfig';
+import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
-import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
+import { authSelectors } from '@/store/user/selectors';
 
 import ProfileRow from './ProfileRow';
-import { usePasswordReset } from './usePasswordReset';
 
+/**
+ * Password set/reset is owned by the accounts portal (Clerk) — the row links
+ * out instead of calling a local reset endpoint.
+ */
 const PasswordRow = () => {
   const { t } = useTranslation('auth');
-  const userProfile = useUserStore(userProfileSelectors.userProfile);
   const hasPasswordAccount = useUserStore(authSelectors.hasPasswordAccount);
-  const { requestReset, sending, sent } = usePasswordReset(userProfile?.email);
+  const accountsUrl = useServerConfigStore(serverConfigSelectors.authAccountsUrl);
 
   return (
     <ProfileRow
       anchor={'profile-password'}
       label={t('profile.password')}
       action={
-        <Button loading={sending} size="small" onClick={requestReset}>
-          {sent
-            ? t('betterAuth.signin.emailSent.resend')
-            : hasPasswordAccount
-              ? t('profile.changePassword')
-              : t('profile.setPassword')}
-        </Button>
+        <Text
+          style={{ cursor: 'pointer', fontSize: 13 }}
+          onClick={() => window.open(accountsUrl, '_blank', 'noopener,noreferrer')}
+        >
+          {hasPasswordAccount ? t('profile.changePassword') : t('profile.setPassword')}{' '}
+          <Icon icon={ExternalLinkIcon} size={12} style={{ verticalAlign: 'middle' }} />
+        </Text>
       }
     >
-      {sent && (
-        <Flexbox horizontal align={'center'} gap={6}>
-          <Icon color={cssVar.colorSuccess} icon={CheckCircle2Icon} size={14} />
-          <Text fontSize={12} type={'secondary'}>
-            {t('profile.resetPasswordSent', { email: userProfile?.email })}
-          </Text>
-        </Flexbox>
-      )}
+      <Text fontSize={12} type={'secondary'}>
+        {hasPasswordAccount ? '••••••••' : '--'}
+      </Text>
     </ProfileRow>
   );
 };

@@ -6,8 +6,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { defineConfig } from './define-config';
 
-vi.mock('@/auth', () => ({
-  auth: { api: { getSession: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) } },
+vi.mock('@/database/core/db-adaptor', () => ({ getServerDB: vi.fn(async () => ({})) }));
+vi.mock('@/server/services/auth', () => ({
+  resolveAuthSessionFromHeaders: vi.fn().mockResolvedValue({ userId: 'user-1' }),
 }));
 
 const { middleware } = defineConfig();

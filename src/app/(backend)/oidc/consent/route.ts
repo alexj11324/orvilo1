@@ -51,6 +51,18 @@ export async function POST(request: NextRequest) {
       const { userId } = await getUserAuth();
       log('Obtained userId: %s', userId);
 
+      // Accepting either prompt requires an authenticated web session — a
+      // missing one must fail loudly instead of minting a session for nobody.
+      if (!userId) {
+        return NextResponse.json(
+          {
+            error: 'unauthorized',
+            error_description: 'A signed-in session is required to complete authorization',
+          },
+          { status: 401 },
+        );
+      }
+
       if (details.prompt.name === 'login') {
         result = {
           login: { accountId: userId, remember: true },

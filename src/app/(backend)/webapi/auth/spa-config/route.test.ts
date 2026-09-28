@@ -10,10 +10,10 @@ const mocks = vi.hoisted(() => ({
     posthog: { debug: false, host: 'https://ph', key: 'phc' },
   })),
   getServerAuthConfig: vi.fn(() => ({
+    authAccountsUrl: 'https://accounts.aspectlylabs.com',
     disableEmailPassword: false,
     enableEmailVerification: true,
     enableMagicLink: false,
-    oAuthSSOProviders: ['github'],
   })),
   getServerFeatureFlagsValue: vi.fn(() => ({ auth_captcha: true })),
 }));

@@ -1,19 +1,20 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@/auth';
+import { getServerDB } from '@/database/core/db-adaptor';
+import { resolveAuthSessionFromHeaders } from '@/server/services/auth/session';
 import { startGitHubOAuth } from '@/server/services/githubOAuth';
 
 /** Hosted entry used by desktop so one click starts the existing Web OAuth flow. */
 export const GET = async (request: NextRequest): Promise<NextResponse> => {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session?.user?.id) {
+  const session = await resolveAuthSessionFromHeaders(await getServerDB(), request.headers);
+  if (!session?.userId) {
     const signIn = new URL('/signin', request.nextUrl.origin);
     signIn.searchParams.set('callbackUrl', '/oauth/github/start');
     return NextResponse.redirect(signIn);
   }
 
   try {
-    return NextResponse.redirect(await startGitHubOAuth(session.user.id));
+    return NextResponse.redirect(await startGitHubOAuth(session.userId));
   } catch (error) {
     console.error(
       '[githubOAuth:startRoute]',

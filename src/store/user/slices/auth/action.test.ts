@@ -15,16 +15,17 @@ vi.mock('@/libs/swr', async () => {
   };
 });
 
-const mockBetterAuthClient = vi.hoisted(() => ({
-  listAccounts: vi.fn().mockResolvedValue({ data: [] }),
-  accountInfo: vi.fn().mockResolvedValue({ data: { user: {} } }),
-  signOut: vi.fn().mockResolvedValue({}),
+const mockSessionApi = vi.hoisted(() => ({
+  fetchAuthAccounts: vi.fn().mockResolvedValue({ hasPasswordAccount: false, providers: [] }),
+  signOutWebSession: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@/libs/better-auth/auth-client', () => mockBetterAuthClient);
+vi.mock('@/libs/auth/session', () => mockSessionApi);
 
 beforeEach(() => {
   localStorage.clear();
+  // /oidc/clear-session is best-effort inside logout; keep it inert in tests.
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null));
 });
 
 afterEach(() => {
@@ -59,11 +60,10 @@ describe('createAuthSlice', () => {
       localStorage.setItem('orvilo:active-scope', 'user-a:personal');
       useUserStore.setState({ user: { id: 'user-a' } });
 
-      mockBetterAuthClient.signOut.mockImplementationOnce(async ({ fetchOptions }) => {
+      mockSessionApi.signOutWebSession.mockImplementationOnce(async () => {
         // A concurrent session update must not change which snapshot this
         // sign-out is allowed to clear.
         useUserStore.setState({ user: { id: 'user-b' } });
-        fetchOptions?.onSuccess?.();
       });
 
       const { result } = renderHook(() => useUserStore());
@@ -72,7 +72,7 @@ describe('createAuthSlice', () => {
         await result.current.logout();
       });
 
-      expect(mockBetterAuthClient.signOut).toHaveBeenCalled();
+      expect(mockSessionApi.signOutWebSession).toHaveBeenCalled();
       expect(readUserDisplaySnapshot('user-a')).toBeUndefined();
       expect(readUserDisplaySnapshot('user-b')).toEqual({ avatar: 'avatar-b' });
       expect(localStorage.getItem('orvilo:active-scope')).toBeNull();
@@ -82,7 +82,7 @@ describe('createAuthSlice', () => {
       writeUserDisplaySnapshot('user-a', { avatar: 'avatar-a' });
       localStorage.setItem('orvilo:active-scope', 'user-a:personal');
       useUserStore.setState({ user: { id: 'user-a' } });
-      mockBetterAuthClient.signOut.mockRejectedValueOnce(new Error('sign-out failed'));
+      mockSessionApi.signOutWebSession.mockRejectedValueOnce(new Error('sign-out failed'));
 
       const { result } = renderHook(() => useUserStore());
       const logoutPromise = result.current.logout();
@@ -191,18 +191,13 @@ describe('createAuthSlice', () => {
         await result.current.fetchAuthProviders();
       });
 
-      expect(mockBetterAuthClient.listAccounts).not.toHaveBeenCalled();
+      expect(mockSessionApi.fetchAuthAccounts).not.toHaveBeenCalled();
     });
 
-    it('should fetch providers from BetterAuth', async () => {
-      mockBetterAuthClient.listAccounts.mockResolvedValueOnce({
-        data: [
-          { providerId: 'github', accountId: 'gh-123' },
-          { providerId: 'credential', accountId: 'cred-1' },
-        ],
-      });
-      mockBetterAuthClient.accountInfo.mockResolvedValueOnce({
-        data: { user: { email: 'test@github.com' } },
+    it('should fetch providers from the accounts endpoint', async () => {
+      mockSessionApi.fetchAuthAccounts.mockResolvedValueOnce({
+        hasPasswordAccount: true,
+        providers: [{ provider: 'github', providerAccountId: 'gh-123' }],
       });
 
       const { result } = renderHook(() => useUserStore());
@@ -211,13 +206,16 @@ describe('createAuthSlice', () => {
         await result.current.fetchAuthProviders();
       });
 
-      expect(mockBetterAuthClient.listAccounts).toHaveBeenCalled();
+      expect(mockSessionApi.fetchAuthAccounts).toHaveBeenCalled();
       expect(result.current.isLoadedAuthProviders).toBe(true);
       expect(result.current.hasPasswordAccount).toBe(true);
+      expect(result.current.authProviders).toEqual([
+        { provider: 'github', providerAccountId: 'gh-123' },
+      ]);
     });
 
     it('should handle fetch error gracefully', async () => {
-      mockBetterAuthClient.listAccounts.mockRejectedValueOnce(new Error('Network error'));
+      mockSessionApi.fetchAuthAccounts.mockRejectedValueOnce(new Error('Network error'));
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -233,12 +231,10 @@ describe('createAuthSlice', () => {
   });
 
   describe('refreshAuthProviders', () => {
-    it('should refresh providers from BetterAuth', async () => {
-      mockBetterAuthClient.listAccounts.mockResolvedValueOnce({
-        data: [{ providerId: 'google', accountId: 'g-1' }],
-      });
-      mockBetterAuthClient.accountInfo.mockResolvedValueOnce({
-        data: { user: { email: 'user@gmail.com' } },
+    it('should refresh providers from the accounts endpoint', async () => {
+      mockSessionApi.fetchAuthAccounts.mockResolvedValueOnce({
+        hasPasswordAccount: false,
+        providers: [{ email: 'user@gmail.com', provider: 'google', providerAccountId: 'g-1' }],
       });
 
       const { result } = renderHook(() => useUserStore());
@@ -247,14 +243,14 @@ describe('createAuthSlice', () => {
         await result.current.refreshAuthProviders();
       });
 
-      expect(mockBetterAuthClient.listAccounts).toHaveBeenCalled();
+      expect(mockSessionApi.fetchAuthAccounts).toHaveBeenCalled();
       expect(result.current.authProviders).toEqual([
         { provider: 'google', email: 'user@gmail.com', providerAccountId: 'g-1' },
       ]);
     });
 
     it('should handle refresh error gracefully', async () => {
-      mockBetterAuthClient.listAccounts.mockRejectedValueOnce(new Error('Refresh failed'));
+      mockSessionApi.fetchAuthAccounts.mockRejectedValueOnce(new Error('Refresh failed'));
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

@@ -1,0 +1,91 @@
+import { type NextRequest, NextResponse } from 'next/server';
+
+import { getServerDB } from '@/database/core/db-adaptor';
+import { legacySessionCookieName } from '@/database/models/authSession';
+import { authEnv } from '@/envs/auth';
+import { ClerkAuthError, exchangeClerkSession } from '@/server/services/auth';
+
+const accountsOrigin = () => {
+  try {
+    return new URL(authEnv.AUTH_ACCOUNTS_URL || 'https://accounts.aspectlylabs.com').origin;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * The accounts portal calls this endpoint cross-origin when the worker has no
+ * API proxy configured; scope CORS to the configured portal origin only.
+ */
+const corsHeaders = (request: NextRequest): Record<string, string> => {
+  const origin = request.headers.get('origin');
+  const allowed = accountsOrigin();
+  if (!origin || !allowed || origin !== allowed) return {};
+
+  return {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'authorization, content-type',
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+};
+
+export const OPTIONS = (request: NextRequest) =>
+  new NextResponse(null, { headers: corsHeaders(request), status: 204 });
+
+/**
+ * POST /api/auth/clerk
+ * Exchange a Clerk session token (Bearer) for an Orvilo `orvilo_auth` session cookie.
+ */
+export const POST = async (request: NextRequest) => {
+  try {
+    const authorization = request.headers.get('authorization');
+    const token = authorization?.toLowerCase().startsWith('bearer ')
+      ? authorization.slice(7).trim()
+      : null;
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Missing Clerk session token' },
+        { headers: corsHeaders(request), status: 401 },
+      );
+    }
+
+    const db = await getServerDB();
+    const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const { cookie, user } = await exchangeClerkSession(db, {
+      ipAddress: forwardedFor ?? request.headers.get('x-real-ip'),
+      sessionToken: token,
+      userAgent: request.headers.get('user-agent'),
+    });
+
+    const response = NextResponse.json(
+      {
+        user: {
+          email: user.email,
+          emailVerified: user.emailVerified,
+          id: user.id,
+          image: user.avatar,
+          name: user.fullName,
+          username: user.username,
+        },
+      },
+      { headers: corsHeaders(request), status: 200 },
+    );
+    response.cookies.set(cookie.name, cookie.value, cookie.options);
+    // Drop the legacy Better Auth cookie if a migrated browser still carries it.
+    response.cookies.set(legacySessionCookieName(authEnv.AUTH_COOKIE_PREFIX), '', {
+      ...cookie.options,
+      expires: new Date(0),
+    });
+
+    return response;
+  } catch (error) {
+    const status = error instanceof ClerkAuthError ? error.status : 500;
+    if (status === 500) console.error('[auth/clerk] exchange failed:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Exchange failed' },
+      { headers: corsHeaders(request), status },
+    );
+  }
+};

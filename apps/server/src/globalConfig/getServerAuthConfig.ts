@@ -2,16 +2,12 @@ import { ENABLE_BUSINESS_FEATURES } from '@orvilo/business-const';
 
 import { appEnv } from '@/envs/app';
 import { authEnv } from '@/envs/auth';
-import { parseSSOProviders } from '@/libs/better-auth/utils/server';
 import { type GlobalServerConfig } from '@/types/serverConfig';
-
-const getBetterAuthSSOProviders = () => {
-  return parseSSOProviders(authEnv.AUTH_SSO_PROVIDERS);
-};
 
 export const getServerAuthConfig = (): GlobalServerConfig => {
   return {
     aiProvider: {},
+    authAccountsUrl: authEnv.AUTH_ACCOUNTS_URL || 'https://accounts.aspectlylabs.com',
     disableEmailPassword: authEnv.AUTH_DISABLE_EMAIL_PASSWORD,
     enableBusinessFeatures: ENABLE_BUSINESS_FEATURES,
     enableEmailVerification: authEnv.AUTH_EMAIL_VERIFICATION,
@@ -19,7 +15,6 @@ export const getServerAuthConfig = (): GlobalServerConfig => {
     enableMarketTrustedClient: !!(
       appEnv.MARKET_TRUSTED_CLIENT_SECRET && appEnv.MARKET_TRUSTED_CLIENT_ID
     ),
-    oAuthSSOProviders: getBetterAuthSSOProviders(),
     telemetry: {},
   };
 };

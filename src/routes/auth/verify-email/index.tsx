@@ -1,1 +1,1 @@
-export { default } from '@/features/Auth/VerifyEmail';
+export { default } from '@/features/Auth/SignIn';

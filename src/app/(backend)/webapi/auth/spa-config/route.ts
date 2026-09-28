@@ -11,17 +11,17 @@ import { getServerAuthConfig } from '@/server/globalConfig/getServerAuthConfig';
 // unauthenticated, so it carries only the fields the auth pages actually read.
 // `enableBusinessFeatures` is not among them — it is a build-time constant.
 export const GET = () => {
-  const { disableEmailPassword, enableEmailVerification, enableMagicLink, oAuthSSOProviders } =
+  const { authAccountsUrl, disableEmailPassword, enableEmailVerification, enableMagicLink } =
     getServerAuthConfig();
 
   return Response.json(
     {
       analyticsConfig: buildAnalyticsConfig(),
       config: {
+        authAccountsUrl,
         disableEmailPassword,
         enableEmailVerification,
         enableMagicLink,
-        oAuthSSOProviders,
       },
       enableOIDC: authEnv.ENABLE_OIDC,
       featureFlags: getServerFeatureFlagsValue(),

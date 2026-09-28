@@ -1,1 +1,1 @@
-export { default } from '@/features/Auth/ResetPassword';
+export { default } from '@/features/Auth/SignIn';

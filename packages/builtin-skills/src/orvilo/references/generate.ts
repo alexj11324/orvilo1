@@ -21,25 +21,32 @@ Generate text, images, videos, and audio. Alias: \`lh generate\`.
 
 ## Finding Available Video / Image Models
 
-Before generating, always look up the correct model ID with \`lh model list\`:
+Provider/model management commands (\`lh model\`, \`lh provider\`) are retired — the
+catalog is deployment-owned. Read it through the REST API with a credential your
+environment already carries (\`$ORVILO_CLI_API_KEY\`, or \`$ORVILO_JWT\` when it is
+exported — note that operation-scoped tokens are only accepted by the model
+invocation endpoints, not this one):
 
 \`\`\`bash
-# List all video models for the orvilo provider
-lh model list orvilo --type video
+TOKEN="\${ORVILO_CLI_API_KEY:-$ORVILO_JWT}"
 
-# List only enabled video models
-lh model list orvilo --type video --enabled
+# List enabled video models for the orvilo provider
+curl -s "$ORVILO_SERVER/api/v1/models?provider=orvilo&type=video&enabled=true" \\
+  -H "Authorization: Bearer $TOKEN"
 
 # List image generation models
-lh model list orvilo --type image
+curl -s "$ORVILO_SERVER/api/v1/models?provider=orvilo&type=image&enabled=true" \\
+  -H "Authorization: Bearer $TOKEN"
 \`\`\`
 
 Use the \`id\` field from the output as the \`-m\` argument. Model IDs for video/image are
 **not** the same as human-readable display names — always use the exact \`id\` field.
+If no usable credential is in your environment, ask the user for the model ID or
+reuse one from \`lh agent view\` on an existing agent — never guess slugs.
 
 Example:
 \`\`\`bash
-# ✅ Correct — use the id from lh model list
+# ✅ Correct — use the id from the catalog
 lh gen video "a cat riding a skateboard" -p orvilo -m dreamina-seedance-2-0-260128
 
 # ❌ Wrong — guessed slugs will fail with no_valid_channel_error

@@ -124,9 +124,8 @@ class GroupManagementExecutionRuntime {
   // ==================== Task Execution (isolated threads) ====================
 
   /**
-   * Run a member as an isolated-thread task. `runInClient` only takes effect on
-   * the desktop client (handled by the client orchestrator); on the cloud/web
-   * server there is no local FS/shell, so the task always runs server-side.
+   * Run a member as an isolated-thread task. Tasks always execute server-side
+   * in their own thread — the desktop-only client runtime was retired.
    */
   executeAgentTask = async (
     params: ExecuteTaskParams,

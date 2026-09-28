@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Header from './index';
 
 const mocks = vi.hoisted(() => ({
-  marketSubmission: { isSubmitting: false, isUnderReview: false, open: vi.fn(), revision: 0 },
   agentState: {
     activeAgentId: 'agent-1',
     authorId: undefined as string | undefined,
@@ -157,10 +156,6 @@ vi.mock('@/features/AgentBreadcrumb', () => ({
   default: () => null,
 }));
 
-vi.mock('@/features/AgentMarketSubmission/useAgentMarketSubmission', () => ({
-  useAgentMarketSubmission: () => mocks.marketSubmission,
-}));
-
 vi.mock('@/business/client/hooks/useHasActiveWorkspace', () => ({
   useHasActiveWorkspace: () => mocks.hasActiveWorkspace,
 }));
@@ -264,21 +259,8 @@ vi.mock('../store', () => ({
     selector(mocks.profileState),
 }));
 
-vi.mock('./AgentForkTag', () => ({
-  default: () => null,
-}));
-
-vi.mock('./AgentStatusTag', () => ({
-  default: () => <span>Unpublished</span>,
-}));
-
-vi.mock('@/services/marketApi', () => ({
-  marketApiService: { getAgentDetail: vi.fn().mockResolvedValue({ status: 'unpublished' }) },
-}));
-
 describe('Agent profile Header', () => {
   beforeEach(() => {
-    mocks.marketSubmission.isUnderReview = false;
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:agent-profile');
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
@@ -298,52 +280,6 @@ describe('Agent profile Header', () => {
     mocks.shareSupport = { publishable: false, supported: false, visible: false };
     mocks.serverConfigState.featureFlags.enableAgentShare = undefined;
     mocks.serverConfigState.serverConfig.enableBusinessFeatures = true;
-  });
-
-  describe('Market review entry', () => {
-    it('replaces the unpublished status with under review after submission', () => {
-      const { rerender } = render(<Header />);
-      expect(screen.getByText('Unpublished')).toBeVisible();
-      expect(screen.queryByText('Under Review')).toBeNull();
-
-      mocks.marketSubmission.isUnderReview = true;
-      rerender(<Header key="submitted" />);
-
-      expect(screen.getByText('Under Review')).toBeVisible();
-      expect(screen.queryByText('Unpublished')).toBeNull();
-    });
-
-    it('keeps publishing inside the collapsed actions menu, not directly in the header', () => {
-      render(<Header />);
-
-      const entry = screen.getByRole('button', { name: 'marketSubmission.entry' });
-      expect(screen.getByTestId('agent-profile-menu')).toContainElement(entry);
-      expect(entry).toBeVisible();
-    });
-
-    it('offers submission independently of the share rollout flag', () => {
-      mocks.serverConfigState.featureFlags.enableAgentShare = false;
-      render(<Header />);
-      expect(screen.getByText('marketSubmission.entry')).toBeEnabled();
-    });
-
-    it.each(['builtin', 'heterogeneous'] as const)('hides submission for %s agents', (kind) => {
-      mocks.agentState.isBuiltinAgent = kind === 'builtin';
-      mocks.agentState.isCurrentAgentHeterogeneous = kind === 'heterogeneous';
-      render(<Header />);
-      expect(screen.queryByText('marketSubmission.entry')).toBeNull();
-    });
-
-    it.each(['role', 'resource', 'lock'] as const)(
-      'disables submission when blocked by %s',
-      (kind) => {
-        mocks.permission.allowed = kind !== 'role';
-        mocks.resourceAccess.canManageResource = kind !== 'resource';
-        mocks.profileState.lockState.lockedByOther = kind === 'lock';
-        render(<Header />);
-        expect(screen.getByText('marketSubmission.entry')).toBeDisabled();
-      },
-    );
   });
 
   describe('share entry', () => {

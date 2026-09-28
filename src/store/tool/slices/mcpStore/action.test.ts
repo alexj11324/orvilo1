@@ -1,13 +1,11 @@
 import { type PluginItem } from '@lobehub/market-sdk';
-import type * as OrvilochatConstModule from '@orvilo/const';
 import { type ToolManifest } from '@orvilo/types';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { discoverService } from '@/services/discover';
 import { mcpService } from '@/services/mcp';
 import { pluginService } from '@/services/plugin';
-import { globalHelpers } from '@/store/global/helpers';
 import { type CheckMcpInstallResult } from '@/types/plugins';
 import { MCPInstallStep } from '@/types/plugins';
 
@@ -17,9 +15,7 @@ vi.mock('@/libs/trpc/client', () => ({
   asyncClient: {},
   lambdaClient: {
     market: {
-      getMcpCategories: { query: vi.fn() },
       getMcpDetail: { query: vi.fn() },
-      getMcpList: { query: vi.fn() },
       getMcpManifest: { query: vi.fn() },
       registerClientInMarketplace: {
         mutate: vi.fn().mockResolvedValue({
@@ -28,9 +24,6 @@ vi.mock('@/libs/trpc/client', () => ({
         }),
       },
       registerM2MToken: { query: vi.fn().mockResolvedValue({ success: true }) },
-      reportCall: { mutate: vi.fn().mockResolvedValue(undefined) },
-      reportMcpEvent: { mutate: vi.fn().mockResolvedValue(undefined) },
-      reportMcpInstallResult: { mutate: vi.fn().mockResolvedValue(undefined) },
     },
   },
   toolsClient: {
@@ -51,34 +44,6 @@ vi.mock('@/utils/sleep', () => ({
 
 vi.mock('zustand/traditional');
 
-const bootstrapToolStoreWithDesktop = async (isDesktopEnv: boolean) => {
-  vi.resetModules();
-
-  vi.doMock('@orvilo/const', async () => {
-    const actual = await vi.importActual<typeof OrvilochatConstModule>('@orvilo/const');
-    return {
-      ...actual,
-      isDesktop: isDesktopEnv,
-    };
-  });
-
-  const storeModule = await import('@/store/tool');
-  const discoverModule = await import('@/services/discover');
-  const helpersModule = await import('@/store/global/helpers');
-
-  const cleanup = () => {
-    vi.resetModules();
-    vi.doUnmock('@orvilo/const');
-  };
-
-  return {
-    useToolStore: storeModule.useToolStore,
-    discoverService: discoverModule.discoverService,
-    globalHelpers: helpersModule.globalHelpers,
-    cleanup,
-  };
-};
-
 beforeEach(() => {
   vi.clearAllMocks();
 
@@ -87,21 +52,16 @@ beforeEach(() => {
     clientId: 'test-client-id',
     clientSecret: 'test-client-secret',
   });
-  vi.spyOn(discoverService, 'reportMcpEvent').mockResolvedValue(undefined as any);
 
   // Reset store state
   act(() => {
     useToolStore.setState(
       {
-        mcpPluginItems: [],
         mcpInstallProgress: {},
         mcpInstallAbortControllers: {},
         mcpTestAbortControllers: {},
         mcpTestLoading: {},
         mcpTestErrors: {},
-        currentPage: 1,
-        totalCount: 0,
-        categories: [],
         refreshPlugins: vi.fn(),
         updateInstallLoadingState: vi.fn(),
       },
@@ -449,239 +409,6 @@ describe('mcpStore actions', () => {
     });
   });
 
-  describe('loadMoreMCPPlugins', () => {
-    it('should increment current page when more items available', () => {
-      const { result } = renderHook(() => useToolStore());
-
-      act(() => {
-        useToolStore.setState({
-          mcpPluginItems: Array.from({ length: 10 }, (_, i) => ({
-            identifier: `plugin-${i}`,
-          })) as PluginItem[],
-          totalCount: 50,
-          currentPage: 1,
-        });
-      });
-
-      act(() => {
-        result.current.loadMoreMCPPlugins();
-      });
-
-      expect(result.current.currentPage).toBe(2);
-    });
-
-    it('should not increment page when all items loaded', () => {
-      const { result } = renderHook(() => useToolStore());
-
-      act(() => {
-        useToolStore.setState({
-          mcpPluginItems: Array.from({ length: 50 }, (_, i) => ({
-            identifier: `plugin-${i}`,
-          })) as PluginItem[],
-          totalCount: 50,
-          currentPage: 5,
-        });
-      });
-
-      act(() => {
-        result.current.loadMoreMCPPlugins();
-      });
-
-      expect(result.current.currentPage).toBe(5);
-    });
-  });
-
-  describe('resetMCPPluginList', () => {
-    it('should reset plugin list and page', () => {
-      const { result } = renderHook(() => useToolStore());
-
-      act(() => {
-        useToolStore.setState({
-          mcpPluginItems: [{ identifier: 'plugin-1' }] as PluginItem[],
-          currentPage: 5,
-          mcpSearchKeywords: 'old-keyword',
-        });
-      });
-
-      act(() => {
-        result.current.resetMCPPluginList('new-keyword');
-      });
-
-      expect(result.current.mcpPluginItems).toEqual([]);
-      expect(result.current.currentPage).toBe(1);
-      expect(result.current.mcpSearchKeywords).toBe('new-keyword');
-    });
-
-    it('should reset without keywords', () => {
-      const { result } = renderHook(() => useToolStore());
-
-      act(() => {
-        useToolStore.setState({
-          mcpPluginItems: [{ identifier: 'plugin-1' }] as PluginItem[],
-          currentPage: 3,
-        });
-      });
-
-      act(() => {
-        result.current.resetMCPPluginList();
-      });
-
-      expect(result.current.mcpPluginItems).toEqual([]);
-      expect(result.current.currentPage).toBe(1);
-      expect(result.current.mcpSearchKeywords).toBeUndefined();
-    });
-  });
-
-  describe('useFetchMCPPluginList', () => {
-    it('should fetch MCP plugin list and update state', async () => {
-      const mockData = {
-        items: [
-          { identifier: 'plugin-1', name: 'Plugin 1' },
-          { identifier: 'plugin-2', name: 'Plugin 2' },
-        ] as PluginItem[],
-        categories: ['category1', 'category2'],
-        totalCount: 2,
-        totalPages: 1,
-        currentPage: 1,
-        pageSize: 20,
-      };
-
-      vi.spyOn(discoverService, 'getMCPPluginList').mockResolvedValue(mockData);
-      vi.spyOn(globalHelpers, 'getCurrentLanguage').mockReturnValue('en-US');
-
-      const { result } = renderHook(() =>
-        useToolStore.getState().useFetchMCPPluginList({ page: 1, pageSize: 20 }),
-      );
-
-      await waitFor(() => {
-        expect(result.current.data).toEqual(mockData);
-      });
-
-      expect(discoverService.getMCPPluginList).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 1, pageSize: 20, connectionType: 'http' }),
-      );
-
-      const state = useToolStore.getState();
-      expect(state.mcpPluginItems).toEqual(mockData.items);
-      expect(state.categories).toEqual(mockData.categories);
-      expect(state.totalCount).toBe(2);
-      expect(state.totalPages).toBe(1);
-      expect(state.searchLoading).toBe(false);
-    });
-
-    it('should set active identifier on first init', async () => {
-      const mockData = {
-        items: [{ identifier: 'first-plugin', name: 'First Plugin' }] as PluginItem[],
-        categories: [],
-        totalCount: 1,
-        totalPages: 1,
-        currentPage: 1,
-        pageSize: 20,
-      };
-
-      vi.spyOn(discoverService, 'getMCPPluginList').mockResolvedValue(mockData);
-      vi.spyOn(globalHelpers, 'getCurrentLanguage').mockReturnValue('en-US');
-
-      act(() => {
-        useToolStore.setState({ isMcpListInit: false });
-      });
-
-      const { result } = renderHook(() =>
-        useToolStore.getState().useFetchMCPPluginList({ page: 1 }),
-      );
-
-      await waitFor(() => {
-        expect(result.current.data).toEqual(mockData);
-      });
-
-      const state = useToolStore.getState();
-      expect(state.activeMCPIdentifier).toBe('first-plugin');
-      expect(state.isMcpListInit).toBe(true);
-    });
-
-    it('should convert page to number', async () => {
-      vi.spyOn(globalHelpers, 'getCurrentLanguage').mockReturnValue('en-US');
-      vi.spyOn(discoverService, 'getMCPPluginList').mockResolvedValue({
-        items: [],
-        categories: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: 1,
-        pageSize: 20,
-      });
-
-      const params = { page: 2, pageSize: 15 } as any;
-      renderHook(() => useToolStore.getState().useFetchMCPPluginList(params));
-
-      await waitFor(() => {
-        expect(discoverService.getMCPPluginList).toHaveBeenCalledWith(
-          expect.objectContaining({ ...params, connectionType: 'http' }),
-        );
-      });
-    });
-
-    it('should include locale and parameters in SWR key', async () => {
-      vi.spyOn(globalHelpers, 'getCurrentLanguage').mockReturnValue('zh-CN');
-      vi.spyOn(discoverService, 'getMCPPluginList').mockResolvedValue({
-        items: [],
-        categories: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: 1,
-        pageSize: 20,
-      });
-
-      const params = { page: 3, pageSize: 15, q: 'test' } as any;
-      renderHook(() => useToolStore.getState().useFetchMCPPluginList(params));
-
-      await waitFor(() => {
-        expect(discoverService.getMCPPluginList).toHaveBeenCalledWith(
-          expect.objectContaining({ ...params, connectionType: 'http' }),
-        );
-      });
-    });
-
-    it('should not append connectionType in desktop environment', async () => {
-      const {
-        useToolStore: desktopStore,
-        discoverService: desktopDiscoverService,
-        globalHelpers: desktopGlobalHelpers,
-        cleanup,
-      } = await bootstrapToolStoreWithDesktop(true);
-
-      const mockData = {
-        items: [{ identifier: 'desktop-plugin', name: 'Desktop Plugin' }] as PluginItem[],
-        categories: [],
-        totalCount: 1,
-        totalPages: 1,
-        currentPage: 1,
-        pageSize: 20,
-      };
-
-      try {
-        vi.spyOn(desktopGlobalHelpers, 'getCurrentLanguage').mockReturnValue('en-US');
-        const fetchSpy = vi
-          .spyOn(desktopDiscoverService, 'getMCPPluginList')
-          .mockResolvedValue(mockData);
-
-        const { result } = renderHook(() =>
-          desktopStore.getState().useFetchMCPPluginList({ page: 1, pageSize: 20 }),
-        );
-
-        await waitFor(() => {
-          expect(result.current.data).toEqual(mockData);
-        });
-
-        expect(fetchSpy).toHaveBeenCalledTimes(1);
-        const [firstCallArgs] = fetchSpy.mock.calls[0];
-        expect(firstCallArgs).toMatchObject({ page: 1, pageSize: 20 });
-        expect(firstCallArgs.connectionType).toBeUndefined();
-      } finally {
-        cleanup();
-      }
-    });
-  });
-
   describe('installMCPPlugin', () => {
     const mockPlugin: PluginItem = {
       identifier: 'test-plugin',
@@ -732,7 +459,6 @@ describe('mcpStore actions', () => {
       vi.spyOn(mcpService, 'checkInstallation').mockResolvedValue(mockCheckResult);
       vi.spyOn(mcpService, 'getStdioMcpServerManifest').mockResolvedValue(mockServerManifest);
       vi.spyOn(pluginService, 'installPlugin').mockResolvedValue(undefined);
-      vi.spyOn(discoverService, 'reportMcpInstallResult').mockResolvedValue(undefined as any);
       vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
     });
 
@@ -741,9 +467,7 @@ describe('mcpStore actions', () => {
         const { result } = renderHook(() => useToolStore());
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         let installResult;
@@ -765,9 +489,7 @@ describe('mcpStore actions', () => {
         const { result } = renderHook(() => useToolStore());
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         const progressUpdates: any[] = [];
@@ -804,11 +526,7 @@ describe('mcpStore actions', () => {
       it('should fetch plugin detail if not in store', async () => {
         const { result } = renderHook(() => useToolStore());
 
-        act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [],
-          });
-        });
+        act(() => {});
 
         await act(async () => {
           await result.current.installMCPPlugin('test-plugin');
@@ -822,11 +540,7 @@ describe('mcpStore actions', () => {
 
         vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(null as any);
 
-        act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [],
-          });
-        });
+        act(() => {});
 
         let installResult;
         await act(async () => {
@@ -855,9 +569,7 @@ describe('mcpStore actions', () => {
         });
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         let installResult;
@@ -878,9 +590,7 @@ describe('mcpStore actions', () => {
         });
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         let installResult;
@@ -911,9 +621,7 @@ describe('mcpStore actions', () => {
         });
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         let installResult;
@@ -983,9 +691,9 @@ describe('mcpStore actions', () => {
         } as any;
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPluginWithCloudEndpoint],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(
+            mockPluginWithCloudEndpoint as any,
+          );
         });
 
         const installPluginSpy = vi.spyOn(pluginService, 'installPlugin');
@@ -1045,9 +753,7 @@ describe('mcpStore actions', () => {
         vi.spyOn(await import('@orvilo/const'), 'isDesktop', 'get').mockReturnValue(false);
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         let installResult;
@@ -1072,8 +778,8 @@ describe('mcpStore actions', () => {
         const { result } = renderHook(() => useToolStore());
 
         act(() => {
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
           useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
             mcpInstallProgress: {
               'test-plugin': {
                 progress: 50,
@@ -1107,8 +813,8 @@ describe('mcpStore actions', () => {
         const { result } = renderHook(() => useToolStore());
 
         act(() => {
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
           useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
             mcpInstallProgress: {},
           });
         });
@@ -1139,9 +845,7 @@ describe('mcpStore actions', () => {
         );
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         await act(async () => {
@@ -1188,9 +892,7 @@ describe('mcpStore actions', () => {
         );
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         const installPluginSpy = vi.spyOn(pluginService, 'installPlugin');
@@ -1213,7 +915,7 @@ describe('mcpStore actions', () => {
       it('should handle cancellation during installation', async () => {
         const { result } = renderHook(() => useToolStore());
 
-        vi.spyOn(mcpService, 'checkInstallation').mockImplementation(async (manifest, signal) => {
+        vi.spyOn(mcpService, 'checkInstallation').mockImplementation(async () => {
           // Cancel after check
           setTimeout(() => {
             result.current.cancelInstallMCPPlugin('test-plugin');
@@ -1225,9 +927,7 @@ describe('mcpStore actions', () => {
         });
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         await act(async () => {
@@ -1259,9 +959,7 @@ describe('mcpStore actions', () => {
         vi.spyOn(mcpService, 'getStdioMcpServerManifest').mockRejectedValue(mcpError);
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         await act(async () => {
@@ -1287,9 +985,7 @@ describe('mcpStore actions', () => {
         );
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         await act(async () => {
@@ -1311,9 +1007,7 @@ describe('mcpStore actions', () => {
         vi.spyOn(mcpService, 'getStdioMcpServerManifest').mockResolvedValue(undefined as any);
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         let installResult;
@@ -1334,9 +1028,7 @@ describe('mcpStore actions', () => {
         });
 
         act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
+          vi.spyOn(discoverService, 'getMcpDetail').mockResolvedValue(mockPlugin as any);
         });
 
         let installResult;
@@ -1346,57 +1038,6 @@ describe('mcpStore actions', () => {
 
         expect(installResult).toBeUndefined();
         expect(mcpService.getStdioMcpServerManifest).not.toHaveBeenCalled();
-      });
-
-      it('should report installation failure', async () => {
-        const { result } = renderHook(() => useToolStore());
-
-        vi.spyOn(mcpService, 'getStdioMcpServerManifest').mockRejectedValue(
-          new Error('Installation failed'),
-        );
-
-        act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
-        });
-
-        await act(async () => {
-          await result.current.installMCPPlugin('test-plugin');
-        });
-
-        expect(discoverService.reportMcpInstallResult).toHaveBeenCalledWith(
-          expect.objectContaining({
-            success: false,
-            errorMessage: 'Installation failed',
-            identifier: 'test-plugin',
-          }),
-        );
-      });
-    });
-
-    describe('installation reporting', () => {
-      it('should report successful installation', async () => {
-        const { result } = renderHook(() => useToolStore());
-
-        act(() => {
-          useToolStore.setState({
-            mcpPluginItems: [mockPlugin],
-          });
-        });
-
-        await act(async () => {
-          await result.current.installMCPPlugin('test-plugin');
-        });
-
-        expect(discoverService.reportMcpInstallResult).toHaveBeenCalledWith(
-          expect.objectContaining({
-            success: true,
-            identifier: 'test-plugin',
-            platform: 'darwin',
-            version: '1.0.0',
-          }),
-        );
       });
     });
   });

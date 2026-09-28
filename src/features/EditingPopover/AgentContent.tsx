@@ -159,13 +159,19 @@ const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) =>
         onUpload={handleAvatarUpload}
       />
       <Input
+        data-testid="editing-popover-title-input"
         defaultValue={title}
         ref={inputRef}
         style={{ flex: 1 }}
         onChange={(e) => setNewTitle(e.target.value)}
         onPressEnter={handleUpdate}
       />
-      <ActionIcon icon={Check} size={'small'} onClick={handleUpdate} />
+      <ActionIcon
+        data-testid="editing-popover-save"
+        icon={Check}
+        size={'small'}
+        onClick={handleUpdate}
+      />
     </Flexbox>
   );
 });

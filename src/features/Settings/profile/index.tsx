@@ -1,8 +1,9 @@
 'use client';
 
-import { Flexbox, FormGroup } from '@lobehub/ui';
+import { Flexbox } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { Divider } from 'antd';
+import { cssVar } from 'antd-style';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,7 +20,7 @@ import AvatarRow from './features/AvatarRow';
 import ComposioAuthorizationList from './features/ComposioAuthorizationList';
 import EmailRow from './features/EmailRow';
 import FullNameRow from './features/FullNameRow';
-import InterestsRow from './features/InterestsRow';
+import { JobTitleRow } from './features/JobTitleRow';
 import PasswordRow from './features/PasswordRow';
 import ProfileRow from './features/ProfileRow';
 import SSOProvidersList from './features/SSOProvidersList';
@@ -66,7 +67,17 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('profile.title')} />}
-      <FormGroup collapsible={false} gap={16} title={t('profile.account')} variant={'filled'}>
+      <Flexbox
+        style={{
+          width: '100%',
+          maxWidth: 640,
+          marginInline: 'auto',
+          paddingInline: 16,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: 12,
+          background: cssVar.colorBgContainer,
+        }}
+      >
         <Flexbox style={{ display: isLoading ? 'flex' : 'none' }}>
           <SettingsProfileRowSkeleton />
           <Divider style={{ margin: 0 }} />
@@ -81,27 +92,27 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
 
           <Divider style={{ margin: 0 }} />
 
+          {isLogin && userProfile?.email && (
+            <>
+              <EmailRow />
+              <Divider style={{ margin: 0 }} />
+            </>
+          )}
+
           <FullNameRow />
+
+          <Divider style={{ margin: 0 }} />
+
+          <JobTitleRow />
 
           <Divider style={{ margin: 0 }} />
 
           <UsernameRow />
 
-          <Divider style={{ margin: 0 }} />
-
-          <InterestsRow />
-
           {!isDesktop && isLogin && !disableEmailPassword && (
             <>
               <Divider style={{ margin: 0 }} />
               <PasswordRow />
-            </>
-          )}
-
-          {isLogin && userProfile?.email && (
-            <>
-              <Divider style={{ margin: 0 }} />
-              <EmailRow />
             </>
           )}
 
@@ -126,7 +137,7 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
             </>
           )}
         </Flexbox>
-      </FormGroup>
+      </Flexbox>
     </>
   );
 };

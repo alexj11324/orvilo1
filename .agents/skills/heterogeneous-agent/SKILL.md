@@ -10,36 +10,37 @@ Use this skill when the bug or feature lives in the external CLI agent pipeline,
 ## Use This Skill For
 
 - Adding or changing a driver under `apps/desktop/src/main/modules/heterogeneousAgent/drivers/`
-- Editing an adapter under `packages/heterogeneous-agents/src/adapters/`
-- Debugging `heteroAgentRawLine` transport, `window.__HETERO_AGENT_TRACE`, or `executeHeterogeneousAgent`
-- Fixing Claude Code stream-json bugs such as duplicate partial/full chunks, broken `message.id` boundaries, missing `tool_result`, TodoWrite state drift, or subagent thread routing
-- Fixing Codex JSONL bugs such as mixed multi-tool messages, broken turn boundaries, or missing tool-result mapping
-- Fixing step-boundary, tool persistence, subagent thread, or resume bugs in Claude Code / Codex flows
+- Editing an adapter under `packages/heterogeneous-agents/src/adapters/` or an ACP session under `packages/heterogeneous-agents/src/spawn/`
+- Debugging the ACP stdio pipeline (`AcpStdioClient`, `session/update` notifications, `heteroAgentEvent` broadcast), `window.__HETERO_AGENT_TRACE`, or `executeHeterogeneousAgent`
+- Fixing adapter bugs such as duplicate partial/full chunks, broken message/turn boundaries, missing `tool_result`, TodoWrite state drift, or subagent thread routing
+- Fixing step-boundary, tool persistence, subagent thread, or resume bugs in ACP-agent flows
 - Reproducing multi-tool mixing, orphan tool messages, or stuck tool-result loading
 
 ## Pipeline Map
 
-1. CLI raw stdout / JSONL
-2. Electron main spawns the CLI and broadcasts `heteroAgentRawLine`
-3. Adapter maps raw provider events into `HeterogeneousAgentEvent`
-4. `executeHeterogeneousAgent` persists assistant/tool messages and forwards stream events
+1. Electron main resolves the ACP endpoint via `resolveAcpSpawnTarget` — native `*-acp` modes (`kimi acp`, `opencode acp`, `qoder --acp`, `codebuddy --acp`) or upstream bridge binaries (`claude-agent-acp`, `codex-acp`, `amp-acp`, `pi-acp`, falling back to a pinned `bunx`/`npx` package run when the bridge isn't installed)
+2. `AcpStdioClient` spawns the endpoint and speaks JSON-RPC; an `AcpAgentSession` subclass runs `initialize` → `session/new`|`session/load` → `session/prompt`
+3. `session/update` notifications feed `AgentStreamPipeline`; the adapter selected by the agent type maps them into `HeterogeneousAgentEvent`
+4. Main broadcasts `heteroAgentEvent`; `executeHeterogeneousAgent` persists assistant/tool messages and forwards stream events
 5. `createGatewayEventHandler` hydrates the UI
-6. Only after this path looks correct should you move on to `agent-tracing` or context-engine debugging
+6. Reverse requests (`session/request_permission`, `elicitation/create`) become `AskUserBridge` intervention cards when a bridge is attached
+7. Only after this path looks correct should you move on to `agent-tracing` or context-engine debugging
 
 ## Read These Files First
 
 - `apps/desktop/src/main/controllers/HeterogeneousAgentCtr.ts`
-- `apps/desktop/src/main/modules/heterogeneousAgent/drivers/claudeCode.ts`
-- `apps/desktop/src/main/modules/heterogeneousAgent/drivers/codex.ts`
-- `packages/heterogeneous-agents/src/adapters/claudeCode.ts`
-- `packages/heterogeneous-agents/src/adapters/codex.ts`
+- `apps/desktop/src/main/controllers/HeterogeneousAgentImpl.ts`
+- `packages/heterogeneous-agents/src/spawn/acpRuntime.ts` (per-agent ACP endpoint registry)
+- `packages/heterogeneous-agents/src/spawn/standardAcpSession.ts` (shared ACP session)
+- `packages/heterogeneous-agents/src/spawn/acpStdioClient.ts` (stdio JSON-RPC transport)
+- `packages/heterogeneous-agents/src/spawn/agentStreamPipeline.ts` (update → event boundary)
 - `src/store/chat/slices/agentRun/actions/transports/hetero/heterogeneousAgentExecutor.ts`
 - `src/store/chat/slices/agentRun/actions/__tests__/heterogeneousAgentExecutor.test.ts`
 
 ## Default Debug Order
 
-1. Prove whether the raw CLI output is correct before touching UI code. The app records every real session — read the most recent one via `cat .heerogeneous-tracing/.last-live-trace` rather than hand-rolling a `claude -p` repro (see references/debug-workflow\.md §2).
-2. If raw output is correct, compare it with adapter output. In dev, `executeHeterogeneousAgent` exposes `window.__HETERO_AGENT_TRACE`.
+1. Prove whether the raw ACP wire output is correct before touching UI code. The app records every real session — read the most recent one via `cat .heerogeneous-tracing/.last-live-trace` rather than hand-rolling a `claude -p` repro (see references/debug-workflow\.md §2). `stdout.jsonl` in the trace dir is the exact JSON-RPC stream.
+2. If wire output is correct, compare it with adapter output. In dev, `executeHeterogeneousAgent` exposes `window.__HETERO_AGENT_TRACE`.
 3. If adapted events look correct, inspect `persistToolBatch`, `persistToolResult`, step transitions, and subagent routing.
 4. Turn the repro into a focused test before fixing.
 5. Only after the transport/adapter/executor path looks sound should you debug later-stage message processing.

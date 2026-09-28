@@ -71,9 +71,9 @@ export const BriefActionLink = memo<BriefActionLinkProps>(
         event.preventDefault();
 
         if (reference.type === 'acceptance' && taskId) {
-          // Arm the panel before navigating, the same handoff
-          // `Home/InputArea/useSend` performs — the panel mounts with the task
-          // page and reads this state on its first render.
+          // Arm the panel before navigating, the same handoff the old Home
+          // composer performed — the panel mounts with the task page and reads
+          // this state on its first render.
           toggleTaskAgentPanel(true);
           openAcceptance(reference.acceptanceId);
           navigate(taskDetailPath(taskId, agentId ?? undefined));

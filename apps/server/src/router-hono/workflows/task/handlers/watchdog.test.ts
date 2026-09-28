@@ -24,6 +24,9 @@ const {
   updateStatus,
   updateStatusIfCurrent,
   updateStatusIfReservation,
+  sweepTaskCancellations,
+  sweepPlanningTaskDispatchStarts,
+  sweepTaskDispatchRecovery,
 } = vi.hoisted(() => ({
   briefCreate: vi.fn<(input: unknown) => Promise<unknown>>(),
   cancelIfRunning: vi.fn<(taskId: string, topicId: string) => Promise<boolean>>(),
@@ -56,6 +59,9 @@ const {
         extra?: unknown,
       ) => Promise<null | WatchdogUpdate>
     >(),
+  sweepTaskCancellations: vi.fn<() => Promise<unknown[]>>(),
+  sweepPlanningTaskDispatchStarts: vi.fn<() => Promise<unknown[]>>(),
+  sweepTaskDispatchRecovery: vi.fn<() => Promise<unknown[]>>(),
 }));
 
 vi.mock('@/database/server', () => ({ getServerDB: vi.fn().mockResolvedValue({}) }));
@@ -82,6 +88,9 @@ vi.mock('@/server/services/taskIntegration', () => ({
     return { cleanupTaskWorktrees };
   }),
 }));
+vi.mock('@/server/services/taskCancellation', () => ({ sweepTaskCancellations }));
+vi.mock('@/server/services/taskDispatchStart', () => ({ sweepPlanningTaskDispatchStarts }));
+vi.mock('@/server/services/taskDispatchRecovery', () => ({ sweepTaskDispatchRecovery }));
 vi.mock('@/database/models/brief', () => ({
   BriefModel: vi.fn(function () {
     return { create: briefCreate };
@@ -114,6 +123,9 @@ describe('task watchdog', () => {
     findStuckTasks.mockResolvedValue([stuckTask]);
     findByTaskId.mockResolvedValue([]);
     interruptTask.mockResolvedValue({ success: true });
+    sweepTaskCancellations.mockResolvedValue([]);
+    sweepPlanningTaskDispatchStarts.mockResolvedValue([]);
+    sweepTaskDispatchRecovery.mockResolvedValue([]);
     updateStatusIfCurrent.mockResolvedValue({ id: 'task-1' });
     updateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
   });

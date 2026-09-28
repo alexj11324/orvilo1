@@ -11,6 +11,7 @@ import { labPreferSelectors } from '@/store/user/selectors';
 import AgentConnectors from './AgentConnectors';
 import AgentGraphRuntime from './AgentGraphRuntime';
 import AgentOpening from './AgentOpening';
+import AgentRules from './AgentRules';
 import AgentSelfIteration from './AgentSelfIteration';
 
 export interface AgentSettingsContentProps {
@@ -22,12 +23,14 @@ const AgentSettingsContent = memo<AgentSettingsContentProps>(({ tab, loadingSkel
   const loading = useAgentStore(agentSelectors.isAgentConfigLoading);
   const { enableAgentSelfIteration } = useServerConfigStore(featureFlagsSelectors);
   const enableAgentGraphConfigLab = useUserStore(labPreferSelectors.enableAgentGraphConfig);
+  const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   if (loading) return loadingSkeleton;
 
   return (
     <>
       {tab === ChatSettingsTabs.Opening && <AgentOpening />}
+      {enableSelfLearning && tab === ChatSettingsTabs.Rules && <AgentRules />}
       {enableAgentSelfIteration && tab === ChatSettingsTabs.SelfIteration && <AgentSelfIteration />}
       {enableAgentGraphConfigLab && tab === ChatSettingsTabs.Graph && <AgentGraphRuntime />}
       {tab === ChatSettingsTabs.Connector && <AgentConnectors />}

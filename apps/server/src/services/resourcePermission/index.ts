@@ -19,6 +19,8 @@ import {
   resolveWorkspaceGrantedPermissions,
 } from '@/server/services/workspacePermission';
 
+import { isWorkspaceScopedMeta } from './scopeMeta';
+
 export interface ResourceMeta {
   /** Only agents carry a slug; with `virtual` it identifies a provisioned builtin. */
   slug?: string | null;
@@ -84,6 +86,8 @@ export const isAccessLevelAllowed = (
   resourceType: PermissionResourceType,
   accessLevel: ResourceAccessLevel,
 ) => isResourceAccessLevelAllowed(resourceType, accessLevel);
+
+export { isWorkspaceScopedMeta } from './scopeMeta';
 
 /**
  * Fetch creator/visibility/workspace of a permission-capable resource,
@@ -233,7 +237,7 @@ export const canPerformResourceAction = async (params: {
     userId,
     workspaceId,
   } = params;
-  if (meta.workspaceId !== workspaceId) return false;
+  if (!isWorkspaceScopedMeta(meta, workspaceId, userId)) return false;
 
   const isCreator = meta.userId === userId;
   const isPrivate = meta.visibility === 'private';
@@ -350,7 +354,7 @@ export const assertCanPerformResourceAction = async (
 ): Promise<void> => {
   const meta =
     params.meta ?? (await getResourceMeta(params.db, params.resourceType, params.resourceId));
-  if (!meta || meta.workspaceId !== params.workspaceId) {
+  if (!meta || !isWorkspaceScopedMeta(meta, params.workspaceId, params.userId)) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Resource not found' });
   }
 
@@ -389,7 +393,7 @@ export const isResourceAuthorOrAdmin = async (params: {
   workspaceId: string;
 }): Promise<boolean> => {
   const { db, grantedPermissions, meta, resourceType, userId, workspaceId } = params;
-  if (meta.workspaceId !== workspaceId) return false;
+  if (!isWorkspaceScopedMeta(meta, workspaceId, userId)) return false;
   if (meta.userId === userId) return true;
   if (meta.visibility === 'private') return false;
 

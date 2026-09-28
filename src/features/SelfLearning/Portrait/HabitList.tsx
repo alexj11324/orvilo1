@@ -2,17 +2,11 @@
 
 import { Block, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
 import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { ActionIcon, Button, DropdownMenu, Popover, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { ActionIcon, DropdownMenu, Popover, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
-import {
-  ArchiveIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  MessageSquareTextIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
-} from 'lucide-react';
-import { Fragment, memo, useMemo, useState } from 'react';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { ArchiveIcon, MessageSquareTextIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react';
+import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import urlJoin from 'url-join';
@@ -21,15 +15,17 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import type { ExpertiseHabit } from '@/services/expertise';
 import { expertiseService } from '@/services/expertise';
 
-import { countTiers, type HabitTier, habitTier, TIER_ORDER } from '../helpers';
+import { describeRecent } from '../helpers';
 import LessonPreview from './LessonPreview';
 import { portraitStyles as styles } from './styles';
 import TeachBox from './TeachBox';
 
+// `.fromNow()` needs the plugin; extending here keeps the module self-sufficient. See the
+// note in `LessonDetail`.
+dayjs.extend(relativeTime);
+
 interface HabitListProps {
   agentId: string;
-  /** Start with the "formed" group open — the full-list page has nothing to fold. */
-  defaultStableOpen?: boolean;
   /** Present when the list mixes several domains, so each row can say which one it belongs to. */
   domainTitles?: Record<string, string>;
   habits: (ExpertiseHabit & { domainId: string })[];
@@ -69,38 +65,17 @@ interface HabitRowProps {
   domainTitle?: string;
   habit: ExpertiseHabit & { domainId: string };
   onChanged: () => void;
-  tier: HabitTier;
 }
 
-const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged, tier }) => {
+const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }) => {
   const { t } = useTranslation('selfLearning');
   const navigate = useWorkspaceAwareNavigate();
   const [teaching, setTeaching] = useState(false);
 
-  const hint = useMemo(() => {
-    if (habit.taughtByUser && habit.recent.length === 0) return t('habit.hint.taughtPending');
-    const bad = habit.recent.filter((r) => !r.pass);
-    const lastBad = [...bad].reverse()[0];
-    const topic = lastBad?.subjectTitle ?? undefined;
-    switch (tier) {
-      case 'recurring': {
-        return topic
-          ? t('habit.hint.recurring', { bad: bad.length, topic, total: habit.recent.length })
-          : t('habit.hint.recurringNoTopic', { bad: bad.length, total: habit.recent.length });
-      }
-      case 'shaky': {
-        return topic
-          ? t('habit.hint.shaky', { topic, total: habit.recent.length })
-          : t('habit.hint.shakyNoTopic', { total: habit.recent.length });
-      }
-      case 'fresh': {
-        return habit.recent.length === 0 ? t('habit.hint.freshNone') : t('habit.hint.freshOne');
-      }
-      default: {
-        return t('habit.hint.stable', { count: habit.hitCount });
-      }
-    }
-  }, [habit, t, tier]);
+  const hint = useMemo(
+    () => describeRecent(habit.recent, habit.taughtByUser, t),
+    [habit.recent, habit.taughtByUser, t],
+  );
 
   const revise = async (text: string) => {
     try {
@@ -212,15 +187,6 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged, 
         </Popover>
         <RecentDots recent={habit.recent} />
         <Flexbox horizontal align={'center'} className={'teach'} gap={4} style={{ flex: 'none' }}>
-          {(tier === 'recurring' || tier === 'shaky') && (
-            <Button
-              size={'small'}
-              type={tier === 'recurring' ? 'primary' : 'default'}
-              onClick={() => setTeaching((v) => !v)}
-            >
-              {t('habit.action.teachAgain')}
-            </Button>
-          )}
           <DropdownMenu items={menu}>
             <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
           </DropdownMenu>
@@ -228,15 +194,7 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged, 
       </Flexbox>
       {teaching && (
         <Flexbox style={{ paddingInlineStart: 48 }}>
-          <TeachBox
-            autoFocus
-            placeholder={
-              tier === 'recurring'
-                ? t('habit.teach.placeholderRecurring')
-                : t('habit.teach.placeholderCorrect')
-            }
-            onSubmit={revise}
-          />
+          <TeachBox autoFocus placeholder={t('habit.teach.placeholderCorrect')} onSubmit={revise} />
         </Flexbox>
       )}
     </Flexbox>
@@ -246,32 +204,26 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged, 
 HabitRow.displayName = 'ExpertiseHabitRow';
 
 /**
- * 习惯清单，按可靠度分组：老毛病 → 还不稳 → 刚学的 展开，已养成 折起。
- * 值得看的都在上面，稳的收起来 —— 用户不需要有精力逐条过。
+ * The rules an agent carries, as a flat list in the order the server ranks them (most-used
+ * first). One row per rule: what it says, where it came from, how it has held up, and the
+ * actions to correct, trace or retire it.
+ *
+ * It used to group rows by a reliability verdict — 老毛病 / 还不稳 / 刚学的 / 已养成 — which read
+ * as a growth narrative and made a stored rule sound like a habit being formed. S60 drops that
+ * framing: the outcome counts stay, the verdict word does not.
  */
 const HabitList = memo<HabitListProps>(
-  ({ agentId, defaultStableOpen = false, domainTitles, habits, onChanged, viewAllPath }) => {
+  ({ agentId, domainTitles, habits, onChanged, viewAllPath }) => {
     const { t } = useTranslation('selfLearning');
     const [search, setSearch] = useState('');
-    const [stableOpen, setStableOpen] = useState(defaultStableOpen);
 
-    const counts = useMemo(() => countTiers(habits), [habits]);
-    const grouped = useMemo(() => {
-      const g: Record<HabitTier, HabitListProps['habits']> = {
-        fresh: [],
-        recurring: [],
-        shaky: [],
-        stable: [],
-      };
+    const filtered = useMemo(() => {
       const q = search.trim().toLowerCase();
-      for (const h of habits) {
-        if (q && !h.title.toLowerCase().includes(q) && !h.code.toLowerCase().includes(q)) continue;
-        g[habitTier(h.recent)].push(h);
-      }
-      return g;
+      if (!q) return habits;
+      return habits.filter(
+        (h) => h.title.toLowerCase().includes(q) || h.code.toLowerCase().includes(q),
+      );
     }, [habits, search]);
-
-    const stableVisible = stableOpen || !!search.trim();
 
     return (
       <Flexbox gap={10}>
@@ -279,7 +231,7 @@ const HabitList = memo<HabitListProps>(
           <Flexbox horizontal align={'baseline'} gap={8}>
             <Text weight={600}>{t('habits.title')}</Text>
             <Text fontSize={12} type={'secondary'}>
-              {t('habits.summary', counts)}
+              {t('habits.summary', { count: habits.length })}
             </Text>
           </Flexbox>
           <Flexbox horizontal align={'center'} gap={8}>
@@ -298,67 +250,15 @@ const HabitList = memo<HabitListProps>(
           </Flexbox>
         </Flexbox>
         <Block padding={0} variant={'outlined'}>
-          {TIER_ORDER.filter((tier) => tier !== 'stable').map((tier) => {
-            const rows = grouped[tier];
-            if (rows.length === 0) return null;
-            return (
-              <Fragment key={tier}>
-                <Flexbox horizontal align={'center'} className={styles.groupHead} gap={8}>
-                  <Text
-                    className={tier === 'recurring' ? styles.accent : undefined}
-                    fontSize={12.5}
-                    weight={600}
-                  >
-                    {t(`tier.${tier}`)} {rows.length}
-                  </Text>
-                  <Text fontSize={12} type={'secondary'}>
-                    {t(`tier.${tier}Sub`)}
-                  </Text>
-                </Flexbox>
-                {rows.map((h) => (
-                  <HabitRow
-                    agentId={agentId}
-                    domainTitle={domainTitles?.[h.domainId]}
-                    habit={h}
-                    key={h.id}
-                    tier={tier}
-                    onChanged={onChanged}
-                  />
-                ))}
-              </Fragment>
-            );
-          })}
-          <Flexbox
-            horizontal
-            align={'center'}
-            as={'button'}
-            className={styles.groupHead}
-            gap={8}
-            justify={'space-between'}
-            style={{ background: undefined, color: 'inherit', cursor: 'pointer', width: '100%' }}
-            onClick={() => setStableOpen((v) => !v)}
-          >
-            <Flexbox horizontal align={'center'} gap={8}>
-              <Text fontSize={12.5} weight={600}>
-                {t('tier.stable')} {grouped.stable.length}
-              </Text>
-              <Text fontSize={12} type={'secondary'}>
-                {t('tier.stableSub')}
-              </Text>
-            </Flexbox>
-            <Icon icon={stableVisible ? ChevronUpIcon : ChevronDownIcon} size={14} />
-          </Flexbox>
-          {stableVisible &&
-            grouped.stable.map((h) => (
-              <HabitRow
-                agentId={agentId}
-                domainTitle={domainTitles?.[h.domainId]}
-                habit={h}
-                key={h.id}
-                tier={'stable'}
-                onChanged={onChanged}
-              />
-            ))}
+          {filtered.map((h) => (
+            <HabitRow
+              agentId={agentId}
+              domainTitle={domainTitles?.[h.domainId]}
+              habit={h}
+              key={h.id}
+              onChanged={onChanged}
+            />
+          ))}
         </Block>
       </Flexbox>
     );

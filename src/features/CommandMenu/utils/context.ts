@@ -25,16 +25,6 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
     type: 'group',
   },
   {
-    matcher: /^\/image$/,
-    name: 'Painting',
-    type: 'painting',
-  },
-  {
-    matcher: /^\/video$/,
-    name: 'Video',
-    type: 'video',
-  },
-  {
     captureSubPath: true,
     matcher: /^\/settings(?:\/([^/]+))?/,
     name: 'Settings',
@@ -42,9 +32,31 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
   },
   {
     captureSubPath: true,
-    matcher: /^\/memory(?:\/([^/]+))?/,
+    // Anchored: without `/?$` the retired `/memory-center` path would match
+    // the `/memory` prefix and inherit a context it no longer belongs to.
+    matcher: /^\/memory(?:\/([^/]+))?\/?$/,
     name: 'Memory',
     type: 'memory',
+  },
+  {
+    matcher: /^\/project\/[^/]+/,
+    name: 'Project',
+    type: 'project',
+  },
+  {
+    matcher: /^\/task\/[^/]+/,
+    name: 'Task',
+    type: 'task',
+  },
+  {
+    matcher: /^\/teams\/[^/]+/,
+    name: 'Team',
+    type: 'team',
+  },
+  {
+    matcher: /^\/inbox/,
+    name: 'Inbox',
+    type: 'inbox',
   },
   {
     captureSubPath: true,
@@ -59,9 +71,38 @@ const CONTEXT_CONFIGS: ContextConfig[] = [
  * @param pathname - The current pathname from react-router
  * @returns Context object if detected, undefined otherwise
  */
+// Top-level route names that may appear directly at path root. A first segment
+// that is none of these is a workspace slug and gets stripped before matching.
+const TOP_LEVEL_SEGMENTS = new Set([
+  'agent',
+  'agents',
+  'automations',
+  'goal',
+  'group',
+  'inbox',
+  'invite',
+  'members',
+  'memory',
+  'my-issues',
+  'my-work',
+  'project',
+  'projects',
+  'resource',
+  'reviews',
+  'settings',
+  'task',
+  'tasks',
+  'teams',
+  'views',
+]);
+
 export const detectContext = (pathname: string): MenuContext => {
+  const segments = pathname.split('/').filter(Boolean);
+  const first = segments[0];
+  const rest =
+    first && !TOP_LEVEL_SEGMENTS.has(first) ? `/${segments.slice(1).join('/')}` : pathname;
   for (const config of CONTEXT_CONFIGS) {
-    const match = pathname.match(config.matcher);
+    const match = rest.match(config.matcher);
 
     if (match) {
       const context: Context = {

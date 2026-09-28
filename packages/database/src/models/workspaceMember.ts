@@ -1,15 +1,15 @@
 import { INVITATION_EXPIRY_DAYS } from '@orvilo/const';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
-import { and, asc, count, eq, exists, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
-import { nanoid } from 'nanoid/non-secure';
+import { and, asc, count, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 import { devices } from '../schemas/device';
-import { messengerAccountLinks } from '../schemas/messengerAccountLink';
-import { tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { workspaceInvitations, workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
+import { ProjectMemberModel } from './projectMember';
 import { ResourcePermissionModel } from './resourcePermission';
+import { detachMemberFromTasks } from './taskDomainMutation';
+import { WorkspaceInvitationModel } from './workspaceInvitation';
 
 type MemberRole = 'admin' | 'member' | 'viewer';
 
@@ -45,9 +45,13 @@ export class WorkspaceMemberModel {
       })
       .onConflictDoUpdate({
         set: {
+          authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
           deletedAt: null,
           joinedAt: new Date(),
           role: params.role ?? 'member',
+          // A rejoin starts from the new invitation only: it never revives a
+          // suspension and never restores grants removed with the old row.
+          suspendedAt: null,
         },
         target: [workspaceMembers.workspaceId, workspaceMembers.userId],
       })
@@ -61,6 +65,7 @@ export class WorkspaceMemberModel {
         eq(workspaceMembers.workspaceId, workspaceId),
         eq(workspaceMembers.userId, userId),
         isNull(workspaceMembers.deletedAt),
+        isNull(workspaceMembers.suspendedAt),
       ),
     });
   };
@@ -75,6 +80,7 @@ export class WorkspaceMemberModel {
           eq(workspaceMembers.workspaceId, workspaceId),
           eq(workspaceMembers.userId, userId),
           isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
         ),
       )
       .for('update');
@@ -85,15 +91,19 @@ export class WorkspaceMemberModel {
     return this.db.query.workspaceMembers.findMany({
       where: options.includeDeleted
         ? eq(workspaceMembers.workspaceId, workspaceId)
-        : and(eq(workspaceMembers.workspaceId, workspaceId), isNull(workspaceMembers.deletedAt)),
+        : and(
+            eq(workspaceMembers.workspaceId, workspaceId),
+            isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
+          ),
     });
   };
 
   /**
    * Bounded assignee directory: active members whose role may own a task,
    * optionally narrowed by `query` — an exact (case-folded) user id, or a
-   * case-insensitive part of the display name, @handle, email, or a messenger
-   * identity linked under this workspace's scope — and capped by `limit`.
+   * case-insensitive part of the display name, @handle or email — and capped
+   * by `limit`.
    * The narrowing and the cap run in SQL so a large workspace costs one page
    * plus a count, never a full member scan on the application side. `total`
    * is the number of matches before the cap.
@@ -111,28 +121,12 @@ export class WorkspaceMemberModel {
           containsIgnoreCase(users.fullName, query),
           containsIgnoreCase(users.username, query),
           containsIgnoreCase(users.email, query),
-          // Same scope rule as `MessengerAccountLinkModel.findByUserIds`: only
-          // identities active under this workspace take part in resolution.
-          exists(
-            this.db
-              .select({ one: sql`1` })
-              .from(messengerAccountLinks)
-              .where(
-                and(
-                  eq(messengerAccountLinks.userId, workspaceMembers.userId),
-                  eq(messengerAccountLinks.workspaceId, workspaceId),
-                  or(
-                    containsIgnoreCase(messengerAccountLinks.platformUsername, query),
-                    sql`lower(${messengerAccountLinks.platformUserId}) = ${query}`,
-                  ),
-                ),
-              ),
-          ),
         )
       : undefined;
     const where = and(
       eq(workspaceMembers.workspaceId, workspaceId),
       isNull(workspaceMembers.deletedAt),
+      isNull(workspaceMembers.suspendedAt),
       inArray(workspaceMembers.role, ASSIGNABLE_MEMBER_ROLES),
       matchesQuery,
     );
@@ -187,7 +181,10 @@ export class WorkspaceMemberModel {
     await this.db.transaction(async (tx) => {
       await tx
         .update(workspaceMembers)
-        .set({ deletedAt: new Date() })
+        .set({
+          authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+          deletedAt: new Date(),
+        })
         .where(
           and(
             eq(workspaceMembers.workspaceId, workspaceId),
@@ -198,15 +195,21 @@ export class WorkspaceMemberModel {
 
       await new ResourcePermissionModel(tx, workspaceId).removeMemberGrants(userId);
 
-      await tx
-        .update(tasks)
-        .set({ assigneeUserId: null, reviewerUserId: null })
-        .where(
-          and(
-            eq(tasks.workspaceId, workspaceId),
-            or(eq(tasks.assigneeUserId, userId), eq(tasks.reviewerUserId, userId)),
-          ),
-        );
+      // Identical reasoning for per-project grants: `project_members` is the
+      // same class of per-member grant one level down. A row left behind is
+      // reactivated by `ProjectMemberModel.add`'s upsert on re-invite, so the
+      // member would silently regain their old (uncapped) project role.
+      await new ProjectMemberModel(tx, userId).removeAllForWorkspaceMember(workspaceId, userId);
+
+      // The two responsibility fields detach independently: clearing both
+      // wherever EITHER matched would strip the surviving teammate's role
+      // alongside the departing member's. A task where the member was
+      // assignee keeps its reviewer and vice versa.
+      await detachMemberFromTasks(tx, {
+        idempotencyKeyPrefix: `workspace-member-removed:${workspaceId}:${userId}`,
+        userId,
+        workspaceId,
+      });
     });
 
     // Surfaced so callers can best-effort unenroll any still-connected gateway
@@ -220,7 +223,10 @@ export class WorkspaceMemberModel {
     return this.db.transaction(async (tx) => {
       const updatedMembers = await tx
         .update(workspaceMembers)
-        .set({ role })
+        .set({
+          authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+          role,
+        })
         .where(
           and(
             eq(workspaceMembers.workspaceId, workspaceId),
@@ -231,67 +237,116 @@ export class WorkspaceMemberModel {
         .returning({ userId: workspaceMembers.userId });
 
       if (updatedMembers.length > 0 && !canWorkspaceRoleBeTaskAssignee(role)) {
-        await tx
-          .update(tasks)
-          .set({ assigneeUserId: null, reviewerUserId: null })
-          .where(
-            and(
-              eq(tasks.workspaceId, workspaceId),
-              or(eq(tasks.assigneeUserId, userId), eq(tasks.reviewerUserId, userId)),
-            ),
-          );
+        // Same per-field detach as `removeMember`: downgrading must not clear
+        // a reviewer slot held by a different member (and vice versa).
+        await detachMemberFromTasks(tx, {
+          idempotencyKeyPrefix: `workspace-member-role:${workspaceId}:${userId}:${role}`,
+          userId,
+          workspaceId,
+        });
       }
 
       return updatedMembers;
     });
   };
 
+  /**
+   * Temporarily revoke a member's access without deleting the membership —
+   * every active-membership check filters `suspendedAt IS NULL`, so existing
+   * sessions stop authorizing while the row (and its history) stays put.
+   */
+  suspendMember = async (workspaceId: string, userId: string) => {
+    return this.db
+      .update(workspaceMembers)
+      .set({
+        authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+        suspendedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, userId),
+          isNull(workspaceMembers.deletedAt),
+          isNull(workspaceMembers.suspendedAt),
+        ),
+      )
+      .returning();
+  };
+
+  /** Lift a suspension; the member becomes active again at the bumped version. */
+  resumeMember = async (workspaceId: string, userId: string) => {
+    return this.db
+      .update(workspaceMembers)
+      .set({
+        authzVersion: sql`${workspaceMembers.authzVersion} + 1`,
+        suspendedAt: null,
+      })
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, userId),
+          isNull(workspaceMembers.deletedAt),
+          isNotNull(workspaceMembers.suspendedAt),
+        ),
+      )
+      .returning();
+  };
+
   // ===== Invitations ===== //
 
-  createInvitation = async (params: { email?: string; role?: MemberRole; workspaceId: string }) => {
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
+  private get invitationModel() {
+    return new WorkspaceInvitationModel(this.db, this.userId);
+  }
 
-    const [result] = await this.db
-      .insert(workspaceInvitations)
-      .values({
-        email: params.email,
-        expiresAt,
-        inviterId: this.userId,
-        role: params.role ?? 'member',
-        token: nanoid(32),
-        workspaceId: params.workspaceId,
-      })
-      .returning();
-    return result;
+  /**
+   * Legacy surface over `WorkspaceInvitationModel`: the secure token flow is
+   * shared, so the raw token still reaches the caller once (this method's
+   * historical return shape) while the row persists only `tokenHash`.
+   */
+  createInvitation = async (params: { email?: string; role?: MemberRole; workspaceId: string }) => {
+    const { invitation, token } = await this.invitationModel.createInvitation({
+      email: params.email,
+      expiresAt: (() => {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
+        return expiresAt;
+      })(),
+      role: params.role,
+      workspaceId: params.workspaceId,
+    });
+    return { ...invitation, token };
   };
 
   findInvitationByToken = async (token: string) => {
-    return this.db.query.workspaceInvitations.findFirst({
-      where: eq(workspaceInvitations.token, token),
-    });
+    return this.invitationModel.findByToken(token);
   };
 
   listPendingInvitations = async (workspaceId: string) => {
-    return this.db.query.workspaceInvitations.findMany({
-      where: and(
-        eq(workspaceInvitations.workspaceId, workspaceId),
-        eq(workspaceInvitations.status, 'pending'),
-      ),
-    });
+    const rows = await this.invitationModel.listPendingByWorkspace(workspaceId);
+    return rows.map((row) => row.invitation);
   };
 
   revokeInvitation = async (id: string) => {
-    return this.db
-      .update(workspaceInvitations)
-      .set({ status: 'revoked' })
-      .where(eq(workspaceInvitations.id, id));
+    await this.invitationModel.revoke(id, { revokedBy: this.userId });
   };
 
   updateInvitationStatus = async (id: string, status: 'accepted' | 'expired' | 'revoked') => {
-    return this.db
-      .update(workspaceInvitations)
-      .set({ status })
-      .where(eq(workspaceInvitations.id, id));
+    switch (status) {
+      case 'accepted': {
+        await this.invitationModel.markAccepted(id, { acceptedBy: this.userId });
+        return;
+      }
+      case 'revoked': {
+        await this.invitationModel.revoke(id, { revokedBy: this.userId });
+        return;
+      }
+      case 'expired': {
+        await this.db
+          .update(workspaceInvitations)
+          .set({ status: 'expired' })
+          .where(and(eq(workspaceInvitations.id, id), eq(workspaceInvitations.status, 'pending')));
+        return;
+      }
+    }
   };
 }

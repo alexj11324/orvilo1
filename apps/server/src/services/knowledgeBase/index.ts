@@ -16,7 +16,7 @@ import type { FtsSearchKnowledgeBaseDocumentHit } from '@/database/repositories/
 import { knowledgeBaseFiles } from '@/database/schemas';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { DocumentService } from '@/server/services/document';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 
@@ -133,8 +133,7 @@ export class KnowledgeBaseSearchService {
     const vectorPath = async (): Promise<ChatSemanticSearchChunk[]> => {
       const { model, provider } =
         getServerDefaultFilesConfig().embeddingModel || DEFAULT_FILE_EMBEDDING_MODEL_ITEM;
-      const modelRuntime = await initModelRuntimeFromDB(
-        this.serverDB,
+      const modelRuntime = await initModelRuntimeFromDeploymentConfig(
         this.userId,
         provider,
         this.workspaceId,

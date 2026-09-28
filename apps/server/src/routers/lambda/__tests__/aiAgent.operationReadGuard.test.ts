@@ -17,7 +17,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 
 const mockGetOperationStatus = vi.fn();
 const mockGetPendingInterventions = vi.fn();
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       getOperationStatus: mockGetOperationStatus,
@@ -28,7 +28,16 @@ vi.mock('@/server/services/agentRuntime', () => ({
 
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: vi.fn().mockImplementation(function () {
-    return {};
+    return {
+      // The middleware builds ctx.agentRuntimeService through this facade —
+      // hand back the same mocked surface the bare constructor used to.
+      createIsolatedRuntime: vi.fn(function () {
+        return {
+          getOperationStatus: mockGetOperationStatus,
+          getPendingInterventions: mockGetPendingInterventions,
+        };
+      }),
+    };
   }),
 }));
 

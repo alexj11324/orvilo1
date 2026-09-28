@@ -8,14 +8,22 @@ import type {
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import dayjs from 'dayjs';
-import { and, asc, eq, gt, inArray, max, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, max, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
 import { merge } from '@/utils/merge';
 import { today } from '@/utils/time';
 
 import type { NewUser, UserItem, UserSettingsItem } from '../schemas';
-import { messages, nextauthAccounts, topics, users, userSettings } from '../schemas';
+import {
+  messages,
+  nextauthAccounts,
+  projects,
+  tasks,
+  topics,
+  users,
+  userSettings,
+} from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { AGENT_TRANSFER_PENDING_OWNER_DELETE, AgentTransferJobModel } from './agentTransferJob';
 
@@ -45,6 +53,7 @@ export type ListUsersForHourlyMemoryExtractorOptions = ListUsersForMemoryExtract
 
 export interface UserInfoForAIGeneration {
   responseLanguage: string;
+  timezone?: string;
   userName: string;
 }
 
@@ -111,6 +120,7 @@ export class UserModel {
         firstName: users.firstName,
         fullName: users.fullName,
         interests: users.interests,
+        jobTitle: users.jobTitle,
         isOnboarded: users.isOnboarded,
         lastName: users.lastName,
         onboarding: users.onboarding,
@@ -172,6 +182,7 @@ export class UserModel {
       firstName: state.firstName || undefined,
       fullName: state.fullName || undefined,
       interests: state.interests || undefined,
+      jobTitle: state.jobTitle,
       isOnboarded: state.isOnboarded,
       lastName: state.lastName || undefined,
       onboarding: state.onboarding || undefined,
@@ -461,6 +472,14 @@ export class UserModel {
     return db.transaction(async (tx) => {
       // Purge share-visitor topics authored by this user under any creator.
       await tx.delete(topics).where(eq(topics.senderId, id));
+      // Personal projects belong to the account: `projects.user_id` now
+      // set-nulls on user delete so workspace projects survive, but personal
+      // rows (workspace_id IS NULL) would otherwise linger ownerless with
+      // their children — equivalent to deleted for readers, never collected.
+      await tx.delete(projects).where(and(eq(projects.userId, id), isNull(projects.workspaceId)));
+      // Personal tasks are owned by the account. Workspace tasks keep their
+      // history and rely on the nullable creator FK when the user leaves.
+      await tx.delete(tasks).where(and(eq(tasks.createdByUserId, id), isNull(tasks.workspaceId)));
       return tx.delete(users).where(eq(users.id, id));
     });
   };
@@ -566,14 +585,22 @@ export class UserModel {
         ? inArray(users.id, options.whitelist)
         : undefined;
 
-    const where = and(cursorCondition, whitelistCondition);
+    // User memory defaults to enabled=true when user settings are missing; an
+    // explicit `enabled = false` opts the user out of every extraction entry,
+    // paged sweeps included. Same gate as listUsersForHourlyMemoryExtractor.
+    const memoryEnabledCondition = sql`COALESCE((${userSettings.memory} ->> 'enabled')::boolean, true) = true`;
 
-    return db.query.users.findMany({
-      columns: { createdAt: true, id: true },
-      limit: options.limit,
-      orderBy: (fields, { asc }) => [asc(fields.createdAt), asc(fields.id)],
-      where,
-    });
+    const query = db
+      .select({
+        createdAt: users.createdAt,
+        id: users.id,
+      })
+      .from(users)
+      .leftJoin(userSettings, eq(users.id, userSettings.id))
+      .where(and(cursorCondition, whitelistCondition, memoryEnabledCondition))
+      .orderBy(asc(users.createdAt), asc(users.id));
+
+    return options.limit !== undefined ? query.limit(options.limit) : query;
   };
 
   static listUsersForHourlyMemoryExtractor = (
@@ -645,6 +672,7 @@ export class UserModel {
 
     return {
       responseLanguage: general?.responseLanguage || 'en-US',
+      timezone: general?.timezone,
       userName: user?.fullName || user?.firstName || 'User',
     };
   };

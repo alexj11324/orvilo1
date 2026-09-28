@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
 
-const { mockCreateOperation, mockGetAgentConfig, mockMessageCreate } = vi.hoisted(() => ({
-  mockCreateOperation: vi.fn(),
-  mockGetAgentConfig: vi.fn(),
-  mockMessageCreate: vi.fn(),
-}));
+const { mockCreateOperation, mockDispatchHeteroAgent, mockGetAgentConfig, mockMessageCreate } =
+  vi.hoisted(() => ({
+    mockCreateOperation: vi.fn(),
+    mockDispatchHeteroAgent: vi.fn(),
+    mockGetAgentConfig: vi.fn(),
+    mockMessageCreate: vi.fn(),
+  }));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
@@ -59,6 +61,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -73,12 +76,18 @@ vi.mock('@/database/models/thread', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: mockCreateOperation,
     };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// the tests assert what execAgent threads into it.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/server/services/market', () => ({
@@ -121,14 +130,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
-}));
-
-// The share path's atomic cap reservations open real DB transactions — stub
-// them so the forced-headless test below can drive execAgent with a bare mock db.
-vi.mock('../shareVisitorAbuseGuards', () => ({
-  reserveShareVisitorTopic: vi.fn().mockResolvedValue({ id: 'topic-1' }),
-  reserveShareVisitorTurn: vi.fn().mockResolvedValue({ id: 'msg-1' }),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 vi.mock('model-bank', async (importOriginal) => {
@@ -145,7 +147,11 @@ vi.mock('model-bank', async (importOriginal) => {
   };
 });
 
-describe('AiAgentService.execAgent - headless approval default', () => {
+// `userInterventionConfig` (headless/manual/allow-list approval modes) was a
+// knob of the retired in-process loop; under ACP the harness owns its own
+// permission posture, so those cases are gone. What remains here is the
+// dispatch-boundary wiring execAgent still owes callers.
+describe('AiAgentService.execAgent - dispatch wiring', () => {
   let service: AiAgentService;
   const mockDb = {} as any;
   const userId = 'test-user-id';
@@ -167,33 +173,44 @@ describe('AiAgentService.execAgent - headless approval default', () => {
       provider: 'openai',
       systemRole: '',
     });
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
     service = new AiAgentService(mockDb, userId);
   });
 
-  it('should default to headless approval mode when userInterventionConfig is not provided', async () => {
-    await service.execAgent({
-      agentId: 'agent-1',
-      prompt: 'Hello',
+  it('threads beforeOperationStart into the dispatch commit window', async () => {
+    const order: string[] = [];
+    const beforeOperationStart = vi.fn(async () => {
+      order.push('persisted');
+    });
+    // The dispatch boundary invokes the callback inside the operation's
+    // commit window (after the id is minted, before the durable row exists);
+    // emulating that here proves execAgent threads the callback through.
+    mockDispatchHeteroAgent.mockImplementationOnce(async (_deps, _ctx, input) => {
+      await input.beforeOperationStart?.({ operationId: 'op_minted_1', topicId: 'topic-1' });
+      order.push('dispatched');
+      return {
+        autoStarted: true,
+        operationId: 'op-123',
+        success: true,
+        topicId: 'topic-1',
+      };
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.userInterventionConfig).toEqual({ approvalMode: 'headless' });
-  });
+    await service.execAgent({ agentId: 'agent-1', beforeOperationStart, prompt: 'Hello' });
 
-  it('should respect explicit userInterventionConfig when provided', async () => {
-    await service.execAgent({
-      agentId: 'agent-1',
-      prompt: 'Hello',
-      userInterventionConfig: { approvalMode: 'manual' },
+    expect(beforeOperationStart).toHaveBeenCalledWith({
+      operationId: expect.stringContaining('op_'),
+      topicId: 'topic-1',
     });
-
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.userInterventionConfig).toEqual({ approvalMode: 'manual' });
+    expect(order).toEqual(['persisted', 'dispatched']);
   });
 
-  it('forwards clientIp / userAgent into the createOperation appContext when provided', async () => {
+  it('forwards clientIp / userAgent to the dispatch input when provided', async () => {
     await service.execAgent({
       agentId: 'agent-1',
       clientIp: '203.0.113.7',
@@ -201,58 +218,23 @@ describe('AiAgentService.execAgent - headless approval default', () => {
       userAgent: 'Mozilla/5.0 (Test)',
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.appContext).toMatchObject({
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
+    expect(dispatchInput).toMatchObject({
       clientIp: '203.0.113.7',
       userAgent: 'Mozilla/5.0 (Test)',
     });
   });
 
-  it('leaves clientIp / userAgent undefined in the createOperation appContext when not provided', async () => {
+  it('leaves clientIp / userAgent undefined on the dispatch input when not provided', async () => {
     await service.execAgent({
       agentId: 'agent-1',
       prompt: 'Hello',
     });
 
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const { appContext } = mockCreateOperation.mock.calls[0][0];
-    expect(appContext.clientIp).toBeUndefined();
-    expect(appContext.userAgent).toBeUndefined();
-  });
-
-  it('forces headless for a share-visitor run regardless of what the caller passed', async () => {
-    // Share runs have no approver: any waiting mode would park the run on
-    // request_human_approve forever. The override must win over an explicit
-    // caller-provided config — a call site cannot reintroduce a waiting mode.
-    await service.execAgent({
-      agentId: 'agent-1',
-      prompt: 'Hello',
-      shareGate: {
-        agentId: 'agent-1',
-        shareConfig: { toolGrants: [] },
-        shareId: 'share-1',
-        visitorUserId: 'visitor-1',
-      },
-      userInterventionConfig: { approvalMode: 'manual' },
-    });
-
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.userInterventionConfig).toEqual({ approvalMode: 'headless' });
-  });
-
-  it('should respect explicit allow-list approval mode with allowList', async () => {
-    const config = { allowList: ['tool-a', 'tool-b'], approvalMode: 'allow-list' as const };
-
-    await service.execAgent({
-      agentId: 'agent-1',
-      prompt: 'Hello',
-      userInterventionConfig: config,
-    });
-
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.userInterventionConfig).toEqual(config);
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    const dispatchInput = mockDispatchHeteroAgent.mock.calls[0][2];
+    expect(dispatchInput.clientIp).toBeUndefined();
+    expect(dispatchInput.userAgent).toBeUndefined();
   });
 });

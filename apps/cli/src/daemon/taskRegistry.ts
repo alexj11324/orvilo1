@@ -12,9 +12,17 @@ export interface TaskEntry {
    * dispatched through `lh connect` device gateway.
    */
   agentType: string;
+  /**
+   * Process working directory of the run — the provisioned worktree path for
+   * workspace-bound runs. Lets `inspectGitWorktreePath` answer "is a live run
+   * writing here" so the server never double-writes an occupied checkout.
+   */
+  cwd?: string;
   operationId: string;
   parentOperationId?: string;
   pid: number;
+  /** Admission fence echoed back on notify callbacks for this operation. */
+  runGeneration?: number;
   startedAt: string;
   taskId: string;
   topicId: string;

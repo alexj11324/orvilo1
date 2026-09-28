@@ -15,8 +15,15 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 `AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in skills so they have one source of truth.
 
+- **Live application UI parity**: Read `clone-website-orvilo` and its required references before reference collection, specification or implementation. It owns evidence-backed state coverage, isolated builder handoffs and whole-page acceptance; use existing domain skills for the code changes. Its upstream directory is a provenance archive, not an alternate skill.
+
+- **Linear UI parity**: For page-by-page implementation or audit against the live Linear product, read the `linear-ui-parity` skill. It owns two-way comparison, comparable runtime evidence, and the independent final page review.
+
 - **React and TSX**: Before editing components, component state, render boundaries, or memoization, read the `react` skill. It owns component selection, styling, state locality, and render-performance rules.
+
 - **Heavy domain features**: When splitting a fat Viewer/Page into reusable pieces (page vs portal vs share vs micro-app), read the `compose-atoms` skill. Split on mountable capabilities, not visual sections, and do not hide unused work behind `readOnly` / `mode` flags.
+
+- **Implementation simplicity**: Apply Ponytail before code work: trace the affected flow, reuse existing code and platform features, then make the smallest correct change. Preserve the safety and verification requirements below. The repo marketplace pins the plugin. For Codex CLI, run `codex plugin marketplace add .` and `codex plugin add ponytail@orvilo` once from this repository; the project config then enables it here. Codex Desktop discovers the marketplace after restart.
 
 ## Code Ownership
 
@@ -34,6 +41,8 @@ Before changing SPA routes, read the `spa-routes` skill. Register common Web/Ele
 ## Development
 
 ### Starting the Dev Environment
+
+Full local setup — Postgres/Redis, migrations, seeds, troubleshooting — lives in [docs/development/local-setup.md](./docs/development/local-setup.md).
 
 ```bash
 # SPA dev mode (frontend only, proxies API to localhost:3010)
@@ -54,13 +63,39 @@ Debug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-ho
 
 Open this URL to develop locally against the production backend (orvilo.aspectlylabs.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
 
+### Browser CDP for Linear parity
+
+Use Brave with a copy of the currently used Brave profile when comparing Orvilo with Linear. Keep the original Brave process and profile untouched; a fresh Chrome profile does not carry the reference session.
+
+- Find the active profile under `~/Library/Application Support/BraveSoftware/Brave-Browser` (check `profile.last_used` in `Local State`). Copy the user-data directory to a private temporary directory outside the repository. Exclude `Singleton*` locks, `Crashpad/`, and `BrowserMetrics*`; set the copy's top directory to mode `700` after copying because `rsync -a` can restore its original mode. Never commit or upload the copy, which contains session data.
+- Start a separate Brave instance with `--user-data-dir=<copy> --profile-directory=<active-profile> --remote-debugging-address=127.0.0.1 --remote-debugging-port=<port> --no-first-run`. Do not restart the original Brave instance or point CDP at its live profile.
+- Verify the copied instance by reading `http://127.0.0.1:<port>/json/version` and `/json/list`, then navigate to the Linear workspace and confirm it is authenticated. Cookies in the copy alone do not prove login. Give agents the loopback endpoint only after these checks pass.
+- Run the Orvilo candidate against the intended local revision and populated fixture. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity.
+
 ### Git Workflow
 
-- **Branch strategy**: `canary` is the development branch (cloud production); `main` is the release branch (periodically cherry-picks from canary)
+- **Branch strategy**: `canary` is the development trunk **and** the cloud production line; `main` is a release snapshot cut from it. Neither is an environment. Full model: [docs/development/branch-model.md](./docs/development/branch-model.md); deploy targets: [docs/environments.md](./docs/environments.md)
 - New branches should be created from `canary`; PRs should target `canary`
 - Use rebase for `git pull`
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
+- Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
+- **GitHub API credentials (Devin sessions)** — **DO NOT hunt for another token**: the only GitHub credential on a Devin machine is the platform-issued file below. Stop searching elsewhere; if an endpoint fails, report the permission gap instead of looking for a second credential.
+  - **File**: `~/.devin/.devin-integration-gh-credentials` (absolute path; line 1 = `github.com/<owner>` + space + token). `gh` is authenticated via `GH_TOKEN` read from it: `GH_TOKEN=$(awk '{print $2}' ~/.devin/.devin-integration-gh-credentials) gh <cmd> -R alexj11324/orvilo1`. Remotes point at the git proxy host, so always pass `-R alexj11324/orvilo1` (or run commands that don't derive the repo from the remote). The token is short-lived and refreshed by the platform — read it fresh per command, never copy it into files or logs.
+  - **Scope**: the `devin-ai-integration[bot]` GitHub App installation token — `contents`/`pull_requests` write (push, PRs, comments, merge-async), `actions`/`checks` **read only**. `actions:write` is **not** granted, so `POST .../dispatches`, `rerun-failed-jobs`, and `cancel` all 403 — those clicks are human-only; ask the user to rerun/dispatch in the GitHub UI or hand them a PAT.
+  - **Git protocol credentials** live separately in `~/.devin/.devin-integration-git-credentials` (`https://devin:<token>@git-manager.devin.ai`) — they authenticate the git proxy remote only, not the GitHub API.
+
+### Cutting a Release
+
+Run `bun run release:branch`. It fetches `origin/canary`, computes the next version,
+creates `release/vX.Y.Z`, and opens a `🚀 release: vX.Y.Z` PR against `main`.
+
+Merging that PR triggers `auto-tag-release.yml`, which bumps `package.json`, generates
+the changelog, creates the tag and GitHub Release, and syncs `main` back to `canary`.
+**Do not hand-edit the root `package.json` version** — the tag workflow owns it.
+
+An urgent fix to an already-released version goes through `hotfix/<name>` branched from
+`main`; the same workflow picks it up as a patch bump.
 
 ### Package Management
 
@@ -77,15 +112,23 @@ Use `bun run check [changed-files...]`.
 - Lint autofixes files: review the emitted diff. Tests use the nearest owning Vitest config. `--type` checks the full repo — it is CI-only and fails fast outside GitHub Actions (`scripts/type-check.mjs`); the `Typecheck` job in `test.yml` runs it on every push/PR. For a scoped local check, run `pnpm type-check` inside the owning package (e.g. `apps/server`). Never run `bun run test`, which runs the full suite.
 - For a manual package test, run from the owning package: `cd packages/database && bunx vitest run --silent='passed-only' '[file-path]'`.
 
-### Acceptance
+### Verification Evidence
 
-Use the `acceptance` skill to decide whether the delivery needs product verification and whether existing evidence already covers it. Opening or marking a PR ready is a checkpoint for that decision, not a trigger to rerun verification.
+Product verification is still required. For new or changed product behavior, exercise the affected
+outcomes on the real product and capture evidence a reviewer can check against a specific revision.
+Opening or marking a PR ready is a checkpoint for that decision, not a trigger to rerun verification.
 
-- Documentation/instruction-only changes, pure refactors or tooling changes with no product behavior change, and gitlink-only syncs do not require a new acceptance run. State the reason in the PR; for a gitlink sync, link the upstream change and its existing acceptance when available.
-- Reuse a completed acceptance that covers the delivered behavior. If its report and evidence exist only locally, inspect and upload them with `lh acceptance run ingest`; if already published, reuse the link. Do not rerun the product merely to open a PR or obtain a report URL.
-- For new or changed product behavior not covered by valid evidence, verify the affected outcomes on the real product, capture the required evidence, and publish the result. The skill owns reuse criteria and the execution workflow.
+- Documentation/instruction-only changes, pure refactors or tooling changes with no product behavior
+  change, and gitlink-only syncs do not require a new verification run. State the reason in the PR.
+- Reuse evidence that already covers the delivered behavior; do not re-run the product merely to open
+  a PR.
+- Attach the evidence to the PR itself — screenshots, screen recordings, logs, or test output — or
+  publish it as a GitHub Actions artifact. Record the commit SHA the evidence was produced on, so a
+  reviewer can tell which revision it proves.
+- Do not publish verification to a separate acceptance site, and do not install a skill into an agent
+  harness to produce it. There is no standalone acceptance platform behind this requirement.
 
-When acceptance is required, put its published `https://orvilo.aspectlylabs.com/acceptance/<id>` link in the PR body. Tests, lint, and type-check remain separate quality gates; they do not replace product acceptance.
+Tests, lint, and type-check remain separate quality gates; they do not replace product verification.
 
 ### i18n
 

@@ -99,6 +99,7 @@ export interface GetAgentInterventionReviewBySourceParams {
 export interface ExecAgentTaskParams {
   agentId?: string;
   appContext?: ExecAgentAppContext;
+  /** `false` is rejected by the server (no deferred start exists); omit or pass `true`. */
   autoStart?: boolean;
   /**
    * Client-minted ids for the rows this run creates, honoured verbatim by the
@@ -151,12 +152,25 @@ export interface ExecAgentTaskParams {
  */
 export interface ExecSubAgentTaskParams {
   agentId: string;
+  /**
+   * chatConfig overrides (thinking / reasoning-effort extend params) resolved
+   * at the spawn site from the parent agent's `agencyConfig.subagent`.
+   */
+  chatConfig?: Record<string, any> | null;
   /** Optional for Single Agent mode, required for Group mode */
   groupId?: string;
+  /** Seed the isolation thread with the parent conversation transcript */
+  inheritMessages?: boolean;
   instruction: string;
+  /** Mark the spawned run as a sub-agent (blocks nested callSubAgent) */
+  isSubAgent?: boolean;
+  /** Sub-agent model override resolved at the spawn site */
+  model?: string;
   parentMessageId: string;
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId?: string;
+  /** Provider for {@link model} */
+  provider?: string;
   timeout?: number;
   /** Task title (shown in UI, used as thread title) */
   title?: string;
@@ -227,10 +241,6 @@ export interface UpdateClientTaskThreadStatusParams {
 }
 
 class AiAgentService {
-  async getServerDefaultHeterogeneousCapability() {
-    return await lambdaClient.aiAgent.getServerDefaultHeterogeneousCapability.query();
-  }
-
   /**
    * Execute a single Agent task.
    * Returns the operationId needed to connect to the Agent Gateway.
@@ -334,8 +344,9 @@ class AiAgentService {
   /**
    * Create Thread for client-side task execution (desktop only, single agent mode)
    *
-   * This method is called when runInClient=true on desktop client.
-   * It creates the Thread but does NOT execute the task - execution happens locally.
+   * Used by desktop-local heterogeneous dispatch (e.g. direct-mention turns) to
+   * materialize the isolated thread + assistant placeholder before the local
+   * agent process starts streaming into it.
    */
   async createClientTaskThread(params: CreateClientTaskThreadParams) {
     return await lambdaClient.aiAgent.createClientTaskThread.mutate(params);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildWorkspaceAwarePath } from '../workspaceAwarePath';
+import { buildWorkspaceAwarePath, stripWorkspaceSlug } from '../workspaceAwarePath';
 
 describe('buildWorkspaceAwarePath', () => {
   it('returns the path unchanged when no active workspace slug exists', () => {
@@ -32,6 +32,20 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/eval/bench/bench-1/runs/run-1/cases/case-1', 'acme')).toBe(
       '/acme/eval/bench/bench-1/runs/run-1/cases/case-1',
     );
+  });
+
+  it('prefixes the nav-attention surfaces mirrored under /:workspaceSlug', () => {
+    expect(buildWorkspaceAwarePath('/inbox', 'acme')).toBe('/acme/inbox');
+    expect(buildWorkspaceAwarePath('/drafts', 'acme')).toBe('/acme/drafts');
+    expect(buildWorkspaceAwarePath('/my-work', 'acme')).toBe('/acme/my-work');
+    expect(buildWorkspaceAwarePath('/views', 'acme')).toBe('/acme/views');
+    expect(buildWorkspaceAwarePath('/views/view-1', 'acme')).toBe('/acme/views/view-1');
+    expect(buildWorkspaceAwarePath('/teams', 'acme')).toBe('/acme/teams');
+    expect(buildWorkspaceAwarePath('/teams/team-1?tab=issues', 'acme')).toBe(
+      '/acme/teams/team-1?tab=issues',
+    );
+    expect(buildWorkspaceAwarePath('/automations', 'acme')).toBe('/acme/automations');
+    expect(buildWorkspaceAwarePath('/goal/goal-1', 'acme')).toBe('/acme/goal/goal-1');
   });
 
   it('bypasses the prefix when `escape` is true', () => {
@@ -81,11 +95,9 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/billing', 'acme')).toBe('/acme/settings/billing');
     expect(buildWorkspaceAwarePath('/settings/credits', 'acme')).toBe('/acme/settings/credits');
     expect(buildWorkspaceAwarePath('/settings/usage', 'acme')).toBe('/acme/settings/usage');
-    expect(buildWorkspaceAwarePath('/settings/skill', 'acme')).toBe('/acme/settings/skill');
     expect(buildWorkspaceAwarePath('/settings/connector', 'acme')).toBe('/acme/settings/connector');
     expect(buildWorkspaceAwarePath('/settings/devices', 'acme')).toBe('/acme/settings/devices');
     expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/acme/settings/labels');
-    expect(buildWorkspaceAwarePath('/settings/audit-log', 'acme')).toBe('/acme/settings/audit-log');
     expect(buildWorkspaceAwarePath('/settings/storage', 'acme')).toBe('/acme/settings/storage');
     expect(buildWorkspaceAwarePath('/settings/credential', 'acme')).toBe(
       '/acme/settings/credential',
@@ -97,15 +109,27 @@ describe('buildWorkspaceAwarePath', () => {
     );
     // Legacy alias — prefixed, then the router redirects to `statistics`.
     expect(buildWorkspaceAwarePath('/settings/stats', 'acme')).toBe('/acme/settings/stats');
-    expect(buildWorkspaceAwarePath('/settings/oauth-apps', 'acme')).toBe(
-      '/acme/settings/oauth-apps',
-    );
-    expect(buildWorkspaceAwarePath('/settings/oauth-apps/client-1', 'acme')).toBe(
-      '/acme/settings/oauth-apps/client-1',
-    );
     expect(buildWorkspaceAwarePath('/settings/provider/openai', 'acme')).toBe(
       '/acme/settings/provider/openai',
     );
+  });
+
+  // The OAuth-app console, the skill marketplace and the audit-log viewer
+  // all had a workspace mirror; with their pages and routes gone the sub-path
+  // is personal-only, like every other retired tab. None gets a redirect
+  // route the way `provider` / `service-model` did — those had a successor
+  // capability to land on, these have none, so the honest answer is the same
+  // not-found the personal settings render.
+  it('leaves the retired settings sub-paths unprefixed', () => {
+    expect(buildWorkspaceAwarePath('/settings/oauth-apps', 'acme')).toBe('/settings/oauth-apps');
+    expect(buildWorkspaceAwarePath('/settings/oauth-apps/client-1', 'acme')).toBe(
+      '/settings/oauth-apps/client-1',
+    );
+    expect(buildWorkspaceAwarePath('/settings/skill', 'acme')).toBe('/settings/skill');
+    expect(buildWorkspaceAwarePath('/settings/skill/anything', 'acme')).toBe(
+      '/settings/skill/anything',
+    );
+    expect(buildWorkspaceAwarePath('/settings/audit-log', 'acme')).toBe('/settings/audit-log');
   });
 
   // Account-level tabs are mirrored under the workspace so members can reach
@@ -116,10 +140,6 @@ describe('buildWorkspaceAwarePath', () => {
       '/acme/settings/appearance',
     );
     expect(buildWorkspaceAwarePath('/settings/hotkey', 'acme')).toBe('/acme/settings/hotkey');
-    expect(buildWorkspaceAwarePath('/settings/messenger', 'acme')).toBe('/acme/settings/messenger');
-    expect(buildWorkspaceAwarePath('/settings/messenger/slack', 'acme')).toBe(
-      '/acme/settings/messenger/slack',
-    );
     expect(buildWorkspaceAwarePath('/settings/advanced', 'acme')).toBe('/acme/settings/advanced');
     expect(buildWorkspaceAwarePath('/settings/labs', 'acme')).toBe('/acme/settings/labs');
     expect(buildWorkspaceAwarePath('/settings/about', 'acme')).toBe('/acme/settings/about');
@@ -138,5 +158,25 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings', 'acme')).toBe('/acme/settings');
     expect(buildWorkspaceAwarePath('/settings/', 'acme')).toBe('/acme/settings/');
     expect(buildWorkspaceAwarePath('/settings?foo=bar', 'acme')).toBe('/acme/settings?foo=bar');
+  });
+});
+
+describe('stripWorkspaceSlug', () => {
+  it('returns the path unchanged when no active workspace slug exists', () => {
+    expect(stripWorkspaceSlug('/acme/tasks', null)).toBe('/acme/tasks');
+    expect(stripWorkspaceSlug('/acme/tasks', undefined)).toBe('/acme/tasks');
+  });
+
+  it('drops a leading `/{slug}` so scope-mirrored paths read as personal paths', () => {
+    expect(stripWorkspaceSlug('/acme/tasks', 'acme')).toBe('/tasks');
+    expect(stripWorkspaceSlug('/acme/agent/inbox', 'acme')).toBe('/agent/inbox');
+    expect(stripWorkspaceSlug('/acme', 'acme')).toBe('/');
+  });
+
+  it('leaves personal paths and other slugs untouched', () => {
+    expect(stripWorkspaceSlug('/tasks', 'acme')).toBe('/tasks');
+    expect(stripWorkspaceSlug('/other/tasks', 'acme')).toBe('/other/tasks');
+    // A segment that merely starts with the slug is not a workspace prefix.
+    expect(stripWorkspaceSlug('/acme-legacy/tasks', 'acme')).toBe('/acme-legacy/tasks');
   });
 });

@@ -55,6 +55,7 @@ import {
   mapUnderstandingTRPCError,
 } from '@/server/routers/lambda/_helpers/onboardingError';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
+import { getRoomPublisher } from '@/server/services/collaboration';
 import { FileService } from '@/server/services/file';
 import { OnboardingService } from '@/server/services/onboarding';
 import {
@@ -171,6 +172,8 @@ const OWNER_SETTING_KEYS = ['defaultAgent', 'image', 'memory', 'systemAgent', 't
 const MEMBER_SETTING_KEYS = ['tool'] as const;
 const WORKSPACE_UPDATE_PERMISSION = 'workspace:update:all';
 const WORKSPACE_CONTENT_PERMISSIONS = ['agent:update:all', 'agent:update:owner'] as const;
+
+type CollaborationPreference = UserPreference & { collaborationVisibilityEpoch?: string };
 
 // Accept only: base64 data URL, absolute http(s) URL, empty string,
 // or an internal /webapi/user/avatar/<userId>/... path scoped to the caller.
@@ -479,6 +482,7 @@ export const userRouter = router({
 
       agentOnboarding: state.agentOnboarding,
       interests: state.interests,
+      jobTitle: state.jobTitle,
 
       // always return true for community version
       isOnboard: state.isOnboarded ?? true,
@@ -605,6 +609,12 @@ export const userRouter = router({
   updateInterests: userProcedure.input(z.array(z.string())).mutation(async ({ ctx, input }) => {
     return ctx.userModel.updateUser({ interests: input });
   }),
+
+  updateJobTitle: userProcedure
+    .input(z.string().trim().max(128))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.userModel.updateUser({ jobTitle: input || null });
+    }),
 
   getOrCreateOnboardingState: userProcedure.query(async ({ ctx }) => {
     const onboardingService = new OnboardingService(ctx.serverDB, ctx.userId);
@@ -840,19 +850,74 @@ export const userRouter = router({
   }),
 
   updatePreference: userProcedure.input(UserPreferenceSchema).mutation(async ({ ctx, input }) => {
-    return ctx.userModel.updatePreference(input);
+    if (input.showInCollaboration === undefined) return ctx.userModel.updatePreference(input);
+
+    const currentPreference = await ctx.userModel.getUserPreference();
+    const currentlyVisible = currentPreference?.showInCollaboration !== false;
+    if (input.showInCollaboration === currentlyVisible)
+      return ctx.userModel.updatePreference(input);
+
+    if (!input.showInCollaboration) {
+      const hiddenEpoch = uuidv4();
+      await getRoomPublisher().setUserPresenceVisibility(ctx.userId, false, hiddenEpoch);
+      try {
+        return await ctx.userModel.updatePreference({
+          ...input,
+          collaborationVisibilityEpoch: hiddenEpoch,
+        } as Partial<CollaborationPreference>);
+      } catch (error) {
+        try {
+          await getRoomPublisher().setUserPresenceVisibility(
+            ctx.userId,
+            true,
+            (currentPreference as CollaborationPreference | undefined)
+              ?.collaborationVisibilityEpoch,
+          );
+        } catch (compensationError) {
+          console.error('Failed to compensate collaboration concealment', compensationError);
+        }
+        throw error;
+      }
+    }
+
+    const pendingEpoch = uuidv4();
+    const visibleEpoch = uuidv4();
+    const result = await ctx.userModel.updatePreference({
+      ...input,
+      collaborationVisibilityEpoch: pendingEpoch,
+    } as Partial<CollaborationPreference>);
+    try {
+      await getRoomPublisher().setUserPresenceVisibility(ctx.userId, true, visibleEpoch);
+      await ctx.userModel.updatePreference({
+        collaborationVisibilityEpoch: visibleEpoch,
+      } as Partial<CollaborationPreference>);
+    } catch (error) {
+      const rollbackEpoch = uuidv4();
+      try {
+        await getRoomPublisher().setUserPresenceVisibility(ctx.userId, false, rollbackEpoch);
+        await ctx.userModel.updatePreference({
+          collaborationVisibilityEpoch: rollbackEpoch,
+          showInCollaboration: false,
+        } as Partial<CollaborationPreference>);
+      } catch (rollbackError) {
+        console.error('Failed to roll back collaboration visibility preference', rollbackError);
+      }
+      throw error;
+    }
+    return result;
   }),
 
   updateSettings: userProcedure.input(UserSettingsSchema).mutation(async ({ ctx, input }) => {
-    const { keyVaults, ...res } = input as Partial<UserSettings>;
-    // presence, not truthiness: `keyVaults: null` is an explicit credential clear
-    const hasKeyVaultsUpdate = 'keyVaults' in (input as Partial<UserSettings>);
+    // `keyVaults` (provider/tool credentials) is retired: the field is still
+    // accepted for wire compatibility but never persisted — stored creds stay
+    // frozen and readable only by the runtime's existing-row path.
+    const { keyVaults: _ignoredKeyVaults, ...res } = input as Partial<UserSettings>;
 
-    // credential-bearing settings: `keyVaults` holds provider/tool credentials,
-    // `market` holds Marketplace OAuth access/refresh tokens. A restricted key
-    // needs `model:write` on top of the namespace's `user:write` to touch (or
-    // clear) either; full-access keys pass through.
-    const touchedCredentialFields = ['keyVaults', 'market'].filter(
+    // credential-bearing settings: `market` holds Marketplace OAuth
+    // access/refresh tokens. A restricted key needs `model:write` on top of
+    // the namespace's `user:write` to touch (or clear) it; full-access keys
+    // pass through.
+    const touchedCredentialFields = ['market'].filter(
       (field) => field in (input as Partial<UserSettings>),
     );
     if (
@@ -885,25 +950,7 @@ export const userRouter = router({
       }
     }
 
-    // Encrypt keyVaults; only touch the column when the caller sent the field,
-    // so a settings update without `keyVaults` no longer clears stored creds
-    const nextValue: Record<string, unknown> = { ...res };
-
-    if (hasKeyVaultsUpdate) {
-      let encryptedKeyVaults: string | null = null;
-
-      if (keyVaults) {
-        // TODO: better to add a validation
-        const data = JSON.stringify(keyVaults);
-        const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
-
-        encryptedKeyVaults = await gateKeeper.encrypt(data);
-      }
-
-      nextValue.keyVaults = encryptedKeyVaults;
-    }
-
-    return ctx.userModel.updateSetting(nextValue);
+    return ctx.userModel.updateSetting(res);
   }),
 
   updateToolIntervention: userProcedure

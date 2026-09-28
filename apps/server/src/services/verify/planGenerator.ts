@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS, VERIFY_INSTRUCTION_FILE_TYPE } from '@orvilo/const';
 import { HOLISTIC_CHECK_TITLE, isProgrammaticTestCheck } from '@orvilo/const/verify';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
@@ -44,6 +45,8 @@ export interface GeneratePlanParams {
   operationId: string;
   /** One-sentence acceptance the holistic check verifies against (falls back to `goal`). */
   requirement?: string;
+  /** Preferred ACP binding for the criteria-generation judgment. */
+  verifierAgentId?: string | null;
   /** Ad-hoc criteria mounted on the agent (`agencyConfig.verifyCriteriaIds`). */
   verifyCriteriaIds?: string[];
   /** Reusable rubric mounted on the agent (`agencyConfig.verifyRubricId`). */
@@ -186,6 +189,11 @@ export class VerifyPlanGeneratorService {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          binding: { slug: BUILTIN_AGENT_SLUGS.verifyAgent },
+          purpose: 'verify.planGen',
+        },
+        kind: 'judgment',
         tracing: {
           promptVersion: VERIFY_PLAN_PROMPT_VERSION,
           scenario: TRACING_SCENARIOS.VerifyPlanGen,
@@ -292,6 +300,7 @@ export class VerifyPlanGeneratorService {
           maxCriteria: params.maxAiCriteria ?? DEFAULT_MAX_AI_CRITERIA,
           modelConfig: params.modelConfig,
           operationId: params.operationId,
+          verifierAgentId: params.verifierAgentId,
         });
         for (const item of generated) {
           items.push({ ...item, index: items.length });
@@ -324,6 +333,7 @@ export class VerifyPlanGeneratorService {
     maxCriteria: number;
     modelConfig: { model: string; provider: string };
     operationId: string;
+    verifierAgentId?: string | null;
   }): Promise<VerifyCheckItem[]> {
     const chain = chainVerifyPlan({
       context: params.context,
@@ -342,6 +352,15 @@ export class VerifyPlanGeneratorService {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          binding: {
+            agentId: params.verifierAgentId,
+            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+          },
+          parentOperationId: params.operationId,
+          purpose: 'verify.planGen',
+        },
+        kind: 'judgment',
         tracing: {
           promptVersion: VERIFY_PLAN_PROMPT_VERSION,
           scenario: TRACING_SCENARIOS.VerifyPlanGen,

@@ -3,11 +3,10 @@ import path from 'node:path';
 
 import { isValidElement, type ReactElement, Suspense } from 'react';
 import type { RouteObject } from 'react-router';
-import { matchRoutes } from 'react-router';
+import { matchRoutes, Navigate } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import BrandTextLoading from '@/components/Loading/BrandTextLoading';
-import AppsSkeleton from '@/components/Skeleton/Apps';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import DelayedFallback from '@/components/Skeleton/Delayed';
@@ -18,6 +17,7 @@ import ProfileSkeleton, { GroupProfileRouteSkeleton } from '@/components/Skeleto
 import ResourceHomeSkeleton from '@/components/Skeleton/ResourceHome';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import SettingsPageSkeleton from '@/components/Skeleton/Settings/Page';
+import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import TasksSkeleton from '@/components/Skeleton/Tasks';
 import TaskDetailSkeleton from '@/features/AgentTasks/AgentTaskDetail/TaskDetailSkeleton';
 import { WORKSPACE_SETTINGS_TABS } from '@/features/Workspace/workspaceAwarePath';
@@ -34,6 +34,7 @@ import {
   desktopRoutes as electronDesktopRoutes,
 } from './desktopRouter.config.desktop';
 import { createMainAreaRouteFactory, ResourceCategorySkeleton } from './desktopRouter.shared';
+import WebHomeRedirect from './WebHomeRedirect';
 
 type MainAreaFactory = () => RouteObject[];
 
@@ -106,8 +107,6 @@ describe('desktop router shared definition', () => {
     (_, createMainAreaChildren) => {
       for (const pathname of [
         '/agent/agent-1/profile',
-        '/agent/agent-1/channel',
-        '/agent/agent-1/channel/slack',
         '/agent/agent-1/statistics',
         '/agent/agent-1/share',
         '/group/group-1/profile',
@@ -199,7 +198,7 @@ describe('desktop router shared definition', () => {
   });
 
   it.each(mainAreaVariants)(
-    '%s exposes project task, goal, and acceptance workspaces',
+    '%s exposes the project overview, activity, task, milestone, goal, and resource workspaces',
     (_, factory) => {
       const projectRoute = factory().find((route) => route.path === 'project/:projectId');
       const projectIndexRoute = projectRoute?.children?.find((route) => route.index);
@@ -207,12 +206,41 @@ describe('desktop router shared definition', () => {
         ?.map((route) => route.path)
         .filter((routePath): routePath is string => Boolean(routePath));
 
-      expect(projectPaths).toEqual(['tasks', 'goals', 'acceptance']);
+      // `acceptance` is gone from the project workspace: acceptances are objects
+      // under a task, and the project-level collection was a second, parentless
+      // way to browse them. The assertion follows the behavior change rather
+      // than being relaxed — the list is still compared exactly.
+      expect(projectPaths).toEqual([
+        'overview',
+        'activity',
+        'tasks',
+        'milestones',
+        'goals',
+        'resources',
+        'library/:id',
+        'conversation/:topicId?',
+      ]);
+      // Linear shape: the project index redirects to its Overview tab (the real
+      // app's landing), so the index element must be a Navigate to 'overview'.
+      expect(projectIndexRoute?.element).toBeTruthy();
       expect(
-        (projectIndexRoute?.element as ReactElement<{ to: string }> | undefined)?.props.to,
-      ).toBe('tasks');
+        (projectIndexRoute?.element as ReactElement<{ to?: string }> | undefined)?.props.to,
+      ).toBe('overview');
     },
   );
+
+  // The project's resources page links to `/project/:id/library/:id`, so that
+  // URL has to resolve — a route module existing under `src/routes` is not on
+  // its own reachable, which is how this one went unnoticed.
+  it.each(mainAreaVariants)('%s resolves a project resource and its library', (_, factory) => {
+    const resources = matchRoutes(createMainAreaRoutes(factory), '/project/prj_1/resources');
+    const library = matchRoutes(createMainAreaRoutes(factory), '/project/prj_1/library/kb_1');
+
+    expect(resources?.at(-1)?.route.path).toBe('resources');
+    expect(resources?.at(-1)?.route.handle).toMatchObject({ meta: expect.any(Object) });
+    expect(library?.at(-1)?.route.path).toBe('library/:id');
+    expect(library?.at(-1)?.params).toMatchObject({ id: 'kb_1', projectId: 'prj_1' });
+  });
 
   it.each(mainAreaVariants)('%s exposes the projects view-all route', (_, factory) => {
     const personalMatches = matchRoutes(createMainAreaRoutes(factory), '/projects');
@@ -286,6 +314,33 @@ describe('desktop router shared definition', () => {
     );
   });
 
+  it.each(mainAreaVariants)(
+    '%s matches work attention surfaces instead of a splat 404',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+
+      for (const [pathname, parent] of [
+        ['/inbox', 'inbox'],
+        ['/my-work', 'my-work'],
+        ['/views', 'views'],
+        ['/views/builtin:all', 'views'],
+        ['/teams', 'teams'],
+        ['/teams/team-1', 'teams'],
+        ['/acme/inbox', 'inbox'],
+        ['/acme/my-work', 'my-work'],
+        ['/acme/views/view-1', 'views'],
+        ['/acme/teams/team-1', 'teams'],
+      ] as const) {
+        const matches = matchRoutes(routes, pathname);
+        const paths = matches?.map((match) => match.route.path) ?? [];
+
+        expect(matches, pathname).toBeTruthy();
+        expect(paths, pathname).toContain(parent);
+        expect(paths, pathname).not.toContain('*');
+      }
+    },
+  );
+
   it('keeps all route modules behind lazy import boundaries', async () => {
     const sources = await readRouterSources();
     const combinedSource = sources.join('\n');
@@ -302,7 +357,12 @@ describe('desktop router shared definition', () => {
     expect(combinedSource).not.toContain(
       "import { ProviderDetailPage, ProviderLayout } from '@/routes/(main)/settings/provider'",
     );
-    expect(lazyRouteImports.length).toBeGreaterThan(100);
+    // The threshold guards against a refactor that pulls route modules back
+    // into eager imports; it is not a route count. Retiring the standalone
+    // acceptance and messenger pages removed their lazy boundaries, so the
+    // floor follows the smaller tree instead of being pinned to the
+    // pre-retirement number.
+    expect(lazyRouteImports.length).toBeGreaterThan(80);
   });
 
   it('owns prioritized preload registration only in the shared route definition', async () => {
@@ -333,7 +393,6 @@ describe('desktop router shared definition', () => {
       { element: null, index: true },
       { element: null, path: '*' },
     ]);
-    expect(webPaths).toContain('/verify-im');
     // `/share/*` moved to the standalone Share app (apps/share).
     expect(webPaths).not.toContain('/share/t');
     expect(webPaths).not.toContain('/share/page');
@@ -344,16 +403,57 @@ describe('desktop router shared definition', () => {
     expect(webPaths).not.toContain('/a/:slugOrId/:topicId?');
     expect(electronPaths).not.toContain('/a/:slugOrId/:topicId?');
     expect(webPaths).not.toContain('/verify');
-    expect(webPaths).toContain('/acceptance');
+    // The standalone `/acceptance` tree was retired with the standalone
+    // platform; the root is now reserved and redirects into the task board.
+    expect(webPaths).not.toContain('/acceptance');
     expect(webPaths).toContain('/onboarding');
     expect(webPaths).not.toContain('/desktop-onboarding');
-    expect(electronPaths).not.toContain('/verify-im');
     expect(electronPaths).not.toContain('/share/t');
     expect(electronPaths).not.toContain('/share/page');
     expect(electronPaths).not.toContain('/verify');
     expect(electronPaths).not.toContain('/acceptance');
-    expect(electronPaths).not.toContain('/onboarding');
+    // Both clients mount the unified `/onboarding`; `/desktop-onboarding`
+    // survives on Electron only as a compat redirect for legacy links.
+    expect(electronPaths).toContain('/onboarding');
     expect(electronPaths).toContain('/desktop-onboarding');
+  });
+
+  // The standalone Acceptance / Verify platform is retired. Its two roots must
+  // still resolve — not as 404s, and above all not through `/:workspaceSlug`,
+  // which would parse a stored `/acceptance/<id>` link as workspace
+  // `acceptance`. Both redirect into the main area instead.
+  it.each(mainAreaVariants)('%s redirects the retired acceptance/verify roots', (_, factory) => {
+    for (const pathname of [
+      '/acceptance',
+      '/acceptance/acceptance-1',
+      '/acceptance/acceptance-1/check/check-1',
+      '/verify',
+      '/verify/run-1',
+    ]) {
+      const matches = matchRoutes(createMainAreaRoutes(factory), pathname);
+      const last = matches?.at(-1);
+
+      expect(last?.route.path).toMatch(/^(acceptance|verify)\/\*$/);
+      expect(last?.params['*']).toBe(pathname.split('/').slice(2).join('/'));
+      expect(isValidElement(last?.route.element)).toBe(true);
+      expect((last?.route.element as ReactElement<{ to?: string }>).props.to).toBe('/tasks');
+    }
+  });
+
+  // The two `desktopRoutes` trees are thin platform adapters (Electron replaces
+  // its root children with per-tab stubs), so the content tree is read from the
+  // shared factory both of them build from.
+  it.each(mainAreaVariants)('%s no longer mounts an acceptance page segment', (_, factory) => {
+    const paths: string[] = [];
+    const walk = (list: RouteObject[]) => {
+      for (const route of list) {
+        if (typeof route.path === 'string') paths.push(route.path);
+        if (route.children) walk(route.children);
+      }
+    };
+    walk(factory());
+
+    expect(paths.filter((routePath) => routePath.includes('acceptance'))).toEqual(['acceptance/*']);
   });
 
   it.each([
@@ -476,12 +576,16 @@ describe('desktop router shared definition', () => {
       ['/group/group-1/profile', GroupProfileRouteSkeleton],
       ['/group/group-1/topic-1', ConversationLayoutSkeleton],
       ['/settings/profile', SettingsPageSkeleton],
-      ['/apps', AppsSkeleton],
       ['/memory', MemorySkeleton],
       ['/resource', ResourceHomeSkeleton],
       ['/resource/files', ResourceCategorySkeleton],
       ['/resource/images', ResourceCategorySkeleton],
       ['/resource/works', ResourceCategorySkeleton],
+      // Work inbox / My Work / Views / Teams must keep their own list skeletons.
+      ['/inbox', createSurfaceSkeleton('list')],
+      ['/my-work', createSurfaceSkeleton('list')],
+      ['/views', createSurfaceSkeleton('list')],
+      ['/teams', createSurfaceSkeleton('list')],
     ] as const) {
       const matches = matchRoutes(getRoutes(pathname), pathname);
       expect(
@@ -513,29 +617,75 @@ describe('desktop router shared definition', () => {
   it.each([
     ['Web', (_pathname: string) => webDesktopRoutes],
     ['Electron', (pathname: string) => createTabRouter(pathname).routes],
-  ])('%s keeps /apps on the route-segment fallback', (_, getRoutes) => {
+  ])('%s redirects retired /apps to the Settings > About downloads', (_, getRoutes) => {
+    // `/apps` was retired into Settings > About; the route stays registered as
+    // a static redirect so legacy deep-links and stored tab state still land
+    // somewhere honest instead of 404ing.
     const matches = matchRoutes(getRoutes('/apps'), '/apps');
-    const fallbackTypes = matches
-      ?.map(
-        ({ route }) =>
-          (route.element as ReactElement<{ fallback?: ReactElement }> | undefined)?.props.fallback
-            ?.type,
-      )
-      .filter(Boolean);
+    const element = matches?.at(-1)?.route.element as ReactElement<{
+      replace?: boolean;
+      to?: string;
+    }>;
 
-    expect(fallbackTypes?.at(-1)).toBe(RouteSegmentSkeleton);
+    expect(element?.type).toBe(Navigate);
+    expect(element?.props.to).toBe('/settings/about');
+    expect(element?.props.replace).toBe(true);
   });
 
-  it('injects Home only into Electron per-tab content routes', () => {
+  it('fills each platform index slot with that platform landing element', () => {
     const webChildren = createWebMainAreaChildren();
     const electronChildren = createElectronMainAreaChildren();
     const webWorkspace = webChildren.find((route) => route.path === ':workspaceSlug');
     const electronWorkspace = electronChildren.find((route) => route.path === ':workspaceSlug');
 
-    expect(webChildren.find((route) => route.index)?.element).toBeUndefined();
-    expect(webWorkspace?.children?.find((route) => route.index)?.element).toBeUndefined();
-    expect(electronChildren.find((route) => route.index)?.element).toBeDefined();
-    expect(electronWorkspace?.children?.find((route) => route.index)?.element).toBeDefined();
+    // `deferPlatformElement` mounts the factory as the element's type, so read
+    // through it: the contract is what the slot renders, not which factory
+    // closed over it.
+    const landingTypes = (children: RouteObject[], workspace?: RouteObject) =>
+      [
+        children.find((route) => route.index)?.element,
+        workspace?.children?.find((route) => route.index)?.element,
+      ].map((element) => {
+        const factory = (element as ReactElement).type as () => ReactElement;
+        return factory().type;
+      });
+
+    // Web used to leave both slots empty and render the chat Home beside the
+    // outlet instead. Task-first makes the slot the app's landing behaviour, so
+    // the workspace tree has to answer it too — otherwise `/:slug` lands on the
+    // chat Home while `/` lands on the task list.
+    expect(landingTypes(webChildren, webWorkspace)).toEqual([WebHomeRedirect, WebHomeRedirect]);
+    // Electron lands its tabs on the same element: each tab owns a memory
+    // router, so a fresh `/` (or `/:workspaceSlug`) tab redirects inside that
+    // router to the same `/tasks` board Web opens on.
+    expect(landingTypes(electronChildren, electronWorkspace)).toEqual([
+      WebHomeRedirect,
+      WebHomeRedirect,
+    ]);
+  });
+
+  it('lands an empty Electron tab on the task board while explicit urls keep their route', () => {
+    // The tab router is what a new empty tab and a bare-root boot both paint:
+    // its index match must be the redirect that lands the tab on `/tasks`,
+    // not a second home surface.
+    const tabRoutes = createTabRouter('/').routes;
+    const indexMatch = matchRoutes(tabRoutes, '/')?.at(-1);
+    const indexFactory = (indexMatch?.route.element as ReactElement).type as () => ReactElement;
+
+    expect(indexMatch?.route.index).toBe(true);
+    expect(indexFactory().type).toBe(WebHomeRedirect);
+
+    const workspaceMatch = matchRoutes(tabRoutes, '/acme')?.at(-1);
+    const workspaceFactory = (workspaceMatch?.route.element as ReactElement)
+      .type as () => ReactElement;
+
+    expect(workspaceMatch?.params).toMatchObject({ workspaceSlug: 'acme' });
+    expect(workspaceFactory().type).toBe(WebHomeRedirect);
+
+    // An explicit deep link never touches the index slot: the task detail and
+    // the tasks board resolve to their own routes.
+    expect(matchRoutes(tabRoutes, '/task/task-1')?.at(-1)?.route.path).toBe(':taskId/:slug?');
+    expect(matchRoutes(tabRoutes, '/tasks')?.at(-1)?.route.index).toBe(true);
   });
 
   it.each(mainAreaVariants)(
@@ -556,36 +706,66 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
-    '%s keeps workspace provider deep-links inside the workspace',
+    '%s resolves the Linear import catalog and wizard inside workspace settings',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
-      const listMatches = matchRoutes(routes, '/acme/settings/provider');
-      const detailMatches = matchRoutes(routes, '/acme/settings/provider/orvilo');
-
-      expect(listMatches?.at(-1)?.route.path).toBe('provider');
-      // Before the redirect route existed, the detail path fell through to the
-      // root catch-all (`*`) and kicked the user out of the workspace.
-      expect(detailMatches?.at(-1)?.route.path).toBe('provider/:providerId');
-      expect(detailMatches?.at(-1)?.params).toMatchObject({
-        providerId: 'orvilo',
-        workspaceSlug: 'acme',
-      });
+      for (const [url, path] of [
+        ['/acme/settings/imports', 'imports'],
+        ['/acme/settings/imports/linear', 'imports/linear'],
+      ]) {
+        const matches = matchRoutes(routes, url);
+        expect(matches?.at(-1)?.route.path).toBe(path);
+        expect(
+          resolveRouteSkeleton(matches?.map(({ route }) => ({ handle: route.handle })) ?? []),
+        ).toBeDefined();
+      }
     },
   );
 
   it.each(mainAreaVariants)(
-    '%s registers workspace OAuth app list and detail routes',
+    '%s redirects the old Linear settings URL to the new importer',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
-      const listMatches = matchRoutes(routes, '/acme/settings/oauth-apps');
-      const detailMatches = matchRoutes(routes, '/acme/settings/oauth-apps/client-1');
+      const leaf = matchRoutes(routes, '/acme/settings/linear')?.at(-1)?.route;
 
-      expect(listMatches?.at(-1)?.route.path).toBe('oauth-apps');
-      expect(detailMatches?.at(-1)?.route.path).toBe('oauth-apps/:sub');
-      expect(detailMatches?.at(-1)?.params).toMatchObject({
-        sub: 'client-1',
-        workspaceSlug: 'acme',
-      });
+      expect(leaf?.path).toBe('linear');
+      expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe(
+        '../imports/linear',
+      );
+    },
+  );
+
+  it.each(mainAreaVariants)(
+    '%s redirects retired workspace provider deep-links inside the workspace',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+      const listMatches = matchRoutes(routes, '/acme/settings/provider');
+      const detailMatches = matchRoutes(routes, '/acme/settings/provider/lobehub');
+      const serviceModelMatches = matchRoutes(routes, '/acme/settings/service-model');
+
+      // The provider/service-model pages are retired — deep-links must land on
+      // the workspace settings root instead of the `*` catch-all.
+      for (const matches of [listMatches, detailMatches, serviceModelMatches]) {
+        const leaf = matches?.at(-1)?.route;
+        expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('..');
+      }
+    },
+  );
+
+  it.each(mainAreaVariants)(
+    '%s no longer resolves the retired workspace OAuth app routes',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+
+      // The self-built OAuth app console was retired with its workspace mirror
+      // (hidden-surface-retirement HS-50). Deep links must stop matching a route
+      // of their own instead of landing on a page the product no longer ships.
+      for (const pathname of ['/acme/settings/oauth-apps', '/acme/settings/oauth-apps/client-1']) {
+        const paths = matchRoutes(routes, pathname)?.map((match) => match.route.path) ?? [];
+
+        expect(paths, `${pathname} still resolves the app list`).not.toContain('oauth-apps');
+        expect(paths, `${pathname} still resolves the app detail`).not.toContain('oauth-apps/:sub');
+      }
     },
   );
 

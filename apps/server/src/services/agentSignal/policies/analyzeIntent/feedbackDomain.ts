@@ -18,6 +18,7 @@ import {
 import { classifySkillIntent, SkillIntentClassifierAgentService } from './skillIntent';
 
 interface FeedbackDomainJudgeResolverInput {
+  agentId: SignalFeedbackSatisfaction['payload']['agentId'];
   chain: SignalFeedbackSatisfaction['chain'];
   feedback: Pick<
     SignalFeedbackSatisfaction['payload'],
@@ -74,11 +75,13 @@ const createDomainResolver = (
 
     return (
       await agent.judgeDomains({
+        agentId: signal.agentId,
         evidence: signal.feedback.evidence,
         message: signal.feedback.message,
         reason: signal.feedback.reason,
         result: signal.feedback.result,
         serializedContext: signal.feedback.serializedContext,
+        topicId: signal.topicId,
       })
     ).targets;
   };
@@ -136,8 +139,10 @@ export const createFeedbackDomainJudgeSignalHandler = (
 
             const classification = await classifySkillIntent(
               {
+                agentId: signal.payload.agentId,
                 message: signal.payload.message,
                 serializedContext: signal.payload.serializedContext,
+                topicId: signal.payload.topicId,
               },
               {
                 diagnostics: options.classifierDiagnostics,
@@ -163,6 +168,7 @@ export const createFeedbackDomainJudgeSignalHandler = (
         ? {
             async classify(input) {
               const targets = await resolveDomains({
+                agentId: input.payload.agentId,
                 chain: input.chain,
                 feedback: {
                   confidence: input.payload.confidence,

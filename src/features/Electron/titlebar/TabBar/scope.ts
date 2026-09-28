@@ -36,7 +36,6 @@ const PERSONAL_TOP_LEVEL_SEGMENTS = new Set([
   'task',
   'tasks',
   'verify',
-  'verify-im',
   'video',
 ]);
 

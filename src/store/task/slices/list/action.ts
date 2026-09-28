@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import {
-  isAutomationListKey,
   isAutomationRunsKey,
   isMyTaskListKey,
   isScheduledTaskListKey,
@@ -36,8 +35,28 @@ const PROJECT_LIST_KEY_PREFIX = '__project__:';
  */
 const MINE_LIST_KEY_PREFIX = '__mine__:';
 
-const projectIdFromListKey = (key?: string) =>
-  key?.startsWith(PROJECT_LIST_KEY_PREFIX) ? key.slice(PROJECT_LIST_KEY_PREFIX.length) : undefined;
+const NO_PROJECT_MARKER = 'no-project';
+
+/**
+ * The project filter segment of a group-list key: a project board carries it
+ * in `PROJECT_LIST_KEY_PREFIX`, a scoped ("My tasks") board as a `:…` suffix
+ * after the scope name. `no-project` decodes back to `null` — the "No
+ * project" chip — so refresh helpers rebuild the same cache key the fetch
+ * registered.
+ */
+const projectIdFromListKey = (key?: string): string | null | undefined => {
+  if (key?.startsWith(PROJECT_LIST_KEY_PREFIX)) {
+    const value = key.slice(PROJECT_LIST_KEY_PREFIX.length);
+    return value === NO_PROJECT_MARKER ? null : value;
+  }
+  if (key?.startsWith(MINE_LIST_KEY_PREFIX)) {
+    const separator = key.indexOf(':', MINE_LIST_KEY_PREFIX.length);
+    if (separator === -1) return undefined;
+    const value = key.slice(separator + 1);
+    return value === NO_PROJECT_MARKER ? null : value;
+  }
+  return undefined;
+};
 
 const isMineListKey = (key?: string) => !!key?.startsWith(MINE_LIST_KEY_PREFIX);
 
@@ -54,19 +73,26 @@ const effectiveGroupVisibility = (
   visibility: TaskListVisibilityFilter,
 ): TaskListVisibilityFilter => (isMineListKey(listKey) ? 'all' : visibility);
 
-// Default kanban groups: 5 columns
-// 'scheduled' shares the 'running' column — both represent "automation in
-// progress" from the user's perspective (one is mid-tick, the other is
-// waiting for the next tick).
-// `needsInput` is intentionally first: in the list view it surfaces the
-// actionable items at the top of the page.
+// Shared business-workflow board. Linked tasks use the normalized Linear
+// category; legacy tasks without an exact workflow state retain the execution
+// projection they used before the workflow split.
 const DEFAULT_KANBAN_GROUPS = [
-  { key: 'needsInput', statuses: ['paused', 'failed'] },
-  { key: 'backlog', statuses: ['backlog'] },
-  { key: 'running', statuses: ['running', 'scheduled'] },
-  { key: 'done', statuses: ['completed'] },
-  { key: 'canceled', statuses: ['canceled'] },
-];
+  { key: 'triage', workflowCategories: ['triage'] },
+  { key: 'backlog', statuses: ['backlog'], workflowCategories: ['backlog'] },
+  { key: 'todo', workflowCategories: ['todo'] },
+  {
+    key: 'running',
+    statuses: ['running', 'scheduled'],
+    workflowCategories: ['in_progress'],
+  },
+  {
+    key: 'needsInput',
+    statuses: ['paused', 'failed'],
+    workflowCategories: ['in_review'],
+  },
+  { key: 'done', statuses: ['completed'], workflowCategories: ['done'] },
+  { key: 'canceled', statuses: ['canceled'], workflowCategories: ['canceled'] },
+] as const;
 
 /**
  * First page each board column loads. "Load more" grows a column by another
@@ -259,9 +285,9 @@ export class TaskListSliceActionImpl {
       mutate(isMyTaskListKey),
       // A run starting or an automation being (un)configured shifts the
       // workspace roll-up the "All runs" page reads, and the automations
-      // list's own rows.
+      // list's own rows — which live under the scheduled root, so
+      // `isScheduledTaskListKey` above already covers them.
       mutate(isAutomationRunsKey),
-      mutate(isAutomationListKey),
     ]);
   };
 
@@ -292,12 +318,15 @@ export class TaskListSliceActionImpl {
       enabled?: boolean;
       excludeStatuses?: readonly TaskStatus[];
       groupBy?: TaskKanbanGroupBy;
-      projectId?: string;
+      /** `null` narrows to tasks with no project — the "No project" board chip. */
+      projectId?: string | null;
       /**
        * "My tasks" board: the caller's own slice of the workspace, narrowed
        * server-side exactly like `useFetchMyTaskList` narrows its list.
+       * 'delegated' = tasks the caller delegated to agents (active execution
+       * grant) — the My Work "Delegated" tab.
        */
-      scope?: 'assigned' | 'created';
+      scope?: 'assigned' | 'created' | 'delegated';
     } = {},
   ) => {
     const {
@@ -310,13 +339,19 @@ export class TaskListSliceActionImpl {
       projectId,
       scope,
     } = options;
+    // A scoped board's project filter is part of its identity too — flipping
+    // the "No project" chip must reset like a scope change, not share the
+    // unfiltered scope's slot and groups.
+    const scopeKeySuffix = projectId === null ? ':no-project' : projectId ? `:${projectId}` : '';
     const effectiveKey = scope
-      ? `${MINE_LIST_KEY_PREFIX}${scope}`
-      : projectId
-        ? `${PROJECT_LIST_KEY_PREFIX}${projectId}`
-        : allAgents
-          ? ALL_AGENTS_LIST_KEY
-          : agentId;
+      ? `${MINE_LIST_KEY_PREFIX}${scope}${scopeKeySuffix}`
+      : projectId === null
+        ? `${PROJECT_LIST_KEY_PREFIX}no-project`
+        : projectId
+          ? `${PROJECT_LIST_KEY_PREFIX}${projectId}`
+          : allAgents
+            ? ALL_AGENTS_LIST_KEY
+            : agentId;
     const excludeStatusesSignature = excludeStatuses?.length
       ? [...excludeStatuses].sort().join(',')
       : undefined;
@@ -393,6 +428,8 @@ export class TaskListSliceActionImpl {
                 groups: DEFAULT_KANBAN_GROUPS.map((group) => ({
                   ...group,
                   limit: groupLimits[group.key] ?? KANBAN_GROUP_PAGE_SIZE,
+                  statuses: 'statuses' in group ? [...group.statuses] : undefined,
+                  workflowCategories: [...group.workflowCategories],
                 })),
               }
             : {
@@ -431,12 +468,17 @@ export class TaskListSliceActionImpl {
   };
 
   /**
-   * The automated-task roll-up behind Home's "Scheduled" section and the Tasks
-   * page's scheduled tab. Each caller consumes its own SWR result because Home
-   * and the paginated Tasks page can coexist in Electron with different limits
-   * and offsets. `agentId`/`projectId` narrow the roll-up to the scoped Tasks
-   * page; they are part of the key so an agent's schedules never render under
-   * another scope.
+   * The automated-task roll-up behind the Tasks page's scheduled collection
+   * and the Automations list.
+   *
+   * A single roll-up on purpose. This used to be two hooks under two key roots,
+   * so two callers asking the same question — same scope, same limit, same
+   * offset, no filter — each held their own copy of the same page and each
+   * revalidated it separately.
+   *
+   * `agentId`/`projectId` narrow it to a scoped Tasks page, `scope` picks
+   * "created by me", and `statuses` is the active/paused narrowing. All three
+   * are part of the key, so different questions still get different entries.
    */
   useFetchScheduledTaskList = (
     options: {
@@ -445,14 +487,19 @@ export class TaskListSliceActionImpl {
       limit?: number;
       offset?: number;
       projectId?: string;
+      scope?: 'all' | 'created';
+      statuses?: TaskStatus[];
     } = {},
   ) => {
-    const { agentId, enabled = true, limit, offset, projectId } = options;
+    const { agentId, enabled = true, limit, offset, projectId, scope = 'all', statuses } = options;
     const scopeKey = projectId
       ? `${PROJECT_LIST_KEY_PREFIX}${projectId}`
       : (agentId ?? ALL_AGENTS_LIST_KEY);
+    const statusesSignature = statuses?.length ? [...statuses].sort().join(',') : 'all';
     return useClientDataSWR(
-      enabled ? taskKeys.scheduledList(scopeKey, 'all', limit, offset) : null,
+      enabled
+        ? taskKeys.scheduledList(scopeKey, 'all', limit, offset, scope, statusesSignature)
+        : null,
       async () =>
         this.fetchTaskList({
           ...(projectId ? { projectId } : agentId ? { assigneeAgentId: agentId } : {}),
@@ -460,6 +507,8 @@ export class TaskListSliceActionImpl {
           limit,
           offset,
           orderBy: 'updatedAt',
+          scope: scope === 'created' ? 'created' : undefined,
+          statuses,
         }),
       { revalidateOnFocus: false },
     );
@@ -491,37 +540,6 @@ export class TaskListSliceActionImpl {
           offset,
           scope: scope === 'created' ? 'created' : undefined,
           search: search?.trim() || undefined,
-          statuses,
-        }),
-      { revalidateOnFocus: false },
-    );
-  };
-
-  /**
-   * The Automations page's list: automated tasks that can still fire, with
-   * the optional "created by me" scope and active/paused status narrowing the
-   * Cordy-style tabs need. Server-paginated like `useFetchScheduledTaskList`.
-   */
-  useFetchAutomationList = (
-    options: {
-      enabled?: boolean;
-      limit?: number;
-      offset?: number;
-      scope?: 'all' | 'created';
-      statuses?: TaskStatus[];
-    } = {},
-  ) => {
-    const { enabled = true, limit, offset, scope = 'all', statuses } = options;
-    const statusesSignature = statuses?.length ? [...statuses].sort().join(',') : 'all';
-    return useClientDataSWR(
-      enabled ? taskKeys.automationList(scope, statusesSignature, limit, offset) : null,
-      async () =>
-        this.fetchTaskList({
-          automated: true,
-          limit,
-          offset,
-          orderBy: 'updatedAt',
-          scope: scope === 'created' ? 'created' : undefined,
           statuses,
         }),
       { revalidateOnFocus: false },

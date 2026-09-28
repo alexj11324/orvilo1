@@ -12,10 +12,16 @@ const INTERACTION_KINDS = new Set<AgentInterventionInteractionKind>([
   'question',
 ]);
 const PROVIDERS = new Set<AgentInterventionProvider>([
+  'amp',
   'claude-code',
+  'codebuddy',
+  'codex',
   'cursor',
   'devin',
   'droid',
+  'kimi-code',
+  'opencode',
+  'pi',
   'qoder',
 ]);
 
@@ -114,6 +120,8 @@ export const sanitizeAgentInterventionRequestForReview = (
     });
   }
 
+  const windowId = boundedString(request.windowId, 128);
+
   return {
     apiName: request.apiName,
     arguments: JSON.stringify({ questions } satisfies AgentInterventionRenderArguments),
@@ -122,5 +130,6 @@ export const sanitizeAgentInterventionRequestForReview = (
     interactionKind: request.interactionKind,
     provider: request.provider,
     toolCallId: request.toolCallId,
+    ...(windowId ? { windowId } : {}),
   };
 };

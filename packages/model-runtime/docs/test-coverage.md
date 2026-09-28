@@ -38,12 +38,12 @@
 **65+ providers and core modules with 90%+ coverage**, including:
 
 - **100% coverage**: deepseek, nvidia, qiniu, wenxin, giteeai, v0, zeroone, ai360, akashchat, baichuan, bedrock, cohere, mistral, moonshot, ollama, openrouter, search1api, sensenova, spark, zhipu, vercelaigateway, cometapi, cerebras, ollamacloud, internlm, hunyuan, huggingface, groq, modelscope, nebius, stepfun, lmstudio, newapi, fireworksai, jina, tencentcloud, togetherai, ai21, sambanova, upstage, vllm
-- **95-99%**: ModelRuntime, computeChatCost, computeImageCost, openai streams, createImage, github, vertexai, volcengine, siliconcloud, ppio, minimax, cloudflare, fal
+- **95-99%**: ModelRuntime, computeChatCost, openai streams, github, vertexai, volcengine, siliconcloud, ppio, minimax, cloudflare
 - **90-94%**: contextBuilders, streams (anthropic, protocol, qwen), openai provider
 
 **Good - Coverage (80-89%)**:
 
-- ai302, qwen, google, azureOpenai, azureai, infiniai, aihubmix, bfl, anthropic, openai, RouterRuntime
+- ai302, qwen, google, azureOpenai, azureai, infiniai, aihubmix, anthropic, openai, RouterRuntime
 
 ## Testing Strategy
 
@@ -573,9 +573,8 @@ bunx eslint src/providers/{provider}/
   **Core Modules (6 files, +96 tests):**
 
   - **responsesStream.ts** (50.6% → 91.56%) - 19 tests, response events, function calls, reasoning, citations
-  - **createImage.ts** (54.76% → 100%) - 24 tests, chat model mode, image mode, routing logic
   - **computeImageCost.ts** (64.47% → 100%) - 12 tests, lookup/fixed/tiered pricing strategies
-  - **openai.ts** (73.87% → 98.79%) - 19 tests, image handling, tool calls, citations, reasoning
+  - **openai.ts** (73.87% → 98.79%) - 19 tests, tool calls, citations, reasoning
   - **ModelRuntime.ts** (75% → 100%) - 12 tests, embeddings, textToSpeech, pullModel, generateObject
   - **computeChatCost.ts** (79.78% → 95.74%) - 10 tests, tiered pricing, error handling
 

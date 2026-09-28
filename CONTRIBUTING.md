@@ -4,6 +4,12 @@ We're thrilled that you want to contribute to Orvilo, the future of communicatio
 
 Orvilo is an open-source project, and we welcome your collaboration. Before you jump in, let's make sure you're all set to contribute effectively and have loads of fun along the way!
 
+> **Read this first:** `canary` is the development branch — **all pull requests
+> target `canary`**, never `main`. `main` is a release snapshot that only
+> receives PRs from `release/*` and `hotfix/*` branches.
+> Full model: [`docs/development/branch-model.md`](./docs/development/branch-model.md).
+> Repo conventions for code and tooling: [`AGENTS.md`](./AGENTS.md).
+
 ## Table of Contents
 
 - [Fork the Repository](#fork-the-repository)
@@ -25,26 +31,37 @@ Orvilo is an open-source project, and we welcome your collaboration. Before you 
 📦 Clone your forked repository to your local machine using the `git clone` command:
 
 ```bash
-git clone https://github.com/YourUsername/orvilo.git
+git clone https://github.com/YourUsername/orvilo1.git
 ```
 
 ## Create a New Branch
 
-🌿 Create a new branch for your contribution. This helps keep your work organized and separate from the main codebase.
+🌿 Branch off **`canary`**, not `main`. This keeps your work on the same line
+everyone else is developing against.
 
 ```bash
-git checkout -b your-branch-name
+git remote add upstream https://github.com/alexj11324/orvilo1.git
+git fetch upstream canary
+git checkout -b feat/your-feature-name upstream/canary
 ```
 
-Choose a meaningful branch name related to your work. It makes collaboration easier!
+Use the `<type>/<feature-name>` format — `feat/`, `fix/`, `chore/`, `ci/`,
+`docs/`, `refactor/`. A meaningful name makes collaboration easier!
 
 ## Code Like a Wizard
 
-🧙‍♀️ Time to work your magic! Write your code, fix bugs, or add new features. Be sure to follow our project's coding style. You can check if your code adheres to our style using:
+🧙‍♀️ Time to work your magic! Write code, fix bugs, or add features. Before
+opening a PR, run the project's own quality gate:
 
 ```bash
-pnpm lint
+bun run check
 ```
+
+That runs lint and the related tests for your changed files. Add `--type` for a
+scoped type-check inside the owning package (full-repo type-check runs in CI
+only). See [`AGENTS.md`](./AGENTS.md) → _Quality Check_ for the full selector
+set. Note this repo uses `pnpm` for dependencies and `bun` to run scripts — not
+`npm` or `yarn`.
 
 This adds a bit of enchantment to your coding experience! ✨
 
@@ -54,30 +71,38 @@ This adds a bit of enchantment to your coding experience! ✨
 
 ```bash
 git add .
-git commit -m "Your meaningful commit message"
+git commit -m "✨ feat: your meaningful commit message"
 ```
 
-Please keep your commits focused and clear. And remember to be kind to your fellow contributors; keep your commits concise.
+Prefix your commit message with a gitmoji, and keep commits focused and clear.
+Remember to be kind to your fellow contributors; keep your commits concise.
 
 ## Sync with Upstream
 
-⚙️ Periodically, sync your forked repository with the original (upstream) repository to stay up-to-date with the latest changes.
+⚙️ Periodically, sync your fork with the original repository to stay up-to-date.
+**Sync against `canary`** — that is where development happens.
 
 ```bash
-git remote add upstream https://github.com/alexj11324/orvilo1.git
-git fetch upstream
-git merge upstream/main
+git fetch upstream canary
+git rebase upstream/canary
 ```
-
-This ensures you're working on the most current version of Orvilo. Stay fresh! 💨
 
 ## Open a Pull Request
 
-🚀 Time to share your contribution! Head over to the original Orvilo repository and open a Pull Request (PR). Our maintainers will review your work.
+🚀 Time to share your contribution! Open a Pull Request **against `canary`**.
+
+Direct pushes to `canary` and `main` are blocked by branch protection — a PR is
+the only way in.
+
+When you open the PR, fill in the template: screenshots for UI changes, how you
+tested, and an acceptance note for user-visible behavior. Every bug fix needs a
+regression test that fails before the fix and passes after it.
+
+Our maintainers will review your work.
 
 ## Review and Collaboration
 
-👓 Your PR will undergo thorough review and testing. The maintainers will provide feedback, and you can collaborate to make your contribution even better. We value teamwork!
+👓 Your PR will undergo thorough review and testing. The maintainers will provide feedback, and you can collaborate to make your contribution even more magical. We value teamwork!
 
 ## Celebrate 🎉
 

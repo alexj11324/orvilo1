@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { getComposioAppByIdentifier } from '@orvilo/const';
 import { upsertPluginMode } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -26,7 +28,13 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { callConnectorToolById, ConnectorToolCallError } from '@/server/services/connector/exec';
 import {
+  findExistingGitHubMcpConnector,
+  reconcileGitHubMcpAvailability,
+} from '@/server/services/connector/githubMcp';
+import { activateGitHubMcpConnector } from '@/server/services/connector/githubMcpActivation';
+import {
   buildAuthorizationUrl,
+  buildOAuthClientInformation,
   discoverConnectorOAuth,
   getConnectorRedirectUri,
   registerDynamicClient,
@@ -76,6 +84,7 @@ const oidcConfigSchema = z.object({
   scheme: z.enum(['pre_registration', 'dcr', 'client_id_metadata_document']),
   scopes: z.array(z.string()).optional(),
   tokenEndpoint: z.string().optional(),
+  tokenEndpointAuthMethod: z.string().optional(),
   usePKCE: z.boolean().optional(),
 });
 
@@ -89,6 +98,15 @@ const connectorCredentialsInputSchema = z.discriminatedUnion('type', [
   z.object({ apiKey: z.string().min(1), type: z.literal('apikey') }),
   z.object({ headers: z.record(z.string(), z.string()), type: z.literal('header') }),
 ]);
+
+/** Keep the GitHub provider binding server-owned on generic create/update paths. */
+const withTrustedGitHubMcpBinding = (
+  candidate: Record<string, unknown> | null | undefined,
+  existing: ConnectorMetadata | null | undefined,
+): ConnectorMetadata => {
+  const { githubMcp: _untrustedGitHubMcp, ...rest } = candidate ?? {};
+  return existing?.githubMcp ? { ...rest, githubMcp: existing.githubMcp } : rest;
+};
 
 const createConnectorSchema = z.object({
   /**
@@ -130,7 +148,10 @@ export const connectorRouter = router({
   // ── Queries ──────────────────────────────────────────────────────────────
 
   list: connectorProcedure.query(async ({ ctx }) => {
-    const connectors = await ctx.connectorModel.query();
+    const connectors = await reconcileGitHubMcpAvailability({
+      connectors: await ctx.connectorModel.query(),
+      db: ctx.serverDB,
+    });
 
     // Attribution — resolve the member who authorized each connector (workspace
     // dimension), so the profile can tag "authorized by X". The ids come from
@@ -168,7 +189,10 @@ export const connectorRouter = router({
   listByAgent: connectorProcedure
     .input(z.object({ agentId: z.string() }))
     .query(async ({ input, ctx }) => {
-      const connectors = await ctx.connectorModel.queryByAgent(input.agentId);
+      const connectors = await reconcileGitHubMcpAvailability({
+        connectors: await ctx.connectorModel.queryByAgent(input.agentId),
+        db: ctx.serverDB,
+      });
 
       // Attribution — the member who authorized each agent-scoped connector, so
       // a teammate viewing the agent sees "authorized by X" on each chip.
@@ -206,7 +230,10 @@ export const connectorRouter = router({
    * that workspace's agent connectors ( /).
    */
   listAgentBound: connectorProcedure.query(async ({ ctx }) => {
-    const connectors = await ctx.connectorModel.queryAllAgentScoped();
+    const connectors = await reconcileGitHubMcpAvailability({
+      connectors: await ctx.connectorModel.queryAllAgentScoped(),
+      db: ctx.serverDB,
+    });
 
     // Resolve owning-agent display info in one scoped query (workspace-aware),
     // instead of loading each agent's config client-side from a page that isn't
@@ -286,6 +313,55 @@ export const connectorRouter = router({
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
+  /** Connect GitHub's hosted MCP through the existing per-user GitHub App grant. */
+  connectGitHubMcp: connectorWriteProcedure.mutation(async ({ ctx }) => {
+    const existingReference = findExistingGitHubMcpConnector(
+      await ctx.connectorModel.queryPublic(),
+    );
+    const existing = existingReference
+      ? await ctx.connectorModel.findById(existingReference.id)
+      : null;
+    if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'connector');
+
+    try {
+      const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+      return await activateGitHubMcpConnector({
+        ctx: {
+          ...ctx,
+          runInTransaction: (callback) =>
+            ctx.serverDB.transaction(async (tx) => {
+              const serverDB = tx as unknown as OrviloDatabase;
+              return callback({
+                connectorModel: new ConnectorModel(
+                  serverDB,
+                  ctx.userId,
+                  ctx.workspaceId ?? undefined,
+                  gateKeeper,
+                ),
+                connectorToolModel: new ConnectorToolModel(
+                  serverDB,
+                  ctx.userId,
+                  ctx.workspaceId ?? undefined,
+                ),
+                serverDB,
+              });
+            }),
+        },
+        existing,
+        userId: ctx.userId,
+      });
+    } catch (error) {
+      console.error(
+        '[connector:connectGitHubMcp] failed:',
+        error instanceof Error ? error.name : 'UnknownError',
+      );
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Could not connect GitHub MCP',
+      });
+    }
+  }),
+
   create: connectorWriteProcedure.input(createConnectorSchema).mutation(async ({ input, ctx }) => {
     const { agentId } = input;
 
@@ -309,8 +385,15 @@ export const connectorRouter = router({
       // Drop any client-supplied `composio.linkedByUserId` — it is server-owned
       // (written by the OAuth connect path), and trusting it here would let a
       // member spoof connector attribution. No existing row on create → the
-      // field is simply removed.
-      metadata: withTrustedLinkedByUserId(input.metadata, undefined) ?? null,
+      // field is simply removed. `grantEpoch` mints a fresh grant generation
+      // for every create/re-add so exec pins never outlive the credential set.
+      metadata: {
+        ...withTrustedGitHubMcpBinding(
+          withTrustedLinkedByUserId(input.metadata, undefined),
+          undefined,
+        ),
+        grantEpoch: randomUUID(),
+      },
       name: input.name,
       oidcConfig: input.oidcConfig ?? null,
     };
@@ -529,9 +612,9 @@ export const connectorRouter = router({
    *
    * Discovers the authorization server (RFC 9728 → RFC 8414), resolves the
    * client (pre-registration when a client_id was provided, otherwise RFC 7591
-   * dynamic registration), persists the resolved OIDC config, and returns the
-   * authorize URL for the client to open. The PKCE verifier is stashed in Redis
-   * keyed by `state`; the callback route completes the exchange.
+   * dynamic registration), and returns the authorize URL for the client to
+   * open. The resolved OIDC config and PKCE verifier are stashed in Redis keyed
+   * by `state`; the callback promotes the config only after token exchange.
    */
   startOAuth: connectorWriteProcedure
     .input(z.object({ id: z.string().uuid(), returnTo: z.string().optional() }))
@@ -561,9 +644,14 @@ export const connectorRouter = router({
       // 2. Resolve the OAuth client: pre-registration vs. DCR.
       let clientId = existing.clientId;
       let clientSecret = existing.clientSecret;
-      const scheme: OIDCConfig['scheme'] = clientId ? 'pre_registration' : 'dcr';
+      let tokenEndpointAuthMethod = existing.tokenEndpointAuthMethod;
+      const scheme: OIDCConfig['scheme'] = clientId ? existing.scheme : 'dcr';
 
-      if (!clientId) {
+      // Older DCR rows stored the client id/secret but dropped the registration
+      // response's token auth method. Re-register those clients instead of
+      // guessing: choosing `client_secret_basic` for a `client_secret_post`
+      // client makes the authorization-code exchange fail.
+      if (!clientId || (existing.scheme === 'dcr' && !tokenEndpointAuthMethod)) {
         if (!metadata.registration_endpoint) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
@@ -579,9 +667,12 @@ export const connectorRouter = router({
         });
         clientId = reg.client_id;
         clientSecret = reg.client_secret ?? undefined;
+        tokenEndpointAuthMethod = reg.token_endpoint_auth_method;
       }
 
-      // 3. Persist the resolved config so the callback + refresh can reuse it.
+      // 3. Keep the resolved config pending until the callback exchanges the
+      // code successfully. Persisting a replacement DCR client here would make
+      // existing refresh tokens unusable when the user abandons consent.
       const resolvedOidc: OIDCConfig = {
         ...existing,
         authorizationEndpoint: metadata.authorization_endpoint,
@@ -593,14 +684,19 @@ export const connectorRouter = router({
         scheme,
         scopes,
         tokenEndpoint: metadata.token_endpoint,
+        tokenEndpointAuthMethod,
       };
-      await ctx.connectorModel.update(input.id, { oidcConfig: resolvedOidc });
 
-      // 4. Build the authorize URL (with PKCE) and stash the verifier under `state`.
+      // 4. Build the authorize URL (with PKCE) and stash both the verifier and
+      // pending client config under the single-use state.
       const state = generateConnectorOAuthState();
       const { authorizationUrl, codeVerifier } = await buildAuthorizationUrl({
         authorizationServerUrl,
-        clientInformation: { client_id: clientId, client_secret: clientSecret },
+        clientInformation: buildOAuthClientInformation({
+          clientId,
+          clientSecret,
+          tokenEndpointAuthMethod,
+        }),
         metadata,
         redirectUri,
         resource: connector.mcpServerUrl,
@@ -612,8 +708,10 @@ export const connectorRouter = router({
         authorizationServerUrl,
         codeVerifier,
         connectorId: input.id,
+        oidcConfig: resolvedOidc,
         orviloUserId: ctx.userId,
         returnTo: input.returnTo,
+        workspaceId: ctx.workspaceId ?? undefined,
       });
 
       return { authorizationUrl };
@@ -643,10 +741,19 @@ export const connectorRouter = router({
       // and ignore whatever the client sent, so an edit can never spoof (or
       // silently clear) the connector's authorizer. Untouched when the patch
       // omits metadata.
-      const metadata = withTrustedLinkedByUserId(patch.metadata, target.metadata);
+      const metadata = withTrustedGitHubMcpBinding(
+        withTrustedLinkedByUserId(patch.metadata, target.metadata),
+        target.metadata,
+      );
+      // Any credential patch — set, replace, or clear — is a new grant epoch,
+      // so exec-time pins minted under the old credentials refuse to execute
+      // (SA02-C). Plain OAuth token refresh never reaches this procedure.
+      const grantEpoch = credentials === undefined ? undefined : randomUUID();
       await ctx.connectorModel.update(input.id, {
         ...patch,
-        ...(patch.metadata === undefined ? {} : { metadata }),
+        ...(patch.metadata === undefined && grantEpoch === undefined
+          ? {}
+          : { metadata: { ...metadata, ...(grantEpoch ? { grantEpoch } : {}) } }),
         // undefined → leave untouched; null → clear; object → encrypt the JSON string.
         // When credentials are cleared, also drop the cached expiry timestamp so
         // token-refresh logic doesn't act on a stale value for the new server.

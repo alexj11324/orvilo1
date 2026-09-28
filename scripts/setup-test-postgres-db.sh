@@ -15,7 +15,7 @@ echo "等待PostgreSQL完全启动..."
 sleep 5
 
 # 确保postgres用户存在且有适当权限
-docker exec postgres-pgvector psql -U postgres -c "\du"
+docker exec postgres-paradedb psql -U postgres -c "\du"
 
 echo "✅ PostgreSQL with paradedb 已成功启动，并配置好了 postgres 用户"
 echo "连接字符串: postgres://postgres:mysecretpassword@localhost:5432/postgres"

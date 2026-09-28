@@ -11,20 +11,16 @@ import { OFFICIAL_SITE, OG_URL } from '@/const/url';
 // account is configured, and the tag is then omitted rather than emitted empty.
 const OG_IMAGE_URL = urlJoin(OFFICIAL_SITE, OG_URL);
 
-const FALLBACK_DESCRIPTION = 'Verification runs, delivery reports, and acceptance reviews.';
+/**
+ * The workbench serves one surface now — the mobile agent-document reader. Its
+ * description used to be read out of the `verify` i18n namespace, which
+ * advertised the standalone Acceptance/Verify platform; that platform is
+ * retired, so the copy described a product this deployment no longer has. The
+ * tag is `noindex, nofollow`, but stale copy is still wrong to ship.
+ */
+const DESCRIPTION = 'Orvilo agent documents, rendered for mobile.';
 
-export const workbenchMetaDescription = (resources: unknown): string => {
-  const verify = (resources as Record<string, Record<string, unknown>> | undefined)?.verify;
-  const text = verify?.['meta.description'];
-  return typeof text === 'string' ? text : FALLBACK_DESCRIPTION;
-};
-
-export const truncateDescription = (text: string | null | undefined, max = 200) => {
-  if (!text) return undefined;
-  const clean = text.replaceAll(/\s+/g, ' ').trim();
-  if (!clean) return undefined;
-  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
-};
+export const workbenchMetaDescription = (): string => DESCRIPTION;
 
 interface BuildPageMetaOptions {
   description: string;

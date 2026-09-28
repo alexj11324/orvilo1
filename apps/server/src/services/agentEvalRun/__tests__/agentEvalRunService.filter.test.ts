@@ -4,7 +4,7 @@ import { AgentEvalRunTopicModel } from '@/database/models/agentEval';
 
 import { cleanupDB, serverDB, setupMultiCaseRun, userId } from './_setup';
 
-vi.mock('@/server/services/agentRuntime/AgentRuntimeService', () => ({
+vi.mock('@/server/services/agentExecution/AgentRuntimeService', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(() => ({
     interruptOperation: vi.fn().mockResolvedValue(true),
   })),

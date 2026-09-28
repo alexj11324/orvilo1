@@ -41,10 +41,11 @@ export const resolveTab = (
       ? liveDynamic
       : undefined;
 
+  const translated = titleKey ? t(titleKey, { ns: ['electron', 'common'] }) : undefined;
   const title =
     pickMeaningful(live?.title) ??
     pickMeaningful(tab.cached?.title) ??
-    (titleKey ? t(titleKey, { ns: 'electron' }) : undefined) ??
+    (translated && translated !== titleKey ? translated : undefined) ??
     t('navigation.orvilo', { ns: 'electron' });
 
   const avatar = pickMeaningful(live?.avatar) ?? pickMeaningful(tab.cached?.avatar);
@@ -64,7 +65,9 @@ export const resolveTab = (
 };
 
 export const useResolvedTabs = (): UseResolvedTabsResult => {
-  const { t } = useTranslation('electron');
+  // Route titleKeys live in either `electron` (navigation.*) or `common`
+  // (tab.*, navPanel.*) — bind both so either resolves.
+  const { t } = useTranslation(['electron', 'common']);
 
   const tabRefs = useElectronStore((s) => s.tabs);
   const activeTabId = useElectronStore((s) => s.activeTabId);

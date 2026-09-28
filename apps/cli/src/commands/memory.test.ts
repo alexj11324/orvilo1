@@ -13,10 +13,8 @@ const { mockTrpcClient } = vi.hoisted(() => ({
       getContexts: { query: vi.fn() },
       getExperiences: { query: vi.fn() },
       getIdentities: { query: vi.fn() },
-      getMemoryExtractionTask: { query: vi.fn() },
       getPersona: { query: vi.fn() },
       getPreferences: { query: vi.fn() },
-      requestMemoryFromChatTopic: { mutate: vi.fn() },
       updateIdentity: { mutate: vi.fn() },
     },
   },
@@ -102,7 +100,10 @@ describe('memory command', () => {
 
   describe('create', () => {
     it('should create an identity memory', async () => {
-      mockTrpcClient.userMemory.createIdentity.mutate.mockResolvedValue({ id: 'mem-1' });
+      mockTrpcClient.userMemory.createIdentity.mutate.mockResolvedValue({
+        identityId: 'id-1',
+        userMemoryId: 'mem-1',
+      });
 
       const program = createProgram();
       await program.parseAsync([
@@ -180,31 +181,21 @@ describe('memory command', () => {
     });
   });
 
-  describe('extract', () => {
-    it('should start memory extraction', async () => {
-      mockTrpcClient.userMemory.requestMemoryFromChatTopic.mutate.mockResolvedValue({
-        id: 'task-1',
-      });
-
+  describe('retired extraction commands', () => {
+    it('should not expose a broad "extract" command', async () => {
       const program = createProgram();
-      await program.parseAsync(['node', 'test', 'memory', 'extract']);
-
-      expect(mockTrpcClient.userMemory.requestMemoryFromChatTopic.mutate).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('extraction started'));
+      const extract = program.commands
+        .find((c) => c.name() === 'memory')
+        ?.commands.find((c) => c.name() === 'extract');
+      expect(extract).toBeUndefined();
     });
-  });
 
-  describe('extract-status', () => {
-    it('should show extraction task status', async () => {
-      mockTrpcClient.userMemory.getMemoryExtractionTask.query.mockResolvedValue({
-        id: 'task-1',
-        status: 'completed',
-      });
-
+    it('should not expose an "extract-status" command', async () => {
       const program = createProgram();
-      await program.parseAsync(['node', 'test', 'memory', 'extract-status']);
-
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('task-1'));
+      const status = program.commands
+        .find((c) => c.name() === 'memory')
+        ?.commands.find((c) => c.name() === 'extract-status');
+      expect(status).toBeUndefined();
     });
   });
 });

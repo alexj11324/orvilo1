@@ -112,20 +112,20 @@ describe('resolveExecutionTarget', () => {
     ).toBe('sandbox');
   });
 
-  it('defaults to local on desktop, none on web when unset', () => {
-    expect(resolveExecutionTarget(undefined, { clientExecutionAvailable: true })).toBe('local');
+  it('defaults to none on every client when unset — no viewer-derived default', () => {
+    expect(resolveExecutionTarget(undefined, { clientExecutionAvailable: true })).toBe('none');
     expect(resolveExecutionTarget(undefined, { clientExecutionAvailable: false })).toBe('none');
-    expect(resolveExecutionTarget(cfg(), { clientExecutionAvailable: true })).toBe('local');
+    expect(resolveExecutionTarget(cfg(), { clientExecutionAvailable: true })).toBe('none');
     expect(resolveExecutionTarget(cfg(), { clientExecutionAvailable: false })).toBe('none');
   });
 
-  it('coerces a stored `local` to `sandbox` on web (no local filesystem)', () => {
+  it('degrades a stored unbound `local` to pending `none` off-client (no silent cloud)', () => {
     expect(
       resolveExecutionTarget(cfg({ executionTarget: 'local' }), {
         clientExecutionAvailable: false,
       }),
-    ).toBe('sandbox');
-    // …but keeps it on desktop
+    ).toBe('none');
+    // …but keeps it where in-process execution is real
     expect(
       resolveExecutionTarget(cfg({ executionTarget: 'local' }), { clientExecutionAvailable: true }),
     ).toBe('local');
@@ -152,17 +152,16 @@ describe('resolveExecutionTarget', () => {
     ).toBe('device');
   });
 
-  it('keeps a bound `local` as `sandbox` when no device routing is available ( regression)', () => {
+  it('degrades a bound `local` to pending `none` when no device routing is available', () => {
     // A plain agent with a bound `local` target but no device-gateway to route
     // it (self-host without DEVICE_GATEWAY_URL, or any server call that leaves
-    // `deviceRoutingAvailable` unset) must fall back to the cloud sandbox — it
-    // cannot reach the bound device. Guards against resolving to
-    // `device`/`device-unrouted` and stripping sandbox tools server-side.
+    // `deviceRoutingAvailable` unset) cannot reach the bound device — it stays
+    // pending rather than silently running in the cloud sandbox.
     expect(
       resolveExecutionTarget(cfg({ boundDeviceId: 'device-a', executionTarget: 'local' }), {
         clientExecutionAvailable: false,
       }),
-    ).toBe('sandbox');
+    ).toBe('none');
   });
 
   it('keeps `device` on web (a bound device is reachable from anywhere)', () => {
@@ -182,27 +181,28 @@ describe('resolveExecutionTarget', () => {
     ).toBe('none');
   });
 
-  it('coerces `none` for hetero agents — they must execute somewhere', () => {
-    // stored none → desktop local, web sandbox
+  it('keeps `none` for hetero agents — pending selection, never viewer-derived', () => {
+    // stored none stays pending on every client — hetero agents must not
+    // silently pick the viewing machine or the cloud sandbox
     expect(
       resolveExecutionTarget(cfg({ executionTarget: 'none' }), {
         clientExecutionAvailable: true,
         isHetero: true,
       }),
-    ).toBe('local');
+    ).toBe('none');
     expect(
       resolveExecutionTarget(cfg({ executionTarget: 'none' }), {
         clientExecutionAvailable: false,
         isHetero: true,
       }),
-    ).toBe('sandbox');
-    // unset → platform default, then the same coercion on web
+    ).toBe('none');
+    // unset → same pending state on both clients
     expect(
       resolveExecutionTarget(undefined, { clientExecutionAvailable: true, isHetero: true }),
-    ).toBe('local');
+    ).toBe('none');
     expect(
       resolveExecutionTarget(undefined, { clientExecutionAvailable: false, isHetero: true }),
-    ).toBe('sandbox');
+    ).toBe('none');
   });
 
   describe('hetero providers without sandbox execution', () => {
@@ -215,7 +215,7 @@ describe('resolveExecutionTarget', () => {
       ['OpenCode', openCodeCfg],
       ['Pi', piCfg],
       ['Qoder', qoderCfg],
-    ] as const)('keeps an unconfigured %s agent pending on web', (_name, providerCfg) => {
+    ] as const)('keeps an unconfigured %s agent pending on every client', (_name, providerCfg) => {
       expect(
         resolveExecutionTarget(providerCfg(), {
           clientExecutionAvailable: false,
@@ -223,13 +223,14 @@ describe('resolveExecutionTarget', () => {
         }),
       ).toBe('none');
 
-      // Desktop can still run the CLI in-process, so its default remains local.
+      // Desktop no longer defaults an unconfigured hetero agent to this
+      // machine — an explicit selection (persisted binding) is required.
       expect(
         resolveExecutionTarget(providerCfg(), {
           clientExecutionAvailable: true,
           isHetero: true,
         }),
-      ).toBe('local');
+      ).toBe('none');
     });
 
     it('normalizes unsupported Amp sandbox and unbound web-local targets to pending', () => {
@@ -308,7 +309,7 @@ describe('resolveExecutionTarget', () => {
   });
 
   describe('workspaceScoped — a workspace agent never executes on the member client', () => {
-    it('suppresses the desktop `local` default (unset → none, hetero → sandbox)', () => {
+    it('keeps unset targets pending for every member (no viewer default)', () => {
       expect(
         resolveExecutionTarget(undefined, {
           clientExecutionAvailable: true,
@@ -321,16 +322,16 @@ describe('resolveExecutionTarget', () => {
           isHetero: true,
           workspaceScoped: true,
         }),
-      ).toBe('sandbox');
+      ).toBe('none');
     });
 
-    it('coerces a stored `local` (pre-workspace leftover) to sandbox on desktop', () => {
+    it('degrades a stored `local` (pre-workspace leftover) to pending on the member client', () => {
       expect(
         resolveExecutionTarget(cfg({ executionTarget: 'local' }), {
           clientExecutionAvailable: true,
           workspaceScoped: true,
         }),
-      ).toBe('sandbox');
+      ).toBe('none');
     });
 
     it('routes a hetero stored `local` with a (grandfathered) binding to that device', () => {
@@ -366,20 +367,21 @@ describe('resolveExecutionTarget', () => {
   });
 
   describe('trigger=bot — upgrades a local target (bound → device, unbound → auto)', () => {
-    it('coerces an UNBOUND desktop `local` (and the unset desktop default) to auto', () => {
+    it('coerces an UNBOUND `local` to auto; an unset target stays pending', () => {
       expect(
         resolveExecutionTarget(cfg({ executionTarget: 'local' }), {
           clientExecutionAvailable: true,
           trigger: RequestTrigger.Bot,
         }),
       ).toBe('auto');
-      // unset desktop default is `local`, so it coerces too
+      // unset resolves to `none` — there is no stored local intent to upgrade,
+      // and a bot may not infer a machine the user never chose
       expect(
         resolveExecutionTarget(undefined, {
           clientExecutionAvailable: true,
           trigger: RequestTrigger.Bot,
         }),
-      ).toBe('auto');
+      ).toBe('none');
     });
 
     it('routes a BOUND `local` to `device` — honours the pinned machine, not auto', () => {
@@ -404,15 +406,23 @@ describe('resolveExecutionTarget', () => {
       }
     });
 
-    it('does not resurrect a device on web — `local` still coerces to sandbox first', () => {
-      // the web→sandbox coercion runs before the bot rule, so a web `local`
-      // never becomes auto (there is no in-process local on web anyway).
+    it('still upgrades `local` on a client-less host — the pin survives the coercion order', () => {
+      // the bot upgrade runs BEFORE the no-client `local`→`none` coercion, so
+      // a bot server without in-process execution honours the stored intent
+      // (bound → device, unbound → auto) instead of silently dropping to chat
+      // or the cloud sandbox.
       expect(
         resolveExecutionTarget(cfg({ executionTarget: 'local' }), {
           clientExecutionAvailable: false,
           trigger: RequestTrigger.Bot,
         }),
-      ).toBe('sandbox');
+      ).toBe('auto');
+      expect(
+        resolveExecutionTarget(cfg({ boundDeviceId: 'device-a', executionTarget: 'local' }), {
+          clientExecutionAvailable: false,
+          trigger: RequestTrigger.Bot,
+        }),
+      ).toBe('device');
     });
 
     it('only fires for the bot trigger — other triggers keep `local`', () => {
@@ -485,10 +495,9 @@ describe('executionPlanToManifestExecutionEnv', () => {
 });
 
 describe('resolveRuntimeMode', () => {
-  it('derives from the default target when executionTarget is unset', () => {
-    // desktop default → local
-    expect(resolveRuntimeMode(undefined, true)).toBe('local');
-    // web default → none (an unconfigured web agent is plain chat, no run tools)
+  it('derives from the pending target when executionTarget is unset', () => {
+    // unset → pending `none` on every client — no viewer-derived default
+    expect(resolveRuntimeMode(undefined, true)).toBe('none');
     expect(resolveRuntimeMode(undefined, false)).toBe('none');
   });
 
@@ -499,17 +508,19 @@ describe('resolveRuntimeMode', () => {
     expect(resolveRuntimeMode(cfg({ executionTarget: 'none' }), true)).toBe('none');
   });
 
-  it('applies the web `local`→`sandbox` coercion before mapping to runtime mode', () => {
-    // executionTarget=local synced from desktop, resolved on web → sandbox → cloud
-    expect(resolveRuntimeMode(cfg({ executionTarget: 'local' }), false)).toBe('cloud');
+  it('degrades an unbound web `local` to pending `none` (no silent cloud)', () => {
+    // executionTarget=local synced from desktop with no binding — on web it
+    // can't run in-process, so it stays pending instead of claiming the cloud
+    expect(resolveRuntimeMode(cfg({ executionTarget: 'local' }), false)).toBe('none');
   });
 
   it('routes a bound web `local` to device (runtimeMode none) only when device routing is available', () => {
     const boundLocal = cfg({ boundDeviceId: 'device-a', executionTarget: 'local' });
     // with a device-gateway → device → runtimeMode none (routed via the plan)
     expect(resolveRuntimeMode(boundLocal, false, true)).toBe('none');
-    // without one → sandbox → cloud ( regression guard)
-    expect(resolveRuntimeMode(boundLocal, false)).toBe('cloud');
+    // without one → pending `none` — the bound device is unreachable and the
+    // cloud sandbox is never an implicit substitute
+    expect(resolveRuntimeMode(boundLocal, false)).toBe('none');
   });
 });
 
@@ -680,18 +691,18 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ kind: 'sandbox', target: 'sandbox' });
     });
 
-    it('keeps a bound `local` as sandbox on a no-gateway backend ( regression)', () => {
+    it('keeps a bound `local` pending on a no-gateway backend — no silent cloud', () => {
       // No device-gateway: `clientExecutionAvailable` is false and the plan
-      // never passes `deviceRoutingAvailable`, so a bound `local` target must
-      // resolve to the sandbox — not `device`/`device-unrouted`, which would
-      // strip cloud-sandbox tools on a self-host without device routing.
+      // never passes `deviceRoutingAvailable`, so a bound `local` target can
+      // not reach its machine. It stays pending — resolving to `sandbox`
+      // would silently execute somewhere the user never selected.
       expect(
         resolveExecutionPlan({
           agencyConfig: cfg({ boundDeviceId: 'device-a', executionTarget: 'local' }),
           clientExecutionAvailable: false,
           onlineDeviceIds: [],
         }),
-      ).toEqual({ kind: 'sandbox', target: 'sandbox' });
+      ).toEqual({ kind: 'none', target: 'none' });
     });
 
     it('survives canUseDevice=false — the sandbox never touches user machines', () => {
@@ -747,15 +758,16 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
     });
 
-    it('treats the desktop default (unset target) as `local` but never auto-grabs a device', () => {
-      // unset → `local` on desktop; device-capable but unrouted until bound.
+    it('keeps an unset target pending on every client — no implicit routing', () => {
+      // unset → `none` everywhere: the run never claims a device the user did
+      // not explicitly select, whichever client sent it
       expect(
         resolveExecutionPlan({
           agencyConfig: undefined,
           clientExecutionAvailable: true,
           onlineDeviceIds: ONLINE_A,
         }),
-      ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
+      ).toEqual({ kind: 'none', target: 'none' });
     });
 
     it('resolves the unset web target to none', () => {
@@ -875,7 +887,7 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ deviceId: 'device-a', kind: 'device', target: 'auto' });
     });
 
-    it('upgrades the unset desktop default (local) to auto', () => {
+    it('keeps an unset target pending for a bot — no machine inferred', () => {
       expect(
         resolveExecutionPlan({
           agencyConfig: undefined,
@@ -883,7 +895,7 @@ describe('resolveExecutionPlan', () => {
           onlineDeviceIds: ONLINE_A,
           trigger: RequestTrigger.Bot,
         }),
-      ).toEqual({ deviceId: 'device-a', kind: 'device', target: 'auto' });
+      ).toEqual({ kind: 'none', target: 'none' });
     });
 
     it('stays unrouted (model picks) when several devices are online', () => {
@@ -1189,17 +1201,26 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ deviceId: 'device-a', kind: 'device', target: 'device' });
     });
 
-    it('sends hetero non-device targets to the sandbox on the server', () => {
-      // server resolves hetero with isDesktop=false: unbound local → sandbox,
-      // none → sandbox (hetero coercion), sandbox → sandbox
-      for (const executionTarget of ['local', 'none', 'sandbox', undefined] as const) {
+    it('keeps hetero non-device targets pending — only explicit sandbox clouds', () => {
+      // server resolves hetero with isDesktop=false: unbound local / none /
+      // unset all stay pending (`none`) — dispatch then fails loudly with an
+      // actionable pick-a-device error. Only an EXPLICIT `sandbox` selection
+      // resolves to the cloud.
+      for (const executionTarget of ['local', 'none', undefined] as const) {
         const plan: ExecutionPlan = resolveExecutionPlan({
           agencyConfig: executionTarget ? cfg({ executionTarget }) : undefined,
           clientExecutionAvailable: false,
           isHetero: true,
         });
-        expect(plan).toEqual({ kind: 'sandbox', target: 'sandbox' });
+        expect(plan).toEqual({ kind: 'none', target: 'none' });
       }
+      expect(
+        resolveExecutionPlan({
+          agencyConfig: cfg({ executionTarget: 'sandbox' }),
+          clientExecutionAvailable: false,
+          isHetero: true,
+        }),
+      ).toEqual({ kind: 'sandbox', target: 'sandbox' });
     });
 
     it.each([

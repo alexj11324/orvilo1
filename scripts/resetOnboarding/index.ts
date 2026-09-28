@@ -2,7 +2,17 @@
  * Reset onboarding state for a user (by email) so they re-enter the
  * shared-prefix onboarding flow from scratch.
  *
- * Usage: tsx scripts/resetOnboarding/index.ts <email>
+ * Usage:
+ *   bun run workflow:reset-onboarding -- <email>
+ *   tsx scripts/resetOnboarding/index.ts <email>
+ *
+ * Env:
+ *   DATABASE_URL   (required) target Postgres connection string
+ *   NODE_ENV       (optional) selects layered .env.[env] / .env.[env].local files
+ *
+ * Guard rail: explicit-target reset — destructive by design but writes ONLY
+ * the single user row matched by the required <email> argument
+ * (see scripts/README.md → Guard rails).
  *
  * Clears:
  *   users.onboarding         (currentStep, finishedAt, version)

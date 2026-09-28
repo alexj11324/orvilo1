@@ -14,12 +14,10 @@ vi.mock('@/server/services/aiAgent', () => ({
   }),
 }));
 
-vi.mock('@/server/modules/AgentRuntime', () => ({
-  AgentRuntimeCoordinator: vi.fn().mockImplementation(function () {
-    return {
-      getOperationMetadata: mockGetOperationMetadata,
-    };
-  }),
+vi.mock('@/server/modules/AgentExecution/factory', () => ({
+  createAgentStateManager: vi.fn(() => ({
+    getOperationMetadata: mockGetOperationMetadata,
+  })),
 }));
 
 vi.mock('@/database/core/db-adaptor', () => ({

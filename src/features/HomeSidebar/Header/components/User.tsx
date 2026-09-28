@@ -50,6 +50,7 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
         paddingBlock={2}
         variant={'borderless'}
         style={{
+          borderRadius: 10,
           minWidth: 32,
           overflow: 'hidden',
           paddingInlineEnd: lite ? 2 : 8,

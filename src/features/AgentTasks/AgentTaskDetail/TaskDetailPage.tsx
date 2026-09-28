@@ -7,19 +7,19 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import Breadcrumb from '../shared/Breadcrumb';
-import TaskDetailCopyActions from './TaskDetailCopyActions';
+import IssueContent from './IssueContent';
+import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
-import TaskDetailSections from './TaskDetailSections';
-import TaskDetailSkeleton from './TaskDetailSkeleton';
 import TopicChatDrawer from './TopicChatDrawer';
 import { useActiveTaskDetail } from './useActiveTaskDetail';
 
@@ -36,7 +36,8 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
     s.toggleTaskAgentPanel,
   ]);
 
-  const { isInitialLoading, isNotFound, error, onRetry } = useActiveTaskDetail(taskId);
+  const detail = useActiveTaskDetail(taskId);
+  const { isNotFound, error, onRetry } = detail;
 
   // A transient fetch failure (network / 500) is not a 404 — keep the URL and
   // offer Reload instead of the terminal "task was deleted" dead-end below.
@@ -77,11 +78,16 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
   }
 
   return (
-    <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, position: 'relative' }}>
+    <WorkSurface style={{ position: 'relative' }}>
       <NavHeader
         left={
           <>
             <Breadcrumb taskId={taskId} />
+            {/* Reference: the star and overflow sit inline right after the
+                issue crumb; the copy buttons moved into the rail's round
+                action row (TaskRailActions), so the header's right side only
+                keeps the agent-panel toggle. */}
+            <WorkFavoriteButton icon={'star'} targetId={taskId} targetType="task" variant="icon" />
             <TaskDetailHeaderActions />
             {saveStatus === 'saving' || saveStatus === 'failed' ? (
               <AutoSaveHint saveStatus={saveStatus} />
@@ -90,7 +96,6 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
         }
         right={
           <>
-            <TaskDetailCopyActions />
             {showTaskAgentPanelToggle ? (
               <ToggleRightPanelButton
                 hideWhenExpanded
@@ -107,16 +112,13 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
           },
         }}
       />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
-        {/* Detail is prose — instruction, deliverables, activity — so it keeps the
-            centered reading column rather than the list page's full-bleed rows,
-            whose value is the horizontal room for their metadata columns. */}
-        <WideScreenContainer>
-          {isInitialLoading ? <TaskDetailSkeleton chrome={'body'} /> : <TaskDetailSections />}
-        </WideScreenContainer>
-      </Flexbox>
+      {/* The routed issue uses the page geometry; the split pane and Portal
+          still mount IssueContent with their own container widths. */}
+      <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
+        <IssueContent detail={detail} taskId={taskId} />
+      </WorkSurfaceDocument>
       <TopicChatDrawer />
-    </Flexbox>
+    </WorkSurface>
   );
 });
 

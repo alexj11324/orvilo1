@@ -1,8 +1,10 @@
 #!/usr/bin/env bun
 /**
- * E2E Test Environment Setup Script
+ * setup.ts — one-click E2E test environment setup.
  *
- * One-click setup for E2E testing environment.
+ * Boots the disposable e2e stack: ParadeDB Postgres container (port 5433),
+ * migrations, optional app build + server start, and the mock Agent
+ * Gateway/LLM endpoints the server's agent runtime talks to.
  *
  * Usage:
  *   bun e2e/scripts/setup.ts [options]
@@ -15,10 +17,18 @@
  *   --start        Start the server after setup
  *   --port <port>  Server port (default: 3006)
  *   --help         Show help message
+ *
+ * Env:
+ *   E2E_MOCK_LLM_PORT      (default 3406)  mock OpenAI-compatible LLM port
+ *   E2E_MOCK_GATEWAY_PORT  (default 3407)  fake Agent Gateway port
+ *
+ * Exit behavior: 0 on success; 1 on setup failure; the started server keeps
+ * running in the background when --start is used.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import { clearAllMockLLMState } from '../src/mocks/llm/registry';
 import { createTestOidcJwks } from '../src/support/oidcTestKey';
 
 // ============================================================================
@@ -45,7 +55,6 @@ const CONFIG = {
   // 2 minutes
   // Secrets (for e2e testing only)
   secrets: {
-    betterAuthSecret: 'e2e-test-secret-key-for-better-auth-32chars!',
     keyVaultsSecret: 'LA7n9k3JdEcbSgml2sxfw+4TV1AzaaFU5+R176aQz4s=',
     oidcJwks: createTestOidcJwks(),
   },
@@ -263,7 +272,6 @@ async function buildApp(port: number): Promise<void> {
 
   await execAsync('bun', ['run', 'build'], {
     APP_URL: `http://localhost:${port}`,
-    AUTH_SECRET: CONFIG.secrets.betterAuthSecret,
     DATABASE_DRIVER: CONFIG.databaseDriver,
     DATABASE_URL: CONFIG.databaseUrl,
     JWKS_KEY: CONFIG.secrets.oidcJwks,
@@ -291,9 +299,24 @@ function getServerEnv(port: number): Record<string, string> {
   return {
     APP_URL: `http://localhost:${port}`,
     AUTH_EMAIL_VERIFICATION: '0',
-    AUTH_SECRET: CONFIG.secrets.betterAuthSecret,
     DATABASE_DRIVER: CONFIG.databaseDriver,
     DATABASE_URL: CONFIG.databaseUrl,
+    // Agent sends run through the server-side runtime in gateway mode (the
+    // browser client runtime is retired) — point it at the local stand-ins.
+    AGENT_GATEWAY_SERVICE_TOKEN: 'e2e-mock-service-token',
+    AGENT_GATEWAY_URL: 'http://localhost:3407',
+    // Device-bound runs (the only execution path web sends resolve) dispatch
+    // to the device gateway — the same fake process emulates a device.
+    DEVICE_GATEWAY_SERVICE_TOKEN: 'e2e-mock-service-token',
+    DEVICE_GATEWAY_URL: 'http://localhost:3407',
+    DEEPSEEK_API_KEY: 'e2e-mock-key',
+    DEEPSEEK_PROXY_URL: 'http://localhost:3406/v1',
+    // Mini-model calls (topic titles, summaries) resolve to openai — same mock.
+    OPENAI_API_KEY: 'e2e-mock-key',
+    OPENAI_PROXY_URL: 'http://localhost:3406/v1',
+    ENABLE_AGENT_GATEWAY: '1',
+    E2E_MOCK_GATEWAY_PORT: '3407',
+    E2E_MOCK_LLM_PORT: '3406',
     JWKS_KEY: CONFIG.secrets.oidcJwks,
     KEY_VAULTS_SECRET: CONFIG.secrets.keyVaultsSecret,
     NODE_OPTIONS: '--max-old-space-size=6144',
@@ -303,6 +326,54 @@ function getServerEnv(port: number): Record<string, string> {
     S3_ENDPOINT: CONFIG.s3Mock.endpoint,
     S3_SECRET_ACCESS_KEY: CONFIG.s3Mock.secretAccessKey,
   };
+}
+
+/**
+ * Start the fake Agent Gateway + mock LLM endpoint that gateway-mode runs
+ * need. Idempotent — skips the spawn when both ports already answer /health.
+ */
+async function startMockServices(): Promise<void> {
+  const llmPort = Number(process.env.E2E_MOCK_LLM_PORT || 3406);
+  const gatewayPort = Number(process.env.E2E_MOCK_GATEWAY_PORT || 3407);
+
+  const isHealthy = async (port: number) => {
+    try {
+      const res = await fetch(`http://localhost:${port}/health`, {
+        signal: AbortSignal.timeout(1500),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  if ((await isHealthy(llmPort)) && (await isHealthy(gatewayPort))) {
+    // Services already up (e.g. a long-lived local pair) — still wipe stale
+    // worker-state files so a previous run's responses can't shadow this one.
+    clearAllMockLLMState();
+    log('✅', `E2E mock services already running (LLM :${llmPort}, gateway :${gatewayPort})`);
+    return;
+  }
+
+  const scriptPath = path.join(CONFIG.projectRoot, 'e2e', 'scripts', 'mockServices.ts');
+  const child = spawn('bun', [scriptPath], {
+    cwd: CONFIG.projectRoot,
+    detached: true,
+    env: process.env,
+    stdio: 'ignore',
+  });
+  child.unref();
+
+  const isReady = await waitForCondition(
+    async () => (await isHealthy(llmPort)) && (await isHealthy(gatewayPort)),
+    15_000,
+    500,
+  );
+
+  if (!isReady) {
+    throw new Error(`E2E mock services (LLM :${llmPort}, gateway :${gatewayPort}) failed to start`);
+  }
+  log('✅', `E2E mock services started (LLM :${llmPort}, gateway :${gatewayPort})`);
 }
 
 async function startServer(port: number): Promise<void> {
@@ -503,9 +574,11 @@ ${'─'.repeat(50)}
       await buildApp(options.port);
     }
 
-    // Step 4: Start server (optional)
+    // Step 4: Start server (optional) — with the E2E mock services the
+    // gateway-mode runtime depends on (fake Agent Gateway + mock LLM).
     if (options.start) {
       logStep(++currentStep, totalSteps, 'Starting application server');
+      await startMockServices();
       await startServer(options.port);
     }
 

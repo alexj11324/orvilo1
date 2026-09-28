@@ -1,10 +1,10 @@
 @journey @home @sidebar @group
-Feature: Home 页面 Agent Group 管理
-  作为用户，我希望能够在 Home 页面管理 Agent Group
+Feature: Agents 页面 Agent Group 管理
+  作为用户，我希望能够在 Agents 页面管理 Agent Group
 
   Background:
     Given 用户已登录系统
-    And 用户在 Home 页面有一个 Agent Group
+    And 用户在 Agents 页面有一个 Agent Group
 
   # ============================================
   # 重命名
@@ -33,22 +33,10 @@ Feature: Home 页面 Agent Group 管理
     Then 该项名称应该更新为 "Enter Confirmed"
 
   # ============================================
-  # 置顶
+  # 侧边栏显示/隐藏 — 场景随固定侧边栏 IA 退役而移除
   # ============================================
-
-  @HOME-GROUP-PIN-001 @P1
-  Scenario: 置顶 Agent Group
-    Given 该 Agent Group 未被置顶
-    When 用户右键点击该 Agent Group
-    And 用户在菜单中选择置顶
-    Then Agent Group 应该显示置顶图标
-
-  @HOME-GROUP-PIN-002 @P1
-  Scenario: 取消置顶 Agent Group
-    Given 该 Agent Group 已被置顶
-    When 用户右键点击该 Agent Group
-    And 用户在菜单中选择取消置顶
-    Then Agent Group 不应该显示置顶图标
+  # 同 sidebarAgent.feature：主侧边栏不再渲染按 Agent Group 分组的列表，
+  # "在我的侧边栏显示/隐藏" 已退役。HOME-GROUP-PIN-001/002 为有意删除。
 
   # ============================================
   # 删除

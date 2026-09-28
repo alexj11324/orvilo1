@@ -14,24 +14,20 @@ import {
 } from '@orvilo/builtin-tool-agent-signal';
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { BriefManifest } from '@orvilo/builtin-tool-brief';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { CalculatorManifest } from '@orvilo/builtin-tool-calculator/manifest';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { CredsManifest } from '@orvilo/builtin-tool-creds';
 import { GoalManifest, GoalSupervisorManifest } from '@orvilo/builtin-tool-goal';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
-import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest, resolveLocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
-import { MessageManifest, resolveMessageManifest } from '@orvilo/builtin-tool-message';
 import { OrviloAgentManifest, resolveOrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
 import { SkillMaintainerManifest } from '@orvilo/builtin-tool-skill-maintainer';
-import { SkillStoreManifest } from '@orvilo/builtin-tool-skill-store';
 import { resolveSkillsManifest, SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { TaskManifest } from '@orvilo/builtin-tool-task';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
@@ -49,12 +45,10 @@ import { type OrviloBuiltinTool } from '@orvilo/types';
 export const defaultToolIds = [
   OrviloActivatorManifest.identifier,
   SkillsManifest.identifier,
-  SkillStoreManifest.identifier,
   WebBrowsingManifest.identifier,
   KnowledgeBaseManifest.identifier,
   MemoryManifest.identifier,
   LocalSystemManifest.identifier,
-  BrowserManifest.identifier,
   CloudSandboxManifest.identifier,
   TopicReferenceManifest.identifier,
   AgentDocumentsManifest.identifier,
@@ -81,7 +75,6 @@ export const alwaysOnToolIds = [
   OrviloAgentManifest.identifier,
   OrviloActivatorManifest.identifier,
   SkillsManifest.identifier,
-  SkillStoreManifest.identifier,
 ];
 
 /**
@@ -95,30 +88,25 @@ export const activationModeControlledToolIds = [OrviloActivatorManifest.identifi
  * These are the tool/skill discovery tools that should be disabled when user wants precise control.
  * Other default tools (sandbox, web browsing, etc.) remain available if enabled externally.
  */
-export const manualModeExcludeToolIds = [
-  OrviloActivatorManifest.identifier,
-  SkillStoreManifest.identifier,
-];
+export const manualModeExcludeToolIds = [OrviloActivatorManifest.identifier];
 
 /**
  * Tool IDs allowed when the agent runs in chat mode
  * (`chatConfig.enableAgentMode === false`). Each one still passes through
  * its own runtime gate (e.g. knowledge base requires `hasEnabledKnowledgeBases`,
  * memory requires the global memory setting, web-browsing requires search
- * enabled, image-generation requires an explicit pin). This list is the
+ * enabled). This list is the
  * strict outer whitelist.
  *
  * In chat mode, both the server `createServerAgentToolsEngine` and the
  * frontend `createAgentToolsEngine` build their rules from ONLY these
  * identifiers, drop user plugins / `alwaysOnToolIds` entirely (except
- * image-generation, which is re-enabled only when pinned), and disable
  * `allowExplicitActivation` so the activator can't smuggle other tools in.
  */
 export const chatModeAllowedToolIds = [
   KnowledgeBaseManifest.identifier,
   MemoryManifest.identifier,
   WebBrowsingManifest.identifier,
-  ImageGenerationManifest.identifier,
 ];
 
 /**
@@ -157,7 +145,6 @@ export const groupSupervisorToolIds = [GroupManagementManifest.identifier];
  * `src/helpers/toolEngineering/index.ts`.
  */
 export const runtimeManagedToolIds = [
-  BrowserManifest.identifier,
   CloudSandboxManifest.identifier,
   KnowledgeBaseManifest.identifier,
   LocalSystemManifest.identifier,
@@ -169,10 +156,11 @@ export const runtimeManagedToolIds = [
 
 /**
  * Master allowlist of builtin tool identifiers a share visitor's run may ever
- * touch, at BOTH the tool-set-assembly layer (server
- * `applyShareGateToToolSet`) and the dispatch layer (server
- * `isShareBlockedDataToolCall`) — see
- * `apps/server/src/services/aiAgent/shareGate.ts`. Also the single source of
+ * touch, enforced at the dispatch layer (server
+ * `isShareBlockedDataToolCall` / `isShareBlockedBuiltinDispatch`) — see
+ * `apps/server/src/services/aiAgent/shareGate.ts`. Visitor execution is
+ * retired, so the only callers left are tool calls dispatched by visitor
+ * operations persisted before retirement. Also the single source of
  * truth for the agent-owner-facing share settings tool picker, which must
  * show a builtin tool as unavailable-to-visitors rather than let the owner
  * select (and the UI silently confirm) a grant the server gate can never
@@ -203,11 +191,11 @@ export const runtimeManagedToolIds = [
  * Every entry was verified against its actual server runtime
  * (`apps/server/src/services/toolExecution/serverRuntimes/*`), not just its
  * manifest. For the rationale behind every DENIED identifier
- * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`, `orvilo-message`,
- * `orvilo-skill-store`, `orvilo-agent-builder`, `orvilo-skills`,
+ * (`orvilo-agent-management`, `orvilo-task`, `orvilo-creds`,
+ * `orvilo-agent-builder`, `orvilo-skills`,
  * `orvilo-group-agent-builder`, `orvilo-group-management`, `agent-signal-review`,
  * `orvilo-user-interaction`, `orvilo-activator`,
- * `orvilo-local-system`, `orvilo-browser`, `orvilo-remote-device`,
+ * `orvilo-local-system`, `orvilo-remote-device`,
  * `orvilo-topic-reference`, and the hidden system-only self-iteration tools),
  * see the denied-bucket doc block at the bottom of
  * `apps/server/src/services/aiAgent/shareGate.ts`.
@@ -215,7 +203,6 @@ export const runtimeManagedToolIds = [
 export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
   CalculatorManifest.identifier,
   WebBrowsingManifest.identifier,
-  ImageGenerationManifest.identifier,
   VerifyToolManifest.identifier,
   AcceptanceEvidenceManifest.identifier,
   OrviloAgentManifest.identifier,
@@ -243,8 +230,8 @@ export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
  * to be blocked outright by `DATA_TOOL_ACCESS_RULES` in
  * `apps/server/src/services/aiAgent/shareGate.ts`, for every API and no matter
  * what the share config says. There is no knowledge-base or agent-file grant
- * in `AgentShareConfig` at all (see `applyShareGateToAgentConfig`), so a
- * visitor run can never reach either store.
+ * in `AgentShareConfig` at all, so a visitor run can never reach either
+ * store.
  *
  * Memory is deliberately NOT here: its grant is conditional on
  * `allowReadMemory`, so the owner enabling that switch does change what a
@@ -296,12 +283,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     type: 'builtin',
   },
   {
-    hidden: true,
-    identifier: SkillStoreManifest.identifier,
-    manifest: SkillStoreManifest,
-    type: 'builtin',
-  },
-  {
     discoverable: false,
     hidden: true,
     identifier: SkillMaintainerManifest.identifier,
@@ -341,13 +322,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     hidden: true,
     identifier: agentSignalSkillManagementManifest.identifier,
     manifest: agentSignalSkillManagementManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: isDesktop,
-    hidden: true,
-    identifier: BrowserManifest.identifier,
-    manifest: BrowserManifest,
     type: 'builtin',
   },
   {
@@ -400,13 +374,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     type: 'builtin',
   },
   {
-    // Opt-in image generation: chat mode no longer auto-injects it, so the
-    // Tools popover must expose a pin/disable control.
-    identifier: ImageGenerationManifest.identifier,
-    manifest: ImageGenerationManifest,
-    type: 'builtin',
-  },
-  {
     discoverable: false,
     hidden: true,
     identifier: PageAgentManifest.identifier,
@@ -445,14 +412,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
   {
     identifier: CalculatorManifest.identifier,
     manifest: CalculatorManifest,
-    type: 'builtin',
-  },
-  {
-    identifier: MessageManifest.identifier,
-    manifest: MessageManifest,
-    // Context-aware: drops APIs the current IM platform can't fulfil (e.g.
-    // WeChat has no `readMessages`), trimming both the tool list and systemRole.
-    resolveManifest: resolveMessageManifest,
     type: 'builtin',
   },
   {

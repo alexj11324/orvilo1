@@ -1,72 +1,78 @@
 'use client';
 
-import { Center, Flexbox, TextArea } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
+import { Center, Flexbox, Icon } from '@lobehub/ui';
+import { DropdownMenu, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { SendHorizontalIcon, SparklesIcon } from 'lucide-react';
+import { ArrowRightIcon, Link2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { getProjectConversationStartPath } from '@/features/Projects/Layout/navigation';
+import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
+import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
+import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
+import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
+import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
+import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import TeamIdentity from '@/features/WorkTeams/TeamIdentity';
+import { projectService } from '@/services/project';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
+import {
+  ProjectUpdateComposer,
+  ProjectUpdateRow,
+  useCanModerateProjectUpdate,
+  useProjectUpdates,
+} from '../Updates';
 import ProjectDashboard from './ProjectDashboard';
+import ProjectDescription from './ProjectDescription';
+import { ProjectMembersField } from './ProjectMembersField';
+import { ProjectOverviewField } from './ProjectOverviewField';
+import { getProjectOverviewUpdateState } from './projectOverviewUpdates';
+import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
 
 const styles = createStaticStyles(({ css }) => ({
-  composer: css`
-    overflow: hidden;
-
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 18px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  composerFooter: css`
-    padding-block: 6px 8px;
-    padding-inline: 14px 8px;
-  `,
   content: css`
+    scrollbar-width: thin;
+
+    /* Linear parity, read off the reference's own scroll container: a fixed
+       48px inline padding plus a thin scrollbar gutter reserved on BOTH edges
+       (scrollbar-gutter: stable both-edges; 11px each side here). Those two
+       gutters are the "constant 11px inset" measured at 1440 and 1600 — the
+       column is fluid, never centred and never capped.
+
+       An earlier version imitated the gutters with an 11px margin on the
+       page. That only held while the overview fit the viewport: once it
+       scrolled, the real scrollbar took a further 11px and the column shrank
+       from 669 to 658. Reserving the gutter keeps it at 669 either way. */
+    scrollbar-gutter: stable both-edges;
+
     overflow: auto;
+
     width: 100%;
-  `,
-  intro: css`
-    width: 100%;
-    max-width: 760px;
+    padding-inline: 48px;
+
+    @media (width <= 720px) {
+      scrollbar-gutter: auto;
+      padding-inline: 0;
+    }
   `,
   page: css`
     box-sizing: border-box;
-    width: min(1060px, calc(100% - 64px));
-    margin-inline: auto;
-    padding-block: 42px 72px;
+    padding-block: 24px 32px;
 
     @media (width <= 720px) {
-      width: calc(100% - 40px);
-      padding-block: 32px 48px;
-    }
-  `,
-  prompt: css`
-    cursor: pointer;
-
-    padding-block: 5px;
-    padding-inline: 10px;
-    border: 0;
-    border-radius: 999px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
+      margin-inline: 20px;
+      padding-block: 20px 48px;
     }
   `,
   shell: css`
@@ -74,17 +80,81 @@ const styles = createStaticStyles(({ css }) => ({
     height: 100%;
     background: ${cssVar.colorBgContainer};
   `,
-  textarea: css`
-    padding-block: 15px 8px !important;
-    padding-inline: 16px !important;
-    border: 0 !important;
+  properties: css`
+    flex: 1;
+    gap: 2px 4px;
+    min-width: 0;
+  `,
+  status: css`
+    cursor: pointer;
 
-    font-size: 15px !important;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
 
-    background: transparent !important;
-    box-shadow: none !important;
+    height: 28px;
+    padding-block: 3px;
+    padding-inline: 6px;
+    border: 0;
+    border-radius: 9999px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: ${cssVar.colorText};
+
+    background: transparent;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.6;
+    }
+  `,
+  /* The reference's fifth property chip is the project's team: a 28px pill
+     carrying the team's accent glyph (14px) and name, and it is a real
+     navigation target. Ours links to the team page — the destination this
+     codebase already gives a team everywhere else. */
+  teamChip: css`
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+
+    height: 28px;
+    padding-inline: 6px;
+    border-radius: 9999px;
+
+    font-size: 13px;
+    font-weight: 500;
+    color: ${cssVar.colorText};
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: none;
+      background: ${cssVar.colorFillTertiary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorPrimary};
+    }
   `,
 }));
+
+const editableStatuses = [
+  'backlog',
+  'planned',
+  'active',
+  'paused',
+  'canceled',
+  'archived',
+] as const;
 
 const ProjectWorkspace = memo(() => {
   const { t } = useTranslation('project');
@@ -92,8 +162,16 @@ const ProjectWorkspace = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const enabled = useUserStore(labPreferSelectors.enableProjects);
   const detail = useCurrentProjectDetail(projectId);
-  const [message, setMessage] = useState('');
+  const updateProject = useProjectStore((s) => s.updateProject);
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
+  const updatesSWR = useProjectUpdates(detail?.project.id);
+  const canModerateUpdate = useCanModerateProjectUpdate(detail?.project);
+  const [editingUpdateId, setEditingUpdateId] = useState<string | null>(null);
+  const workspaceId = useActiveWorkspaceId();
+  const membersEnabled = !!workspaceId;
+  const databaseId = detail?.project.id;
+  const membersSWR = useProjectMembersQuery(databaseId, membersEnabled && !!databaseId);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   if (!enabled) return <ProjectDisabled />;
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
@@ -104,77 +182,183 @@ const ProjectWorkspace = memo(() => {
       </Center>
     );
 
-  const startConversation = () => {
-    const content = message.trim();
-    if (!content || !projectId) return;
-    navigate(getProjectConversationStartPath(detail.project.slug ?? projectId, content));
+  const project = detail.project;
+  const projectReference = project.slug ?? projectId!;
+  const teams = detail.teams ?? [];
+
+  const knowledgeBases = detail.knowledgeBases ?? [];
+  const { emptyState: updatesEmpty, publishedUpdates: projectUpdates } =
+    getProjectOverviewUpdateState(updatesSWR.data);
+  const changeStatus = async (status: (typeof editableStatuses)[number]) => {
+    if (updatingStatus || status === project.status) return;
+    setUpdatingStatus(true);
+    try {
+      await projectService.updateStatus(project.id, status);
+      await mutate();
+    } catch (error) {
+      console.error('Failed to update project status', error);
+      toast.error(t('properties.saveError'));
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
-  const prompts = [
-    t('overview.prompts.summarizeProgress'),
-    t('overview.prompts.planMilestone'),
-    t('overview.prompts.findBlockers'),
-  ];
+  const lifecycleLocked =
+    project.status === 'reviewing' ||
+    (project.status === 'archived' && !!project.completedReviewId);
+  const availableStatuses =
+    project.status === 'completed' || project.completedReviewId
+      ? editableStatuses.filter((status) => status === 'archived')
+      : editableStatuses;
+  const statusItems = availableStatuses.map((status) => ({
+    icon: <ProjectStatusIcon size={16} status={status} />,
+    key: status,
+    label: t(`status.${status}`),
+    onClick: () => void changeStatus(status),
+  }));
 
   return (
     <Flexbox className={styles.shell} flex={1}>
       <div className={styles.content}>
         <Flexbox className={styles.page} gap={0}>
-          <Flexbox className={styles.intro} gap={18}>
-            <Flexbox gap={5}>
-              <Text fontSize={26} weight={650}>
-                {t('overview.title')}
-              </Text>
-              <Text type={'secondary'}>{t('overview.description')}</Text>
-            </Flexbox>
+          <Flexbox gap={20}>
             <Flexbox gap={10}>
-              <Flexbox className={styles.composer}>
-                <TextArea
-                  autoFocus
-                  autoSize={{ maxRows: 7, minRows: 3 }}
-                  className={styles.textarea}
-                  placeholder={t('overview.composerPlaceholder')}
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  onKeyDown={(event) => {
-                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter')
-                      startConversation();
-                  }}
+              <Avatar
+                avatar={project.avatar || undefined}
+                name={project.name}
+                shape={'square'}
+                size={44}
+                title={project.name}
+              />
+              <Flexbox gap={2}>
+                <ProjectOverviewField
+                  key={`${project.id}:name`}
+                  kind="name"
+                  value={project.name}
+                  onSave={(name) => updateProject(project.id, { name })}
                 />
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={styles.composerFooter}
-                  justify={'space-between'}
-                >
-                  <Flexbox horizontal align={'center'} gap={7}>
-                    <Tag icon={<SparklesIcon size={12} />}>{detail.project.name}</Tag>
-                    <Text fontSize={12} type={'secondary'}>
-                      {t('overview.contextEnabled')}
-                    </Text>
-                  </Flexbox>
-                  <Button
-                    disabled={!message.trim()}
-                    icon={SendHorizontalIcon}
-                    type={'primary'}
-                    onClick={startConversation}
-                  />
-                </Flexbox>
-              </Flexbox>
-              <Flexbox horizontal gap={8} wrap={'wrap'}>
-                {prompts.map((prompt) => (
-                  <button
-                    className={styles.prompt}
-                    key={prompt}
-                    type={'button'}
-                    onClick={() => setMessage(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
+                <ProjectOverviewField
+                  key={`${project.id}:summary`}
+                  kind="summary"
+                  value={project.summary ?? ''}
+                  onSave={(summary) => updateProject(project.id, { summary })}
+                />
               </Flexbox>
             </Flexbox>
+
+            <Flexbox horizontal align={'center'} gap={16}>
+              {/* Label column: the reference sizes one shared grid column by
+                  the widest label — "Resources" at 65.4766px (≈65.5). */}
+              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 65.5 }}>
+                {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
+              </Text>
+              <Flexbox horizontal align={'center'} className={styles.properties} wrap={'wrap'}>
+                <DropdownMenu items={statusItems}>
+                  <button
+                    aria-label={t('properties.status')}
+                    className={styles.status}
+                    disabled={updatingStatus || lifecycleLocked}
+                    type="button"
+                  >
+                    <ProjectStatusIcon
+                      percent={projectIssueProgressPercent(detail.tasks) ?? 0}
+                      size={16}
+                      status={project.status}
+                    />
+                    {t(`status.${project.status}`, { defaultValue: project.status })}
+                  </button>
+                </DropdownMenu>
+                <ProjectPriorityField inline project={project} />
+                <ProjectLeadField inline project={project} />
+                <ProjectDateField inline kind="startDate" project={project} />
+                <Icon aria-hidden icon={ArrowRightIcon} size={16} />
+                <ProjectDateField inline kind="targetDate" project={project} />
+                {teams.map((team) => (
+                  <WorkspaceLink className={styles.teamChip} key={team.id} to={`/teams/${team.id}`}>
+                    <TeamIdentity
+                      color={team.color}
+                      id={team.id}
+                      letter={(team.key || team.name).slice(0, 1)}
+                      size={14}
+                    />
+                    {team.name}
+                  </WorkspaceLink>
+                ))}
+                {membersEnabled && (
+                  <ProjectMembersField projectId={project.id} query={membersSWR} />
+                )}
+              </Flexbox>
+            </Flexbox>
+
+            <Flexbox horizontal align={'center'} gap={16}>
+              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 65.5 }}>
+                {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
+              </Text>
+              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+                {knowledgeBases.map((link) => (
+                  <Tag
+                    icon={<Icon icon={Link2Icon} size={12} />}
+                    key={link.knowledgeBase.id}
+                    shape={'round'}
+                    size={'small'}
+                  >
+                    {link.knowledgeBase.name}
+                  </Tag>
+                ))}
+                <ProjectLinks ownerId={project.userId} projectId={project.id} />
+              </Flexbox>
+            </Flexbox>
+
+            <Flexbox gap={8}>
+              <ProjectUpdateComposer
+                emptyState={updatesEmpty}
+                projectId={project.id}
+                onPosted={() => void updatesSWR.mutate()}
+                onExpand={() =>
+                  navigate(getProjectActivityPath(projectReference), {
+                    state: { projectUpdate: true },
+                  })
+                }
+              />
+              {/* A failed updates fetch must not read as a confident "no
+                  updates yet" — inline failure marker with retry. */}
+              {updatesSWR.error ? (
+                <AsyncError
+                  error={updatesSWR.error}
+                  variant={'inline'}
+                  onRetry={() => void updatesSWR.mutate()}
+                />
+              ) : null}
+              {projectUpdates.map((update) =>
+                editingUpdateId === update.id ? (
+                  <ProjectUpdateComposer
+                    editingUpdate={update}
+                    key={update.id}
+                    projectId={project.id}
+                    onCancelEdit={() => setEditingUpdateId(null)}
+                    onPosted={() => {
+                      setEditingUpdateId(null);
+                      void updatesSWR.mutate();
+                    }}
+                  />
+                ) : (
+                  <ProjectUpdateRow
+                    canEdit={canModerateUpdate(update)}
+                    key={update.id}
+                    update={update}
+                    onChanged={() => void updatesSWR.mutate()}
+                    onEdit={() => setEditingUpdateId(update.id)}
+                  />
+                ),
+              )}
+            </Flexbox>
+            <ProjectDescription
+              description={project.description}
+              key={project.id}
+              projectId={project.id}
+              onSaved={() => void mutate()}
+            />
           </Flexbox>
-          <ProjectDashboard detail={detail} projectId={detail.project.id} />
+          <ProjectDashboard detail={detail} projectId={project.id} />
         </Flexbox>
       </div>
     </Flexbox>

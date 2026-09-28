@@ -22,12 +22,41 @@ describe('createInitialSystemStatus', () => {
   });
 
   it('restores the Home customizations that decide layout on first paint', () => {
-    seed({ hiddenHomeWidgets: ['news', 'suggestions'], showHomePortrait: false });
+    seed({ hiddenHomeWidgets: ['news', 'suggestions'] });
 
     const status = createInitialSystemStatus();
 
-    expect(status.showHomePortrait).toBe(false);
     expect(status.hiddenHomeWidgets).toEqual(['news', 'suggestions']);
+  });
+
+  it('restores the per-workspace priority-inbox choice before first paint', () => {
+    // Otherwise the onboarding banner — and the tabbed feed request — would
+    // flash their undecided state on every reload for a decided workspace.
+    seed({ inboxPriorityMode: { 'u1:w1': 'all' } });
+
+    const status = createInitialSystemStatus();
+
+    expect(status.inboxPriorityMode).toEqual({ 'u1:w1': 'all' });
+  });
+
+  it('ignores a non-object inboxPriorityMode payload', () => {
+    seed({ inboxPriorityMode: 'all' });
+
+    expect(createInitialSystemStatus().inboxPriorityMode).toBeUndefined();
+  });
+
+  it('restores the per-workspace show-snoozed toggle before first paint', () => {
+    seed({ inboxShowSnoozed: { 'u1:w1': true } });
+
+    const status = createInitialSystemStatus();
+
+    expect(status.inboxShowSnoozed).toEqual({ 'u1:w1': true });
+  });
+
+  it('ignores a non-object inboxShowSnoozed payload', () => {
+    seed({ inboxShowSnoozed: true });
+
+    expect(createInitialSystemStatus().inboxShowSnoozed).toBeUndefined();
   });
 
   it('falls back to defaults when nothing is persisted', () => {
@@ -36,7 +65,6 @@ describe('createInitialSystemStatus', () => {
     expect(status.leftPanelWidth).toBe(INITIAL_STATUS.leftPanelWidth);
     expect(status.showHomeRail).toBe(INITIAL_STATUS.showHomeRail);
     expect(status.showLeftPanel).toBe(INITIAL_STATUS.showLeftPanel);
-    expect(status.showHomePortrait).toBe(INITIAL_STATUS.showHomePortrait);
     expect(status.hiddenHomeWidgets).toEqual(INITIAL_STATUS.hiddenHomeWidgets);
   });
 
@@ -44,7 +72,6 @@ describe('createInitialSystemStatus', () => {
     seed({
       hiddenHomeWidgets: 'news',
       leftPanelWidth: '360',
-      showHomePortrait: 'false',
       showLeftPanel: 'false',
     });
 
@@ -52,7 +79,6 @@ describe('createInitialSystemStatus', () => {
 
     expect(status.leftPanelWidth).toBe(INITIAL_STATUS.leftPanelWidth);
     expect(status.showLeftPanel).toBe(INITIAL_STATUS.showLeftPanel);
-    expect(status.showHomePortrait).toBe(INITIAL_STATUS.showHomePortrait);
     expect(status.hiddenHomeWidgets).toEqual(INITIAL_STATUS.hiddenHomeWidgets);
   });
 

@@ -34,8 +34,6 @@ vi.mock('@/utils/rbac', () => ({ getScopePermissions: () => [] }));
 vi.mock('@/database/models/rbac', () => ({ RbacModel: class {} }));
 vi.mock('@/database/schemas', () => ({
   agents: {},
-  aiModels: {},
-  aiProviders: {},
   files: {},
   knowledgeBases: {},
   messages: {},

@@ -223,6 +223,9 @@ export class GoalSupervisorService {
           disableSelfFeedbackIntentTool: true,
           exclusivePluginIds: [GoalSupervisorIdentifier],
           instructions: GOAL_SUPERVISOR_INSTRUCTIONS,
+          // Exclusive is the ceiling; required makes the supervisor tool a
+          // hard mount contract (unmountable → incident escalates).
+          requiredToolIds: [GoalSupervisorIdentifier],
           maxSteps: 16,
           model: modelConfig.model,
           prompt: buildGoalSupervisorPrompt({

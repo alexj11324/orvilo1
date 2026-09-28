@@ -35,11 +35,6 @@ class ExpertiseService {
   deleteDomain = async (domainId: string) =>
     lambdaClient.expertise.deleteDomain.mutate({ domainId });
 
-  countHistory = async (agentId: string) => lambdaClient.expertise.countHistory.query({ agentId });
-
-  ingestHistory = async (agentId: string) =>
-    lambdaClient.expertise.ingestHistory.mutate({ agentId });
-
   teachLesson = async (params: { domainId: string; text: string }) =>
     lambdaClient.expertise.teachLesson.mutate(params);
 

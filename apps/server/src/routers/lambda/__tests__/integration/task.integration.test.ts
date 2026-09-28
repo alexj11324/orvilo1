@@ -1,11 +1,15 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
+import { LinearSyncModel } from '@/database/models/linearSync';
+import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { tasks } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
@@ -60,9 +64,16 @@ vi.mock('@/server/services/taskReview', () => ({
   }),
 }));
 
-// Mock initModelRuntimeFromDB
+// Mock initModelRuntimeFromDeploymentConfig
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
+}));
+
+// These tests exercise the orchestrated-dispatch path (cascade, batch run):
+// keep the CAID admission gate open here — the flag-off hold is covered in
+// `services/taskDispatch`'s unit tests.
+vi.mock('@/server/featureFlags/caidAdmission', () => ({
+  isCaidDispatchAllowed: vi.fn(async () => true),
 }));
 
 // Mock the assignment-notification business slot (default impl is a no-op;
@@ -119,6 +130,47 @@ describe('Task Router Integration', () => {
   });
 
   describe('create + find + detail', () => {
+    it('removes a related issue whose stored id predates the task_ prefix', async () => {
+      const source = await caller.create({ instruction: 'Source' });
+      const peer = await caller.create({ instruction: 'Peer' });
+      const legacyId = 'legacytaskrelation001';
+      await serverDB.update(tasks).set({ id: legacyId }).where(eq(tasks.id, source.data.id));
+
+      await caller.addDependency({
+        dependsOnId: peer.data.identifier,
+        taskId: source.data.identifier,
+        type: 'relates',
+      });
+      expect((await caller.detail({ id: peer.data.identifier })).data.dependencies).toMatchObject([
+        { dependsOn: source.data.identifier, type: 'relates' },
+      ]);
+      await caller.removeDependency({
+        dependsOnId: legacyId,
+        taskId: peer.data.identifier,
+        type: 'relates',
+      });
+      expect((await caller.detail({ id: peer.data.identifier })).data.dependencies).toEqual([]);
+    });
+
+    it('removes a symmetric relation by opaque edge id from the other issue', async () => {
+      const source = await caller.create({ instruction: 'Source' });
+      const peer = await caller.create({ instruction: 'Peer' });
+      await caller.addDependency({
+        dependsOnId: peer.data.identifier,
+        taskId: source.data.identifier,
+        type: 'relates',
+      });
+      const related = (await caller.detail({ id: peer.data.identifier })).data.dependencies?.[0];
+      expect(related).toMatchObject({ dependsOn: source.data.identifier, type: 'relates' });
+      expect(related?.relationId).toBeTruthy();
+      await caller.removeDependency({
+        relationId: related!.relationId!,
+        taskId: peer.data.identifier,
+      });
+      expect((await caller.detail({ id: source.data.identifier })).data.dependencies).toEqual([]);
+      expect((await caller.detail({ id: peer.data.identifier })).data.dependencies).toEqual([]);
+    });
+
     it('should create a task and retrieve it', async () => {
       const result = await caller.create({
         instruction: 'Write a book',
@@ -246,6 +298,96 @@ describe('Task Router Integration', () => {
       const persisted = await new TaskModel(serverDB, userId).findById(task.data.id);
       expect(persisted?.name).toBe('Original');
       expect(persisted?.status).toBe('backlog');
+    });
+
+    it('should move a linked task to the exact mapped workflow state without changing execution', async () => {
+      const workspaceId = 'task-workflow-board-workspace';
+      const { workspaces, workspaceMembers } = await import('@/database/schemas');
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Workflow Board Workspace',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+      const wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      const project = await new ProjectModel(serverDB, userId, workspaceId).create({
+        identifier: 'WFLOW',
+        name: 'Workflow board project',
+      });
+      const created = await wsCaller.create({
+        instruction: 'Move the business state only',
+        projectId: project.id,
+      });
+
+      const linear = new LinearSyncModel(serverDB, workspaceId);
+      const installation = await linear.upsertOAuthInstallation({
+        accessTokenCiphertext: 'encrypted-access',
+        accessTokenExpiresAt: null,
+        appActorId: 'linear-app',
+        installedByUserId: userId,
+        oauthClientId: 'linear-client',
+        organizationId: 'linear-org',
+        refreshTokenCiphertext: 'encrypted-refresh',
+        scopes: ['read', 'write'],
+      });
+      const binding = await linear.upsertBinding({
+        defaultTeamId: 'linear-team',
+        installationId: installation.id,
+        linearProjectId: 'linear-project',
+        projectId: project.id,
+        settings: {
+          statusMappings: [
+            { linearStateId: 'linear-state-backlog', workflowCategory: 'backlog' },
+            { linearStateId: 'linear-state-done', workflowCategory: 'done' },
+          ],
+          writeEnabled: true,
+        },
+        teamIds: ['linear-team'],
+      });
+      await linear.createIssueLink({
+        bindingId: binding.id,
+        installationId: installation.id,
+        linearIdentifier: 'ENG-42',
+        linearIssueId: 'linear-issue-42',
+        organizationId: 'linear-org',
+        remoteSnapshot: {
+          id: 'linear-issue-42',
+          identifier: 'ENG-42',
+          projectId: 'linear-project',
+          stateId: 'linear-state-backlog',
+          teamId: 'linear-team',
+          title: 'Move the business state only',
+        },
+        taskId: created.data.id,
+      });
+      await new TaskModel(serverDB, userId, workspaceId).update(
+        created.data.id,
+        { workflowCategory: 'backlog', workflowStateId: 'linear-state-backlog' },
+        { source: 'linear', suppressLinearOutbox: true },
+      );
+
+      const moved = await wsCaller.update({
+        id: created.data.id,
+        workflowCategory: 'done',
+      });
+
+      expect(moved.data).toMatchObject({
+        status: 'backlog',
+        workflowCategory: 'done',
+        workflowStateId: 'linear-state-done',
+      });
+      const outbox = await linear.listOutbox();
+      expect(outbox).toHaveLength(1);
+      expect(outbox[0]).toMatchObject({
+        operation: 'update_issue',
+        payload: { stateId: 'linear-state-done' },
+        taskId: created.data.id,
+      });
+
+      await expect(
+        wsCaller.update({ id: created.data.id, workflowCategory: 'todo' }),
+      ).rejects.toThrow('No Linear state is mapped to todo');
     });
   });
 
@@ -928,7 +1070,7 @@ describe('Task Router Integration', () => {
       await caller.run({ id: task.data.id });
 
       // Second run should fail with CONFLICT
-      await expect(caller.run({ id: task.data.id })).rejects.toThrow(/already has a running topic/);
+      await expect(caller.run({ id: task.data.id })).rejects.toThrow(/active dispatch/);
     });
 
     it('should reject continue on already running topic', async () => {
@@ -940,7 +1082,7 @@ describe('Task Router Integration', () => {
       await caller.run({ id: task.data.id });
 
       await expect(caller.run({ continueTopicId: 'tpc_test', id: task.data.id })).rejects.toThrow(
-        /already running/,
+        /active dispatch/,
       );
     });
   });
@@ -1762,7 +1904,7 @@ describe('Task Router Integration', () => {
       });
       await wsOtherCaller.create({ instruction: 'Others unassigned', name: 'Others unassigned' });
 
-      const groups = () => ({ groups: [{ key: 'backlog', statuses: ['backlog'] }] });
+      const groups = () => ({ groups: [{ key: 'backlog', statuses: ['backlog' as const] }] });
       const idsIn = (result: { data: Array<{ tasks: Array<{ id: string }> }> }) =>
         result.data.flatMap((group) => group.tasks.map((task) => task.id));
 

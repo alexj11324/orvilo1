@@ -1074,6 +1074,13 @@ export class UnderstandingService {
                     thinking: { type: 'disabled' },
                   },
                   {
+                    judgment: {
+                      // The onboarding-understanding builtin agent is the
+                      // authorized binding for this persona judgment.
+                      binding: { agentId: writerAgent.id },
+                      purpose: 'understanding.detailedPersona',
+                    },
+                    kind: 'judgment',
                     metadata: { trigger: RequestTrigger.Onboarding },
                     tracing: {
                       promptVersion: UNDERSTANDING_DETAILED_PERSONA_PROMPT_VERSION,
@@ -1250,6 +1257,11 @@ export class UnderstandingService {
                   thinking: { type: 'disabled' },
                 },
                 {
+                  judgment: {
+                    binding: { agentId: writerAgent.id },
+                    purpose: 'understanding.personaAnalysis',
+                  },
+                  kind: 'judgment',
                   metadata: { trigger: RequestTrigger.Onboarding },
                   tracing: {
                     promptVersion: UNDERSTANDING_ANALYSIS_PROMPT_VERSION,

@@ -18,10 +18,12 @@ import { CommandMenuProvider, useCommandMenuContext } from './CommandMenuContext
 import CommandFooter from './components/CommandFooter';
 import CommandInput from './components/CommandInput';
 import MainMenu from './MainMenu';
+import ResultActionsMenu from './ResultActionsMenu';
 import SearchResults from './SearchResults';
 import { styles } from './styles';
 import ThemeMenu from './ThemeMenu';
 import { useCommandMenu } from './useCommandMenu';
+import { findActionableResult, isResultActionsPage } from './utils/resultActions';
 
 const CLOSE_ANIMATION_DURATION = 150;
 
@@ -55,8 +57,10 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
 
   const {
     menuContext,
+    openResultActions,
     page,
     pages,
+    popPage,
     search,
     setPages,
     setSearch,
@@ -146,6 +150,21 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
               setPages([...pages, 'ask-ai']);
               return;
             }
+            // → on a highlighted task/project result drills into its action
+            // submenu (Linear's "act on a result without leaving the palette").
+            // cmdk doesn't handle ArrowRight, so an unhandled press still
+            // moves the input caret as usual.
+            if (e.key === 'ArrowRight' && !page && !selectedAgent) {
+              const selectedItemValue = listRef.current
+                ?.querySelector<HTMLElement>('[cmdk-item][aria-selected="true"]')
+                ?.getAttribute('data-value');
+              const target = findActionableResult(searchResults, selectedItemValue);
+              if (target) {
+                e.preventDefault();
+                openResultActions(target);
+              }
+              return;
+            }
             // Escape goes to previous page, clears selected agent, or closes
             if (e.key === 'Escape') {
               e.preventDefault();
@@ -164,7 +183,7 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
                 setSelectedAgent(undefined);
               } else if (pages.length > 0) {
                 e.preventDefault();
-                setPages((prev) => prev.slice(0, -1));
+                popPage();
               }
             }
           }}
@@ -180,12 +199,16 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
                The unfiltered search view also renders the marketplace fallback
                entries whenever the search settles with no results, so it is
                never truly empty. */}
-            {!(
+            {/* On result-actions pages the Empty hint manages itself (cmdk's
+                filtered count tracks the action rows), so mount it regardless
+                of the stale search-results state. */}
+            {(!(
               hasSearch &&
               (searchResults.length > 0 ||
                 isSearching ||
                 (!page && !selectedAgent && !typeFilter && !search.trimStart().startsWith('@')))
-            ) && <Command.Empty>{t('cmdk.noResults')}</Command.Empty>}
+            ) ||
+              isResultActionsPage(page)) && <Command.Empty>{t('cmdk.noResults')}</Command.Empty>}
 
             {/* Show send command when agent is selected */}
             {selectedAgent && (
@@ -219,6 +242,7 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
 
             {page === 'theme' && <ThemeMenu />}
             {page === 'ask-ai' && <AskAIMenu />}
+            {isResultActionsPage(page) && <ResultActionsMenu />}
 
             {!page && !selectedAgent && hasSearch && !search.trimStart().startsWith('@') && (
               <SearchResults
@@ -227,6 +251,7 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
                 searchQuery={searchQuery}
                 typeFilter={typeFilter}
                 onClose={onClose}
+                onOpenResultActions={openResultActions}
                 onResultClick={searchAnalytics.trackResultClick}
                 onSetTypeFilter={setTypeFilter}
                 onTypeFilterChange={searchAnalytics.trackFilterChange}

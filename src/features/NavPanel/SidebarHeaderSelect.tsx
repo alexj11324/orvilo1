@@ -67,7 +67,7 @@ export const SidebarHeaderSelectTrigger = memo<SidebarHeaderSelectTriggerProps>(
       className={className}
       gap={8}
       padding={2}
-      style={{ minWidth: 32, overflow: 'hidden', ...style }}
+      style={{ borderRadius: 10, minWidth: 32, overflow: 'hidden', ...style }}
       variant={'borderless'}
       {...rest}
     >

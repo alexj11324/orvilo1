@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { executeToolWithRetry } from '@orvilo/agent-runtime';
+import { executeToolWithRetry } from '@orvilo/agent-execution';
 import { CloudSandboxExecutionRuntime } from '@orvilo/builtin-tool-cloud-sandbox/executionRuntime';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

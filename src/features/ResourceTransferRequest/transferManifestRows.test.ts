@@ -5,8 +5,6 @@ import type { TransferManifest } from '@/services/resourceTransferRequest';
 import { buildTransferManifestRows } from './transferManifestRows';
 
 const emptyManifest: TransferManifest = {
-  botBindings: 0,
-  botPlatforms: [],
   connectorsAffected: 0,
   cronJobs: 0,
   deviceBindingAffected: false,
@@ -30,8 +28,6 @@ describe('buildTransferManifestRows', () => {
     const rows = buildTransferManifestRows(
       {
         ...emptyManifest,
-        botBindings: 2,
-        botPlatforms: ['discord', 'telegram'],
         connectorsAffected: 1,
         cronJobs: 1,
         deviceBindingAffected: true,
@@ -40,13 +36,7 @@ describe('buildTransferManifestRows', () => {
       'initiator',
     );
 
-    expect(rows.map((row) => row.impact)).toEqual([
-      'carried',
-      'carried',
-      'reset',
-      'reset',
-      'detached',
-    ]);
+    expect(rows.map((row) => row.impact)).toEqual(['carried', 'reset', 'reset', 'detached']);
   });
 
   it('leads with the blocker, which is a refusal rather than an impact', () => {
@@ -99,15 +89,6 @@ describe('buildTransferManifestRows', () => {
     expect(buildTransferManifestRows(manifest, 'recipient')[0].key).toBe(
       'transferRequest.manifest.cronJobs',
     );
-  });
-
-  it('carries the bot platforms into the copy so the row names them', () => {
-    const [row] = buildTransferManifestRows(
-      { ...emptyManifest, botBindings: 2, botPlatforms: ['discord', 'telegram'] },
-      'recipient',
-    );
-
-    expect(row.options).toEqual({ count: 2, platforms: 'discord, telegram' });
   });
 
   it('reports a device reset from the flag alone, with no count to interpolate', () => {

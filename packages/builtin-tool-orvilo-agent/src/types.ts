@@ -141,7 +141,6 @@ export interface CallSubAgentParams {
   description: string;
   inheritMessages?: boolean;
   instruction: string;
-  runInClient?: boolean;
   timeout?: number;
 }
 

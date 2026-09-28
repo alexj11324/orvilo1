@@ -17,4 +17,10 @@ describe('UserPreferenceSchema', () => {
       expect(parsed).toMatchObject({ [key]: ['id-1', 'id-2'] });
     },
   );
+
+  it.each([true, false])('preserves showInCollaboration=%s', (showInCollaboration) => {
+    const parsed = UserPreferenceSchema.parse({ showInCollaboration });
+
+    expect(parsed.showInCollaboration).toBe(showInCollaboration);
+  });
 });

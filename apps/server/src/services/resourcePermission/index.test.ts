@@ -146,6 +146,43 @@ describe('canPerformResourceAction', () => {
     ).resolves.toBe(false);
   });
 
+  // Union-scope admission (buildWorkspaceWhere): the caller's own unfiled row
+  // is inside their workspace scope — activating a workspace must not lock the
+  // owner out of pre-provisioning data. A teammate's unfiled row stays closed.
+  it('lets the author keep editing their own unfiled agent inside a workspace', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: true });
+    effectiveAccessMock.mockResolvedValue('edit');
+
+    await expect(
+      canPerformResourceAction({
+        action: 'edit',
+        db,
+        meta: { ...meta, userId: 'member-1', workspaceId: null },
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'member-1',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it('still rejects a teammate unfiled agent inside a workspace', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+
+    await expect(
+      canPerformResourceAction({
+        action: 'view',
+        db,
+        meta: { ...meta, workspaceId: null },
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'member-1',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(false);
+    expect(permissionMatchesMock).not.toHaveBeenCalled();
+  });
+
   it("rejects the primary owner transferring another member's private agent", async () => {
     permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
     primaryOwnerMock.mockResolvedValue(true);

@@ -347,9 +347,6 @@ export const isMyTaskListKey = (key: unknown): boolean =>
 export const isAutomationRunsKey = (key: unknown): boolean =>
   Array.isArray(key) && key[0] === 'task:automationRuns';
 
-export const isAutomationListKey = (key: unknown): boolean =>
-  Array.isArray(key) && key[0] === 'task:automationList';
-
 /**
  * Goal Graph reads. Keyed by the `goals` row id (not the carrier task's
  * identifier) because that is what every `goal.*` procedure takes.
@@ -360,21 +357,6 @@ export const goalKeys = {
 };
 
 export const taskKeys = {
-  /**
-   * The Automations list page: automated tasks still able to fire. Its own
-   * root like `scheduledList` — the extra scope/status slots keep the "mine"
-   * tab and the active/paused filter from sharing cache entries.
-   */
-  automationList: def(
-    'task:automationList',
-    (scope: 'created' | 'all', statuses: string, limit?: number, offset?: number) => [
-      'task:automationList',
-      scope,
-      statuses,
-      limit ?? 'all',
-      offset ?? 0,
-    ],
-  ),
   /**
    * The Automations "All runs" roll-up: every run whose task still carries an
    * automation mode, newest first, plus the 24h/7d outcome counts. Its own
@@ -405,16 +387,19 @@ export const taskKeys = {
       visibility: 'all' | 'private' | 'workspace' = 'all',
       groupBy: 'assignee' | 'member' | 'priority' | 'status' = 'status',
       excludeStatuses?: string,
-      projectId?: string,
+      projectId?: string | null,
       automated?: boolean,
     ) => {
+      // `null` = the "No project" filter; it must key differently from an
+      // unfiltered board, so it collapses to a readable marker segment.
+      const projectKey = projectId === null ? 'no-project' : projectId;
       const hasBoardFilter = groupBy !== 'status' || excludeStatuses !== undefined;
       const key = hasBoardFilter
-        ? projectId
-          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectId]
+        ? projectKey
+          ? ['task:groupList', agentKey, visibility, groupBy, excludeStatuses, projectKey]
           : ['task:groupList', agentKey, visibility, groupBy, excludeStatuses]
-        : projectId
-          ? ['task:groupList', agentKey, visibility, projectId]
+        : projectKey
+          ? ['task:groupList', agentKey, visibility, projectKey]
           : ['task:groupList', agentKey, visibility];
 
       return automated === undefined ? key : [...key, { automated }];
@@ -487,6 +472,14 @@ export const taskKeys = {
       ...(limit === undefined && offset === undefined ? [] : [{ limit, offset }]),
     ],
   ),
+  /**
+   * The automated-task roll-up: Home's "Scheduled" section, the Tasks page's
+   * scheduled collection, and the Automations list.
+   *
+   * One root on purpose. `scope` / `statuses` used to live under a separate
+   * `automationList` root, which meant the same query — same agent scope, same
+   * limit, same offset, no filter — was cached and revalidated twice.
+   */
   scheduledList: def(
     'task:scheduledList',
     (
@@ -494,11 +487,17 @@ export const taskKeys = {
       visibility: 'all' | 'private' | 'workspace' = 'all',
       limit?: number,
       offset?: number,
+      scope: 'all' | 'created' = 'all',
+      statuses: string = 'all',
     ) => [
       'task:scheduledList',
       agentKey,
       visibility,
       ...(limit === undefined && offset === undefined ? [] : [{ limit, offset }]),
+      scope,
+      // Status narrowing is part of the identity, exactly as in `myList`:
+      // "active only" and "everything" are different server pages.
+      statuses,
     ],
   ),
   /**
@@ -507,6 +506,29 @@ export const taskKeys = {
    * open renders from cache instead of a skeleton.
    */
   sidebarGroups: def('task:sidebarGroups', (agentId: string) => ['task:sidebarGroups', agentId]),
+};
+
+// ---- task labels ----------------------------------------------------------
+export const taskLabelKeys = {
+  /**
+   * Task label registry (workspace-shared, or personal). Keyed by workspace:
+   * the registries are disjoint per scope, so a shared key would serve the
+   * previous workspace's labels across a switch.
+   */
+  list: def('taskLabel:list', (isLogin: boolean, workspaceId: string | null | undefined) => [
+    'taskLabel:list',
+    isLogin,
+    workspaceId ?? null,
+  ]),
+};
+
+// ---- project ------------------------------------------------------------
+export const projectKeys = {
+  links: def('project:links', (scope: string, projectId: string) => [
+    'project:links',
+    scope,
+    projectId,
+  ]),
 };
 
 // ---- work ---------------------------------------------------------------
@@ -566,52 +588,15 @@ export const agentConfigKeys = {
   available: def('agent:available', () => ['agent:available']),
   config: def('agent:config', (agentId: string) => ['agent:config', agentId]),
   search: def('agent:search', (keyword?: string) => ['agent:search', keyword]),
-  serverDefaultHeterogeneousCapability: def('agent:serverDefaultHeterogeneousCapability', () => [
-    'agent:serverDefaultHeterogeneousCapability',
-  ]),
 };
 
 // ---- aiModel ------------------------------------------------------------
 export const aiModelKeys = {
-  disabledModelsPage: def('aiModel:disabledModelsPage', (providerId: string, offset: number) => [
-    'aiModel:disabledModelsPage',
-    providerId,
-    offset,
-  ]),
-  list: def('aiModel:list', (provider: string | undefined) => ['aiModel:list', provider]),
   reasoningConfig: def('aiModel:reasoningConfig', (provider: string, model: string) => [
     'aiModel:reasoningConfig',
     provider,
     model,
   ]),
-};
-
-// ---- image generation ---------------------------------------------------
-export const imageKeys = {
-  generationBatches: def('image:generationBatches', (topicId: string) => [
-    'image:generationBatches',
-    topicId,
-  ]),
-  generationStatus: def('image:generationStatus', (generationId: string, asyncTaskId?: string) => [
-    'image:generationStatus',
-    generationId,
-    asyncTaskId,
-  ]),
-  generationTopics: def('image:generationTopics', () => ['image:generationTopics']),
-};
-
-// ---- video generation ---------------------------------------------------
-export const videoKeys = {
-  generationBatches: def('video:generationBatches', (topicId: string) => [
-    'video:generationBatches',
-    topicId,
-  ]),
-  generationStatus: def('video:generationStatus', (generationId: string, asyncTaskId?: string) => [
-    'video:generationStatus',
-    generationId,
-    asyncTaskId,
-  ]),
-  generationTopics: def('video:generationTopics', () => ['video:generationTopics']),
 };
 
 // ---- serverConfig -------------------------------------------------------
@@ -620,109 +605,22 @@ export const serverConfigKeys = {
 };
 
 // ---- discover (marketplace) ---------------------------------------------
-// NOTE: discover/eval/ragEval/knowledgeBase/device/userMemory/agentKnowledge/
-// agentBot/file/chatTool prefixes are deliberately kept OUT of `CACHE_TIERS`
+// NOTE: discover/ragEval/knowledgeBase/device/userMemory/agentKnowledge/
+// file/chatTool prefixes are deliberately kept OUT of `CACHE_TIERS`
 // (see localStorageProvider.ts) so this key-convergence introduces no new
 // persistence — they stay memory-only exactly as before.
 export const discoverKeys = {
-  assistantCategories: def('discover:assistantCategories', (locale: string, params: unknown) => [
-    'discover:assistantCategories',
-    locale,
-    params,
-  ]),
-  assistantDetail: def('discover:assistantDetail', (locale: string, params: unknown) => [
-    'discover:assistantDetail',
-    locale,
-    params,
-  ]),
-  assistantIdentifiers: def('discover:assistantIdentifiers', (source?: string) => [
-    'discover:assistantIdentifiers',
-    source,
-  ]),
-  assistantList: def('discover:assistantList', (locale: string, params: unknown) => [
-    'discover:assistantList',
-    locale,
-    params,
-  ]),
-  favoriteAgents: def('discover:favoriteAgents', (userId: number, params?: unknown) => [
-    'discover:favoriteAgents',
-    userId,
-    params,
-  ]),
-  favoritePlugins: def('discover:favoritePlugins', (userId: number, params?: unknown) => [
-    'discover:favoritePlugins',
-    userId,
-    params,
-  ]),
-  followCounts: def('discover:followCounts', (userId: number) => ['discover:followCounts', userId]),
-  followStatus: def('discover:followStatus', (userId: number) => ['discover:followStatus', userId]),
-  followers: def('discover:followers', (userId: number, params?: unknown) => [
-    'discover:followers',
-    userId,
-    params,
-  ]),
-  following: def('discover:following', (userId: number, params?: unknown) => [
-    'discover:following',
-    userId,
-    params,
-  ]),
-  groupAgentCategories: def('discover:groupAgentCategories', (locale: string, params: unknown) => [
-    'discover:groupAgentCategories',
-    locale,
-    params,
-  ]),
-  groupAgentDetail: def(
-    'discover:groupAgentDetail',
-    (locale: string, identifier: string, version?: string) => [
-      'discover:groupAgentDetail',
-      locale,
-      identifier,
-      version,
-    ],
-  ),
-  groupAgentIdentifiers: def('discover:groupAgentIdentifiers', () => [
-    'discover:groupAgentIdentifiers',
-  ]),
-  groupAgentList: def('discover:groupAgentList', (locale: string, params: unknown) => [
-    'discover:groupAgentList',
-    locale,
-    params,
-  ]),
-  mcpCategories: def('discover:mcpCategories', (locale: string, params: unknown) => [
-    'discover:mcpCategories',
-    locale,
-    params,
+  // -- marketplace detail "related agents" lists (UI) --
+  mcpAgents: def('discover:mcpAgents', (identifier: string, page: number) => [
+    'discover:mcpAgents',
+    identifier,
+    page,
   ]),
   mcpDetail: def('discover:mcpDetail', (locale: string, identifier: string, version?: string) => [
     'discover:mcpDetail',
     locale,
     identifier,
     version,
-  ]),
-  mcpList: def('discover:mcpList', (locale: string, params: unknown) => [
-    'discover:mcpList',
-    locale,
-    params,
-  ]),
-  modelCategories: def('discover:modelCategories', (params: unknown) => [
-    'discover:modelCategories',
-    params,
-  ]),
-  modelDetail: def('discover:modelDetail', (locale: string, identifier: string) => [
-    'discover:modelDetail',
-    locale,
-    identifier,
-  ]),
-  modelIdentifiers: def('discover:modelIdentifiers', () => ['discover:modelIdentifiers']),
-  modelList: def('discover:modelList', (locale: string, params: unknown) => [
-    'discover:modelList',
-    locale,
-    params,
-  ]),
-  pluginCategories: def('discover:pluginCategories', (locale: string, params: unknown) => [
-    'discover:pluginCategories',
-    locale,
-    params,
   ]),
   pluginDetail: def(
     'discover:pluginDetail',
@@ -733,107 +631,6 @@ export const discoverKeys = {
       withManifest,
     ],
   ),
-  pluginIdentifiers: def('discover:pluginIdentifiers', () => ['discover:pluginIdentifiers']),
-  pluginList: def('discover:pluginList', (locale: string, params: unknown) => [
-    'discover:pluginList',
-    locale,
-    params,
-  ]),
-  providerDetail: def('discover:providerDetail', (locale: string, identifier: string) => [
-    'discover:providerDetail',
-    locale,
-    identifier,
-  ]),
-  providerIdentifiers: def('discover:providerIdentifiers', () => ['discover:providerIdentifiers']),
-  providerList: def('discover:providerList', (locale: string, params: unknown) => [
-    'discover:providerList',
-    locale,
-    params,
-  ]),
-  skillCategories: def('discover:skillCategories', (locale: string, params: unknown) => [
-    'discover:skillCategories',
-    locale,
-    params,
-  ]),
-  skillComments: def('discover:skillComments', (identifier: string, params: unknown) => [
-    'discover:skillComments',
-    identifier,
-    params,
-  ]),
-  skillDetail: def(
-    'discover:skillDetail',
-    (locale: string, identifier: string, version?: string) => [
-      'discover:skillDetail',
-      locale,
-      identifier,
-      version,
-    ],
-  ),
-  skillList: def('discover:skillList', (locale: string, params: unknown) => [
-    'discover:skillList',
-    locale,
-    params,
-  ]),
-  skillRatingDistribution: def('discover:skillRatingDistribution', (identifier: string) => [
-    'discover:skillRatingDistribution',
-    identifier,
-  ]),
-  skillRelated: def(
-    'discover:skillRelated',
-    (locale: string, category: string, identifier: string) => [
-      'discover:skillRelated',
-      locale,
-      category,
-      identifier,
-    ],
-  ),
-  userProfile: def('discover:userProfile', (locale: string, username: string) => [
-    'discover:userProfile',
-    locale,
-    username,
-  ]),
-  // -- marketplace detail "related agents" lists (UI) --
-  mcpAgents: def('discover:mcpAgents', (identifier: string, page: number) => [
-    'discover:mcpAgents',
-    identifier,
-    page,
-  ]),
-  skillAgents: def('discover:skillAgents', (identifier: string, page: number) => [
-    'discover:skillAgents',
-    identifier,
-    page,
-  ]),
-  skillStoreMarketSkills: def(
-    'discover:skillStoreMarketSkills',
-    (locale: string, keywords: string, page: number) => [
-      'discover:skillStoreMarketSkills',
-      locale,
-      keywords,
-      page,
-    ],
-  ),
-};
-
-// ---- agent eval ---------------------------------------------------------
-export const evalKeys = {
-  benchmarkDetail: def('eval:benchmarkDetail', (id: string) => ['eval:benchmarkDetail', id]),
-  benchmarks: def('eval:benchmarks', () => ['eval:benchmarks']),
-  datasetDetail: def('eval:datasetDetail', (id: string) => ['eval:datasetDetail', id]),
-  datasetRuns: def('eval:datasetRuns', (datasetId: string) => ['eval:datasetRuns', datasetId]),
-  datasetsAll: def('eval:datasetsAll', () => ['eval:datasetsAll']),
-  datasets: def('eval:datasets', (benchmarkId: string) => ['eval:datasets', benchmarkId]),
-  experimentDetail: def('eval:experimentDetail', (id: string) => ['eval:experimentDetail', id]),
-  experiments: def('eval:experiments', () => ['eval:experiments']),
-  runDetail: def('eval:runDetail', (id: string) => ['eval:runDetail', id]),
-  runResults: def('eval:runResults', (id: string) => ['eval:runResults', id]),
-  runs: def('eval:runs', (benchmarkId?: string) => ['eval:runs', benchmarkId]),
-  testCaseDetail: def('eval:testCaseDetail', (id: string) => ['eval:testCaseDetail', id]),
-  testCases: def('eval:testCases', (datasetId: string, limit?: number, offset?: number) => [
-    'eval:testCases',
-    datasetId,
-    limit,
-    offset,
-  ]),
 };
 
 // ---- RAG eval -----------------------------------------------------------
@@ -928,10 +725,6 @@ export const deviceKeys = {
 // ---- user memory --------------------------------------------------------
 export const userMemoryKeys = {
   activities: def('userMemory:activities', (params: unknown) => ['userMemory:activities', params]),
-  analysisTask: def('userMemory:analysisTask', (taskId?: string) => [
-    'userMemory:analysisTask',
-    taskId,
-  ]),
   contexts: def('userMemory:contexts', (params: unknown) => ['userMemory:contexts', params]),
   experiences: def('userMemory:experiences', (params: unknown) => [
     'userMemory:experiences',
@@ -980,11 +773,6 @@ export const toolKeys = {
     'tool:orviloSkillTools',
     provider,
   ]),
-  mcpPluginList: def('tool:mcpPluginList', (locale: string, params: unknown) => [
-    'tool:mcpPluginList',
-    locale,
-    params,
-  ]),
   uninstalledBuiltins: def('tool:uninstalledBuiltins', (workspaceId: string | null | undefined) => [
     'tool:uninstalledBuiltins',
     workspaceId,
@@ -1010,10 +798,6 @@ export const agentKnowledgeKeys = {
 };
 
 // ---- agent bot ----------------------------------------------------------
-export const agentBotKeys = {
-  platformDefinitions: def('agentBot:platformDefinitions', () => ['agentBot:platformDefinitions']),
-  providers: def('agentBot:providers', (agentId: string) => ['agentBot:providers', agentId]),
-};
 
 // ---- file ---------------------------------------------------------------
 export const fileKeys = {
@@ -1058,9 +842,6 @@ export const statsKeys = {
   heatmaps: def('stats:heatmaps', (type: string) => ['stats:heatmaps', type]),
   maxTaskDuration: def('stats:maxTaskDuration', () => ['stats:maxTaskDuration']),
   messages: def('stats:messages', () => ['stats:messages']),
-  rankAgents: def('stats:rankAgents', () => ['stats:rankAgents']),
-  rankModels: def('stats:rankModels', () => ['stats:rankModels']),
-  rankTopics: def('stats:rankTopics', () => ['stats:rankTopics']),
   sessions: def('stats:sessions', () => ['stats:sessions']),
   topics: def('stats:topics', () => ['stats:topics']),
   usageLogs: def('stats:usageLogs', () => ['stats:usageLogs']),
@@ -1068,38 +849,9 @@ export const statsKeys = {
   welcome: def('stats:welcome', () => ['stats:welcome']),
 };
 
-// ---- messenger / platform integration -----------------------------------
-export const messengerKeys = {
-  agentsForBinding: def('messenger:agentsForBinding', (workspaceId: string | null | undefined) => [
-    'messenger:agentsForBinding',
-    workspaceId ?? null,
-  ]),
-  availablePlatforms: def('messenger:availablePlatforms', () => ['messenger:availablePlatforms']),
-  bindingScopes: def('messenger:bindingScopes', () => ['messenger:bindingScopes']),
-  listMyInstallations: def('messenger:listMyInstallations', () => [
-    'messenger:listMyInstallations',
-  ]),
-  listMyLinks: def('messenger:listMyLinks', () => ['messenger:listMyLinks']),
-  myLink: def('messenger:myLink', (platform: string, tokenScopeKey: string | undefined) => [
-    'messenger:myLink',
-    platform,
-    tokenScopeKey,
-  ]),
-  peek: def('messenger:peek', (randomId: string) => ['messenger:peek', randomId]),
-  pushWindow: def('messenger:pushWindow', (platform: string, tenantId?: string) => [
-    'messenger:pushWindow',
-    platform,
-    tenantId ?? null,
-  ]),
-};
-
 // ---- verify (deliverable judging) ---------------------------------------
 export const expertiseKeys = {
   domain: def('expertise:domain', (domainId: string) => ['expertise:domain', domainId]),
-  historyCount: def('expertise:historyCount', (agentId: string) => [
-    'expertise:historyCount',
-    agentId,
-  ]),
   lesson: def('expertise:lesson', (lessonId: string) => ['expertise:lesson', lessonId]),
   overview: def('expertise:overview', (agentId: string) => ['expertise:overview', agentId]),
 };
@@ -1117,44 +869,10 @@ export const verifyKeys = {
       subjectId,
     ],
   ),
-  /** Statuses for a known subject set. Ids are sorted+joined so the key is order-free. */
-  acceptanceStatuses: def(
-    'verify:acceptanceStatuses',
-    (subjectType: string, subjectIds: string[]) => [
-      'verify:acceptanceStatuses',
-      subjectType,
-      [...subjectIds].sort().join(','),
-    ],
-  ),
-  /**
-   * One scroll page of the list panel. Keyed by workspace + the status split +
-   * the cursor, mirroring `reportSummaries` — the sibling paged feed.
-   */
   acceptancePurgePreview: def('verify:acceptancePurgePreview', (acceptanceId: string) => [
     'verify:acceptancePurgePreview',
     acceptanceId,
   ]),
-  acceptancePage: def(
-    'verify:acceptancePage',
-    (workspaceId: string | undefined, filter: string, projectId?: string, cursor?: string) => [
-      'verify:acceptancePage',
-      workspaceId ?? '',
-      filter,
-      projectId ?? '',
-      cursor ?? '',
-    ],
-  ),
-  /** Query inputs are part of the key so server-side list filtering never reuses stale rows. */
-  acceptances: def(
-    'verify:acceptances',
-    (limit?: number, q?: string, filter?: string, projectId?: string) => [
-      'verify:acceptances',
-      String(limit ?? ''),
-      q ?? '',
-      filter ?? '',
-      projectId ?? '',
-    ],
-  ),
   criteria: def('verify:criteria', () => ['verify:criteria']),
   instruction: def('verify:instruction', (documentId: string) => [
     'verify:instruction',
@@ -1184,15 +902,6 @@ export const verifyKeys = {
   tracing: def('verify:tracing', (tracingId: string) => ['verify:tracing', tracingId]),
 };
 
-/**
- * Match every cached Acceptance list read — the flat window's filter / limit /
- * search variants AND every loaded page of the panel's scroll feed. A write has
- * no idea how deep the panel has scrolled, so it invalidates the whole family.
- */
-export const isAcceptanceListKey = (key: unknown): boolean =>
-  Array.isArray(key) &&
-  (key[0] === verifyKeys.acceptances.root || key[0] === verifyKeys.acceptancePage.root);
-
 // ---- inbox / notifications ----------------------------------------------
 export const inboxKeys = {
   navigationCounts: def('inbox:navigationCounts', (workspaceId: string | null) => [
@@ -1213,6 +922,104 @@ export const inboxKeys = {
   unreadCount: def('inbox:unreadCount', (workspaceId: string | null) => [
     'inbox:unreadCount',
     workspaceId,
+  ]),
+  feed: def(
+    'inbox:feed',
+    (
+      workspaceId: string | null,
+      kind: string | undefined,
+      filter: string | undefined,
+      variant: string | undefined,
+    ) => ['inbox:feed', workspaceId, kind, filter, variant],
+  ),
+  feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
+    'inbox:feedSummary',
+    workspaceId,
+  ]),
+  /**
+   * Deep-link card lookup — keyed by workspace so a card readable in one
+   * scope can never be served from another scope's cache entry.
+   */
+  feedCard: def('inbox:feedCard', (workspaceId: string | null, id: string) => [
+    'inbox:feedCard',
+    workspaceId,
+    id,
+  ]),
+};
+
+export const workAttentionKeys = {
+  favorites: def('workAttention:favorites', (workspaceId: string | null) => [
+    'workAttention:favorites',
+    workspaceId,
+  ]),
+  myWork: def(
+    'workAttention:myWork',
+    (
+      workspaceId: string | null,
+      mode: string,
+      layout = 'list',
+      noProject = false,
+      delegated = false,
+    ) => ['workAttention:myWork', workspaceId, mode, layout, noProject, delegated],
+  ),
+  reviews: def(
+    'workAttention:reviews',
+    (workspaceId: string | null, tab: 'created' | 'for-me', layout = 'list') => [
+      'workAttention:reviews',
+      workspaceId,
+      tab,
+      layout,
+    ],
+  ),
+  savedView: def('workAttention:savedView', (workspaceId: string | null, viewId: string) => [
+    'workAttention:savedView',
+    workspaceId,
+    viewId,
+  ]),
+  savedViews: def('workAttention:savedViews', (workspaceId: string | null) => [
+    'workAttention:savedViews',
+    workspaceId,
+  ]),
+  search: def(
+    'workAttention:search',
+    (workspaceId: string | null, query: string, type: string | undefined) => [
+      'workAttention:search',
+      workspaceId,
+      query,
+      type,
+    ],
+  ),
+  teams: def('workAttention:teams', (workspaceId: string | null) => [
+    'workAttention:teams',
+    workspaceId,
+  ]),
+};
+
+/**
+ * Prefix matcher for every cached list whose task rows carry hydrated labels:
+ * My Issues pages, saved-view evaluations, the reviews queue and team issues
+ * all read `task.labels` through the work-query path, so a label toggle must
+ * revalidate each root — not just `myWork`. `task:list` rows are matched by
+ * {@link isTaskListKey} and invalidated alongside.
+ */
+export const isWorkQueryTaskRowsKey = (key: unknown): boolean =>
+  Array.isArray(key) &&
+  (key[0] === 'workAttention:myWork' ||
+    key[0] === 'workAttention:savedView' ||
+    key[0] === 'workAttention:reviews' ||
+    key[0] === 'team-tasks');
+
+// ---- pull request reviews (/reviews GitHub surface) -----------------------
+export const pullRequestKeys = {
+  detail: def('pullRequest:detail', (workspaceId: string | null, id: string) => [
+    'pullRequest:detail',
+    workspaceId,
+    id,
+  ]),
+  queue: def('pullRequest:queue', (workspaceId: string | null, tab: 'created' | 'for-me') => [
+    'pullRequest:queue',
+    workspaceId,
+    tab,
   ]),
 };
 
@@ -1290,15 +1097,6 @@ export const localFileKeys = {
   ]),
 };
 
-// ---- favorite status (marketplace detail headers) -----------------------
-export const favoriteKeys = {
-  status: def('favorite:status', (targetType: string, identifier: string) => [
-    'favorite:status',
-    targetType,
-    identifier,
-  ]),
-};
-
 // ---- changelog ----------------------------------------------------------
 export const changelogKeys = {
   modalIndex: def('changelog:modalIndex', () => ['changelog:modalIndex']),
@@ -1342,9 +1140,6 @@ export const agentSignalKeys = {
 };
 
 // ---- misc UI singletons -------------------------------------------------
-export const ollamaKeys = {
-  downloadModel: def('ollama:downloadModel', (model: string) => ['ollama:downloadModel', model]),
-};
 export const authKeys = {
   oauthAppById: def('auth:oauthAppById', (id: string) => ['auth:oauthAppById', id]),
   oauthAppList: def('auth:oauthAppList', () => ['auth:oauthAppList']),
@@ -1420,9 +1215,6 @@ export const resourceKeys = {
     workspaceId,
   ]),
 };
-export const providerKeys = {
-  clientConfig: def('provider:clientConfig', (id: string) => ['provider:clientConfig', id]),
-};
 export const recommendationsKeys = {
   heteroDetections: def('recommendations:heteroDetections', () => [
     'recommendations:heteroDetections',
@@ -1444,9 +1236,6 @@ export const builtinAgentKeys = {
     slug,
     scope,
   ]),
-};
-export const imessageKeys = {
-  bridgeStatus: def('imessage:bridgeStatus', () => ['imessage:bridgeStatus']),
 };
 // Desktop/electron IPC fetches — roots keep their existing `electron:getXxx` value.
 export const electronKeys = {
@@ -1474,7 +1263,6 @@ export const matchDomain =
  */
 export const swrKeys = {
   agent: { ...agentKeys, ...agentConfigKeys },
-  agentBot: agentBotKeys,
   agentBuilder: agentBuilderKeys,
   agentDocument: agentDocumentSWRKeys,
   agentHome: agentHomeKeys,
@@ -1493,9 +1281,7 @@ export const swrKeys = {
   discover: discoverKeys,
   document: documentSWRKeys,
   electron: electronKeys,
-  eval: evalKeys,
   expertise: expertiseKeys,
-  favorite: favoriteKeys,
   file: fileKeys,
   fork: forkKeys,
   gateway: gatewayKeys,
@@ -1503,19 +1289,14 @@ export const swrKeys = {
   global: globalKeys,
   group: groupKeys,
   home: homeKeys,
-  image: imageKeys,
-  imessage: imessageKeys,
   inbox: inboxKeys,
   knowledgeBase: knowledgeBaseKeys,
   localFile: localFileKeys,
   message: messageKeys,
-  messenger: messengerKeys,
   notebook: notebookSWRKeys,
-  ollama: ollamaKeys,
   onboarding: onboardingKeys,
   openInApp: openInAppKeys,
   portal: portalKeys,
-  provider: providerKeys,
   ragEval: ragEvalKeys,
   recent: recentKeys,
   recommendations: recommendationsKeys,
@@ -1525,6 +1306,7 @@ export const swrKeys = {
   share: shareKeys,
   stats: statsKeys,
   task: taskKeys,
+  taskLabel: taskLabelKeys,
   taskTemplate: taskTemplateKeys,
   thread: threadKeys,
   tool: toolKeys,
@@ -1537,5 +1319,6 @@ export const swrKeys = {
   user: userKeys,
   userMemory: userMemoryKeys,
   verify: verifyKeys,
-  video: videoKeys,
+  pullRequest: pullRequestKeys,
+  workAttention: workAttentionKeys,
 };

@@ -1,5 +1,13 @@
 import type { CSSProperties, PropsWithChildren } from 'react';
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useRouteError } from 'react-router';
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useMatches,
+  useRouteError,
+} from 'react-router';
 import { isRtlLang } from 'rtl-detect';
 import { href as antdStaticCssHref } from 'virtual:aspectlylabs/antd-static-css';
 import { href as themeVarsCssHref } from 'virtual:aspectlylabs/theme-vars-css';
@@ -7,6 +15,7 @@ import { href as themeVarsCssHref } from 'virtual:aspectlylabs/theme-vars-css';
 import NextThemeProvider from '@/layout/GlobalProvider/NextThemeProvider';
 import { isChunkLoadError, notifyChunkError } from '@/utils/chunkError';
 
+import { PORTAL_CONFIG_PLACEHOLDER } from '../workers/document';
 import { resolveAuthLocale } from './lib/locale';
 import { buildAuthMeta } from './lib/seo';
 import { SERVER_CONFIG_PLACEHOLDER } from './lib/serverConfig';
@@ -38,6 +47,7 @@ export const Layout = ({ children }: PropsWithChildren) => {
         <link href={themeVarsCssHref} rel="stylesheet" />
         <link href={antdStaticCssHref} rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: SERVER_CONFIG_PLACEHOLDER }} />
+        <script dangerouslySetInnerHTML={{ __html: PORTAL_CONFIG_PLACEHOLDER }} />
         <script
           dangerouslySetInnerHTML={{ __html: serializeAuthResources(locale) }}
           id={AUTH_I18N_SCRIPT_ID}
@@ -55,6 +65,11 @@ export const Layout = ({ children }: PropsWithChildren) => {
 
 export default function Root() {
   const locale = resolveAuthLocale();
+  // Bare routes (the accounts portal) own their chrome end-to-end —
+  // AuthAppShell's header, i18n stack and container do not apply.
+  const bare = useMatches().some((match) => (match.handle as { bare?: boolean } | undefined)?.bare);
+
+  if (bare) return <Outlet />;
 
   return (
     <NextThemeProvider>
@@ -104,7 +119,7 @@ export const ErrorBoundary = () => {
           style={buttonStyle}
           type={'button'}
           onClick={() => {
-            window.location.href = '/signin';
+            window.location.href = '/login';
           }}
         >
           Back to sign in

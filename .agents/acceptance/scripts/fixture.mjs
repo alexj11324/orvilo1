@@ -10,7 +10,7 @@
  *
  * INPUTS vs OUTPUTS — only inputs are reusable. `seed/` holds what a run
  * CONSUMES (files to upload, DB seed fragments, config, stand-in evidence for
- * synthetic ingest rounds). What a run PRODUCES (screenshots, transcripts) is
+ * synthetic local rounds). What a run PRODUCES (screenshots, transcripts) is
  * tied to that one execution and lives only in the round dir's assets/ under
  * the report root — never copy it back into the fixture.
  *
@@ -30,8 +30,8 @@
  *   fixture.mjs compose --subject topic:tpc_xxx --slug <slug> [--title "..."]
  *                       [--focus "..."] [--entry "..."] <check-id> [<check-id>...]
  *       Assemble a report-shaped round dir from the given checks:
- *       <report-root>/topic-tpc_xxx/<ts>-<slug>/  (ready for
- *       `lh acceptance run ingest <dir>`). Files referenced by case.evidence
+ *       <report-root>/topic-tpc_xxx/<ts>-<slug>/  (ready to attach as the
+ *       round's evidence). Files referenced by case.evidence
  *       (seed/…) are copied into the round's assets/<check-id>/ and paths
  *       rewritten. Prints the dir path.
  *

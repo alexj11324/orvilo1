@@ -1,9 +1,4 @@
-import type {
-  AgentInitErrorPayload,
-  ChatCompletionErrorPayload,
-  CreateImageErrorPayload,
-  CreateVideoErrorPayload,
-} from '../types';
+import type { AgentInitErrorPayload, ChatCompletionErrorPayload } from '../types';
 import type { IOrviloAgentRuntimeErrorType } from '../types/error';
 
 export const AgentRuntimeError = {
@@ -12,6 +7,4 @@ export const AgentRuntimeError = {
     errorType: IOrviloAgentRuntimeErrorType | string | number,
     error?: any,
   ): AgentInitErrorPayload => ({ error, errorType }),
-  createImage: (error: CreateImageErrorPayload): CreateImageErrorPayload => error,
-  createVideo: (error: CreateVideoErrorPayload): CreateVideoErrorPayload => error,
 };

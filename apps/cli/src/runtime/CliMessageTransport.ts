@@ -5,7 +5,7 @@ import type {
   QueryMessagesOptions,
   RuntimeMessageRef,
   UpdateToolMessageInput,
-} from '@orvilo/agent-runtime';
+} from '@orvilo/agent-execution';
 import type { CreateMessageParams, UIChatMessage, UpdateMessageParams } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 

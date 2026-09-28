@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 import { UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { TASK_ASSIGNEE_PERMISSION_CODES } from '@orvilo/const/rbac';
-import { isLocalHeterogeneousType, isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type {
   TaskAssignmentKind,
   TaskAutomationSnapshot,
@@ -16,20 +15,23 @@ import type {
   TaskSchedulerContext,
   TaskStatus,
   TaskTopicHandoff,
+  TaskTriageStatus,
+  TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
-import { AgentOperationModel } from '@/database/models/agentOperation';
-import { MessageModel } from '@/database/models/message';
 import { ProjectModel } from '@/database/models/project';
 import { RbacModel } from '@/database/models/rbac';
 import {
   isTaskIdentifierUniqueViolation,
   taskActivityActor,
   TaskModel,
+  type TaskMutationContext,
 } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
@@ -44,6 +46,7 @@ import { type SubtaskGraphPlan, TaskGraphService } from '../taskGraph';
 import { TaskIntegrationService } from '../taskIntegration';
 import { type ReviewResult, TaskReviewService } from '../taskReview';
 import { TaskRunnerService } from '../taskRunner';
+import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { createTaskSchedulerModule } from '../taskScheduler';
 import { resolveTaskAcceptance } from '../verify/taskAcceptance';
 import { collapseActivityLog } from './collapseActivityLog';
@@ -86,6 +89,15 @@ export interface CreateTaskInput {
   // creation to record `context.origin` — the creator conversation pointer.
   context?: TaskContext;
   createdByAgentId?: string;
+  creationSubject?: {
+    id?: string;
+    kind: 'integration' | 'system';
+    snapshot?: {
+      displayName?: string;
+      externalId?: string;
+      kind: 'integration' | 'system';
+    };
+  };
   description?: string;
   editorData?: unknown;
   fileIds?: string[];
@@ -98,10 +110,29 @@ export interface CreateTaskInput {
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
+  /** Execution-status preset — a status-grouped board column's `+`. */
+  status?: TaskStatus;
+  /**
+   * Owning team for workspace-mode tasks (linear-workspace-v3). TaskModel
+   * allocates the identifier from the team's `next_issue_seq` counter.
+   */
+  teamId?: string;
+  /**
+   * Intake state override. Board-column creates resolve 'accepted' (the issue
+   * never passed through triage); absent → TaskModel's default (`untriaged`
+   * on team tasks, NULL otherwise).
+   */
+  triageStatus?: TaskTriageStatus;
   // Explicit visibility for the new task. When omitted, the service derives it
   // from `parentTaskId` (if present) or `assigneeAgentId`'s visibility, and
   // finally falls back to the schema default ('public').
   visibility?: 'private' | 'public';
+  /** Workflow-category preset — a work-query board column's `+`. */
+  workflowCategory?: TaskWorkflowCategory;
+  /** External provider state identity resolved from `workflowCategory`. */
+  workflowStateId?: string | null;
+  /** Local `team_workflow_states` row resolved from `workflowCategory`. */
+  workflowStateRefId?: string | null;
 }
 
 export interface UpdateStatusResult {
@@ -111,6 +142,10 @@ export interface UpdateStatusResult {
   paused: string[];
   task: TaskItem;
   unlocked: string[];
+}
+
+interface UpdateStatusCommitOptions {
+  onStatusCommitted?: () => void;
 }
 
 export interface UpdateStatusCascadeResult {
@@ -127,17 +162,10 @@ export interface RunReadySubtasksResult {
   skipped?: { reason: 'nothing-runnable' };
 }
 
-export type SteerTopicResult =
-  | { messageId: string; mode: 'continued' }
-  | { messageId: string; mode: 'injected' }
-  | { mode: 'requiresInterrupt' };
-
-/** Verify rounds past which `driveTaskFromVerify` no longer moves the task. */
-const VERIFY_SETTLED_STATUSES = new Set(['passed', 'failed', 'errored', 'delivered']);
-
 export class TaskService {
   private agentModel: AgentModel;
   private db: OrviloDatabase;
+  private taskLabelModel: TaskLabelModel;
   private taskModel: TaskModel;
   private projectModel: ProjectModel;
   private taskTopicModel: TaskTopicModel;
@@ -152,6 +180,7 @@ export class TaskService {
     this.workspaceId = workspaceId;
     this.agentModel = new AgentModel(db, userId, workspaceId);
     this.projectModel = new ProjectModel(db, userId, workspaceId);
+    this.taskLabelModel = new TaskLabelModel(db, userId, workspaceId);
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.topicModel = new TopicModel(db, userId, workspaceId);
@@ -163,7 +192,7 @@ export class TaskService {
    * current model/provider into `task.config` so later changes to the agent's
    * default model don't silently affect this task.
    */
-  async createTask(input: CreateTaskInput): Promise<TaskItem> {
+  async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
 
     const taskInput = input;
@@ -190,6 +219,11 @@ export class TaskService {
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
       createData.identifierPrefix ??= project.identifier;
     }
+
+    // Repository associations are resolved at run provisioning time. Do not
+    // cache a project/team fallback into the task row here: a task-level
+    // association may be applied after creation and must take precedence over
+    // the then-current project or team default.
 
     // Pull the model/provider snapshot and the agent's visibility in a single
     // SQL — both are needed for the same `tasks.create` row, and a second
@@ -236,7 +270,7 @@ export class TaskService {
     // produce a `Private parent + Public child` combo if the caller insists.
     this.assertParentVisibilityCompat(createData.visibility, parentVisibility);
 
-    const task = await this.createTaskWithAssigneeLock(createData);
+    const task = await this.createTaskWithAssigneeLock(createData, mutation);
 
     return task;
   }
@@ -309,13 +343,32 @@ export class TaskService {
 
   private interruptTaskOperation = async (service: AiAgentService, operationId: string) => {
     const result = await service.interruptTask({ operationId });
-    if (!result.success || result.deviceCancellationConfirmed === false) {
+    // `cancelState === 'unknown'` means the stop signal never provably landed —
+    // the remote writer may still be active. `requested` is allowed through:
+    // the signal was durably dispatched and the run's terminal callback
+    // resolves it.
+    const unconfirmed =
+      result.cancelState !== undefined
+        ? result.cancelState === 'unknown'
+        : !result.success || result.deviceCancellationConfirmed === false;
+    if (unconfirmed) {
       throw new TRPCError({
         code: 'CONFLICT',
         message:
           'Task interruption was not confirmed. The execution remains active; retry stopping it before starting another attempt.',
       });
     }
+  };
+
+  private interruptTaskOperations = async (
+    service: AiAgentService,
+    operationIds: Array<string | null | undefined>,
+  ): Promise<Map<string, PromiseSettledResult<void>>> => {
+    const uniqueOperationIds = [...new Set(operationIds.filter((id): id is string => Boolean(id)))];
+    const settled = await Promise.allSettled(
+      uniqueOperationIds.map((operationId) => this.interruptTaskOperation(service, operationId)),
+    );
+    return new Map(uniqueOperationIds.map((operationId, index) => [operationId, settled[index]!]));
   };
 
   /**
@@ -333,6 +386,23 @@ export class TaskService {
       });
     }
 
+    let stoppingDispatch;
+    if (target.dispatchId && target.dispatchFence !== null && target.executionGeneration !== null) {
+      stoppingDispatch = await new TaskDispatchModel(this.db, this.workspaceId).requestStop({
+        dispatchId: target.dispatchId,
+        fence: target.dispatchFence,
+        generation: target.executionGeneration,
+        operationId: target.operationId,
+        reason: 'user_cancel',
+      });
+      if (!stoppingDispatch) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task execution changed before cancellation could be fenced.',
+        });
+      }
+    }
+
     if (target.operationId) {
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
@@ -343,130 +413,28 @@ export class TaskService {
     await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
     await this.taskModel.updateStatus(target.taskId, 'paused');
 
+    if (stoppingDispatch) {
+      const settled = await new TaskDispatchModel(this.db, this.workspaceId).settle({
+        dispatchId: stoppingDispatch.id,
+        expected: ['cancel_requested'],
+        fence: stoppingDispatch.fence,
+        generation: stoppingDispatch.generation,
+        operationId: stoppingDispatch.operationId ?? undefined,
+        phase: 'canceled',
+      });
+      if (!settled) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task cancellation lost dispatch ownership before settlement.',
+        });
+      }
+    }
+
     // The canceled run's provisioned worktrees are abandoned — tear them down
     // best-effort; a cleanup failure must not break the cancel.
     await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
       target.taskId,
     );
-  }
-
-  /**
-   * Steer a task topic: deliver a user message into the run's conversation.
-   *
-   * - Homogeneous run (server runtime rehydrates topic messages at every step
-   *   boundary): persist the message — the next step consumes it live.
-   * - Heterogeneous run (external CLI/device process) or a parked approval:
-   *   the run never reads topic messages, so steering requires an explicit
-   *   interrupt; once confirmed (`interrupt: true`) the operation is stopped
-   *   and the same topic resumes anchored on the persisted steer message.
-   * - Topic not running (or the run ended between our status read and the
-   *   insert): continue the topic off the persisted message. A run that
-   *   finished without consuming a tail steer is also picked up by the
-   *   `onTopicComplete` late-steer fallback, so the message is never lost.
-   */
-  async steerTopic(input: {
-    fileIds?: string[];
-    id: string;
-    interrupt?: boolean;
-    message: string;
-    topicId: string;
-  }): Promise<SteerTopicResult> {
-    const task = await this.taskModel.resolve(input.id);
-    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found.' });
-
-    if (!input.message.trim() && !input.fileIds?.length) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'A steer needs a message or files.' });
-    }
-
-    const target = await this.taskTopicModel.findByTopicId(input.topicId);
-    if (!target || target.taskId !== task.id) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found for this task.' });
-    }
-
-    const running = target.status === 'running';
-    const topic = running ? await this.topicModel.findById(input.topicId) : null;
-    const runningOp = topic?.metadata?.runningOperation;
-    const heteroType = runningOp?.heteroType;
-    const isHetero =
-      !!heteroType &&
-      (isLocalHeterogeneousType(heteroType) || isRemoteHeterogeneousType(heteroType));
-
-    const operationId = target.operationId ?? runningOp?.operationId;
-    const operation = running
-      ? await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
-          operationId ?? '',
-        )
-      : null;
-
-    // Anything that cannot consume a live topic message needs the explicit
-    // interrupt opt-in before we tear the run down.
-    const needsInterrupt = isHetero || operation?.status === 'waiting_for_human';
-    if (running && needsInterrupt && !input.interrupt) {
-      return { mode: 'requiresInterrupt' };
-    }
-
-    // Persist the user's message first — it is the deliverable regardless of
-    // which dispatch branch runs below, and a confirmed interrupt must not
-    // drop it.
-    const messageModel = new MessageModel(this.db, this.userId, this.workspaceId);
-    const parentId =
-      (await messageModel.getLatestSpineMessageId({ topicId: input.topicId })) ??
-      (await messageModel.getLatestNonToolMessageId({ topicId: input.topicId }));
-    const steerMessage = await messageModel.create({
-      agentId: operation?.agentId ?? task.assigneeAgentId ?? undefined,
-      content: input.message,
-      files: input.fileIds,
-      metadata: { steer: true },
-      parentId,
-      role: 'user',
-      topicId: input.topicId,
-    });
-
-    if (running && needsInterrupt) {
-      const aiAgentService = new AiAgentService(this.db, this.userId, {
-        workspaceId: this.workspaceId,
-      });
-      if (operationId) await this.interruptTaskOperation(aiAgentService, operationId);
-      // Settle the interrupted segment so the continuation can claim the
-      // topic (`runTask` refuses a 'running' continue target).
-      await this.taskTopicModel.updateStatus(task.id, input.topicId, 'canceled');
-    } else if (running) {
-      return { messageId: steerMessage.id, mode: 'injected' };
-    }
-
-    // Verify-bound settle race: the topic is done but the confirmed verify
-    // plan still owns the next transition (`driveTaskFromVerify` CASes the
-    // task out of 'running'). Continuing now would bounce the status and hand
-    // the topic a second lifecycle pass. Park the message on the spine
-    // instead — once verify settles the task lands in 'paused', where a
-    // follow-up steer continues it normally.
-    if (!running && operationId) {
-      const verifyRun = await new VerifyRunModel(this.db, this.userId, this.workspaceId)
-        .findByOperation(operationId)
-        .catch(() => undefined);
-      if (verifyRun?.planConfirmedAt && !VERIFY_SETTLED_STATUSES.has(verifyRun.status ?? '')) {
-        return { messageId: steerMessage.id, mode: 'injected' };
-      }
-    }
-
-    const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
-    try {
-      await runner.runTask({
-        continueFromMessageId: steerMessage.id,
-        continueTopicId: input.topicId,
-        taskId: task.id,
-      });
-    } catch (error) {
-      // Lost the status race: the topic flipped back to running between our
-      // read above and the continuation attempt. The persisted message sits
-      // on the spine, so the live run consumes it at its next step — that is
-      // delivery, not failure.
-      if (error instanceof TRPCError && error.code === 'CONFLICT') {
-        return { messageId: steerMessage.id, mode: 'injected' };
-      }
-      throw error;
-    }
-    return { messageId: steerMessage.id, mode: 'continued' };
   }
 
   /**
@@ -550,6 +518,8 @@ export class TaskService {
       content,
       iteration,
       judge: reviewConfig.judge,
+      // Rubric judgments bind to the task's own assignee agent.
+      judgeAgentId: task.assigneeAgentId,
       rubrics: reviewConfig.rubrics,
       taskName: task.name || task.identifier,
     });
@@ -575,6 +545,13 @@ export class TaskService {
   async updateStatus(
     input: {
       error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
       id: string;
       status: TaskStatus;
     },
@@ -584,18 +561,44 @@ export class TaskService {
      * activity feed.
      */
     actor?: { agentId?: string | null; userId?: string | null },
+    guard?: undefined,
+    options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult>;
   async updateStatus(
-    input: { error?: string; id: string; status: TaskStatus },
+    input: {
+      error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
+      id: string;
+      status: TaskStatus;
+    },
     actor: undefined,
     guard: { currentStatus: TaskStatus; reservationId: string },
+    options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult | null>;
   async updateStatus(
-    input: { error?: string; id: string; status: TaskStatus },
+    input: {
+      error?: string;
+      expectedContract?: {
+        assigneeAgentId: string | null;
+        executionGeneration: number;
+        policyRevision: number;
+        requirementRevision: number;
+        status?: string;
+      };
+      id: string;
+      status: TaskStatus;
+    },
     actor?: { agentId?: string | null; userId?: string | null },
     guard?: { currentStatus: TaskStatus; reservationId: string },
+    options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult | null> {
-    const { id, status, error: errorMsg } = input;
+    const { expectedContract, id, status, error: errorMsg } = input;
 
     if (errorMsg && status !== 'failed') {
       throw new TRPCError({
@@ -620,9 +623,27 @@ export class TaskService {
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
+      const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
 
       for (const t of topics) {
         if (t.status !== 'running' || !t.topicId) continue;
+
+        let stoppingDispatch;
+        if (t.dispatchId && t.dispatchFence !== null && t.executionGeneration !== null) {
+          stoppingDispatch = await dispatchModel.requestStop({
+            dispatchId: t.dispatchId,
+            fence: t.dispatchFence,
+            generation: t.executionGeneration,
+            operationId: t.operationId,
+            reason: `task_status:${status}`,
+          });
+          if (!stoppingDispatch) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task execution changed before the status transition could be fenced.',
+            });
+          }
+        }
 
         // Interrupt the remote operation first; if it fails, skip cancellation
         // to avoid desynchronizing DB state from a still-running operation.
@@ -640,6 +661,22 @@ export class TaskService {
         }
 
         await this.taskTopicModel.cancelIfRunning(resolved.id, t.topicId);
+        if (stoppingDispatch) {
+          const settled = await dispatchModel.settle({
+            dispatchId: stoppingDispatch.id,
+            expected: ['cancel_requested'],
+            fence: stoppingDispatch.fence,
+            generation: stoppingDispatch.generation,
+            operationId: stoppingDispatch.operationId ?? undefined,
+            phase: 'canceled',
+          });
+          if (!settled) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task execution changed before the status transition settled.',
+            });
+          }
+        }
       }
     }
 
@@ -663,21 +700,40 @@ export class TaskService {
       extra.completedAt = new Date();
     if (errorMsg) extra.error = errorMsg;
 
-    const task = actor
-      ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
-      : guard
-        ? await this.taskModel.updateStatusIfReservation(
-            resolved.id,
-            guard.reservationId,
-            guard.currentStatus,
-            status,
-            extra,
-          )
-        : await this.taskModel.updateStatus(resolved.id, status, extra);
+    const task = expectedContract
+      ? await this.taskModel.updateStatusForExecutionContract(
+          resolved.id,
+          status,
+          {
+            ...expectedContract,
+            ...(guard && {
+              runReservationId: guard.reservationId,
+              status: guard.currentStatus,
+            }),
+          },
+          extra,
+        )
+      : actor
+        ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
+        : guard
+          ? await this.taskModel.updateStatusIfReservation(
+              resolved.id,
+              guard.reservationId,
+              guard.currentStatus,
+              status,
+              extra,
+            )
+          : await this.taskModel.updateStatus(resolved.id, status, extra);
     if (!task) {
       if (guard) return null;
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      throw new TRPCError({
+        code: expectedContract ? 'CONFLICT' : 'NOT_FOUND',
+        message: expectedContract
+          ? 'Task execution contract changed before the status transition.'
+          : 'Task not found',
+      });
     }
+    options?.onStatusCommitted?.();
 
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
@@ -720,14 +776,15 @@ export class TaskService {
       const schedulerContext = (resolved.context as TaskContext | null)?.scheduler as
         TaskSchedulerContext | undefined;
       const previousTickMessageId = schedulerContext?.tickMessageId;
-      const tickToken = randomUUID();
+      const tickRevision = (schedulerContext?.tickRevision ?? 0) + 1;
+      const tickToken = `heartbeat:task:${task.id}:revision:${tickRevision}`;
       let tickMessageId: string | undefined;
 
       try {
         // Invalidate the previous generation before publishing. This closes
         // the race where an old QStash delivery arrives while the replacement
         // message is being created.
-        await this.taskModel.updateContext(task.id, { scheduler: { tickToken } });
+        await this.taskModel.updateContext(task.id, { scheduler: { tickRevision, tickToken } });
         tickMessageId = await scheduler.scheduleNextTopic({
           delay: task.heartbeatInterval,
           taskId: task.id,
@@ -740,6 +797,7 @@ export class TaskService {
             consecutiveFailures: schedulerContext?.consecutiveFailures ?? 0,
             scheduledAt: new Date().toISOString(),
             tickMessageId,
+            tickRevision,
             tickToken,
           },
         });
@@ -838,19 +896,31 @@ export class TaskService {
 
     const runningTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
     if (runningTopics.length > 0) {
-      const settled = await Promise.allSettled(
-        runningTopics.map(async (topic) => {
-          if (topic.operationId) {
-            await this.interruptTaskOperation(aiAgentService, topic.operationId);
-          }
-        }),
+      if (runningTopics.some((topic) => !topic.operationId)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'Task interruption could not be confirmed because a running topic has no operation identity.',
+        });
+      }
+      const interruptionResults = await this.interruptTaskOperations(
+        aiAgentService,
+        runningTopics.map((topic) => topic.operationId),
       );
-      const failure = settled.find((result) => result.status === 'rejected');
+      const failure = [...interruptionResults.values()].find(
+        (result) => result.status === 'rejected',
+      );
       if (failure) {
         // Persist the interrupts that did succeed before surfacing the error,
         // so an actually-stopped operation is not left recorded as running.
-        for (const [index, topic] of runningTopics.entries()) {
-          if (settled[index].status !== 'fulfilled' || !topic.topicId) continue;
+        for (const topic of runningTopics) {
+          if (
+            !topic.topicId ||
+            (topic.operationId &&
+              interruptionResults.get(topic.operationId)?.status !== 'fulfilled')
+          ) {
+            continue;
+          }
           await this.taskTopicModel
             .cancelIfRunning(topic.taskId, topic.topicId)
             .catch(() => undefined);
@@ -858,22 +928,90 @@ export class TaskService {
         throw failure.reason;
       }
     }
+    const confirmedOperationIds = new Set(
+      runningTopics.flatMap((topic) => (topic.operationId ? [topic.operationId] : [])),
+    );
+
+    // Close the common snapshot-to-transaction race without holding database
+    // locks while a device process exits. Anything that still appears after
+    // this pass is rejected inside the transaction below.
+    const resnapshotTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
+    if (resnapshotTopics.some((topic) => !topic.operationId)) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'Task interruption could not be confirmed because a running topic has no operation identity.',
+      });
+    }
+    const resnapshotResults = await this.interruptTaskOperations(
+      aiAgentService,
+      resnapshotTopics
+        .filter((topic) => !confirmedOperationIds.has(topic.operationId ?? ''))
+        .map((topic) => topic.operationId),
+    );
+    const resnapshotFailure = [...resnapshotResults.values()].find(
+      (result) => result.status === 'rejected',
+    );
+    if (resnapshotFailure) {
+      // As with the first interruption pass, persist every operation that did
+      // stop before surfacing a sibling failure. Otherwise a physically dead
+      // operation remains recorded as running and can block the next run.
+      for (const topic of resnapshotTopics) {
+        if (
+          !topic.topicId ||
+          !topic.operationId ||
+          (!confirmedOperationIds.has(topic.operationId) &&
+            resnapshotResults.get(topic.operationId)?.status !== 'fulfilled')
+        ) {
+          continue;
+        }
+        await this.taskTopicModel
+          .cancelIfRunning(topic.taskId, topic.topicId)
+          .catch(() => undefined);
+      }
+      throw resnapshotFailure.reason;
+    }
+    for (const [operationId, result] of resnapshotResults) {
+      if (result.status === 'fulfilled') confirmedOperationIds.add(operationId);
+    }
 
     const completedAt = new Date();
     let updatedTasks: TaskItem[] = [];
-    let canceledTopics: Awaited<ReturnType<TaskTopicModel['cancelRunningByTaskIds']>> = [];
     await this.db.transaction(async (tx) => {
       const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
       const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
 
+      // Hold every target task row while checking for topics that started after
+      // the interruption passes. A competing run must cross the same
+      // task-status boundary, so no new execution can slip between this check
+      // and the terminal status update.
+      const locked = await taskModel.lockForStatusChange(targetIds);
+      const transactionRunningTopics = await taskTopicModel.findRunningByTaskIds(targetIds);
+      if (transactionRunningTopics.some((topic) => !topic.operationId)) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'Task interruption could not be confirmed because a running topic has no operation identity.',
+        });
+      }
+      if (
+        transactionRunningTopics.some(
+          (topic) => !confirmedOperationIds.has(topic.operationId ?? ''),
+        )
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task execution changed during cancellation. Retry to stop the current run.',
+        });
+      }
+
       // Cancel by the frozen id set rather than the pre-read topic list, so a
       // topic that started between the snapshot and this transaction is still
       // closed together with the status update.
-      canceledTopics = await taskTopicModel.cancelRunningByTaskIds(targetIds);
+      await taskTopicModel.cancelRunningByTaskIds(targetIds);
       // The pre-transaction snapshot only chose *which* tasks; what each one
       // is leaving is read under the lock, so a collaborator's edit between
       // the dialog and this write is logged as it really was.
-      const locked = actor ? await taskModel.lockForStatusChange(targetIds) : [];
       updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, {
         completedAt,
         runReservationExpiresAt: null,
@@ -907,14 +1045,6 @@ export class TaskService {
         );
       }
     });
-
-    // Best-effort: stop any operation discovered only inside the transaction.
-    const interruptedOperationIds = new Set(runningTopics.map((topic) => topic.operationId));
-    await Promise.allSettled(
-      canceledTopics
-        .filter((topic) => topic.operationId && !interruptedOperationIds.has(topic.operationId))
-        .map((topic) => aiAgentService.interruptTask({ operationId: topic.operationId! })),
-    );
 
     // Every cascaded task reached a terminal status — its merge pipeline is
     // abandoned, so tear down any provisioned worktrees it left behind.
@@ -959,7 +1089,10 @@ export class TaskService {
    * Subsequent layers fire automatically through
    * `TaskRunnerService.cascadeOnCompletion` as each upstream finishes.
    */
-  async runReadySubtasks(idOrIdentifier: string): Promise<RunReadySubtasksResult> {
+  async runReadySubtasks(
+    idOrIdentifier: string,
+    requestId: string = randomUUID(),
+  ): Promise<RunReadySubtasksResult> {
     const parent = await this.resolveOrThrow(idOrIdentifier);
     const graph = new TaskGraphService(this.db, this.userId, this.workspaceId);
     const { descendants, plan } = await graph.planForParent(parent.id);
@@ -984,7 +1117,14 @@ export class TaskService {
       firstLayer.map(async (identifier) => {
         const id = identifierToId.get(identifier);
         if (!id) throw new Error(`Subtask ${identifier} not found`);
-        await runner.runTask({ taskId: id });
+        await runner.runTask({
+          idempotencyKey: taskRunIdempotencyKey.readySubtask({
+            parentTaskId: parent.id,
+            requestId,
+            taskId: id,
+          }),
+          taskId: id,
+        });
         return identifier;
       }),
     );
@@ -1081,10 +1221,12 @@ export class TaskService {
 
   private async createTaskWithAssigneeLock(
     createData: CreateTaskInput & { config?: Record<string, unknown> },
+    mutation: TaskMutationContext,
   ): Promise<TaskItem> {
+    const { creationSubject, ...taskData } = createData;
     if (!createData.assigneeUserId || !this.workspaceId) {
       await this.assertAssigneeUserAssignable(createData.assigneeUserId);
-      return this.taskModel.create(createData);
+      return this.taskModel.create(taskData, { creationSubject, mutation });
     }
 
     // TaskModel's normal retry loop cannot continue after a unique violation
@@ -1095,7 +1237,11 @@ export class TaskService {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await this.withAssigneeUserLock(createData.assigneeUserId, (db) =>
-          new TaskModel(db, this.userId, this.workspaceId).create(createData, { maxRetries: 1 }),
+          new TaskModel(db, this.userId, this.workspaceId).create(taskData, {
+            creationSubject,
+            maxRetries: 1,
+            mutation,
+          }),
         );
       } catch (error) {
         if (!isTaskIdentifierUniqueViolation(error) || attempt === maxRetries - 1) throw error;
@@ -1109,6 +1255,7 @@ export class TaskService {
     taskId: string,
     data: Parameters<TaskModel['update']>[1],
     actor: { agentId?: string | null; userId?: string | null } = {},
+    mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     const invalidatesActiveRun = [
       'automationMode',
@@ -1122,7 +1269,12 @@ export class TaskService {
       : data;
 
     return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
-      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(taskId, guardedData, actor),
+      new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
+        taskId,
+        guardedData,
+        actor,
+        mutation,
+      ),
     );
   }
 
@@ -1165,14 +1317,16 @@ export class TaskService {
       activityLogs,
       workspace,
       acceptance,
+      taskLabels,
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
-      this.taskModel.getDependencies(task.id),
+      this.taskModel.getIssueRelations(task.id),
       this.taskTopicModel.findWithHandoff(task.id, TASK_DETAIL_DIRECT_TOPIC_LIMIT).catch(() => []),
       this.taskModel.getComments(task.id).catch(() => []),
       this.taskModel.getActivities(task.id, TASK_DETAIL_ACTIVITY_LIMIT).catch(() => []),
       this.taskModel.getTreePinnedDocuments(task.id).catch(() => emptyWorkspace),
       resolveTaskAcceptance(this.db, this.userId, task.id, this.workspaceId).catch(() => undefined),
+      this.taskLabelModel.listForTask(task.id).catch(() => []),
     ]);
 
     // What the reader is shown, not what was written: a burst of edits to one
@@ -1289,7 +1443,7 @@ export class TaskService {
           assigneeUserId: s.assigneeUserId,
           automationMode: s.automationMode,
           blockedBy: depMap.get(s.id),
-          createdByUserId: s.createdByUserId,
+          createdByUserId: s.createdByUserId ?? undefined,
           visibility: s.visibility,
           children: buildSubtaskTree(s.id),
           ...(s.heartbeatInterval != null ? { heartbeat: { interval: s.heartbeatInterval } } : {}),
@@ -1310,6 +1464,8 @@ export class TaskService {
             : {}),
           status: s.status,
           updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : undefined,
+          ...(s.workflowCategory ? { workflowCategory: s.workflowCategory } : {}),
+          ...(s.workflowStateId ? { workflowStateId: s.workflowStateId } : {}),
         };
       });
     };
@@ -1329,6 +1485,8 @@ export class TaskService {
             identifier: t.identifier,
             name: t.name,
             status: t.status,
+            workflowCategory: t.workflowCategory,
+            workflowStateId: t.workflowStateId,
           },
         ]),
     );
@@ -1359,6 +1517,8 @@ export class TaskService {
           size: doc?.charCount,
           sourceTaskId: doc?.sourceTaskId,
           sourceTaskIdentifier: doc?.sourceTaskIdentifier,
+          sourceTopicId: doc?.sourceTopicId,
+          sourceTopicTitle: doc?.sourceTopicTitle,
           title: doc?.title,
         };
       });
@@ -1568,11 +1728,16 @@ export class TaskService {
       dependencies: dependencies.map((d) => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
-          dependsOn: info?.identifier ?? d.dependsOnId,
-          id: d.dependsOnId,
+          dependsOn:
+            info?.identifier ??
+            (d.type === 'relates' ? 'Unavailable related issue' : 'Unavailable prerequisite'),
+          ...(d.id ? { relationId: d.id } : {}),
+          ...(info ? { id: d.dependsOnId } : {}),
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,
+          ...(info?.workflowCategory ? { workflowCategory: info.workflowCategory } : {}),
+          ...(info?.workflowStateId ? { workflowStateId: info.workflowStateId } : {}),
         };
       }),
       description: task.description,
@@ -1591,6 +1756,7 @@ export class TaskService {
       id: task.id,
       identifier: task.identifier,
       instruction: task.instruction,
+      labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
       priority: task.priority,
@@ -1611,6 +1777,8 @@ export class TaskService {
         ? { ...acceptance.config, requirement: acceptance.requirement }
         : this.taskModel.getVerifyConfig(task),
       visibility: task.visibility,
+      workflowCategory: task.workflowCategory,
+      workflowStateId: task.workflowStateId,
       subtasks,
       activities: activities.length > 0 ? activities : undefined,
       topicCount: topics.length > 0 ? topics.length : undefined,

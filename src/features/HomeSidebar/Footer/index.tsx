@@ -1,7 +1,7 @@
 'use client';
 
 import { type MenuProps } from '@lobehub/ui';
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
+import { Block, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
@@ -11,8 +11,6 @@ import {
   Download,
   Feather,
   FileClockIcon,
-  FlaskConical,
-  Send,
   Settings2,
   SettingsIcon,
 } from 'lucide-react';
@@ -26,11 +24,13 @@ import { DOCUMENTS_REFER_URL, GITHUB } from '@/const/url';
 import Billboard from '@/features/Billboard';
 import { useBillboardMenuItems } from '@/features/Billboard/MenuItems';
 import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
+import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
+import UserAvatar from '@/features/User/UserAvatar';
+import UserPanel from '@/features/User/UserPanel';
 import ThemeButton from '@/features/User/UserPanel/ThemeButton';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useNavLayout } from '@/hooks/useNavLayout';
 import { useAnalytics } from '@/libs/analytics/client';
-import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors/general';
 
@@ -82,7 +82,6 @@ const Footer = memo(() => {
   const activeNavKey = useActiveNavKey();
   const isHomeSidebar = activeNavKey === 'home';
   const billboardMenuItems = useBillboardMenuItems();
-  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
 
   const trackMenuClick = useCallback(
@@ -121,17 +120,6 @@ const Footer = memo(() => {
             },
             {
               type: 'divider' as const,
-            },
-          ]
-        : []),
-      ...(enableBusinessFeatures
-        ? [
-            {
-              icon: <Icon icon={Send} />,
-              key: 'inviteFriend',
-              label: (
-                <WorkspaceLink to="/settings/referral">{t('userPanel.inviteFriend')}</WorkspaceLink>
-              ),
             },
           ]
         : []),
@@ -182,11 +170,7 @@ const Footer = memo(() => {
             {
               icon: <Icon icon={Download} />,
               key: 'get-app',
-              label: (
-                <WorkspaceLink escape to="/apps">
-                  {t('getApp')}
-                </WorkspaceLink>
-              ),
+              label: <WorkspaceLink to="/settings/about">{t('getApp')}</WorkspaceLink>,
             },
           ]
         : []),
@@ -200,15 +184,6 @@ const Footer = memo(() => {
                   GitHub
                 </a>
               ),
-            },
-          ]
-        : []),
-      ...(footer.showEvalEntry && footer.layout === 'compact'
-        ? [
-            {
-              icon: <Icon icon={FlaskConical} />,
-              key: 'eval',
-              label: <WorkspaceLink to="/eval">Evaluation Lab</WorkspaceLink>,
             },
           ]
         : []),
@@ -228,8 +203,6 @@ const Footer = memo(() => {
     footer.showSettingsEntry,
     footer.layout,
     footer.hideGitHub,
-    footer.showEvalEntry,
-    enableBusinessFeatures,
     handleOpenChangelogModal,
     handleOpenFeedbackModal,
     isDevMode,
@@ -276,14 +249,26 @@ const Footer = memo(() => {
                 <ActionIcon icon={GithubIcon} size={16} title={'GitHub'} />
               </a>
             )}
-            <WorkspaceLink to="/eval">
-              <ActionIcon icon={FlaskConical} size={16} title="Evaluation Lab" />
-            </WorkspaceLink>
+            <UserPanel>
+              <Block
+                clickable
+                align={'center'}
+                justify={'center'}
+                padding={4}
+                variant={'borderless'}
+              >
+                <UserAvatar size={20} />
+              </Block>
+            </UserPanel>
           </Flexbox>
           <ThemeButton placement={'topCenter'} size={16} />
         </Flexbox>
       ) : (
-        <Flexbox horizontal align={'center'} gap={2} padding={8}>
+        // Linear's bottom bar: `?` help anchors the left; the right cluster is
+        // the agent-panel switch followed by the avatar. The toggle rides the
+        // global `showRightPanel` state — the panel itself materializes on the
+        // surfaces that host it (agent conversation, task detail, …).
+        <Flexbox horizontal align={'center'} justify={'space-between'} padding={8}>
           <DropdownMenu
             items={helpMenuItems}
             placement="topLeft"
@@ -291,16 +276,30 @@ const Footer = memo(() => {
           >
             <ActionIcon aria-label={t('userPanel.help')} icon={CircleHelp} size={16} />
           </DropdownMenu>
-          {isDevMode && (
-            <WorkspaceLink to="/settings">
-              <ActionIcon
-                aria-label={t(settingLabelKey)}
-                icon={SettingsIcon}
-                size={16}
-                title={t(settingLabelKey)}
-              />
-            </WorkspaceLink>
-          )}
+          <Flexbox horizontal align={'center'} gap={2}>
+            {isHomeSidebar && <ToggleRightPanelButton id={null} size={16} />}
+            {isDevMode && (
+              <WorkspaceLink to="/settings">
+                <ActionIcon
+                  aria-label={t(settingLabelKey)}
+                  icon={SettingsIcon}
+                  size={16}
+                  title={t(settingLabelKey)}
+                />
+              </WorkspaceLink>
+            )}
+            <UserPanel>
+              <Block
+                clickable
+                align={'center'}
+                justify={'center'}
+                padding={4}
+                variant={'borderless'}
+              >
+                <UserAvatar size={20} />
+              </Block>
+            </UserPanel>
+          </Flexbox>
         </Flexbox>
       )}
       {isHomeSidebar && <Billboard />}

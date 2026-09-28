@@ -171,219 +171,28 @@ describe('shareChatRouter', () => {
   });
 
   describe('execAgent', () => {
-    // The owner never uses the visitor chain, so this entry point demands the
-    // same `link` visibility the per-step revalidation
-    // (`AgentShareModel.isRunStillAuthorized`) demands — otherwise an owner
-    // previewing their own private share could start a run its own step loop
-    // would immediately abort.
-    it('rejects a share that is not link-visible, even for the owner', async () => {
-      mockAccessCheck.mockResolvedValue({ ...share, visibility: 'private' });
+    // Visitor execution is retired (product plan §6.5). This entry point is the
+    // only way to start a share-visitor run, so refusing it is the complete
+    // gate — and it has to refuse before the share is resolved, so that nothing
+    // about a share's existence, visibility or the owner's spend is observable
+    // to a caller.
+    //
+    // The behaviours this block used to pin down — spend admission, the
+    // per-visitor topic and turn caps, creator-scoped dispatch carrying the
+    // share gate, prompt-size bounds, failure redaction, and the
+    // `interactiveStart: false` liveness contract — are all downstream of a run
+    // that can no longer start. They are listed in the rollout doc so that
+    // re-opening the capability restores both the code and this coverage.
+    it('refuses before any share lookup, spend check or dispatch', async () => {
       const caller = await createCaller();
 
       await expect(caller.execAgent({ prompt: 'hi', shareId: 'share-1' })).rejects.toMatchObject({
         code: 'FORBIDDEN',
       });
-      expect(mockExecAgent).not.toHaveBeenCalled();
-    });
 
-    // The spend gate runs before ANY row is created, so a rejected run leaves
-    // no orphan topic / placeholder assistant message behind.
-    it('rejects the run when the spend gate vetoes it, before any topic lookup', async () => {
-      mockSpendGate.mockResolvedValue({ allowed: false });
-      const caller = await createCaller();
-
-      await expect(caller.execAgent({ prompt: 'hi', shareId: 'share-1' })).rejects.toMatchObject({
-        code: 'TOO_MANY_REQUESTS',
-        message: 'ShareSpendLimitExceeded',
-      });
-      expect(mockCountBySender).not.toHaveBeenCalled();
-      expect(mockExecAgent).not.toHaveBeenCalled();
-    });
-
-    it('passes the creator, share and configured cap to the spend gate', async () => {
-      mockAccessCheck.mockResolvedValue({
-        ...share,
-        shareConfig: { ...share.shareConfig, monthlySpendLimit: 25 },
-      });
-      const caller = await createCaller();
-
-      await caller.execAgent({ prompt: 'hi', shareId: 'share-1' });
-
-      expect(mockSpendGate).toHaveBeenCalledWith({
-        agentId: share.agentId,
-        monthlySpendLimit: 25,
-        ownerUserId: OWNER,
-        shareId: 'share-1',
-        visitorUserId: VISITOR,
-      });
-    });
-
-    it('rejects a new-topic run once the visitor topic cap is reached', async () => {
-      mockCountBySender.mockResolvedValue(2);
-      const caller = await createCaller();
-
-      await expect(caller.execAgent({ prompt: 'hi', shareId: 'share-1' })).rejects.toMatchObject({
-        code: 'TOO_MANY_REQUESTS',
-        message: 'ShareTopicLimitExceeded',
-      });
-      expect(mockExecAgent).not.toHaveBeenCalled();
-    });
-
-    it('rejects an existing-topic run once the turn cap is reached', async () => {
-      mockMessageCountByTopic.mockResolvedValue(3);
-      const caller = await createCaller();
-
-      await expect(
-        caller.execAgent({ prompt: 'hi', shareId: 'share-1', topicId: 'tpc_visitor' }),
-      ).rejects.toMatchObject({
-        code: 'TOO_MANY_REQUESTS',
-        message: 'ShareTurnLimitExceeded',
-      });
-      expect(mockMessageCountByTopic).toHaveBeenCalledWith({
-        role: 'user',
-        topicId: 'tpc_visitor',
-      });
-      expect(mockExecAgent).not.toHaveBeenCalled();
-    });
-
-    it("fails closed when the topic is not the visitor's own share topic", async () => {
-      mockFindById.mockResolvedValue({ ...visitorTopic, senderId: 'someone-else' });
-      const caller = await createCaller();
-
-      await expect(
-        caller.execAgent({ prompt: 'hi', shareId: 'share-1', topicId: 'tpc_visitor' }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-      expect(mockExecAgent).not.toHaveBeenCalled();
-    });
-
-    it('dispatches a creator-scoped run carrying the share gate', async () => {
-      const caller = await createCaller();
-
-      await expect(caller.execAgent({ prompt: 'hi', shareId: 'share-1' })).resolves.toMatchObject({
-        operationId: 'op-1',
-      });
-
-      // Service runs as the CREATOR — the share's owner, never the visitor.
-      expect(AiAgentServiceMock).toHaveBeenCalledWith(expect.anything(), OWNER, expect.any(Object));
-      expect(mockExecAgent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // Agent id comes from the share record, not client input.
-          agentId: share.agentId,
-          shareGate: {
-            agentId: share.agentId,
-            shareConfig: share.shareConfig,
-            shareId: share.shareId,
-            visitorUserId: VISITOR,
-          },
-        }),
-      );
-    });
-
-    // Regression for Codex P1 (`shareChat.ts` prompt schema): a
-    // direct RPC caller (bypassing any client-side textarea limit) could
-    // previously submit an HTTP-infrastructure-limit-sized `prompt`, which
-    // `AiAgentService.execAgent` would persist verbatim into the CREATOR's
-    // messages before any topic/turn cap even runs (those gate request
-    // COUNT, not per-request SIZE). The schema now rejects an oversized
-    // prompt before any row is touched.
-    it('rejects an oversized prompt before any DB row is touched', async () => {
-      const caller = await createCaller();
-      const oversizedPrompt = 'a'.repeat(20_001);
-
-      await expect(
-        caller.execAgent({ prompt: oversizedPrompt, shareId: 'share-1' }),
-      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
       expect(mockAccessCheck).not.toHaveBeenCalled();
+      expect(mockSpendGate).not.toHaveBeenCalled();
       expect(mockExecAgent).not.toHaveBeenCalled();
-    });
-
-    it('accepts a prompt right at the size limit', async () => {
-      const caller = await createCaller();
-      const maxPrompt = 'a'.repeat(20_000);
-
-      await expect(
-        caller.execAgent({ prompt: maxPrompt, shareId: 'share-1' }),
-      ).resolves.toMatchObject({ operationId: 'op-1' });
-    });
-
-    // Regression for Codex P2: a startup failure BEFORE Gateway
-    // streaming begins (e.g. the queue/runtime backend returning a raw
-    // diagnostic) must not reach the visitor verbatim — the run executes
-    // under the CREATOR's identity, so `error.message` here can carry
-    // provider/infra detail. `toVisitorSafeStartupError` must project it
-    // through the same `sanitizeVisitorError` classification used elsewhere
-    // in this branch, not echo it back raw.
-    it('redacts a diagnostic startup failure instead of leaking it to the visitor', async () => {
-      const diagnostic = new Error(
-        'ECONNREFUSED connecting to internal-runtime-queue.prod.internal:6379 (provider=openai, apiKey=sk-***)',
-      );
-      mockExecAgent.mockRejectedValueOnce(diagnostic);
-      const caller = await createCaller();
-
-      const rejection = caller.execAgent({ prompt: 'hi', shareId: 'share-1' });
-      await expect(rejection).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
-      await rejection.catch((error: any) => {
-        expect(error.message).not.toContain('internal-runtime-queue');
-        expect(error.message).not.toContain('openai');
-        expect(error.message).not.toContain('sk-');
-      });
-    });
-
-    // Regression for Codex P2 follow-up (`shareChat.ts:249`):
-    // `AiAgentService.execAgent` RESOLVES (rather than throws) with
-    // `{ success: false, error }` when `createOperation` itself fails to
-    // start (see `aiAgent/index.ts`'s `execAgent` catch block) — a case the
-    // surrounding try/catch above never sees because nothing was thrown.
-    // Without a check on the resolved value, that raw `error` (and the
-    // whole "started" shape) would flow straight back to the visitor and
-    // the Gateway client would try to open a WebSocket for an operation
-    // that never began.
-    it('redacts a RESOLVED (not thrown) startup failure and never returns it as a live operation', async () => {
-      const diagnostic =
-        'QStash publish failed: 503 from internal-queue.prod.internal (token=shhh)';
-      mockExecAgent.mockResolvedValueOnce({
-        agentId: share.agentId,
-        assistantMessageId: 'msg_assistant',
-        autoStarted: false,
-        createdAt: new Date().toISOString(),
-        error: diagnostic,
-        message: 'Agent operation failed to start',
-        operationId: 'op-failed',
-        status: 'error',
-        success: false,
-        timestamp: new Date().toISOString(),
-        topicId: 'tpc_visitor',
-        userMessageId: 'msg_user',
-      });
-      const caller = await createCaller();
-
-      const rejection = caller.execAgent({ prompt: 'hi', shareId: 'share-1' });
-      await expect(rejection).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
-      await rejection.catch((error: any) => {
-        expect(error.message).not.toContain('internal-queue');
-        expect(error.message).not.toContain('token=shhh');
-      });
-    });
-
-    it('never sets interactiveStart, so concurrent visitor sends contend on the real runningOperation liveness instead of only the short reservation', async () => {
-      // Regression for Codex P1 (`shareChat.ts:186`): `interactiveStart:
-      // true` makes `TopicModel.tryReserveTaskCallback` skip its `runningOperation`
-      // liveness check entirely (`ignoreRunningOperation`) and contend only on the
-      // short-lived `taskCallbackReservation`, which is released right after the
-      // FIRST operation is created — long before it finishes running. That let a
-      // second concurrent visitor send for the same topic claim the topic-start
-      // reservation too, create its own creator-credentialed operation, and
-      // overwrite the topic's `runningOperation` marker, orphaning the first
-      // operation beyond the reach of `interruptTask` / the revocation sweep. See
-      // `topicStartReservation.shareVisitorConcurrency.race.test.ts` for the
-      // real-Postgres proof of the underlying reservation mechanics this pins.
-      const caller = await createCaller();
-
-      await caller.execAgent({ prompt: 'hi', shareId: 'share-1' });
-
-      expect(mockExecAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ interactiveStart: false }),
-      );
     });
   });
 
@@ -643,7 +452,7 @@ describe('shareChatRouter', () => {
     });
 
     it.each([false, undefined])(
-      'admits visitor procedures when the agent share flag is %s',
+      'admits the retained visitor procedures when the agent share flag is %s',
       async (enableAgentShare) => {
         mockGetFeatureFlagsState.mockResolvedValue({ enableAgentShare });
         mockMessageQueryForVisitor.mockResolvedValue([]);
@@ -653,11 +462,6 @@ describe('shareChatRouter', () => {
         await expect(
           caller.getMessages({ shareId: 'share-1', topicId: 'tpc_visitor' }),
         ).resolves.toEqual([]);
-        await expect(caller.execAgent({ prompt: 'hi', shareId: 'share-1' })).resolves.toMatchObject(
-          {
-            success: true,
-          },
-        );
         await expect(
           caller.interruptTask({ operationId: 'op-1', shareId: 'share-1', topicId: 'tpc_visitor' }),
         ).resolves.toMatchObject({ success: true });
@@ -667,6 +471,14 @@ describe('shareChatRouter', () => {
         await expect(caller.issueGatewayUserToken({ shareId: 'share-1' })).resolves.toEqual({
           token: 'visitor-jwt',
         });
+
+        // Starting a run is the one procedure the flag cannot re-open: it is
+        // retired outright rather than rollout-gated, which is also why the
+        // assertion below about the flag never being read still holds.
+        await expect(caller.execAgent({ prompt: 'hi', shareId: 'share-1' })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+
         expect(mockGetFeatureFlagsState).not.toHaveBeenCalled();
       },
     );

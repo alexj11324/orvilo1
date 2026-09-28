@@ -3,15 +3,18 @@ import type {
   TaskDetailActivityAuthor,
   TaskDetailData,
   TaskDetailSubtask,
+  TaskLabelSummary,
   TaskMoveScope,
   TaskStatus,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
-import { taskKeys } from '@/libs/swr/keys';
+import { isTaskListKey, isWorkQueryTaskRowsKey, taskKeys } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
+import { taskLabelService } from '@/services/taskLabel';
 import { workService } from '@/services/work';
 import type { StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
@@ -35,7 +38,6 @@ type CreatedTask = NonNullable<Awaited<ReturnType<typeof taskService.create>>['d
 type DeletedTask = NonNullable<Awaited<ReturnType<typeof taskService.delete>>['data']>;
 
 // config / heartbeatInterval / heartbeatTimeout are not exposed here:
-// - model/provider goes through configSlice.updateTaskModelConfig
 // - checkpoint goes through configSlice.updateCheckpoint
 // - review goes through configSlice.updateReview
 // - heartbeat config will get a dedicated action once the upstream task scheduler infra is complete
@@ -65,6 +67,8 @@ export interface TaskUpdatePayload {
    * `updateTaskStatus` remains the path for standalone status changes.
    */
   status?: TaskStatus;
+  /** Business-workflow target; resolved to an exact provider state by the server. */
+  workflowCategory?: TaskWorkflowCategory;
 }
 
 export interface TaskUpdateOptions {
@@ -293,7 +297,6 @@ export class TaskDetailSliceActionImpl {
     editorData?: unknown;
     /** Periodic-execution interval in seconds for `automationMode: 'heartbeat'`. */
     heartbeatInterval?: number;
-    /** Bind a goal entity (`goals` row) to the created task. */
     instruction: string;
     name?: string;
     parentTaskId?: string;
@@ -301,7 +304,10 @@ export class TaskDetailSliceActionImpl {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    status?: TaskStatus;
+    teamId?: string;
     visibility?: 'private' | 'public';
+    workflowCategory?: TaskWorkflowCategory;
   }): Promise<CreatedTask | null> => {
     this.#set({ isCreatingTask: true }, false, 'createTask/start');
     try {
@@ -361,8 +367,17 @@ export class TaskDetailSliceActionImpl {
     await this.internal_refreshTaskDetail(taskId);
   };
 
-  removeDependency = async (taskId: string, dependsOnId: string): Promise<void> => {
-    await taskService.removeDependency(taskId, dependsOnId);
+  removeDependency = async (
+    taskId: string,
+    dependsOnId: string,
+    type?: 'blocks' | 'relates',
+  ): Promise<void> => {
+    await taskService.removeDependency(taskId, dependsOnId, type);
+    await this.internal_refreshTaskDetail(taskId);
+  };
+
+  removeIssueRelation = async (taskId: string, relationId: string): Promise<void> => {
+    await taskService.removeIssueRelation(taskId, relationId);
     await this.internal_refreshTaskDetail(taskId);
   };
 
@@ -592,6 +607,60 @@ export class TaskDetailSliceActionImpl {
       reviewerUserId !== undefined
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
+    }
+  };
+
+  /**
+   * Apply or remove one label on a task. The chip flips optimistically; the
+   * server answers with the task's authoritative label set, so a concurrent
+   * editor's toggle is merged rather than clobbered. `label` carries the
+   * picked option's display metadata (name/color) so the optimistic chip can
+   * render before the registry round-trips.
+   */
+  toggleTaskLabel = async (
+    taskId: string,
+    labelId: string,
+    assigned: boolean,
+    label?: TaskLabelSummary,
+  ): Promise<void> => {
+    const current = this.#get().taskDetailMap[taskId];
+    const currentLabels = current?.labels ?? [];
+    const optimistic = assigned
+      ? currentLabels.some((item) => item.id === labelId) || !label
+        ? currentLabels
+        : [...currentLabels, label]
+      : currentLabels.filter((item) => item.id !== labelId);
+
+    if (current) {
+      this.internal_dispatchTaskDetail({
+        id: taskId,
+        type: 'updateTaskDetail',
+        value: { labels: optimistic },
+      });
+    }
+
+    try {
+      const labels = assigned
+        ? await taskLabelService.assignLabel(taskId, labelId)
+        : await taskLabelService.unassignLabel(taskId, labelId);
+      this.internal_dispatchTaskDetail({
+        id: taskId,
+        type: 'updateTaskDetail',
+        value: { labels },
+      });
+      // Row chips on My Issues / saved views / team issues read the
+      // WorkQuery and task:list caches, not the detail map — a label change
+      // must invalidate all of them.
+      await Promise.all([mutate(isWorkQueryTaskRowsKey), mutate(isTaskListKey)]).catch(() => {});
+    } catch (error) {
+      if (current) {
+        this.internal_dispatchTaskDetail({
+          id: taskId,
+          type: 'updateTaskDetail',
+          value: { labels: currentLabels },
+        });
+      }
+      throw error;
     }
   };
 

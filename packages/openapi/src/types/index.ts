@@ -32,8 +32,6 @@ export interface TTarget {
   targetFileId?: string;
   targetKnowledgeBaseId?: string;
   targetMessageId?: string;
-  targetModelId?: string;
-  targetProviderId?: string;
   targetRoleId?: string;
   targetSessionId?: string;
   targetTopicId?: string;
@@ -45,8 +43,6 @@ export interface TBatchTarget {
   targetFileIds?: string[];
   targetKnowledgeBaseIds?: string[];
   targetMessageIds?: string[];
-  targetModelIds?: string[];
-  targetProviderIds?: string[];
   targetRoleIds?: string[];
   targetSessionIds?: string[];
   targetTopicIds?: string[];
@@ -57,7 +53,6 @@ export interface TBatchTarget {
 export * from './agent.type';
 export * from './agent-group.type';
 export * from './api-key.type';
-export * from './chat.type';
 export * from './common.type';
 export * from './eval.type';
 export * from './file.type';
@@ -67,7 +62,6 @@ export * from './message.type';
 export * from './message-translations.type';
 export * from './model.type';
 export * from './permission.type';
-export * from './provider.type';
 export * from './responses.type';
 export * from './role.type';
 export * from './topic.type';

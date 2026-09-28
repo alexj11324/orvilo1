@@ -467,7 +467,7 @@ describe('feedbackActionPlanner', () => {
       target: 'skill',
       // A server execAgent inbound trigger — not client.runtime.* and not the
       // agent-signal self-iteration trigger — so it reaches the deferred lane.
-      trigger: 'bot',
+      trigger: 'api',
     });
 
     const result = await handler.handle(signal, context);

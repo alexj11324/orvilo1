@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   createExecutor: vi.fn(),
   getTopicsForUser: vi.fn(),
   isHourlyMemoryExtractionCancellationRequested: vi.fn(),
+  isUserMemoryExtractionEnabled: vi.fn(),
   triggerProcessTopics: vi.fn(),
   triggerProcessUserTopics: vi.fn(),
 }));
@@ -61,6 +62,10 @@ vi.mock('@/database/server', () => ({
   })),
 }));
 
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  isUserMemoryExtractionEnabled: mocks.isUserMemoryExtractionEnabled,
+}));
+
 vi.mock('../runGuard', () => ({
   checkGuard: vi.fn().mockResolvedValue({ result: true }),
   ensureWorkflowStarted: vi.fn().mockResolvedValue({ started: true }),
@@ -78,6 +83,7 @@ describe('processUserTopicsHandler hourly task behavior', () => {
     mocks.createExecutor.mockResolvedValue({ getTopicsForUser: mocks.getTopicsForUser });
     mocks.getTopicsForUser.mockResolvedValue({ ids: ['t1', 't2'] });
     mocks.isHourlyMemoryExtractionCancellationRequested.mockResolvedValue(false);
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
     mocks.triggerProcessTopics.mockResolvedValue({ workflowRunId: 'process-topics-run' });
     mocks.triggerProcessUserTopics.mockResolvedValue({ workflowRunId: 'next-user-topics-run' });
   });

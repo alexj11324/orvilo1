@@ -105,6 +105,13 @@ interface InboxSection {
  * count, and one absent section never hides another's heading.
  */
 interface HomeInboxProps {
+  /**
+   * Main column only. On the Home dashboard an empty inbox renders nothing
+   * because the input area and recommendations stand around it; a page whose
+   * whole subject is the inbox has nothing to fall back on, so it supplies its
+   * own copy instead of leaving a titled blank column.
+   */
+  emptyState?: ReactNode;
   hideNeedsYou?: boolean;
   /** Running activity belongs in the main column above recent topics. */
   hideRunning?: boolean;
@@ -122,6 +129,7 @@ interface HomeInboxProps {
 
 const HomeInbox = memo<HomeInboxProps>((props) => {
   const {
+    emptyState,
     hideNeedsYou,
     hideRunning,
     hideUnread,
@@ -509,7 +517,7 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   const visibleSections = filterHiddenWidgetSections(sections, hiddenWidgets);
 
   if (visibleSections.length === 0) {
-    if (isMain) return null;
+    if (isMain) return emptyState ?? null;
 
     if (isRail)
       return recommendationsVisible || usageCard ? (

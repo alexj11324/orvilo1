@@ -4,13 +4,19 @@ import { RequestTrigger } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import { createRuntimeProcessorContext } from '../../../runtime/context';
 import { createFeedbackSatisfactionJudgeProcessor } from '../feedbackSatisfaction';
 
-vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  generateObject: vi.fn(),
+}));
+
+vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  AiGenerationService: vi.fn(function () {
+    return { generateObject: mocks.generateObject };
+  }),
 }));
 
 const createUserMessageSource = (
@@ -37,16 +43,13 @@ const createUserMessageSource = (
 });
 
 describe('feedbackSatisfactionJudge', () => {
-  const mockGenerateObject = vi.fn();
+  const mockGenerateObject = mocks.generateObject;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(initModelRuntimeFromDB).mockResolvedValue({
-      generateObject: mockGenerateObject,
-    } as never);
   });
 
-  it('uses the injected judge, passes only message and serializedContext, and skips guards', async () => {
+  it('uses the injected judge, passes the message plus agent binding, and skips guards', async () => {
     const getGuardState = vi.fn().mockResolvedValue({});
     const touchGuardState = vi.fn().mockResolvedValue({});
     const judge = {
@@ -72,8 +75,10 @@ describe('feedbackSatisfactionJudge', () => {
     );
 
     expect(judge.judgeSatisfaction).toHaveBeenCalledWith({
+      agentId: 'agent_1',
       message: 'Cut the padding.',
       serializedContext: 'topic=repo-review;assistant_behavior=verbose',
+      topicId: 'topic_1',
     });
     expect(getGuardState).not.toHaveBeenCalled();
     expect(touchGuardState).not.toHaveBeenCalled();
@@ -136,12 +141,6 @@ describe('feedbackSatisfactionJudge', () => {
       ctx,
     );
 
-    expect(initModelRuntimeFromDB).toHaveBeenCalledWith(
-      {} as OrviloDatabase,
-      'user_1',
-      'openai',
-      undefined,
-    );
     expect(mockGenerateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         messages: [
@@ -159,11 +158,18 @@ describe('feedbackSatisfactionJudge', () => {
         model: 'gpt-test',
       }),
       expect.objectContaining({
+        judgment: {
+          binding: { agentId: 'agent_1' },
+          purpose: 'agentSignal.feedbackSatisfaction',
+        },
+        kind: 'judgment',
         metadata: { trigger: RequestTrigger.AgentSignal },
         tracing: {
+          agentId: 'agent_1',
           promptVersion: 'v1',
           scenario: 'signal_feedback_satisfaction',
           schemaName: 'agent_signal_feedback_satisfaction',
+          topicId: 'topic_1',
         },
       }),
     );
@@ -228,8 +234,10 @@ describe('feedbackSatisfactionJudge', () => {
     );
 
     expect(judge.judgeSatisfaction).toHaveBeenCalledWith({
+      agentId: 'agent_1',
       message: '刚才 chat agent 写的 SKILL.md 草稿可以用，把它转成真正的 skills/bundle。',
       serializedContext: 'topic=repo-review',
+      topicId: 'topic_1',
     });
     expect(result).toEqual(
       expect.objectContaining({
@@ -282,9 +290,11 @@ describe('feedbackSatisfactionJudge', () => {
     );
 
     expect(judge.judgeSatisfaction).toHaveBeenCalledWith({
+      agentId: 'agent_1',
       message:
         'The PR review checklist and release-risk checklist overlap; combine the repeated parts.',
       serializedContext: 'topic=repo-review',
+      topicId: 'topic_1',
     });
     expect(result).toEqual(
       expect.objectContaining({
@@ -337,8 +347,10 @@ describe('feedbackSatisfactionJudge', () => {
     );
 
     expect(judge.judgeSatisfaction).toHaveBeenCalledWith({
+      agentId: 'agent_1',
       message: '以后遇到这种数据库迁移 review，就按刚才那套检查顺序来。',
       serializedContext: 'topic=database-migration-review',
+      topicId: 'topic_1',
     });
     expect(result).toEqual(
       expect.objectContaining({
@@ -386,8 +398,10 @@ describe('feedbackSatisfactionJudge', () => {
     );
 
     expect(judge.judgeSatisfaction).toHaveBeenCalledWith({
+      agentId: 'agent_1',
       message: '这个解释挺有帮助的。',
       serializedContext: 'topic=debugging-help',
+      topicId: 'topic_1',
     });
     expect(result).toEqual(
       expect.objectContaining({

@@ -1,63 +1,37 @@
-import type { AiProviderListItem } from '@orvilo/types';
-import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { getTestDB } from '../../../core/getTestDB';
-import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
 
-const userId = 'test-user-id';
-const mockProviderConfigs = {
-  openai: { enabled: true },
-  anthropic: { enabled: false },
-};
-
-let serverDB: OrviloDatabase;
-let repo: AiInfraRepos;
-
-beforeAll(async () => {
-  serverDB = await getTestDB();
-}, 30000);
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  repo = new AiInfraRepos(serverDB, userId, mockProviderConfigs);
-});
+// vitest.config.server.mts runs with isolate:false, so one file's module mock
+// serves every file; delegate through a per-test-installed global instead.
+vi.mock('@orvilo/business-model-bank/model-config', () => ({
+  loadModels: () =>
+    (
+      globalThis as typeof globalThis & {
+        __orviloTestLoadModels?: () => Promise<unknown[]>;
+      }
+    ).__orviloTestLoadModels?.() ?? Promise.resolve([]),
+}));
 
 describe('AiInfraRepos', () => {
   describe('getAiProviderList', () => {
-    it('should merge builtin and user providers correctly', async () => {
-      const mockUserProviders = [
-        { id: 'openai', enabled: true, name: 'Custom OpenAI' },
-        { id: 'custom', enabled: true, name: 'Custom Provider' },
-      ] as AiProviderListItem[];
+    it('returns the builtin catalog in catalog order', async () => {
+      const repo = new AiInfraRepos({});
+      const list = await repo.getAiProviderList();
 
-      vi.spyOn(repo.aiProviderModel, 'getAiProviderList').mockResolvedValueOnce(mockUserProviders);
-
-      const result = await repo.getAiProviderList();
-
-      expect(result).toBeDefined();
-      expect(result.length).toBeGreaterThan(0);
-      // Verify the merge logic
-      const openaiProvider = result.find((p) => p.id === 'openai');
-      expect(openaiProvider).toMatchObject({ enabled: true, name: 'Custom OpenAI' });
+      const { DEFAULT_MODEL_PROVIDER_LIST } = await import('model-bank/modelProviders');
+      expect(list.map((p) => p.id)).toEqual(DEFAULT_MODEL_PROVIDER_LIST.map((p) => p.id));
+      expect(list.every((p) => p.source === 'builtin')).toBe(true);
     });
 
-    it('should sort providers according to DEFAULT_MODEL_PROVIDER_LIST order', async () => {
-      vi.spyOn(repo.aiProviderModel, 'getAiProviderList').mockResolvedValue([]);
+    it('marks providers enabled only via deployment config', async () => {
+      const repo = new AiInfraRepos({
+        openai: { enabled: true },
+      });
+      const list = await repo.getAiProviderList();
 
-      const result = await repo.getAiProviderList();
-
-      expect(result).toEqual(
-        expect.arrayContaining(
-          DEFAULT_MODEL_PROVIDER_LIST.map((item) =>
-            expect.objectContaining({
-              id: item.id,
-              source: 'builtin',
-            }),
-          ),
-        ),
-      );
+      expect(list.find((p) => p.id === 'openai')?.enabled).toBe(true);
+      expect(list.find((p) => p.id === 'anthropic')?.enabled).toBe(false);
     });
   });
 });

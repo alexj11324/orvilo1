@@ -1,13 +1,10 @@
 import { isDesktop } from '@orvilo/const';
 import { type LucideIcon } from 'lucide-react';
 import {
-  Brain,
   ChartColumnBigIcon,
   Coins,
   CreditCard,
   EthernetPort,
-  Gift,
-  Image as ImageIcon,
   Info,
   KeyboardIcon,
   KeyIcon,
@@ -71,16 +68,11 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
     path: '/settings/billing',
     subPath: 'billing',
   },
-  {
-    icon: Gift,
-    keywords: ['referral', 'rewards', 'invite', 'bonus'],
-    keywordsKey: 'cmdk.keywords.referral',
-    label: 'Referral Rewards',
-    labelKey: 'tab.referral',
-    labelNamespace: 'subscription',
-    path: '/settings/referral',
-    subPath: 'referral',
-  },
+  // There is deliberately no Referral entry here. That settings page was an
+  // empty shell and has been retired, so its URL now resolves to a not-found;
+  // a palette entry would advertise a destination the product no longer has.
+  // (Written without the URL on purpose — the retirement gate in
+  // `retiredSettingsSurfaces.test.ts` scans this file for it as text.)
 ];
 
 /**
@@ -90,8 +82,6 @@ const BUSINESS_SETTINGS_COMMANDS: ContextCommand[] = [
 export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
   agent: [],
   group: [],
-  painting: [],
-  video: [],
   resource: [],
   settings: [
     {
@@ -114,16 +104,7 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       path: '/settings/common',
       subPath: 'common',
     },
-    {
-      icon: Brain,
-      keywords: ['provider', 'llm', 'model', 'ai'],
-      keywordsKey: 'cmdk.keywords.provider',
-      label: 'Model Provider',
-      labelKey: 'tab.provider',
-      labelNamespace: 'setting',
-      path: '/settings/provider',
-      subPath: 'provider',
-    },
+
     {
       icon: KeyboardIcon,
       keywords: ['hotkey', 'shortcut', 'keyboard'],
@@ -133,16 +114,6 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
       labelNamespace: 'setting',
       path: '/settings/hotkey',
       subPath: 'hotkey',
-    },
-    {
-      icon: ImageIcon,
-      keywords: ['image', 'picture', 'photo'],
-      keywordsKey: 'cmdk.keywords.image',
-      label: 'Image Settings',
-      labelKey: 'tab.image',
-      labelNamespace: 'setting',
-      path: '/settings/image',
-      subPath: 'image',
     },
     ...(isDesktop
       ? [
@@ -170,11 +141,13 @@ export const CONTEXT_COMMANDS: Record<ContextType, ContextCommand[]> = {
     },
     {
       icon: KeyIcon,
-      keywords: ['apikey', 'api', 'key', 'token'],
+      keywords: ['apikey', 'api', 'key', 'token', 'signed'],
       keywordsKey: 'cmdk.keywords.apikey',
       label: 'API Keys',
       labelKey: 'tab.apikey',
       labelNamespace: 'auth',
+      // Signed Orvilo TRPC keys (`/settings/apikey`). Not model-provider
+      // credentials — `/settings/provider` stays retired.
       path: '/settings/apikey',
       subPath: 'apikey',
     },

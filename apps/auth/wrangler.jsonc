@@ -1,7 +1,7 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "orvilo-auth",
-  "account_id": "d35842305b91be4b48e06ff9a9ad83f5",
+  "account_id": "d8f6630c7869111a5139bc5ed4d24ace",
   "main": "./build/worker/index.js",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -19,6 +19,12 @@
   },
   "vars": {
     "AUTH_API_BASE": "https://orvilo.aspectlylabs.com",
-    "AUTH_APP_HOME": "https://orvilo.aspectlylabs.com"
-  }
+    "AUTH_APP_HOME": "https://orvilo.aspectlylabs.com",
+    // Clerk publishable key — public by design (embedded in every Clerk client bundle).
+    "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuYXNwZWN0bHlsYWJzLmNvbSQ",
+    "PORTAL_PRODUCT_ORIGIN": "https://orvilo.aspectlylabs.com"
+  },
+  "routes": [
+    { "pattern": "accounts.aspectlylabs.com", "zone_name": "aspectlylabs.com", "custom_domain": true }
+  ]
 }

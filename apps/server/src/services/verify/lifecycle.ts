@@ -182,7 +182,11 @@ const executeVerifyLifecycle = async (
       ).claimEvidenceCollection(run.id);
       if (evidenceClaimed) {
         try {
-          if (isHeterogeneousAgentModelId(op.model) || isHeterogeneousAgentModelId(op.provider)) {
+          if (
+            op.provider === 'orvilo' ||
+            isHeterogeneousAgentModelId(op.model) ||
+            isHeterogeneousAgentModelId(op.provider)
+          ) {
             await recordHeterogeneousDeliverableEvidence({
               db,
               deliverable: params.deliverable,
@@ -273,6 +277,9 @@ const executeVerifyLifecycle = async (
         verifierAgentId,
         workspaceId,
       }),
+      // The LLM judge binds to the same verifier agent (builtin fallback inside
+      // the executor) — it is an explicitly-authorized ACP judgment now.
+      verifierAgentId,
     });
 
     // Settle the run: repair-aware tail, then (on terminal settle) report + drive
@@ -289,6 +296,7 @@ const executeVerifyLifecycle = async (
           deliverable: resolvedDeliverable,
           goal: verificationGoal,
           modelConfig,
+          verifierAgentId,
         },
       },
       workspaceId,

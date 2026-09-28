@@ -2,11 +2,6 @@ import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-interface SendToMessengerParams {
-  enabled: boolean;
-  file: { fileType?: string; id: string; name?: string; size?: number };
-}
-
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: null as string | null,
   confirmModal: vi.fn(),
@@ -14,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   dropTreeNodes: vi.fn(async () => undefined),
   refreshFileList: vi.fn(async () => undefined),
   revalidateTree: vi.fn(async () => undefined),
-  useSendToMessengerMenuItem: vi.fn((_params: SendToMessengerParams) => undefined),
 }));
 
 vi.mock('@lobehub/ui/base-ui', () => ({
@@ -27,9 +21,6 @@ vi.mock('@lobehub/ui/base-ui', () => ({
   },
 }));
 
-vi.mock('@/features/Messenger/PushResourceModal/useSendToMessengerMenuItem', () => ({
-  useSendToMessengerMenuItem: mocks.useSendToMessengerMenuItem,
-}));
 vi.mock('@/hooks/useAppOrigin', () => ({ useAppOrigin: () => 'https://app.example.com' }));
 vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
 vi.mock('@/features/ResourceManager/components/KnowledgeBaseListProvider', () => ({
@@ -70,8 +61,6 @@ const baseParams = {
   url: 'https://storage.example.com/notes.md',
 };
 
-const pushedFile = () => mocks.useSendToMessengerMenuItem.mock.calls.at(-1)![0].file;
-
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.activeWorkspaceId = null;
@@ -102,31 +91,6 @@ describe('useFileItemDropdown — visibility toggles', () => {
       useFileItemDropdown({ ...baseParams, userId: 'another-member', visibility: 'public' } as any),
     );
     expect(keys(result)).not.toContain('makePrivate');
-  });
-});
-
-describe('useFileItemDropdown — messenger push id', () => {
-  it('sends the underlying fileId, not the list id, for a file behind a derived page', () => {
-    // Regression: the unified resource list keys such a row by the PAGE id, but
-    // the server resolves the attachment by `files.id` — pushing sent an id the
-    // file table has never seen and the call failed with NOT_FOUND.
-    renderHook(() => useFileItemDropdown({ ...baseParams, fileId: 'file-id' } as any));
-
-    expect(pushedFile().id).toBe('file-id');
-  });
-
-  it('falls back to the row id when there is no separate fileId', () => {
-    renderHook(() => useFileItemDropdown({ ...baseParams, fileId: undefined } as any));
-
-    expect(pushedFile().id).toBe('resource-id');
-  });
-
-  it('falls back to the row id when fileId is null', () => {
-    // `toTreeItem` carries `fileId` straight from the API, which yields null
-    // (not undefined) for rows with no backing file.
-    renderHook(() => useFileItemDropdown({ ...baseParams, fileId: null } as any));
-
-    expect(pushedFile().id).toBe('resource-id');
   });
 });
 

@@ -3,7 +3,6 @@ import { RequestTrigger } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OrviloDatabase } from '@/database/type';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 
 import {
   classifySkillIntent,
@@ -11,18 +10,22 @@ import {
   SkillIntentClassifierAgentService,
 } from '../skillIntent';
 
-vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  generateObject: vi.fn(),
+}));
+
+vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  AiGenerationService: vi.fn(function () {
+    return { generateObject: mocks.generateObject };
+  }),
 }));
 
 describe('skillIntent classifier', () => {
-  const mockGenerateObject = vi.fn();
+  const mockGenerateObject = mocks.generateObject;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(initModelRuntimeFromDB).mockResolvedValue({
-      generateObject: mockGenerateObject,
-    } as never);
   });
 
   /**
@@ -296,12 +299,6 @@ describe('skillIntent classifier', () => {
       topicLabel: 'login-debugging',
     });
 
-    expect(initModelRuntimeFromDB).toHaveBeenCalledWith(
-      {} as OrviloDatabase,
-      'user_1',
-      'openai',
-      undefined,
-    );
     expect(mockGenerateObject).toHaveBeenCalledWith(
       expect.objectContaining({
         messages: [
@@ -317,6 +314,8 @@ describe('skillIntent classifier', () => {
         model: 'gpt-test',
       }),
       expect.objectContaining({
+        judgment: expect.objectContaining({ purpose: 'agentSignal.skillIntent' }),
+        kind: 'judgment',
         metadata: { trigger: RequestTrigger.AgentSignal },
         tracing: {
           promptVersion: 'v1',

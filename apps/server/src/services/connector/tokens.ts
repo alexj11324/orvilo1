@@ -5,7 +5,7 @@ import debug from 'debug';
 import type { ConnectorModel, DecryptedConnector } from '@/database/models/connector';
 import type { ConnectorCredentials } from '@/database/schemas';
 
-import { refreshConnectorToken } from './oauth';
+import { buildOAuthClientInformation, refreshConnectorToken } from './oauth';
 
 const log = debug('orvilo-server:connector:tokens');
 
@@ -55,7 +55,11 @@ export const ensureFreshConnectorToken = async (
 
     const tokens = await refreshConnectorToken({
       authorizationServerUrl: oidc.issuer,
-      clientInformation: { client_id: oidc.clientId, client_secret: oidc.clientSecret },
+      clientInformation: buildOAuthClientInformation({
+        clientId: oidc.clientId,
+        clientSecret: oidc.clientSecret,
+        tokenEndpointAuthMethod: oidc.tokenEndpointAuthMethod,
+      }),
       metadata,
       refreshToken: creds.refreshToken,
       resource: connector.mcpServerUrl ?? undefined,

@@ -82,6 +82,13 @@ export class TaskRecommendationWriter {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          // The onboarded task-recommender builtin agent is the authorized
+          // binding for this writing judgment.
+          binding: { agentId: writerAgent.id },
+          purpose: 'onboarding.taskRecommendation',
+        },
+        kind: 'judgment',
         metadata: { trigger: RequestTrigger.Onboarding },
         tracing: {
           promptVersion: ONBOARDING_TASK_RECOMMENDATION_PROMPT_VERSION,

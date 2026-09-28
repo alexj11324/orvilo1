@@ -1,10 +1,4 @@
-import { type CategoryItem, type CategoryListQuery } from '@lobehub/market-sdk';
-import {
-  type DiscoverPluginDetail,
-  type IdentifiersResponse,
-  type PluginListResponse,
-  type PluginQueryParams,
-} from '@orvilo/types';
+import { type DiscoverPluginDetail } from '@orvilo/types';
 import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
 
@@ -25,17 +19,6 @@ export class PluginActionImpl {
     void get;
   }
 
-  usePluginCategories = (params: CategoryListQuery): SWRResponse<CategoryItem[]> => {
-    const locale = globalHelpers.getCurrentLanguage();
-    return useSWR(
-      discoverKeys.pluginCategories(locale, params),
-      async () => discoverService.getPluginCategories(params),
-      {
-        revalidateOnFocus: false,
-      },
-    );
-  };
-
   usePluginDetail = ({
     identifier,
     withManifest,
@@ -47,32 +30,6 @@ export class PluginActionImpl {
     return useSWR(
       !identifier ? null : discoverKeys.pluginDetail(locale, identifier, withManifest),
       async () => discoverService.getPluginDetail({ identifier: identifier!, withManifest }),
-      {
-        revalidateOnFocus: false,
-      },
-    );
-  };
-
-  usePluginIdentifiers = (): SWRResponse<IdentifiersResponse> => {
-    return useSWR(
-      discoverKeys.pluginIdentifiers(),
-      async () => discoverService.getPluginIdentifiers(),
-      {
-        revalidateOnFocus: false,
-      },
-    );
-  };
-
-  usePluginList = (params: PluginQueryParams = {}): SWRResponse<PluginListResponse> => {
-    const locale = globalHelpers.getCurrentLanguage();
-    return useSWR(
-      discoverKeys.pluginList(locale, params),
-      async () =>
-        discoverService.getPluginList({
-          ...params,
-          page: params.page ? Number(params.page) : 1,
-          pageSize: params.pageSize ? Number(params.pageSize) : 21,
-        }),
       {
         revalidateOnFocus: false,
       },

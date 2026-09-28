@@ -3,7 +3,6 @@ import type {
   CodexQuotaSnapshot,
   CodexRateLimitResetResult,
 } from '@orvilo/electron-client-ipc';
-import type { HeterogeneousProviderBindingReference } from '@orvilo/heterogeneous-agents';
 import type {
   HeterogeneousAgentModelCatalog,
   HeteroSessionImportMessage,
@@ -30,15 +29,12 @@ class HeterogeneousAgentService {
     initialModel?: string;
     /**
      * Builtin Orvilo engine selection (provider `type: 'orvilo'` runs — the
-     * `agentType` sent here is already the engine's CLI family). Forces the
-     * managed transport — `claude-sdk` → Claude Agent SDK, `codex-app-server`
-     * → Codex app-server — regardless of the Labs toggles.
+     * `agentType` sent here is already the engine's CLI family). Selects the
+     * ACP transport family — `claude-sdk` → claude-code via
+     * `claude-agent-acp`, `codex-app-server` → codex via `codex-acp`.
      */
     orviloEngine?: OrviloEngineKind;
-    providerBinding?: HeterogeneousProviderBindingReference;
     resumeSessionId?: string;
-    useClaudeCodeSdk?: boolean;
-    useCodexAppServer?: boolean;
   }) {
     return this.ipc.heterogeneousAgent.startSession(params);
   }

@@ -69,3 +69,6 @@ packages/sdk/src/generated/
 
 # generated files (regenerate with `codex app-server generate-ts`)
 packages/heterogeneous-agents/src/codex/protocol/generated.ts
+
+# Frozen v4 execution packet — keep original bytes / SHA256SUMS
+docs/implementation/navigation-attention-v4/**

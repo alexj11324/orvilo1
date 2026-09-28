@@ -51,7 +51,7 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ),
 }));
 
-vi.mock('@/features/Acceptance/Workspace/AcceptanceDeleteConfirm', () => ({
+vi.mock('@/features/Acceptance/AcceptanceDeleteConfirm', () => ({
   openAcceptanceDeleteConfirm: (opts: unknown) => mocks.openDeleteConfirm(opts),
 }));
 

@@ -33,7 +33,10 @@ export function isFunctionalSourceChange(path) {
   if (path.endsWith('.md') || path.endsWith('.mdx')) return false;
 
   const segments = path.split('/');
-  return !segments.some((segment) => NON_FUNCTIONAL_SEGMENTS.has(segment)) && !TEST_FILE_PATTERN.test(path);
+  return (
+    !segments.some((segment) => NON_FUNCTIONAL_SEGMENTS.has(segment)) &&
+    !TEST_FILE_PATTERN.test(path)
+  );
 }
 
 export function evaluateDocumentationRequirement(changedFiles) {
@@ -45,8 +48,12 @@ export function evaluateDocumentationRequirement(changedFiles) {
       paths: [file.filename, file.previous_filename].filter(Boolean),
     };
   });
-  const hasDocumentationChange = filesWithPaths.some(({ filename }) => filename.startsWith('docs/'));
-  const functionalFiles = filesWithPaths.flatMap(({ paths }) => paths.filter(isFunctionalSourceChange));
+  const hasDocumentationChange = filesWithPaths.some(({ filename }) =>
+    filename.startsWith('docs/'),
+  );
+  const functionalFiles = filesWithPaths.flatMap(({ paths }) =>
+    paths.filter(isFunctionalSourceChange),
+  );
 
   return {
     functionalFiles,
@@ -57,7 +64,9 @@ export function evaluateDocumentationRequirement(changedFiles) {
 
 export function assertPullRequestFileListIsComplete(fileCount) {
   if (fileCount >= MAX_LISTED_PULL_REQUEST_FILES) {
-    throw new Error('PR has 3,000 or more changed files; unable to verify the documentation requirement.');
+    throw new Error(
+      'PR has 3,000 or more changed files; unable to verify the documentation requirement.',
+    );
   }
 }
 
@@ -70,8 +79,8 @@ async function listPullRequestFiles({ repository, pullRequest, token }) {
       `https://api.github.com/repos/${repository}/pulls/${pullRequest}/files?per_page=100&page=${page}`,
       {
         headers: {
-          Accept: 'application/vnd.github+json',
-          Authorization: `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${token}`,
           'X-GitHub-Api-Version': '2022-11-28',
         },
       },

@@ -1,11 +1,8 @@
 import { Avatar } from '@lobehub/ui/base-ui';
-import { SkillsIcon } from '@lobehub/ui/icons';
+import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
-  AppWindowIcon,
   BellIcon,
-  Blocks,
-  Brain,
   Building2,
   ChartColumnBigIcon,
   Coins,
@@ -14,16 +11,14 @@ import {
   EllipsisIcon,
   FlaskConical,
   HandCoins,
+  Import,
   Info,
   KeyboardIcon,
   KeyIcon,
   KeyRound,
   Map,
-  MessageCircleIcon,
   MonitorSmartphoneIcon,
   PaletteIcon,
-  ScrollText,
-  Sparkles,
   TagIcon,
   Users,
 } from 'lucide-react';
@@ -33,9 +28,13 @@ import { useTranslation } from 'react-i18next';
 import { usePermission } from '@/hooks/usePermission';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
+import {
+  featureFlagsSelectors,
+  serverConfigSelectors,
+  useServerConfigStore,
+} from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
+import { userProfileSelectors } from '@/store/user/selectors';
 import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 
 export enum WorkspaceSettingsGroupKey {
@@ -72,8 +71,8 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
   // up, never to Viewer. Without this the tab leads to a list request that
   // immediately 403s.
   const { allowed: canCreateContent } = usePermission('create_content');
-  const enableOAuthApps = useUserStore(labPreferSelectors.enableOAuthApps);
   const { hideDocs } = useServerConfigStore(featureFlagsSelectors);
+  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
@@ -91,7 +90,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
   return useMemo(
     () =>
       [
-        // Account-level settings (profile / appearance / hotkeys / messenger)
+        // Account-level settings (profile / appearance / hotkeys)
         // follow the user, not the workspace. They are mirrored here so members
         // can reach them without leaving the workspace; the pages are the
         // personal ones.
@@ -115,14 +114,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: KeyboardIcon,
               key: WorkspaceSettingsTabs.Hotkey,
               label: t('tab.hotkey'),
-            },
-            // The System Bot binding is a per-user identity (owned by userId,
-            // not the workspace); reaching a workspace's agents happens via the
-            // scope selector on the page itself.
-            {
-              icon: MessageCircleIcon,
-              key: WorkspaceSettingsTabs.Messenger,
-              label: t('tab.messenger'),
             },
           ],
           key: WorkspaceSettingsGroupKey.Account,
@@ -159,7 +150,10 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
           key: WorkspaceSettingsGroupKey.General,
           title: t('workspaceSetting.group.workspace'),
         },
-        {
+        // The business settings pages only exist on deployments that ship the
+        // business overlay — the route slots stay registered as its injection
+        // points, but the nav must not offer them where the flag is off.
+        enableBusinessFeatures && {
           items: [
             {
               icon: Map,
@@ -197,25 +191,9 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
         },
         {
           items: [
-            // AI provider config (keys/endpoints) is shared workspace infra —
-            // Admin-or-higher, hidden from members entirely.
-            canManageWorkspace && {
-              icon: Brain,
-              key: WorkspaceSettingsTabs.Provider,
-              label: t('tab.provider'),
-            },
-            // Service-model preferences steer the shared workspace model
-            // policy — Admin-or-higher, hidden from members like Provider.
-            canManageWorkspace && {
-              icon: Sparkles,
-              key: WorkspaceSettingsTabs.ServiceModel,
-              label: t('tab.serviceModel'),
-            },
-            {
-              icon: SkillsIcon,
-              key: WorkspaceSettingsTabs.Skill,
-              label: t('workspaceSetting.tab.skill'),
-            },
+            // The workspace skill settings page was retired with the platform's
+            // skill marketplace; the route survives only as a redirect to this
+            // settings root (see `WORKSPACE_SETTINGS_ALIASES`).
             // Label registry is readable by everyone; the page itself keeps
             // management actions behind the admin gate (disabled, not hidden).
             {
@@ -224,17 +202,20 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               label: t('workspaceSetting.tab.labels'),
             },
             {
-              icon: Blocks,
+              icon: McpIcon,
               key: WorkspaceSettingsTabs.Connector,
               label: t('workspaceSetting.tab.connector'),
+            },
+            canManageWorkspace && {
+              icon: Import,
+              key: WorkspaceSettingsTabs.Imports,
+              label: t('workspaceSetting.tab.imports'),
             },
             {
               icon: KeyRound,
               key: WorkspaceSettingsTabs.Creds,
               label: t('tab.creds'),
             },
-            // Messenger lives in the Account group above — it is a per-user
-            // binding, not workspace configuration.
           ].filter(Boolean) as WorkspaceSettingCategoryItem[],
           key: WorkspaceSettingsGroupKey.Agent,
           title: t('workspaceSetting.group.agent'),
@@ -246,11 +227,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: Database,
               key: WorkspaceSettingsTabs.Storage,
               label: t('tab.storage'),
-            },
-            {
-              icon: ScrollText,
-              key: WorkspaceSettingsTabs.AuditLog,
-              label: t('workspaceSetting.tab.auditLog'),
             },
           ].filter(Boolean) as WorkspaceSettingCategoryItem[],
           key: WorkspaceSettingsGroupKey.Admin,
@@ -270,8 +246,7 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
           title: t('group.system'),
         },
         // Developer group sits last, mirroring the personal sidebar: Advanced
-        // and Labs are user preferences (always shown), API Key / OAuth apps
-        // keep their gates.
+        // and Labs are user preferences (always shown), API Key keeps its gate.
         {
           items: [
             {
@@ -283,11 +258,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
               icon: KeyIcon,
               key: WorkspaceSettingsTabs.APIKey,
               label: tAuth('tab.apikey'),
-            },
-            enableOAuthApps && {
-              icon: AppWindowIcon,
-              key: WorkspaceSettingsTabs.OAuthApps,
-              label: tAuth('tab.oauthApps'),
             },
             {
               icon: FlaskConical,
@@ -304,10 +274,10 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
       tAuth,
       tLabs,
       tSubscription,
-      enableOAuthApps,
       canManageWorkspace,
       canViewBilling,
       canCreateContent,
+      enableBusinessFeatures,
       hideDocs,
       avatarUrl,
       username,

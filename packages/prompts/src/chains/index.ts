@@ -14,7 +14,6 @@ export * from './judgeBriefEmit';
 export * from './langDetect';
 export * from './onboardingTaskRecommendation';
 export * from './pickEmoji';
-export * from './rewriteGenerationPrompt';
 export * from './summaryAgentName';
 export * from './summaryDescription';
 export * from './summaryGenerationTitle';

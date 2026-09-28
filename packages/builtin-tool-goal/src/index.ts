@@ -2,6 +2,7 @@ export {
   buildGoalRequirement,
   type GoalCriterionInput,
   resolveGoalAttemptBudget,
+  resolveGoalConcurrency,
   resolveGoalScheduleConfig,
 } from './createGoalInput';
 export { isGoalPrompt } from './goalPrompt';

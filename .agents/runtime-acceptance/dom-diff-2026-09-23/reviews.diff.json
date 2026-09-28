@@ -1,0 +1,1540 @@
+{
+  "candidate": {
+    "url": "app://renderer/ws-useragenttes/reviews",
+    "title": "待审核 · Orvilo",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 2
+    },
+    "capturedAt": "2026-09-23T10:13:31.797Z"
+  },
+  "divergenceScore": 246,
+  "dprMatch": true,
+  "generatedAt": "2026-09-23T10:23:01.295Z",
+  "geometryDeltas": [
+    {
+      "landmark": "sidebar-nav",
+      "deltas": {
+        "y": {
+          "ref": 0,
+          "cand": 38,
+          "delta": 38
+        },
+        "h": {
+          "ref": 900,
+          "cand": 842,
+          "delta": -58
+        }
+      },
+      "worstDelta": 58
+    },
+    {
+      "landmark": "sidebar-nav-item",
+      "deltas": {
+        "x": {
+          "ref": 12,
+          "cand": 8,
+          "delta": -4
+        },
+        "y": {
+          "ref": 61,
+          "cand": 46,
+          "delta": -15
+        },
+        "w": {
+          "ref": 220,
+          "cand": 180,
+          "delta": -40
+        },
+        "h": {
+          "ref": 28,
+          "cand": 32,
+          "delta": 4
+        }
+      },
+      "worstDelta": 40
+    },
+    {
+      "landmark": "header",
+      "deltas": {
+        "x": {
+          "ref": 245,
+          "cand": 0,
+          "delta": -245
+        },
+        "y": {
+          "ref": 9,
+          "cand": 0,
+          "delta": -9
+        },
+        "w": {
+          "ref": 482,
+          "cand": 1440,
+          "delta": 958
+        },
+        "h": {
+          "ref": 88,
+          "cand": 38,
+          "delta": -50
+        }
+      },
+      "worstDelta": 958
+    },
+    {
+      "landmark": "tabs",
+      "deltas": {
+        "x": {
+          "ref": 253,
+          "cand": 257,
+          "delta": 4
+        },
+        "y": {
+          "ref": 53,
+          "cand": 99,
+          "delta": 46
+        },
+        "w": {
+          "ref": 463,
+          "cand": 156,
+          "delta": -307
+        },
+        "h": {
+          "ref": 44,
+          "cand": 34,
+          "delta": -10
+        }
+      },
+      "worstDelta": 307
+    },
+    {
+      "landmark": "list-row",
+      "deltas": {
+        "y": {
+          "ref": 126,
+          "cand": 574,
+          "delta": 448
+        },
+        "w": {
+          "ref": 471,
+          "cand": 481,
+          "delta": 10
+        },
+        "h": {
+          "ref": 40,
+          "cand": 44,
+          "delta": 4
+        }
+      },
+      "worstDelta": 448
+    },
+    {
+      "landmark": "primary-button",
+      "deltas": {
+        "x": {
+          "ref": 655,
+          "cand": 0,
+          "delta": -655
+        },
+        "y": {
+          "ref": 16,
+          "cand": 0,
+          "delta": -16
+        },
+        "w": {
+          "ref": 28,
+          "cand": 1440,
+          "delta": 1412
+        },
+        "h": {
+          "ref": 28,
+          "cand": 900,
+          "delta": 872
+        }
+      },
+      "worstDelta": 1412
+    },
+    {
+      "landmark": "detail-pane",
+      "deltas": {
+        "x": {
+          "ref": 727,
+          "cand": 1024,
+          "delta": 297
+        },
+        "y": {
+          "ref": 9,
+          "cand": 59,
+          "delta": 50
+        },
+        "w": {
+          "ref": 705,
+          "cand": 407,
+          "delta": -298
+        },
+        "h": {
+          "ref": 855,
+          "cand": 799,
+          "delta": -56
+        }
+      },
+      "worstDelta": 298
+    }
+  ],
+  "landmarkSummary": {
+    "matched": 7,
+    "missingInCandidate": 0,
+    "extraInCandidate": 0
+  },
+  "landmarks": {
+    "sidebar-nav": {
+      "status": "matched",
+      "refStrategy": "css:nav",
+      "candStrategy": "layout:leftRail",
+      "refTag": "NAV",
+      "candTag": "ASIDE",
+      "strategyNote": "candidate fell back to layout heuristic (semantic selector absent)",
+      "styleDeltaCount": 8
+    },
+    "sidebar-nav-item": {
+      "status": "matched",
+      "refStrategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]",
+      "candStrategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]",
+      "refTag": "DIV",
+      "candTag": "DIV",
+      "styleDeltaCount": 18
+    },
+    "header": {
+      "status": "matched",
+      "refStrategy": "css:main header, [role=\"main\"] header",
+      "candStrategy": "layout:topBar",
+      "refTag": "HEADER",
+      "candTag": "DIV",
+      "strategyNote": "candidate fell back to layout heuristic (semantic selector absent)",
+      "styleDeltaCount": 15
+    },
+    "tabs": {
+      "status": "matched",
+      "refStrategy": "layout:tabStrip",
+      "candStrategy": "css:[role=\"tablist\"]",
+      "refTag": "DIV",
+      "candTag": "DIV",
+      "styleDeltaCount": 20
+    },
+    "list-row": {
+      "status": "matched",
+      "refStrategy": "layout:firstRow",
+      "candStrategy": "layout:firstRow",
+      "refTag": "A",
+      "candTag": "DIV",
+      "styleDeltaCount": 14
+    },
+    "primary-button": {
+      "status": "matched",
+      "refStrategy": "layout:primaryButton",
+      "candStrategy": "layout:primaryButton",
+      "refTag": "BUTTON",
+      "candTag": "DIV",
+      "styleDeltaCount": 15
+    },
+    "detail-pane": {
+      "status": "matched",
+      "refStrategy": "layout:detailPane",
+      "candStrategy": "layout:detailPane",
+      "refTag": "DIV",
+      "candTag": "DIV",
+      "styleDeltaCount": 10
+    },
+    "empty-state": {
+      "status": "absent-both",
+      "refStrategy": null,
+      "candStrategy": null,
+      "refTag": null,
+      "candTag": null
+    }
+  },
+  "pair": "reviews",
+  "reference": {
+    "url": "https://linear.app/bdiverifier/reviews",
+    "title": "Reviews (17)",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 2
+    },
+    "capturedAt": "2026-09-23T10:21:58.519Z"
+  },
+  "structural": {
+    "nodes": {
+      "reference": 167,
+      "candidate": 243,
+      "delta": 76
+    },
+    "truncated": {
+      "reference": true,
+      "candidate": true
+    },
+    "tagCountDeltas": [
+      {
+        "key": "span",
+        "reference": 60,
+        "candidate": 98,
+        "delta": 38
+      },
+      {
+        "key": "button",
+        "reference": 12,
+        "candidate": 39,
+        "delta": 27
+      },
+      {
+        "key": "div",
+        "reference": 88,
+        "candidate": 103,
+        "delta": 15
+      },
+      {
+        "key": "a",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "ul",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "li",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "main",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "h2",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "section",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "aside",
+        "reference": 0,
+        "candidate": 1,
+        "delta": 1
+      },
+      {
+        "key": "kbd",
+        "reference": 0,
+        "candidate": 1,
+        "delta": 1
+      }
+    ],
+    "roleCountDeltas": [
+      {
+        "key": "img",
+        "reference": 0,
+        "candidate": 62,
+        "delta": 62
+      },
+      {
+        "key": "button",
+        "reference": 15,
+        "candidate": 27,
+        "delta": 12
+      },
+      {
+        "key": "region",
+        "reference": 0,
+        "candidate": 6,
+        "delta": 6
+      },
+      {
+        "key": "status",
+        "reference": 5,
+        "candidate": 1,
+        "delta": -4
+      },
+      {
+        "key": "presentation",
+        "reference": 0,
+        "candidate": 4,
+        "delta": 4
+      },
+      {
+        "key": "heading",
+        "reference": 2,
+        "candidate": 0,
+        "delta": -2
+      },
+      {
+        "key": "tab",
+        "reference": 0,
+        "candidate": 2,
+        "delta": 2
+      },
+      {
+        "key": "separator",
+        "reference": 0,
+        "candidate": 1,
+        "delta": 1
+      },
+      {
+        "key": "tablist",
+        "reference": 0,
+        "candidate": 1,
+        "delta": 1
+      }
+    ],
+    "missingSections": [
+      {
+        "role": null,
+        "aria": "BDI_Verifier Workspace Menu",
+        "tag": "button",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": null,
+        "aria": "Search workspace",
+        "tag": "button",
+        "text": null,
+        "depth": 9
+      },
+      {
+        "role": null,
+        "aria": "Create new issue",
+        "tag": "button",
+        "text": null,
+        "depth": 9
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 12
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": null,
+        "aria": "Join a team",
+        "tag": "button",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": null,
+        "aria": "Enable cycles for team…",
+        "tag": "span",
+        "text": "Cycles",
+        "depth": 12
+      },
+      {
+        "role": null,
+        "aria": "Open Help menu",
+        "tag": "button",
+        "text": null,
+        "depth": 6
+      },
+      {
+        "role": null,
+        "aria": "Menu",
+        "tag": "button",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": null,
+        "aria": "Add filter",
+        "tag": "button",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": null,
+        "aria": "Display options",
+        "tag": "button",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": "heading",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": "heading",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": null,
+        "aria": "Dismiss",
+        "tag": "button",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": null,
+        "aria": "Agent",
+        "tag": "button",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": null,
+        "aria": "Chat history",
+        "tag": "button",
+        "text": null,
+        "depth": 6
+      },
+      {
+        "role": null,
+        "aria": "Notifications alt+T",
+        "tag": "section",
+        "text": null,
+        "depth": 3
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 2
+      }
+    ],
+    "extraSections": [
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 6
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      }
+    ]
+  },
+  "styleDeltas": [
+    {
+      "landmark": "sidebar-nav",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "color": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        }
+      },
+      "meaningfulCount": 8
+    },
+    {
+      "landmark": "sidebar-nav-item",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "color": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderRadius": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "10px",
+          "delta": 10
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px 8px 2px 2px"
+        },
+        "paddingTop": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px",
+          "delta": 2
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "8px",
+          "delta": 8
+        },
+        "paddingBottom": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px",
+          "delta": 2
+        },
+        "paddingLeft": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px",
+          "delta": 2
+        },
+        "gap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "8px"
+        },
+        "rowGap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "8px"
+        },
+        "columnGap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "8px"
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "display": {
+          "severity": "style",
+          "ref": "block",
+          "cand": "flex"
+        }
+      },
+      "meaningfulCount": 18
+    },
+    {
+      "landmark": "header",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "background": {
+          "severity": "style",
+          "ref": "#121213 none repeat scroll 0% 0% / auto padding-box border-box",
+          "cand": "#00000000 none repeat scroll 0% 0% / auto padding-box border-box",
+          "kind": "color"
+        },
+        "backgroundColor": {
+          "severity": "style",
+          "ref": "#121213",
+          "cand": "#00000000",
+          "kind": "color"
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "0px 12px"
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "12px",
+          "delta": 12
+        },
+        "paddingLeft": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "12px",
+          "delta": 12
+        },
+        "gap": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "0px",
+          "delta": 12
+        },
+        "rowGap": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "0px",
+          "delta": 12
+        },
+        "columnGap": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "0px",
+          "delta": 12
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        }
+      },
+      "meaningfulCount": 15
+    },
+    {
+      "landmark": "tabs",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "background": {
+          "severity": "style",
+          "ref": "#00000000 none repeat scroll 0% 0% / auto padding-box border-box",
+          "cand": "#000000 none repeat scroll 0% 0% / auto padding-box border-box",
+          "kind": "color"
+        },
+        "backgroundColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#000000",
+          "kind": "color"
+        },
+        "borderRadius": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "12px",
+          "delta": 12
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "3px",
+          "delta": 3
+        },
+        "paddingTop": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "3px",
+          "delta": 3
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "3px",
+          "delta": 3
+        },
+        "paddingBottom": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "3px",
+          "delta": 3
+        },
+        "paddingLeft": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "3px",
+          "delta": 3
+        },
+        "gap": {
+          "severity": "style",
+          "ref": "6px",
+          "cand": "4px",
+          "delta": 2
+        },
+        "rowGap": {
+          "severity": "style",
+          "ref": "6px",
+          "cand": "4px",
+          "delta": 2
+        },
+        "columnGap": {
+          "severity": "style",
+          "ref": "6px",
+          "cand": "4px",
+          "delta": 2
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "display": {
+          "severity": "style",
+          "ref": "flex",
+          "cand": "inline-flex"
+        },
+        "position": {
+          "severity": "style",
+          "ref": "static",
+          "cand": "relative"
+        }
+      },
+      "meaningfulCount": 20
+    },
+    {
+      "landmark": "list-row",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "borderRadius": {
+          "severity": "style",
+          "ref": "8px",
+          "cand": "12px",
+          "delta": 4
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "0px 8px 0px 0px"
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "8px",
+          "delta": 8
+        },
+        "gap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "0px"
+        },
+        "rowGap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "0px"
+        },
+        "columnGap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "0px"
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "display": {
+          "severity": "style",
+          "ref": "block",
+          "cand": "flex"
+        }
+      },
+      "meaningfulCount": 14
+    },
+    {
+      "landmark": "primary-button",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "fontWeight": {
+          "severity": "style",
+          "ref": "500",
+          "cand": "400"
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "14px"
+        },
+        "color": {
+          "severity": "style",
+          "ref": "#E3E4E6",
+          "cand": "#FFFFFF",
+          "kind": "color"
+        },
+        "borderRadius": {
+          "severity": "style",
+          "ref": "9999px",
+          "cand": "0px",
+          "delta": 9999
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px 2px",
+          "cand": "0px"
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "2px",
+          "cand": "0px",
+          "delta": 2
+        },
+        "paddingLeft": {
+          "severity": "style",
+          "ref": "2px",
+          "cand": "0px",
+          "delta": 2
+        },
+        "borderWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderTopWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderRightWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderBottomWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderLeftWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "display": {
+          "severity": "style",
+          "ref": "flex",
+          "cand": "block"
+        },
+        "position": {
+          "severity": "style",
+          "ref": "relative",
+          "cand": "static"
+        }
+      },
+      "meaningfulCount": 15
+    },
+    {
+      "landmark": "detail-pane",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "background": {
+          "severity": "style",
+          "ref": "#00000000 none repeat scroll 0% 0% / auto padding-box border-box",
+          "cand": "#0D0D0D none repeat scroll 0% 0% / auto padding-box border-box",
+          "kind": "color"
+        },
+        "backgroundColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0D0D0D",
+          "kind": "color"
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "position": {
+          "severity": "style",
+          "ref": "relative",
+          "cand": "static"
+        }
+      },
+      "meaningfulCount": 10
+    }
+  ],
+  "text": {
+    "shared": 2,
+    "refOnlyCopy": [
+      "Skip to content",
+      "BDI_Verifier Workspace Menu",
+      "BD",
+      "BDI_Verifier",
+      "Search workspace",
+      "Create new issue",
+      "Inbox",
+      "My issues",
+      "Reviews",
+      "Agent",
+      "Drafts",
+      "Workspace",
+      "Projects",
+      "Views",
+      "Show more links",
+      "More",
+      "Favorites",
+      "Your teams",
+      "Join a team",
+      "orvilo",
+      "Team menu",
+      "Home",
+      "Triage",
+      "Issues",
+      "Try",
+      "Initiatives",
+      "Cycles",
+      "Open Help menu",
+      "Add filter",
+      "Display options",
+      "For you",
+      "Created",
+      "Ready to merge",
+      "fix(ci): name the GitHub secret in the deploy pre-flight error",
+      "9d",
+      "Make 纸白 and 米黄 look like different papers",
+      "6w",
+      "Fix leftover import P2s: session trust, S3 resign, auth match",
+      "codex/daymark stack 01 trellis removal",
+      "7w",
+      "test: add UI automation and smoke flows",
+      "Optimize notebook for local setup and disable cloud platform sections",
+      "6mo",
+      "Add drug sales backtesting analysis with visualization",
+      "Habits: fix heatmap gutters and floating month day",
+      "fix: use native Liquid Glass for the detail date",
+      "docs: align product and interaction guidance",
+      "feat: update localization for redesigned flows",
+      "feat: redesign the event creation and detail experience",
+      "feat: expand the event background picker",
+      "feat: refine widgets and Live Activity layouts",
+      "feat: refine subscriptions and premium paywall",
+      "refactor: harden local-first integration services",
+      "feat: add event style foundations and display fonts",
+      "Created by you",
+      "🔒 ci(vercel): gate branch deployments on green CI",
+      "3d",
+      "🔥 chore(retire): drop the skill-store prompt wiring and its dead locale keys",
+      "4d",
+      "🔧 ci(release): prepare protected releases and standalone desktop publishing"
+    ],
+    "candOnlyCopy": [
+      "项目",
+      "待审核",
+      "收件箱",
+      "团队",
+      "视图",
+      "我的事项",
+      "草稿",
+      "任务",
+      "AG",
+      "Agent Testing User's workspace",
+      "助理",
+      "工作区",
+      "更多",
+      "收藏",
+      "你的团队",
+      "S",
+      "Parity Shipping",
+      "团队菜单",
+      "主页",
+      "分诊",
+      "P",
+      "Parity Test Team",
+      "帮助中心",
+      "待你处理",
+      "我发起的",
+      "拉取请求",
+      "连接 GitHub 后查看拉取请求审核。未连接时不会显示为空队列。",
+      "连接 GitHub",
+      "产品内审批",
+      "待审核的 PR",
+      "Review PR #118: Timeline display options",
+      "alexj11324/orvilo#118",
+      "已暂停",
+      "审核中",
+      "Review: board keyboard navigation notes",
+      "AT",
+      "9月22日",
+      "Review: migration dry-run output",
+      "Review: inbox batch mutation results",
+      "9月21日",
+      "Voyager: review readiness report",
+      "9月20日",
+      "Apollo: review board keyboard flow",
+      "9月19日",
+      "Apollo: review inbox batch mutations",
+      "9月18日",
+      "话题",
+      "问我关于你的任务",
+      "从任何想法开始… 按 换行...",
+      "avatar",
+      "DeepSeek V4 Flash",
+      "Agent Mock",
+      "Feature Flags",
+      "Render Gallery",
+      "Tab Routers",
+      "/ws-useragenttes/reviews",
+      "144 FPS",
+      "CLS 0.001",
+      "R2.0G · J450.2M",
+      "CPU 9.7%"
+    ],
+    "refOnlyData": ["2"],
+    "candOnlyData": ["6", "PARITY-6", "PARITY-7", "PARITY-5", "VYG-4", "APX-7", "APX-6", "1/19"],
+    "counts": {
+      "refOnlyCopy": 69,
+      "candOnlyCopy": 61,
+      "refOnlyData": 1,
+      "candOnlyData": 8
+    }
+  },
+  "viewportMatch": true
+}

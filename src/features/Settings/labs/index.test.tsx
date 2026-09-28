@@ -102,10 +102,12 @@ describe('Labs settings page', () => {
     expect(within(splitView).getByText('stage.alpha.label')).toBeDefined();
   });
 
-  it('renders the OAuth Apps lab toggle', () => {
+  it('no longer offers the retired OAuth Apps console as a lab toggle', () => {
     renderPage();
 
-    expect(screen.getByText('features.oauthApps.title')).toBeDefined();
+    // The self-built OAuth app console was retired (hidden-surface-retirement
+    // HS-50), so its toggle must not come back as a way to re-open the surface.
+    expect(screen.queryByText('features.oauthApps.title')).toBeNull();
   });
 
   it('renders the topic acceptance (tray) lab toggle', () => {
@@ -146,8 +148,8 @@ describe('Labs settings page', () => {
   it('marks internal-testing experiments as alpha and usable ones as beta', () => {
     renderPage();
 
-    const claudeCodeSdk = screen.getByText('features.claudeCodeSdk.title');
-    expect(within(claudeCodeSdk).getByText('stage.alpha.label')).toBeDefined();
+    const agentGraphConfig = screen.getByText('features.agentGraphConfig.title');
+    expect(within(agentGraphConfig).getByText('stage.alpha.label')).toBeDefined();
 
     const inputMarkdown = screen.getByText('features.inputMarkdown.title');
     expect(within(inputMarkdown).getByText('stage.beta.label')).toBeDefined();

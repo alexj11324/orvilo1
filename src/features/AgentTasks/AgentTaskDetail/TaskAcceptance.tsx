@@ -26,13 +26,13 @@ import {
   useAcceptanceBundle,
   useAcceptanceBySubject,
 } from '@/features/Acceptance';
+import { openAcceptanceDeleteConfirm } from '@/features/Acceptance/AcceptanceDeleteConfirm';
 import {
   AcceptanceBundleGate,
   AcceptanceScope,
 } from '@/features/Acceptance/Viewer/AcceptanceScope';
 import AcceptanceCheckInventory from '@/features/Acceptance/Viewer/Checks/AcceptanceCheckInventory';
 import AcceptanceDecision from '@/features/Acceptance/Viewer/Review/AcceptanceDecision';
-import { openAcceptanceDeleteConfirm } from '@/features/Acceptance/Workspace/AcceptanceDeleteConfirm';
 import { usePermission } from '@/hooks/usePermission';
 import { verifyService } from '@/services/verify';
 import { useChatStore } from '@/store/chat';

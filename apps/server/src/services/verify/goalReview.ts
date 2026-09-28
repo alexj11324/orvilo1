@@ -104,6 +104,9 @@ export const reviewGoalDelivery = async (
             checkResultId,
             includeTextEvidence: true,
             instructionDocumentId: check.planItem?.documentId,
+            // The Acceptance's pinned verifier is the review's authorized
+            // judgment binding (builtin verify agent + env are the fallbacks).
+            judgmentAgentId: acceptance.config?.verifierAgentId,
             modelConfig,
             requirement: acceptance.requirement,
             surface: check.surface,

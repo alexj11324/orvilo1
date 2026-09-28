@@ -1,7 +1,7 @@
 import type { ChaosExperiment, ChaosRunContext } from '@achaos/core';
 import { createSeededRandom } from '@achaos/core';
-import type { AgentHookEvent, AgentHookType } from '@orvilo/agent-runtime/src/types/hooks';
-import { executeToolWithRetry } from '@orvilo/agent-runtime/src/utils/runtimeRetry';
+import type { AgentHookEvent, AgentHookType } from '@orvilo/agent-execution';
+import { executeToolWithRetry } from '@orvilo/agent-execution';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createRuntimeChaosAdapter } from './adapter';

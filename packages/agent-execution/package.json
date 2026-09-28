@@ -1,0 +1,17 @@
+{
+  "name": "@orvilo/agent-execution",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest --coverage --silent='passed-only'"
+  },
+  "dependencies": {
+    "@orvilo/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@orvilo/context-engine": "workspace:*",
+    "@orvilo/types": "workspace:*"
+  }
+}

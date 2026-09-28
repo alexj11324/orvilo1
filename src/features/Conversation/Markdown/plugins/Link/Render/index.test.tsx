@@ -353,7 +353,7 @@ describe('Link Render — internal entities', () => {
     expect(mockOpenAgentDetail).toHaveBeenCalledWith('agt_1');
   });
 
-  it('hard-navigates personal verify pages into the Workbench runtime', () => {
+  it('keeps a retired personal verify link in-router instead of ejecting into Workbench', () => {
     const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => undefined);
 
     const { getByRole } = renderLink({
@@ -364,9 +364,14 @@ describe('Link Render — internal entities', () => {
 
     fireEvent.click(getByRole('link', { name: 'Verify report' }));
 
-    expect(assign).toHaveBeenCalledWith('/verify/run-1');
+    // The standalone `/verify/:runId` page was retired with the standalone
+    // platform, so this link must no longer leave the SPA for the Workbench
+    // runtime — and it must not dead-end into a blank page either. It opens in
+    // the portal panel, the same destination a workspace-scoped verify link
+    // already used.
+    expect(assign).not.toHaveBeenCalled();
+    expect(mockOpenVerifyReport).toHaveBeenCalledWith('run-1');
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(mockOpenVerifyReport).not.toHaveBeenCalled();
   });
 
   it('opens a verify link for the active workspace in the report portal', () => {

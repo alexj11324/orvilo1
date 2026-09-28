@@ -5,6 +5,12 @@
  * plus any producer-mounted extra tools (e.g. in-app browser control).
  */
 export {
+  type AcpBuiltinToolCaller,
+  buildAcpBuiltinToolExtras,
+  decodeAcpBuiltinToolSpecs,
+} from './acpBuiltinToolExtras';
+export { jsonSchemaToZodRawShape } from './jsonSchemaToZod';
+export {
   type McpExtraTool,
   type McpToolResult,
   OrviloBuiltinMcpServer,

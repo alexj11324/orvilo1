@@ -2,10 +2,9 @@
 
 import type { IconProps } from '@lobehub/ui';
 import { Icon, Popover } from '@lobehub/ui';
-import { Tag, toast } from '@lobehub/ui/base-ui';
+import { Tag, toast, Upload } from '@lobehub/ui/base-ui';
 import { GlobeOffIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { validateVideoFileSize } from '@orvilo/utils/client';
-import { Upload } from 'antd';
 import { css, cssVar, cx } from 'antd-style';
 import {
   Brain,
@@ -488,7 +487,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
         label: (
           <Upload
             multiple
-            showUploadList={false}
+
             beforeUpload={async (file) => {
               if (file.type.startsWith('image') && !canUploadImage) return false;
               if (file.type.startsWith('video') && !canUploadVideo) return false;

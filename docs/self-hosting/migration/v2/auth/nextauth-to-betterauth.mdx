@@ -359,8 +359,8 @@ For identity providers like Casdoor or Logto, users may not have an email config
 Solution:
 
 1. First configure the Webhook in Orvilo to sync user data from the identity provider:
-   - [Casdoor Webhook Configuration](/docs/self-hosting/auth/providers/casdoor)
-   - [Logto Webhook Configuration](/docs/self-hosting/auth/providers/logto)
+   - Configure the Casdoor webhook
+   - Configure the Logto webhook
 2. Then configure the user's email in the identity provider's admin console
 3. The user data will be synced to Orvilo via Webhook, and the user can then log
 
@@ -373,5 +373,5 @@ Solution:
 
   <Card href={'/docs/self-hosting/environment-variables/auth'} title={'Auth Environment Variables'} />
 
-  <Card href={'/docs/self-hosting/auth/legacy'} title={'Legacy Authentication (NextAuth & Clerk)'} />
+  <Card href={'/docs/self-hosting/auth/legacy'} title={'Legacy Authentication (NextAuth & Better Auth)'} />
 </Cards>

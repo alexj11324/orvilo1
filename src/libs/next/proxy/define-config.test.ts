@@ -1,15 +1,14 @@
 /**
  * @vitest-environment node
  */
-import { readFile } from 'node:fs/promises';
-
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { defineConfig } from './define-config';
 
-vi.mock('@/auth', () => ({
-  auth: { api: { getSession: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) } },
+vi.mock('@/database/core/db-adaptor', () => ({ getServerDB: vi.fn(async () => ({})) }));
+vi.mock('@/server/services/auth', () => ({
+  resolveAuthSessionFromHeaders: vi.fn().mockResolvedValue({ userId: 'user-1' }),
 }));
 
 const { middleware } = defineConfig();
@@ -52,18 +51,42 @@ describe('defineConfig locale path-traversal hardening', () => {
       /^\/spa\/[^/]+\/oauth-preview-e2e-20260716\/settings\/oauth-apps$/,
     );
   });
+
+  it('passes the Linear OAuth callback through to the Next route handler', async () => {
+    const response = await middleware(
+      new NextRequest('http://localhost:3010/oauth/linear/callback?code=code&state=state'),
+    );
+
+    expect(response?.headers.get('x-middleware-next')).toBe('1');
+    expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
+  });
+
+  it('passes the GitHub OAuth callback through to the Next route handler', async () => {
+    const response = await middleware(
+      new NextRequest('http://localhost:3010/oauth/github/callback?code=code&state=state'),
+    );
+
+    expect(response?.headers.get('x-middleware-next')).toBe('1');
+    expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
+  });
 });
 
 describe('defineConfig Workbench SPA rewrite', () => {
-  it('routes verify through Workbench for every user agent', async () => {
+  // The standalone `/verify` tree used to be rewritten to Workbench for every
+  // user agent. It is retired, so the path no longer reaches Workbench on any
+  // device; it falls through to the main SPA, whose retired-root reservation
+  // guard owns it (see `sharedMainAreaChildren`).
+  it('no longer routes the retired verify tree to Workbench', async () => {
     const mobileVerify = await run(
       'http://localhost:3010/verify/run-1?hl=en-US',
       MOBILE_USER_AGENT,
     );
     const desktopVerify = await run('http://localhost:3010/verify/run-1?hl=en-US');
 
-    expect(new URL(mobileVerify!).pathname).toBe('/spa-workbench/en-US/verify/run-1');
-    expect(new URL(desktopVerify!).pathname).toBe('/spa-workbench/en-US/verify/run-1');
+    for (const rewritten of [mobileVerify, desktopVerify]) {
+      expect(new URL(rewritten!).pathname).toMatch(/^\/spa\/[^/]+\/verify\/run-1$/);
+      expect(new URL(rewritten!).pathname).not.toContain('/spa-workbench/');
+    }
   });
 
   it('keeps acceptance on the main SPA', async () => {
@@ -114,21 +137,36 @@ describe('defineConfig Share SPA rewrite', () => {
   });
 });
 
-describe('Acceptance installation guide', () => {
-  it('serves the public Markdown asset without authentication or SPA rewrites', async () => {
-    const { auth } = await import('@/auth');
-    vi.mocked(auth.api.getSession).mockClear();
+describe('defineConfig backend subtree pass-through', () => {
+  // The matcher's workspace-slug lookahead keeps `/market/agent/**` and
+  // `/api/agent/**` unmatched today — this locks the middleware-level contract
+  // as a safety net: those are Bearer-token APIs (`MarketService`, Hono) whose
+  // auth lives in the route handlers, so the middleware must hand them through
+  // untouched and an unauthenticated API client must never see a 302 to
+  // /signin.
+  it('passes /market/agent and /api/agent through without rewrite or session gate', async () => {
+    const { resolveAuthSessionFromHeaders } = await import('@/server/services/auth');
+    vi.mocked(resolveAuthSessionFromHeaders).mockClear();
+
+    for (const pathname of ['/market/agent', '/market/agent/agent-1', '/api/agent/abc']) {
+      const response = await middleware(new NextRequest(`http://localhost:3010${pathname}`));
+
+      expect(response?.headers.get('x-middleware-next'), pathname).toBe('1');
+      expect(response?.headers.get('x-middleware-rewrite'), pathname).toBeNull();
+      expect(response?.headers.get('location'), pathname).toBeNull();
+    }
+
+    expect(resolveAuthSessionFromHeaders).not.toHaveBeenCalled();
+  });
+});
+
+describe('retired acceptance installation guide', () => {
+  it('no longer bypasses the proxy for the withdrawn asset', async () => {
     const response = await middleware(new NextRequest('http://localhost:3010/acceptance/skill.md'));
 
-    expect(response?.headers.get('x-middleware-next')).toBe('1');
-    expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
-    expect(response?.headers.get('location')).toBeNull();
-    expect(auth.api.getSession).not.toHaveBeenCalled();
-
-    const guide = await readFile('public/acceptance/skill.md', 'utf8');
-    expect(guide).toContain('npm install -g @orvilo/cli');
-    expect(guide).toContain('lh login');
-    expect(guide).toContain('lh acceptance install');
-    expect(guide).toContain('.agents/skills/acceptance/SKILL.md');
+    // The public install guide was retired with the standalone Acceptance
+    // platform. The path must fall through to normal SPA handling instead of
+    // keeping the removed unauthenticated pass-through from `public/acceptance/`.
+    expect(response?.headers.get('x-middleware-next')).not.toBe('1');
   });
 });

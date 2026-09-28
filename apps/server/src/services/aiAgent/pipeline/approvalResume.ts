@@ -1,4 +1,4 @@
-import type { AgentRuntimeContext } from '@orvilo/agent-runtime';
+import type { AgentRuntimeContext } from '@orvilo/agent-execution';
 import type { ExecAgentResult, MessagePluginItem } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
@@ -8,7 +8,7 @@ import type { AgentOperationModel } from '@/database/models/agentOperation';
 import type { HumanApprovalResolution, MessageModel } from '@/database/models/message';
 import { HumanApprovalAlreadyResolvedError } from '@/database/models/message';
 import { signUserJWT } from '@/libs/trpc/utils/internalJwt';
-import type { AgentRuntimeService } from '@/server/services/agentRuntime';
+import type { AgentRuntimeService } from '@/server/services/agentExecution';
 
 import type { InternalExecAgentParams } from '../types';
 

@@ -1,10 +1,9 @@
 'use client';
 
 import { Center } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
+import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import { type ErrorShape, type ImportFileUploadState } from '@orvilo/types';
 import { ImportStage } from '@orvilo/types';
-import { Upload } from 'antd';
 import { createStaticStyles, cx } from 'antd-style';
 import { ImportIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
@@ -197,7 +196,6 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
               beforeUpload={handleBeforeUpload}
               className={cx(styles.wrapper)}
               maxCount={1}
-              showUploadList={false}
             >
               <Button>{t('importModal.error.selectAnotherFile')}</Button>
             </Upload>
@@ -211,7 +209,6 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
         beforeUpload={handleBeforeUpload}
         className={cx(styles.wrapper)}
         maxCount={1}
-        showUploadList={false}
       >
         {/* a very hackable solution: add a pseudo before to have a large hot zone */}
         <div className={cx(styles.children)}>{children}</div>

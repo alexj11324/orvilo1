@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
 
@@ -45,7 +45,7 @@ const {
 // publishAgentRuntimeInit so the agent-gateway DO reports `running` on a later reconnect. Stub the factory so
 // the assertion below can verify the init, and so the real one (which probes
 // Redis synchronously) doesn't throw a server-env error in the test env.
-vi.mock('@/server/modules/AgentRuntime/factory', () => ({
+vi.mock('@/server/modules/AgentExecution/factory', () => ({
   createAgentStateManager: vi.fn(function () {
     return {
       createOperationMetadata: mockCreateOperationMetadata,
@@ -102,7 +102,10 @@ vi.mock('@/database/models/message', () => ({
 }));
 
 const heteroAgentConfig = {
-  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+  agencyConfig: {
+    executionTarget: 'sandbox',
+    heterogeneousProvider: { type: 'claude-code' },
+  },
   chatConfig: {},
   files: [],
   id: 'agent-1',
@@ -151,6 +154,7 @@ const topicMock = {
   appendRunningOperationChild: vi.fn().mockResolvedValue(true),
   create: vi.fn().mockResolvedValue({ id: 'topic-1', metadata: undefined }),
   findById: vi.fn().mockResolvedValue(undefined),
+  findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
   patchRunningOperation: vi.fn().mockResolvedValue(true),
   settleRunningOperation: vi.fn().mockResolvedValue({ status: 'settled' }),
   releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
@@ -211,7 +215,7 @@ vi.mock('@/server/services/document', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -259,6 +263,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
     recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);
     topicMock.appendRunningOperationChild.mockResolvedValue(true);
@@ -283,7 +288,10 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
     mockCreateOperationMetadata.mockResolvedValue(undefined);
     mockIngestAttachment.mockReset();
-    heteroAgentConfig.agencyConfig = { heterogeneousProvider: { type: 'claude-code' } } as any;
+    heteroAgentConfig.agencyConfig = {
+      executionTarget: 'sandbox',
+      heterogeneousProvider: { type: 'claude-code' },
+    } as any;
     heteroAgentConfig.model = 'claude-code';
     heteroAgentConfig.provider = 'anthropic';
     delete (heteroAgentConfig as any).userId;
@@ -505,6 +513,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
   it('applies an Orvilo topic pin before resolving the CLI family for sandbox dispatch', async () => {
     heteroAgentConfig.agencyConfig = {
+      executionTarget: 'sandbox',
       heterogeneousProvider: {
         engine: 'claude-sdk',
         model: 'agent-model',
@@ -690,45 +699,6 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       }),
     );
   });
-
-  it.each(['claude-code', 'codex'] as const)(
-    'should reject %s provider binding before sandbox or device dispatch',
-    async (type) => {
-      heteroAgentConfig.agencyConfig = {
-        executionTarget: 'sandbox',
-        heterogeneousProvider: {
-          apiConfig: {
-            model: type === 'codex' ? 'gpt-test' : 'claude-test',
-            providerId: type === 'codex' ? 'openai' : 'anthropic',
-          },
-          authMode: 'api',
-          type,
-        },
-      } as any;
-
-      const result = await service.execAgent({
-        agentId: 'agent-1',
-        prompt: 'This must not receive provider credentials remotely',
-      });
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          error: expect.stringContaining('Desktop local execution'),
-          status: 'error',
-          success: false,
-        }),
-      );
-      expect(topicMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: type === 'codex' ? 'gpt-test' : 'claude-test',
-          provider: type === 'codex' ? 'openai' : 'anthropic',
-        }),
-        undefined,
-      );
-      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
-      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
-    },
-  );
 
   it('should pass resolved Codex model and reasoning effort args to sandbox dispatch', async () => {
     heteroAgentConfig.model = 'codex';
@@ -1523,6 +1493,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     it('seeds the gateway runtime init for a sandbox-dispatched local hetero run', async () => {
       heteroAgentConfig.agencyConfig = {
+        executionTarget: 'sandbox',
         heterogeneousProvider: { type: 'claude-code' },
       } as any;
 
@@ -1559,6 +1530,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     it('forwards the topic workspace into the cloud sandbox hetero spawn', async () => {
       heteroAgentConfig.agencyConfig = {
+        executionTarget: 'sandbox',
         heterogeneousProvider: { type: 'claude-code' },
       } as any;
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-a' });

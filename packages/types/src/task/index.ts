@@ -6,6 +6,271 @@ import type { ChatFileItem } from '../message/ui/chat';
 export type TaskStatus =
   'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running' | 'scheduled';
 
+/**
+ * Business workflow is independent from execution. `workflowStateId` keeps the
+ * exact provider/team state while this category gives the shared board a
+ * stable local grouping.
+ */
+export type TaskWorkflowCategory =
+  'triage' | 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled';
+
+/** Team intake state. NULL means the task is not in triage. */
+export type TaskTriageStatus = 'accepted' | 'declined' | 'duplicate' | 'untriaged';
+
+export type TaskAssignmentMode = 'manual' | 'rules' | 'orchestrated';
+
+export type TaskOrchestrationOwner =
+  'manual' | `goal:${string}` | `project:${string}` | `team:${string}`;
+
+export type TaskCreationSubjectKind = 'agent' | 'integration' | 'system' | 'user';
+
+export type TaskLockField = 'assignee' | 'priority' | 'requirement' | 'workflow';
+
+export interface TaskHumanLock {
+  actorId?: string;
+  actorKind: 'agent' | 'system' | 'user';
+  at: string;
+  reason?: string;
+  revision: number;
+}
+
+export interface TaskCreationSubjectSnapshot {
+  displayName?: string;
+  externalId?: string;
+  kind: TaskCreationSubjectKind;
+}
+
+export type TaskRunState =
+  | 'queued'
+  | 'provisioning'
+  | 'running'
+  | 'waiting'
+  | 'cancel_requested'
+  | 'canceled'
+  | 'failed'
+  | 'succeeded'
+  | 'outcome_unknown';
+
+export type TaskDispatchPhase =
+  | 'requested'
+  | 'claimed'
+  | 'provisioning'
+  | 'dispatched'
+  | 'running'
+  | 'waiting'
+  | 'cancel_requested'
+  | 'canceled'
+  | 'failed'
+  | 'succeeded'
+  | 'outcome_unknown';
+
+/**
+ * Authoritative execution origin persisted on a dispatch row (SA05-B):
+ * `caid` = a new orchestrated writer (goal/planner/cascade entry);
+ * `internal` = settlement work continuing an existing dispatch (corrective
+ * merges, reservation handoffs); `external` = direct user/schedule
+ * invocation. `null` on rows persisted before the column existed.
+ */
+export type TaskDispatchOrigin = 'caid' | 'external' | 'internal';
+
+/**
+ * Run intent a dispatch was claimed under: `continue` resumes the continued
+ * topic's frozen contract; `repair` re-executes the immutable source
+ * contract for a new attempt; `authorized_replan` rebuilds constraints from
+ * the live task under an approved action grant.
+ */
+export type TaskRunIntent = 'authorized_replan' | 'continue' | 'repair';
+
+/**
+ * Verified settlement evidence persisted with an `internal` dispatch —
+ * the real association that authorized continuing an existing dispatch's
+ * work, resolved server-side at claim time (never caller-asserted).
+ *
+ * A grant is only valid while it is *current and bounded*: it pins the exact
+ * source dispatch + generation it settles, the workspace it may run in, the
+ * run intents it authorizes, and the deadline/budget it inherits. Rows
+ * written before the binding fields existed — or whose source generation is
+ * no longer the task's current delivery chain — are rejected as stale at the
+ * persisted-claim boundary and again at the final dispatch transition.
+ */
+export interface TaskDispatchSettlementGrant {
+  /** Run intents this grant may settle; rejected claims cannot stretch it. */
+  allowedIntents?: TaskRunIntent[];
+  /** Delivery budget bound to the source contract when resolvable. */
+  budget?: { maxRounds: number | null };
+  /** Grant deadline — reservation expiry for takeovers, a bounded window otherwise. */
+  expiresAt?: string;
+  kind: 'integration_seed' | 'parent_operation' | 'reservation_takeover';
+  /** Reservation token being handed off (`reservation_takeover` only). */
+  reservationId?: string;
+  /** Dispatch row that produced the delivery being settled. */
+  sourceDispatchId?: string;
+  /** Execution generation of that source dispatch — pinned, never "latest". */
+  sourceGeneration?: number;
+  /** Upstream delivery operation the settlement corrects/settles. */
+  sourceOperationId?: string;
+  /** task_topics row the settlement continues. */
+  sourceTopicId?: string;
+  /** Workspace the settlement may execute in; a cross-workspace claim rejects. */
+  workspaceId?: string | null;
+}
+
+export interface TaskExecutionEnvironmentSnapshot {
+  branch?: string;
+  deviceId?: string;
+  provider?: string;
+  repo?: string;
+  workingDirectory?: string;
+  workingDirectoryId?: string;
+}
+
+/**
+ * The versioned run contract frozen onto a `task_topics` row when the run is
+ * registered. Once persisted it is the single source of truth for what this
+ * run was authorized and required to do — retries, continuations and
+ * corrective merge runs rebind to the persisted contract rather than
+ * re-deriving it from mutable task config.
+ *
+ * Every field is assembled from authoritative inputs (task revisions, the
+ * provisioned workspace, the mounted tool surface, acceptance config, the
+ * delegation grant) — never re-synthesized by the model.
+ */
+/** Evidence that a `blocks` dependency was satisfied at dispatch time. */
+export interface TaskDependencyReceipt {
+  /** Settled delivery the downstream run is built on, when known. */
+  delivery?: {
+    /** Dispatch identity that produced the delivery — binds the receipt to a
+     * specific claim, not just "some completed topic". */
+    dispatchId?: string;
+    /** Upstream task's execution generation the delivery belongs to. */
+    executionGeneration?: number;
+    /** Merge SHA once the upstream delivery integrated, if it integrated. */
+    integratedSha?: string;
+    operationId?: string;
+    seq?: number;
+    /** Immutable source commit accepted for the upstream delivery. */
+    sourceSha?: string;
+    topicId: string;
+    /** Verification operation that accepted the delivery, when recorded. */
+    verifyOperationId?: string;
+  };
+  /**
+   * Whether the recorded delivery is the upstream's *current* valid delivery
+   * at freeze time. `false` = the upstream has no usable delivery right now
+   * (never delivered, superseded by a newer attempt, or reopened) — admission
+   * must refuse, not silently execute on a stale/historical receipt.
+   * `undefined` on receipts persisted before this field existed.
+   */
+  deliveryValid?: boolean;
+  /** Upstream task id (`task_dependencies.depends_on_id`). */
+  dependsOnId: string;
+  /**
+   * Evidence class the `deliveryValid` decision rests on: `'delivery'` = an
+   * agent-produced Git/CI delivery receipt (topic row + integration identity);
+   * `'manual_completion'` = the upstream was completed by a human status flip
+   * with no delivery topic — a legitimate completion, but never a stand-in
+   * for code evidence. `undefined` on receipts persisted before this field.
+   */
+  evidenceKind?: 'delivery' | 'manual_completion';
+  /** Upstream identifier rendered into the prompt. */
+  identifier?: string;
+  /** Upstream task status observed at receipt time. */
+  status?: string;
+  type: string;
+}
+
+/**
+ * The frozen policy content a run executes under: what the prompt said, what
+ * the acceptance gate required, and which upstream deliveries the run relied
+ * on. Assembled once per attempt and persisted verbatim — continuations and
+ * repairs inherit it instead of re-reading live task rows, so editing a Task
+ * mid-run can never silently rewrite an in-flight attempt.
+ */
+export interface TaskExecutionContractContent {
+  /** Upstream delivery evidence for every `blocks` dependency at dispatch. */
+  dependencies?: TaskDependencyReceipt[];
+  /** `task.instruction` frozen at dispatch — the prompt's policy payload. */
+  instruction: string;
+  /** Frozen verify gate: criteria + requirement as rendered into the prompt. */
+  verify?: {
+    criteria?: Array<{
+      required?: boolean;
+      requiredEvidence?: Array<{ hint?: string; type: string }>;
+      title: string;
+    }>;
+    enabled: boolean;
+    maxIterations?: number;
+    requirement?: string | null;
+  };
+}
+
+export interface TaskExecutionContract {
+  /** Acceptance gate the run must satisfy (required evidence exists). */
+  acceptance: { enabled: boolean };
+  /** Frozen budget: goal-loop round and attempt cap (`null` = unbounded). */
+  budget: { maxRounds: number | null; round: number };
+  /** Frozen policy payload — instruction, verify gate, dependency receipts. */
+  content?: TaskExecutionContractContent;
+  /** Stable identity of this contract row (unique per attempt). */
+  contractId?: string;
+  /** Delegated-execution grant bound at registration, when delegated. */
+  delegation?: { grantId: string };
+  /** Frozen execution environment (repo/branch/workdir/device identity). */
+  environment: TaskExecutionEnvironmentSnapshot;
+  /** Workspace-integration binding (base/head SHAs + branches) when provisioned. */
+  integration?: {
+    baseBranch?: string;
+    /**
+     * Immutable base commit the run's checkout was built from (`origin/<base>`
+     * resolved at provisioning). Pinning it here — rather than trusting the
+     * mutable branch ref — is what makes a delivery traceable to its real base.
+     */
+    baseSha?: string;
+    branch?: string;
+    expectedBaseSha?: string;
+    expectedHeadSha?: string;
+    repo?: string;
+  };
+  /** Run intent this contract was minted under (`repair` when absent). */
+  intent?: TaskRunIntent;
+  /**
+   * Server-derived approval evidence for an `authorized_replan` contract —
+   * the consumed action approval, the recorded approver and which constraint
+   * fields the replan changed. Never caller-supplied.
+   */
+  replan?: {
+    /** Consumed `action_approvals` row id — single-use, never replayable. */
+    approvalId: string;
+    /** Recorded approver identity resolved from the approval row. */
+    approvedBy?: string;
+    /** Constraint fields whose content changed vs the source contract. */
+    changedFields?: string[];
+  };
+  /** Monotonic ordinal within the task's contract chain (1 for the first). */
+  revision?: number;
+  /**
+   * Contract schema version. Bumped on incompatible shape changes so readers
+   * can tell which assembler produced a persisted row.
+   */
+  schemaVersion: 1;
+  /**
+   * The contract this attempt's content descends from: the continued topic's
+   * contract for continuations, or the previous attempt's contract for a fresh
+   * repair/retry. `undefined` only on the first contract a task ever writes.
+   */
+  sourceContractId?: string;
+  /** Tool identifiers mounted for this run (builtin required-tool set). */
+  tools: string[];
+  /** Version pins the run was dispatched under. */
+  versions: {
+    executionGeneration: number;
+    planRevision: number | null;
+    policyRevision: number;
+    requirementRevision: number;
+    taskRevision: number;
+  };
+}
+
 export type TaskPriority = 0 | 1 | 2 | 3 | 4;
 
 export type TaskActivityType =
@@ -72,8 +337,10 @@ export type TaskAutomationMode = 'heartbeat' | 'schedule';
  * - `heartbeat` — a heartbeat interval tick fired the run.
  * - `goal`      — the Goal coordinator started this Work attempt.
  *                 Like `manual`, it never counts against automation quotas.
+ * - `orchestrator` — the dependency/project planner started this run. Project
+ *                    dispatch policy and execution budgets apply.
  */
-export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal';
+export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
 
 /**
  * A clarifying question the intent reader wants answered before an agent
@@ -165,6 +432,42 @@ export interface TaskWorkspaceConfig {
 }
 
 /**
+ * What a queued workspace-recovery entry asks a human to resolve (SA01). An
+ * unregistered directory at a provisioned path is never deleted by the
+ * pipeline — it lands here for manual review.
+ *
+ * - `orphan_directory` — device reported an unregistered/foreign directory at
+ *   the claim path (`orphan-safe`, `orphan-foreign`, or a symlink).
+ * - `claim_conflict` — the path already carries a claim owned by another
+ *   dispatch; the occupant is preserved until reconciled.
+ * - `inspection_unknown` — the device could not classify the path (I/O or stat
+ *   failure); retrying provision cannot proceed until a human looks.
+ */
+export type TaskWorkspaceRecoveryKind =
+  'claim_conflict' | 'inspection_unknown' | 'orphan_directory';
+
+/** Lifecycle of a manual workspace-recovery request. */
+export type TaskWorkspaceRecoveryStatus = 'dismissed' | 'pending' | 'resolved';
+
+/**
+ * Repo/ref integration lease phases (R02 fencing). 'claimed' rows have not yet
+ * issued any remote side effect; the mutation phases record which write class
+ * was in flight so an ambiguous failure can persist `outcomeUnknown` on the
+ * lease row instead of letting a retry re-issue writes blind.
+ */
+export type IntegrationLeasePhase =
+  'claimed' | 'dispatch' | 'merge' | 'prepare' | 'publish' | 'reconcile';
+
+/**
+ * Delivery-review remote-observation stages (F08). Each stage owns a failure
+ * budget: a read may only clear the counter for the stage it actually
+ * observed, so a healthy first snapshot cannot erase failures accumulated at
+ * the merge boundary.
+ */
+export type VerificationPollStage =
+  'branch_read' | 'merge_confirm' | 'merge_decision' | 'pr_establish' | 'snapshot' | 'sweep';
+
+/**
  * Per-run workspace/integration record persisted on `task_topics.integration`.
  * Written by the task runner at provision time and advanced by
  * TaskIntegrationService once the run's topic completes.
@@ -174,6 +477,18 @@ export interface TaskTopicIntegration {
   attempts: number;
   /** Integration target branch the task branch merges into. */
   baseBranch: string;
+  /**
+   * Immutable base commit the run's checkout was built from, resolved at
+   * provisioning (`origin/<baseBranch>` is mutable — this pin is the durable
+   * provenance). Absent when the base could not be resolved to a SHA.
+   */
+  baseSha?: string;
+  /**
+   * Re-baseline history: every previous `expectedBaseSha` this record advanced
+   * past, oldest first. Preserved so a delivery remains traceable to the base
+   * it was originally verified against even after a re-baseline.
+   */
+  baseShaHistory?: Array<{ observedAt?: string; sha: string }>;
   /** Branch created for the run (`task/<identifier>`). */
   branch: string;
   /** Repo-relative paths reported unmerged at the last attempt. */
@@ -204,6 +519,13 @@ export interface TaskTopicIntegration {
     | 'remote_verification_unavailable'
     | 'workspace_unavailable'
     | null;
+  /**
+   * Set when GitHub accepted the merge request but the confirmation read has
+   * not yet landed: later sweep passes reconcile (re-read the merged state)
+   * instead of re-issuing the merge — a lost acknowledgement must not
+   * double-merge the delivery.
+   */
+  mergeIssuedAt?: string;
   /** Pull request number bound to this delivery, when known. */
   prNumber?: number;
   /** Short lease protecting completion/retry handling from duplicate delivery. */
@@ -241,6 +563,28 @@ export interface TaskTopicIntegration {
     | 'verification_pending'
     | 'blocked'
     | 'skipped';
+  /**
+   * @deprecated Legacy pre-R07 scalar counter stored under this key, later
+   * briefly written as an unversioned map. Kept for mixed-version reads: new
+   * code MUST read via the normalized accessor (legacy number → `{sweep: n}`,
+   * legacy map → the map) and write only `verificationPollFailureStages`.
+   */
+  verificationPollFailures?: number | Partial<Record<VerificationPollStage, number>>;
+  /**
+   * Consecutive sweep passes that could not read the delivery's remote state
+   * (auth/permission/network), keyed by the observation stage that failed.
+   * A stage's counter resets only when that stage is re-observed successfully
+   * or a later stage succeeds (valid stage advance); reaching the per-stage
+   * cap marks the record 'blocked' instead of waiting silently forever.
+   * Business-CI pending is not counted here — it is a merge gate, not an
+   * observation error.
+   *
+   * Stored under a new JSON key deliberately: the old `verificationPollFailures`
+   * field carried a bare number, and a rolled-back writer would corrupt a map
+   * written under the same key (`(value ?? 0) + 1` → `[object Object]1`).
+   * Minimum rollback version = the first release that understands this key.
+   */
+  verificationPollFailureStages?: Partial<Record<VerificationPollStage, number>>;
   /**
    * Original verified delivery waiting for this corrective integration chain.
    * Once the chain settles, the lifecycle re-drives that Verify run so task
@@ -306,6 +650,15 @@ export interface WorkspaceDocNode {
   pinnedBy: string;
   sourceTaskId: string;
   sourceTaskIdentifier: string | null;
+  /**
+   * The run that produced this document, when one exists — its `works` row's
+   * origin topic. Absent for a document pinned by hand, which no run produced.
+   * Read from the Work rather than from a second association: `works` already
+   * records the origin topic for the documents it registers.
+   */
+  sourceTopicId?: string | null;
+  /** Display title of {@link sourceTopicId}; null when the topic was deleted. */
+  sourceTopicTitle?: string | null;
   title: string;
   updatedAt: string | null;
 }
@@ -372,6 +725,9 @@ export interface TaskSchedulerContext {
   // Provider message id (or LocalScheduler scheduleId) for the next tick. Used
   // to cancel when the user wants an interval change to take effect immediately.
   tickMessageId?: string;
+  // Monotonic scheduler generation. It gives each user restart / lifecycle
+  // re-arm a durable identity without relying on wall-clock time or UUIDs.
+  tickRevision?: number;
   // Generation token carried by the currently active tick. A delivered tick
   // must match this value so a failed best-effort cancellation cannot create
   // a second heartbeat chain.
@@ -452,19 +808,33 @@ export interface TaskSubtaskProgress {
 export interface TaskItem {
   accessedAt: Date;
   assigneeAgentId: string | null;
+  assigneeLocked: boolean;
   assigneeUserId: string | null;
+  assignmentMode: TaskAssignmentMode;
   automationMode: TaskAutomationMode | null;
   completedAt: Date | null;
   config: unknown;
   context: unknown;
   createdAt: Date;
   createdByAgentId: string | null;
-  createdByUserId: string;
+  createdBySnapshot: TaskCreationSubjectSnapshot | null;
+  createdBySubjectId: string | null;
+  createdBySubjectKind: TaskCreationSubjectKind;
+  createdByUserId: string | null;
   currentTopicId: string | null;
+  /** Team-scoped cycle association (local `team_cycles` row), when set. */
+  cycleRefId: string | null;
   deletedAt?: Date | null;
   description: string | null;
+  domainRevision: number;
+  /**
+   * Canonical task this row duplicates. Null unless triage marked it duplicate.
+   * Never a hard-delete or merged execution history.
+   */
+  duplicateOfTaskId: string | null;
   editorData: unknown;
   error: string | null;
+  executionGeneration: number;
   heartbeatInterval: number | null;
   heartbeatTimeout: number | null;
   id: string;
@@ -472,9 +842,12 @@ export interface TaskItem {
   instruction: string;
   isDeleted?: boolean | null;
   lastHeartbeatAt: Date | null;
+  lockMetadata: Partial<Record<TaskLockField, TaskHumanLock>>;
   maxTopics: number | null;
   name: string | null;
+  orchestrationOwner: TaskOrchestrationOwner;
   parentTaskId: string | null;
+  policyRevision: number;
   /**
    * Kanban board ordering key (fractional indexing): lower renders earlier in
    * a column. NULL means "never dragged" — board reads fall back to
@@ -483,7 +856,11 @@ export interface TaskItem {
    */
   position: number | null;
   priority: number | null;
+  priorityLocked: boolean;
   projectId: string | null;
+  projectMilestoneId?: string | null;
+  requirementLocked: boolean;
+  requirementRevision: number;
   /**
    * The human accountable while the task sits in 'paused' ("pending review").
    * Stamped when a run hands off for review; the assignees stay the executors.
@@ -501,18 +878,54 @@ export interface TaskItem {
   status: string;
   /** Lightweight recursive descendant progress attached by task list reads. */
   subtaskProgress?: TaskSubtaskProgress;
+  /**
+   * Owning team (shared mode). Every shared-mode task resolves to exactly one
+   * team — explicit assignment or the workspace default. Personal-mode tasks
+   * keep `null`.
+   */
+  teamId: string | null;
   totalRunCost?: number | null;
   totalRunDuration?: number | null;
   totalTopics: number | null;
+  /**
+   * Team intake state. NULL means the task is not in triage (legacy and
+   * already-accepted work). Existing backlog rows are never backfilled to
+   * `untriaged`.
+   */
+  triageStatus: TaskTriageStatus | null;
   updatedAt: Date;
   // 'private' tasks are only visible to their creator in workspace mode.
   // 'public' (default) tasks are visible to every workspace member.
   // The column is ignored in personal mode (no workspace).
   visibility: 'private' | 'public';
+  workflowCategory: TaskWorkflowCategory;
+  workflowLocked: boolean;
+  /** External provider state identity (Linear state UUID) — kept verbatim. */
+  workflowStateId: string | null;
+  /** Local `team_workflow_states` row; the canonical internal state pointer. */
+  workflowStateRefId: string | null;
   workspaceId: string | null;
 }
 
 export type TaskListItem = TaskItem & {
+  /**
+   * Work-query activity mode only: the latest notification episode on the
+   * task — the clock the feed is ordered by, so its day buckets and the row's
+   * date use it instead of updatedAt. `null` outside activity mode.
+   */
+  activityAt?: Date | string | null;
+  /**
+   * Label chips hydrated by the list/work-query reads (`task.list`,
+   * `workAttention.*`). Optional — endpoints that never join labels leave it
+   * undefined rather than promising an empty set.
+   */
+  labels?: TaskLabelSummary[];
+  /**
+   * The parent issue's identifier and title, hydrated by work-query reads so
+   * a flat list can show Linear's `› Parent title` breadcrumb. `null` when
+   * the parent is missing or unreadable; undefined on endpoints that skip it.
+   */
+  parent?: { identifier: string; name: string | null } | null;
   participants: TaskParticipant[];
 };
 
@@ -527,26 +940,37 @@ export interface TaskMoveScope {
   assigneeUserId?: string | null;
   /** The column's priority value; the `priority:0` column also holds NULLs. */
   priority?: number;
-  /** The merged status column's member statuses (needsInput → paused+failed). */
+  /** Legacy execution statuses represented by a business-workflow column. */
   statuses?: TaskStatus[];
+  /** Business categories represented by a workflow-aware board column. */
+  workflowCategories?: TaskWorkflowCategory[];
 }
 
 export interface NewTask {
   accessedAt?: Date;
   assigneeAgentId?: string | null;
+  assigneeLocked?: boolean;
   assigneeUserId?: string | null;
+  assignmentMode?: TaskAssignmentMode;
   automationMode?: TaskAutomationMode | null;
   completedAt?: Date | null;
   config?: unknown;
   context?: unknown;
   createdAt?: Date;
   createdByAgentId?: string | null;
-  createdByUserId: string;
+  createdBySnapshot?: TaskCreationSubjectSnapshot | null;
+  createdBySubjectId?: string | null;
+  createdBySubjectKind?: TaskCreationSubjectKind;
+  createdByUserId?: string | null;
   currentTopicId?: string | null;
+  cycleRefId?: string | null;
   deletedAt?: Date | null;
   description?: string | null;
+  domainRevision?: number;
+  duplicateOfTaskId?: string | null;
   editorData?: unknown;
   error?: string | null;
+  executionGeneration?: number;
   heartbeatInterval?: number | null;
   heartbeatTimeout?: number | null;
   id?: string;
@@ -554,12 +978,18 @@ export interface NewTask {
   instruction: string;
   isDeleted?: boolean | null;
   lastHeartbeatAt?: Date | null;
+  lockMetadata?: Partial<Record<TaskLockField, TaskHumanLock>>;
   maxTopics?: number | null;
   name?: string | null;
+  orchestrationOwner?: TaskOrchestrationOwner;
   parentTaskId?: string | null;
+  policyRevision?: number;
   position?: number | null;
   priority?: number | null;
+  priorityLocked?: boolean;
   projectId?: string | null;
+  requirementLocked?: boolean;
+  requirementRevision?: number;
   reviewerUserId?: string | null;
   schedulePattern?: string | null;
   scheduleTimezone?: string | null;
@@ -567,9 +997,15 @@ export interface NewTask {
   sortOrder?: number | null;
   startedAt?: Date | null;
   status?: string;
+  teamId?: string | null;
   totalTopics?: number | null;
+  triageStatus?: TaskTriageStatus | null;
   updatedAt?: Date;
   visibility?: 'private' | 'public';
+  workflowCategory?: TaskWorkflowCategory;
+  workflowLocked?: boolean;
+  workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
   workspaceId?: string | null;
 }
 
@@ -607,6 +1043,9 @@ export interface TaskDetailSubtask {
   status: string;
   updatedAt?: string;
   visibility?: 'private' | 'public';
+  /** Provider business state, independent from execution progress. */
+  workflowCategory?: TaskWorkflowCategory;
+  workflowStateId?: string | null;
 }
 
 export interface TaskDetailWorkspaceNode {
@@ -622,6 +1061,13 @@ export interface TaskDetailWorkspaceNode {
   size?: number | null;
   sourceTaskId?: string;
   sourceTaskIdentifier?: string | null;
+  /**
+   * The run that produced this artifact, and its title — see
+   * {@link WorkspaceDocNode.sourceTopicId}. Undefined when the artifact was
+   * pinned by hand rather than produced by a run.
+   */
+  sourceTopicId?: string | null;
+  sourceTopicTitle?: string | null;
   title?: string;
 }
 
@@ -762,6 +1208,17 @@ export interface TaskRunVerifySummary {
   total: number;
 }
 
+/**
+ * Slim label shape on wire payloads (task detail, WorkQuery rows). The full
+ * `task_labels` row stays server-side; chips and pickers only need these
+ * three fields.
+ */
+export interface TaskLabelSummary {
+  color?: string | null;
+  id: string;
+  name: string;
+}
+
 export interface TaskDetailData {
   activities?: TaskDetailActivity[];
   agentId?: string | null;
@@ -774,12 +1231,17 @@ export interface TaskDetailData {
   createdByUserId?: string | null;
   dependencies?: Array<{
     dependsOn: string;
-    /** Raw edge target, retained so an unavailable prerequisite can be removed. */
+    /** Raw target ID is exposed only when the issue is readable. */
     id?: string;
+    /** Opaque relation row ID; allows unlinking without exposing an unreadable target ID. */
+    relationId?: string;
     name?: string | null;
     /** Null/omitted means unavailable, never implicitly completed. */
     status?: string | null;
     type: string;
+    /** Provider business state shown with the same glyph as issue board rows. */
+    workflowCategory?: TaskWorkflowCategory;
+    workflowStateId?: string | null;
   }>;
   description?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
@@ -799,6 +1261,8 @@ export interface TaskDetailData {
   id?: string;
   identifier: string;
   instruction: string;
+  /** Labels assigned to the task (Linear-style issue labels). */
+  labels?: TaskLabelSummary[];
   name?: string | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
   priority?: number | null;
@@ -815,6 +1279,8 @@ export interface TaskDetailData {
   startedAt?: string;
   status: string;
   subtasks?: TaskDetailSubtask[];
+  /** Owning team (shared mode); null for personal tasks and legacy rows. */
+  teamId?: string | null;
   topicCount?: number;
   updatedAt?: string;
   userId?: string | null;
@@ -823,6 +1289,12 @@ export interface TaskDetailData {
   /** Visibility within a workspace. 'public' is workspace-shared (default);
    *  'private' is only visible to the creator. Ignored in personal mode. */
   visibility?: 'private' | 'public';
+  /** Provider workflow grouping, independent from Orvilo execution and delivery state. */
+  workflowCategory?: TaskWorkflowCategory;
+  /** Exact provider workflow-state identity; null means the task has no external workflow state. */
+  workflowStateId?: string | null;
+  /** Local `team_workflow_states` row id; the canonical internal state pointer. */
+  workflowStateRefId?: string | null;
   workspace?: TaskDetailWorkspaceNode[];
   /** Owning workspace; null for personal (non-workspace) tasks. */
   workspaceId?: string | null;

@@ -1,62 +1,12 @@
 import { createStaticStyles, cssVar } from 'antd-style';
 
 /**
- * 整页只有一种强调色，只标一件事：它做错的地方。
- * 「对 / 已养成 / 用上了」是默认态，不发信号；成长曲线用 success 色，和错点分开。
+ * 规则清单共用的几处样式：一行的排版与悬停，命中点的圆点，以及「全部经验」链接。
+ *
+ * 这里原来还有成长画像的一套（可靠度条、等级分段、判断句标题、按层画像）。S60 把画像改成
+ * 规则清单后，那些只服务于「它成长得怎么样」的样式一并删掉了 —— 留下的都只描述事实。
  */
 export const portraitStyles = createStaticStyles(({ css }) => ({
-  accent: css`
-    color: ${cssVar.colorWarning} !important;
-  `,
-  bar: css`
-    overflow: hidden;
-    display: flex;
-
-    width: 100%;
-    height: 5px;
-    border-radius: 3px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  profileCounts: css`
-    min-width: 0;
-    text-align: end;
-    white-space: nowrap;
-  `,
-  profileKey: css`
-    flex: none;
-    width: 32px;
-    font-family: ${cssVar.fontFamilyCode};
-    white-space: nowrap;
-  `,
-  profileProgress: css`
-    width: 100%;
-    min-width: 120px;
-  `,
-  profileRow: css`
-    display: grid;
-    grid-template-columns: minmax(220px, 1.15fr) minmax(180px, 1fr) 84px minmax(220px, auto);
-    gap: 20px;
-    align-items: center;
-
-    padding-block: 14px;
-    padding-inline: 18px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    @media (width <= 1100px) {
-      grid-template-columns: minmax(200px, 1fr) minmax(140px, 1fr) 84px;
-
-      & > :last-child {
-        grid-column: 2 / -1;
-        text-align: start;
-      }
-    }
-  `,
-  profileTitle: css`
-    padding-block: 14px 10px;
-    padding-inline: 18px;
-    font-size: 12px;
-  `,
   dot: css`
     display: inline-block;
 
@@ -74,16 +24,6 @@ export const portraitStyles = createStaticStyles(({ css }) => ({
   `,
   dotOk: css`
     background: ${cssVar.colorTextQuaternary};
-  `,
-  groupHead: css`
-    padding-block: 8px;
-    padding-inline: 14px;
-    border: 0;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font: inherit;
-
-    background: ${cssVar.colorFillQuaternary};
   `,
   previewTarget: css`
     cursor: pointer;
@@ -129,21 +69,5 @@ export const portraitStyles = createStaticStyles(({ css }) => ({
         opacity: 1;
       }
     }
-  `,
-  segBad: css`
-    background: ${cssVar.colorWarning};
-  `,
-  segOk: css`
-    background: ${cssVar.colorTextQuaternary};
-  `,
-  segShaky: css`
-    opacity: 0.55;
-    background: ${cssVar.colorWarning};
-  `,
-  sentence: css`
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.4;
-    text-wrap: balance;
   `,
 }));

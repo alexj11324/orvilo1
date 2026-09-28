@@ -11,7 +11,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 
 const transcribeMock = vi.fn();
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(async () => ({ transcribe: transcribeMock })),
+  initModelRuntimeFromDeploymentConfig: vi.fn(async () => ({ transcribe: transcribeMock })),
 }));
 
 const findByIdMock = vi.fn();

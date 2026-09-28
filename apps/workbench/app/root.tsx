@@ -36,7 +36,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const meta: MetaFunction<typeof loader> = ({ loaderData }) =>
   buildPageMeta({
-    description: workbenchMetaDescription(loaderData?.resources),
+    description: workbenchMetaDescription(),
     locale: loaderData?.locale,
     title: BRANDING_NAME,
   });

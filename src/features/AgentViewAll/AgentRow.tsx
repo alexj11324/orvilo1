@@ -1,14 +1,13 @@
 'use client';
 
 import { ContextMenuTrigger, Flexbox, type MenuProps, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Avatar, Tag, Text } from '@lobehub/ui/base-ui';
+import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
-import { EyeIcon, EyeOffIcon } from 'lucide-react';
-import { memo, type MouseEvent, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -17,8 +16,8 @@ import AgentAvatar from './AgentAvatar';
 import ItemActions from './ItemActions';
 import LabelTags from './LabelTags';
 
-/** Fixed action-column width (sidebar-eye toggle + "…" menu) so rows stay aligned. */
-export const ACTION_COL_WIDTH = 64;
+/** Fixed action-column width (the "…" menu) so rows stay aligned. */
+export const ACTION_COL_WIDTH = 32;
 
 /** Author avatar slot — reserved even when the author is unknown. */
 const AUTHOR_COL_WIDTH = 20;
@@ -86,149 +85,111 @@ interface AgentRowProps {
   /** Creator profile; rendered only when `showAuthor` is set. */
   author?: AgentRowAuthor | null;
   item: SidebarAgentItem;
-  /**
-   * Toggle whether this item appears in the caller's sidebar. A membership
-   * action, deliberately distinct from the sidebar's own 置顶 pin
-   * (`agents.pinned`) — that stays untouched.
-   */
-  onToggleSidebar?: (item: SidebarAgentItem) => void;
   /** Whether to render the author column (workspace mode). */
   showAuthor?: boolean;
-  /** Whether the caller removed this item from their sidebar (default listed). */
-  sidebarHidden?: boolean;
 }
 
-const AgentRow = memo<AgentRowProps>(
-  ({ author, item, onToggleSidebar, showAuthor, sidebarHidden }) => {
-    const { t } = useTranslation('common');
-    const { id, type, updatedAt } = item;
-    // Groups have no personal name, so this resolves to their title.
-    const displayTitle = agentDisplayName(item, t('agentViewAll.untitled'));
-    const roleTag = agentSecondaryDisplayName(item);
-    const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
+  const { t } = useTranslation('common');
+  const { id, type, updatedAt } = item;
+  // Groups have no personal name, so this resolves to their title.
+  const displayTitle = agentDisplayName(item, t('agentViewAll.untitled'));
+  const roleTag = agentSecondaryDisplayName(item);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
-    // Right-click support (Task-List-style): the hook-bearing menu mounts on
-    // the ROW's pointer-enter (which always precedes a right-click) and hands
-    // its filtered items back via ref for the ContextMenuTrigger.
-    const [menuActivated, setMenuActivated] = useState(false);
-    const activateMenu = useCallback(() => setMenuActivated(true), []);
-    const menuItemsRef = useRef<(() => MenuProps['items']) | null>(null);
-    const handleMenuReady = useCallback((getItems: () => MenuProps['items']) => {
-      menuItemsRef.current = getItems;
-    }, []);
-    const getContextMenuItems = useCallback(() => menuItemsRef.current?.() ?? [], []);
+  // Right-click support (Task-List-style): the hook-bearing menu mounts on
+  // the ROW's pointer-enter (which always precedes a right-click) and hands
+  // its filtered items back via ref for the ContextMenuTrigger.
+  const [menuActivated, setMenuActivated] = useState(false);
+  const activateMenu = useCallback(() => setMenuActivated(true), []);
+  const menuItemsRef = useRef<(() => MenuProps['items']) | null>(null);
+  const handleMenuReady = useCallback((getItems: () => MenuProps['items']) => {
+    menuItemsRef.current = getItems;
+  }, []);
+  const getContextMenuItems = useCallback(() => menuItemsRef.current?.() ?? [], []);
 
-    const handleToggleSidebar = useCallback(
-      (e: MouseEvent) => {
-        e.stopPropagation();
-        onToggleSidebar?.(item);
-      },
-      [item, onToggleSidebar],
-    );
-
-    return (
-      <ContextMenuTrigger items={getContextMenuItems}>
+  return (
+    <ContextMenuTrigger items={getContextMenuItems}>
+      <Flexbox
+        horizontal
+        align={'center'}
+        className={styles.row}
+        gap={12}
+        ref={setAnchor}
+        onPointerEnter={activateMenu}
+      >
+        <WorkspaceLink
+          aria-label={displayTitle}
+          className={styles.identity}
+          to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
+        >
+          <AgentAvatar item={item} size={28} />
+          <Flexbox flex={1} style={{ minWidth: 0 }}>
+            {/* Single-line row (Linear-style density) — the description only
+                renders in card mode, where there is room to browse. */}
+            <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
+              <Text ellipsis className={'agent-row-title'} weight={500}>
+                {displayTitle}
+              </Text>
+              {roleTag ? (
+                <Tag size={'small'} style={{ flex: 'none' }}>
+                  {roleTag}
+                </Tag>
+              ) : null}
+            </Flexbox>
+          </Flexbox>
+        </WorkspaceLink>
+        {/* Trailing cluster (Task-list-style): label pills + author avatar +
+            update time as one tight right-aligned group. */}
         <Flexbox
           horizontal
           align={'center'}
-          className={styles.row}
-          gap={12}
-          ref={setAnchor}
-          onPointerEnter={activateMenu}
+          flex={'none'}
+          gap={8}
+          justify={'flex-end'}
+          style={{ maxWidth: 420, overflow: 'hidden' }}
         >
-          <WorkspaceLink
-            aria-label={displayTitle}
-            className={styles.identity}
-            to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
-          >
-            <AgentAvatar item={item} size={28} />
-            <Flexbox flex={1} style={{ minWidth: 0 }}>
-              {/* Single-line row (Linear-style density) — the description only
-                renders in card mode, where there is room to browse. */}
-              <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
-                <Text ellipsis className={'agent-row-title'} weight={500}>
-                  {displayTitle}
-                </Text>
-                {roleTag ? (
-                  <Tag size={'small'} style={{ flex: 'none' }}>
-                    {roleTag}
-                  </Tag>
-                ) : null}
-              </Flexbox>
+          <LabelTags labels={item.labels} />
+          {showAuthor && (
+            // The slot is reserved even without an author, so an unknown
+            // author doesn't shift the row's label pills sideways.
+            <Flexbox flex={'none'} style={{ width: AUTHOR_COL_WIDTH }}>
+              {author && (
+                <Tooltip title={author.name}>
+                  <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={AUTHOR_COL_WIDTH} />
+                </Tooltip>
+              )}
             </Flexbox>
-          </WorkspaceLink>
-          {/* Trailing cluster (Task-list-style): label pills + author avatar +
-            update time as one tight right-aligned group. */}
-          <Flexbox
-            horizontal
-            align={'center'}
-            flex={'none'}
-            gap={8}
-            justify={'flex-end'}
-            style={{ maxWidth: 420, overflow: 'hidden' }}
+          )}
+          <Text
+            className={styles.updatedAt}
+            fontSize={12}
+            title={updatedAt ? dayjs(updatedAt).format('YYYY-MM-DD HH:mm') : undefined}
           >
-            <LabelTags labels={item.labels} />
-            {showAuthor && (
-              // The slot is reserved even without an author, so an unknown
-              // author doesn't shift the row's label pills sideways.
-              <Flexbox flex={'none'} style={{ width: AUTHOR_COL_WIDTH }}>
-                {author && (
-                  <Tooltip title={author.name}>
-                    <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={AUTHOR_COL_WIDTH} />
-                  </Tooltip>
-                )}
-              </Flexbox>
-            )}
-            <Text
-              className={styles.updatedAt}
-              fontSize={12}
-              title={updatedAt ? dayjs(updatedAt).format('YYYY-MM-DD HH:mm') : undefined}
-            >
-              {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
-            </Text>
-          </Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            flex={'none'}
-            gap={4}
-            style={{ width: ACTION_COL_WIDTH }}
-          >
-            {onToggleSidebar && (
-              <ActionIcon
-                color={cssVar.colorTextSecondary}
-                icon={sidebarHidden ? EyeOffIcon : EyeIcon}
-                size={'small'}
-                // Hidden agents read as faded, mirroring the customize-sidebar
-                // modal's 0.5-opacity treatment of hidden rows.
-                style={{ opacity: sidebarHidden ? 0.5 : undefined }}
-                title={
-                  sidebarHidden
-                    ? t('agentViewAll.addToSidebar')
-                    : t('agentViewAll.removeFromSidebar')
-                }
-                onClick={handleToggleSidebar}
-              />
-            )}
-            {/* Visible "…" trigger AND right-click open the same menu — the
-              context menu alone proved undiscoverable (users assumed rows had
-              no actions). The menu carries the sidebar toggle too; the eye
-              icon stays as the fast single-click path. */}
-            <ItemActions
-              anchor={anchor}
-              forceActivated={menuActivated}
-              includeSidebarToggle={Boolean(onToggleSidebar)}
-              item={item}
-              sidebarHidden={sidebarHidden}
-              onMenuReady={handleMenuReady}
-              onToggleSidebar={onToggleSidebar}
-            />
-          </Flexbox>
+            {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
+          </Text>
         </Flexbox>
-      </ContextMenuTrigger>
-    );
-  },
-);
+        <Flexbox
+          horizontal
+          align={'center'}
+          flex={'none'}
+          gap={4}
+          style={{ width: ACTION_COL_WIDTH }}
+        >
+          {/* Visible "…" trigger AND right-click open the same menu — the
+              context menu alone proved undiscoverable (users assumed rows had
+              no actions). */}
+          <ItemActions
+            anchor={anchor}
+            forceActivated={menuActivated}
+            item={item}
+            onMenuReady={handleMenuReady}
+          />
+        </Flexbox>
+      </Flexbox>
+    </ContextMenuTrigger>
+  );
+});
 
 AgentRow.displayName = 'AgentRow';
 

@@ -39,8 +39,6 @@ export default {
   'flow.exitFullscreen': 'Exit full screen',
   'flow.expandAll': 'Expand all',
   'flow.collapseAll': 'Collapse all',
-  'flow.diff.required': 'Required',
-  'flow.diff.optional': 'Optional',
 
   'flow.checks.title': 'Flow checks',
   'flow.checks.hint':
@@ -48,29 +46,6 @@ export default {
 
   'flow.nodeCount': '{{count}} nodes',
   'flow.annotate': 'Annotate evidence and comment',
-  'flow.diff.title': 'Compare versions',
-  'flow.diff.before': 'Before',
-  'flow.diff.after': 'After',
-  'flow.diff.hint':
-    'Compare flow definitions. Changed expectations need new verification; execution history is kept separately.',
-  'flow.diff.empty': 'No definition changes',
-  'flow.diff.added': 'Added',
-  'flow.diff.removed': 'Removed',
-  'flow.diff.modified': 'Modified',
-  'flow.diff.flow': 'Flow',
-  'flow.diff.node': 'Node',
-  'flow.diff.edge': 'Transition',
-  'flow.diff.fields.title': 'Title',
-  'flow.diff.fields.goal': 'Goal',
-  'flow.diff.fields.preconditions': 'Preconditions',
-  'flow.diff.fields.entryNodeKey': 'Entry node',
-  'flow.diff.fields.instruction': 'Steps',
-  'flow.diff.fields.expected': 'Expected result',
-  'flow.diff.fields.sourceNodeKey': 'From',
-  'flow.diff.fields.targetNodeKey': 'To',
-  'flow.diff.fields.trigger': 'Trigger',
-  'flow.diff.fields.condition': 'Condition',
-  'flow.diff.fields.required': 'Required',
 
   'flow.closeResults': 'Close results',
   'flow.resultHistory': '{{count}} verification records',
@@ -462,7 +437,6 @@ export default {
   'acceptance.surface.other': 'Other',
   'acceptance.titleFallback': 'Acceptance',
   'acceptance.verdict.inProgress': 'Acceptance in progress',
-  'acceptance.viewFullReport': 'View full report',
   'acceptance.workspace.actions.delete': 'Delete',
   'acceptance.workspace.actions.markAccepted': 'Mark as accepted',
   'acceptance.workspace.actions.markClosed': 'Mark as closed',
@@ -546,29 +520,6 @@ export default {
   'acceptance.workspace.listEmpty':
     'Ingest a verification report with the CLI and its acceptance will show up here.',
   'acceptance.workspace.listEmptyTitle': 'No acceptances yet',
-  'acceptance.workspace.onboarding.description':
-    'Add the Acceptance skill to your project, then start a review from your coding agent.',
-  'acceptance.workspace.onboarding.agent.description':
-    'Copy this prompt to your coding agent and let it complete the setup.',
-  'acceptance.workspace.onboarding.agent.prompt':
-    'Read https://orvilo.aspectlylabs.com/acceptance/skill.md and follow the instructions to install Acceptance.',
-  'acceptance.workspace.onboarding.agent.title': 'Install with an Agent',
-  'acceptance.workspace.onboarding.enable.description': 'Run this from your project root.',
-  'acceptance.workspace.onboarding.enable.title': 'Enable Acceptance',
-  'acceptance.workspace.onboarding.install.description': 'Install the CLI once on this device.',
-  'acceptance.workspace.onboarding.install.title': 'Install the Orvilo CLI',
-  'acceptance.workspace.onboarding.installSection': 'Install Acceptance',
-  'acceptance.workspace.onboarding.manual.description':
-    'Run both commands yourself from the project root.',
-  'acceptance.workspace.onboarding.manual.title': 'Install manually',
-  'acceptance.workspace.onboarding.example.command':
-    '/acceptance Review the current changes, focusing on the core flow, empty states, and error states',
-  'acceptance.workspace.onboarding.example.description':
-    'After installation, send this example to your coding agent to create the first review.',
-  'acceptance.workspace.onboarding.example.title': 'Try your first acceptance',
-  'acceptance.workspace.onboarding.run.description': 'Enter this in your coding agent chat.',
-  'acceptance.workspace.onboarding.run.title': 'Start an acceptance run',
-  'acceptance.workspace.onboarding.title': 'Set up Acceptance',
   'acceptance.workspace.project.add': 'Add to project',
   'acceptance.workspace.project.addSuccess': 'Added to the project',
   'acceptance.workspace.project.create': 'New project with this delivery',

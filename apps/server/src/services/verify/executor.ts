@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
 import { getModelPropertyWithFallback } from '@orvilo/model-runtime';
@@ -18,7 +19,6 @@ import type {
 } from '@orvilo/types';
 import debug from 'debug';
 
-import { AiModelModel } from '@/database/models/aiModel';
 import { DocumentModel } from '@/database/models/document';
 import { FileModel } from '@/database/models/file';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
@@ -26,6 +26,7 @@ import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { FileService } from '@/server/services/file';
 
 import { coverageGaps, readRequiredEvidence } from './evidenceCoverage';
@@ -64,6 +65,12 @@ export interface ExecuteVerifyParams {
   operationId: string;
   /** Runs agent checks and program checks without a native runner as verifier sub-agents. */
   runVerifierAgent?: VerifierAgentRunner;
+  /**
+   * Task-pinned verifier agent — the preferred ACP binding for the LLM judge.
+   * Falls back to the builtin verify agent slug, then the operator env
+   * binding; no binding at all blocks the judgment (items gate delivery).
+   */
+  verifierAgentId?: string;
 }
 
 const verdictToStatus = (verdict: VerifyVerdict): VerifyCheckResultStatus =>
@@ -95,7 +102,6 @@ export class VerifyExecutorService {
   private readonly evidenceModel: VerifyEvidenceModel;
   private readonly fileModel: FileModel;
   private readonly fileService: FileService;
-  private readonly aiModelModel: AiModelModel;
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
@@ -107,7 +113,6 @@ export class VerifyExecutorService {
     this.evidenceModel = new VerifyEvidenceModel(db, userId, workspaceId);
     this.fileModel = new FileModel(db, userId, workspaceId);
     this.fileService = new FileService(db, userId, workspaceId);
-    this.aiModelModel = new AiModelModel(db, userId, workspaceId);
   }
 
   /**
@@ -241,9 +246,6 @@ export class VerifyExecutorService {
   }
 
   private async modelSupportsVision(model: string, provider: string): Promise<boolean> {
-    const custom = await this.aiModelModel.findByIdAndProvider(model, provider);
-    const customAbilities = custom?.abilities as { vision?: boolean } | undefined;
-    if (typeof customAbilities?.vision === 'boolean') return customAbilities.vision;
     const abilities = await getModelPropertyWithFallback<{ vision?: boolean }>(
       model,
       'abilities',
@@ -337,6 +339,22 @@ export class VerifyExecutorService {
         await this.judgeSingle(params, verifyRunId, item, evidenceByItem, true);
     } catch (error) {
       log('llm judge failed for op %s: %O', params.operationId, error);
+      if (isAcpJudgmentBindingError(error)) {
+        // Missing authorization is not an infra hiccup — it means no verifier
+        // agent is bound, so the judgment can never legitimately run. Mark each
+        // item failed/uncertain so it GATES delivery (unlike `errored`).
+        await Promise.all(
+          items.map((item) =>
+            this.resultModel.updateByCheckItem(verifyRunId, item.id, {
+              completedAt: new Date(),
+              status: 'failed',
+              toulmin: { limitation: error.message },
+              verdict: 'uncertain',
+            }),
+          ),
+        );
+        return;
+      }
       await this.markUnfinishedErrored(
         verifyRunId,
         items,
@@ -450,6 +468,15 @@ export class VerifyExecutorService {
         schema: BATCH_VERDICT_JSON_SCHEMA,
       },
       {
+        judgment: {
+          binding: {
+            agentId: params.verifierAgentId,
+            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+          },
+          parentOperationId: params.operationId,
+          purpose: 'verify.judge',
+        },
+        kind: 'judgment',
         tracing: {
           ...({
             promptVersion: VERIFY_JUDGE_PROMPT_VERSION,
@@ -527,6 +554,20 @@ export class VerifyExecutorService {
         schema: SINGLE_VERDICT_JSON_SCHEMA,
       },
       {
+        judgment: {
+          binding: {
+            agentId: params.verifierAgentId,
+            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+          },
+          // Multimodal judgments read the evidence frames through the bound
+          // agent's file access (attached to the judgment turn).
+          fileIds: multimodal
+            ? hydratedEvidence?.flatMap((entry) => (entry.fileId ? [entry.fileId] : []))
+            : undefined,
+          parentOperationId: params.operationId,
+          purpose: 'verify.judge',
+        },
+        kind: 'judgment',
         tracing: {
           ...({
             promptVersion: VERIFY_JUDGE_PROMPT_VERSION,

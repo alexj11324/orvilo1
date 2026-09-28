@@ -2,26 +2,29 @@ import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { FileTextIcon, HashIcon, MoreHorizontalIcon } from 'lucide-react';
+import { BookmarkIcon, FileTextIcon, HashIcon, MoreHorizontalIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 
 import InlineRename from '@/components/InlineRename';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { usePrefetchAgent } from '@/hooks/usePrefetchAgent';
 import { usePrefetchPage } from '@/hooks/usePrefetchPage';
-import { getPlatformIcon } from '@/routes/(main)/agent/channel/const';
 
 import { useRecentItemDropdownMenu } from './useDropdownMenu';
 
-const TYPE_ICON_MAP: Partial<Record<'document' | 'task' | 'topic', typeof FileTextIcon>> = {
+const TYPE_ICON_MAP: Partial<Record<RecentItem['type'], typeof FileTextIcon>> = {
   document: FileTextIcon,
+  project: PROJECT_ENTITY_ICON,
+  savedView: BookmarkIcon,
+  team: UsersIcon,
   topic: HashIcon,
 };
 
 const RecentListItem = memo<RecentItem>((item) => {
-  const { title, type, agentId, id, metadata, status } = item;
+  const { title, type, agentId, id, status } = item;
   const IconComponent = TYPE_ICON_MAP[type] || FileTextIcon;
   const [editing, setEditing] = useState(false);
   const prefetchAgent = usePrefetchAgent();
@@ -46,17 +49,21 @@ const RecentListItem = memo<RecentItem>((item) => {
   }, [type, agentId, id, prefetchAgent, prefetchPage]);
 
   const { dropdownMenu, handleRename } = useRecentItemDropdownMenu(item, toggleEditing);
+  const menuItems = dropdownMenu();
+  const hasOverflowMenu = (menuItems?.length ?? 0) > 0;
 
   return (
     <Flexbox style={{ position: 'relative' }}>
       <NavItem
-        contextMenuItems={dropdownMenu}
+        contextMenuItems={hasOverflowMenu ? dropdownMenu : undefined}
         disabled={editing}
         title={title}
         actions={
-          <DropdownMenu items={dropdownMenu()}>
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
-          </DropdownMenu>
+          hasOverflowMenu ? (
+            <DropdownMenu items={menuItems}>
+              <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
+            </DropdownMenu>
+          ) : undefined
         }
         icon={(() => {
           if (type === 'task') {
@@ -66,12 +73,6 @@ const RecentListItem = memo<RecentItem>((item) => {
             return <TaskStatusIcon size={16} status={status ?? 'backlog'} />;
           }
 
-          if (type === 'topic' && metadata?.bot?.platform) {
-            const ProviderIcon = getPlatformIcon(metadata.bot.platform);
-            if (ProviderIcon) {
-              return <ProviderIcon color={cssVar.colorTextDescription} size={16} />;
-            }
-          }
           return (
             <Icon
               icon={IconComponent}

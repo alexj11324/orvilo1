@@ -1,0 +1,28 @@
+{
+  "failureInjection": {
+    "crossScopeOrdering": {
+      "agentBoundList": "pass",
+      "baseList": "pass"
+    },
+    "deferredDcrPromotion": {
+      "activeConfigUnchangedBeforeCallback": true,
+      "pendingConfigPromotedWithTokens": true,
+      "result": "pass"
+    },
+    "postOAuthRefreshFailure": {
+      "oauthSuccessPreserved": true,
+      "refreshFailureReportedSeparately": true,
+      "result": "pass"
+    }
+  },
+  "outcome": "pass",
+  "priorRuntimeEvidence": "runtime-result.json",
+  "sourceRevision": "8a3ab61fd",
+  "verification": {
+    "focusedTestFilesPassed": 5,
+    "focusedTestsPassed": 23,
+    "independentReview": "approve",
+    "lintAndFormatHooks": "pass",
+    "remoteProviderWritePerformed": false
+  }
+}

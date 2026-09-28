@@ -21,7 +21,7 @@ interface AuthWorkerConfig {
   analyticsConfig: AnalyticsConfig;
   config: Pick<
     GlobalServerConfig,
-    'disableEmailPassword' | 'enableEmailVerification' | 'enableMagicLink' | 'oAuthSSOProviders'
+    'authAccountsUrl' | 'disableEmailPassword' | 'enableEmailVerification' | 'enableMagicLink'
   >;
   enableOIDC: boolean;
   featureFlags?: Partial<IFeatureFlags>;
@@ -54,10 +54,14 @@ const AuthAppShell = memo<AuthAppShellProps>(({ children, locale }) => {
         <AuthServerConfigProvider
           enableOIDC={serverConfig?.enableOIDC}
           isMobile={false}
-          serverConfig={serverConfig?.config}
           featureFlags={
             serverConfig?.featureFlags
               ? mapFeatureFlagsEnvToState(serverConfig.featureFlags)
+              : undefined
+          }
+          serverConfig={
+            serverConfig?.config
+              ? { aiProvider: {}, telemetry: {}, ...serverConfig.config }
               : undefined
           }
         >

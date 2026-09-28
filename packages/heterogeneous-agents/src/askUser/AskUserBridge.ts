@@ -43,6 +43,12 @@ export interface PendingArgs {
    * stand-alone tests, but the renderer won't be able to correlate.
    */
   toolCallId?: string;
+  /**
+   * Approval-window id the decision must CAS-match (SA02-C). Echoed onto
+   * the request data so the durable card state — and the eventual
+   * `submitHeteroIntervention` — carries it back to the receipt.
+   */
+  windowId?: string;
 }
 
 export interface PendingOptions {
@@ -198,6 +204,7 @@ export class AskUserBridge {
         interactionKind: args.interactionKind ?? 'question',
         provider: this.provider,
         toolCallId,
+        windowId: args.windowId,
       };
       this.emit({
         data,

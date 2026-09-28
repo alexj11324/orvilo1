@@ -22,11 +22,11 @@ describe('resolveSlots', () => {
   describe('submenu groups', () => {
     it('nests the surviving children under the group action', () => {
       const out = resolveSlots(
-        [{ children: ['copyMessageId', 'saveAsEvalCase'], key: 'advanced' }],
+        [{ children: ['copyMessageId', 'copyOperationId'], key: 'advanced' }],
         {
           advanced: item('advanced'),
           copyMessageId: item('copyMessageId'),
-          saveAsEvalCase: null,
+          copyOperationId: null,
         },
       );
       expect(out).toEqual([{ ...item('advanced'), children: [item('copyMessageId')] }]);

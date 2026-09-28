@@ -16,7 +16,6 @@ describe('FeatureFlagsSchema', () => {
       create_session: true,
       edit_agent: false,
       dalle: true,
-      ai_image: true,
     });
 
     expect(result.success).toBe(true);
@@ -27,7 +26,6 @@ describe('FeatureFlagsSchema', () => {
       edit_agent: ['user-123', 'user-456'],
       create_session: ['user-789'],
       dalle: true,
-      ai_image: false,
     });
 
     expect(result.success).toBe(true);
@@ -188,7 +186,6 @@ describe('mapFeatureFlagsEnvToState', () => {
       openai_api_key: true,
       openai_proxy_url: false,
       edit_agent: false,
-      ai_image: true,
       check_updates: true,
       welcome_suggest: true,
       knowledge_base: false,
@@ -215,7 +212,6 @@ describe('mapFeatureFlagsEnvToState', () => {
       showOpenAIApiKey: true,
       showOpenAIProxyUrl: false,
       showApiKeyManage: false,
-      showAiImage: true,
       showChangelog: false,
       enableCheckUpdates: true,
       showWelcomeSuggest: true,
@@ -294,7 +290,6 @@ describe('mapFeatureFlagsEnvToState', () => {
       agent_onboarding: ['user-123'],
       create_session: true,
       dalle: false,
-      ai_image: ['user-456'],
       knowledge_base: ['user-123', 'user-789'],
       rag_eval: true,
     };
@@ -305,7 +300,6 @@ describe('mapFeatureFlagsEnvToState', () => {
 
     expect(mappedState.enableAgentSelfIteration).toBe(true);
     expect(mappedState.enableAgentOnboarding).toBe(true);
-    expect(mappedState.showAiImage).toBe(false);
     expect(mappedState.enableKnowledgeBase).toBe(true);
     expect(mappedState.enableRAGEval).toBe(true);
   });

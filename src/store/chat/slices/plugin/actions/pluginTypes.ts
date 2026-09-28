@@ -1,3 +1,4 @@
+import { getSubAgentChatConfigOverride, resolveSubAgentModel } from '@orvilo/const';
 import {
   type ChatToolPayload,
   type RuntimeStepContext,
@@ -11,7 +12,11 @@ import { type MCPToolCallResult } from '@/libs/mcp';
 import { mcpService } from '@/services/mcp';
 import { messageService } from '@/services/message';
 import { archiveToolResultViaServer } from '@/services/toolResultArchive';
+import { getAgentStoreState } from '@/store/agent';
+import { agentSelectors } from '@/store/agent/selectors';
+import { ClientSubAgentTransport } from '@/store/chat/agents/transports/ClientSubAgentTransport';
 import { operationSelectors } from '@/store/chat/slices/operation';
+import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 import { type ChatStore } from '@/store/chat/store';
 import { useToolStore } from '@/store/tool';
 import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
@@ -131,29 +136,68 @@ export class PluginTypesActionImpl {
         groupId = getChatGroupStoreState().activeGroupId;
       }
 
-      // Get group orchestration callbacks if available (for group management tools)
-      const groupOrchestration = this.#get().getGroupOrchestrationCallbacks?.();
-
-      // Sub-agent runner injected for sub-agent-spawning tools (orvilo-agent.callSubAgent).
-      // Runs the sub-agent in an isolated thread using the current client runtime
-      // and resolves with its output, so the tool returns a normal tool result.
+      // Sub-agent runner injected for sub-agent-spawning tools
+      // (orvilo-agent.callSubAgent). Dispatches a server-backed sub-agent task and
+      // polls for completion via `ClientSubAgentTransport`, so the tool returns
+      // a normal tool result. The local browser runtime is retired.
+      //
+      // The spawn-site contract the client runtime kept still applies here:
+      // `inheritMessages` forwards to the server (which seeds the isolation
+      // thread), and the child is an anonymous clone of the parent — the
+      // parent's `agencyConfig.subagent` model/provider/chatConfig overrides
+      // resolve here, not inside the transport.
       const subAgentParentOperationId = rootRuntimeOperationId ?? operationId;
       const subAgent: SubAgentCallbacks = {
-        run: (runParams) => {
+        run: async (runParams) => {
           if (!agentId || !topicId) {
-            return Promise.resolve({
+            return {
               error: 'No agent context available for sub-agent execution',
               result: 'No agent context available for sub-agent execution',
               success: false,
               threadId: '',
-            });
+            };
           }
-          return this.#get().runClientSubAgent({
-            ...runParams,
+
+          const parentAgentConfig =
+            agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
+          const parentEffectiveModel =
+            topicSelectors.getTopicModelById(topicId)(this.#get()) ?? parentAgentConfig;
+          const subAgentModel = resolveSubAgentModel(
+            parentAgentConfig?.agencyConfig?.subagent,
+            parentEffectiveModel,
+          );
+
+          const result = await new ClientSubAgentTransport(
+            this.#get,
+            subAgentParentOperationId,
+          ).execSubAgent({
             agentId,
+            chatConfig: getSubAgentChatConfigOverride(parentAgentConfig?.agencyConfig?.subagent),
+            inheritMessages: runParams.inheritMessages,
+            instruction: runParams.instruction,
+            isSubAgent: true,
+            model: subAgentModel.model,
+            parentMessageId: runParams.toolMessageId,
             parentOperationId: subAgentParentOperationId,
+            provider: subAgentModel.provider,
+            timeout: runParams.timeout,
+            title: runParams.description,
             topicId,
           });
+          return {
+            error: result.error,
+            model: subAgentModel.model,
+            result: result.result ?? '',
+            success: result.success,
+            threadId: result.threadId,
+            // Terminal task metrics ride back so the parent's usage tray and
+            // the tool message's pluginState account for the isolated work.
+            totalCost: result.cost?.total,
+            totalInputTokens: result.usage?.prompt_tokens,
+            totalOutputTokens: result.usage?.completion_tokens,
+            totalTokens: result.usage?.total_tokens,
+            totalToolCalls: result.totalToolCalls,
+          };
         },
       };
 
@@ -165,13 +209,12 @@ export class PluginTypesActionImpl {
         : undefined;
 
       log(
-        '[invokeBuiltinTool] Using Tool Store executor: %s/%s, messageId=%s, agentId=%s, groupId=%s, hasGroupOrchestration=%s, rootRuntimeOp=%s, stepContext=%O',
+        '[invokeBuiltinTool] Using Tool Store executor: %s/%s, messageId=%s, agentId=%s, groupId=%s, rootRuntimeOp=%s, stepContext=%O',
         payload.identifier,
         payload.apiName,
         id,
         agentId,
         groupId,
-        !!groupOrchestration,
         rootRuntimeOperationId,
         !!stepContext,
       );
@@ -199,7 +242,6 @@ export class PluginTypesActionImpl {
           anchorMessageId,
           documentId,
           groupId,
-          groupOrchestration,
           isSubAgent,
           // Only the in-process desktop path reaches here; gateway-routed runs
           // get the same decision from the server device-proxy. Both funnel

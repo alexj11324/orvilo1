@@ -1,0 +1,11 @@
+---
+title: Debug Proxy URL works on all deployments
+description: The extensionless `/_dangerous_local_dev_proxy` URL printed by `dev:spa` now resolves on self-hosted deployments instead of returning 404.
+tags:
+  - Developer Experience
+  - Bug Fix
+---
+
+## Fixes
+
+- **Debug Proxy route**: `/_dangerous_local_dev_proxy` (and its subpaths) now serves the debug-proxy page via a Next.js rewrite, so the URL printed by `bun run dev:spa` works on self-hosted deployments — previously it only resolved on Vercel through `vercel.json`. The proxy page is also served with no-store cache headers outside Vercel.

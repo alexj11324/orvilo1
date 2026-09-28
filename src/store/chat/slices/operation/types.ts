@@ -272,7 +272,7 @@ export interface QueuedMessage {
   filesPreview?: QueuedFile[];
   /** Mirrors SendMessageParams.forceRuntime so a queued task-topic follow-up
    *  keeps its gateway pin when the queue drains. */
-  forceRuntime?: 'client' | 'gateway' | 'hetero';
+  forceRuntime?: 'gateway' | 'hetero';
   id: string;
   interruptMode: 'soft' | 'hard';
   metadata?: MessageMetadata;
@@ -287,7 +287,7 @@ export interface MergedQueuedMessage {
   editorData?: Record<string, any>;
   files: string[];
   filesPreview: QueuedFile[];
-  forceRuntime?: 'client' | 'gateway' | 'hetero';
+  forceRuntime?: 'gateway' | 'hetero';
   metadata?: MessageMetadata;
 }
 

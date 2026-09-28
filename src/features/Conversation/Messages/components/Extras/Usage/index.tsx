@@ -1,7 +1,6 @@
 import { Center, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { HETEROGENEOUS_TYPE_LABELS, isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type { ModelPerformance, ModelUsage } from '@orvilo/types';
-import { unwrapServerDefaultHeterogeneousModel } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { CircleDollarSignIcon } from 'lucide-react';
@@ -10,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ModelIcon } from '@/components/OrviloIcons';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
+import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -44,27 +43,12 @@ const Usage = memo<UsageProps>(({ model, usage, performance, provider }) => {
   const { t } = useTranslation('chat');
   const onboardingAgentId = useAgentStore(builtinAgentSelectors.webOnboardingAgentId);
   const conversationAgentId = useConversationStore(contextSelectors.agentId);
-  const serverDefaultConfiguredModel = useAgentStore((s) => {
-    if (!conversationAgentId) return undefined;
-    const apiConfig =
-      agentByIdSelectors.getAgencyConfigById(conversationAgentId)(s)?.heterogeneousProvider
-        ?.apiConfig;
-    return apiConfig?.source === 'server-default' ? apiConfig.model : undefined;
-  });
   // Credit mode already expresses cost in credits — showing USD alongside would conflict.
   const isShowCredit = useGlobalStore(systemStatusSelectors.isShowCredit);
-  const displayModel =
-    unwrapServerDefaultHeterogeneousModel(model, serverDefaultConfiguredModel) ?? model;
-  const modelCard = useAiInfraStore((s) => {
-    const exact = aiModelSelectors.getModelCard(displayModel, provider)(s);
-    if (exact || !serverDefaultConfiguredModel) return exact;
-    // Server-default messages keep provider as the CLI type (`claude-code` /
-    // `codex`), so the catalog card lives under the relay provider id.
-    return (
-      s.enabledAiModels?.find((item) => item.id === displayModel) ||
-      s.builtinAiModelList.find((item) => item.id === displayModel)
-    );
-  });
+  const displayModel = model;
+  const modelCard = useAiInfraStore((s) =>
+    aiModelSelectors.getModelCard(displayModel, provider)(s),
+  );
   const displayProvider = modelCard?.providerId ?? provider;
 
   if (!isDev && onboardingAgentId && conversationAgentId === onboardingAgentId) return null;
@@ -72,9 +56,7 @@ const Usage = memo<UsageProps>(({ model, usage, performance, provider }) => {
   // Only remote platform agents (openclaw, hermes) replace the model name with
   // the brand label — they don't expose a real model id. Local CLI agents
   // (claude-code, codex) report their actual model on `turn_metadata` and
-  // should keep showing it. Server-default bindings report `aspectlylabs/${id}`
-  // (or the legacy `orvilo-default` alias); unwrap to the catalog id so this
-  // footer matches what the user selected.
+  // should keep showing it.
   const heteroName =
     provider && isRemoteHeterogeneousType(provider)
       ? HETEROGENEOUS_TYPE_LABELS[provider]

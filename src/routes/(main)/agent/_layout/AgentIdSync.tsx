@@ -7,6 +7,16 @@ import { useInitAgentConfig } from '@/hooks/useInitAgentConfig';
 
 import { useAgentIdStoreSync } from './useAgentIdStoreSync';
 
+export const getAgentRouteSuffix = (pathname: string, routeAgentId?: string) => {
+  if (!routeAgentId) return '';
+
+  const routePrefix = `/agent/${routeAgentId}`;
+  const routeStart = pathname.indexOf(routePrefix);
+  if (routeStart < 0) return '';
+
+  return pathname.slice(routeStart + routePrefix.length);
+};
+
 const AgentIdSync = () => {
   const params = useParams<{ aid?: string; topicId?: string }>();
   const [searchParams] = useSearchParams();
@@ -23,7 +33,12 @@ const AgentIdSync = () => {
   // Redirect slug URL to real agent ID URL, preserving child path and query string
   useEffect(() => {
     if (isSlugRoute && resolvedAgentId) {
-      const suffix = location.pathname.replace(`/agent/${params.aid}`, '');
+      // `location.pathname` can be workspace-prefixed (`/:workspaceSlug/agent/:aid`).
+      // Replacing only `/agent/:aid` leaves the workspace slug behind and turns it
+      // into a fake topic segment after the redirect. Slice from the actual Agent
+      // route boundary so both personal and workspace mirrors preserve only the
+      // real child path.
+      const suffix = getAgentRouteSuffix(location.pathname, params.aid);
       const qs = searchParams.toString();
       navigate(`/agent/${resolvedAgentId}${suffix}${qs ? `?${qs}` : ''}`, { replace: true });
     }

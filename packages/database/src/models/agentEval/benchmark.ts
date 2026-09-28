@@ -8,7 +8,7 @@ import {
   type NewAgentEvalBenchmark,
 } from '../../schemas';
 import { type OrviloDatabase } from '../../type';
-import { buildWorkspaceWhere } from '../../utils/workspace';
+import { buildStrictWorkspaceWhere, buildWorkspaceWhere } from '../../utils/workspace';
 
 export class AgentEvalBenchmarkModel {
   private userId: string;
@@ -196,7 +196,22 @@ export class AgentEvalBenchmarkModel {
     const [result] = await this.db
       .select()
       .from(agentEvalBenchmarks)
-      .where(and(eq(agentEvalBenchmarks.identifier, identifier), this.ownership()))
+      .where(
+        and(
+          eq(agentEvalBenchmarks.identifier, identifier),
+          // Identifiers are a per-scope namespace: the same identifier can
+          // legitimately exist once as an unfiled row and once filed, so
+          // resolution must not collapse the two. System rows (userId NULL)
+          // resolve in every scope, matching ownership().
+          or(
+            buildStrictWorkspaceWhere(
+              { userId: this.userId, workspaceId: this.workspaceId },
+              agentEvalBenchmarks,
+            ),
+            isNull(agentEvalBenchmarks.userId),
+          ),
+        ),
+      )
       .limit(1);
     return result;
   };

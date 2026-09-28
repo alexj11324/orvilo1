@@ -6,23 +6,11 @@ import type { OrviloDatabase } from '@/database/type';
 import { BaseService } from './base.service';
 
 const {
-  mockAiModels,
-  mockAiProviders,
   mockBuildWorkspacePayload,
   mockBuildWorkspaceWhere,
   mockGetScopePermissions,
   mockHasAnyPermission,
 } = vi.hoisted(() => ({
-  mockAiModels: {
-    id: 'aiModels.id',
-    userId: 'aiModels.userId',
-    workspaceId: 'aiModels.workspaceId',
-  },
-  mockAiProviders: {
-    id: 'aiProviders.id',
-    userId: 'aiProviders.userId',
-    workspaceId: 'aiProviders.workspaceId',
-  },
   mockBuildWorkspacePayload: vi.fn(),
   mockBuildWorkspaceWhere: vi.fn(),
   mockGetScopePermissions: vi.fn(),
@@ -46,8 +34,6 @@ vi.mock('@/database/models/rbac', () => ({
 
 vi.mock('@/database/schemas', () => ({
   agents: {},
-  aiModels: mockAiModels,
-  aiProviders: mockAiProviders,
   files: {},
   knowledgeBases: {},
   messages: {},
@@ -175,43 +161,19 @@ describe('BaseService workspace helpers', () => {
     });
   });
 
-  it('scopes target provider ownership lookup to the active workspace', async () => {
+  it('scopes target file ownership lookup to the workspace-shared tables', async () => {
     const findFirst = vi.fn().mockResolvedValue({ userId: 'user-1' });
     const service = new TestService(
-      { query: { aiProviders: { findFirst } } } as unknown as OrviloDatabase,
+      { query: { files: { findFirst } } } as unknown as OrviloDatabase,
       'user-1',
       'workspace-1',
     );
     mockHasAnyPermission.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
     await expect(
-      service.operationPermission('aiProviders:update' as any, { targetProviderId: 'provider-1' }),
+      service.operationPermission('files:update' as any, { targetFileId: 'file-1' }),
     ).resolves.toMatchObject({ condition: { userId: 'user-1' }, isPermitted: true });
 
-    expect(mockBuildWorkspaceWhere).toHaveBeenCalledWith(
-      { userId: 'user-1', workspaceId: 'workspace-1' },
-      mockAiProviders,
-    );
-    expect(findFirst).toHaveBeenCalledTimes(1);
-  });
-
-  it('scopes target model ownership lookup to the active workspace', async () => {
-    const findFirst = vi.fn().mockResolvedValue({ userId: 'user-1' });
-    const service = new TestService(
-      { query: { aiModels: { findFirst } } } as unknown as OrviloDatabase,
-      'user-1',
-      'workspace-1',
-    );
-    mockHasAnyPermission.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-
-    await expect(
-      service.operationPermission('aiModels:update' as any, { targetModelId: 'model-1' }),
-    ).resolves.toMatchObject({ condition: { userId: 'user-1' }, isPermitted: true });
-
-    expect(mockBuildWorkspaceWhere).toHaveBeenCalledWith(
-      { userId: 'user-1', workspaceId: 'workspace-1' },
-      mockAiModels,
-    );
     expect(findFirst).toHaveBeenCalledTimes(1);
   });
 });
@@ -229,7 +191,7 @@ describe('BaseService.resolveOperationPermission ownership resolution', () => {
     new TestService(
       {
         query: {
-          aiModels: {
+          files: {
             findFirst: vi
               .fn()
               .mockResolvedValue(
@@ -256,12 +218,12 @@ describe('BaseService.resolveOperationPermission ownership resolution', () => {
       codes.some((code) => (code.endsWith(':all') ? all : owner)),
     );
 
-  it('lets an owner-scoped grant invoke a model nobody owns', async () => {
+  it('lets an owner-scoped grant invoke a resource nobody owns', async () => {
     grants({ owner: true });
 
     await expect(
       modelService(null).operationPermission('ai_model:invoke' as any, {
-        targetModelId: 'builtin-model',
+        targetFileId: 'ownerless-file',
       }),
     ).resolves.toMatchObject({ condition: { userId: 'user-1' }, isPermitted: true });
   });
@@ -270,7 +232,7 @@ describe('BaseService.resolveOperationPermission ownership resolution', () => {
     grants({ owner: true });
 
     const result = await modelService(undefined).operationPermission('ai_model:invoke' as any, {
-      targetModelId: 'missing-model',
+      targetFileId: 'missing-file',
     });
 
     // The condition scopes the follow-up query. An unresolved owner must never
@@ -283,7 +245,7 @@ describe('BaseService.resolveOperationPermission ownership resolution', () => {
 
     await expect(
       modelService('user-2').operationPermission('ai_model:invoke' as any, {
-        targetModelId: 'their-model',
+        targetFileId: 'their-file',
       }),
     ).resolves.toMatchObject({ isPermitted: false });
   });
@@ -301,7 +263,7 @@ describe('BaseService.resolveOperationPermission ownership resolution', () => {
 
     await expect(
       modelService(null).operationPermission('ai_model:invoke' as any, {
-        targetModelId: 'builtin-model',
+        targetFileId: 'ownerless-file',
       }),
     ).resolves.toMatchObject({ isPermitted: false });
   });
@@ -311,7 +273,7 @@ describe('BaseService.resolveOperationPermission ownership resolution', () => {
 
     await expect(
       modelService('user-2').operationPermission('ai_model:invoke' as any, {
-        targetModelId: 'their-model',
+        targetFileId: 'their-file',
       }),
     ).resolves.toMatchObject({ condition: { userId: 'user-2' }, isPermitted: true });
   });

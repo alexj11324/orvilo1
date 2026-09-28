@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Body from './index';
@@ -8,16 +8,25 @@ interface MockGlobalState {
     hiddenSidebarSections?: string[];
     sidebarExpandedKeys?: string[];
     sidebarItems?: string[];
+    workspace?: { hiddenSidebarSections?: string[]; sidebarExpandedKeys?: string[] };
   };
   updateSystemStatus: (patch: Partial<MockGlobalState['status']>) => void;
 }
 
 const mocks = vi.hoisted(() => ({
+  activeWorkspaceId: null as string | null,
   globalState: undefined as unknown as MockGlobalState,
   navLayout: {
     bottomMenuItems: [] as { key: string; title: string; url: string }[],
-    topNavItems: [] as { key: string; title: string; url: string }[],
+    topNavItems: [
+      { key: 'inbox', title: 'Inbox', url: '/inbox' },
+      { key: 'my-work', title: 'My issues', url: '/my-issues' },
+      { key: 'reviews', title: 'Reviews', url: '/reviews' },
+      { key: 'agent', title: 'Agent', url: '/agents' },
+      { key: 'drafts', title: 'Drafts', url: '/drafts' },
+    ],
   },
+  searchParams: new URLSearchParams(),
   updateSystemStatus: vi.fn(),
 }));
 
@@ -33,14 +42,12 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   AccordionRoot: ({
     children,
     value,
-    onValueChange,
   }: {
     children: React.ReactNode;
     onValueChange?: (keys: string[]) => void;
     value?: string[];
   }) => (
     <div data-expanded-keys={JSON.stringify(value)} data-testid="sidebar-accordion">
-      <button aria-label="collapse recents" onClick={() => onValueChange?.(['agent'])} />
       {children}
     </div>
   ),
@@ -51,6 +58,17 @@ vi.mock('react-router', () => ({
     <a href={to}>{children}</a>
   ),
   useNavigate: () => vi.fn(),
+}));
+
+vi.mock('@/libs/router/navigation', () => ({
+  useSearchParams: () => [mocks.searchParams],
+  usePathname: () => '/',
+}));
+
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getActiveWorkspaceSlug: () => null,
+  useActiveWorkspaceId: () => mocks.activeWorkspaceId,
 }));
 
 vi.mock('@/features/NavPanel/components/NavItem', () => ({
@@ -69,15 +87,19 @@ vi.mock('@/utils/navigation', () => ({
   isModifierClick: () => false,
 }));
 
-vi.mock('@/features/Home/Recents', () => ({
-  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
-}));
-
 vi.mock('./Agent', () => ({
   default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
 }));
 
-vi.mock('./Private', () => ({
+vi.mock('./WorkFavorites', () => ({
+  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+}));
+
+vi.mock('./WorkspaceSection', () => ({
+  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+}));
+
+vi.mock('./TeamsSection', () => ({
   default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
 }));
 
@@ -85,21 +107,41 @@ vi.mock('./CustomizeSidebarModal', () => ({
   openCustomizeSidebarModal: vi.fn(),
 }));
 
+vi.mock('./CreateRow', () => ({
+  default: () => <div data-testid="sidebar-item-create" />,
+}));
+
+vi.mock('@/libs/swr', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useClientDataSWR: () => ({ data: undefined, error: undefined, isLoading: false }),
+}));
+
+vi.mock('./useSyncWorkspaceSidebarPreference', () => ({
+  useSyncWorkspaceSidebarPreference: vi.fn(),
+}));
+
+vi.mock('../Header/components/useInboxUnreadCount', () => ({
+  useInboxUnreadCount: () => ({ enabled: false, unreadCount: 0 }),
+}));
+
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: MockGlobalState) => unknown) => selector(mocks.globalState),
 }));
 
+vi.mock('@/store/user', () => ({
+  useUserStore: (selector: (state: unknown) => unknown) =>
+    selector({ useFetchWorkspaceUserPreference: () => undefined }),
+}));
+
 beforeEach(() => {
   mocks.updateSystemStatus.mockReset();
-  mocks.navLayout = {
-    bottomMenuItems: [],
-    topNavItems: [],
-  };
+  mocks.activeWorkspaceId = null;
+  mocks.searchParams = new URLSearchParams();
   mocks.globalState = {
     status: {
       hiddenSidebarSections: [],
-      sidebarExpandedKeys: ['recents', 'agent'],
-      sidebarItems: ['recents', 'agent'],
+      sidebarExpandedKeys: ['agent', 'workspace', 'favorites', 'teams'],
+      sidebarItems: ['recents', 'tasks', 'image'],
     },
     updateSystemStatus: mocks.updateSystemStatus,
   };
@@ -110,76 +152,62 @@ afterEach(() => {
 });
 
 describe('Home sidebar body', () => {
-  it('uses persisted sidebar accordion expanded keys', () => {
-    mocks.globalState.status.sidebarExpandedKeys = ['agent'];
+  it('renders the fixed IA regardless of a stale stored order', () => {
+    render(<Body />);
+
+    const children = Array.from(screen.getByTestId('sidebar-body').children);
+    const texts = children.map((child) => child.textContent);
+
+    // Core links first, in contract order — the stored legacy keys
+    // (recents/tasks/image) can neither reorder nor resurrect. Agent is a
+    // flat row now; the old agent accordion is retired.
+    expect(texts[0]).toBe('Inbox');
+    expect(texts[1]).toBe('My issues');
+    expect(texts[2]).toBe('Reviews');
+    expect(texts[3]).toBe('Agent');
+    expect(texts[4]).toBe('Drafts');
+    // The standalone quick-create row sits between the flat links and the
+    // first accordion, mirroring Linear's `+` slot.
+    expect(children[5]).toHaveAttribute('data-testid', 'sidebar-item-create');
+    expect(screen.getByTestId('sidebar-item-workspace')).toBeInTheDocument();
+    expect(screen.getByTestId('sidebar-item-favorites')).toBeInTheDocument();
+    // There is no personal mode — Your teams renders even while the
+    // workspace is still being provisioned (empty-state row inside).
+    expect(screen.getByTestId('sidebar-item-teams')).toBeInTheDocument();
+    expect(children.some((child) => child.hasAttribute('data-sidebar-bottom-spacer'))).toBe(true);
+  });
+
+  it('always renders the Your teams section', () => {
+    mocks.activeWorkspaceId = 'ws-1';
+    mocks.globalState.status.workspace = { hiddenSidebarSections: [] } as never;
+
+    render(<Body />);
+
+    expect(screen.getByTestId('sidebar-item-teams')).toBeInTheDocument();
+  });
+
+  it('hides an optional section via hiddenSidebarSections but never a core link', () => {
+    mocks.globalState.status.hiddenSidebarSections = ['workspace', 'favorites', 'inbox'];
+
+    render(<Body />);
+
+    expect(screen.queryByTestId('sidebar-item-workspace')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-item-favorites')).not.toBeInTheDocument();
+    // `inbox` is core — hidden sections cannot remove it.
+    const texts = Array.from(screen.getByTestId('sidebar-body').children).map(
+      (child) => child.textContent,
+    );
+    expect(texts).toContain('Inbox');
+  });
+
+  it('passes persisted expanded keys to the accordion', () => {
+    mocks.globalState.status.sidebarExpandedKeys = ['workspace'];
 
     render(<Body />);
 
     expect(screen.getByTestId('sidebar-accordion')).toHaveAttribute(
       'data-expanded-keys',
-      '["agent"]',
+      '["workspace"]',
     );
-  });
-
-  it('persists sidebar accordion expanded changes', () => {
-    render(<Body />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'collapse recents' }));
-
-    expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ sidebarExpandedKeys: ['agent'] });
-  });
-
-  it('renders items strictly in sidebarItems order with the spacer at its stored position', () => {
-    mocks.navLayout = {
-      bottomMenuItems: [
-        { key: 'image', title: 'Image', url: '/image' },
-        { key: 'resource', title: 'Resource', url: '/resource' },
-      ],
-      topNavItems: [
-        { key: 'automations', title: 'Automations', url: '/automations' },
-        { key: 'tasks', title: 'Tasks', url: '/tasks' },
-      ],
-    };
-    mocks.globalState.status.sidebarItems = [
-      'automations',
-      'recents',
-      'agent',
-      '__spacer__',
-      'image',
-      'tasks',
-      'resource',
-    ];
-
-    render(<Body />);
-
-    const children = Array.from(screen.getByTestId('sidebar-body').children);
-    const spacerIndex = children.findIndex((child) =>
-      child.hasAttribute('data-sidebar-bottom-spacer'),
-    );
-
-    expect(spacerIndex).toBe(2);
-    expect(children[0]).toHaveTextContent('Automations');
-    expect(children[1]).toHaveAttribute('data-testid', 'sidebar-accordion');
-    expect(children[3]).toHaveTextContent('Image');
-    expect(children[4]).toHaveTextContent('Tasks');
-    expect(children[5]).toHaveTextContent('Resource');
-  });
-
-  it('keeps a top item that was dragged past the spacer in its new position', () => {
-    mocks.navLayout = {
-      bottomMenuItems: [{ key: 'image', title: 'Image', url: '/image' }],
-      topNavItems: [{ key: 'tasks', title: 'Tasks', url: '/tasks' }],
-    };
-    // User dragged `tasks` from the top section to sit after `image`.
-    mocks.globalState.status.sidebarItems = ['recents', 'agent', '__spacer__', 'image', 'tasks'];
-
-    render(<Body />);
-
-    const children = Array.from(screen.getByTestId('sidebar-body').children);
-
-    expect(children[0]).toHaveAttribute('data-testid', 'sidebar-accordion');
-    expect(children[1]).toHaveAttribute('data-sidebar-bottom-spacer');
-    expect(children[2]).toHaveTextContent('Image');
-    expect(children[3]).toHaveTextContent('Tasks');
   });
 });

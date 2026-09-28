@@ -46,7 +46,10 @@ const createAcpProcess = (options: FakeAcpProcessOptions = {}) => {
   const send: Send = (message) => stdout.write(`${JSON.stringify(message)}\n`);
 
   Object.assign(child, {
-    kill: vi.fn(() => true),
+    kill: vi.fn(() => {
+      queueMicrotask(() => child.emit('close', null, 'SIGTERM'));
+      return true;
+    }),
     killed: false,
     pid: 987_654,
     stderr,
@@ -673,7 +676,12 @@ describe('TraeAcpSession', () => {
       },
     });
     spawnMock.mockReturnValue(child);
-    vi.spyOn(process, 'kill').mockImplementation(() => true);
+    // The detached-path group signal is mocked, so simulate the realistic
+    // outcome: a killed child emits `close` and resolves the interrupt wait.
+    vi.spyOn(process, 'kill').mockImplementation(() => {
+      queueMicrotask(() => child.emit('close', null, 'SIGTERM'));
+      return true;
+    });
     const session = new TraeAcpSession(createSessionOptions());
     const run = session.run();
     await vi.waitFor(() => {

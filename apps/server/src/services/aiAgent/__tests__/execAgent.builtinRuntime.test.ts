@@ -1,44 +1,35 @@
-import { GeneralChatAgent, GraphAgent } from '@orvilo/agent-runtime';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { SELF_FEEDBACK_INTENT_IDENTIFIER } from '@orvilo/builtin-tool-self-iteration';
 import { RequestTrigger } from '@orvilo/types';
 import type * as ModelBankModule from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createServerAgentToolsEngine } from '@/server/modules/Mecha';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
-
 import { AiAgentService } from '../index';
 
 const {
-  mockCreateOperation,
+  mockDispatchHeteroAgent,
   mockGetAgentConfig,
   mockGetBuiltinAgent,
   mockGetInfoForAIGeneration,
-  mockGetModelMetadata,
-  mockIsAgentSignalEnabledForUser,
   mockMessageCreate,
   mockMessageQuery,
   mockResolveTask,
-  mockToolsEnv,
 } = vi.hoisted(() => ({
-  mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
   mockGetAgentConfig: vi.fn(),
   mockGetBuiltinAgent: vi.fn(),
   mockGetInfoForAIGeneration: vi.fn(),
-  mockGetModelMetadata: vi.fn(),
-  mockIsAgentSignalEnabledForUser: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockMessageQuery: vi.fn(),
   mockResolveTask: vi.fn(),
-  mockToolsEnv: {
-    MULTIMODAL_UNDERSTANDING_MODEL: undefined as string | undefined,
-    MULTIMODAL_UNDERSTANDING_PROVIDER: undefined as string | undefined,
-  },
 }));
 
-vi.mock('@/envs/tools', () => ({
-  toolsEnv: mockToolsEnv,
+// P70: every run dispatches through `dispatchHeteroAgent` onto an ACP binding.
+// These tests cover execAgent-level semantics (agent resolution, config merge,
+// message persistence) — stub the dispatch boundary itself and assert on the
+// ExecRunContext / dispatch input it receives.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/libs/trusted-client', () => ({
@@ -59,14 +50,6 @@ vi.mock('@/database/models/message', () => ({
   }),
 }));
 
-vi.mock('@/database/models/aiModel', () => ({
-  AiModelModel: vi.fn().mockImplementation(function () {
-    return {
-      findByIdAndProvider: mockGetModelMetadata,
-    };
-  }),
-}));
-
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
@@ -83,21 +66,6 @@ vi.mock('@/server/services/agent', () => ({
       getAgentConfig: mockGetAgentConfig,
     };
   }),
-}));
-
-vi.mock('@/server/services/agentSignal/featureGate', () => ({
-  isAgentSignalEnabledForUser: mockIsAgentSignalEnabledForUser,
-  isOrviloAiAgentSlug: (slug?: string | null) => slug === 'inbox',
-  resolveAgentSelfIterationCapability: ({
-    agentSelfIterationEnabled,
-    isAgentSelfIterationFeatureEnabled,
-    isOrviloAiAgent,
-  }: {
-    agentSelfIterationEnabled?: boolean;
-    isAgentSelfIterationFeatureEnabled: boolean;
-    isOrviloAiAgent: boolean;
-  }) =>
-    isAgentSelfIterationFeatureEnabled && (isOrviloAiAgent || agentSelfIterationEnabled === true),
 }));
 
 vi.mock('@/server/services/agentSignal', () => ({
@@ -138,6 +106,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -166,10 +135,10 @@ vi.mock('@/database/models/task', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
-      createOperation: mockCreateOperation,
+      createOperation: vi.fn(),
     };
   }),
 }));
@@ -244,120 +213,30 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
   let service: AiAgentService;
   const mockDb = {} as any;
   const userId = 'test-user-id';
-  const minimalGraph = {
-    edges: [{ from: '__root__', instruction: 'Answer with the graph runtime.', to: 'answer' }],
-    fields: {},
-    name: 'answer-graph',
-    nodes: { answer: { type: 'llm' } },
-    terminal: 'answer',
+
+  const lastDispatchCall = () => {
+    const calls = mockDispatchHeteroAgent.mock.calls;
+    expect(calls).toHaveLength(1);
+    return { ctx: calls[0]![1], input: calls[0]![2] } as any;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
     mockMessageQuery.mockResolvedValue([]);
-    mockIsAgentSignalEnabledForUser.mockResolvedValue(true);
     mockResolveTask.mockResolvedValue(null);
     mockGetInfoForAIGeneration.mockResolvedValue({
       responseLanguage: 'en-US',
       userName: 'Test User',
     });
-    mockGetModelMetadata.mockResolvedValue(undefined);
-    mockToolsEnv.MULTIMODAL_UNDERSTANDING_MODEL = 'vision-model';
-    mockToolsEnv.MULTIMODAL_UNDERSTANDING_PROVIDER = 'test-provider';
-    mockCreateOperation.mockResolvedValue({
+    mockDispatchHeteroAgent.mockResolvedValue({
       autoStarted: true,
-      messageId: 'queue-msg-1',
       operationId: 'op-123',
       success: true,
+      topicId: 'topic-1',
     });
     mockGetBuiltinAgent.mockResolvedValue(null);
     service = new AiAgentService(mockDb, userId);
-  });
-
-  describe('graph runtime factory', () => {
-    const getLatestAgentFactory = () => {
-      const options = vi.mocked(AgentRuntimeService).mock.calls.at(-1)?.[2] as any;
-      const agentFactory = options?.agentFactory;
-
-      expect(agentFactory).toEqual(expect.any(Function));
-
-      return agentFactory as (config: any) => unknown;
-    };
-
-    it('creates GraphAgent when graph mode is enabled with a valid graph snapshot', () => {
-      service = new AiAgentService(mockDb, userId);
-
-      const agent = getLatestAgentFactory()({
-        agentConfig: {
-          agencyConfig: {
-            enableGraphMode: true,
-            graph: minimalGraph,
-          },
-        },
-        operationId: 'op-graph',
-      });
-
-      expect(agent).toBeInstanceOf(GraphAgent);
-    });
-
-    it('falls back to GeneralChatAgent when the graph snapshot is invalid', () => {
-      service = new AiAgentService(mockDb, userId);
-
-      const agent = getLatestAgentFactory()({
-        agentConfig: {
-          agencyConfig: {
-            enableGraphMode: true,
-            graph: { ...minimalGraph, edges: [] },
-          },
-        },
-        operationId: 'op-invalid-graph',
-      });
-
-      expect(agent).toBeInstanceOf(GeneralChatAgent);
-    });
-
-    it('falls back to a legacy chatConfig graph snapshot', () => {
-      service = new AiAgentService(mockDb, userId);
-
-      const agent = getLatestAgentFactory()({
-        agentConfig: {
-          chatConfig: {
-            enableGraphMode: true,
-            graph: minimalGraph,
-          },
-        },
-        operationId: 'op-legacy-graph',
-      });
-
-      expect(agent).toBeInstanceOf(GraphAgent);
-    });
-
-    it('keeps an upstream runtime agent factory authoritative', () => {
-      const upstreamAgent = { runner: vi.fn() };
-      const upstreamFactory = vi.fn(function () {
-        return upstreamAgent;
-      });
-      service = new AiAgentService(mockDb, userId, {
-        runtimeOptions: {
-          agentFactory: upstreamFactory,
-        },
-      } as any);
-
-      const config = {
-        agentConfig: {
-          chatConfig: {
-            enableGraphMode: true,
-            graph: minimalGraph,
-          },
-        },
-        operationId: 'op-upstream',
-      };
-      const agent = getLatestAgentFactory()(config);
-
-      expect(agent).toBe(upstreamAgent);
-      expect(upstreamFactory).toHaveBeenCalledWith(config);
-    });
   });
 
   it('materializes a builtin agent addressed by slug when no row exists yet', async () => {
@@ -382,8 +261,9 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     await service.execAgent({ prompt: 'reflect', slug: 'self-reflection' });
 
     expect(mockGetBuiltinAgent).toHaveBeenCalledWith('self-reflection');
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    expect(mockCreateOperation.mock.calls[0][0].agentConfig.slug).toBe('self-reflection');
+    const { ctx } = lastDispatchCall();
+    expect(ctx.agentConfig.slug).toBe('self-reflection');
+    expect(ctx.resolvedAgentId).toBe('agent-self-reflection');
   });
 
   it('throws for an unknown non-builtin identifier without materializing a row', async () => {
@@ -393,6 +273,7 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       'Agent not found: does-not-exist',
     );
     expect(mockGetBuiltinAgent).not.toHaveBeenCalled();
+    expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
   });
 
   it('should merge runtime systemRole for inbox agent when DB systemRole is empty', async () => {
@@ -412,13 +293,11 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Hello',
     });
 
-    // Verify createOperation was called with agentConfig containing the runtime systemRole
-    expect(mockCreateOperation).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.systemRole).toContain('You are Orvilo');
+    const { ctx } = lastDispatchCall();
+    expect(ctx.agentConfig.systemRole).toContain('You are Orvilo');
     // Model identity is injected by ModelInfoProvider now, not the `{{model}}`
     // template placeholder; `{{date}}` still proves the runtime template merged.
-    expect(callArgs.agentConfig.systemRole).toContain('{{date}}');
+    expect(ctx.agentConfig.systemRole).toContain('{{date}}');
   });
 
   it('should pass user response language into web onboarding runtime systemRole', async () => {
@@ -441,10 +320,10 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: '你好',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.agencyConfig?.executionTarget).toBe('none');
-    expect(callArgs.agentConfig.systemRole).toContain('Preferred reply language: zh-CN');
-    expect(callArgs.agentConfig.systemRole).toContain(
+    const { ctx } = lastDispatchCall();
+    expect(ctx.agentConfig.agencyConfig?.executionTarget).toBe('none');
+    expect(ctx.agentConfig.systemRole).toContain('Preferred reply language: zh-CN');
+    expect(ctx.agentConfig.systemRole).toContain(
       'Every visible reply, question, and visible choice label must be entirely in zh-CN',
     );
   });
@@ -466,8 +345,8 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Hello',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.systemRole).toBe(customSystemRole);
+    const { ctx } = lastDispatchCall();
+    expect(ctx.agentConfig.systemRole).toBe(customSystemRole);
   });
 
   // Regular agents get no builtin runtime prompt. They do get the user's reply
@@ -492,9 +371,9 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Hello',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
+    const { ctx } = lastDispatchCall();
     // No runtime prompt applied — only the reply-language instruction.
-    expect(callArgs.agentConfig.systemRole).toBe(REPLY_LANGUAGE_ONLY);
+    expect(ctx.agentConfig.systemRole).toBe(REPLY_LANGUAGE_ONLY);
   });
 
   it('should not apply runtime config for agents without slug', async () => {
@@ -512,8 +391,8 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Hello',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.agentConfig.systemRole).toBe(REPLY_LANGUAGE_ONLY);
+    const { ctx } = lastDispatchCall();
+    expect(ctx.agentConfig.systemRole).toBe(REPLY_LANGUAGE_ONLY);
   });
 
   it('should persist request trigger metadata on the created user message', async () => {
@@ -543,12 +422,16 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     );
   });
 
-  it('should inject self-feedback intent tool for Orvilo AI when user gate is enabled', async () => {
+  // The self-feedback intent tool is a caller-driven mount under ACP: execAgent
+  // no longer resolves the agent-signal gate itself (that moved to the
+  // agentSignal workflow); it mounts whatever the caller pinned and drops the
+  // tool when `disableSelfFeedbackIntentTool` is passed.
+  it('mounts the self-feedback spec when the caller pins it', async () => {
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
       id: 'agent-inbox',
       model: 'gpt-4',
-      plugins: [],
+      plugins: [SELF_FEEDBACK_INTENT_IDENTIFIER],
       provider: 'openai',
       slug: 'inbox',
       systemRole: '',
@@ -559,13 +442,13 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Hello',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.toolSet.enabledToolIds).toContain(SELF_FEEDBACK_INTENT_IDENTIFIER);
-    expect(callArgs.toolSet.manifestMap[SELF_FEEDBACK_INTENT_IDENTIFIER]).toBeDefined();
-    expect(callArgs.toolSet.sourceMap[SELF_FEEDBACK_INTENT_IDENTIFIER]).toBe('builtin');
+    const { input } = lastDispatchCall();
+    expect(input.builtinToolSpecs.map((spec: any) => spec.identifier)).toContain(
+      SELF_FEEDBACK_INTENT_IDENTIFIER,
+    );
   });
 
-  it('should not inject self-feedback intent tool for custom agents without agent self-iteration', async () => {
+  it('does not mount self-feedback for agents that do not declare it', async () => {
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
       id: 'agent-custom',
@@ -581,18 +464,18 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Hello',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.toolSet.enabledToolIds).not.toContain(SELF_FEEDBACK_INTENT_IDENTIFIER);
-    expect(callArgs.toolSet.manifestMap[SELF_FEEDBACK_INTENT_IDENTIFIER]).toBeUndefined();
-    expect(callArgs.toolSet.sourceMap[SELF_FEEDBACK_INTENT_IDENTIFIER]).toBeUndefined();
+    const { input } = lastDispatchCall();
+    expect(input.builtinToolSpecs.map((spec: any) => spec.identifier)).not.toContain(
+      SELF_FEEDBACK_INTENT_IDENTIFIER,
+    );
   });
 
-  it('should inject self-feedback intent tool for custom agents with agent self-iteration', async () => {
+  it('drops self-feedback when the caller disables it for this run', async () => {
     mockGetAgentConfig.mockResolvedValue({
-      chatConfig: { selfIteration: { enabled: true } },
+      chatConfig: {},
       id: 'agent-custom',
       model: 'gpt-4',
-      plugins: [],
+      plugins: [SELF_FEEDBACK_INTENT_IDENTIFIER],
       provider: 'openai',
       slug: 'custom-agent',
       systemRole: '',
@@ -600,13 +483,14 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
 
     await service.execAgent({
       agentId: 'agent-custom',
+      disableSelfFeedbackIntentTool: true,
       prompt: 'Hello',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.toolSet.enabledToolIds).toContain(SELF_FEEDBACK_INTENT_IDENTIFIER);
-    expect(callArgs.toolSet.manifestMap[SELF_FEEDBACK_INTENT_IDENTIFIER]).toBeDefined();
-    expect(callArgs.toolSet.sourceMap[SELF_FEEDBACK_INTENT_IDENTIFIER]).toBe('builtin');
+    const { input } = lastDispatchCall();
+    expect(input.builtinToolSpecs.map((spec: any) => spec.identifier)).not.toContain(
+      SELF_FEEDBACK_INTENT_IDENTIFIER,
+    );
   });
 
   it('should inject page-agent runtime for regular agents in page scope', async () => {
@@ -629,29 +513,25 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Rewrite this page',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
-    expect(callArgs.appContext).toMatchObject({
+    const { ctx, input } = lastDispatchCall();
+    expect(ctx.appContext).toMatchObject({
       documentId: 'docs-1',
       scope: 'page',
     });
-    expect(callArgs.agentConfig.plugins).toEqual([PageAgentIdentifier, 'orvilo-agent-documents']);
-    expect(callArgs.agentConfig.chatConfig.enableHistoryCount).toBe(false);
-    expect(callArgs.agentConfig.systemRole).toContain('Custom role.');
-    expect(callArgs.agentConfig.systemRole).toContain(
+    expect(ctx.agentConfig.plugins).toEqual([PageAgentIdentifier, 'orvilo-agent-documents']);
+    expect(ctx.agentConfig.chatConfig.enableHistoryCount).toBe(false);
+    expect(ctx.agentConfig.systemRole).toContain('Custom role.');
+    expect(ctx.agentConfig.systemRole).toContain(
       'You are a helpful document (page) editing assistant',
     );
 
-    expect(createServerAgentToolsEngine).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        agentConfig: expect.objectContaining({
-          plugins: [PageAgentIdentifier, 'orvilo-agent-documents'],
-        }),
-      }),
+    // The injected page-agent rides the per-run MCP surface (server runtime).
+    expect(input.builtinToolSpecs.map((spec: any) => spec.identifier)).toContain(
+      PageAgentIdentifier,
     );
   });
 
-  it('should normalize task identifier from appContext before creating runtime operation', async () => {
+  it('should normalize task identifier from appContext into the dispatch operationTaskId', async () => {
     mockResolveTask.mockResolvedValue({ id: 'task-row-1', identifier: 'T-1' });
     mockGetAgentConfig.mockResolvedValue({
       chatConfig: {},
@@ -673,158 +553,18 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       prompt: 'Show current task',
     });
 
-    const callArgs = mockCreateOperation.mock.calls[0][0];
     expect(mockResolveTask).toHaveBeenCalledWith('T-1');
-    expect(callArgs.appContext).toMatchObject({
+    const { ctx, input } = lastDispatchCall();
+    // The operation records the resolved row id; `appContext.taskId` stays the
+    // caller-supplied identifier — the taskManager context prompt the retired
+    // loop injected (`Default Orvilo AI agent id: …`) is no longer part of the
+    // run context under ACP.
+    expect(input.operationTaskId).toBe('task-row-1');
+    expect(ctx.appContext).toMatchObject({
       defaultTaskAssigneeAgentId: 'agt_inbox',
       scope: 'task',
-      taskId: 'task-row-1',
+      taskId: 'T-1',
       topicId: 'topic-1',
     });
-    expect(callArgs.initialContext.initialContext.taskManager.contextPrompt).toContain(
-      'Default Orvilo AI agent id: agt_inbox',
-    );
-  });
-
-  it('should inject orvilo-agent when history has audio and model lacks native audio support', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-custom',
-      model: 'text-only',
-      plugins: [],
-      provider: 'openai',
-      systemRole: '',
-    });
-    mockMessageQuery.mockResolvedValue([
-      {
-        audioList: [{ alt: 'audio.mp3', id: 'file-audio', url: 'https://example.com/audio.mp3' }],
-        id: 'history-audio',
-        role: 'user',
-      },
-    ]);
-
-    await service.execAgent({
-      agentId: 'agent-custom',
-      appContext: { topicId: 'topic-1' },
-      prompt: 'What is said in the previous audio?',
-    });
-
-    expect(createServerAgentToolsEngine).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        agentConfig: expect.objectContaining({
-          plugins: expect.arrayContaining(['orvilo-agent']),
-        }),
-      }),
-    );
-  });
-
-  it('should not inject orvilo-agent when the Orvilo routed model supports audio natively', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-custom',
-      model: 'gemini-3.1-flash-lite-preview',
-      plugins: [],
-      provider: 'orvilo',
-      systemRole: '',
-    });
-    mockMessageQuery.mockResolvedValue([
-      {
-        audioList: [{ id: 'file-audio', url: 'https://example.com/audio.mp3' }],
-        id: 'history-audio',
-        role: 'user',
-      },
-    ]);
-
-    await service.execAgent({
-      agentId: 'agent-custom',
-      appContext: { topicId: 'topic-1' },
-      prompt: 'What is said in the previous audio?',
-    });
-
-    const callArgs = vi.mocked(createServerAgentToolsEngine).mock.calls[0][1];
-    expect(callArgs.agentConfig.plugins).not.toContain('orvilo-agent');
-  });
-
-  it('should not inject orvilo-agent when user model abilities support images natively', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-custom',
-      model: 'custom-vision-model',
-      plugins: [],
-      provider: 'custom-provider',
-      systemRole: '',
-    });
-    mockGetModelMetadata.mockResolvedValue({ abilities: { vision: true } });
-    mockMessageQuery.mockResolvedValue([
-      {
-        id: 'history-image',
-        imageList: [{ alt: 'image.png', id: 'file-image', url: 'https://example.com/image.png' }],
-        role: 'user',
-      },
-    ]);
-
-    await service.execAgent({
-      agentId: 'agent-custom',
-      appContext: { topicId: 'topic-1' },
-      prompt: 'What is shown in the previous image?',
-    });
-
-    const callArgs = vi.mocked(createServerAgentToolsEngine).mock.calls[0][1];
-    expect(callArgs.agentConfig.plugins).not.toContain('orvilo-agent');
-  });
-
-  it('should inject orvilo-agent when user model abilities disable builtin image support', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-custom',
-      model: 'gpt-4',
-      plugins: [],
-      provider: 'openai',
-      systemRole: '',
-    });
-    mockGetModelMetadata.mockResolvedValue({ abilities: { vision: false } });
-    mockMessageQuery.mockResolvedValue([
-      {
-        id: 'history-image',
-        imageList: [{ alt: 'image.png', id: 'file-image', url: 'https://example.com/image.png' }],
-        role: 'user',
-      },
-    ]);
-
-    await service.execAgent({
-      agentId: 'agent-custom',
-      appContext: { topicId: 'topic-1' },
-      prompt: 'What is shown in the previous image?',
-    });
-
-    expect(createServerAgentToolsEngine).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        agentConfig: expect.objectContaining({
-          plugins: expect.arrayContaining(['orvilo-agent']),
-        }),
-      }),
-    );
-  });
-
-  it('should preserve builtin image output support when user abilities override vision', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-custom',
-      model: 'gemini-3.1-flash-image',
-      plugins: [],
-      provider: 'google',
-      systemRole: '',
-    });
-    mockGetModelMetadata.mockResolvedValue({ abilities: { vision: false } });
-
-    await service.execAgent({
-      agentId: 'agent-custom',
-      prompt: 'Generate an image',
-    });
-
-    const callArgs = vi.mocked(createServerAgentToolsEngine).mock.calls[0][1];
-    expect(callArgs.modelAbilities).toMatchObject({ imageOutput: true });
   });
 });

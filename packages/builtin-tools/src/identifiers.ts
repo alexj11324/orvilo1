@@ -10,14 +10,12 @@ import {
   agentSignalSkillManagementManifest,
 } from '@orvilo/builtin-tool-agent-signal';
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
-import { BrowserManifest } from '@orvilo/builtin-tool-browser';
 import { CalculatorManifest } from '@orvilo/builtin-tool-calculator/manifest';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { CredsManifest } from '@orvilo/builtin-tool-creds';
 import { GoalManifest, GoalSupervisorManifest } from '@orvilo/builtin-tool-goal';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
-import { ImageGenerationManifest } from '@orvilo/builtin-tool-image-generation';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
@@ -25,7 +23,6 @@ import { NotebookManifest } from '@orvilo/builtin-tool-notebook';
 import { OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
-import { SkillStoreManifest } from '@orvilo/builtin-tool-skill-store';
 import { SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
 import { UserInteractionManifest } from '@orvilo/builtin-tool-user-interaction';
@@ -46,9 +43,7 @@ export const builtinToolIdentifiers: string[] = [
   GroupManagementManifest.identifier,
   GoalManifest.identifier,
   GoalSupervisorManifest.identifier,
-  ImageGenerationManifest.identifier,
   KnowledgeBaseManifest.identifier,
-  BrowserManifest.identifier,
   LocalSystemManifest.identifier,
   MemoryManifest.identifier,
   NotebookManifest.identifier,
@@ -59,7 +54,6 @@ export const builtinToolIdentifiers: string[] = [
   agentSignalFeedbackIntentManifest.identifier,
   agentSignalSkillManagementManifest.identifier,
   SkillsManifest.identifier,
-  SkillStoreManifest.identifier,
   TopicReferenceManifest.identifier,
   OrviloActivatorManifest.identifier,
   WebBrowsingManifest.identifier,

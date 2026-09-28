@@ -1,7 +1,7 @@
 'use client';
 
 import { Flexbox, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
+import { ActionIcon, Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { agentSecondaryDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -10,27 +10,20 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
-import { AgentProfileArtwork } from '@/features/AgentProfileArtwork';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
-import { useGlobalStore } from '@/store/global';
-import { globalGeneralSelectors } from '@/store/global/selectors';
 
 import { useAutoName } from './useAutoName';
 
 const AgentHeader = memo(() => {
   const { t } = useTranslation(['setting', 'common']);
-  const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
   const { allowed: canEdit } = usePermission('edit_own_content');
 
   const agentId = useAgentStore((s) => s.activeAgentId || '');
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId), isEqual);
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
   const slug = useAgentStore(agentSelectors.getAgentSlugById(agentId));
-  /** Keeps the render-only fallback avatar out of generation references. */
-  const storedAvatar = useAgentStore(agentSelectors.getAgentStoredAvatarById(agentId));
-  const updateMetaById = useAgentStore((s) => s.updateAgentMetaById);
   const { autoName, naming } = useAutoName(agentId);
   const personalName = meta.name?.trim();
   const role = meta.title?.trim();
@@ -57,24 +50,30 @@ const AgentHeader = memo(() => {
         e.preventDefault();
       }}
     >
-      <AgentProfileArtwork
-        agentId={agentId}
-        avatar={meta.avatar}
-        background={meta.backgroundColor}
-        canEdit={canEdit}
-        description={meta.description}
-        locale={locale}
-        name={meta.name}
-        storedAvatar={storedAvatar}
-        systemRole={config?.systemRole}
-        title={meta.title}
-        onAvatarChange={(avatar) => {
-          if (canEdit) void updateMetaById(agentId, { avatar });
-        }}
-        onBackgroundChange={(backgroundColor) => {
-          if (canEdit) void updateMetaById(agentId, { backgroundColor });
-        }}
-      />
+      <div style={{ paddingBlockEnd: 36, position: 'relative' }}>
+        <div
+          style={{
+            background: meta.backgroundColor || 'transparent',
+            borderRadius: cssVar.borderRadiusLG,
+            height: meta.backgroundColor ? 160 : 80,
+            marginInline: -16,
+            width: 'calc(100% + 32px)',
+          }}
+        />
+        <div
+          style={{
+            background: cssVar.colorBgContainer,
+            border: `4px solid ${cssVar.colorBgContainer}`,
+            borderRadius: `calc(${cssVar.borderRadiusLG} + 4px)`,
+            bottom: 0,
+            left: 24,
+            position: 'absolute',
+            zIndex: 4,
+          }}
+        >
+          <Avatar avatar={meta.avatar} shape={'square'} size={72} />
+        </div>
+      </div>
       {/* Identity Section — display only. Editing all three fields happens in a
           form modal; inline inputs crowded the header and left no room for a
           per-field label or error. */}

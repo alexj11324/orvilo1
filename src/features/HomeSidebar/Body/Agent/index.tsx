@@ -15,7 +15,6 @@ import { ArrowRight } from 'lucide-react';
 import React, { memo, type MouseEvent, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -37,11 +36,7 @@ const Agent = memo<AgentProps>(({ itemKey }) => {
   const { isRevalidating } = useFetchAgentList();
   // Keep the label registry warm so the per-item "Labels" submenu opens populated.
   useFetchAgentLabels();
-  // In workspace mode the section pairs with the "Private" bucket, so the
-  // public/shared agents are labeled "Public" to make the contrast obvious.
-  // Personal mode has no such duality — keep the existing "Agents" label.
-  const activeWorkspaceId = useActiveWorkspaceId();
-  const titleKey = activeWorkspaceId ? 'navPanel.publicAgents' : 'navPanel.agent';
+  const titleKey = 'navPanel.agent';
 
   const { openConfigGroupModal } = useAgentModal();
 
@@ -83,12 +78,12 @@ const Agent = memo<AgentProps>(({ itemKey }) => {
           <Flexbox
             horizontal
             align="center"
+            gap={2}
             className={cx(
               'accordion-action',
               accordionStyles.action,
               accordionStyles.actionBorderless,
             )}
-            gap={2}
           >
             {/* The flat view-all page adapts per mode: workspace gets the
                 workspace/private segments + per-user pin + author column;

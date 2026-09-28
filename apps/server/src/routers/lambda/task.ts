@@ -1,6 +1,11 @@
 import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
-import type { TaskListItem, TaskParticipant, TaskVerifyConfig } from '@orvilo/types';
+import type {
+  TaskListItem,
+  TaskParticipant,
+  TaskVerifyConfig,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -11,16 +16,31 @@ import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPer
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
+import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
+import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
+import { resolveWorkflowCreatePreset } from '@/database/models/workflowMove';
+import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
+import {
+  ActionApprovalService,
+  AgentDelegationService,
+  DELEGATION_ACTIONS,
+  ProjectMemberModel,
+  TASK_INPUT_INTENT_TYPES,
+  TASK_INPUT_STATUSES,
+  TaskInputService,
+} from '@/server/services/agentDelegation';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
@@ -48,12 +68,17 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
   return opts.next({
     ctx: {
       agentModel: new AgentModel(ctx.serverDB, ctx.userId, wsId),
+      approvals: new ActionApprovalService(ctx.serverDB, ctx.userId, wsId),
       briefModel: new BriefModel(ctx.serverDB, ctx.userId, wsId),
+      delegation: new AgentDelegationService(ctx.serverDB, ctx.userId, wsId),
       editLockService: new EditLockService(ctx.userId),
+      taskInputs: new TaskInputService(ctx.serverDB, ctx.userId, wsId),
       taskIntegration: new TaskIntegrationService(ctx.serverDB, ctx.userId, wsId),
       taskLifecycle: new TaskLifecycleService(ctx.serverDB, ctx.userId, wsId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
+      teamModel: new TeamModel(ctx.serverDB, ctx.userId, wsId ?? ''),
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
+      taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, wsId),
       taskService: new TaskService(ctx.serverDB, ctx.userId, wsId),
       taskTopicModel: new TaskTopicModel(ctx.serverDB, ctx.userId, wsId),
       topicModel: new TopicModel(ctx.serverDB, ctx.userId, wsId),
@@ -69,6 +94,16 @@ const taskProcedureWrite = taskProcedure.use(withScopedPermission('agent:update'
 // All procedures that take an id accept either raw id (task_xxx) or identifier (TASK-1)
 // Resolution happens in the model layer via model.resolve()
 const idInput = z.object({ id: z.string() });
+
+const TASK_WORKFLOW_CATEGORIES = [
+  'triage',
+  'backlog',
+  'todo',
+  'in_progress',
+  'in_review',
+  'done',
+  'canceled',
+] as const satisfies readonly TaskWorkflowCategory[];
 
 const taskVerifyConfigPatchSchema = z.object({
   enabled: z.boolean().nullish(),
@@ -109,10 +144,17 @@ const createSchema = z.object({
   projectId: z.string().optional(),
   schedulePattern: z.string().optional(),
   scheduleTimezone: z.string().optional(),
+  /** Execution-status preset — a status-grouped board column's `+`. */
+  status: z.enum(TASK_STATUSES).optional(),
+  /** Owning team for workspace tasks — the team's issue-seq allocates the identifier. */
+  teamId: z.string().optional(),
   // When omitted, the server derives visibility from the parent task or the
   // assignee agent's visibility (private agent → private task). UI surfaces
   // such as the top-level "Tasks" create form pass it explicitly.
   visibility: z.enum(['private', 'public']).optional(),
+  /** Workflow-category preset — a work-query board column's `+`; resolved to
+   *  the team's mapped workflow state below when exactly one matches. */
+  workflowCategory: z.enum(TASK_WORKFLOW_CATEGORIES).optional(),
   // Removed contract, kept so the server can recognise it. A task no longer
   // carries a goal — the Goal Graph owns execution and dispatches its own Work
   // Tasks — and silently dropping this field would let a released client report
@@ -161,6 +203,7 @@ const updateSchema = z.object({
       assigneeUserId: z.string().nullish(),
       priority: z.number().min(0).max(4).optional(),
       statuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
+      workflowCategories: z.array(z.enum(TASK_WORKFLOW_CATEGORIES)).max(7).optional(),
     })
     .optional(),
   name: z.string().optional(),
@@ -173,6 +216,8 @@ const updateSchema = z.object({
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
   status: z.enum(TASK_STATUSES).optional(),
+  /** Business-workflow board target. The server resolves its exact mapped state id. */
+  workflowCategory: z.enum(TASK_WORKFLOW_CATEGORIES).optional(),
 });
 
 const listSchema = z.object({
@@ -217,21 +262,29 @@ const groupListSchema = z
     groupLimits: z.record(z.string(), z.number().int().min(1).max(500)).optional(),
     groups: z
       .array(
-        z.object({
-          key: z.string(),
-          limit: z.number().min(1).max(100).default(50),
-          offset: z.number().min(0).default(0),
-          statuses: z.array(z.string()).min(1).max(10),
-        }),
+        z
+          .object({
+            key: z.string(),
+            limit: z.number().min(1).max(100).default(50),
+            offset: z.number().min(0).default(0),
+            statuses: z.array(z.enum(TASK_STATUSES)).max(10).optional(),
+            workflowCategories: z.array(z.enum(TASK_WORKFLOW_CATEGORIES)).max(7).optional(),
+          })
+          .refine(
+            ({ statuses, workflowCategories }) =>
+              Boolean(statuses?.length) || Boolean(workflowCategories?.length),
+            { message: 'A task group needs statuses or workflow categories' },
+          ),
       )
       .min(1)
       .max(10)
       .optional(),
     parentTaskId: z.string().nullish(),
-    projectId: z.string().optional(),
+    // `null` narrows to tasks with no project — the board's "No project" chip.
+    projectId: z.string().nullish(),
     // Same "My tasks" narrowing as `listSchema.scope`, so the board renders the
     // exact set its list view does. Always resolved against `ctx.userId`.
-    scope: z.enum(['assigned', 'created']).optional(),
+    scope: z.enum(['assigned', 'created', 'delegated']).optional(),
     visibility: z.enum(['private', 'public']).optional(),
   })
   .refine(({ groupBy, groups }) => Boolean(groupBy) !== Boolean(groups), {
@@ -246,6 +299,53 @@ async function resolveOrThrow(model: TaskModel, id: string) {
 }
 
 /**
+ * Task-steering capability for `instruction` inputs: the assignee or reviewer
+ * steers by role on the task, a project manager steers inside their project,
+ * and a workspace owner/admin steers anywhere in the workspace. Members
+ * without steering rights may still submit comments, proposals and decisions
+ * (the procedure's `agent:update` gate already admits them); workspace
+ * viewers are read-only and submit nothing.
+ */
+async function assertTaskSteeringCapability(
+  ctx: {
+    serverDB: OrviloDatabase;
+    userId: string;
+    workspaceId?: string;
+  },
+  task: {
+    assigneeUserId: string | null;
+    projectId: string | null;
+    reviewerUserId: string | null;
+    workspaceId: string | null;
+  },
+) {
+  if (task.assigneeUserId === ctx.userId || task.reviewerUserId === ctx.userId) return;
+
+  const workspaceId = task.workspaceId ?? ctx.workspaceId;
+  if (workspaceId) {
+    const role = await getActiveWorkspaceMembershipRole(ctx.serverDB, {
+      userId: ctx.userId,
+      workspaceId,
+    });
+    if (role === 'owner' || role === 'admin') return;
+
+    if (task.projectId) {
+      const projectRole = await new ProjectMemberModel(ctx.serverDB, ctx.userId).getRole(
+        task.projectId,
+        ctx.userId,
+      );
+      if (projectRole === 'manager') return;
+    }
+  }
+
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message:
+      'Instruction inputs require assignee, reviewer, project-manager or workspace-admin steering capability',
+  });
+}
+
+/**
  * Recipients of a new member comment on a task: the creator and the member
  * assignee as ambient `commented` pings, upgraded to `mentioned` when the
  * comment @mentions them. The actor never appears in the result.
@@ -253,7 +353,7 @@ async function resolveOrThrow(model: TaskModel, id: string) {
 function collectTaskCommentRecipients(params: {
   actorUserId: string;
   mentionedUserIds: string[];
-  task: { assigneeUserId: string | null; createdByUserId: string };
+  task: { assigneeUserId: string | null; createdByUserId: string | null };
 }): TaskCommentActivityRecipient[] {
   const { actorUserId, mentionedUserIds, task } = params;
   const byUserId = new Map<string, TaskCommentActivityRecipient['kind']>();
@@ -272,7 +372,7 @@ function collectTaskCommentRecipients(params: {
  * check (`filterActiveWorkspaceMemberIds`).
  */
 function isTaskHiddenFrom(
-  task: { createdByUserId: string; visibility: 'private' | 'public' },
+  task: { createdByUserId: string | null; visibility: 'private' | 'public' },
   userId: string,
 ): boolean {
   return task.visibility === 'private' && task.createdByUserId !== userId;
@@ -470,6 +570,15 @@ export const taskRouter = router({
       try {
         return await ctx.taskIntentService.analyze(input);
       } catch (error) {
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -505,6 +614,15 @@ export const taskRouter = router({
       try {
         return await ctx.taskIntentService.synthesize(input);
       } catch (error) {
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -750,7 +868,7 @@ export const taskRouter = router({
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
         const dep = await resolveOrThrow(model, input.dependsOnId);
-        await model.addDependency(task.id, dep.id, input.type);
+        await model.addDependency(task.id, dep.id, input.type, { source: 'user' });
         return { message: 'Dependency added', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -789,40 +907,6 @@ export const taskRouter = router({
       }
     }),
 
-  /**
-   * Steer a task topic's agent: a message sent while the run is live is
-   * injected into the topic (the runtime picks it up at the next step); a
-   * run that cannot consume messages (heterogeneous process / parked
-   * approval) reports `requiresInterrupt` and must be resent with
-   * `interrupt: true`; an idle topic is continued off the new message.
-   */
-  steer: taskProcedureWrite
-    .input(
-      z.object({
-        fileIds: z.array(z.string()).optional(),
-        id: z.string(),
-        interrupt: z.boolean().optional(),
-        message: z.string(),
-        topicId: z.string(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      try {
-        return await ctx.taskService.steerTopic(input);
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        if (error instanceof TaskDependencyError) {
-          throw new TRPCError({ cause: error, code: error.code, message: error.message });
-        }
-        console.error('[task:steer]', error);
-        throw new TRPCError({
-          cause: error,
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to steer task topic',
-        });
-      }
-    }),
-
   deleteTopic: taskProcedureWrite
     .input(z.object({ topicId: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -855,8 +939,24 @@ export const taskRouter = router({
     try {
       const parsedVerify = taskVerifyConfigPatchSchema.safeParse(createInput.config?.verify);
       const { verify: _legacyVerify, ...taskConfig } = createInput.config ?? {};
+      // Board `+` presets: a workflow-category target resolves against the
+      // team's imported states (exact match → stamp the state; otherwise keep
+      // the bare category — the board groups on it regardless). Creating into
+      // a real column also bypasses intake, so `triageStatus` lands 'accepted'
+      // instead of the model's 'untriaged' default and the new card stays
+      // visible on a triage-capable team's board.
+      const workflowPreset = resolveWorkflowCreatePreset({
+        category: createInput.workflowCategory,
+        states:
+          createInput.workflowCategory && createInput.teamId && ctx.teamModel
+            ? await ctx.teamModel.listWorkflowStates(createInput.teamId)
+            : [],
+        status: createInput.status,
+        teamId: createInput.teamId,
+      });
       const task = await ctx.taskService.createTask({
         ...createInput,
+        ...workflowPreset,
         config: parsedVerify.success ? taskConfig : createInput.config,
       });
       try {
@@ -908,7 +1008,7 @@ export const taskRouter = router({
           ids.map(async (id) => [id, await ctx.taskIntegration.snapshotTaskWorktrees(id)] as const),
         ),
       );
-      const deletedIds = await model.deleteMany(ids);
+      const deletedIds = await model.deleteMany(ids, { source: 'user' });
       await Promise.allSettled(
         deletedIds.map((id) => ctx.taskIntegration.cleanupTaskWorktrees(id, snapshots.get(id)!)),
       );
@@ -934,7 +1034,7 @@ export const taskRouter = router({
       const task = await resolveOrThrow(model, input.id);
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
       const snapshot = await ctx.taskIntegration.snapshotTaskWorktrees(task.id);
-      const deleted = await model.delete(task.id);
+      const deleted = await model.delete(task.id, { source: 'user' });
       if (deleted) await ctx.taskIntegration.cleanupTaskWorktrees(task.id, snapshot);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {
@@ -993,6 +1093,49 @@ export const taskRouter = router({
         });
       }
     }),
+
+  contractContext: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
+    try {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      const topics = await ctx.taskTopicModel.findByTaskId(task.id).catch(() => []);
+      // The contract a fresh run would descend from — latest topic carrying
+      // one — plus whether the live task constraints have drifted from the
+      // revisions that contract pinned (pending un-adopted edits).
+      const contract = [...topics]
+        .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
+        .find((t) => t.contract)?.contract;
+      const pendingConstraintEdits = Boolean(
+        contract &&
+        (contract.versions?.requirementRevision !== task.requirementRevision ||
+          contract.versions?.policyRevision !== task.policyRevision),
+      );
+      return {
+        data: {
+          contract: contract
+            ? {
+                contractId: contract.contractId ?? null,
+                intent: contract.intent ?? null,
+                replan: contract.replan ?? null,
+                revision: contract.revision ?? null,
+                sourceContractId: contract.sourceContractId ?? null,
+              }
+            : null,
+          pendingConstraintEdits,
+          policyRevision: task.policyRevision,
+          requirementRevision: task.requirementRevision,
+        },
+        success: true,
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[task:contractContext]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get task contract context',
+      });
+    }
+  }),
 
   detail: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
     try {
@@ -1163,6 +1306,7 @@ export const taskRouter = router({
         ...query,
         ...(scope === 'assigned' ? { assigneeUserId: ctx.userId } : {}),
         ...(scope === 'created' ? { createdByUserId: ctx.userId } : {}),
+        ...(scope === 'delegated' ? { delegatedByUserId: ctx.userId } : {}),
       });
       return { data: groups, success: true };
     } catch (error) {
@@ -1206,11 +1350,13 @@ export const taskRouter = router({
       const assigneeUserIds = [
         ...new Set(result.tasks.map((t) => t.assigneeUserId).filter((id): id is string => !!id)),
       ];
-      const [agents, users] = await Promise.all([
+      const [agents, users, labelsByTask] = await Promise.all([
         assigneeIds.length > 0 ? ctx.agentModel.getAgentAvatarsByIds(assigneeIds) : [],
         assigneeUserIds.length > 0
           ? UserModel.getDisplayInfoByIds(ctx.serverDB, assigneeUserIds)
           : [],
+        // Row chips: one batched join, never a query per row.
+        ctx.taskLabelModel.listForTasks(result.tasks.map((task) => task.id)),
       ]);
       const agentMap = new Map(agents.map((a) => [a.id, a]));
       const userMap = new Map(users.map((u) => [u.id, u]));
@@ -1241,7 +1387,11 @@ export const taskRouter = router({
             });
           }
         }
-        return { ...task, participants };
+        return {
+          ...task,
+          labels: (labelsByTask.get(task.id) ?? []).map(toTaskLabelSummary),
+          participants,
+        };
       });
 
       return { data, success: true, total: result.total };
@@ -1261,13 +1411,40 @@ export const taskRouter = router({
       idInput.merge(
         z.object({
           continueTopicId: z.string().optional(),
+          delegationGrantId: z.string().optional(),
+          idempotencyKey: z.string().min(1).max(255).optional(),
+          // SB08: which contract this run adopts. `continue` continues an
+          // existing topic; `repair` re-executes the frozen contract;
+          // `authorized_replan` adopts the live (edited) constraints under a
+          // task.replan action approval. Omitting intent on a drifted
+          // contract is an explicit CONFLICT, never a silent adoption.
+          intent: z.enum(['continue', 'repair', 'authorized_replan']).optional(),
           prompt: z.string().optional(),
+          replanApprovalId: z.string().optional(),
+          sourceContractId: z.string().optional(),
         }),
       ),
     )
     .mutation(async ({ input, ctx }) => {
       try {
         const task = await resolveOrThrow(ctx.taskModel, input.id);
+
+        // Delegated run: the grant must be live, unexpired, action-permitted
+        // and bound to THIS task — a grant for another task stays invisible.
+        // The validated grant then BINDS the run: it executes as the grant's
+        // agent (never the task's stored assignee or the inbox fallback) and
+        // is epoch-fenced to the grant id on its task_topics row.
+        let delegation: { agentId: string; grantId: string } | undefined;
+        if (input.delegationGrantId) {
+          const grant = await ctx.delegation.validateGrantForRun({
+            action: 'run',
+            grantId: input.delegationGrantId,
+          });
+          if (grant.taskId !== task.id) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+          }
+          delegation = { agentId: grant.agentId, grantId: grant.id };
+        }
 
         const runner = new TaskRunnerService(
           ctx.serverDB,
@@ -1276,7 +1453,12 @@ export const taskRouter = router({
         );
         return await runner.runTask({
           continueTopicId: input.continueTopicId,
+          delegation,
           extraPrompt: input.prompt,
+          idempotencyKey: input.idempotencyKey,
+          intent: input.intent,
+          replanApprovalId: input.replanApprovalId,
+          sourceContractId: input.sourceContractId,
           taskId: task.id,
         });
       } catch (error) {
@@ -1351,17 +1533,46 @@ export const taskRouter = router({
     }),
 
   removeDependency: taskProcedureWrite
-    .input(z.object({ dependsOnId: z.string(), taskId: z.string() }))
+    .input(
+      z
+        .object({
+          dependsOnId: z.string().optional(),
+          relationId: z.uuid().optional(),
+          taskId: z.string(),
+          type: z.enum(['blocks', 'relates']).optional(),
+        })
+        .refine((input) => Boolean(input.dependsOnId) !== Boolean(input.relationId), {
+          message: 'Provide either a relation ID or a task ID.',
+        }),
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
-        // A known raw edge target may have become private/trashed. Authorize
-        // the dependent, not the upstream, so its owner can remove that blocker.
-        const depId = input.dependsOnId.startsWith('task_')
-          ? input.dependsOnId
-          : (await resolveOrThrow(model, input.dependsOnId)).id;
-        await model.removeDependency(task.id, depId);
+        if (input.relationId) {
+          await model.removeDependencyByRelationId(task.id, input.relationId, { source: 'user' });
+          return { message: 'Dependency removed', success: true };
+        }
+        if (!input.dependsOnId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Task ID is required' });
+        }
+        // Legacy task IDs do not all begin with task_. Resolve both an ID and
+        // an issue identifier; an inaccessible target may still be unlinked
+        // through a relation owned by this readable task.
+        const matches = await model.resolveMany([input.dependsOnId]);
+        const depId =
+          (matches.find((row) => row.id === input.dependsOnId) ?? matches[0])?.id ??
+          input.dependsOnId;
+        if (
+          matches.length === 0 &&
+          !(await model.getIssueRelations(task.id)).some(
+            (relation) =>
+              relation.dependsOnId === depId && (!input.type || relation.type === input.type),
+          )
+        ) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Relation not found' });
+        }
+        await model.removeDependency(task.id, depId, { source: 'user' }, input.type);
         return { message: 'Dependency removed', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -1671,6 +1882,89 @@ export const taskRouter = router({
         );
         const resolved = await resolveOrThrow(model, id);
 
+        let workflowPatch:
+          | {
+              workflowCategory: TaskWorkflowCategory;
+              workflowStateId: string;
+              workflowStateRefId?: string | null;
+            }
+          | undefined;
+        if (data.workflowCategory !== undefined) {
+          if (!ctx.workspaceId || !resolved.workflowStateId) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Business workflow moves require a linked Linear issue',
+            });
+          }
+
+          const linearSyncModel = new LinearSyncModel(ctx.serverDB, ctx.workspaceId);
+          const issueLink = await linearSyncModel.findIssueLinkByTaskId(resolved.id);
+          const binding = issueLink?.bindingId
+            ? await linearSyncModel.findBindingById(issueLink.bindingId)
+            : null;
+          if (issueLink && binding) {
+            if (!linearBindingWriteEnabled(binding)) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'Linear workflow writes are unavailable for this task',
+              });
+            }
+
+            const targetMappings = (binding.settings.statusMappings ?? []).filter(
+              (mapping) => mapping.workflowCategory === data.workflowCategory,
+            );
+            if (targetMappings.length === 0) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `No Linear state is mapped to ${data.workflowCategory}`,
+              });
+            }
+            if (targetMappings.length > 1) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `Multiple Linear states are mapped to ${data.workflowCategory}; choose one in workspace settings`,
+              });
+            }
+            workflowPatch = {
+              workflowCategory: data.workflowCategory,
+              workflowStateId: targetMappings[0].linearStateId,
+            };
+          } else if (issueLink?.linearTeamId && resolved.teamId) {
+            // Team-scope links carry no project binding — category moves resolve
+            // through the team's imported workflow states (lowest position wins).
+            const teamLink = await linearSyncModel.findTeamLinkByLinearTeamId(
+              issueLink.linearTeamId,
+            );
+            if (!teamLink || teamLink.syncState !== 'synced') {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: 'Linear workflow writes are unavailable for this task',
+              });
+            }
+            const [targetState] = (await ctx.teamModel.listWorkflowStates(resolved.teamId))
+              .filter(
+                (state) => state.category === data.workflowCategory && state.remoteStateId !== null,
+              )
+              .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+            if (!targetState) {
+              throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `No Linear state is mapped to ${data.workflowCategory}`,
+              });
+            }
+            workflowPatch = {
+              workflowCategory: data.workflowCategory,
+              workflowStateId: targetState.remoteStateId!,
+              workflowStateRefId: targetState.id,
+            };
+          } else {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Linear workflow writes are unavailable for this task',
+            });
+          }
+        }
+
         // Collaborative edit lock: reject writes to a workspace task another member
         // is actively editing. Inert until a client acquires the lock.
         if (ctx.workspaceId) {
@@ -1698,7 +1992,7 @@ export const taskRouter = router({
         ctx.taskService.assertAssigneeUserVisibilityCompat(
           resolved.visibility,
           data.assigneeUserId,
-          resolved.createdByUserId,
+          resolved.createdByUserId ?? ctx.userId,
         );
 
         // The reviewer is the human accountable at review — same workspace
@@ -1708,7 +2002,7 @@ export const taskRouter = router({
         ctx.taskService.assertAssigneeUserVisibilityCompat(
           resolved.visibility,
           data.reviewerUserId,
-          resolved.createdByUserId,
+          resolved.createdByUserId ?? ctx.userId,
         );
 
         const resolvedParentTaskId =
@@ -1726,8 +2020,11 @@ export const taskRouter = router({
           ctx.taskService.assertParentVisibilityCompat(resolved.visibility, newParent?.visibility);
         }
 
-        const updateData =
-          parentTaskId === undefined ? data : { ...data, parentTaskId: resolvedParentTaskId };
+        const updateData = {
+          ...data,
+          ...workflowPatch,
+          ...(parentTaskId === undefined ? {} : { parentTaskId: resolvedParentTaskId }),
+        };
         // `instruction` is the markdown source of truth while `editorData` is its
         // rich-text mirror. Text-only callers (for example the editTask builtin)
         // cannot produce Lexical JSON, so discard the stale mirror and let the
@@ -1850,7 +2147,7 @@ export const taskRouter = router({
         if (input.visibility === 'private') {
           const hasOtherCreators = await ctx.taskModel.subtreeHasOtherCreators(
             resolved.id,
-            resolved.createdByUserId,
+            resolved.createdByUserId ?? ctx.userId,
           );
           if (hasOtherCreators) {
             throw new TRPCError({
@@ -1868,7 +2165,7 @@ export const taskRouter = router({
           ctx.taskService.assertAssigneeUserVisibilityCompat(
             input.visibility,
             resolved.assigneeUserId,
-            resolved.createdByUserId,
+            resolved.createdByUserId ?? ctx.userId,
           );
         }
 
@@ -1889,7 +2186,9 @@ export const taskRouter = router({
           ctx.taskService.assertParentVisibilityCompat(input.visibility, parent?.visibility);
         }
 
-        const updated = await ctx.taskModel.updateVisibility(resolved.id, input.visibility);
+        const updated = await ctx.taskModel.updateVisibility(resolved.id, input.visibility, {
+          source: 'user',
+        });
         if (!updated) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: updated, message: 'Task visibility updated', success: true };
       } catch (error) {
@@ -1983,20 +2282,29 @@ export const taskRouter = router({
     }
   }),
 
-  runReadySubtasks: taskProcedureWrite.input(idInput).mutation(async ({ input, ctx }) => {
-    try {
-      const result = await ctx.taskService.runReadySubtasks(input.id);
-      return { data: result, success: result.failed.length === 0 };
-    } catch (error) {
-      if (error instanceof TRPCError) throw error;
-      console.error('[task:runReadySubtasks]', error);
-      throw new TRPCError({
-        cause: error,
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to run subtasks',
-      });
-    }
-  }),
+  runReadySubtasks: taskProcedureWrite
+    .input(
+      idInput.merge(
+        z.object({
+          /** One client-generated identity for this manual "run all" action. */
+          requestId: z.string().min(1).max(255).optional(),
+        }),
+      ),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const result = await ctx.taskService.runReadySubtasks(input.id, input.requestId);
+        return { data: result, success: result.failed.length === 0 };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[task:runReadySubtasks]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to run subtasks',
+        });
+      }
+    }),
 
   updateStatus: taskProcedureWrite
     .input(
@@ -2164,5 +2472,121 @@ export const taskRouter = router({
         ctx.userId,
         input.targetVisibility,
       );
+    }),
+
+  // ---------------------------------------------------------------------
+  // Agent delegation + multi-user task inputs (teammates collaboration)
+  // ---------------------------------------------------------------------
+
+  // Server-authoritative input queue: the author is always the caller, the
+  // sequence is allocated per task inside the write transaction, and a replayed
+  // idempotency key returns the original row instead of appending a twin.
+  submitTaskInput: taskProcedureWrite
+    .input(
+      z.object({
+        baseTaskVersion: z.number().int().optional(),
+        idempotencyKey: z.string().min(1).max(255),
+        intentType: z.enum(TASK_INPUT_INTENT_TYPES),
+        payload: z.record(z.string(), z.unknown()),
+        taskId: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+
+      if (input.intentType === 'instruction') {
+        await assertTaskSteeringCapability(
+          { serverDB: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          task,
+        );
+      }
+
+      return ctx.taskInputs.submit({
+        baseTaskVersion: input.baseTaskVersion,
+        idempotencyKey: input.idempotencyKey,
+        intentType: input.intentType,
+        payload: input.payload,
+        taskId: task.id,
+      });
+    }),
+
+  listTaskInputs: taskProcedure
+    .input(
+      z.object({
+        status: z.enum(TASK_INPUT_STATUSES).optional(),
+        taskId: z.string(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+      return ctx.taskInputs.list({ status: input.status, taskId: task.id });
+    }),
+
+  // Delegating an agent onto a task consumes the caller's run capability (the
+  // `agent:update` gate on taskProcedureWrite) plus the same usable-agent
+  // predicate every other agent binding goes through.
+  delegateAgent: taskProcedureWrite
+    .input(
+      z.object({
+        agentId: z.string(),
+        allowedActions: z.array(z.enum(DELEGATION_ACTIONS)).max(32).optional(),
+        expiresAt: z.coerce.date().optional(),
+        taskId: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+      if (!task.workspaceId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Agent delegation requires a workspace task',
+        });
+      }
+
+      await assertAgentUsableBy(ctx.serverDB, input.agentId, {
+        userId: ctx.userId,
+        workspaceId: task.workspaceId,
+      });
+
+      return ctx.delegation.createGrant({
+        agentId: input.agentId,
+        allowedActions: input.allowedActions,
+        expiresAt: input.expiresAt,
+        task: { id: task.id, projectId: task.projectId, workspaceId: task.workspaceId },
+      });
+    }),
+
+  revokeDelegation: taskProcedureWrite
+    .input(z.object({ grantId: z.string() }))
+    .mutation(async ({ input, ctx }) => ctx.delegation.revokeGrant(input.grantId)),
+
+  // Approvals live on taskProcedure (not Write): the decider is bound by the
+  // recorded approver or a workspace-admin role, not by generic task-write
+  // permission — an approver who is a viewer must still be able to reject.
+  approveAction: taskProcedure
+    .input(
+      z.object({
+        approvalId: z.string(),
+        baseSha: z.string().optional(),
+        baseVersion: z.number().int().optional(),
+        decision: z.enum(['approved', 'rejected']),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.workspaceId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'workspaceId is required' });
+      }
+      const role = await getActiveWorkspaceMembershipRole(ctx.serverDB, {
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+
+      return ctx.approvals.decide({
+        approvalId: input.approvalId,
+        baseSha: input.baseSha,
+        baseVersion: input.baseVersion,
+        callerIsWorkspaceAdmin: role === 'owner' || role === 'admin',
+        decision: input.decision,
+      });
     }),
 });

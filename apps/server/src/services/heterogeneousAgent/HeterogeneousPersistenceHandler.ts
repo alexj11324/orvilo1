@@ -41,7 +41,7 @@ import {
 import type { MessageModel } from '@/database/models/message';
 import type { ThreadModel } from '@/database/models/thread';
 import type { TopicModel } from '@/database/models/topic';
-import { formatErrorForState } from '@/server/modules/AgentRuntime/formatErrorForState';
+import { formatErrorForState } from '@/server/modules/AgentExecution/formatErrorForState';
 
 const log = debug('orvilo-server:hetero-agent:persistence');
 
@@ -206,6 +206,8 @@ interface StoredHeterogeneousIntervention {
   resolutionRequestId?: string;
   summary?: string;
   transition?: MainAgentInterventionTransition;
+  /** Approval-window id echoed into the submit's `expectedWindowId` CAS. */
+  windowId?: string;
 }
 
 const HETEROGENEOUS_INTERVENTION_STATE_KEY = 'heterogeneousIntervention';
@@ -1355,6 +1357,7 @@ export class HeterogeneousPersistenceHandler {
       resolutionRequestId: intent.resolutionRequestId,
       summary,
       transition: intent.transition,
+      windowId: intent.request?.windowId,
     };
 
     // Persist before any business side effect. The existing JSON plugin-state

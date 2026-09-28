@@ -7,7 +7,7 @@ const MAIN_LAYOUT_PATH = '/';
  *
  * The shell draws the main-app chrome — nav panel column plus the rounded
  * container — so it is only an honest placeholder for routes that actually
- * render that chrome. `/onboarding` and `/verify-im` are siblings of the
+ * render that chrome. `/onboarding` is a sibling of the
  * main-layout root, not children: showing them a nav panel that never arrives
  * is worse than showing the brand logo they already fall back to.
  *

@@ -43,6 +43,7 @@ const loadIndexIntegrationModule = async (options: LoadIndexIntegrationModuleOpt
   vi.doUnmock('../sources');
   vi.doUnmock('@/server/services/agentDocuments');
   vi.doUnmock('@/server/modules/ModelRuntime');
+  vi.doUnmock('@/server/services/aiGeneration/judgment');
 
   const persistAgentSignalObservability = vi.fn().mockResolvedValue(undefined);
   const isAgentSignalEnabledForUser = vi.fn().mockResolvedValue(options.featureGateEnabled ?? true);
@@ -56,7 +57,16 @@ const loadIndexIntegrationModule = async (options: LoadIndexIntegrationModuleOpt
 
   if (options.mockInitModelRuntimeFromDB) {
     vi.doMock('@/server/modules/ModelRuntime', () => ({
-      initModelRuntimeFromDB: options.mockInitModelRuntimeFromDB,
+      initModelRuntimeFromDeploymentConfig: options.mockInitModelRuntimeFromDB,
+    }));
+    // Retained judgments route through runAcpJudgment; this harness fakes the
+    // ACP binding by delegating the judgment input to the same stubbed runtime.
+    vi.doMock('@/server/services/aiGeneration/judgment', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      runAcpJudgment: vi.fn(async (_db: never, _userId: string, params: { input: unknown }) => {
+        const runtime = await options.mockInitModelRuntimeFromDB!();
+        return { data: await runtime.generateObject(params.input), run: {} };
+      }),
     }));
   }
 
@@ -301,7 +311,7 @@ describe('emitAgentSignalSourceEvent integration', () => {
       mockRedis.hgetall.mockResolvedValue({});
       mockRedis.hset.mockResolvedValue(1);
       mockRedis.expire.mockResolvedValue(1);
-      const initModelRuntimeFromDB = vi.fn().mockResolvedValue({
+      const initModelRuntimeFromDeploymentConfig = vi.fn().mockResolvedValue({
         generateObject: vi.fn().mockResolvedValue({
           confidence: 0.91,
           evidence: [{ cue: 'no durable request', excerpt: 'remember this' }],
@@ -311,7 +321,7 @@ describe('emitAgentSignalSourceEvent integration', () => {
       });
 
       const { emitAgentSignalSourceEvent, mocks } = await loadIndexIntegrationModule({
-        mockInitModelRuntimeFromDB: initModelRuntimeFromDB,
+        mockInitModelRuntimeFromDB: initModelRuntimeFromDeploymentConfig,
       });
 
       const result = await emitAgentSignalSourceEvent(
@@ -340,7 +350,7 @@ describe('emitAgentSignalSourceEvent integration', () => {
 
       expect(result.orchestration.observability.record.sourceType).toBe('agent.user.message');
       expect(result.orchestration.observability.envelope.source.sourceId).toBe('source_1');
-      expect(initModelRuntimeFromDB).toHaveBeenCalledTimes(1);
+      expect(initModelRuntimeFromDeploymentConfig).toHaveBeenCalledTimes(1);
       expect(mocks.persistAgentSignalObservability).toHaveBeenCalledWith(
         expect.objectContaining({
           record: expect.objectContaining({ sourceId: 'source_1' }),

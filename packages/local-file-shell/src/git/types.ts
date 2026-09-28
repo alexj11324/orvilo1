@@ -113,6 +113,8 @@ export interface GitRemoteBranchListItem {
   isDefault: boolean;
   /** Short ref name, e.g. `origin/canary`. */
   name: string;
+  /** Commit SHA the ref currently points at (`%(objectname)`). */
+  sha?: string;
 }
 
 export interface GitWorkingTreeFiles {
@@ -228,6 +230,12 @@ export interface GitDeleteBranchResult {
 }
 
 export interface GitRemoveWorktreeResult {
+  /**
+   * Set when the request carried a `claimToken`: `true` = the host verified
+   * no live writer owns the path before removing; absent/false on hosts that
+   * cannot answer writer presence, which callers must treat as unverified.
+   */
+  claimTokenVerified?: boolean;
   error?: string;
   success: boolean;
 }
@@ -239,6 +247,57 @@ export interface GitAddWorktreeResult {
   worktreePath?: string;
 }
 
+/**
+ * What occupies a candidate worktree path, per `inspectGitWorktreePath`:
+ * - `listed` — git already tracks a worktree there (`listed` carries branch/head/dirty/locked).
+ * - `absent` — nothing on disk.
+ * - `orphan-safe` — unregistered directory whose contents are provably a crashed
+ *   `worktree add` remnant (empty, or only the `.git` gitfile): safe to clear.
+ * - `orphan-foreign` — unregistered directory holding content we cannot prove
+ *   disposable: preserve and block.
+ * - `unknown` — the worktree listing itself failed (`error` set); a failed list
+ *   is not an empty list.
+ */
+export interface GitWorktreePathInspection {
+  /**
+   * Live writer occupying the path, reported by the host's run registry (not
+   * by this function — the host annotates it at dispatch). `null` = verified
+   * no writer; an object = a live run owns the path; `undefined` = the host
+   * cannot answer, which callers must treat as "cannot prove safe".
+   */
+  activeWriter?: GitWorktreeActiveWriter | null;
+  /**
+   * Canonical spelling of `worktreePath` — every symlink/alias/case variant
+   * of the same physical directory collapses to this. Present whenever the
+   * repo listing succeeded; absent on `unknown`.
+   */
+  canonicalWorktreePath?: string;
+  /**
+   * Host capabilities negotiated before writer admission. `worktreeClaims`
+   * true means this host can bind a claim token to a created checkout inside
+   * the claims mutex (`addGitWorktree` carrying a `claimToken`). Absent =
+   * the host predates verified claims — callers must refuse before creating.
+   */
+  capabilities?: { worktreeClaims?: boolean };
+  error?: string;
+  kind: 'absent' | 'listed' | 'orphan-foreign' | 'orphan-safe' | 'unknown';
+  listed?: GitWorktreeListItem;
+  /**
+   * Canonical git common-dir of the repo — the physical repo identity that
+   * survives path aliases.
+   */
+  repoCommonDir?: string;
+  /** Canonical main-checkout root of the repo. */
+  repoRoot?: string;
+}
+
+/** A live agent run writing inside an inspected worktree path. */
+export interface GitWorktreeActiveWriter {
+  operationId?: string;
+  pid?: number;
+  topicId?: string;
+}
+
 export interface GitPullResult {
   error?: string;
   /** True when `git pull` reported the branch was already up-to-date */
@@ -248,11 +307,32 @@ export interface GitPullResult {
 
 export interface GitPushResult {
   error?: string;
+  /**
+   * Capability negotiation flag — true when a `fence` argument was supplied
+   * and this client persisted/enforced it. Absent on pre-fence clients, so
+   * the caller can tell "fenced push" from "legacy push" after the fact.
+   */
+  fenceEnforced?: boolean;
   /** True when `git push` reported everything is already up-to-date */
   noop?: boolean;
   /** Proves this client pushed the requested immutable source ref. */
   pushedSourceRef?: string;
+  /** Remote ref value observed while enforcing `expectedRemoteSha`. */
+  remoteSha?: string;
   success: boolean;
+}
+
+/**
+ * Result of the `probeGitRemoteRef` remote observation — the reconcile-side
+ * read for a fenced publish. `unknown` means the remote could not be read
+ * (unreachable/credentials), `missing` means the remote was reached and the
+ * ref does not exist, `found` carries the live sha.
+ */
+export interface GitRemoteRefProbe {
+  ref?: string;
+  /** Live sha the remote advertises for the ref. */
+  sha?: string;
+  state: 'found' | 'missing' | 'unknown';
 }
 
 export interface GitMergeResult {

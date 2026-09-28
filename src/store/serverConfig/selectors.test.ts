@@ -13,7 +13,6 @@ describe('featureFlagsSelectors', () => {
         isAgentEditable: false,
         showProvider: true,
         showMarket: true,
-        showAiImage: true,
       },
     });
 
@@ -22,7 +21,6 @@ describe('featureFlagsSelectors', () => {
     expect(result.isAgentEditable).toBe(false);
     expect(result.showProvider).toBe(true);
     expect(result.showMarket).toBe(true);
-    expect(result.showAiImage).toBe(true);
   });
 });
 

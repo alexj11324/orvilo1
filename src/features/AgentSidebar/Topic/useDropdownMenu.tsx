@@ -1,8 +1,8 @@
 import { type MenuProps } from '@lobehub/ui';
 import { Icon } from '@lobehub/ui';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
+import { confirmModal, toast, Upload } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
-import { App, Upload } from 'antd';
+import { App } from 'antd';
 import { css, cx } from 'antd-style';
 import { Archive, HardDriveDownload, Hash, Import, LucideCheck, Trash } from 'lucide-react';
 import { useCallback } from 'react';
@@ -153,12 +153,7 @@ export const useTopicActionsDropdownMenu = (
         icon: <Icon icon={Import} />,
         key: 'import',
         label: (
-          <Upload
-            accept=".json"
-            beforeUpload={handleImport}
-            disabled={!canCreateTopic}
-            showUploadList={false}
-          >
+          <Upload accept=".json" beforeUpload={handleImport} disabled={!canCreateTopic}>
             <div className={cx(hotArea)}>{t('actions.import')}</div>
           </Upload>
         ),

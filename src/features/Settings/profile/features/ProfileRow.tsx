@@ -11,6 +11,7 @@ interface ProfileRowProps {
   /** Settings-search anchor id; when set, the row becomes a scroll/highlight target */
   anchor?: string;
   children?: ReactNode;
+  description?: string;
   label?: string;
   labelSlot?: ReactNode;
 }
@@ -24,7 +25,7 @@ const styles = createStaticStyles(({ css, responsive }) => ({
   `,
   body: css`
     display: flex;
-    flex: 1;
+    flex: 0 1 auto;
     gap: 12px;
     align-items: center;
     justify-content: space-between;
@@ -32,7 +33,7 @@ const styles = createStaticStyles(({ css, responsive }) => ({
     min-width: 0;
   `,
   label: css`
-    flex: 0 0 160px;
+    flex: 1;
 
     ${responsive.md} {
       flex: 0 0 auto;
@@ -43,7 +44,7 @@ const styles = createStaticStyles(({ css, responsive }) => ({
     gap: 24px;
     align-items: center;
 
-    min-height: 48px;
+    min-height: 64px;
     padding-block: 16px;
 
     ${responsive.md} {
@@ -54,13 +55,27 @@ const styles = createStaticStyles(({ css, responsive }) => ({
   `,
 }));
 
-const ProfileRow = ({ anchor, label, labelSlot, children, action }: ProfileRowProps) => {
-  const labelNode = labelSlot ?? (label && <Text strong>{label}</Text>);
+const ProfileRow = ({
+  anchor,
+  description,
+  label,
+  labelSlot,
+  children,
+  action,
+}: ProfileRowProps) => {
+  const labelNode = labelSlot ?? (label && <Text fontSize={14}>{label}</Text>);
 
   return (
     <div className={styles.row} {...(anchor ? { [SETTINGS_ANCHOR_ROW_ATTR]: '' } : undefined)}>
       <div className={styles.label}>
         {anchor ? <SettingsSearchAnchor id={anchor}>{labelNode}</SettingsSearchAnchor> : labelNode}
+        {description && (
+          <div>
+            <Text fontSize={13} type={'secondary'}>
+              {description}
+            </Text>
+          </div>
+        )}
       </div>
       <div className={styles.body}>
         {children}

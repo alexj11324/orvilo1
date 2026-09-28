@@ -6,8 +6,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrviloOpenAI } from '../providers/openai';
 import { providerRuntimeMap } from '../runtimeMap';
 import type { ChatStreamCallbacks, ChatStreamPayload } from '../types';
-import type { CreateImagePayload } from '../types/image';
-import type { CreateVideoPayload } from '../types/video';
 import { ModelRuntime, type ModelRuntimeHooks } from './ModelRuntime';
 
 vi.mock('../providers/orvilo', () => ({
@@ -233,107 +231,6 @@ describe('ModelRuntime', () => {
 
       expect(OrviloOpenAI.prototype.generateObject).toHaveBeenCalledWith(payload, undefined);
       expect(result).toBe(mockResponse);
-    });
-  });
-
-  describe('ModelRuntime createImage method', () => {
-    it('should run correctly', async () => {
-      const payload: CreateImagePayload = {
-        model: 'dall-e-3',
-        params: {
-          prompt: 'A beautiful sunset over mountains',
-          width: 1024,
-          height: 1024,
-        },
-      };
-
-      const mockResponse = {
-        imageUrl: 'https://example.com/image.jpg',
-        width: 1024,
-        height: 1024,
-      };
-
-      vi.spyOn(OrviloOpenAI.prototype, 'createImage').mockResolvedValue(mockResponse);
-
-      const result = await mockModelRuntime.createImage(payload);
-
-      expect(OrviloOpenAI.prototype.createImage).toHaveBeenCalledWith(payload, undefined);
-      expect(result).toBe(mockResponse);
-    });
-
-    it('should handle undefined createImage method gracefully', async () => {
-      const payload: CreateImagePayload = {
-        model: 'dall-e-3',
-        params: {
-          prompt: 'A beautiful sunset over mountains',
-          width: 1024,
-          height: 1024,
-        },
-      };
-
-      // Mock runtime without createImage method
-      const runtimeWithoutCreateImage = {
-        createImage: undefined,
-      };
-
-      // @ts-ignore - testing edge case
-      mockModelRuntime['_runtime'] = runtimeWithoutCreateImage;
-
-      const result = await mockModelRuntime.createImage(payload);
-
-      expect(result).toBeUndefined();
-    });
-
-    it('should forward options to the underlying runtime', async () => {
-      const payload: CreateImagePayload = {
-        model: 'dall-e-3',
-        params: { prompt: 'a cat', width: 512, height: 512 },
-      };
-      const mockResponse = { imageUrl: 'x', width: 512, height: 512 };
-      const createImage = vi.fn().mockResolvedValue(mockResponse);
-
-      // @ts-ignore - injecting a minimal runtime for this case
-      mockModelRuntime['_runtime'] = { createImage };
-
-      const options = { metadata: { trigger: 'image' } };
-      const result = await mockModelRuntime.createImage(payload, options);
-
-      expect(createImage).toHaveBeenCalledWith(payload, options);
-      expect(result).toBe(mockResponse);
-    });
-  });
-
-  describe('ModelRuntime createVideo method', () => {
-    it('should forward payload and options to the underlying runtime', async () => {
-      const payload: CreateVideoPayload = {
-        model: 'sora-1',
-        params: { prompt: 'a cat' } as any,
-      };
-      const mockResponse = { inferenceId: 'job-1' };
-      const createVideo = vi.fn().mockResolvedValue(mockResponse);
-
-      // @ts-ignore - injecting a minimal runtime for this case
-      mockModelRuntime['_runtime'] = { createVideo };
-
-      const options = { metadata: { trigger: 'video' } };
-      const result = await mockModelRuntime.createVideo(payload, options);
-
-      expect(createVideo).toHaveBeenCalledWith(payload, options);
-      expect(result).toBe(mockResponse);
-    });
-
-    it('should handle undefined createVideo method gracefully', async () => {
-      const payload: CreateVideoPayload = {
-        model: 'sora-1',
-        params: { prompt: 'a cat' } as any,
-      };
-
-      // @ts-ignore - testing edge case
-      mockModelRuntime['_runtime'] = { createVideo: undefined };
-
-      const result = await mockModelRuntime.createVideo(payload);
-
-      expect(result).toBeUndefined();
     });
   });
 

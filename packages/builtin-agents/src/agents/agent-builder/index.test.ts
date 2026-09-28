@@ -26,7 +26,7 @@ describe('AGENT_BUILDER runtime plugins', () => {
   it('keeps functional plugins (web browsing, Gmail/Composio, etc.)', () => {
     const plugins = resolvePlugins([
       'orvilo-web-browsing',
-      'orvilo-image-generation',
+      'orvilo-agent-documents',
       'gmail',
       'orvilo-agent-management', // conflicting → removed
     ]);
@@ -34,7 +34,7 @@ describe('AGENT_BUILDER runtime plugins', () => {
     expect(plugins).toEqual([
       AgentBuilderIdentifier,
       'orvilo-web-browsing',
-      'orvilo-image-generation',
+      'orvilo-agent-documents',
       'gmail',
     ]);
   });

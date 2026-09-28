@@ -1,12 +1,14 @@
-import { Block, Flexbox } from '@lobehub/ui';
+import { Flexbox, Icon } from '@lobehub/ui';
 import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
-import { DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import { DropdownMenu, Progress, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
-import { Progress } from 'antd';
 import { cssVar } from 'antd-style';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import IssueRowChip from '@/components/IssueRowChip';
 
 import TaskStatusIcon from './TaskStatusIcon';
 
@@ -130,13 +132,21 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
     const navigationItems = flattenedSubtasks.map((subtask) => {
       const isActive = subtask.task.identifier === currentIdentifier;
       const itemStatus = toTaskStatus(subtask.task.status);
+      const workflowVisual =
+        subtask.task.workflowStateId && subtask.task.workflowCategory
+          ? WORKFLOW_CATEGORY_VISUALS[subtask.task.workflowCategory]
+          : undefined;
 
       return {
         key: subtask.task.identifier,
         label: (
           <Flexbox horizontal align="center" gap={8}>
             {subtask.depth > 0 && <div style={{ flex: 'none', width: subtask.depth * 16 }} />}
-            <TaskStatusIcon size={16} status={itemStatus} />
+            {workflowVisual ? (
+              <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
+            ) : (
+              <TaskStatusIcon size={16} status={itemStatus} />
+            )}
             <Text ellipsis weight={isActive ? 'bold' : undefined}>
               {subtask.task.name || subtask.task.identifier}
             </Text>
@@ -198,32 +208,27 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
 
     if (!data) return null;
 
+    const interactive = hasDropdown || Boolean(onRequestSubtasks);
+    // Rows with a peek-capture click handler (My issues detail pane) treat
+    // this as interactive chrome — otherwise the first click would be
+    // swallowed by row selection instead of lazy-loading subtasks.
     const tag = (
-      <Block
-        horizontal
-        align={'center'}
-        gap={4}
-        height={24}
-        paddingInline={'4px 8px'}
-        variant={'outlined'}
-        style={{
-          borderRadius: 24,
-          cursor: hasDropdown || onRequestSubtasks ? 'pointer' : undefined,
-        }}
-        onClick={hasDropdown || onRequestSubtasks ? handleTagClick : undefined}
+      <IssueRowChip
+        data-row-interactive={interactive || undefined}
+        icon={
+          <Progress
+            percent={data.percent}
+            showInfo={false}
+            size={14}
+            strokeColor={cssVar.colorSuccess}
+            type={'circle'}
+          />
+        }
+        onClick={interactive ? handleTagClick : undefined}
         onContextMenu={onRequestSubtasks ? handleTagClick : undefined}
       >
-        <Progress
-          percent={data.percent}
-          showInfo={false}
-          size={16}
-          strokeColor={cssVar.colorSuccess}
-          type={'circle'}
-        />
-        <Text fontSize={12} type={'secondary'}>
-          {data.text}
-        </Text>
-      </Block>
+        {data.text}
+      </IssueRowChip>
     );
 
     if (!hasDropdown) return tag;

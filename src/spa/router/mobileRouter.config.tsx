@@ -6,14 +6,24 @@ import {
   BusinessMobileRoutesWithMainLayout,
   BusinessMobileRoutesWithoutMainLayout,
 } from '@/business/client/BusinessMobileRoutes';
-import AppsSkeleton from '@/components/Skeleton/Apps';
-import { delayed } from '@/components/Skeleton/Delayed';
-import { acceptanceRouteMeta } from '@/features/Acceptance/routeMeta';
+import { RETIRED_ROUTE_PREFIXES } from '@/config/routes';
+import { WORKSPACE_SETTINGS_ALIASES } from '@/config/routes/settings';
 import { mobileAgentSettingsRouteMeta } from '@/features/RouteMeta/mobileRouteMeta';
-import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
 import { agentRouteMeta } from '@/routes/(main)/agent/features/routeMeta';
 import { loadRouteWithBuiltinToolSurfaces } from '@/spa/initialize/toolSurfaces';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
+
+/**
+ * Mobile mirrors the desktop shared tree minus the surfaces it does not serve,
+ * so it has to reserve more of the retired roots than the desktop tree does.
+ * `/memory` has no mobile route at all — the preferences manager is where the
+ * retired browsing centre left it, and mobile never had one — which would leave
+ * the slug segment free to claim it. `/apps` keeps its own redirect below, so it
+ * is the one retired prefix that already has a route here.
+ */
+const mobileRetiredRootGuards = [...RETIRED_ROUTE_PREFIXES]
+  .map((prefix) => prefix.replace(/^\//, ''))
+  .filter((root) => root !== 'apps');
 
 const mobileChatElement = dynamicElement(
   () => loadRouteWithBuiltinToolSurfaces(() => import('@/routes/(mobile)/chat')),
@@ -27,9 +37,15 @@ const mobileChatElement = dynamicElement(
  * home stay personal-only.
  */
 export const sharedMainAreaChildren: RouteObject[] = [
-  // Retired Community and standalone Pages URLs return to the current scope root.
+  // Retired roots come first: they are the paths a dynamic segment would
+  // otherwise claim as a workspace id. Derived from the navigation registry, so
+  // retiring a route reserves its root on mobile too.
+  ...mobileRetiredRootGuards.map((path): RouteObject => ({
+    element: redirectElement('..'),
+    path,
+  })),
+  // Deeper URLs of the retired Community and standalone Pages surfaces.
   ...[
-    'community',
     ...[
       'agent',
       'group_agent',
@@ -42,7 +58,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'workspace',
     ].flatMap((type) => [`community/${type}`, `community/${type}/:slug`]),
     'community/workspace/settings',
-    'page',
     'page/:id',
     'page/:id/permission',
   ].map((path): RouteObject => ({ element: redirectElement('..'), path })),
@@ -157,6 +172,106 @@ export const sharedMainAreaChildren: RouteObject[] = [
         errorElement: <ErrorBoundary resetPath="../tasks" />,
         path: 'agent',
       },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/inbox'), 'Mobile > Inbox', {
+              preloadId: 'mobile-inbox',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'inbox',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/my-issues'),
+              'Mobile > My Issues',
+              {
+                preloadId: 'mobile-my-work',
+              },
+            ),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-issues',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Mobile > My Work', {
+              preloadId: 'mobile-my-work',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'my-work',
+      },
+      {
+        element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Mobile > Reviews', {
+          preloadId: 'mobile-reviews',
+        }),
+        errorElement: <ErrorBoundary resetPath=".." />,
+        // Keep queue pagination/scroll mounted while only the selected review changes.
+        path: 'reviews/:reviewId?',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/members'), 'Mobile > Members', {
+              preloadId: 'mobile-members',
+            }),
+            index: true,
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'members',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/views'), 'Mobile > Views', {
+              preloadId: 'mobile-views',
+            }),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/views/[viewId]'),
+              'Mobile > Saved View',
+              { preloadId: 'mobile-views' },
+            ),
+            path: ':viewId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'views',
+      },
+      {
+        children: [
+          {
+            element: dynamicElement(() => import('@/routes/(main)/teams'), 'Mobile > Teams', {
+              preloadId: 'mobile-teams',
+            }),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/teams/[teamId]'),
+              'Mobile > Team',
+              { preloadId: 'mobile-teams' },
+            ),
+            path: ':teamId',
+          },
+        ],
+        errorElement: <ErrorBoundary resetPath=".." />,
+        path: 'teams',
+      },
     ],
     element: dynamicLayout(
       () => import('@/routes/(main)/(task-workspace)/_layout'),
@@ -174,12 +289,10 @@ export const mobileRoutes: RouteObject[] = [
     children: [
       ...sharedMainAreaChildren,
 
-      // Apps page (personal-only — never mirrored under /:workspaceSlug)
+      // Retired: `/apps` folded into Settings > About (kept as a redirect so
+      // legacy deep-links still land somewhere honest).
       {
-        element: dynamicElement(() => import('@/routes/(main)/apps'), 'Mobile > Apps', {
-          fallback: delayed(<AppsSkeleton />),
-        }),
-        errorElement: <ErrorBoundary />,
+        element: redirectElement('/settings/about'),
         path: 'apps',
       },
 
@@ -194,27 +307,14 @@ export const mobileRoutes: RouteObject[] = [
             ),
             index: true,
           },
-          // Provider routes with nested structure
+          // Retired LLM Provider surface — legacy deep-links land on the settings root.
           {
-            children: [
-              {
-                element: redirectElement('/settings/provider/all'),
-                index: true,
-              },
-              {
-                element: dynamicElement(
-                  () =>
-                    import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
-                  'Mobile > Settings > Provider > Detail',
-                ),
-                path: ':providerId',
-              },
-            ],
-            element: dynamicLayout(
-              () => import('@/routes/(mobile)/settings/provider/_layout'),
-              'Mobile > Settings > Provider > Layout',
-            ),
+            element: redirectElement('/settings'),
             path: 'provider',
+          },
+          {
+            element: redirectElement('/settings'),
+            path: 'provider/:providerId',
           },
           {
             element: redirectElement('/settings/credential'),
@@ -365,20 +465,6 @@ export const mobileRoutes: RouteObject[] = [
               },
               {
                 element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Mobile > Workspace > Settings > Messenger',
-                ),
-                path: 'messenger',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/messenger'),
-                  'Mobile > Workspace > Settings > Messenger > Platform',
-                ),
-                path: 'messenger/:sub',
-              },
-              {
-                element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/advanced'),
                   'Mobile > Workspace > Settings > Advanced',
                 ),
@@ -429,24 +515,26 @@ export const mobileRoutes: RouteObject[] = [
                 path: 'labels',
               },
               {
-                element: dynamicElement(
-                  () =>
-                    import('@/routes/(main)/[workspaceSlug]/settings/provider').then(
-                      (m) => m.WorkspaceProviderSettingMobile,
-                    ),
-                  'Mobile > Workspace > Settings > Provider',
-                ),
+                element: redirectElement('..'),
                 path: 'provider',
               },
-              // Path-shaped provider deep-links (`/:slug/settings/provider/:id`)
-              // redirect to the query form the workspace provider page uses, so
-              // they don't fall through to the catch-all and leave the workspace.
-              // Static element: the redirect is tiny and lazy-loading it would
-              // flash the generic brand loader before redirecting.
               {
-                element: <WorkspaceProviderRedirect />,
-                path: 'provider/:providerId',
+                // The legacy sync/import page is retired. Mobile has no
+                // replacement importer route, so return to workspace settings.
+                element: redirectElement('..'),
+                path: 'linear',
               },
+              // Legacy `/<slug>/settings/<alias>` deep links, from the same
+              // registry the desktop router reads.
+              ...WORKSPACE_SETTINGS_ALIASES.flatMap(
+                ({ alias, subPaths, target }): RouteObject[] => {
+                  const element = redirectElement(target === 'root' ? '..' : `../${target}`);
+                  return [
+                    { element, path: alias },
+                    ...(subPaths ? [{ element, path: `${alias}/:sub` }] : []),
+                  ];
+                },
+              ),
               {
                 element: dynamicElement(
                   () => import('@/routes/(main)/[workspaceSlug]/settings/plans'),
@@ -482,27 +570,6 @@ export const mobileRoutes: RouteObject[] = [
                 ),
                 path: 'usage',
               },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/audit-log'),
-                  'Mobile > Workspace > Settings > Audit Log',
-                ),
-                path: 'audit-log',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/oauth-apps'),
-                  'Mobile > Workspace > Settings > OAuth Apps',
-                ),
-                path: 'oauth-apps',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/oauth-apps'),
-                  'Mobile > Workspace > Settings > OAuth App Detail',
-                ),
-                path: 'oauth-apps/:sub',
-              },
             ],
             element: dynamicLayout(
               () => import('@/routes/(mobile)/settings/_layout'),
@@ -530,6 +597,19 @@ export const mobileRoutes: RouteObject[] = [
         path: ':workspaceSlug',
       },
 
+      // Retired standalone Acceptance / Verify platform — both roots must stay
+      // reserved words so `/:workspaceSlug` cannot claim `acceptance` /
+      // `verify`; the acceptance a stored link pointed at is reachable from
+      // the task board.
+      {
+        element: redirectElement('/tasks'),
+        path: 'acceptance/*',
+      },
+      {
+        element: redirectElement('/tasks'),
+        path: 'verify/*',
+      },
+
       // Catch-all route
       {
         element: redirectElement('/'),
@@ -547,30 +627,4 @@ export const mobileRoutes: RouteObject[] = [
     path: '/onboarding',
   },
   ...BusinessMobileRoutesWithoutMainLayout,
-
-  // Messenger verify route (outside main layout)
-  {
-    element: dynamicElement(() => import('@/routes/verify-im'), 'Mobile > VerifyIm'),
-    errorElement: <ErrorBoundary />,
-    path: '/verify-im',
-  },
-
-  {
-    element: dynamicElement(
-      () => import('@/routes/acceptance/[acceptanceId]'),
-      'Mobile > AcceptanceReport',
-    ),
-    errorElement: <ErrorBoundary />,
-    handle: { meta: acceptanceRouteMeta },
-    path: '/acceptance/:acceptanceId',
-  },
-  {
-    element: dynamicElement(
-      () => import('@/routes/acceptance/[acceptanceId]'),
-      'Mobile > AcceptanceCheck',
-    ),
-    errorElement: <ErrorBoundary />,
-    handle: { meta: acceptanceRouteMeta },
-    path: '/acceptance/:acceptanceId/check/:checkId',
-  },
 ];

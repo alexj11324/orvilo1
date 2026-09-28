@@ -14,10 +14,10 @@ export interface RecentItem {
    * the instruction for display; a prompt body must never reach a URL.
    */
   slugTitle?: string | null;
-  /** Task lifecycle status when `type === 'task'`; null for topic/document. */
+  /** Task lifecycle status when `type === 'task'`; null for the other types. */
   status: TaskStatus | null;
   title: string;
-  type: 'topic' | 'document' | 'task';
+  type: 'topic' | 'document' | 'task' | 'project' | 'savedView' | 'team';
   updatedAt: Date;
   /** The member who owns this item — for author attribution in workspace team views. */
   userId?: string;

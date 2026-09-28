@@ -1,9 +1,16 @@
 export type HotkeyId =
   | 'addUserMessage'
   | 'commandPalette'
+  | 'createTask'
   | 'deleteAndRegenerateMessage'
   | 'deleteLastMessage'
   | 'editMessage'
+  | 'goToDrafts'
+  | 'goToInbox'
+  | 'goToMyIssues'
+  | 'goToProjects'
+  | 'goToReviews'
+  | 'goToViews'
   | 'navigateToChat'
   | 'nextTab'
   | 'openChatSettings'
@@ -22,7 +29,7 @@ export type HotkeyId =
 
 export type HotkeyGroupId = 'conversation' | 'essential';
 
-export type HotkeyScopeId = 'chat' | 'files' | 'global' | 'image';
+export type HotkeyScopeId = 'chat' | 'files' | 'global';
 
 export interface HotkeyItem {
   group: HotkeyGroupId;

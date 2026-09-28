@@ -329,12 +329,15 @@ describe('HeteroSessionImporterRepo.importSessions', () => {
 
     const [personal] = await personalRepo.importSessions({ agentId, sessions: [basePayload()] });
 
-    // (clientId, userId) is globally unique: importing the same session from a
-    // workspace must NOT silently append to the personal topic — it rejects
-    // with the owning scope instead
-    await expect(
-      workspaceRepo.importSessions({ agentId, sessions: [basePayload()] }),
-    ).rejects.toThrow('personal space');
+    // (clientId, userId) is globally unique: importing the same session from
+    // workspace scope finds the owner's unfiled topic (unfiled rows follow
+    // their owner into workspace scope) and dedupes in place instead of
+    // appending a duplicate or rejecting — there is no personal mode to
+    // switch back to.
+    const [again] = await workspaceRepo.importSessions({ agentId, sessions: [basePayload()] });
+    expect(again.created).toBe(false);
+    expect(again.topicId).toBe(personal.topicId);
+    expect(again.skippedMessages).toBe(3);
     const personalRows = await serverDB
       .select()
       .from(messages)
@@ -353,11 +356,14 @@ describe('HeteroSessionImporterRepo.importSessions', () => {
     const [team] = await workspaceRepo.importSessions({ agentId, sessions: [wsPayload] });
     expect(team.created).toBe(true);
 
-    // status badges are scoped: each side only reports its own scope's topics
+    // status badges are scoped: personal scope reports only unfiled topics;
+    // workspace scope reports filed topics plus the owner's unfiled ones.
     const personalStatus = await personalRepo.getImportStatus();
     const teamStatus = await workspaceRepo.getImportStatus();
     expect(personalStatus.imported.map((i) => i.topicId)).toEqual([personal.topicId]);
-    expect(teamStatus.imported.map((i) => i.topicId)).toEqual([team.topicId]);
+    expect(teamStatus.imported.map((i) => i.topicId).sort()).toEqual(
+      [personal.topicId, team.topicId].sort(),
+    );
   });
 
   it('seeds incremental timestamps past the already-imported tail', async () => {

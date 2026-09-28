@@ -34,7 +34,6 @@ export interface EmitToolOutcomeInput {
   /** Runtime scope fields used to match planner suppression. */
   scope: {
     agentId?: string;
-    botScopeKey?: string;
     taskId?: string;
     topicId?: string;
     userId: string;

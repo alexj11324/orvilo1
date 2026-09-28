@@ -32,6 +32,11 @@ export type BuiltinAgentSlug = (typeof BUILTIN_AGENT_SLUGS)[keyof typeof BUILTIN
  * Persist Config - these fields will be stored in the database
  */
 export interface BuiltinAgentPersistConfig {
+  /**
+   * Agency configuration bound at creation. A builtin agent must never exist
+   * unbound — user-facing builtins (e.g. inbox) declare their harness here.
+   */
+  agencyConfig?: Partial<OrviloAgentAgencyConfig>;
   /** Default chat configuration */
   chatConfig?: Partial<OrviloAgentChatConfig>;
   /** Default model */

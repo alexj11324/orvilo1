@@ -8,19 +8,23 @@ import { type TopicGroupMode } from '@/types/topic';
 import { AsyncLocalStorage } from '@/utils/localStorage';
 
 export enum SidebarTabKey {
+  Agent = 'agent',
+  Agents = 'agents',
   Automations = 'automations',
   Chat = 'chat',
-  Community = 'community',
+  Drafts = 'drafts',
   Home = 'home',
-  Image = 'image',
+  Inbox = 'inbox',
   Knowledge = 'knowledge',
   Me = 'me',
-  Memory = 'memory',
-  Pages = 'pages',
+  MyIssues = 'my-issues',
+  MyWork = 'my-work',
   Resource = 'resource',
+  Reviews = 'reviews',
   Setting = 'settings',
   Tasks = 'tasks',
-  Video = 'video',
+  Teams = 'teams',
+  Views = 'views',
 }
 
 export enum ChatSettingsTabs {
@@ -29,6 +33,7 @@ export enum ChatSettingsTabs {
   Opening = 'opening',
   Plugin = 'plugin',
   Prompt = 'prompt',
+  Rules = 'rules',
   SelfIteration = 'selfIteration',
 }
 
@@ -81,7 +86,6 @@ export enum SettingsTabs {
   Labs = 'labs',
   LLM = 'llm',
   Memory = 'memory',
-  Messenger = 'messenger',
   Notification = 'notification',
   OAuthApps = 'oauth-apps',
   // business
@@ -114,34 +118,60 @@ export enum ProfileTabs {
   Usage = 'usage',
 }
 
-export const MODEL_DETAIL_PANEL_EXPANDED_KEYS = [
-  'rating',
-  'context',
-  'abilities',
-  'pricing',
-  'config',
-] as const;
-
-export type ModelDetailPanelExpandedKey = (typeof MODEL_DETAIL_PANEL_EXPANDED_KEYS)[number];
-
-/**
- * Expandable sections of the ModelDetailPanel Accordion, all expanded by default.
- *
- * Persistence stores the COLLAPSED keys (`modelDetailPanelCollapsedKeys`) instead of the
- * expanded ones: an expanded-keys array persisted before a section shipped would keep that
- * section collapsed forever (this happened to `rating`), while a collapsed-keys array lets
- * newly added sections default to expanded automatically.
- */
-export const MODEL_DETAIL_PANEL_EXPANDABLE_KEYS = [
-  'rating',
-  'abilities',
-  'pricing',
-  'config',
-] as const satisfies readonly ModelDetailPanelExpandedKey[];
-
 export type TaskViewMode = 'kanban' | 'list';
 
-export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['recents', 'agent', 'private'];
+/**
+ * The persisted task-list display config — one shape shared by the live
+ * `taskListViewOptions` and the `taskListViewDefaults` baseline "Set default"
+ * writes. The unions mirror `TaskGroupBy`/`TaskOrderBy` in
+ * `AgentTasks/AgentTaskList/listViewOptions` (which can't be imported here —
+ * it pulls in i18next and feature code); keep them in lockstep.
+ * `automationMode` is part of the union because normalization accepts it, but
+ * writers clamp it out before persisting (the scheduled surface groups on it
+ * ephemerally instead).
+ */
+export interface TaskListViewOptionsState {
+  groupBy: 'assignee' | 'automationMode' | 'member' | 'milestone' | 'none' | 'priority' | 'status';
+  hideCompleted: boolean;
+  nestedSubTasks: boolean;
+  orderBy: 'assignee' | 'createdAt' | 'manual' | 'priority' | 'status' | 'title' | 'updatedAt';
+  orderCompletedByRecency: boolean;
+  orderDirection: 'asc' | 'desc';
+  showMilestone: boolean;
+  showSubTasks: boolean;
+  subGroupBy:
+    'assignee' | 'automationMode' | 'member' | 'milestone' | 'none' | 'priority' | 'status';
+}
+
+/**
+ * The persisted My issues display options for one tab — Linear's "Display
+ * options" panel (layout grouping / sub-grouping / ordering / completed
+ * window / row-property visibility / sub-issue + triage switches). Mirrors
+ * `MyWorkDisplay` in features/MyWork/myWorkDisplay.ts, which can't be
+ * imported here (store files stay feature-free); keep the unions in
+ * lockstep. `properties` keys are the `MyWorkRowProperty` ids.
+ */
+export interface MyWorkViewOptionsState {
+  boardGrouping?: 'status' | 'workflowCategory';
+  completed?: 'all' | 'none' | 'pastDay';
+  grouping?:
+    | 'activityDate'
+    | 'assignee'
+    | 'attention'
+    | 'none'
+    | 'priority'
+    | 'project'
+    | 'status'
+    | 'workflowCategory';
+  nestedSubIssues?: boolean;
+  ordering?: 'createdAsc' | 'createdDesc' | 'default' | 'updatedAsc' | 'updatedDesc';
+  properties?: Record<string, boolean>;
+  showSubIssues?: boolean;
+  showTriage?: boolean;
+  subGrouping?: 'assignee' | 'none' | 'priority' | 'project' | 'status';
+}
+
+export const DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS = ['agent', 'workspace', 'favorites', 'teams'];
 
 export interface SystemStatus {
   /**
@@ -164,13 +194,12 @@ export interface SystemStatus {
    */
   agentListViewMode?: 'card' | 'list';
   /**
-   * Display options of the agent view-all page (grouping / ordering / hidden-agent visibility)
+   * Display options of the agent view-all page (grouping / ordering)
    */
   agentListViewOptions?: {
     groupBy: 'author' | 'label' | 'none';
     orderBy: 'author' | 'title' | 'updatedAt';
     orderDirection: 'asc' | 'desc';
-    showSidebarHidden: boolean;
   };
   /**
    * number of agents (defaultList) to display
@@ -203,6 +232,10 @@ export interface SystemStatus {
   expandInputActionbar?: boolean;
   // which sessionGroup should expand
   expandSessionGroupKeys: string[];
+  /**
+   * number of pinned favorites to display in the sidebar before More
+   */
+  favoritePageSize?: number;
   fileManagerViewMode?: 'list' | 'masonry';
   filePanelWidth: number;
   /**
@@ -234,6 +267,25 @@ export interface SystemStatus {
   imageTopicPanelWidth?: number;
   imageTopicViewMode?: 'grid' | 'list';
   /**
+   * Inbox-agent landing: the `Get started with some examples` block stays
+   * dismissed once the user closes it (the reference keeps it dismissed).
+   */
+  inboxAgentExamplesDismissed?: boolean;
+  /**
+   * Per (user, workspace) priority-inbox choice, keyed by the WorkInbox
+   * `inboxPriorityScopeKey` (`userId:workspaceId`). 'priority' keeps the
+   * Priority/Other tab split; 'all' is Linear's "Disable" — one unified list.
+   * Absent = undecided: the onboarding banner shows until the user picks.
+   * Not workspace-overlaid — the workspace id is already inside each key.
+   */
+  inboxPriorityMode?: Record<string, 'all' | 'priority'>;
+  /**
+   * Per (user, workspace) "show snoozed" display option for the inbox feed,
+   * keyed by the same scope key as `inboxPriorityMode`. Absent/false hides
+   * snoozed-until-wake cards (Linear's default).
+   */
+  inboxShowSnoozed?: Record<string, boolean>;
+  /**
    * Do not enable PGLite on app initialization, only enable when user manually turns it on
    */
   isEnablePglite?: boolean;
@@ -255,21 +307,13 @@ export interface SystemStatus {
   mobileShowPortal?: boolean;
   mobileShowTopic?: boolean;
   /**
-   * Persisted collapsed keys of the ModelDetailPanel Accordion
-   * (Rating / Abilities / Pricing / Model Config). Single shared preference
-   * across all entries (model picker submenu, ChatInput extend-params popover).
-   * Collapsed (not expanded) keys are stored so new sections default to expanded
-   * — see MODEL_DETAIL_PANEL_EXPANDABLE_KEYS.
+   * Per (user, workspace) My issues display options, keyed by the same
+   * `userId:workspaceId` scope key as `inboxPriorityMode`, then by tab
+   * (assigned/created/subscribed/activity). Linear persists these per tab
+   * server-side; the work-query API has no preference store, so local
+   * persistence stands in and a workspace switch never bleeds prefs.
    */
-  modelDetailPanelCollapsedKeys?: ModelDetailPanelExpandedKey[];
-  /**
-   * ModelSwitchPanel grouping mode
-   */
-  modelSwitchPanelGroupMode?: 'byModel' | 'byProvider';
-  /**
-   * ModelSwitchPanel width
-   */
-  modelSwitchPanelWidth?: number;
+  myWorkViewOptions?: Record<string, Partial<Record<string, MyWorkViewOptionsState>>>;
   noWideScreen?: boolean;
   pageAgentPanelWidth?: number;
   /**
@@ -289,6 +333,30 @@ export interface SystemStatus {
    * number of private agents (ungrouped) to display in the Private sidebar bucket
    */
   privateAgentPageSize?: number;
+  /**
+   * Display options of the `/projects` list page (Linear's "Display options"
+   * panel: layout / grouping / ordering / closed-projects window / property
+   * visibility / timeline toggles). Personal-scope persistence — the
+   * reference's "Set default for everyone" is a workspace write and stays
+   * disabled until a workspace settings path exists.
+   */
+  projectListViewOptions?: {
+    grouping?: 'lead' | 'none' | 'status';
+    layout?: 'board' | 'list' | 'timeline';
+    orderBy?:
+      | 'createdAt'
+      | 'health'
+      | 'manual'
+      | 'name'
+      | 'priority'
+      | 'status'
+      | 'targetDate'
+      | 'updatedAt';
+    orderDirection?: 'asc' | 'desc';
+    properties?: Record<string, boolean>;
+    showClosed?: 'all' | 'none' | 'pastMonth' | 'pastWeek' | 'pastYear';
+    timeline?: { showProjectList?: boolean; showWeekNumbers?: boolean };
+  };
   readNotificationSlugs?: string[];
   /**
    * number of recent items to display
@@ -310,7 +378,6 @@ export interface SystemStatus {
   showAgentBuilderPanel?: boolean;
   showCommandMenu?: boolean;
   showFilePanel?: boolean;
-  showHomePortrait?: boolean;
   /**
    * Visibility of the Home dashboard's activity and recommendations rail.
    * Independent from `showRightPanel` so Home preferences do not affect chat pages.
@@ -346,6 +413,18 @@ export interface SystemStatus {
   /** Visibility of the lightweight chat overview card. Independent from the workspace panel. */
   showWorkingOverview?: boolean;
   /**
+   * Sidebar accordion keys the user has explicitly COLLAPSED. Only keys whose
+   * default is expanded belong here — today the per-team sub-navigation rows of
+   * "Your teams" (`team:<id>`).
+   *
+   * Persisted as the collapsed set rather than the expanded one for the same
+   * reason as `modelDetailPanelCollapsedKeys`: an expanded-keys array written
+   * before a team existed (or before it defaulted to open) leaves that team
+   * folded with nothing to unfold it, while a collapsed-keys array keeps every
+   * absent key open — including teams joined later.
+   */
+  sidebarCollapsedKeys?: string[];
+  /**
    * Flat ordered list of sidebar items.
    */
   sidebarExpandedKeys?: string[];
@@ -371,19 +450,41 @@ export interface SystemStatus {
    */
   taskKanbanHiddenPanelCollapsed?: boolean;
   /**
+   * The display-options baseline the task list's "Set default" snapshots and
+   * "Reset" restores. Kept separate from `taskListViewOptions` — that field
+   * holds the live (already persisted) view config, so a Reset needs its own
+   * slot to return to. `undefined` = the user never saved one; Reset then
+   * falls back to the built-in defaults.
+   */
+  taskListViewDefaults?: TaskListViewOptionsState;
+  /**
    * Display mode for the tasks page. Persisted so a manually selected board or
    * list view survives navigation and page reloads.
    */
   taskListViewMode?: TaskViewMode;
-  taskListViewOptions?: {
-    groupBy: 'assignee' | 'member' | 'none' | 'priority' | 'status';
-    hideCompleted: boolean;
-    nestedSubTasks: boolean;
-    orderBy: 'assignee' | 'createdAt' | 'priority' | 'status' | 'title' | 'updatedAt';
-    orderCompletedByRecency: boolean;
-    orderDirection: 'asc' | 'desc';
-    showSubTasks: boolean;
-    subGroupBy: 'assignee' | 'member' | 'none' | 'priority' | 'status';
+  taskListViewOptions?: TaskListViewOptionsState;
+  /**
+   * Display options of the team Projects tab — same shape as
+   * `projectListViewOptions`, persisted under its own key so the team
+   * surface's panel never overwrites the workspace list's options.
+   * Absent = built-in defaults (the feature normalizes undefined).
+   */
+  teamProjectsViewOptions?: {
+    grouping?: 'lead' | 'none' | 'status';
+    layout?: 'board' | 'list' | 'timeline';
+    orderBy?:
+      | 'createdAt'
+      | 'health'
+      | 'manual'
+      | 'name'
+      | 'priority'
+      | 'status'
+      | 'targetDate'
+      | 'updatedAt';
+    orderDirection?: 'asc' | 'desc';
+    properties?: Record<string, boolean>;
+    showClosed?: 'all' | 'none' | 'pastMonth' | 'pastWeek' | 'pastYear';
+    timeline?: { showProjectList?: boolean; showWeekNumbers?: boolean };
   };
   /**
    * Height of the chat bottom terminal panel. Persisted so resizing survives remounts.
@@ -453,11 +554,16 @@ export interface SystemStatus {
  * overlay is empty.
  */
 export type WorkspaceOverridableField =
-  'expandSessionGroupKeys' | 'hiddenSidebarSections' | 'sidebarExpandedKeys' | 'sidebarItems';
+  | 'expandSessionGroupKeys'
+  | 'hiddenSidebarSections'
+  | 'sidebarCollapsedKeys'
+  | 'sidebarExpandedKeys'
+  | 'sidebarItems';
 
 export const WORKSPACE_OVERRIDABLE_FIELDS = [
   'expandSessionGroupKeys',
   'hiddenSidebarSections',
+  'sidebarCollapsedKeys',
   'sidebarExpandedKeys',
   'sidebarItems',
 ] as const satisfies readonly WorkspaceOverridableField[];
@@ -511,24 +617,33 @@ export const INITIAL_STATUS = {
     groupBy: 'none' as const,
     orderBy: 'updatedAt' as const,
     orderDirection: 'desc' as const,
-    showSidebarHidden: true,
   },
   agentPageSize: 5,
   privateAgentPageSize: 5,
   chatInputHeight: 64,
+  favoritePageSize: 5,
   recentPageSize: 5,
   taskListViewOptions: {
     groupBy: 'status',
-    hideCompleted: true,
+    // Completed work is part of the default picture now that the task board is
+    // the product's front door; only `canceled` starts folded away.
+    hideCompleted: false,
     nestedSubTasks: true,
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
     orderDirection: 'asc',
-    showSubTasks: false,
+    // The badge only materializes on rows carrying a milestone, so the
+    // property starts on — the same posture the reference's display options
+    // ship with.
+    showMilestone: true,
+    showSubTasks: true,
     subGroupBy: 'none',
   },
-  taskListViewMode: 'list' as const,
-  taskKanbanHiddenColumns: ['done', 'canceled'],
+  // Left unset on purpose: `undefined` means the user never chose a mode, so
+  // surfaces can apply their own default (project issues open on the grouped
+  // list, everywhere else stays on the board). A stored value always wins.
+  taskListViewMode: undefined,
+  taskKanbanHiddenColumns: ['canceled'],
   taskKanbanHiddenPanelCollapsed: false,
   disabledModelProvidersSortType: 'default',
   disabledModelsSortType: 'default',
@@ -549,21 +664,51 @@ export const INITIAL_STATUS = {
   imageTopicViewMode: 'grid' as const,
   imageTopicPanelWidth: 80,
   knowledgeBaseModalViewMode: 'list' as const,
-  leftPanelWidth: 280,
+  // Linear parity: the reference nav panel is 244px, and the whole shell budget
+  // (787px left column, 669px content column at x=304) is derived from it. Only
+  // the DEFAULT moves — a user who dragged the panel keeps their width, which is
+  // why the persisted `leftPanelWidth` in localStorage wins over this value.
+  leftPanelWidth: 244,
   mobileShowTopic: false,
-  modelDetailPanelCollapsedKeys: [],
-  modelSwitchPanelGroupMode: 'byProvider',
-  modelSwitchPanelWidth: 460,
   noWideScreen: true,
   pageAgentPanelWidth: 360,
   pagePageSize: 20,
   portalWidth: 400,
   portalWidths: {},
+  // Mirrors DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS in
+  // features/Projects/List/displayOptions.ts — duplicated inline because the
+  // store cannot import feature code (feature→store is the allowed direction).
+  projectListViewOptions: {
+    grouping: 'none' as const,
+    layout: 'list' as const,
+    orderBy: 'manual' as const,
+    orderDirection: 'asc' as const,
+    properties: {
+      completed: false,
+      created: false,
+      dependencies: false,
+      health: true,
+      id: false,
+      issues: true,
+      labels: false,
+      lead: true,
+      members: false,
+      milestones: true,
+      priority: true,
+      startDate: false,
+      status: true,
+      summary: false,
+      targetDate: true,
+      teams: false,
+      updated: false,
+    },
+    showClosed: 'all' as const,
+    timeline: { showProjectList: true, showWeekNumbers: false },
+  },
   readNotificationSlugs: [],
   resourceManagerColumnWidths: DEFAULT_RESOURCE_MANAGER_COLUMN_WIDTHS,
   showCommandMenu: false,
   showFilePanel: true,
-  showHomePortrait: true,
   showHotkeyHelper: false,
   showHomeRail: true,
   showImagePanel: true,
@@ -608,14 +753,39 @@ export const createInitialSystemStatus = (): SystemStatus => {
     hiddenHomeWidgets: Array.isArray(persistedStatus.hiddenHomeWidgets)
       ? persistedStatus.hiddenHomeWidgets
       : INITIAL_STATUS.hiddenHomeWidgets,
+    // The priority-inbox choice decides which feed the page fetches and whether
+    // the onboarding banner renders — restore it with the boot shell so neither
+    // flashes its undecided state before the async status init lands.
+    inboxPriorityMode:
+      persistedStatus.inboxPriorityMode &&
+      typeof persistedStatus.inboxPriorityMode === 'object' &&
+      !Array.isArray(persistedStatus.inboxPriorityMode)
+        ? persistedStatus.inboxPriorityMode
+        : undefined,
+    inboxShowSnoozed:
+      persistedStatus.inboxShowSnoozed &&
+      typeof persistedStatus.inboxShowSnoozed === 'object' &&
+      !Array.isArray(persistedStatus.inboxShowSnoozed)
+        ? persistedStatus.inboxShowSnoozed
+        : undefined,
+    // Same synchronous-restore rationale as inboxPriorityMode — without it the
+    // example prompts flash in then vanish once async status init lands.
+    inboxAgentExamplesDismissed:
+      typeof persistedStatus.inboxAgentExamplesDismissed === 'boolean'
+        ? persistedStatus.inboxAgentExamplesDismissed
+        : undefined,
+    // The My issues display options decide which sections and row chips the
+    // first paint draws — restore them with the boot shell like the inbox prefs.
+    myWorkViewOptions:
+      persistedStatus.myWorkViewOptions &&
+      typeof persistedStatus.myWorkViewOptions === 'object' &&
+      !Array.isArray(persistedStatus.myWorkViewOptions)
+        ? persistedStatus.myWorkViewOptions
+        : undefined,
     leftPanelWidth:
       typeof persistedStatus.leftPanelWidth === 'number'
         ? persistedStatus.leftPanelWidth
         : INITIAL_STATUS.leftPanelWidth,
-    showHomePortrait:
-      typeof persistedStatus.showHomePortrait === 'boolean'
-        ? persistedStatus.showHomePortrait
-        : INITIAL_STATUS.showHomePortrait,
     showHomeRail:
       typeof persistedStatus.showHomeRail === 'boolean'
         ? persistedStatus.showHomeRail

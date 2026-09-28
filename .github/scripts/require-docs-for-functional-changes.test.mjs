@@ -23,17 +23,17 @@ test('recognizes product source changes while excluding tests and prose', () => 
 });
 
 test('requires docs only when a pull request changes functional source', () => {
-  assert.deepEqual(
-    evaluateDocumentationRequirement(['apps/server/src/routers/tasks.ts']),
-    {
-      functionalFiles: ['apps/server/src/routers/tasks.ts'],
-      requiresDocumentation: true,
-      satisfied: false,
-    },
-  );
+  assert.deepEqual(evaluateDocumentationRequirement(['apps/server/src/routers/tasks.ts']), {
+    functionalFiles: ['apps/server/src/routers/tasks.ts'],
+    requiresDocumentation: true,
+    satisfied: false,
+  });
   assert.deepEqual(
     evaluateDocumentationRequirement([
-      { filename: 'scripts/retired-feature.ts', previous_filename: 'src/features/retired-feature.ts' },
+      {
+        filename: 'scripts/retired-feature.ts',
+        previous_filename: 'src/features/retired-feature.ts',
+      },
     ]),
     {
       functionalFiles: ['src/features/retired-feature.ts'],
@@ -43,7 +43,10 @@ test('requires docs only when a pull request changes functional source', () => {
   );
   assert.deepEqual(
     evaluateDocumentationRequirement([
-      { filename: 'src/features/renamed-feature.ts', previous_filename: 'docs/development/renamed-feature.mdx' },
+      {
+        filename: 'src/features/renamed-feature.ts',
+        previous_filename: 'docs/development/renamed-feature.mdx',
+      },
     ]),
     {
       functionalFiles: ['src/features/renamed-feature.ts'],
@@ -52,7 +55,10 @@ test('requires docs only when a pull request changes functional source', () => {
     },
   );
   assert.deepEqual(
-    evaluateDocumentationRequirement(['apps/server/src/routers/tasks.ts', 'docs/development/tasks.mdx']),
+    evaluateDocumentationRequirement([
+      'apps/server/src/routers/tasks.ts',
+      'docs/development/tasks.mdx',
+    ]),
     {
       functionalFiles: ['apps/server/src/routers/tasks.ts'],
       requiresDocumentation: true,
@@ -60,7 +66,10 @@ test('requires docs only when a pull request changes functional source', () => {
     },
   );
   assert.deepEqual(
-    evaluateDocumentationRequirement(['apps/server/src/routers/tasks.test.ts', '.github/workflows/test.yml']),
+    evaluateDocumentationRequirement([
+      'apps/server/src/routers/tasks.test.ts',
+      '.github/workflows/test.yml',
+    ]),
     { functionalFiles: [], requiresDocumentation: false, satisfied: true },
   );
 });

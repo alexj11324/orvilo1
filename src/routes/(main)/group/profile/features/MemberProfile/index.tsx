@@ -11,7 +11,6 @@ import { useParams } from 'react-router';
 import urlJoin from 'url-join';
 
 import { EditorCanvas } from '@/features/EditorCanvas';
-import ModelSelect from '@/features/ModelSelect';
 import { usePermission } from '@/hooks/usePermission';
 import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { useAgentStore } from '@/store/agent';
@@ -89,16 +88,6 @@ const MemberProfile = memo(() => {
     handleContentChange(updateContent);
   }, [canEdit, handleContentChange, updateContent]);
 
-  // Wrap updateAgentConfigById for ModelSelect
-  const updateAgentConfig = useCallback(
-    async (config: { model?: string; provider?: string }) => {
-      if (!canEdit) return;
-
-      await updateAgentConfigById(agentId, config);
-    },
-    [canEdit, updateAgentConfigById, agentId],
-  );
-
   // Watch for agent builder content updates and apply them directly to the editor
   useEffect(() => {
     if (!editor || !agentBuilderContentUpdate) return;
@@ -136,24 +125,6 @@ const MemberProfile = memo(() => {
       >
         {/* Header: Avatar + Name */}
         <AgentHeader disabled={!canEdit} readOnly={isSupervisor} />
-        {/* Config Bar: Model Selector */}
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          justify={'flex-start'}
-          style={{ marginBottom: 12 }}
-        >
-          <ModelSelect
-            initialWidth
-            disabled={!canEdit}
-            value={{
-              model: config?.model,
-              provider: config?.provider,
-            }}
-            onChange={updateAgentConfig}
-          />
-        </Flexbox>
         <AgentTool />
         <Flexbox
           horizontal

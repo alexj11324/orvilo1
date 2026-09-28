@@ -5,8 +5,7 @@ import { deviceGateway } from '@/server/services/deviceGateway';
 import { mcpService } from '@/server/services/mcp';
 
 import { buildLastSyncedAtMap, scheduleStaleConnectorToolsRefresh } from './refresh';
-import { buildConnectorMcpParams, type ConnectorToolSyncContext } from './sync';
-import { ensureFreshConnectorToken } from './tokens';
+import { type ConnectorToolSyncContext, resolveConnectorMcpParams } from './sync';
 
 export type ConnectorToolCallErrorCode = 'NOT_FOUND' | 'FORBIDDEN' | 'BAD_REQUEST';
 
@@ -100,11 +99,9 @@ export const callConnectorToolById = async (
     );
   }
 
-  const fresh = await ensureFreshConnectorToken(connector, ctx.connectorModel);
-
   return mcpService.callTool({
     argsStr: params.args ?? '{}',
-    clientParams: buildConnectorMcpParams(fresh),
+    clientParams: await resolveConnectorMcpParams(connector, ctx),
     toolName: params.toolName,
   });
 };

@@ -38,6 +38,7 @@ import { consumePendingTopicRepos, getPendingTopicRepos } from '@/store/chat/pen
 import { topicSelectors } from '@/store/chat/selectors';
 import type { ChatStore } from '@/store/chat/store';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { pushGatewayDiag } from '@/store/chat/utils/pushGatewayDiag';
 import { topicMapKey } from '@/store/chat/utils/topicMapKey';
 import { getFileStoreState } from '@/store/file/store';
 import type { StoreSetter } from '@/store/types';
@@ -60,15 +61,26 @@ import { createGatewayMemberStreamHandler } from './gatewayMemberStreamHandler';
 /**
  * Interrupts a gateway operation and rejects when its physical shutdown is unconfirmed.
  *
- * Device confirmation is authoritative for local heterogeneous agents because
- * their server runtime may already be absent while the native process still
- * needs to release its writer. Other runtimes fall back to the service result.
+ * `cancelState` (P20) is authoritative when present:
+ * - `confirmed` — the host acknowledged the stop (device exit or in-process runtime).
+ * - `requested` — the cancel signal was durably recorded and dispatched; host
+ *   confirmation arrives via the run's terminal callback. The local teardown
+ *   may proceed — the gateway `agent_runtime_end` remains authoritative.
+ * - `unknown` — the signal could not be confirmed delivered; the remote writer
+ *   may still be active, so the caller must not treat the cancel as done.
+ * - `none` — no signal was dispatched (op already terminal/missing).
+ *
+ * Older servers return only `deviceCancellationConfirmed`/`success`; fall back
+ * to that boolean collapse when `cancelState` is absent.
  */
 const interruptGatewayTaskOrThrow = async (
   params: Parameters<typeof aiAgentService.interruptTask>[0],
 ): Promise<void> => {
   const result = await aiAgentService.interruptTask(params);
-  const cancellationConfirmed = result.deviceCancellationConfirmed ?? result.success;
+  const cancellationConfirmed =
+    result.cancelState !== undefined
+      ? result.cancelState !== 'unknown'
+      : (result.deviceCancellationConfirmed ?? result.success);
 
   if (!cancellationConfirmed) {
     throw new Error(
@@ -307,6 +319,7 @@ export class GatewayActionImpl {
     this.disconnectFromGateway(operationId);
 
     const client = this.createClient({ gatewayUrl, operationId, resumeOnConnect, token });
+    pushGatewayDiag(`connect op=${operationId} resume=${Boolean(resumeOnConnect)}`);
 
     // Track connection in store
     this.#set(
@@ -322,6 +335,7 @@ export class GatewayActionImpl {
 
     // Wire up status changes
     client.on('status_changed', (status) => {
+      pushGatewayDiag(`op=${operationId} status=${status}`);
       this.#set(
         (state) => {
           const conn = state.gatewayConnections[operationId];
@@ -368,6 +382,7 @@ export class GatewayActionImpl {
       const isOwnOp = !event.operationId || event.operationId === operationId;
       if (isOwnOp && (event.type === 'agent_runtime_end' || event.type === 'error')) {
         receivedTerminalEvent = true;
+        pushGatewayDiag(`op=${operationId} event=${event.type}`);
       }
       // Only a clean completion counts as success — a cancel ('interrupted') or
       // deferred-tool park ('waiting_for_async_tool') must take the non-success
@@ -385,6 +400,9 @@ export class GatewayActionImpl {
 
     // Handle session completion
     client.on('session_complete', (completion) => {
+      pushGatewayDiag(
+        `op=${operationId} session_complete src=${completion?.source ?? 'raw'} status=${completion && 'status' in completion ? String(completion.status) : '-'} terminal=${receivedTerminalEvent}`,
+      );
       this.internal_cleanupGatewayConnection(operationId);
       fireSessionComplete({ completion });
     });
@@ -394,6 +412,7 @@ export class GatewayActionImpl {
     // non-terminal disconnects should NOT trigger onSessionComplete.
     // (auth_failed is handled separately below — it's also session-terminal.)
     client.on('disconnected', () => {
+      pushGatewayDiag(`op=${operationId} disconnected terminal=${receivedTerminalEvent}`);
       this.internal_cleanupGatewayConnection(operationId);
       if (receivedTerminalEvent) {
         fireSessionComplete();
@@ -408,6 +427,7 @@ export class GatewayActionImpl {
     // reconnect.
     client.on('auth_failed', (reason) => {
       console.error(`[Gateway] Auth failed for operation ${operationId}: ${reason}`);
+      pushGatewayDiag(`op=${operationId} auth_failed ${reason}`);
       this.internal_cleanupGatewayConnection(operationId);
       fireSessionComplete({ authFailed: true });
     });
@@ -1199,6 +1219,11 @@ export class GatewayActionImpl {
       ?.runningOperation?.operationId;
     if (topicOpIdAfterRefresh && topicOpIdAfterRefresh !== operationId) return;
 
+    // Same race on the connection itself: the send path's connectToGateway may
+    // have landed during the token-refresh await — bail before disconnecting it.
+    const connStatusAfterRefresh = this.#get().gatewayConnections[operationId]?.status;
+    if (connStatusAfterRefresh && connStatusAfterRefresh !== 'disconnected') return;
+
     const agentId = params.agentId ?? this.#get().activeAgentId;
     // Carry agentShareId the same way executeGatewayAgent's execution context
     // does — `createGatewayEventHandler` branches on `context.agentShareId` to
@@ -1230,16 +1255,35 @@ export class GatewayActionImpl {
       ? new Date(assistantMessage.createdAt).getTime()
       : undefined;
 
+    // Reuse a live local op already bound to this server op instead of minting
+    // a duplicate: `executeGatewayAgent` registers one at send time, and a
+    // second op re-keying `connectToGateway` under the same server id would
+    // sever the first op's socket mid-flight and leave it `running` forever —
+    // observed on e2e as two ops sharing `serverOperationId` (one completed,
+    // one stuck) with the input queue blocked behind the zombie.
+    const existingLocalOp = Object.values(this.#get().operations ?? {}).find(
+      (op) =>
+        op.type === 'execServerAgentRuntime' &&
+        op.metadata?.serverOperationId === operationId &&
+        (op.status === 'pending' || op.status === 'paused' || op.status === 'running'),
+    );
+
     // Create a local operation for UI loading state, stashing the server op id
     // so intervention flows can find it after reconnect as well.
-    const { operationId: gatewayOpId } = this.#get().startOperation({
-      context,
-      metadata: {
-        serverOperationId: operationId,
-        ...(Number.isFinite(startTime) ? { startTime } : {}),
-      },
-      type: 'execServerAgentRuntime',
-    });
+    const gatewayOpId =
+      existingLocalOp?.id ??
+      this.#get().startOperation({
+        context,
+        metadata: {
+          serverOperationId: operationId,
+          ...(Number.isFinite(startTime) ? { startTime } : {}),
+        },
+        type: 'execServerAgentRuntime',
+      }).operationId;
+
+    if (existingLocalOp) {
+      pushGatewayDiag(`op=${gatewayOpId} reconnect reuses local op for ${operationId}`);
+    }
 
     this.#get().associateMessageWithOperation(assistantMessageId, gatewayOpId);
 

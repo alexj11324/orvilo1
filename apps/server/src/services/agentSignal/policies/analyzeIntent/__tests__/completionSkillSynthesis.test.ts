@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import * as agentSignalService from '@/server/services/agentSignal';
 
 import type { RuntimeProcessorContext } from '../../../runtime/context';

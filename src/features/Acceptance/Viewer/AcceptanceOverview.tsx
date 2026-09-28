@@ -17,7 +17,6 @@ import AcceptanceOriginTopic from './Conversation/AcceptanceOriginTopic';
 import AcceptanceResources from './Evidence/AcceptanceResources';
 import { AcceptanceFlow } from './Flow/AcceptanceFlow';
 import { getFlowNodeCount, resolveAcceptanceTab } from './Flow/flowNavigation';
-import AcceptanceEnterFocus from './Focus/AcceptanceEnterFocus';
 import AcceptanceGoal from './Header/AcceptanceGoal';
 import AcceptanceGoalEdit from './Header/AcceptanceGoalEdit';
 import AcceptanceIdentity from './Header/AcceptanceIdentity';
@@ -90,7 +89,6 @@ export const AcceptanceOverview = ({
       <Flexbox className={styles.headerBand}>
         <Flexbox className={styles.column} gap={12}>
           <AcceptanceIdentity
-            focusSlot={<AcceptanceEnterFocus />}
             statusSlot={<AcceptanceStatusControl />}
             topicSlot={<AcceptanceOriginTopic />}
           />

@@ -349,7 +349,10 @@ export function registerAgentCommand(program: Command) {
     .option('-s, --slug <slug>', 'Agent slug')
     .option('-p, --prompt <text>', 'User prompt')
     .option('-t, --topic-id <id>', 'Reuse an existing topic')
-    .option('--no-auto-start', 'Do not auto-start the agent')
+    .option(
+      '--no-auto-start',
+      'Unsupported — every accepted run is dispatched immediately; kept to fail fast with a clear error',
+    )
     .option(
       '--device <target>',
       'Target device ID, or use "local" for the current connected device',
@@ -393,6 +396,13 @@ export function registerAgentCommand(program: Command) {
         }
         if (!options.prompt) {
           log.error('--prompt is required.');
+          process.exit(1);
+          return;
+        }
+        if (options.autoStart === false) {
+          log.error(
+            '--no-auto-start is not supported: every accepted run is dispatched immediately and there is no deferred start to trigger later. Remove the flag to run the agent.',
+          );
           process.exit(1);
           return;
         }

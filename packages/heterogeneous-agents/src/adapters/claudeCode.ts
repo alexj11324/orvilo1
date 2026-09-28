@@ -149,6 +149,18 @@ const stripModelBetaMarker = (model?: string) => {
 const ASK_USER_MCP_TOOL_NAME = 'mcp__orvilo_cc__ask_user_question';
 
 /**
+ * Wire name produced while the desktop host still mounted the server as
+ * `lobe_cc` (pre-P04). Accepted for in-flight sessions and any history that
+ * recorded the old name; the mount itself is `orvilo_cc`-only now.
+ */
+const LEGACY_ASK_USER_MCP_TOOL_NAME = 'mcp__lobe_cc__ask_user_question';
+
+const ASK_USER_MCP_TOOL_NAMES: ReadonlySet<string> = new Set([
+  ASK_USER_MCP_TOOL_NAME,
+  LEGACY_ASK_USER_MCP_TOOL_NAME,
+]);
+
+/**
  * apiName the adapter rewrites the MCP tool to so the renderer routes on
  * a stable key, not the wire-prefixed MCP name. Source of truth same as
  * above.
@@ -1458,7 +1470,7 @@ export class ClaudeCompatibleStreamAdapter implements AgentEventAdapter {
           // apiName so the renderer routes on `askUserQuestion` (clean,
           // domain-named) instead of the wire-prefixed MCP form. Identifier
           // stays `claude-code` because this remains a CC-side tool.
-          const apiName = block.name === ASK_USER_MCP_TOOL_NAME ? ASK_USER_API_NAME : block.name;
+          const apiName = ASK_USER_MCP_TOOL_NAMES.has(block.name) ? ASK_USER_API_NAME : block.name;
           const toolPayload: ToolCallPayload = {
             apiName,
             arguments: JSON.stringify(block.input || {}),
@@ -1696,7 +1708,7 @@ export class ClaudeCompatibleStreamAdapter implements AgentEventAdapter {
           // apiName so the renderer routes on `askUserQuestion` (clean,
           // domain-named) instead of the wire-prefixed MCP form. Identifier
           // stays `claude-code` because this remains a CC-side tool.
-          const apiName = block.name === ASK_USER_MCP_TOOL_NAME ? ASK_USER_API_NAME : block.name;
+          const apiName = ASK_USER_MCP_TOOL_NAMES.has(block.name) ? ASK_USER_API_NAME : block.name;
           const toolPayload: ToolCallPayload = {
             apiName,
             arguments: JSON.stringify(block.input || {}),

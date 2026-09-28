@@ -1,0 +1,280 @@
+'use client';
+
+import { Center, Empty, Flexbox } from '@lobehub/ui';
+import { Text } from '@lobehub/ui/base-ui';
+import { InboxIcon, UsersIcon } from 'lucide-react';
+import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router';
+
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import AsyncError from '@/components/AsyncError';
+import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import NavHeader from '@/features/NavHeader';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
+import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
+import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
+import { useSearchParams } from '@/libs/router/navigation';
+import { mutate, useClientDataSWR } from '@/libs/swr';
+import { workAttentionKeys } from '@/libs/swr/keys';
+import { lambdaClient } from '@/libs/trpc/client';
+import { workAttentionService } from '@/services/workAttention';
+
+import { otherTeamOptions } from './otherTeamOptions';
+import TeamHome from './TeamHome';
+import TeamIdentity from './TeamIdentity';
+import TeamIssuesSurface from './TeamIssuesSurface';
+import TeamProjectsSurface from './TeamProjectsSurface';
+import TeamViewsSurface from './TeamViewsSurface';
+import { ALL_TEAM_CYCLES, teamTriageQuery } from './teamWorkQuery';
+import TeamTriageSurface from './triage/TeamTriageSurface';
+
+const TeamPage = memo(() => {
+  const { t } = useTranslation('common');
+  const { teamId } = useParams<{ teamId: string }>();
+  const workspaceId = useActiveWorkspaceId();
+  const workspaceSlug = useActiveWorkspaceSlug();
+  const [searchParams] = useSearchParams();
+  // Linear's per-team sub-navigation lands here: home is the team context
+  // surface; triage, issues, projects and views each get their own tab.
+  const teamTab = searchParams.get('tab') ?? 'home';
+  const {
+    data: teamData,
+    error: teamError,
+    mutate: revalidateTeam,
+  } = useClientDataSWR(teamId && workspaceId ? ['team', workspaceId, teamId] : null, () =>
+    lambdaClient.team.team.query({ teamId: teamId! }),
+  );
+  const { data: teamsData } = useClientDataSWR(
+    workspaceId ? workAttentionKeys.teams(workspaceId) : null,
+    () => lambdaClient.team.teams.query(),
+  );
+  // Triage is a per-team capability — a team that turned intake off shows
+  // no triage surface, and a `?tab=triage` deep link falls back to home.
+  const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;
+  const wantsTriage = triageCapable && teamTab === 'triage';
+  const {
+    data: triageData,
+    error: triageError,
+    isLoading,
+    mutate: revalidateTriage,
+  } = useClientDataSWR(
+    wantsTriage && teamId && workspaceId
+      ? ['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]
+      : null,
+    () =>
+      workAttentionService.query({
+        query: teamTriageQuery(teamId!, ALL_TEAM_CYCLES, false),
+      }),
+  );
+  const {
+    data: teamProjectsData,
+    error: teamProjectsError,
+    isLoading: isTeamProjectsLoading,
+    mutate: revalidateTeamProjects,
+  } = useClientDataSWR(
+    teamTab === 'projects' && teamId && workspaceId ? ['team-projects', workspaceId, teamId] : null,
+    () =>
+      workAttentionService.query({
+        query: {
+          entityType: 'project',
+          filter: { all: [{ field: 'teamId', op: 'eq', value: teamId! }] },
+          schemaVersion: 1,
+        },
+      }),
+  );
+  const {
+    data: teamViewsData,
+    error: teamViewsError,
+    isLoading: isTeamViewsLoading,
+    mutate: revalidateTeamViews,
+  } = useClientDataSWR(
+    teamTab === 'views' && workspaceId ? workAttentionKeys.savedViews(workspaceId) : null,
+    () => workAttentionService.savedViewList(),
+  );
+  const teamProjects =
+    teamProjectsData?.data && 'projects' in teamProjectsData.data
+      ? (teamProjectsData.data.projects ?? [])
+      : [];
+  // Team context shows the team's own views plus every workspace-shared view
+  // the visitor can read — Linear keeps both reachable from the team page.
+  const teamViews = (teamViewsData?.data ?? []).filter(
+    (view) =>
+      (view.visibility === 'team' && view.teamId === teamId) || view.visibility === 'workspace',
+  );
+  const tasks = triageData?.data && 'tasks' in triageData.data ? triageData.data.tasks : [];
+  const destinations = otherTeamOptions(teamsData?.data ?? [], teamId ?? '');
+
+  const refreshTriage = useCallback(() => {
+    void Promise.all([
+      mutate(['team-triage', workspaceId, teamId, ALL_TEAM_CYCLES, false]),
+      // The issues surface owns its own query shape — prefix-match the key so
+      // a triage accept/decline still revalidates whatever it is showing.
+      mutate(
+        (key) =>
+          Array.isArray(key) &&
+          key[0] === 'team-tasks' &&
+          key[1] === workspaceId &&
+          key[2] === teamId,
+      ),
+    ]);
+  }, [teamId, workspaceId]);
+
+  // The views tab is a routed surface of its own — a team-scoped directory
+  // plus the `?new=1` draft editor — so it returns before the shared team
+  // chrome. The team fetch still gates it: the editor header and save-to
+  // copy need the real team name, and a failed team response must never
+  // leave the tab blank.
+  if (teamTab === 'views' && teamId) {
+    if (!workspaceId)
+      return (
+        <WorkSurface>
+          <NavHeader
+            left={
+              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+                {t('tab.views')}
+              </Text>
+            }
+          />
+          <Center flex={1}>
+            <Empty description={t('teams.personal')} icon={UsersIcon} />
+          </Center>
+        </WorkSurface>
+      );
+    if (teamError || !teamData)
+      return (
+        <WorkSurface>
+          <NavHeader
+            left={
+              <Text style={{ paddingInlineStart: 4 }} weight={500}>
+                {t('tab.views')}
+              </Text>
+            }
+          />
+          <WorkSurfaceCollection>
+            {teamError ? (
+              <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
+            ) : (
+              <SkeletonList aria-label={t('teams.loading')} rows={4} />
+            )}
+          </WorkSurfaceCollection>
+        </WorkSurface>
+      );
+    return (
+      <TeamViewsSurface
+        error={teamViewsError}
+        isLoading={isTeamViewsLoading}
+        teamId={teamId}
+        teamName={teamData.data.team.name}
+        views={teamViews}
+        onRetry={() => revalidateTeamViews()}
+      />
+    );
+  }
+
+  if (teamTab === 'projects' && teamId) return <TeamProjectsSurface teamId={teamId} />;
+
+  // The issues tab owns its full chrome — scope switch, filter/display/detail
+  // controls, paging and the peek pane — in a dedicated surface.
+  if (teamTab === 'issues' && teamId) return <TeamIssuesSurface teamId={teamId} />;
+
+  return (
+    <WorkSurface>
+      <NavHeader
+        left={
+          wantsTriage && teamData ? (
+            <Flexbox horizontal align={'center'} gap={8} style={{ paddingInlineStart: 4 }}>
+              <TeamIdentity
+                color={teamData.data.team.color}
+                id={teamData.data.team.id}
+                letter={(teamData.data.team.key || teamData.data.team.name).slice(0, 1)}
+              />
+              <Text weight={500}>{t('teams.triage')}</Text>
+            </Flexbox>
+          ) : (
+            <Text style={{ paddingInlineStart: 4 }} weight={500}>
+              {teamData?.data.team.name ?? t('tab.teams')}
+            </Text>
+          )
+        }
+        right={
+          <Flexbox horizontal align={'center'} gap={8}>
+            <WorkFavoriteButton targetId={teamId} targetType="team" />
+          </Flexbox>
+        }
+      />
+      {!workspaceId ? (
+        <Center flex={1}>
+          <Empty description={t('teams.personal')} icon={UsersIcon} />
+        </Center>
+      ) : (
+        <WorkSurfaceCollection>
+          {/* The team fetch gates every tab — a failed team response never
+              renders a half-populated tab surface underneath the error. */}
+          {teamError ? (
+            <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
+          ) : (
+            <>
+              {teamTab === 'home' && teamData ? (
+                <TeamHome
+                  teamData={teamData.data}
+                  teamId={teamId!}
+                  triageCapable={triageCapable}
+                  workspaceSlug={workspaceSlug ?? ''}
+                />
+              ) : null}
+              {teamTab === 'triage' && !triageCapable ? (
+                <Center flex={1} padding={48}>
+                  <Empty description={t('teams.triageDisabled')} icon={InboxIcon} />
+                </Center>
+              ) : null}
+              {wantsTriage && teamId ? (
+                <TeamTriageSurface
+                  destinations={destinations}
+                  error={triageError}
+                  isLoading={isLoading}
+                  members={teamData?.data.members ?? []}
+                  tasks={tasks}
+                  teamId={teamId}
+                  onChanged={refreshTriage}
+                  onRetry={() => void revalidateTriage()}
+                />
+              ) : null}
+
+              {teamTab === 'projects' ? (
+                isTeamProjectsLoading ? (
+                  <SkeletonList aria-label={t('teams.loading')} rows={4} />
+                ) : teamProjectsError && teamProjects.length === 0 ? (
+                  <AsyncError error={teamProjectsError} onRetry={() => revalidateTeamProjects()} />
+                ) : teamProjects.length === 0 ? (
+                  <Center flex={1} padding={48}>
+                    <Empty description={t('teams.projectsEmpty')} icon={PROJECT_ENTITY_ICON} />
+                  </Center>
+                ) : (
+                  <Flexbox gap={2}>
+                    {teamProjectsError ? (
+                      <AsyncError
+                        error={teamProjectsError}
+                        variant={'inline'}
+                        onRetry={() => revalidateTeamProjects()}
+                      />
+                    ) : null}
+                    {teamProjects.map((project) => (
+                      <SavedViewProjectRow key={project.id} project={project} />
+                    ))}
+                  </Flexbox>
+                )
+              ) : null}
+            </>
+          )}
+        </WorkSurfaceCollection>
+      )}
+    </WorkSurface>
+  );
+});
+
+TeamPage.displayName = 'TeamPage';
+
+export default TeamPage;

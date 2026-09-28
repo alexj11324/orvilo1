@@ -11,22 +11,12 @@ import { agentService } from '@/services/agent';
 import { formatIntergerNumber } from '@/utils/format';
 import { lastMonth } from '@/utils/time';
 
-import TotalCard from './ShareButton/TotalCard';
-
-const TotalMessages = memo<{ inShare?: boolean; mobile?: boolean }>(({ inShare }) => {
+const TotalMessages = memo<{ mobile?: boolean }>(() => {
   const { t } = useTranslation('auth');
   const { data, isLoading, error, mutate } = useClientDataSWR(statsKeys.agents(), async () => ({
     count: await agentService.countAgents(),
     prevCount: await agentService.countAgents({ endDate: lastMonth().format('YYYY-MM-DD') }),
   }));
-
-  if (inShare)
-    return (
-      <TotalCard
-        count={formatIntergerNumber(data?.prevCount) || '--'}
-        title={t('stats.assistants')}
-      />
-    );
 
   return (
     <AsyncBoundary data={data} error={error} errorVariant={'metric'} onRetry={() => mutate()}>

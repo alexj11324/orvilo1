@@ -18,7 +18,6 @@ export * from './keyboard';
 export * from './merge';
 export * from './mimeType';
 export * from './multimodalContent';
-export * from './number';
 export * from './object';
 export * from './platform';
 export * from './pricing';

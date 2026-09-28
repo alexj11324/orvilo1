@@ -49,7 +49,10 @@ export class GoalExplorationPlanner {
     private readonly workspaceId?: string,
   ) {}
 
-  async plan(input: GoalExploreInput): Promise<GoalExplorationPlan> {
+  async plan(
+    input: GoalExploreInput,
+    options?: { agentId?: string | null },
+  ): Promise<GoalExplorationPlan> {
     const model = await resolveGoalModelConfig(this.db, this.userId);
     const result = await new AiGenerationService(
       this.db,
@@ -63,6 +66,13 @@ export class GoalExplorationPlanner {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          // The goal's coordinator agent is the authorized binding for this
+          // planning judgment; a missing binding blocks explicitly.
+          binding: { agentId: options?.agentId },
+          purpose: 'goal.explore',
+        },
+        kind: 'judgment',
         tracing: {
           scenario: TRACING_SCENARIOS.GoalExplore,
           promptVersion: GOAL_EXPLORE_PROMPT_VERSION,

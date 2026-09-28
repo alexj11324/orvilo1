@@ -35,11 +35,10 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'about',
   'advanced',
   'apikey',
-  // Account-level tabs (profile / appearance / hotkey / messenger) are
+  // Account-level tabs (profile / appearance / hotkey) are
   // mirrored under the workspace so members can reach them without leaving
   // the workspace.
   'appearance',
-  'audit-log',
   'billing',
   'budget',
   'connector',
@@ -51,17 +50,19 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'devices',
   'general',
   'hotkey',
+  'imports',
   'labels',
   'labs',
+  'linear',
   'members',
-  'messenger',
   'notification',
-  'oauth-apps',
   'plans',
   'profile',
+  // Retired LLM Provider / service-model surfaces — the routers keep redirect
+  // routes under the workspace settings subtree, so prefixed deep-links still
+  // land on `/:slug/settings` instead of escaping to personal settings.
   'provider',
   'service-model',
-  'skill',
   'statistics',
   // Legacy alias for `statistics` — the routers keep a redirect, so prefixed
   // deep-links still land on `/:slug/settings/statistics`.
@@ -73,22 +74,32 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
 const SETTINGS_PREFIX_REGEX = /^\/settings\/([^/?#]+)/;
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;
 
-const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
+export const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
   'agent',
   'agents',
+  'automations',
   'community',
+  'drafts',
   'eval',
+  'goal',
   'group',
   'image',
+  'inbox',
+  'members',
   'memory',
+  'my-issues',
+  'my-work',
   'page',
   'project',
   'projects',
   'resource',
+  'reviews',
   'settings',
   'task',
   'tasks',
+  'teams',
   'video',
+  'views',
 ]);
 
 const parseFirstSegment = (pathname: string): string | null => {
@@ -134,4 +145,22 @@ export const buildWorkspaceAwarePath = (
   if (firstSegment && !WORKSPACE_MIRRORED_FIRST_SEGMENTS.has(firstSegment)) return to;
 
   return `/${activeSlug}${to}`;
+};
+
+/**
+ * Inverse of {@link buildWorkspaceAwarePath}: drops a leading `/${slug}` so
+ * callers comparing the pathname against scope-relative destinations —
+ * mobile tab-bar routes, the active-tab key — see the same path regardless
+ * of which scope mirrored it. The strip is purely positional: only an exact
+ * `/${slug}` or `/${slug}/…` prefix comes off; everything else passes
+ * through unchanged.
+ */
+export const stripWorkspaceSlug = (
+  pathname: string,
+  activeSlug: string | null | undefined,
+): string => {
+  if (!activeSlug) return pathname;
+  if (pathname === `/${activeSlug}`) return '/';
+  if (pathname.startsWith(`/${activeSlug}/`)) return pathname.slice(activeSlug.length + 1);
+  return pathname;
 };

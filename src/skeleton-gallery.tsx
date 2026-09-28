@@ -6,7 +6,6 @@ import { ArticleSkeleton } from '@/components/Skeleton';
 import ConversationListSkeleton from '@/components/Skeleton/Conversation/List';
 import TaskItemSkeleton from '@/features/AgentTasks/AgentTaskList/TaskItemSkeleton';
 import { BriefCardSkeleton } from '@/features/DailyBrief/BriefCardSkeleton';
-import ModelSkeletonList from '@/features/Settings/provider/features/ModelList/SkeletonList';
 import MemoryDetailLoading from '@/routes/(main)/memory/features/DetailLoading';
 import MemoryLoading from '@/routes/(main)/memory/features/Loading';
 
@@ -40,9 +39,6 @@ createRoot(document.querySelector('#root')!).render(
       </Case>
       <Case title="memory / DetailLoading">
         <MemoryDetailLoading />
-      </Case>
-      <Case title="Settings / provider ModelList SkeletonList">
-        <ModelSkeletonList />
       </Case>
       <Case title="Conversation / List skeleton">
         <ConversationListSkeleton />

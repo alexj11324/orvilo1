@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type IStreamEventManager } from '@/server/modules/AgentRuntime/types';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
+import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { HeterogeneousAgentService, HeterogeneousPersistenceHandler } from '..';
 import { __resetOperationStatesForTesting } from '../HeterogeneousPersistenceHandler';

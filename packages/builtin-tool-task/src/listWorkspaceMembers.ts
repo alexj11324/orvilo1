@@ -10,21 +10,15 @@ export interface ListWorkspaceMembersQuery {
   query?: string;
 }
 
-// Native chat-platform mention wrappers the model may pass through verbatim:
-// Slack `<@U123>` / `<@U123|name>`, Discord `<@4521>` / `<@!4521>` (nickname
-// form). The wrapper carries no identity of its own — only the id inside does.
-const NATIVE_MENTION_WRAPPER = /^<@!?([^\s>|]*)(?:\|[^>]*)?>$/;
-
 /**
  * Fold a raw query into the needle `matchesMemberQuery` compares against:
- * trimmed and lower-cased, with a native mention wrapper or a leading `@`
- * stripped so `<@U123>`, `@neko` and `neko` all reach the same comparison.
- * `undefined` when nothing usable is left (blank, or a bare `@`).
+ * trimmed and lower-cased, with a leading `@` stripped so `@neko` and `neko`
+ * reach the same comparison. `undefined` when nothing usable is left (blank,
+ * or a bare `@`).
  */
 export const normalizeMemberQuery = (raw: string | undefined): string | undefined => {
   const trimmed = raw?.trim() ?? '';
-  const unwrapped = NATIVE_MENTION_WRAPPER.exec(trimmed)?.[1] ?? trimmed;
-  const needle = (unwrapped.startsWith('@') ? unwrapped.slice(1) : unwrapped).trim().toLowerCase();
+  const needle = (trimmed.startsWith('@') ? trimmed.slice(1) : trimmed).trim().toLowerCase();
   return needle || undefined;
 };
 
@@ -46,14 +40,14 @@ export const normalizeListWorkspaceMembersParams = (
 
 /**
  * Whether a member matches a needle produced by `normalizeMemberQuery`: an
- * exact user id, or a case-insensitive substring of the display name, @handle,
- * email or any linked IM identity — so "neko", "@neko", "<@4521>",
- * "alice@acme.com" and a raw platform user id all resolve the same person.
+ * exact user id, or a case-insensitive substring of the display name, @handle
+ * or email — so "neko", "@neko" and "alice@acme.com" all resolve the same
+ * person.
  */
 export const matchesMemberQuery = (member: TaskAssignableMember, needle: string): boolean => {
   if (!needle) return false;
   if (member.id.toLowerCase() === needle) return true;
-  const haystacks = [member.name, member.username, member.email, ...(member.imAccounts ?? [])];
+  const haystacks = [member.name, member.username, member.email];
   return haystacks.some((value) => value?.toLowerCase().includes(needle));
 };
 

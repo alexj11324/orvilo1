@@ -1,11 +1,17 @@
 import superjson from 'superjson';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { lambdaClient } from './lambda';
+import { createWorkspaceLambdaClient, lambdaClient } from './lambda';
+
+const workspaceHeaders = vi.hoisted(() => ({ activeId: null as string | null }));
 
 vi.mock('@/const/version', () => ({ isDesktop: false }));
 vi.mock('@/services/_auth', () => ({ createHeaderWithAuth: async () => ({}) }));
-vi.mock('@/business/client/trpc-headers', () => ({ getBusinessTrpcHeaders: async () => ({}) }));
+vi.mock('@/business/client/trpc-headers', () => ({
+  getBusinessTrpcHeaders: async () =>
+    workspaceHeaders.activeId ? { 'X-Workspace-Id': workspaceHeaders.activeId } : {},
+}));
+vi.mock('@/store/user/store', () => ({ getUserStoreState: () => ({ isSignedIn: false }) }));
 // i18next is never initialised in this suite, so `t` echoes the key — assertions
 // below check which copy was selected, not its wording.
 vi.mock('i18next', () => ({ t: (key: string) => key }));
@@ -15,6 +21,39 @@ const okTrpcResponse = (data: unknown) =>
     headers: { 'content-type': 'application/json' },
     status: 200,
   });
+
+describe('workspace-pinned lambda client', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('location', new URL('http://localhost/chat'));
+    workspaceHeaders.activeId = null;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+    workspaceHeaders.activeId = null;
+  });
+
+  it.each([
+    ['ws-origin', 'ws-other', 'ws-origin'],
+    [null, 'ws-other', null],
+  ] as const)(
+    'sends %s scope after the active workspace changes to %s',
+    async (origin, active, expected) => {
+      const client = createWorkspaceLambdaClient(origin);
+      workspaceHeaders.activeId = active;
+      fetchMock.mockResolvedValueOnce(okTrpcResponse({ data: 0, success: true }));
+
+      await client.taskDraft.count.query();
+
+      const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit];
+      expect(new Headers(init.headers).get('X-Workspace-Id')).toBe(expected);
+    },
+  );
+});
 
 describe('lambdaClient large-input query transport', () => {
   const fetchMock = vi.fn();
@@ -138,5 +177,66 @@ describe('lambdaClient unreadable response handling', () => {
     await expect(
       lambdaClient.agent.getAgentConfigById.query({ agentId: 'agt_test' }),
     ).rejects.toThrow('agentId is required');
+  });
+});
+
+describe('lambdaClient session-auth events', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('location', new URL('http://localhost/chat'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    fetchMock.mockReset();
+  });
+
+  const unauthorizedResponse = () =>
+    new Response(
+      JSON.stringify({
+        error: superjson.serialize({
+          code: -32_001,
+          data: { code: 'UNAUTHORIZED', httpStatus: 401 },
+          message: 'session expired',
+        }),
+      }),
+      { headers: { 'content-type': 'application/json' }, status: 401 },
+    );
+
+  it('emits session-auth-expired for a non-market 401', async () => {
+    const { sessionAuthEvents } = await import('@/layout/AuthProvider/SessionAuth/events');
+    const handler = vi.fn();
+    const unsubscribe = sessionAuthEvents.on('session-auth-expired', handler);
+
+    fetchMock.mockResolvedValueOnce(unauthorizedResponse());
+    await expect(
+      lambdaClient.agent.getAgentConfigById.query({ agentId: 'agt_test' }),
+    ).rejects.toThrow('session expired');
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'agent.getAgentConfigById',
+        source: 'trpc',
+      }),
+    );
+    unsubscribe();
+  });
+
+  it('does not emit session-auth-expired for a market 401', async () => {
+    const { sessionAuthEvents } = await import('@/layout/AuthProvider/SessionAuth/events');
+    const handler = vi.fn();
+    const unsubscribe = sessionAuthEvents.on('session-auth-expired', handler);
+
+    fetchMock.mockResolvedValueOnce(unauthorizedResponse());
+    await expect(lambdaClient.market.agent.getOnboardingFull.query()).rejects.toThrow();
+
+    // A market.* 401 routes to marketAuthEvents (or bubbles when the Orvilo
+    // session is already gone) — never to the session-auth funnel.
+    expect(handler).not.toHaveBeenCalled();
+    unsubscribe();
   });
 });

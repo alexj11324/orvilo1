@@ -1,11 +1,12 @@
 import type { RecentItem } from '@orvilo/types';
 import type { SWRResponse } from 'swr';
 
+import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { recentKeys } from '@/libs/swr/keys';
 import { getCacheScope } from '@/libs/swr/useCacheScope';
 import { documentService } from '@/services/document';
-import { RECENT_SIDEBAR_TYPES, recentService } from '@/services/recent';
+import { recentService, recentTypesForWorkspace } from '@/services/recent';
 import { taskService } from '@/services/task';
 import { topicService } from '@/services/topic';
 import type { HomeStore } from '@/store/home/store';
@@ -202,7 +203,10 @@ export class RecentActionImpl {
       this.internal_dispatchRecent({ queryKey, scope, type: 'startSync' });
 
       try {
-        const items = await recentService.getAll(limit, RECENT_SIDEBAR_TYPES);
+        const items = await recentService.getAll(
+          limit,
+          recentTypesForWorkspace(getActiveWorkspaceId()),
+        );
         this.internal_replaceRecentQuery(scope, queryKey, items);
         this.internal_dispatchRecent({ queryKey, scope, type: 'finishSync' });
         return Date.now();
@@ -234,7 +238,10 @@ export class RecentActionImpl {
         this.internal_dispatchRecent({ queryKey, scope, type: 'startSync' });
 
         try {
-          const items = await recentService.getAll(requestLimit, RECENT_SIDEBAR_TYPES);
+          const items = await recentService.getAll(
+            requestLimit,
+            recentTypesForWorkspace(getActiveWorkspaceId()),
+          );
           this.internal_replaceRecentQuery(scope, queryKey, items);
           this.internal_dispatchRecent({ queryKey, scope, type: 'finishSync' });
           return Date.now();

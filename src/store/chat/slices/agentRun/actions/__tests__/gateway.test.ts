@@ -2213,6 +2213,111 @@ describe('GatewayActionImpl', () => {
       );
     });
 
+    // A second local op for the same server op re-keys `connectToGateway`,
+    // severing the first op's socket mid-flight — the orphaned op then stays
+    // `running` forever and holds the input queue. Reuse the live local op.
+    it('reuses an existing non-terminal op bound to the same server operation', async () => {
+      const startOperation = vi.fn(() => ({ operationId: 'gw-op-new' }));
+      const connectToGateway = vi.fn();
+      const state: Record<string, any> = {
+        activeAgentId: 'agent-1',
+        gatewayConnections: {},
+        messagesMap: { 'agent-1_topic-1': [{ createdAt: 1, id: 'ast-1' }] },
+        operations: {
+          'op-existing': {
+            id: 'op-existing',
+            metadata: { serverOperationId: 'server-op-1' },
+            status: 'running',
+            type: 'execServerAgentRuntime',
+          },
+        },
+        topicDataMap: {},
+      };
+      const set = vi.fn((updater: any) => {
+        if (typeof updater === 'function') Object.assign(state, updater(state));
+        else Object.assign(state, updater);
+      });
+      const associateMessageWithOperation = vi.fn();
+      const get = vi.fn(() => ({
+        ...state,
+        associateMessageWithOperation,
+        connectToGateway,
+        onOperationCancel: vi.fn(),
+        startOperation,
+      })) as any;
+
+      (globalThis as any).window = {
+        global_serverConfigStore: {
+          getState: () => ({ serverConfig: { agentGatewayUrl: 'https://gateway.test.com' } }),
+        },
+      };
+      vi.mocked(aiAgentService.refreshGatewayToken).mockResolvedValue({
+        token: 'fresh-token',
+      } as any);
+      const action = new GatewayActionImpl(set as any, get, undefined);
+
+      await action.reconnectToGatewayOperation({
+        assistantMessageId: 'ast-1',
+        operationId: 'server-op-1',
+        topicId: 'topic-1',
+      });
+
+      expect(startOperation).not.toHaveBeenCalled();
+      expect(connectToGateway).toHaveBeenCalledWith(
+        expect.objectContaining({ operationId: 'server-op-1' }),
+      );
+      expect(associateMessageWithOperation).toHaveBeenCalledWith('ast-1', 'op-existing');
+    });
+
+    it('mints a fresh op when the bound local op already terminated', async () => {
+      const startOperation = vi.fn(() => ({ operationId: 'gw-op-new' }));
+      const state: Record<string, any> = {
+        activeAgentId: 'agent-1',
+        gatewayConnections: {},
+        messagesMap: { 'agent-1_topic-1': [{ createdAt: 1, id: 'ast-1' }] },
+        operations: {
+          'op-done': {
+            id: 'op-done',
+            metadata: { serverOperationId: 'server-op-1' },
+            status: 'completed',
+            type: 'execServerAgentRuntime',
+          },
+        },
+        topicDataMap: {},
+      };
+      const set = vi.fn((updater: any) => {
+        if (typeof updater === 'function') Object.assign(state, updater(state));
+        else Object.assign(state, updater);
+      });
+      const get = vi.fn(() => ({
+        ...state,
+        associateMessageWithOperation: vi.fn(),
+        connectToGateway: vi.fn(),
+        onOperationCancel: vi.fn(),
+        startOperation,
+      })) as any;
+
+      (globalThis as any).window = {
+        global_serverConfigStore: {
+          getState: () => ({ serverConfig: { agentGatewayUrl: 'https://gateway.test.com' } }),
+        },
+      };
+      vi.mocked(aiAgentService.refreshGatewayToken).mockResolvedValue({
+        token: 'fresh-token',
+      } as any);
+      const action = new GatewayActionImpl(set as any, get, undefined);
+
+      await action.reconnectToGatewayOperation({
+        assistantMessageId: 'ast-1',
+        operationId: 'server-op-1',
+        topicId: 'topic-1',
+      });
+
+      expect(startOperation).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'execServerAgentRuntime' }),
+      );
+    });
+
     // Agent-share visitor surface: a visitor has no owner-scoped access to the
     // creator's topic/operation rows, so the reconnect must route through the
     // share-authorized `shareChat` mirror instead — mirrors the split

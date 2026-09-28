@@ -1,0 +1,1444 @@
+{
+  "candidate": {
+    "url": "app://renderer/ws-useragenttes/project/parity-test-project/overview",
+    "title": "项目 · Orvilo",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 2
+    },
+    "capturedAt": "2026-09-23T10:15:31.334Z"
+  },
+  "divergenceScore": 229,
+  "dprMatch": true,
+  "generatedAt": "2026-09-23T10:23:01.289Z",
+  "geometryDeltas": [
+    {
+      "landmark": "sidebar-nav",
+      "deltas": {
+        "y": {
+          "ref": 0,
+          "cand": 38,
+          "delta": 38
+        },
+        "h": {
+          "ref": 900,
+          "cand": 842,
+          "delta": -58
+        }
+      },
+      "worstDelta": 58
+    },
+    {
+      "landmark": "sidebar-nav-item",
+      "deltas": {
+        "x": {
+          "ref": 12,
+          "cand": 8,
+          "delta": -4
+        },
+        "y": {
+          "ref": 61,
+          "cand": 46,
+          "delta": -15
+        },
+        "w": {
+          "ref": 220,
+          "cand": 180,
+          "delta": -40
+        },
+        "h": {
+          "ref": 28,
+          "cand": 32,
+          "delta": 4
+        }
+      },
+      "worstDelta": 40
+    },
+    {
+      "landmark": "header",
+      "deltas": {
+        "x": {
+          "ref": 245,
+          "cand": 0,
+          "delta": -245
+        },
+        "y": {
+          "ref": 9,
+          "cand": 0,
+          "delta": -9
+        },
+        "w": {
+          "ref": 1187,
+          "cand": 1440,
+          "delta": 253
+        },
+        "h": {
+          "ref": 88,
+          "cand": 38,
+          "delta": -50
+        }
+      },
+      "worstDelta": 253
+    },
+    {
+      "landmark": "tabs",
+      "deltas": {
+        "x": {
+          "ref": 1048,
+          "cand": 265,
+          "delta": -783
+        },
+        "y": {
+          "ref": 830,
+          "cand": 97,
+          "delta": -733
+        },
+        "w": {
+          "ref": 360,
+          "cand": 202,
+          "delta": -158
+        },
+        "h": {
+          "ref": 32,
+          "cand": 28,
+          "delta": -4
+        }
+      },
+      "worstDelta": 783
+    },
+    {
+      "landmark": "list-row",
+      "deltas": {
+        "y": {
+          "ref": 137,
+          "cand": 192,
+          "delta": 55
+        }
+      },
+      "worstDelta": 55
+    },
+    {
+      "landmark": "primary-button",
+      "deltas": {
+        "x": {
+          "ref": 411,
+          "cand": 0,
+          "delta": -411
+        },
+        "y": {
+          "ref": 16,
+          "cand": 0,
+          "delta": -16
+        },
+        "w": {
+          "ref": 28,
+          "cand": 1440,
+          "delta": 1412
+        },
+        "h": {
+          "ref": 28,
+          "cand": 900,
+          "delta": 872
+        }
+      },
+      "worstDelta": 1412
+    }
+  ],
+  "landmarkSummary": {
+    "matched": 6,
+    "missingInCandidate": 1,
+    "extraInCandidate": 0
+  },
+  "landmarks": {
+    "sidebar-nav": {
+      "status": "matched",
+      "refStrategy": "css:nav",
+      "candStrategy": "layout:leftRail",
+      "refTag": "NAV",
+      "candTag": "ASIDE",
+      "strategyNote": "candidate fell back to layout heuristic (semantic selector absent)",
+      "styleDeltaCount": 8
+    },
+    "sidebar-nav-item": {
+      "status": "matched",
+      "refStrategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]",
+      "candStrategy": "within:sidebar-nav>a[href], [role=\"link\"], [role=\"menuitem\"], [role=\"tab\"], [role=\"button\"]",
+      "refTag": "DIV",
+      "candTag": "DIV",
+      "styleDeltaCount": 18
+    },
+    "header": {
+      "status": "matched",
+      "refStrategy": "css:main header, [role=\"main\"] header",
+      "candStrategy": "layout:topBar",
+      "refTag": "HEADER",
+      "candTag": "DIV",
+      "strategyNote": "candidate fell back to layout heuristic (semantic selector absent)",
+      "styleDeltaCount": 15
+    },
+    "tabs": {
+      "status": "matched",
+      "refStrategy": "css:[role=\"tablist\"]",
+      "candStrategy": "layout:tabStrip",
+      "refTag": "DIV",
+      "candTag": "DIV",
+      "strategyNote": "candidate fell back to layout heuristic (semantic selector absent)",
+      "styleDeltaCount": 17
+    },
+    "list-row": {
+      "status": "matched",
+      "refStrategy": "layout:firstRow",
+      "candStrategy": "layout:firstRow",
+      "refTag": "DIV",
+      "candTag": "DIV",
+      "styleDeltaCount": 7
+    },
+    "primary-button": {
+      "status": "matched",
+      "refStrategy": "layout:primaryButton",
+      "candStrategy": "layout:primaryButton",
+      "refTag": "BUTTON",
+      "candTag": "DIV",
+      "styleDeltaCount": 15
+    },
+    "detail-pane": {
+      "status": "missing-in-candidate",
+      "refStrategy": "css:[role=\"complementary\"], main aside, [role=\"main\"] aside",
+      "candStrategy": null,
+      "refTag": "ASIDE",
+      "candTag": null,
+      "refText": "PropertiesStatusIn ProgressPriorityNo priorityLeadAJAlex Jia"
+    },
+    "empty-state": {
+      "status": "absent-both",
+      "refStrategy": null,
+      "candStrategy": null,
+      "refTag": null,
+      "candTag": null
+    }
+  },
+  "pair": "project-overview",
+  "reference": {
+    "url": "https://linear.app/bdiverifier/project/orvilo-linear-parity-3eb13143d468/overview",
+    "title": "Orvilo Linear Parity › Overview",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 2
+    },
+    "capturedAt": "2026-09-23T10:22:48.300Z"
+  },
+  "structural": {
+    "nodes": {
+      "reference": 115,
+      "candidate": 432,
+      "delta": 317
+    },
+    "truncated": {
+      "reference": true,
+      "candidate": true
+    },
+    "tagCountDeltas": [
+      {
+        "key": "span",
+        "reference": 21,
+        "candidate": 153,
+        "delta": 132
+      },
+      {
+        "key": "div",
+        "reference": 72,
+        "candidate": 166,
+        "delta": 94
+      },
+      {
+        "key": "button",
+        "reference": 16,
+        "candidate": 67,
+        "delta": 51
+      },
+      {
+        "key": "a",
+        "reference": 1,
+        "candidate": 19,
+        "delta": 18
+      },
+      {
+        "key": "label",
+        "reference": 0,
+        "candidate": 7,
+        "delta": 7
+      },
+      {
+        "key": "input",
+        "reference": 0,
+        "candidate": 6,
+        "delta": 6
+      },
+      {
+        "key": "dl",
+        "reference": 0,
+        "candidate": 3,
+        "delta": 3
+      },
+      {
+        "key": "dt",
+        "reference": 0,
+        "candidate": 3,
+        "delta": 3
+      },
+      {
+        "key": "dd",
+        "reference": 0,
+        "candidate": 3,
+        "delta": 3
+      },
+      {
+        "key": "li",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "main",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "aside",
+        "reference": 0,
+        "candidate": 1,
+        "delta": 1
+      },
+      {
+        "key": "time",
+        "reference": 0,
+        "candidate": 1,
+        "delta": 1
+      }
+    ],
+    "roleCountDeltas": [
+      {
+        "key": "img",
+        "reference": 0,
+        "candidate": 102,
+        "delta": 102
+      },
+      {
+        "key": "button",
+        "reference": 14,
+        "candidate": 39,
+        "delta": 25
+      },
+      {
+        "key": "combobox",
+        "reference": 0,
+        "candidate": 7,
+        "delta": 7
+      },
+      {
+        "key": "region",
+        "reference": 0,
+        "candidate": 6,
+        "delta": 6
+      },
+      {
+        "key": "status",
+        "reference": 7,
+        "candidate": 2,
+        "delta": -5
+      },
+      {
+        "key": "presentation",
+        "reference": 0,
+        "candidate": 3,
+        "delta": 3
+      },
+      {
+        "key": "switch",
+        "reference": 1,
+        "candidate": 0,
+        "delta": -1
+      },
+      {
+        "key": "textbox",
+        "reference": 2,
+        "candidate": 1,
+        "delta": -1
+      },
+      {
+        "key": "separator",
+        "reference": 0,
+        "candidate": 1,
+        "delta": 1
+      }
+    ],
+    "missingSections": [
+      {
+        "role": null,
+        "aria": "BDI_Verifier Workspace Menu",
+        "tag": "button",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": null,
+        "aria": "Search workspace",
+        "tag": "button",
+        "text": null,
+        "depth": 9
+      },
+      {
+        "role": null,
+        "aria": "Create new issue",
+        "tag": "button",
+        "text": null,
+        "depth": 9
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": null,
+        "aria": "Join a team",
+        "tag": "button",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": null,
+        "aria": "Enable cycles for team…",
+        "tag": "span",
+        "text": "Cycles",
+        "depth": 12
+      },
+      {
+        "role": null,
+        "aria": "Open Help menu",
+        "tag": "button",
+        "text": null,
+        "depth": 6
+      },
+      {
+        "role": null,
+        "aria": "Menu",
+        "tag": "button",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": "switch",
+        "aria": "Add to favorites",
+        "tag": "button",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": null,
+        "aria": "Project actions",
+        "tag": "button",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": null,
+        "aria": "Copy page URL",
+        "tag": "button",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": null,
+        "aria": "Setup project notifications",
+        "tag": "button",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": null,
+        "aria": "Add new view",
+        "tag": "button",
+        "text": null,
+        "depth": 11
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "div",
+        "text": null,
+        "depth": 10
+      },
+      {
+        "role": null,
+        "aria": "Close project details",
+        "tag": "button",
+        "text": null,
+        "depth": 9
+      },
+      {
+        "role": null,
+        "aria": "Choose icon",
+        "tag": "button",
+        "text": null,
+        "depth": 12
+      },
+      {
+        "role": "textbox",
+        "aria": "Project name",
+        "tag": "div",
+        "text": null,
+        "depth": 12
+      },
+      {
+        "role": "textbox",
+        "aria": "Project summary",
+        "tag": "div",
+        "text": null,
+        "depth": 12
+      },
+      {
+        "role": null,
+        "aria": "Project sidebar",
+        "tag": "div",
+        "text": null,
+        "depth": 9
+      },
+      {
+        "role": null,
+        "aria": "Agent",
+        "tag": "button",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": null,
+        "aria": "Chat history",
+        "tag": "button",
+        "text": null,
+        "depth": 6
+      },
+      {
+        "role": null,
+        "aria": "Notifications alt+T",
+        "tag": "section",
+        "text": null,
+        "depth": 3
+      },
+      {
+        "role": "status",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 2
+      }
+    ],
+    "extraSections": [
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 6
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 8
+      },
+      {
+        "role": "img",
+        "aria": null,
+        "tag": "span",
+        "text": null,
+        "depth": 7
+      }
+    ]
+  },
+  "styleDeltas": [
+    {
+      "landmark": "sidebar-nav",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "color": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        }
+      },
+      "meaningfulCount": 8
+    },
+    {
+      "landmark": "sidebar-nav-item",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "color": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderRadius": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "10px",
+          "delta": 10
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px 8px 2px 2px"
+        },
+        "paddingTop": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px",
+          "delta": 2
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "8px",
+          "delta": 8
+        },
+        "paddingBottom": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px",
+          "delta": 2
+        },
+        "paddingLeft": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "2px",
+          "delta": 2
+        },
+        "gap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "8px"
+        },
+        "rowGap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "8px"
+        },
+        "columnGap": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "8px"
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#AAAAAA",
+          "kind": "color"
+        },
+        "display": {
+          "severity": "style",
+          "ref": "block",
+          "cand": "flex"
+        }
+      },
+      "meaningfulCount": 18
+    },
+    {
+      "landmark": "header",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "background": {
+          "severity": "style",
+          "ref": "#121213 none repeat scroll 0% 0% / auto padding-box border-box",
+          "cand": "#00000000 none repeat scroll 0% 0% / auto padding-box border-box",
+          "kind": "color"
+        },
+        "backgroundColor": {
+          "severity": "style",
+          "ref": "#121213",
+          "cand": "#00000000",
+          "kind": "color"
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "0px 12px"
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "12px",
+          "delta": 12
+        },
+        "paddingLeft": {
+          "severity": "style",
+          "ref": "0px",
+          "cand": "12px",
+          "delta": 12
+        },
+        "gap": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "0px",
+          "delta": 12
+        },
+        "rowGap": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "0px",
+          "delta": 12
+        },
+        "columnGap": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "0px",
+          "delta": 12
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        }
+      },
+      "meaningfulCount": 15
+    },
+    {
+      "landmark": "tabs",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "background": {
+          "severity": "style",
+          "ref": "#1A1A1B none repeat scroll 0% 0% / auto padding-box border-box",
+          "cand": "#00000000 none repeat scroll 0% 0% / auto padding-box border-box",
+          "kind": "color"
+        },
+        "backgroundColor": {
+          "severity": "style",
+          "ref": "#1A1A1B",
+          "cand": "#00000000",
+          "kind": "color"
+        },
+        "borderRadius": {
+          "severity": "style",
+          "ref": "5px",
+          "cand": "0px",
+          "delta": 5
+        },
+        "margin": {
+          "severity": "style",
+          "ref": "-2px 0px",
+          "cand": "0px"
+        },
+        "marginTop": {
+          "severity": "style",
+          "ref": "-2px",
+          "cand": "0px",
+          "delta": 2
+        },
+        "marginBottom": {
+          "severity": "style",
+          "ref": "-2px",
+          "cand": "0px",
+          "delta": 2
+        },
+        "gap": {
+          "severity": "style",
+          "ref": "2px",
+          "cand": "4px",
+          "delta": 2
+        },
+        "rowGap": {
+          "severity": "style",
+          "ref": "2px",
+          "cand": "4px",
+          "delta": 2
+        },
+        "columnGap": {
+          "severity": "style",
+          "ref": "2px",
+          "cand": "4px",
+          "delta": 2
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "position": {
+          "severity": "style",
+          "ref": "relative",
+          "cand": "static"
+        }
+      },
+      "meaningfulCount": 17
+    },
+    {
+      "landmark": "list-row",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "16px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "24px",
+          "cand": "22px",
+          "delta": 2
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#FFFFFF",
+          "cand": "#0404041A",
+          "kind": "color"
+        }
+      },
+      "meaningfulCount": 7
+    },
+    {
+      "landmark": "primary-button",
+      "deltas": {
+        "fontFamily": {
+          "severity": "font-stack",
+          "ref": "\"Inter Variable\", \"SF Pro Display\", -apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Open Sans\", \"Helvetica Neue\", \"Linear Thai\", sans-serif",
+          "cand": "Geist, -apple-system, \"system-ui\", \"Segoe UI Variable Display\", \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"HarmonyOS Sans SC\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"Source Han Sans SC\", \"Noto Sans CJK SC\", ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+        },
+        "fontSize": {
+          "severity": "style",
+          "ref": "12px",
+          "cand": "14px",
+          "delta": 2
+        },
+        "fontWeight": {
+          "severity": "style",
+          "ref": "500",
+          "cand": "400"
+        },
+        "lineHeight": {
+          "severity": "style",
+          "ref": "normal",
+          "cand": "14px"
+        },
+        "color": {
+          "severity": "style",
+          "ref": "#E3E4E6",
+          "cand": "#FFFFFF",
+          "kind": "color"
+        },
+        "borderRadius": {
+          "severity": "style",
+          "ref": "9999px",
+          "cand": "0px",
+          "delta": 9999
+        },
+        "padding": {
+          "severity": "style",
+          "ref": "0px 2px",
+          "cand": "0px"
+        },
+        "paddingRight": {
+          "severity": "style",
+          "ref": "2px",
+          "cand": "0px",
+          "delta": 2
+        },
+        "paddingLeft": {
+          "severity": "style",
+          "ref": "2px",
+          "cand": "0px",
+          "delta": 2
+        },
+        "borderWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderTopWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderRightWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderBottomWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderLeftWidth": {
+          "severity": "noise",
+          "ref": "0.5px",
+          "cand": "0px",
+          "delta": 0.5
+        },
+        "borderColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderTopColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderRightColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderBottomColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "borderLeftColor": {
+          "severity": "style",
+          "ref": "#00000000",
+          "cand": "#0404041A",
+          "kind": "color"
+        },
+        "display": {
+          "severity": "style",
+          "ref": "flex",
+          "cand": "block"
+        },
+        "position": {
+          "severity": "style",
+          "ref": "relative",
+          "cand": "static"
+        }
+      },
+      "meaningfulCount": 15
+    }
+  ],
+  "text": {
+    "shared": 3,
+    "refOnlyCopy": [
+      "Skip to content",
+      "BDI_Verifier Workspace Menu",
+      "BD",
+      "BDI_Verifier",
+      "Search workspace",
+      "Create new issue",
+      "Inbox",
+      "My issues",
+      "Reviews",
+      "Agent",
+      "Drafts",
+      "Workspace",
+      "Projects",
+      "Views",
+      "Show more links",
+      "More",
+      "Favorites",
+      "Your teams",
+      "Join a team",
+      "orvilo",
+      "Team menu",
+      "Home",
+      "Triage",
+      "Issues",
+      "Try",
+      "Initiatives",
+      "Cycles",
+      "Open Help menu",
+      "Orvilo Linear Parity",
+      "Project actions",
+      "Copy page URL",
+      "Setup project notifications",
+      "Overview",
+      "Activity",
+      "Add new view",
+      "Close project details",
+      "Choose icon",
+      "把 Orvilo 的导航与工作面对齐到 Linear：统一 KanbanBoard、Linear 侧栏 IA、Inbox/My issues/Reviews/Views/Teams/Members/Project 各面。仓库 alexj11324/orvilo1，stack #117 + 6 个 wave PR 承载实现。",
+      "Properties",
+      "In Progress",
+      "No priority",
+      "AJ",
+      "Alex Jiang",
+      "Change project start date",
+      "Sep 20th",
+      "Change project target date",
+      "Target date",
+      "Resources",
+      "Add document or link…",
+      "Write first project update",
+      "Description",
+      "Heading actions",
+      "目标：Orvilo 的导航与所有工作面（Inbox / My issues / Reviews / Views / Teams / Members / Project）在结构与视觉语言上对齐 Linear；看板统一复用 KanbanBoard；删除个人模式（workspace 单人也可用）；编排类 Orvilo 特有功能降为次要入口而非主视觉。",
+      "仓库：",
+      "交付载体",
+      "Stack #117（四层 draft PR）：#113 数据契约 → #114 workspace 激活链 → #115 工作面 → #116 侧栏 IA + 冻结规格",
+      "Wave 2 修复包（均 draft，叠在栈顶之上）： 视觉模板 / #120 数据语义 / #123 审核契约 / 页面模板应用+project 页 / Inbox 恢复 / e2e journey 改写",
+      "⁠",
+      "✨ feat(work-surface): v6 page-frame contract + members directory + IssueContent extraction",
+      "💄 feat(pages): v6 collection skeleton on my issues, teams, projects, views"
+    ],
+    "candOnlyCopy": [
+      "项目",
+      "待审核",
+      "收件箱",
+      "团队",
+      "视图",
+      "我的事项",
+      "草稿",
+      "AG",
+      "Agent Testing User's workspace",
+      "助理",
+      "工作区",
+      "更多",
+      "收藏",
+      "你的团队",
+      "S",
+      "Parity Shipping",
+      "团队菜单",
+      "主页",
+      "分诊",
+      "任务",
+      "P",
+      "Parity Test Team",
+      "帮助中心",
+      "📦",
+      "Parity Test Project",
+      "进行中",
+      "概览",
+      "动态",
+      "问题",
+      "里程碑",
+      "添加简短摘要…",
+      "属性",
+      "状态",
+      "优先级",
+      "高",
+      "负责人",
+      "Agent Testing User",
+      "AT",
+      "user_agent_testing_001",
+      "开始",
+      "9月 1, 2026",
+      "目标",
+      "12月 31, 2026",
+      "成员",
+      "添加成员",
+      "资源",
+      "添加文档或链接…",
+      "撰写首条项目进展",
+      "描述",
+      "Synthetic description text used only as layout-equivalent fixture data for Linear parity comparison.",
+      "Gate A — Synthetic Boundary",
+      "收起",
+      "2 个议题 · 100%",
+      "设置目标日期",
+      "10月 15",
+      "打开菜单",
+      "添加描述…",
+      "拖拽调整里程碑顺序",
+      "Gate B — Synthetic Retirement",
+      "7 个议题 · 100%"
+    ],
+    "refOnlyData": [
+      "7",
+      "https://github.com/alexj11324/orvilo1",
+      "46",
+      "12",
+      "10",
+      "35%",
+      "35",
+      "7%",
+      "11"
+    ],
+    "candOnlyData": ["3", "16", "0", "1/25"],
+    "counts": {
+      "refOnlyCopy": 101,
+      "candOnlyCopy": 100,
+      "refOnlyData": 9,
+      "candOnlyData": 4
+    }
+  },
+  "viewportMatch": true
+}

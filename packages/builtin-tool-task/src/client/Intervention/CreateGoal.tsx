@@ -335,6 +335,19 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
                 onChange={(value) => patch({ maxTotalCost: value })}
               />
             </Flexbox>
+            <Flexbox gap={4}>
+              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</Text>
+              <InputNumber
+                max={10}
+                min={1}
+                placeholder={t('builtins.orvilo-task.goal.parallelismAuto')}
+                size={'small'}
+                style={{ width: 120 }}
+                value={args.maxConcurrentTasks ?? undefined}
+                variant={'filled'}
+                onChange={(value) => patch({ maxConcurrentTasks: value })}
+              />
+            </Flexbox>
           </Flexbox>
         </Section>
       </Flexbox>

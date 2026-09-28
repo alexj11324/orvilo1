@@ -4,6 +4,21 @@ import { eslint } from '@lobehub/lint';
 import { restrictedImports } from '@lobehub/ui/eslint';
 import { flat as mdxFlat } from 'eslint-plugin-mdx';
 
+// lucide's circle family — the shapes task/issue status marks are made of.
+const STATUS_CIRCLE_GLYPHS = [
+  'Circle',
+  'CircleCheck',
+  'CircleCheckBig',
+  'CircleDashed',
+  'CircleDot',
+  'CircleDotDashed',
+  'CirclePause',
+  'CircleX',
+  'CheckCircle',
+  'CheckCircle2',
+  'Contrast',
+];
+
 const tsconfigRootDir = fileURLToPath(new URL('.', import.meta.url));
 
 const baseRestrictedImportOptions = restrictedImports.rules['no-restricted-imports'][1];
@@ -341,8 +356,6 @@ export default eslint(
   },
   {
     // Sidebar/titlebar/command-menu trees the desktop shell renders outside TabHost.
-    // GenerationLayout is split deliberately: Body and Header are portal'd into the
-    // sidebar, while the layout root stays in the route tree and owns the url sync.
     files: [
       'src/features/AgentSidebar/**/*.{ts,tsx}',
       'src/features/CommandMenu/**/*.{ts,tsx}',
@@ -350,8 +363,6 @@ export default eslint(
       'src/features/HomeSidebar/**/*.{ts,tsx}',
       'src/features/Pages/PageLayout/Sidebar.{ts,tsx}',
       'src/features/WorkspaceSetting/SideBar/**/*.{ts,tsx}',
-      'src/routes/(main)/(create)/features/GenerationLayout/Body/**/*.{ts,tsx}',
-      'src/routes/(main)/(create)/features/GenerationLayout/Header/**/*.{ts,tsx}',
     ],
     rules: {
       'no-restricted-imports': createRestrictedImportRule({
@@ -525,15 +536,6 @@ export default eslint(
       'react/no-unescaped-entities': 0,
     },
   },
-  // Store/image and types/generation - disable sorting
-  {
-    files: ['src/store/image/**/*', 'src/types/generation/**/*'],
-    rules: {
-      'perfectionist/sort-interfaces': 0,
-      'perfectionist/sort-object-types': 0,
-      'perfectionist/sort-objects': 0,
-    },
-  },
   // model-bank aiModels - enforce English-only descriptions
   {
     files: ['packages/model-bank/src/aiModels/**/*'],
@@ -604,6 +606,55 @@ export default eslint(
     files: ['**/*.cjs'],
     rules: {
       '@typescript-eslint/no-require-imports': 0,
+    },
+  },
+  // Status marks have one source: `@/components/ExecutionStatus` (execution
+  // and workflow-state visuals). Task surfaces kept reaching for lucide's
+  // circle family instead and drew a second, near-identical glyph beside the
+  // canonical one. This runs as the typescript-eslint twin of
+  // no-restricted-imports so it never replaces the per-directory core rule
+  // blocks above (flat config replaces a rule per file; it does not merge).
+  {
+    files: [
+      'src/features/AgentTasks/**/*.{ts,tsx}',
+      'src/features/HomeInbox/**/*.{ts,tsx}',
+      'src/features/MyWork/**/*.{ts,tsx}',
+      'src/features/Projects/**/*.{ts,tsx}',
+      'src/features/Reviews/**/*.{ts,tsx}',
+      'src/features/SavedViews/**/*.{ts,tsx}',
+    ],
+    ignores: [
+      'src/**/*.test.{ts,tsx}',
+      // Not task status — pass / pending / fail of verification, acceptance
+      // and CI check runs, which are their own result family.
+      'src/features/AgentTasks/AgentTaskDetail/PendingAcceptanceCheckList.tsx',
+      'src/features/AgentTasks/AgentTaskDetail/RunIntegrationTag.tsx',
+      'src/features/AgentTasks/AgentTaskDetail/RunVerifyDetail.tsx',
+      'src/features/AgentTasks/AgentTaskDetail/RunVerifyTag.tsx',
+      'src/features/AgentTasks/AgentTaskDetail/TaskAcceptanceStateRow.tsx',
+      'src/features/AgentTasks/AgentTaskDetail/TaskVerifyConfig.tsx',
+      'src/features/Reviews/ReviewChecksPanel.tsx',
+      'src/features/Reviews/ReviewPullRequestPage.tsx',
+      // Not task status — Linear sync state and project health.
+      'src/features/AgentTasks/shared/LinearTaskSyncStatus.tsx',
+      'src/features/Projects/healthMeta.tsx',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              allowTypeImports: true,
+              // lucide exports each glyph under a bare and an `Icon`-suffixed name.
+              importNames: STATUS_CIRCLE_GLYPHS.flatMap((name) => [name, `${name}Icon`]),
+              message:
+                'Task/issue status marks come from "@/components/ExecutionStatus" (TASK_STATUS_VISUALS, WORKFLOW_CATEGORY_VISUALS). Do not draw a status with a lucide circle — a second glyph for the same state is exactly the drift this rule exists for. If this icon is not a status mark, disable the line with a reason.',
+              name: 'lucide-react',
+            },
+          ],
+        },
+      ],
     },
   },
 );

@@ -1,3 +1,5 @@
+import type { AcpBuiltinToolSpec } from '@orvilo/types';
+
 // ─── Device Info ───
 
 /** A single live gateway WebSocket connection belonging to a device. */
@@ -81,16 +83,6 @@ export interface ToolCallResponseMessage {
   type: 'tool_call_response';
 }
 
-export interface MessageApiResponseMessage {
-  requestId: string;
-  result: {
-    content: string;
-    error?: string;
-    success: boolean;
-  };
-  type: 'message_api_response';
-}
-
 // Server → Client
 export interface HeartbeatAckMessage {
   type: 'heartbeat_ack';
@@ -172,16 +164,6 @@ export interface ToolCallRequestMessage {
   type: 'tool_call_request';
 }
 
-export interface MessageApiRequestMessage {
-  api: {
-    apiName: string;
-    payload: Record<string, unknown>;
-    platform: string;
-  };
-  requestId: string;
-  type: 'message_api_request';
-}
-
 // Server → Client
 export interface SystemInfoRequestMessage {
   requestId: string;
@@ -239,7 +221,20 @@ export interface AgentRunRequestMessage {
   args?: string[];
   /** Seed assistant message that receives terminal state from the CLI run. */
   assistantMessageId?: string;
+  /**
+   * Server-backed builtin tools for this run. The device mounts each spec on
+   * its per-run MCP server (`orvilo_cc`); invocations call back to the
+   * server with `jwt` + `operationId`. Optional for older servers.
+   */
+  builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
+  /**
+   * Server-side idempotency key for admission. Always equals `operationId`
+   * (the device-side task id): a gateway or device retry carrying the same key
+   * must not spawn a second execution of the same logical run. Optional for
+   * compatibility with older servers; absent means "no dedupe hint sent".
+   */
+  idempotencyKey?: string;
   /**
    * Image attachments from the user message, as URLs the device can fetch
    * (signed S3 URLs). Appended as image content blocks after the prompt so
@@ -265,6 +260,12 @@ export interface AgentRunRequestMessage {
   resumeFallbackSystemContext?: string;
   resumeSessionId?: string;
   /**
+   * Run generation/fence minted at admission. A re-admitted operation bumps it,
+   * so a device-side ack or cancel that names an older generation is stale.
+   * Optional for compatibility with older servers/devices.
+   */
+  runGeneration?: number;
+  /**
    * Static context injected before the user prompt (workspace conventions,
    * selected context). The desktop sends it to `lh hetero exec` as the first
    * text block of a content-block array. Optional — omitted for older servers
@@ -287,6 +288,17 @@ export interface AgentRunRequestMessage {
 export interface AgentRunAckMessage {
   operationId: string;
   reason?: string;
+  /**
+   * Echo of the dispatched run generation so the server can detect an ack
+   * landing for a fenced (older) admission. Optional — older devices omit it.
+   */
+  runGeneration?: number;
+  /**
+   * Native/ACP session id the device agent established for this run, when the
+   * ack is produced after session handshake. Distinct from `operationId`.
+   * Optional — older devices omit it.
+   */
+  sessionId?: string;
   status: 'accepted' | 'rejected';
   type: 'agent_run_ack';
 }
@@ -295,7 +307,6 @@ export type ClientMessage =
   | AgentRunAckMessage
   | AuthMessage
   | HeartbeatMessage
-  | MessageApiResponseMessage
   | RpcResponseMessage
   | SystemInfoResponseMessage
   | ToolCallResponseMessage;
@@ -305,7 +316,6 @@ export type ServerMessage =
   | AuthFailedMessage
   | AuthSuccessMessage
   | HeartbeatAckMessage
-  | MessageApiRequestMessage
   | RpcRequestMessage
   | SystemInfoRequestMessage
   | ToolCallRequestMessage;
@@ -323,7 +333,6 @@ export interface GatewayClientEvents {
   disconnected: () => void;
   error: (error: Error) => void;
   heartbeat_ack: () => void;
-  message_api_request: (request: MessageApiRequestMessage) => void;
   reconnecting: (delay: number) => void;
   rpc_request: (request: RpcRequestMessage) => void;
   status_changed: (status: ConnectionStatus) => void;

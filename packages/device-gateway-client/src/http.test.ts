@@ -171,7 +171,7 @@ describe('GatewayHttpClient', () => {
 
       const result = await client.executeToolCall(
         { userId: 'user-1' },
-        { apiName: 'navigate', arguments: '{}', identifier: 'orvilo-browser' },
+        { apiName: 'navigate', arguments: '{}', identifier: 'orvilo-local-system' },
       );
 
       expect(result).toEqual({
@@ -383,7 +383,9 @@ describe('GatewayHttpClient', () => {
     });
 
     it('describes an unreachable gateway host', async () => {
-      vi.mocked(fetch).mockRejectedValue(new TypeError('fetch failed'));
+      vi.mocked(fetch).mockRejectedValue(
+        Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } }),
+      );
 
       const result = await client.executeToolCall(
         { userId: 'user-1' },
@@ -485,6 +487,32 @@ describe('GatewayHttpClient', () => {
       );
     });
 
+    it('forwards the admission identity (idempotencyKey + runGeneration) to the device', async () => {
+      mockFetch({
+        json: vi.fn().mockResolvedValue({ success: true }),
+        ok: true,
+      });
+
+      await client.dispatchAgentRun({
+        agentType: 'claude-code',
+        assistantMessageId: 'asst-1',
+        idempotencyKey: 'op-1',
+        jwt: 'jwt',
+        operationId: 'op-1',
+        prompt: 'run',
+        runGeneration: 1,
+        topicId: 'tpc-1',
+        userId: 'user-1',
+      });
+
+      const [, init] = vi.mocked(fetch).mock.calls[0];
+      expect(JSON.parse((init as any).body)).toMatchObject({
+        idempotencyKey: 'op-1',
+        operationId: 'op-1',
+        runGeneration: 1,
+      });
+    });
+
     it('should preserve backward compatibility when accepted response has no JSON body', async () => {
       mockFetch({
         json: vi.fn().mockRejectedValue(new Error('empty body')),
@@ -523,7 +551,11 @@ describe('GatewayHttpClient', () => {
         userId: 'user-1',
       });
 
-      expect(result).toEqual({ error: 'spawn failed', success: false });
+      expect(result).toEqual({
+        error: 'spawn failed',
+        errorCode: 'DEVICE_GATEWAY_REJECTED',
+        success: false,
+      });
     });
 
     it('should surface success false returned with HTTP 200', async () => {
@@ -542,7 +574,11 @@ describe('GatewayHttpClient', () => {
         userId: 'user-1',
       });
 
-      expect(result).toEqual({ error: 'DEVICE_OFFLINE', success: false });
+      expect(result).toEqual({
+        error: 'DEVICE_OFFLINE',
+        errorCode: 'DEVICE_GATEWAY_REJECTED',
+        success: false,
+      });
     });
 
     it('should surface non-ok agent-run responses', async () => {
@@ -562,7 +598,11 @@ describe('GatewayHttpClient', () => {
         userId: 'user-1',
       });
 
-      expect(result).toEqual({ error: 'DEVICE_OFFLINE', success: false });
+      expect(result).toEqual({
+        error: 'DEVICE_OFFLINE',
+        errorCode: 'DEVICE_CHANNEL_UNAVAILABLE',
+        success: false,
+      });
     });
 
     /** @example A pre-acceptance 404 keeps enough context for an outer agent to retry. */
@@ -662,83 +702,6 @@ describe('GatewayHttpClient', () => {
     });
   });
 
-  describe('executeMessageApi', () => {
-    it('should return message API result on success', async () => {
-      mockFetch({
-        json: vi.fn().mockResolvedValue({ content: '{"guid":"sent-1"}', success: true }),
-        ok: true,
-      });
-
-      const result = await client.executeMessageApi(
-        { userId: 'user-1' },
-        { apiName: 'sendText', payload: { chatGuid: 'chat-1' }, platform: 'imessage' },
-      );
-
-      expect(result).toEqual({ content: '{"guid":"sent-1"}', error: undefined, success: true });
-      expect(fetch).toHaveBeenCalledWith(
-        'https://gateway.test.com/api/device/message-api',
-        expect.objectContaining({
-          body: JSON.stringify({
-            api: { apiName: 'sendText', payload: { chatGuid: 'chat-1' }, platform: 'imessage' },
-            userId: 'user-1',
-          }),
-        }),
-      );
-    });
-
-    it('should handle non-string content', async () => {
-      mockFetch({
-        json: vi.fn().mockResolvedValue({ content: { ok: true }, success: true }),
-        ok: true,
-      });
-
-      const result = await client.executeMessageApi(
-        { userId: 'user-1' },
-        { apiName: 'ping', payload: {}, platform: 'imessage' },
-      );
-
-      expect(result.content).toBe(JSON.stringify({ ok: true }));
-    });
-
-    it('should handle non-ok response', async () => {
-      mockFetch({
-        ok: false,
-        status: 503,
-        text: vi.fn().mockResolvedValue('Desktop offline'),
-      });
-
-      const result = await client.executeMessageApi(
-        { userId: 'user-1' },
-        { apiName: 'ping', payload: {}, platform: 'imessage' },
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Desktop offline');
-      expect(result.content).toContain('The device is not reachable right now');
-      expect(result.content).toContain('message API call');
-      expect(result.content).toContain('HTTP 503');
-    });
-
-    it('should pass optional deviceId and timeout', async () => {
-      mockFetch({
-        json: vi.fn().mockResolvedValue({ content: 'ok', success: true }),
-        ok: true,
-      });
-
-      await client.executeMessageApi(
-        { deviceId: 'device-1', timeout: 5000, userId: 'user-1' },
-        { apiName: 'ping', payload: {}, platform: 'imessage' },
-      );
-
-      expect(fetch).toHaveBeenCalledWith(
-        'https://gateway.test.com/api/device/message-api',
-        expect.objectContaining({
-          body: expect.stringContaining('"deviceId":"device-1"'),
-        }),
-      );
-    });
-  });
-
   describe('getDeviceSystemInfo', () => {
     it('should return system info on success', async () => {
       const systemInfo = {
@@ -815,7 +778,11 @@ describe('GatewayHttpClient', () => {
         { method: 'initWorkspace' },
       );
 
-      expect(result).toEqual({ error: 'offline', success: false });
+      expect(result).toEqual({
+        error: 'offline',
+        errorCode: 'DEVICE_CHANNEL_UNAVAILABLE',
+        success: false,
+      });
     });
 
     it('defaults success to false when the field is missing', async () => {

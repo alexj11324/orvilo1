@@ -1,132 +1,50 @@
 'use client';
 
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
+import { Flexbox, Icon } from '@lobehub/ui';
+import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { ExternalLinkIcon } from 'lucide-react';
-import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import urlJoin from 'url-join';
 
-import { useAppOrigin } from '@/hooks/useAppOrigin';
-import { changeEmail } from '@/libs/better-auth/auth-client';
 import { electronSystemService } from '@/services/electron/system';
+import { useServerConfigStore } from '@/store/serverConfig';
+import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
-import { saveToast } from '@/store/utils/saveToast';
 
 import ProfileRow from './ProfileRow';
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
-
+/**
+ * Email changes are owned by the accounts portal (Clerk). Both platforms link
+ * out — desktop via the system browser, web via a new tab.
+ */
 const EmailRow = () => {
   const { t } = useTranslation('auth');
   const email = useUserStore(userProfileSelectors.email);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState('');
-  const [saving, setSaving] = useState(false);
-  const appOrigin = useAppOrigin();
+  const accountsUrl = useServerConfigStore(serverConfigSelectors.authAccountsUrl);
 
-  const handleStartEdit = () => {
-    setEditValue('');
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditValue('');
-  };
-
-  const handleSave = useCallback(async () => {
-    const trimmed = editValue.trim();
-    if (!trimmed) return;
-
-    if (!EMAIL_REGEX.test(trimmed)) {
-      toast.error(t('profile.emailInvalid'));
+  const openAccountsPortal = () => {
+    if (isDesktop) {
+      void electronSystemService.openExternalLink(accountsUrl);
       return;
     }
-
-    try {
-      setSaving(true);
-      const res = await changeEmail({ callbackURL: '/settings/profile', newEmail: trimmed });
-      if (res.error) {
-        toast.error(res.error.message ?? res.error.statusText ?? t('profile.saveError'));
-        return;
-      }
-      setIsEditing(false);
-      toast.success(t('profile.emailChangeSuccess'));
-    } catch (err) {
-      console.error('Failed to change email:', err);
-      saveToast(err, { retry: () => void handleSave(), title: t('profile.saveError') });
-    } finally {
-      setSaving(false);
-    }
-  }, [editValue, t]);
-
-  // Desktop OIDC and Better Auth sessions are not bridged, so change-email can only
-  // be completed on the web app.
-  if (isDesktop)
-    return (
-      <ProfileRow
-        anchor={'profile-email'}
-        label={t('profile.email')}
-        action={
-          <Text
-            style={{ cursor: 'pointer', fontSize: 13 }}
-            onClick={() => {
-              if (!appOrigin) return;
-              void electronSystemService.openExternalLink(urlJoin(appOrigin, '/settings/profile'));
-            }}
-          >
-            <Flexbox horizontal align={'center'} gap={4}>
-              {t('profile.updateEmail')}
-              <Icon icon={ExternalLinkIcon} size={12} />
-            </Flexbox>
-          </Text>
-        }
-      >
-        <Text>{email || '--'}</Text>
-      </ProfileRow>
-    );
+    window.open(accountsUrl, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <ProfileRow
       anchor={'profile-email'}
       label={t('profile.email')}
       action={
-        isEditing ? (
-          <Flexbox horizontal gap={8}>
-            <Button disabled={saving} size="small" onClick={handleCancel}>
-              {t('profile.cancel')}
-            </Button>
-            <Button loading={saving} size="small" type="primary" onClick={handleSave}>
-              {t('profile.save')}
-            </Button>
-          </Flexbox>
-        ) : (
-          <Text style={{ cursor: 'pointer', fontSize: 13 }} onClick={handleStartEdit}>
+        <Text style={{ cursor: 'pointer', fontSize: 13 }} onClick={openAccountsPortal}>
+          <Flexbox horizontal align={'center'} gap={4}>
             {t('profile.updateEmail')}
-          </Text>
-        )
+            <Icon icon={ExternalLinkIcon} size={12} />
+          </Flexbox>
+        </Text>
       }
     >
-      {isEditing ? (
-        <Input
-          autoFocus
-          autoComplete="email"
-          inputMode="email"
-          placeholder={t('profile.emailPlaceholder')}
-          size="small"
-          style={{ flex: 1, minWidth: 0, width: '100%' }}
-          type="email"
-          value={editValue}
-          variant="filled"
-          onChange={(e) => setEditValue(e.target.value)}
-          onPressEnter={handleSave}
-        />
-      ) : (
-        <Text>{email || '--'}</Text>
-      )}
+      <Text>{email || '--'}</Text>
     </ProfileRow>
   );
 };

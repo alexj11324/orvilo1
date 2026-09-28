@@ -1,5 +1,6 @@
 import { Center, Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- Linear's unassigned avatar
 import { Bot, CircleDashed, UserRound } from 'lucide-react';
 import { memo } from 'react';
 

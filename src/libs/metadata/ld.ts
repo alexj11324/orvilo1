@@ -9,6 +9,7 @@ import qs from 'query-string';
 
 import { DEFAULT_LANG } from '@/const/locale';
 import { OFFICIAL_SITE, OFFICIAL_URL } from '@/const/url';
+import metadataCopy from '@/locales/default/metadata';
 import { type Locales } from '@/locales/resources';
 import { getCanonicalUrl } from '@/server/utils/url';
 
@@ -106,7 +107,7 @@ export class Ld {
             'email': BRANDING_EMAIL.support,
           }
         : undefined,
-      'description': `Agent teammates that grow with you\n${BRANDING_NAME} is a work-and-lifestyle space to find, build, and collaborate with agent teams that grow with you.`,
+      'description': `Agent teammates that grow with you\n${metadataCopy['chat.description'].replace('{{appName}}', BRANDING_NAME)}`,
       'email': BRANDING_EMAIL.business,
       // No `founders`: upstream named its own founders here, and carrying that
       // over would publish a false statement about named individuals under a

@@ -1,4 +1,4 @@
-import type { UpdateToolMessageInput } from '@orvilo/agent-runtime';
+import type { UpdateToolMessageInput } from '@orvilo/agent-execution';
 import type { CreateMessageParams, UpdateMessageParams } from '@orvilo/types';
 
 /**

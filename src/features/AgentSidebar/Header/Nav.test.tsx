@@ -167,7 +167,7 @@ describe('Agent sidebar header nav', () => {
 
   it('disables starting a new topic for workspace viewers', () => {
     permissionMock.create_content = false;
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/channel');
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/profile');
 
     render(<Nav />);
 
@@ -180,29 +180,19 @@ describe('Agent sidebar header nav', () => {
     expect(mutateMock).not.toHaveBeenCalled();
   });
 
-  it('no longer offers a standalone message channels entry', () => {
-    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
+  it.each([['/agent/agt_eH4zL98zBx5u/profile'], ['/agent/agt_eH4zL98zBx5u/statistics']])(
+    'keeps the profile entry active on %s',
+    (pathname) => {
+      usePathnameMock.mockReturnValue(pathname);
 
-    render(<Nav />);
+      render(<Nav />);
 
-    expect(screen.queryByRole('button', { name: 'tab.integration' })).not.toBeInTheDocument();
-  });
-
-  it.each([
-    ['/agent/agt_eH4zL98zBx5u/profile'],
-    ['/agent/agt_eH4zL98zBx5u/channel'],
-    ['/agent/agt_eH4zL98zBx5u/channel/slack'],
-    ['/agent/agt_eH4zL98zBx5u/statistics'],
-  ])('keeps the profile entry active on %s', (pathname) => {
-    usePathnameMock.mockReturnValue(pathname);
-
-    render(<Nav />);
-
-    expect(screen.getByRole('button', { name: 'tab.profile' })).toHaveAttribute(
-      'data-active',
-      'true',
-    );
-  });
+      expect(screen.getByRole('button', { name: 'tab.profile' })).toHaveAttribute(
+        'data-active',
+        'true',
+      );
+    },
+  );
 
   it('navigates to the agent goals page', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');

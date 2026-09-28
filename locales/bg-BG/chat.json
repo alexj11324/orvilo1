@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Презареди",
   "workingPanel.browser.actions.stop": "Спри зареждането",
   "workingPanel.browser.addressPlaceholder": "Търсене или въведете адрес",
-  "workingPanel.browser.agentControlling": "Агентът използва браузъра",
-  "workingPanel.browser.agentCursor": "Агент",
   "workingPanel.browser.context.elementAdded": "Елементът е добавен към контекста на чата",
   "workingPanel.browser.context.elementTitle": "Елемент",
   "workingPanel.browser.context.failed": "Неуспешно добавяне на контекст на елемента",

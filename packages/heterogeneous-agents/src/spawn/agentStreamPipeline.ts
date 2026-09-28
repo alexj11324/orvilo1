@@ -1,7 +1,7 @@
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 
 import { rewriteImagePlaceholders, type UploadedImageOutcome } from '../imageEcho';
-import { createAdapter } from '../registry';
+import { createLiveAdapter } from '../registry';
 import type {
   AgentEventAdapter,
   HeterogeneousAgentEvent,
@@ -26,6 +26,14 @@ export type UploadHeterogeneousImage = (image: {
 }) => Promise<{ fileId: string; url: string } | undefined>;
 
 export interface AgentStreamPipelineOptions {
+  /**
+   * Explicit adapter instance. When omitted the pipeline resolves one from the
+   * live registry by `agentType` — always an ACP adapter; historical
+   * stream-json decoders cannot be resolved here. Inject a decoder from
+   * `createTraceDecoder` only when replaying archived payloads (tests / trace
+   * tooling).
+   */
+  adapter?: AgentEventAdapter;
   /** Agent type key (e.g. `claude-code`, `codex`). */
   agentType: string;
   /** Working directory used to resolve relative file paths emitted by CLI tools. */
@@ -65,7 +73,7 @@ export class AgentStreamPipeline {
   private queuedEvents: AgentStreamEvent[] = [];
 
   constructor(options: AgentStreamPipelineOptions) {
-    this.adapter = createAdapter(options.agentType);
+    this.adapter = options.adapter ?? createLiveAdapter(options.agentType);
     this.operationId = options.operationId;
     this.uploadImage = options.uploadImage;
     this.codexTracker =

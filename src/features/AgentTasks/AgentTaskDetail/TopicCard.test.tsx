@@ -46,6 +46,21 @@ const activity = {
 } as unknown as TaskDetailActivity;
 
 describe('TopicCard', () => {
+  /**
+   * The budget is matched to the work because the work cannot be moved.
+   * Measured across two identical runs: 3628ms and 564ms, of which the first
+   * `render` (2060ms / 277ms) and the first `getByRole` query (1079ms / 124ms)
+   * dominate — one-time warm-up of the render and accessibility machinery, not
+   * per-test work. Against the default 5s that left ~1.4x of headroom on the
+   * slower reading, on a machine that also runs other agents' builds.
+   *
+   * Two fixes are closed off. `userEvent` cannot be swapped for `fireEvent`:
+   * the assertion is precisely that a pointer-events-respecting click gets
+   * through, which `fireEvent` ignores. And the warm-up cannot be hoisted the
+   * way a module import can (see `(main)/_layout/authMount.test.ts`) — it needs
+   * a mounted DOM, so `beforeAll` would only move the same load sensitivity
+   * into the hook timeout.
+   */
   it('leaves links in the run output clickable', async () => {
     render(<TopicCard activity={activity} />);
 
@@ -55,5 +70,5 @@ describe('TopicCard', () => {
     // through to the card behind it. user-event refuses to click through that
     // rule, which is exactly what a reader hit: a link that ignores the mouse.
     await expect(userEvent.click(link)).resolves.not.toThrow();
-  }, 15_000);
+  }, 20_000);
 });

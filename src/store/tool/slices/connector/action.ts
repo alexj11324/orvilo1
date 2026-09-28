@@ -17,6 +17,12 @@ export const createConnectorSlice = (set: Setter, get: () => ToolStore, _api?: u
 export class ConnectorActionImpl {
   readonly #set: Setter;
   readonly #get: () => ToolStore;
+  // A later request wins only after it succeeds; a failed refresh must not
+  // discard an earlier valid response for the same scope.
+  #connectorListRequestId = 0;
+  #connectorListCommittedRequestIds = new Map<string | null, number>();
+  #agentBoundListRequestId = 0;
+  #agentBoundListCommittedRequestIds = new Map<string | null, number>();
 
   constructor(set: Setter, get: () => ToolStore, _api?: unknown) {
     void _api;
@@ -48,9 +54,16 @@ export class ConnectorActionImpl {
 
   fetchConnectors = async (): Promise<void> => {
     const scope = getActiveWorkspaceId();
+    const requestId = ++this.#connectorListRequestId;
     const data = await lambdaClient.connector.list.query();
-    if (!this.#isStillInScope(scope)) return;
-    this.#set({ connectors: data as any, isConnectorsInit: true }, false, 'fetchConnectors');
+    const committedRequestId = this.#connectorListCommittedRequestIds.get(scope) ?? 0;
+    if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
+    this.#connectorListCommittedRequestIds.set(scope, requestId);
+    this.#set(
+      { connectors: data as any, connectorsScopeId: scope, isConnectorsInit: true },
+      false,
+      'fetchConnectors',
+    );
   };
 
   /**
@@ -74,8 +87,11 @@ export class ConnectorActionImpl {
    */
   fetchAgentBoundConnectors = async (): Promise<void> => {
     const scope = getActiveWorkspaceId();
+    const requestId = ++this.#agentBoundListRequestId;
     const data = await lambdaClient.connector.listAgentBound.query();
-    if (!this.#isStillInScope(scope)) return;
+    const committedRequestId = this.#agentBoundListCommittedRequestIds.get(scope) ?? 0;
+    if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
+    this.#agentBoundListCommittedRequestIds.set(scope, requestId);
     this.#set(
       { agentBoundConnectors: data as any, isAgentBoundInit: true },
       false,
@@ -164,6 +180,13 @@ export class ConnectorActionImpl {
   startConnectorOAuth = async (id: string): Promise<string> => {
     const { authorizationUrl } = await lambdaClient.connector.startOAuth.mutate({ id });
     return authorizationUrl;
+  };
+
+  /** Connect the official GitHub MCP through the server-held GitHub App grant. */
+  connectGitHubMcp = async () => {
+    const result = await lambdaClient.connector.connectGitHubMcp.mutate();
+    if (result.status === 'connected') await this.#refreshConnectorLists();
+    return result;
   };
 
   deleteConnector = async (id: string): Promise<void> => {

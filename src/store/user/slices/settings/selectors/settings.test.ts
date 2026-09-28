@@ -1,5 +1,4 @@
 import { type HotkeyId } from '@/types/hotkey';
-import { type GlobalLLMProviderKey } from '@/types/user/settings';
 
 import { type UserStore } from '../../../store';
 import { settingsSelectors } from './settings';
@@ -117,41 +116,6 @@ describe('settingsSelectors', () => {
       const result = settingsSelectors.currentTTS(s);
 
       expect(result).toMatchSnapshot();
-    });
-  });
-
-  describe('getProviderConfigById', () => {
-    it('should return the provider config for a given provider id', () => {
-      const providerConfig = {
-        OPENAI_API_KEY: 'test-key',
-        endpoint: 'https://test-endpoint.com',
-      };
-
-      const s = {
-        settings: {
-          languageModel: {
-            openAI: providerConfig,
-          },
-        },
-      } as unknown as UserStore;
-
-      const result = settingsSelectors.providerConfig('openAI')(s);
-
-      expect(result).toEqual(providerConfig);
-    });
-
-    it('should return undefined if provider does not exist', () => {
-      const s = {
-        settings: {
-          languageModel: {},
-        },
-      } as unknown as UserStore;
-
-      const result = settingsSelectors.providerConfig(
-        'nonExistentProvider' as GlobalLLMProviderKey,
-      )(s);
-
-      expect(result).toBeUndefined();
     });
   });
 

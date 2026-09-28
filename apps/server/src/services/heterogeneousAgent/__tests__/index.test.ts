@@ -3,10 +3,10 @@ import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { type IStreamEventManager } from '@/server/modules/AgentRuntime/types';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
-import { hookDispatcher } from '@/server/services/agentRuntime/hooks';
-import type { AgentHook, SerializedHook } from '@/server/services/agentRuntime/hooks/types';
+import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import { hookDispatcher } from '@/server/services/agentExecution/hooks';
+import type { AgentHook, SerializedHook } from '@/server/services/agentExecution/hooks/types';
 import * as verifyService from '@/server/services/verify';
 
 import type { HeterogeneousPersistenceHandler } from '..';

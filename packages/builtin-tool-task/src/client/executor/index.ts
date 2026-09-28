@@ -201,7 +201,6 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
       instruction: string;
       assigneeAgentId?: string;
       assigneeUserId?: string;
-      // Bind a goal entity to the created task (see TaskService.createTask).
       name: string;
       parentIdentifier?: string;
       priority?: number;

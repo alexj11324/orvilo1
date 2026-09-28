@@ -1,23 +1,22 @@
 import { ChatErrorType } from '@orvilo/types';
 import type OpenAI from 'openai';
 
-import { getOpenAIAuthFromRequest } from '@/const/fetch';
 import { createErrorResponse } from '@/utils/errorResponse';
 
 import { createOpenai } from './createOpenai';
 
 /**
- * @deprecated
- * createOpenAI Instance with Auth and azure openai support
- * if auth not pass ,just return error response
+ * Create an OpenAI client from deployment configuration only.
+ *
+ * Caller-supplied provider credentials (`X-openai-api-key` /
+ * `X-openai-end-point` headers) are intentionally ignored — user BYOK is
+ * retired and must never drive a server-side model call.
  */
-export const createBizOpenAI = (req: Request): Response | OpenAI => {
-  const { apiKey, endpoint } = getOpenAIAuthFromRequest(req);
-
+export const createBizOpenAI = (): Response | OpenAI => {
   let openai: OpenAI;
 
   try {
-    openai = createOpenai(apiKey, endpoint);
+    openai = createOpenai();
   } catch (error) {
     if ((error as Error).cause === ChatErrorType.NoOpenAIAPIKey) {
       return createErrorResponse(ChatErrorType.NoOpenAIAPIKey);

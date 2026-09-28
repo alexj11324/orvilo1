@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "بارگذاری مجدد",
   "workingPanel.browser.actions.stop": "توقف بارگذاری",
   "workingPanel.browser.addressPlaceholder": "جستجو یا وارد کردن آدرس",
-  "workingPanel.browser.agentControlling": "عامل در حال استفاده از مرورگر است",
-  "workingPanel.browser.agentCursor": "عامل",
   "workingPanel.browser.context.elementAdded": "عنصر به زمینه چت اضافه شد",
   "workingPanel.browser.context.elementTitle": "عنصر",
   "workingPanel.browser.context.failed": "افزودن زمینه عنصر ممکن نشد",

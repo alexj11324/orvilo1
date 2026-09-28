@@ -22,7 +22,9 @@ const PluginTag = memo<PluginTagProps>(({ plugins }) => {
   const installedPlugins = useToolStore(pluginSelectors.installedPlugins, isEqual);
 
   const visiblePlugins = useMemo(
-    () => filterToolIdsByCurrentEnv(plugins, { installedPlugins }),
+    // Configured tools stay visible on any viewer — the target device owns
+    // the real capability decision at run time.
+    () => filterToolIdsByCurrentEnv(plugins, { canExecuteOnDevice: true, installedPlugins }),
     [installedPlugins, plugins],
   );
 

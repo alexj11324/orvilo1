@@ -6,7 +6,7 @@ import { Outlet, useRouteError } from 'react-router';
 
 import { isChunkLoadError, notifyChunkError } from '@/utils/chunkError';
 
-import WorkbenchShell, { WorkbenchNamespace } from './shell';
+import WorkbenchShell from './shell';
 import WorkbenchLoading from './shell/WorkbenchLoading';
 
 const lazyElement = (importFn: () => Promise<{ default: ComponentType }>): ReactElement => {
@@ -69,50 +69,12 @@ const ExitWorkbench = () => {
   return <WorkbenchLoading />;
 };
 
-const VerifyNamespace = () => (
-  <WorkbenchNamespace namespace="verify">
-    <Outlet />
-  </WorkbenchNamespace>
-);
-
 export const workbenchRoutes: RouteObject[] = [
   {
     children: [
       {
         element: lazyElement(() => import('./routes/agent/docs/[docId]')),
         path: 'agent/:aid/docs/:docId',
-      },
-      {
-        children: [
-          {
-            element: <ExitWorkbench />,
-            index: true,
-          },
-          {
-            element: lazyElement(() => import('./routes/acceptance/[acceptanceId]')),
-            path: ':acceptanceId',
-          },
-          {
-            element: lazyElement(() => import('./routes/acceptance/[acceptanceId]')),
-            path: ':acceptanceId/check/:checkId',
-          },
-        ],
-        element: <VerifyNamespace />,
-        path: 'acceptance',
-      },
-      {
-        children: [
-          {
-            element: lazyElement(() => import('./routes/verify')),
-            index: true,
-          },
-          {
-            element: lazyElement(() => import('./routes/verify/[runId]')),
-            path: ':runId',
-          },
-        ],
-        element: <VerifyNamespace />,
-        path: 'verify',
       },
       {
         element: <ExitWorkbench />,

@@ -20,8 +20,6 @@ import type { AgentInfo } from '../../processors/GroupRoleTransform';
 import type { AgentBuilderContext } from '../../providers/AgentBuilderContextInjector';
 import type { AgentContextDocument } from '../../providers/AgentDocumentInjector';
 import type { AgentManagementContext } from '../../providers/AgentManagementContextInjector';
-import type { BotPlatformContext } from '../../providers/BotPlatformContextInjector';
-import type { DiscordContext } from '../../providers/DiscordContextProvider';
 import type { EvalContext } from '../../providers/EvalContextSystemInjector';
 import type { GroupAgentBuilderContext } from '../../providers/GroupAgentBuilderContextInjector';
 import type { GroupMemberInfo } from '../../providers/GroupContextInjector';
@@ -308,14 +306,11 @@ export interface MessagesEngineParams {
   /** Agent Builder context */
   agentBuilderContext?: AgentBuilderContext;
   /** Bot platform context for injecting platform capabilities (e.g. markdown support) */
-  botPlatformContext?: BotPlatformContext;
   /**
    * Where the conversation lives (app origin + workspace slug), so the model
    * writes in-app links that resolve to the right scope.
    */
   workspaceContext?: WorkspaceContext;
-  /** Discord context for injecting channel/guild info into system injection message */
-  discordContext?: DiscordContext;
   /** Eval context for injecting environment prompts into system message */
   /** Borrowed-connector attribution note, already rendered by the caller. */
   connectorOwnershipNote?: string;
@@ -385,8 +380,6 @@ export interface MessagesEngineResult {
 export { type AgentInfo } from '../../processors/GroupRoleTransform';
 export { type AgentBuilderContext } from '../../providers/AgentBuilderContextInjector';
 export { type AgentManagementContext } from '../../providers/AgentManagementContextInjector';
-export { type BotPlatformContext } from '../../providers/BotPlatformContextInjector';
-export { type DiscordContext } from '../../providers/DiscordContextProvider';
 export { type EvalContext } from '../../providers/EvalContextSystemInjector';
 export { type GroupAgentBuilderContext } from '../../providers/GroupAgentBuilderContextInjector';
 export { type Plan } from '../../providers/PlanInjector';

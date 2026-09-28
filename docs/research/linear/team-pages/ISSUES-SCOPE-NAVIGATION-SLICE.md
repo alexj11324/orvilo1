@@ -1,0 +1,38 @@
+# Team Issues scope navigation slice
+
+## Evidence and boundary
+
+- Direct reference observation: 2026-09-22, authenticated `bdiverifier`, team `ORV`, light theme, English, Brave tab `1298198081`. At 1729×889, `/team/ORV/all` has a breadcrumb (`orvilo › Issues`), Active/Backlog/All issues links at y=60, Add new view, Add filter, Display options and Open details icon buttons, plus populated board columns. Clicking Active then Backlog produced `/team/ORV/active` then `/team/ORV/backlog`; browser Back restored `/team/ORV/active`. At 390×844 the links remain at x=51/112/183, y=52; board columns scroll horizontally. CDP Runtime.evaluate and browser screenshot supplied this evidence. Reference content counts may drift.
+- Candidate source: `src/features/WorkTeams/TeamPage.tsx` at `c5f45c9a3` plus a dirty Triage change. Team Issues uses `?tab=issues`, with `scope=active|backlog` and omitted `scope` for All. The current scope control calls `setSearchParams(..., { replace: true })`, so switching erases the previous scope from browser history.
+- Distinct scopes: Team Issues uses `teamTaskQuery(teamId, ..., scope)`. My Issues uses personal assignee/creator/subscriber scopes; Project Issues uses projectId. No shared route or fixture change is needed.
+
+## Current difference inventory
+
+| Element or action | Reference directly observed                                                                                                                                                                                                 | Candidate source evidence                                                             | Slice                                            |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Page header       | Team icon, `orvilo › Issues`, favorite, notifications                                                                                                                                                                       | Generic team name and favorite in `TeamPage.tsx`                                      | Later chrome work                                |
+| Scope control     | Three pill links in order Active, Backlog, All issues; independent destinations, browser Back restores prior scope                                                                                                          | Segmented control in order All, Active, Backlog; `replace: true` erases prior scope   | History transition in this slice; geometry later |
+| Scope results     | All has Backlog/Todo/In Progress/In Review/Done/Canceled board columns; Active hides completed/backlog columns                                                                                                              | `teamTaskQuery()` has matching teamId and workflow predicates; default layout is list | Board/default styling later                      |
+| Add filter        | Searchable menu with Status, Assignee, Agent, Agent Session, Creator, Priority, Labels, Relations, Suggested label, Dates, Project, Project properties, Subscribers, External source, Auto-closed, Content, Links, Template | No matching page-level Add filter control                                             | Later filters work                               |
+| Display options   | List/Board, columns/rows grouping, ordering, completed order, sub-issues, empty columns, property toggles, reset/default                                                                                                    | One List/Board segmented control                                                      | Later display work                               |
+| More actions      | Add new view and Open details buttons beside filters                                                                                                                                                                        | No corresponding Issues controls                                                      | Later chrome/details work                        |
+| Narrow layout     | At 390×844 scope links remain visible and board columns scroll horizontally                                                                                                                                                 | `boardBodyStyle` exists; candidate runtime not yet observed                           | Runtime comparison pending                       |
+
+The candidate column is source evidence until the shared Electron runtime can be inspected. This table does not claim whole-page parity.
+
+## Observable success
+
+With a populated team page open at `?tab=issues`, choosing Active, then Backlog, then browser Back restores Active with its matching query results. Reload keeps the selected scope. All removes only the `scope` parameter; other route parameters survive. Issue links still open the same task detail. The scope change does not alter Triage, My Issues, or Project Issues.
+
+The helper tests cover parameter preservation and use a React Router memory history to verify that Back restores Active after navigating to Backlog. `bun run check` on the three changed WorkTeams files passed lint and all 3 tests. Runtime acceptance must inspect the actual candidate URL, visible selected scope and result set before and after Back and reload. Compare desktop and narrow viewport against the reference route behavior; record viewport, role, fixture and revision. The rest of the Team Issues chrome gap (breadcrumb/title, filters, Display options, details pane, saved view, board appearance) remains separate.
+
+## Candidate runtime result
+
+- Observed 2026-09-22 at 22:20–22:23 UTC on Electron CDP `:9222`, 1440×900, Chinese locale, `Agent Testing User` in `/ws-useragenttes`, fixture team `team_r6cxh0GBbfrI`. The working tree was dirty; HEAD at report time was `e57a2db6837a250a65e1babd3a1033a0610410b8`, with this slice uncommitted. Results therefore identify this working-tree state, not that HEAD alone.
+- Starting `app://renderer/ws-useragenttes/teams/team_r6cxh0GBbfrI?tab=issues`, All selected. The visible groups showed Todo 5 and Done 17, including team-owned `PMI-*` and `PTP-*` rows (22 total).
+- Clicking the exact `进行中` button set `scope=active`, `aria-pressed=true`, and showed five `PMI-*` rows without the Done group. Clicking `待排期` set `scope=backlog`, selected Backlog, and displayed the fixture's empty state.
+- Clicking Electron's titlebar Back button (`NavigationBar.tsx:147`) from Backlog restored `scope=active`, selected Active, and brought back `PMI-1`. Reloading retained that URL, selected state and results (`PMI-1` present, `PTP-16` absent).
+- The browser shell's `window.history.back()` went to the prior outer Projects route. Electron uses a per-tab React Router memory history, so the titlebar Back action is the product control that was accepted here. The shared window was restored to `app://renderer/ws-useragenttes/projects` and the route was verified before release.
+- Local scoped check: `bun run check src/features/WorkTeams/TeamPage.tsx src/features/WorkTeams/teamIssueScopeNavigation.ts src/features/WorkTeams/teamIssueScopeNavigation.test.ts` → lint clean, 3 tests passed. No local `tsgo` ran.
+
+The candidate's 390px rendering and the remaining whole-page UI/icon differences in the table above were not accepted by this bounded history slice.

@@ -3,7 +3,7 @@ import { Popover, Text } from '@lobehub/ui/base-ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { UserRoundX } from 'lucide-react';
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +20,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { partitionSelfMember } from './assigneeMemberOptions';
+import { blockedPickerContentStyle, pickerTriggerStyle } from './pickerTriggerStyles';
 
 interface AssigneeMemberSelectorProps {
   children: ReactNode;
@@ -79,15 +80,6 @@ const matchesSearch = (member: WorkspaceMemberRow, query: string) =>
   [member.user?.fullName, member.user?.username, member.user?.email].some((label) =>
     (label ?? '').toLowerCase().includes(query),
   );
-
-const triggerStyle: CSSProperties = {
-  alignItems: 'center',
-  display: 'inline-flex',
-  justifyContent: 'center',
-  lineHeight: 1,
-  maxWidth: '100%',
-  minWidth: 0,
-};
 
 const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
   ({
@@ -259,14 +251,16 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
     };
 
     const blocked = disabled || !canEditTask;
-    const currentTriggerStyle = fullWidth ? { ...triggerStyle, width: '100%' } : triggerStyle;
+    const currentTriggerStyle = fullWidth
+      ? { ...pickerTriggerStyle, width: '100%' }
+      : pickerTriggerStyle;
     const trigger = blocked ? (
       <Tooltip title={disabled ? t('taskDetail.reassignDisabled') : reason}>
         <div
           style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
           onClick={(event) => event.stopPropagation()}
         >
-          <span style={{ pointerEvents: 'none' }}>{children}</span>
+          <span style={blockedPickerContentStyle}>{children}</span>
         </div>
       </Tooltip>
     ) : (

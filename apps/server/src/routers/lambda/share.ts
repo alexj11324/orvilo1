@@ -100,13 +100,9 @@ export const shareRouter = router({
         // Identifiers only. The granted API list is owner-facing configuration
         // and must not reach a visitor.
         toolGrants: (share.shareConfig.toolGrants ?? []).map((grant) => grant.identifier),
-        // TODO(cloud budget gate): the spend gate itself is already enforced —
-        // `shareChat.execAgent` checks `checkAgentShareSpendAllowance` before
-        // dispatching a run. This READ-ONLY endpoint just doesn't yet expose
-        // whether the budget is currently exhausted; it only carries the
-        // creator's configured `monthlySpendLimit`. Surfacing a `budgetExhausted`
-        // flag here (so the visitor page can show the state before the visitor
-        // even sends a message) is a tracked followup, not a missing gate.
+        // The configured `monthlySpendLimit` stays readable for owner review;
+        // the enforcement half lived in `shareChat.execAgent`, which is
+        // retired with visitor execution.
         visibility: share.visibility as SharedAgentData['visibility'],
       };
     }),

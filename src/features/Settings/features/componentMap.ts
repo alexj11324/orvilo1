@@ -17,17 +17,8 @@ export const componentMap = {
   [SettingsTabs.Appearance]: dynamic(() => import('../appearance'), {
     loading: loading('Settings > Appearance'),
   }),
-  [SettingsTabs.Provider]: dynamic(() => import('../provider'), {
-    loading: loading('Settings > Provider'),
-  }),
-  [SettingsTabs.ServiceModel]: dynamic(() => import('../service-model'), {
-    loading: loading('Settings > ServiceModel'),
-  }),
   [SettingsTabs.Memory]: dynamic(() => import('../memory'), {
     loading: loading('Settings > Memory'),
-  }),
-  [SettingsTabs.Messenger]: dynamic(() => import('../messenger'), {
-    loading: loading('Settings > Messenger'),
   }),
   [SettingsTabs.Notification]: dynamic(
     () => import('@/business/client/BusinessSettingPages/Notification'),
@@ -69,17 +60,11 @@ export const componentMap = {
   [SettingsTabs.APIKey]: dynamic(() => import('../apikey'), {
     loading: loading('Settings > APIKey'),
   }),
-  [SettingsTabs.OAuthApps]: dynamic(() => import('../oauth-apps'), {
-    loading: loading('Settings > OAuthApps'),
-  }),
   [SettingsTabs.Creds]: dynamic(() => import('../creds'), {
     loading: loading('Settings > Creds'),
   }),
   [SettingsTabs.Security]: dynamic(() => import('../security'), {
     loading: loading('Settings > Security'),
-  }),
-  [SettingsTabs.Skill]: dynamic(() => import('../skill'), {
-    loading: loading('Settings > Skill'),
   }),
   [SettingsTabs.Connector]: dynamic(() => import('../connector'), {
     loading: loading('Settings > Connector'),
@@ -94,10 +79,4 @@ export const componentMap = {
   [SettingsTabs.Billing]: dynamic(() => import('@/business/client/BusinessSettingPages/Billing'), {
     loading: loading('Settings > Billing'),
   }),
-  [SettingsTabs.Referral]: dynamic(
-    () => import('@/business/client/BusinessSettingPages/Referral'),
-    {
-      loading: loading('Settings > Referral'),
-    },
-  ),
 };

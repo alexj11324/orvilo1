@@ -23,6 +23,11 @@ vi.mock('../../store', async (importOriginal) => {
   };
 });
 
+const autoScrollFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('../components/AutoScroll/useAutoScrollEnabled', () => ({
+  useAutoScrollEnabled: () => autoScrollFlag.enabled,
+}));
+
 // ResizeObserver mock capturing the latest callback so tests can trigger it.
 class MockResizeObserver {
   static latest: MockResizeObserver | null = null;
@@ -108,6 +113,7 @@ describe('useConversationScroll — helpers', () => {
 
 describe('useConversationScroll — pin behavior', () => {
   const scrollToIndex = vi.fn();
+  const scrollToBottom = vi.fn();
   const virtuaRef: RefObject<VListHandle | null> = createRef<VListHandle>();
   const assistantId = 'assistant-1';
   const userId = 'user-1';
@@ -117,7 +123,7 @@ describe('useConversationScroll — pin behavior', () => {
    * to verify "user + assistant pair was just appended".
    */
   type StoreFixture = {
-    displayMessages: Array<{ id: string; role: 'user' | 'assistant' }>;
+    displayMessages: Array<{ id: string; role: 'user' | 'assistant'; createdAt: number }>;
     isAIGenerating: boolean;
     virtuaScrollMethods: {
       getItemOffset?: (i: number) => number;
@@ -134,19 +140,25 @@ describe('useConversationScroll — pin behavior', () => {
     virtuaScrollMethods: null,
   };
 
-  const deriveDisplayMessages = (isSecondLastFromUser: boolean) =>
-    isSecondLastFromUser
-      ? [
-          { id: userId, role: 'user' as const },
-          { id: assistantId, role: 'assistant' as const },
-        ]
-      : [{ id: assistantId, role: 'assistant' as const }];
+  // displayMessages mirrors dataSource one-to-one, like rowIds does in the
+  // real list: ids the harness names user*/u<N> render as user rows,
+  // everything else as assistant. The boolean flag is retained for option
+  // compatibility but no longer drives the message list.
+  // Rows default to createdAt 0 (long-ago history); ids in freshIds get
+  // Date.now() to model an optimistic just-sent row.
+  const deriveDisplayMessages = (dataSource: string[], freshIds: ReadonlySet<string> = new Set()) =>
+    dataSource.map((id) => ({
+      id,
+      role: (id === userId || /^u\d+$/.test(id) ? 'user' : 'assistant') as 'user' | 'assistant',
+      createdAt: freshIds.has(id) ? Date.now() : 0,
+    }));
 
   const installStoreMock = () => {
     vi.mocked(useConversationStore).mockImplementation((selector: any) => {
       const probe: any = {
         displayMessages: currentFixture.displayMessages,
         operationState: { isAIGenerating: currentFixture.isAIGenerating },
+        scrollToBottom,
         virtuaScrollMethods: currentFixture.virtuaScrollMethods,
       };
       return selector(probe);
@@ -156,12 +168,13 @@ describe('useConversationScroll — pin behavior', () => {
   const renderScrollHook = (props: {
     contextKey?: string;
     dataSource: string[];
+    freshIds?: string[];
     headerOffset?: number;
     isSecondLastMessageFromUser: boolean;
     fixture?: Partial<StoreFixture>;
   }) => {
     currentFixture = {
-      displayMessages: deriveDisplayMessages(props.isSecondLastMessageFromUser),
+      displayMessages: deriveDisplayMessages(props.dataSource, new Set(props.freshIds)),
       isAIGenerating: false,
       virtuaScrollMethods: {
         getScrollOffset: () => 0,
@@ -189,14 +202,19 @@ describe('useConversationScroll — pin behavior', () => {
       },
     );
 
-    const rerender = (next: {
-      contextKey?: string;
-      dataSource: string[];
-      isSecondLastMessageFromUser: boolean;
-    }) => {
+    const rerender = (
+      next: {
+        contextKey?: string;
+        dataSource: string[];
+        isSecondLastMessageFromUser: boolean;
+      },
+      opts?: { lagDisplayMessages?: boolean; freshIds?: string[] },
+    ) => {
       currentFixture = {
         ...currentFixture,
-        displayMessages: deriveDisplayMessages(next.isSecondLastMessageFromUser),
+        displayMessages: opts?.lagDisplayMessages
+          ? currentFixture.displayMessages
+          : deriveDisplayMessages(next.dataSource, new Set(opts?.freshIds)),
       };
       hook.rerender({ contextKey: undefined, ...next });
     };
@@ -206,6 +224,8 @@ describe('useConversationScroll — pin behavior', () => {
 
   beforeEach(() => {
     scrollToIndex.mockReset();
+    scrollToBottom.mockReset();
+    autoScrollFlag.enabled = true;
     // Attach a live mock handle; scrollToPinned reads virtuaRef.current at call time.
     virtuaRef.current = { scrollToIndex } as unknown as VListHandle;
     vi.stubGlobal('ResizeObserver', MockResizeObserver);
@@ -450,6 +470,302 @@ describe('useConversationScroll — pin behavior', () => {
   it('does not scroll on initial render', () => {
     renderScrollHook({
       dataSource: ['a', 'b', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+
+    expect(scrollToIndex).not.toHaveBeenCalled();
+  });
+
+  // Regression: ChatList renders the welcome screen while the conversation is
+  // empty, so the first send's optimistic tail mounts this list already
+  // present — prevLengthRef seeds past it and the growth scan stays silent.
+  // A fresh tail user row under a live turn must still pin.
+  it('pins a fresh tail user row already present at list mount', () => {
+    renderScrollHook({
+      dataSource: [userId, assistantId],
+      freshIds: [userId],
+      isSecondLastMessageFromUser: true,
+      fixture: { isAIGenerating: true },
+    });
+
+    expect(scrollToIndex).toHaveBeenCalledWith(0, { align: 'start', smooth: true });
+  });
+
+  it('pins the user message when the send pair lands in split commits', () => {
+    const { rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+    });
+
+    // Under load the optimistic user row and the assistant placeholder can
+    // commit separately (+1 then +1) — the pin must fire on the user commit,
+    // not require the exact pair.
+    rerender({
+      dataSource: ['m0', 'm1', userId],
+      isSecondLastMessageFromUser: true,
+    });
+    expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
+
+    // The assistant row arriving a commit later must not double-fire the pin.
+    scrollToIndex.mockClear();
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    expect(scrollToIndex).not.toHaveBeenCalled();
+  });
+
+  it('pins the user message when extra rows land in the same send commit', () => {
+    const { rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+    });
+
+    // A tool/receipt row riding the send commit makes the delta +3 — the old
+    // `+2 and second-last-is-user` gate silently dropped this pin.
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId, 'tool-receipt'],
+      isSecondLastMessageFromUser: true,
+    });
+
+    expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
+  });
+
+  // Regression: on a slowed stream the assistant reply outgrows the viewport
+  // mid-flight and the spacer's natural height hits 0. Unmounting it then
+  // flips `spacerActive` off, which remounts the trailing AutoScroll — with
+  // the pinned spot inside the at-bottom threshold, the next stream chunk
+  // drags the viewport to the tail and strands the user message far above.
+  // The spacer must stay mounted (at height 0) until generation ends.
+  it('keeps the spacer mounted while the streaming reply outgrows the viewport', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          // userTop=200, assistantBottom=300+2000 → span 2100 > viewport 800.
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(result.current.spacerActive).toBe(true);
+    expect(result.current.spacerHeight).toBe(0);
+
+    // Once generation ends the next recompute releases it normally.
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(false);
+  });
+
+  // Regression (AGENT-SCROLL-001 on CI): the pin anchors the viewport to the
+  // user row for the whole stream, so `atBottom` stays false and AutoScroll's
+  // follower never fires. Once the reply ends and the spacer retires, the
+  // viewport must settle at the real bottom when auto-scroll is enabled.
+  it('settles at the bottom when a pinned stream ends naturally and auto-scroll is on', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          // Reply outgrows the viewport: userTop=200, assistantBottom=300+2000.
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(true);
+    expect(scrollToBottom).not.toHaveBeenCalled();
+
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(false);
+    expect(scrollToBottom).toHaveBeenCalledWith(false);
+  });
+
+  // Regression (AGENT-SCROLL-001 on CI): layout keeps settling after the
+  // reply ends, so the ResizeObserver re-measures more often than the spacer
+  // transition. Each idle zero measure used to restart the unmount timer,
+  // starving it: the pin never closed and the viewport stayed at the user row.
+  it('still settles at the bottom while idle re-measures keep arriving after the stream ends', async () => {
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(true);
+
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+
+    // Re-measure every 100 ms — faster than the 200 ms spacer transition.
+    const observer = MockResizeObserver.latest as MockResizeObserver | null;
+    expect(observer, 'no ResizeObserver was created for messages').not.toBeNull();
+    for (let i = 0; i < 10; i += 1) {
+      await act(async () => {
+        observer!.trigger();
+        await vi.advanceTimersByTimeAsync(100);
+      });
+    }
+
+    expect(result.current.spacerActive).toBe(false);
+    expect(scrollToBottom).toHaveBeenCalledWith(false);
+  });
+
+  it('stays at the pinned row when the stream ends and auto-scroll is off', async () => {
+    autoScrollFlag.enabled = false;
+    const { result, rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+      fixture: {
+        isAIGenerating: true,
+        virtuaScrollMethods: {
+          getItemOffset: (i: number) => i * 100,
+          getItemSize: (i: number) => (i === 3 ? 2000 : 80),
+          getScrollOffset: () => 0,
+          getViewportSize: () => 800,
+        },
+      },
+    });
+
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    currentFixture.isAIGenerating = false;
+    rerender({
+      dataSource: ['m0', 'm1', userId, assistantId],
+      isSecondLastMessageFromUser: true,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(result.current.spacerActive).toBe(false);
+    expect(scrollToBottom).not.toHaveBeenCalled();
+  });
+
+  // Regression: under a starved renderer the optimistic user row can commit
+  // to dataSource a pass *before* displayMessages knows its role. The old gate
+  // (findLast(user) then tail-boundary check) rejected it silently — the next
+  // commit's tail was assistant-only, so the pin never fired at all.
+  it('pins the user row when its role resolves a commit after the append', () => {
+    const { rerender } = renderScrollHook({
+      dataSource: [assistantId, 'prev'],
+      isSecondLastMessageFromUser: false,
+    });
+
+    // Commit 1: user row lands in dataSource; role map still shows the old list.
+    rerender(
+      { dataSource: [assistantId, 'prev', userId], isSecondLastMessageFromUser: true },
+      { lagDisplayMessages: true },
+    );
+    expect(scrollToIndex).not.toHaveBeenCalled();
+
+    // Commit 2: assistant row lands; the role map catches up — the pin must
+    // still fire on the user row appended one pass earlier.
+    rerender({
+      dataSource: [assistantId, 'prev', userId, 'assistant-2'],
+      isSecondLastMessageFromUser: true,
+    });
+
+    expect(scrollToIndex).toHaveBeenCalledWith(2, { align: 'start', smooth: true });
+  });
+
+  // Regression: a send that mints its topic has the new contextKey adopt the
+  // optimistic (user, assistant) tail in the same commit that seeds
+  // prevLengthRef — the growth scan then sees zero new rows and stays silent,
+  // so the pin never fired on CI. While the new context's turn is live, the
+  // freshest tail user row is still the just-sent message.
+  it('pins the just-sent user row when topic adoption lands it pre-seeded', () => {
+    const { rerender } = renderScrollHook({
+      contextKey: 'main_agt_1_new',
+      dataSource: [],
+      isSecondLastMessageFromUser: false,
+      fixture: { isAIGenerating: true },
+    });
+
+    rerender(
+      {
+        contextKey: 'main_agt_1_tpc_1',
+        dataSource: [userId, assistantId],
+        isSecondLastMessageFromUser: true,
+      },
+      { freshIds: [userId] },
+    );
+
+    expect(scrollToIndex).toHaveBeenCalledWith(0, { align: 'start', smooth: true });
+  });
+
+  it('does not pin a stale tail user row on a plain topic switch', () => {
+    const { rerender } = renderScrollHook({
+      contextKey: 'main_agt_1_new',
+      dataSource: [],
+      isSecondLastMessageFromUser: false,
+      fixture: { isAIGenerating: true },
+    });
+
+    // Browsing to an old topic mid-run must not pin: its tail user row is old.
+    rerender({
+      contextKey: 'main_agt_1_tpc_old',
+      dataSource: ['m0', 'm1', userId, assistantId],
       isSecondLastMessageFromUser: true,
     });
 

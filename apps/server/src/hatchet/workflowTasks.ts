@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import {
+  ConcurrencyLimitStrategy,
   type HatchetClient,
   type InputType,
   NonRetryableError,
@@ -12,7 +13,6 @@ import { z } from 'zod';
 import { hatchetDispatches, hatchetWorkflowSteps } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { cancelHatchetTask, enqueueHatchetTask } from '@/libs/hatchet';
-import { botCallback } from '@/server/router-hono/agent/handlers/botCallback';
 import { groupMemberCallback } from '@/server/router-hono/agent/handlers/groupMemberCallback';
 import { subAgentCallback } from '@/server/router-hono/agent/handlers/subAgentCallback';
 import { threadRunCallback } from '@/server/router-hono/agent/handlers/threadRunCallback';
@@ -47,10 +47,6 @@ import { onEvidenceComplete } from '@/server/router-hono/workflows/verify/handle
 import { onVerifierComplete } from '@/server/router-hono/workflows/verify/handlers/onVerifierComplete';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import {
-  WORKFLOW_DISPATCH_CONCURRENCY,
-  workflowConcurrencyKeys,
-} from '@/server/services/hatchet/workflowConcurrency';
-import {
   HATCHET_WORKFLOW_PATHS,
   type HatchetWorkflowPath,
 } from '@/server/services/hatchet/workflows';
@@ -64,6 +60,9 @@ import {
 } from '@/server/workflows/context';
 import { runExpertiseHistoryWorkflow } from '@/server/workflows/expertiseHistory';
 import { runExpertiseHistoryTopicWorkflow } from '@/server/workflows/expertiseHistory/topic';
+import { processLinearImportWorkflow } from '@/server/workflows/linearImport/process';
+import { executeLinearSyncWorkflow } from '@/server/workflows/linearSync/execute';
+import { processLinearSyncWorkflow } from '@/server/workflows/linearSync/process';
 import { OnboardingTaskRecommendationWorkflow } from '@/server/workflows/onboardingTaskRecommendation';
 import {
   failOnboardingTaskRecommendations,
@@ -427,7 +426,6 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
     invoke(runBenchmarkHandler, input, stepStore),
   '/api/workflows/agent-eval-run/run-thread-trajectory': (input, stepStore) =>
     invoke(runThreadTrajectoryHandler, input, stepStore),
-  '/api/agent/webhooks/bot-callback': (input) => invokeHonoHandler(botCallback, input),
   '/api/agent/webhooks/group-member-callback': (input) =>
     invokeHonoHandler(groupMemberCallback, input),
   '/api/agent/webhooks/subagent-callback': (input) => invokeHonoHandler(subAgentCallback, input),
@@ -489,6 +487,12 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
           OnboardingTaskRecommendationWorkflow.trigger(payload, options),
       },
     ),
+  '/api/workflows/linear-sync/process': (input, stepStore) =>
+    invoke(processLinearSyncWorkflow, input, stepStore),
+  '/api/workflows/linear-import/process': (input, stepStore) =>
+    invoke(processLinearImportWorkflow, input, stepStore),
+  '/api/workflows/linear-sync/execute': (input, stepStore) =>
+    invoke(executeLinearSyncWorkflow, input, stepStore),
   '/api/workflows/task/on-creator-complete': (input) => invokeHonoHandler(onCreatorComplete, input),
   '/api/workflows/task/on-topic-complete': (input) => invokeHonoHandler(onTopicComplete, input),
   '/api/workflows/topic-auto-summary/dispatch': (input, stepStore) =>
@@ -506,7 +510,6 @@ const workflowDispatchInput = z.object({
   deduplicationKey: z.string().min(1),
   dispatchId: z.string().uuid(),
   laneKey: z.string().length(64),
-  serialKey: z.string().uuid().optional(),
 });
 
 export const scheduleWorkflowCoordinationRetry = (
@@ -517,7 +520,6 @@ export const scheduleWorkflowCoordinationRetry = (
     HATCHET_TASK_NAMES.workflowDispatch,
     {
       coordinationRetry: true,
-      ...(input.serialKey ? { serialKey: input.serialKey } : {}),
       deduplicationKey: `${input.deduplicationKey}:coordination:${retryCount}`,
       dispatchId: input.dispatchId,
       laneKey: input.laneKey,
@@ -548,22 +550,15 @@ export const markCoordinationRetryPending = async (
 const isWorkflowPath = (path: string): path is HatchetWorkflowPath =>
   HATCHET_WORKFLOW_PATHS.includes(path as HatchetWorkflowPath);
 
-export const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$inferSelect) => {
-  const keys = workflowConcurrencyKeys(
-    dispatch.payload.path,
-    dispatch.id,
-    dispatch.payload.body,
-    dispatch.laneKey,
-  );
+const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$inferSelect) => {
   const providerRunId = await enqueueHatchetTask(HATCHET_TASK_NAMES.workflowDispatch, {
-    ...keys,
     deduplicationKey: createHash('sha256')
       .update(dispatch.payload.path)
       .update('\0')
       .update(dispatch.payload.workflowRunId)
-      .update(keys.serialKey ? '\0user-lane-v2' : '')
       .digest('hex'),
     dispatchId: dispatch.id,
+    laneKey: dispatch.laneKey,
   });
   const db = await getServerDB();
   // Store the provider receipt before attempting pending→queued. The worker
@@ -571,7 +566,7 @@ export const enqueueStoredDispatch = async (dispatch: typeof hatchetDispatches.$
   // cancellation still needs the receipt in that race.
   await db
     .update(hatchetDispatches)
-    .set({ laneKey: keys.laneKey, providerRunId, updatedAt: new Date() })
+    .set({ providerRunId, updatedAt: new Date() })
     .where(eq(hatchetDispatches.id, dispatch.id));
   const [transitioned] = await db
     .update(hatchetDispatches)
@@ -601,7 +596,11 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
   const workflowDispatch = hatchet.task({
     name: HATCHET_TASK_NAMES.workflowDispatch,
     backoff: { factor: 2, maxSeconds: 300 },
-    concurrency: WORKFLOW_DISPATCH_CONCURRENCY,
+    concurrency: {
+      expression: 'input.laneKey',
+      limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+      maxRuns: 1,
+    },
     executionTimeout: '30m',
     fn: async (rawInput: z.infer<typeof workflowDispatchInput> & InputType, hatchetContext) => {
       const input = workflowDispatchInput.parse(rawInput);
@@ -636,39 +635,6 @@ export const createWorkflowHatchetTasks = (hatchet: HatchetClient) => {
             ),
           );
         throw new NonRetryableError(`Unsupported Hatchet workflow path: ${dispatch.payload.path}`);
-      }
-
-      const canonicalKeys = workflowConcurrencyKeys(
-        dispatch.payload.path,
-        dispatch.id,
-        dispatch.payload.body,
-        dispatch.laneKey,
-      );
-      if (
-        canonicalKeys.serialKey &&
-        (input.serialKey !== canonicalKeys.serialKey || input.laneKey !== canonicalKeys.laneKey)
-      ) {
-        // Already-queued messages can carry a pre-migration per-topic lane.
-        // Normalize before business execution, not after acquiring its slot.
-        try {
-          await enqueueStoredDispatch(dispatch);
-        } catch (error) {
-          await db
-            .update(hatchetDispatches)
-            .set({
-              error: 'Failed to normalize legacy workflow concurrency',
-              status: 'pending',
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(hatchetDispatches.id, dispatch.id),
-                inArray(hatchetDispatches.status, ['pending', 'queued']),
-              ),
-            );
-          throw error;
-        }
-        return { rerouted: true, success: true };
       }
 
       const claimableStatuses: Array<'pending' | 'queued' | 'running'> =

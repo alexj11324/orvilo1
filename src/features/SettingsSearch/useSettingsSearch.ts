@@ -1,10 +1,8 @@
 import type { IconProps } from '@lobehub/ui';
 import { isDesktop, ORVILO_SKILL_PROVIDERS } from '@orvilo/const';
-import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SUPPORTED_MESSENGER_PLATFORMS } from '@/features/Messenger/constants';
 import { useCategory } from '@/features/Settings/hooks/useCategory';
 import { SettingsTabs } from '@/store/global/initialState';
 import {
@@ -28,7 +26,7 @@ import { containsHan, loadPinyinTexts, type PinyinTexts } from './pinyin';
 export interface SettingsSearchResult {
   /** Present on item-level results; used as the URL hash for scroll targeting */
   anchor?: string;
-  /** Where the result lives, e.g. `General › Appearance` */
+  /** Where the result lives, e.g. `Account › Appearance` */
   breadcrumb: string;
   icon?: IconProps['icon'];
   key: string;
@@ -48,8 +46,7 @@ interface IndexedEntry extends SettingsSearchResult {
   pinyinBase: string[];
 }
 
-export const getTabUrl = (tab: SettingsTabs) =>
-  tab === SettingsTabs.Provider ? '/settings/provider/all' : `/settings/${tab}`;
+export const getTabUrl = (tab: SettingsTabs) => `/settings/${tab}`;
 
 /** Split a localized comma-separated keyword string (supports CJK commas) */
 const splitKeywords = (text: string) =>
@@ -79,7 +76,7 @@ export const useSettingsSearch = (
 } => {
   const { t } = useTranslation(['setting', 'labs', 'electron', 'subscription', 'spend', 'auth']);
   const categoryGroups = useCategory();
-  const { enableSTT, hideDocs, showAiImage } = useServerConfigStore(featureFlagsSelectors);
+  const { hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const enableGatewayMode = useServerConfigStore(serverConfigSelectors.enableGatewayMode);
   const enableComposio = useServerConfigStore(serverConfigSelectors.enableComposio);
@@ -99,13 +96,11 @@ export const useSettingsSearch = (
       enableBusinessFeatures: !!enableBusinessFeatures,
       enableComposio: !!enableComposio,
       enableGatewayMode: !!enableGatewayMode,
-      enableSTT: !!enableSTT,
       hasEmail,
       hideDocs: !!hideDocs,
       isDesktop,
       isLogin: !!isLogin,
       isWindows: getPlatform() === 'Windows',
-      showAiImage: !!showAiImage,
     };
 
     // Tab-level entries first so they rank above item-level matches.
@@ -117,10 +112,12 @@ export const useSettingsSearch = (
 
     for (const group of categoryGroups) {
       for (const item of group.items) {
-        // The same tab may appear in multiple groups (e.g. APIKey in Agent and
-        // System when dev mode is on); index only the first occurrence,
-        // matching the sidebar's top-to-bottom order — otherwise one query
-        // shows duplicate results pointing at the same page.
+        // One tab, one result: when a tab is reachable from two groups, index the
+        // first occurrence so the sidebar's top-to-bottom order decides which group
+        // it is reported under, and one query cannot return two results pointing at
+        // the same page. No tab is listed twice since the S70 regroup merged the
+        // duplicate API Key entry, but the map below is keyed by tab and must keep
+        // agreeing with that rule if one ever is.
         if (visibleTabs.has(item.key)) continue;
 
         const url = item.href ?? getTabUrl(item.key);
@@ -177,25 +174,6 @@ export const useSettingsSearch = (
       });
     }
 
-    // IM notification channels (Telegram / Slack / …) live on the notification
-    // page with per-platform anchors. Index them from the same catalog the page
-    // renders so a search for the platform name deep-links to that row.
-    const notificationTab = visibleTabs.get(SettingsTabs.Notification);
-    if (notificationTab)
-      for (const platform of SUPPORTED_MESSENGER_PLATFORMS) {
-        entries.push({
-          anchor: `notification-${platform.id}`,
-          breadcrumb: `${notificationTab.groupTitle} › ${notificationTab.label}`,
-          haystack: [platform.name.toLowerCase(), platform.id.toLowerCase(), 'messenger', 'im'],
-          icon: notificationTab.icon,
-          key: `item-notification-${platform.id}`,
-          label: platform.name,
-          pinyinBase: [platform.name.toLowerCase()],
-          tab: SettingsTabs.Notification,
-          url: `${notificationTab.url}#notification-${platform.id}`,
-        });
-      }
-
     // Builtin OAuth connectors (Notion, GitHub, …): searching a connector name
     // should land on the connector page. The page has no per-connector deep
     // link, so these navigate to the tab itself. Availability ultimately
@@ -216,24 +194,6 @@ export const useSettingsSearch = (
         });
       }
 
-    // Model providers rank last: builtin names/ids (e.g. "OpenAI") link straight
-    // to the provider detail page. Custom providers need an async store fetch and
-    // are intentionally not indexed.
-    const providerTab = visibleTabs.get(SettingsTabs.Provider);
-    if (providerTab)
-      for (const provider of DEFAULT_MODEL_PROVIDER_LIST) {
-        entries.push({
-          breadcrumb: `${providerTab.groupTitle} › ${providerTab.label}`,
-          haystack: [provider.name.toLowerCase(), provider.id.toLowerCase()],
-          icon: providerTab.icon,
-          key: `provider-${provider.id}`,
-          label: provider.name,
-          pinyinBase: [],
-          tab: SettingsTabs.Provider,
-          url: `/settings/provider/${provider.id}`,
-        });
-      }
-
     return entries;
   }, [
     categoryGroups,
@@ -242,11 +202,9 @@ export const useSettingsSearch = (
     enableBusinessFeatures,
     enableComposio,
     enableGatewayMode,
-    enableSTT,
     hasEmail,
     hideDocs,
     isLogin,
-    showAiImage,
   ]);
 
   // Load the pinyin dict only when the index actually contains Han text, so

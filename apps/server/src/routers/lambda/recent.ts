@@ -30,7 +30,9 @@ export const recentRouter = router({
            * own creator. Set by the home "team" tab.
            */
           sharedOnly: z.boolean().optional(),
-          types: z.array(z.enum(['topic', 'document', 'task'])).optional(),
+          types: z
+            .array(z.enum(['topic', 'document', 'task', 'project', 'savedView', 'team']))
+            .optional(),
           withTopicPreview: z.boolean().optional(),
         })
         .optional(),
@@ -68,6 +70,18 @@ export const recentRouter = router({
             routePath = item.routeId
               ? `/agent/${item.routeId}/task/${item.id}`
               : `/task/${item.id}`;
+            break;
+          }
+          case 'project': {
+            routePath = `/project/${item.id}`;
+            break;
+          }
+          case 'savedView': {
+            routePath = `/views/${item.id}`;
+            break;
+          }
+          case 'team': {
+            routePath = `/teams/${item.id}`;
             break;
           }
         }

@@ -1,0 +1,248 @@
+import { randomUUID } from 'node:crypto';
+
+import type {
+  TaskDispatchOrigin,
+  TaskDispatchPhase,
+  TaskDispatchSettlementGrant,
+  TaskExecutionEnvironmentSnapshot,
+  TaskItem,
+  TaskRunTrigger,
+} from '@orvilo/types';
+
+import {
+  TaskDispatchIdempotencyConflictError,
+  TaskDispatchModel,
+  TaskDispatchSettlementGrantError,
+} from '@/database/models/taskDispatch';
+import type { TaskDispatchItem } from '@/database/schemas/task';
+import type { OrviloDatabase } from '@/database/type';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
+
+const DEFAULT_LEASE_MS = 5 * 60 * 1000;
+
+export class TaskDispatchConflictError extends Error {
+  constructor(
+    message: string,
+    readonly dispatchId: string,
+  ) {
+    super(message);
+  }
+}
+
+export class TaskDispatchWaitingError extends Error {
+  constructor(
+    message: string,
+    readonly dispatchId: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Execution origin recorded on the dispatch intent. `caid` = a new
+ * orchestrated writer (goal/planner/cascade entry); `internal` = settlement
+ * work continuing an existing dispatch (corrective merges, reservation
+ * handoffs); `external` = direct user/schedule invocation. The canonical
+ * definition lives in `@orvilo/types` so the database schema can type the
+ * persisted column; re-exported here for the service's existing consumers.
+ */
+export type { TaskDispatchOrigin, TaskDispatchSettlementGrant } from '@orvilo/types';
+
+export interface PreparedTaskDispatch {
+  dispatch: TaskDispatchItem;
+  fence: number;
+  owner: string;
+  task: TaskItem;
+}
+
+type TaskDispatchTransitionInput = {
+  agentId?: string | null;
+  environmentSnapshot?: TaskExecutionEnvironmentSnapshot;
+  expected: TaskDispatchPhase[];
+  leaseExpiresAt?: Date | null;
+  operationId?: string | null;
+  phase: TaskDispatchPhase;
+  waitingReason?: string | null;
+};
+
+export class TaskDispatchService {
+  private readonly model: TaskDispatchModel;
+
+  constructor(
+    db: OrviloDatabase,
+    private readonly workspaceId?: string,
+  ) {
+    this.model = new TaskDispatchModel(db, workspaceId);
+  }
+
+  static allowsInboxFallback(task: TaskItem, trigger: TaskRunTrigger): boolean {
+    return (
+      trigger === 'manual' &&
+      task.assignmentMode === 'manual' &&
+      task.orchestrationOwner === 'manual' &&
+      task.createdBySubjectKind !== 'integration' &&
+      task.createdBySubjectKind !== 'system'
+    );
+  }
+
+  async prepare(input: {
+    idempotencyKey: string;
+    /** Raw actor identity persisted separately from `requestedBy`. */
+    initiator?: string;
+    origin: TaskDispatchOrigin;
+    planRevision?: number;
+    requestedBy: string;
+    /** Server-verified settlement evidence when `origin === 'internal'`. */
+    settlementGrant?: TaskDispatchSettlementGrant;
+    sourceDispatchId?: string;
+    task: TaskItem;
+    trigger: TaskRunTrigger;
+  }): Promise<PreparedTaskDispatch> {
+    let requested;
+    try {
+      requested = await this.model.request({
+        idempotencyKey: input.idempotencyKey,
+        initiator: input.initiator,
+        origin: input.origin,
+        planRevision: input.planRevision,
+        requestedBy: input.requestedBy,
+        settlementGrant: input.settlementGrant,
+        sourceDispatchId: input.sourceDispatchId,
+        taskId: input.task.id,
+        trigger: input.trigger,
+      });
+    } catch (error) {
+      if (error instanceof TaskDispatchIdempotencyConflictError) {
+        throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
+      }
+      if (error instanceof TaskDispatchSettlementGrantError) {
+        // A stale settlement grant is a hard rejection — the run must
+        // re-enter as `external` (facing normal admission) rather than
+        // inherit an internal claim it can no longer prove (SB09).
+        throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
+      }
+      throw error;
+    }
+    if (requested.state === 'busy') {
+      throw new TaskDispatchConflictError(
+        `Task already has active dispatch ${requested.active.id}`,
+        requested.active.id,
+      );
+    }
+
+    const dispatch = requested.dispatch;
+
+    // Final CAID admission boundary: every new orchestrated claim funnels
+    // here — goal fan-out, planner wakes, AND the dependency cascade — so a
+    // flag flip between an earlier front-check and this claim cannot leak a
+    // new writer. The intent is persisted as `waiting` (auditable, resumable
+    // once admission re-opens); settlement/internal runs never reach this.
+    if (
+      input.origin === 'caid' &&
+      dispatch.phase !== 'waiting' &&
+      !(await isCaidDispatchAllowed({ userId: input.requestedBy, workspaceId: this.workspaceId }))
+    ) {
+      await this.model.markWaiting(dispatch.id, 'caid_dispatch_disabled');
+      throw new TaskDispatchWaitingError(
+        'Orchestrated dispatch is disabled for this workspace (caid_dispatch)',
+        dispatch.id,
+      );
+    }
+    if (
+      input.origin === 'caid' &&
+      dispatch.phase === 'waiting' && // Re-check admission for a persisted hold too: a waiting row resumes
+      // only through this same gate (its `waiting` throw below covers the
+      // still-disabled case).
+
+      dispatch.waitingReason === 'caid_dispatch_disabled' &&
+      !(await isCaidDispatchAllowed({ userId: input.requestedBy, workspaceId: this.workspaceId }))
+    ) {
+      throw new TaskDispatchWaitingError(
+        'Orchestrated dispatch is disabled for this workspace (caid_dispatch)',
+        dispatch.id,
+      );
+    }
+    const currentTask = requested.task;
+    if (dispatch.phase === 'waiting') {
+      throw new TaskDispatchWaitingError(
+        dispatch.waitingReason ?? 'Task execution is waiting for project policy',
+        dispatch.id,
+      );
+    }
+    if (!dispatch.agentId && !TaskDispatchService.allowsInboxFallback(currentTask, input.trigger)) {
+      await this.model.markWaiting(dispatch.id, 'no_eligible_agent');
+      throw new TaskDispatchWaitingError('Task has no eligible execution Agent', dispatch.id);
+    }
+    if (!['requested', 'claimed'].includes(dispatch.phase)) {
+      throw new TaskDispatchConflictError(
+        `Dispatch ${dispatch.id} is already ${dispatch.phase}`,
+        dispatch.id,
+      );
+    }
+
+    const owner = `task-runner:${randomUUID()}`;
+    const lease = await this.model.claimForProvisioning(dispatch.id, owner, DEFAULT_LEASE_MS);
+    if (!lease) {
+      throw new TaskDispatchConflictError(
+        `Dispatch ${dispatch.id} could not be claimed`,
+        dispatch.id,
+      );
+    }
+    return { dispatch: lease.dispatch, fence: lease.fence, owner, task: currentTask };
+  }
+
+  async transition(prepared: PreparedTaskDispatch, input: TaskDispatchTransitionInput) {
+    const updated = await this.model.transition({
+      ...input,
+      // Final host-admission re-check (SA05-B): before the runtime starts,
+      // the persisted origin must still pass the CAID gate — a rollout
+      // flip after prepare parks the claim `waiting` instead of starting
+      // a new orchestrated writer.
+      admissionRecheck:
+        input.phase === 'dispatched'
+          ? (dispatch) =>
+              isCaidDispatchAllowed({
+                userId: dispatch.initiator ?? undefined,
+                workspaceId: dispatch.workspaceId ?? this.workspaceId,
+              })
+          : undefined,
+      dispatchId: prepared.dispatch.id,
+      fence: prepared.fence,
+      owner: prepared.owner,
+    });
+    if (!updated) {
+      throw new TaskDispatchConflictError(
+        `Dispatch ${prepared.dispatch.id} lost its lease or changed phase`,
+        prepared.dispatch.id,
+      );
+    }
+    // The admission re-check parks (not cancels) the claim — surface the
+    // typed hold so callers keep the task claimable.
+    if (updated.phase === 'waiting' && input.phase !== 'waiting') {
+      throw new TaskDispatchWaitingError(
+        updated.waitingReason ?? 'Task execution is waiting',
+        updated.id,
+      );
+    }
+    return updated;
+  }
+
+  async settle(prepared: PreparedTaskDispatch, phase: 'canceled' | 'failed' | 'succeeded') {
+    return this.model.settle({
+      dispatchId: prepared.dispatch.id,
+      expected: [
+        'requested',
+        'claimed',
+        'provisioning',
+        'dispatched',
+        'running',
+        'waiting',
+        'cancel_requested',
+        'outcome_unknown',
+      ],
+      fence: prepared.fence,
+      generation: prepared.dispatch.generation,
+      phase,
+    });
+  }
+}

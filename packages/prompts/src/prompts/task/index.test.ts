@@ -458,13 +458,14 @@ describe('buildTaskRunPrompt', () => {
     expect(result).toContain('include artifact paths, commands, and observed results');
     expect(result).toContain('an independent verifier decides whether this Task is complete');
     expect(result).toContain('Run the Acceptance inside this Task, not after it');
-    expect(result).toContain('lh acceptance install');
-    expect(result).toContain('lh acceptance run result submit');
+    expect(result).toContain('cite each artifact by id through `submitEvidence`');
     expect(result).toContain('proved by a screenshot or recording');
-    // The portable skill is pulled to disk by CLI builders and is absent from
-    // `builtinSkills`, so it must never be named as an unconditional step.
-    expect(result).not.toContain('Use the `acceptance` skill to drive');
     expect(result).toContain('must reference a real artifact by fileId');
+    // The standalone Acceptance distribution is retired: the prompt must not
+    // hand the runtime a shell instruction whose command no longer exists.
+    expect(result).not.toContain('lh acceptance install');
+    expect(result).not.toContain('lh acceptance run result submit');
+    expect(result).not.toContain('Use the `acceptance` skill to drive');
   });
 
   it('should still instruct in-task acceptance when the policy has no criteria or requirement', () => {
@@ -818,19 +819,18 @@ describe('human assignee formatting', () => {
     expect(out).toContain('- bob  id=usr_3');
   });
 
-  it('formatWorkspaceMembers surfaces email and linked IM identities for exact matching', () => {
+  it('formatWorkspaceMembers surfaces email for exact matching', () => {
     const out = formatWorkspaceMembers([
       {
         email: 'alice@orvilo.aspectlylabs.com',
         id: 'usr_2',
-        imAccounts: ['discord:@Neko(4521)', 'slack:U123'],
         name: 'Alice Chen',
         role: 'member',
         username: 'alice',
       },
     ]);
     expect(out).toContain(
-      '- Alice Chen  @alice  alice@orvilo.aspectlylabs.com  role=member  im=discord:@Neko(4521),slack:U123  id=usr_2',
+      '- Alice Chen  @alice  alice@orvilo.aspectlylabs.com  role=member  id=usr_2',
     );
   });
 

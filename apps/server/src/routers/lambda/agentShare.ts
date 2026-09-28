@@ -109,7 +109,7 @@ export const agentShareRouter = router({
   enableShare: agentShareProcedure
     .input(agentIdInput.extend({ visibility: z.enum(['private', 'link']).optional() }).strict())
     .mutation(async ({ input, ctx }) => {
-      await assertAgentShareCreationEnabled(ctx.userId);
+      assertAgentShareCreationEnabled();
 
       return ctx.agentShareModel.create(input.agentId, input.visibility);
     }),
@@ -194,7 +194,7 @@ export const agentShareRouter = router({
     .mutation(async ({ input, ctx }) => {
       // Flipping to `link` publishes the share, so it is the same capability
       // as `enableShare`; going back to `private` unpublishes and stays open.
-      if (input.visibility === 'link') await assertAgentShareCreationEnabled(ctx.userId);
+      if (input.visibility === 'link') assertAgentShareCreationEnabled();
 
       return requireShare(
         await ctx.agentShareModel.updateVisibility(input.agentId, input.visibility),

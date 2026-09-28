@@ -1,8 +1,8 @@
 import { type ChatToolPayload } from '@orvilo/types';
 import debug from 'debug';
 
-import { type StreamEvent } from '@/services/agentRuntime';
-import { agentRuntimeService } from '@/services/agentRuntime';
+import { lambdaClient } from '@/libs/trpc/client';
+import { type StreamEvent } from '@/services/agentExecution';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
 import { type ChatStore } from '@/store/chat/store';
 import {
@@ -391,10 +391,11 @@ export class AgentActionImpl {
       log(`Handling human intervention ${action} for operation ${messageOpId}:`, data);
 
       // Send human intervention request
-      await agentRuntimeService.handleHumanIntervention({
-        action: action as any,
+      await lambdaClient.aiAgent.processHumanIntervention.mutate({
+        action: action as 'approve' | 'reject' | 'input' | 'select',
         data,
         operationId: messageOpId,
+        stepIndex: 0,
       });
 
       // Clear human intervention state

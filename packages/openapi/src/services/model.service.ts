@@ -1,33 +1,42 @@
-import { and, asc, count, eq, ilike, or } from 'drizzle-orm';
+import type { ProviderConfig } from '@orvilo/types';
 
-import { aiModels } from '@/database/schemas';
-import type { OrviloDatabase } from '@/database/type';
+import { AiInfraRepos } from '@/database/repositories/aiInfra';
+import { getServerGlobalConfig } from '@/server/globalConfig';
 
 import { BaseService } from '../common/base.service';
 import { processPaginationConditions } from '../helpers/pagination';
 import { projectPublicModel } from '../helpers/public-fields';
 import type { ServiceResult } from '../types';
-import type {
-  CreateModelRequest,
-  GetModelsResponse,
-  ModelDetailResponse,
-  ModelsListQuery,
-  UpdateModelRequest,
-} from '../types/model.type';
+import type { GetModelsResponse, ModelDetailResponse, ModelsListQuery } from '../types/model.type';
 
-// `stt` was renamed to the standard `asr`. Old rows / deprecated API inputs are
-// normalized at the service boundary instead of running a bulk data migration —
-// responses always emit `asr`, and `stt` is never persisted for new writes.
+// `stt` was renamed to the standard `asr`. Deprecated API inputs are normalized
+// at the service boundary; responses always emit `asr`.
 const normalizeModelType = <T>(type: T): T => (type === 'stt' ? ('asr' as T) : type);
+
+const matchesKeyword = (
+  model: { description?: string; displayName?: string; id: string },
+  keyword: string,
+) =>
+  [model.id, model.displayName, model.description].some((field) =>
+    field?.toLowerCase().includes(keyword.toLowerCase()),
+  );
 
 /**
  * Model service implementation class (dedicated to Hono API)
- * Provides model query and grouping functionality
+ * Serves the deployment-owned model catalog — per-user `ai_models` rows are
+ * retired with provider management, so reads never touch the database.
  */
 export class ModelService extends BaseService {
-  constructor(db: OrviloDatabase, userId: string | null, workspaceId?: string) {
-    super(db, userId, workspaceId);
-  }
+  private catalog = async () => {
+    const { aiProvider } = await getServerGlobalConfig();
+    const providerConfigs: Record<string, ProviderConfig> = Object.fromEntries(
+      Object.entries(aiProvider).map<[string, ProviderConfig]>(([id, config]) => [
+        id,
+        { ...config, enabled: config?.enabled ?? false },
+      ]),
+    );
+    return new AiInfraRepos(providerConfigs);
+  };
 
   /**
    * Get model list
@@ -47,67 +56,23 @@ export class ModelService extends BaseService {
         throw this.createAuthorizationError(permissionResult.message || '无权访问模型列表');
       }
 
-      // Build query conditions
-      const conditions = [];
-
-      // Add permission condition directly to the main conditions array
-      const permissionWhere = this.buildPermissionWhere(aiModels, permissionResult.condition);
-      if (permissionWhere) conditions.push(permissionWhere);
-
-      // Handle ModelsListQuery-specific parameters
       const { page, pageSize, keyword, provider, type, enabled } = request;
+      const normalizedType = type ? normalizeModelType(type) : undefined;
 
-      // If a keyword is provided, add it to the query conditions
-      if (keyword) {
-        conditions.push(
-          or(
-            ilike(aiModels.id, `%${keyword}%`),
-            ilike(aiModels.displayName, `%${keyword}%`),
-            ilike(aiModels.description, `%${keyword}%`),
-          ),
-        );
-      }
+      const repos = await this.catalog();
+      let models = await repos.getEnabledModels(false);
 
-      if (provider) {
-        conditions.push(eq(aiModels.providerId, provider));
-      }
+      if (keyword) models = models.filter((model) => matchesKeyword(model, keyword));
+      if (provider) models = models.filter((model) => model.providerId === provider);
+      if (normalizedType) models = models.filter((model) => model.type === normalizedType);
+      if (typeof enabled === 'boolean')
+        models = models.filter((model) => model.enabled === enabled);
 
-      if (type) {
-        const normalizedType = normalizeModelType(type);
-        // Match both the new `asr` and the legacy `stt` so un-migrated rows
-        // still surface when a client filters by the standard type.
-        conditions.push(
-          normalizedType === 'asr'
-            ? or(eq(aiModels.type, 'asr'), eq(aiModels.type, 'stt'))
-            : eq(aiModels.type, normalizedType),
-        );
-      }
-
-      if (typeof enabled === 'boolean') {
-        conditions.push(eq(aiModels.enabled, enabled));
-      }
-
-      const finalWhereCondition = conditions.length > 0 ? and(...conditions) : undefined;
-
-      // Calculate offset
-      const { limit, offset } = processPaginationConditions({ page, pageSize });
-
-      // Execute query and count in parallel
-      const [result, totalResult] = await Promise.all([
-        this.db.query.aiModels.findMany({
-          limit,
-          offset,
-          orderBy: asc(aiModels.sort),
-          where: finalWhereCondition,
-        }),
-        this.db.select({ count: count() }).from(aiModels).where(finalWhereCondition),
-      ]);
+      const { limit = 20, offset = 0 } = processPaginationConditions({ page, pageSize });
 
       return {
-        models: result.map((model) =>
-          projectPublicModel({ ...model, type: normalizeModelType(model.type) }),
-        ),
-        total: totalResult[0]?.count ?? 0,
+        models: models.slice(offset, offset + limit).map(projectPublicModel),
+        total: models.length,
       };
     } catch (error) {
       this.handleServiceError(error, '获取模型列表失败');
@@ -121,156 +86,22 @@ export class ModelService extends BaseService {
     this.log('info', '获取模型详情', { modelId, providerId, userId: this.userId });
 
     try {
-      const permissionResult = await this.resolveOperationPermission('AI_MODEL_READ', {
-        targetModelId: modelId,
-      });
+      const permissionResult = await this.resolveOperationPermission('AI_MODEL_READ');
 
       if (!permissionResult.isPermitted) {
         throw this.createAuthorizationError(permissionResult.message || '无权访问模型详情');
       }
 
-      const conditions = [eq(aiModels.providerId, providerId), eq(aiModels.id, modelId)];
-
-      const permissionWhere = this.buildPermissionWhere(aiModels, permissionResult.condition);
-      if (permissionWhere) conditions.push(permissionWhere);
-
-      const model = await this.db.query.aiModels.findFirst({ where: and(...conditions) });
+      const repos = await this.catalog();
+      const model = (await repos.getAiProviderModelList(providerId)).find((m) => m.id === modelId);
 
       if (!model) {
         throw this.createNotFoundError(`模型 ${providerId}/${modelId} 不存在`);
       }
 
-      return projectPublicModel({ ...model, type: normalizeModelType(model.type) });
+      return projectPublicModel({ ...model, providerId });
     } catch (error) {
       this.handleServiceError(error, '获取模型详情');
-    }
-  }
-
-  /**
-   * Create a model
-   */
-  async createModel(payload: CreateModelRequest): ServiceResult<ModelDetailResponse> {
-    this.log('info', '创建模型', { payload, userId: this.userId });
-
-    try {
-      const permissionResult = await this.resolveOperationPermission('AI_MODEL_CREATE');
-      if (!permissionResult.isPermitted) {
-        throw this.createAuthorizationError(permissionResult.message || '无权创建模型');
-      }
-
-      if (!this.userId) {
-        throw this.createAuthError('用户未认证');
-      }
-
-      return await this.db.transaction(async (tx) => {
-        const existingModel = await tx.query.aiModels.findFirst({
-          where: and(
-            eq(aiModels.id, payload.id),
-            eq(aiModels.providerId, payload.providerId),
-            this.buildWorkspaceWhere(aiModels),
-          ),
-        });
-
-        if (existingModel) {
-          throw this.createBusinessError(`模型 ${payload.providerId}/${payload.id} 已存在`);
-        }
-
-        const [created] = await tx
-          .insert(aiModels)
-          .values({
-            abilities: payload.abilities ?? {},
-            config: payload.config ?? null,
-            contextWindowTokens: payload.contextWindowTokens ?? null,
-            description: payload.description ?? null,
-            displayName: payload.displayName,
-            enabled: payload.enabled ?? true,
-            id: payload.id,
-            organization: payload.organization ?? null,
-            parameters: payload.parameters ?? {},
-            pricing: payload.pricing ?? null,
-            providerId: payload.providerId,
-            releasedAt: payload.releasedAt ?? null,
-            sort: payload.sort ?? null,
-            source: payload.source ?? null,
-            type: normalizeModelType(payload.type ?? 'chat'),
-            ...this.buildWorkspacePayload({}),
-          })
-          .returning();
-
-        return projectPublicModel(created);
-      });
-    } catch (error) {
-      this.handleServiceError(error, '创建模型');
-    }
-  }
-
-  /**
-   * Update a model
-   */
-  async updateModel(
-    providerId: string,
-    modelId: string,
-    payload: UpdateModelRequest,
-  ): ServiceResult<ModelDetailResponse> {
-    this.log('info', '更新模型', { modelId, payload, providerId, userId: this.userId });
-
-    try {
-      const permissionResult = await this.resolveOperationPermission('AI_MODEL_UPDATE', {
-        targetModelId: modelId,
-      });
-
-      if (!permissionResult.isPermitted) {
-        throw this.createAuthorizationError(permissionResult.message || '无权更新模型');
-      }
-
-      const conditions = [eq(aiModels.providerId, providerId), eq(aiModels.id, modelId)];
-      const permissionWhere = this.buildPermissionWhere(aiModels, permissionResult.condition);
-      if (permissionWhere) conditions.push(permissionWhere);
-
-      return await this.db.transaction(async (tx) => {
-        const existingModel = await tx.query.aiModels.findFirst({ where: and(...conditions) });
-
-        if (!existingModel) {
-          throw this.createNotFoundError(`模型 ${providerId}/${modelId} 不存在`);
-        }
-
-        const updateFields = {
-          ...(payload.abilities !== undefined && { abilities: payload.abilities }),
-          ...(payload.config !== undefined && { config: payload.config }),
-          ...(payload.contextWindowTokens !== undefined && {
-            contextWindowTokens: payload.contextWindowTokens,
-          }),
-          ...(payload.description !== undefined && { description: payload.description }),
-          ...(payload.displayName !== undefined && { displayName: payload.displayName }),
-          ...(payload.enabled !== undefined && { enabled: payload.enabled }),
-          ...(payload.organization !== undefined && { organization: payload.organization }),
-          ...(payload.parameters !== undefined && { parameters: payload.parameters }),
-          ...(payload.pricing !== undefined && { pricing: payload.pricing }),
-          ...(payload.releasedAt !== undefined && { releasedAt: payload.releasedAt }),
-          ...(payload.sort !== undefined && { sort: payload.sort }),
-          ...(payload.source !== undefined && { source: payload.source }),
-          ...(payload.type !== undefined && { type: normalizeModelType(payload.type) }),
-          updatedAt: new Date(),
-        } as Record<string, unknown>;
-
-        if (Object.keys(updateFields).length === 1) {
-          throw this.createBusinessError('未提供需要更新的字段');
-        }
-
-        const [updated] = await tx
-          .update(aiModels)
-          .set(updateFields)
-          .where(and(...conditions))
-          .returning();
-
-        if (!updated) {
-          throw this.createBusinessError('更新模型失败');
-        }
-
-        return projectPublicModel(updated);
-      });
-    } catch (error) {
-      this.handleServiceError(error, '更新模型');
     }
   }
 }

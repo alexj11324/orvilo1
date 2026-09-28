@@ -552,6 +552,8 @@ export const goalRouter = router({
       idInput.extend({
         /** ISO-8601 calendar-time budget; null clears the deadline. */
         deadline: z.string().datetime().nullable().optional(),
+        // Bounds mirror `resolveMaxConcurrentTasks` and the create input.
+        maxConcurrentTasks: z.number().int().min(1).max(10).nullable().optional(),
         maxExperiments: z.number().int().min(1).max(200).optional(),
         maxRounds: z.number().int().positive().nullable().optional(),
         maxTotalCost: z.number().positive().nullable().optional(),

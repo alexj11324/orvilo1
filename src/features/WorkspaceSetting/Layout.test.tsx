@@ -28,16 +28,13 @@ vi.mock('./hooks/useCategory', () => ({
         { key: 'billing', label: 'Billing' },
         { key: 'credits', label: 'Credits' },
         { key: 'apikey', label: 'API Keys' },
-        { key: 'service-model', label: 'Default Models' },
         { key: 'credential', label: 'Credentials' },
         { key: 'statistics', label: 'Statistics' },
         { key: 'storage', label: 'Storage' },
         { key: 'usage', label: 'Usage' },
-        { key: 'audit-log', label: 'Audit Log' },
         { key: 'profile', label: 'Jane Doe' },
         { key: 'appearance', label: 'Appearance' },
         { key: 'hotkey', label: 'Hotkeys' },
-        { key: 'messenger', label: 'Messenger' },
         { key: 'labs', label: 'Labs' },
         { key: 'advanced', label: 'Advanced' },
         { key: 'about', label: 'About' },
@@ -66,14 +63,12 @@ describe('WorkspaceSettingsContentLayout', () => {
     ['billing', 'Billing'],
     ['credits', 'Credits'],
     ['apikey', 'API Keys'],
-    ['service-model', 'Default Models'],
     ['credential', 'Credentials'],
     ['statistics', 'Statistics'],
     ['storage', 'Storage'],
     ['usage', 'Usage'],
     ['appearance', 'Appearance'],
     ['hotkey', 'Hotkeys'],
-    ['messenger', 'Messenger'],
     ['labs', 'Labs'],
     ['about', 'About'],
     // The Profile nav item is labelled with the user's name; the header keeps
@@ -88,7 +83,7 @@ describe('WorkspaceSettingsContentLayout', () => {
     expect(html).toContain('<main><div>Page content</div></main>');
   });
 
-  it.each(['audit-log', 'advanced'])('keeps the %s tab on the content-only layout', (tab) => {
+  it.each(['advanced'])('keeps the %s tab on the content-only layout', (tab) => {
     const html = renderLayout(tab);
 
     expect(html).not.toContain('<header>');

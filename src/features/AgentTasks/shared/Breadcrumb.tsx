@@ -8,7 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 
+import Avatar from '@/components/Avatar';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { useClientDataSWR } from '@/libs/swr';
+import { projectService } from '@/services/project';
+import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 
 import { styles } from './style';
@@ -27,6 +31,21 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
   const taskIdentifier = useTaskStore((s) =>
     taskId ? s.taskDetailMap[taskId]?.identifier : undefined,
   );
+  const taskProjectId = useTaskStore((s) =>
+    taskId ? s.taskDetailMap[taskId]?.projectId : undefined,
+  );
+  const taskTeamId = useTaskStore((s) => (taskId ? s.taskDetailMap[taskId]?.teamId : undefined));
+
+  // The owner crumb mirrors Linear's `Owner › ISSUE` trail: the project chip
+  // when the task is filed under one, else the owning team's name, else the
+  // plain "Tasks" root. All three resolve from data — nothing is fabricated.
+  useProjectStore((s) => s.useFetchProjectDetail)(taskProjectId ?? undefined);
+  const needTeam = !!taskId && !taskProjectId && !!taskTeamId;
+  const { data: teamsResponse } = useClientDataSWR(needTeam ? ['project/teams'] : null, () =>
+    projectService.teams(),
+  );
+  const project = useCurrentProjectDetail(taskProjectId ?? undefined)?.project;
+  const team = needTeam ? teamsResponse?.data.find((row) => row.id === taskTeamId) : undefined;
   const ancestors = useTaskStore(
     useShallow((s) => {
       if (!taskId) return [];
@@ -53,6 +72,47 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
       {t('taskList.all')}
     </Text>
   );
+
+  // Project wins over team, matching Linear's "issue belongs to a project,
+  // otherwise to its team" trail. While the owning entity is still resolving
+  // the crumb falls back to "Tasks" rather than flashing a raw id.
+  const ownerCrumb = project
+    ? {
+        title: (
+          <WorkspaceLink to={`/project/${project.slug || project.id}`}>
+            <span
+              style={{
+                alignItems: 'center',
+                display: 'inline-flex',
+                gap: 6,
+                minWidth: 0,
+              }}
+            >
+              <Avatar
+                avatar={project.avatar || undefined}
+                name={project.name}
+                shape={'square'}
+                size={14}
+                style={{ flex: 'none' }}
+              />
+              <Text ellipsis color={'inherit'} style={{ maxWidth: 160, minWidth: 0 }} weight={500}>
+                {project.name}
+              </Text>
+            </span>
+          </WorkspaceLink>
+        ),
+      }
+    : team
+      ? {
+          title: (
+            <WorkspaceLink to={`/teams/${team.id}`}>
+              <Text ellipsis color={'inherit'} style={{ maxWidth: 160, minWidth: 0 }} weight={500}>
+                {team.name}
+              </Text>
+            </WorkspaceLink>
+          ),
+        }
+      : undefined;
 
   const agentCrumb =
     aid && agentMeta
@@ -135,7 +195,7 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
       className={styles.breadcrumb}
       separator={<Icon icon={ChevronRight} />}
       items={[
-        {
+        ownerCrumb ?? {
           title:
             taskId || agentCrumbNode ? (
               <WorkspaceLink to={'/tasks'}>{allTasksLabel}</WorkspaceLink>

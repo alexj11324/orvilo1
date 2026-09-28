@@ -5,11 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiAgentService } from '../index';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
-const { mockMessageCreate, mockSpineMessageId, mockThreadCreate } = vi.hoisted(() => ({
-  mockMessageCreate: vi.fn(),
-  mockSpineMessageId: vi.fn(),
-  mockThreadCreate: vi.fn(),
-}));
+const { mockDispatchHeteroAgent, mockMessageCreate, mockSpineMessageId, mockThreadCreate } =
+  vi.hoisted(() => ({
+    mockDispatchHeteroAgent: vi.fn(),
+    mockMessageCreate: vi.fn(),
+    mockSpineMessageId: vi.fn(),
+    mockThreadCreate: vi.fn(),
+  }));
 
 // Mock trusted client to avoid server-side env access
 vi.mock('@/libs/trusted-client', () => ({
@@ -80,6 +82,7 @@ vi.mock('@/database/models/plugin', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       appendRunningOperationChild: vi.fn().mockResolvedValue(true),
       releaseTaskCallbackReservation: vi.fn().mockResolvedValue(undefined),
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
@@ -114,7 +117,7 @@ vi.mock('@/database/models/chatGroup', () => ({
 }));
 
 // Mock AgentRuntimeService
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -125,6 +128,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
       }),
     };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// these tests exercise thread/message persistence without the gateway.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 // Mock MarketService (for getOrviloSkillManifests)
@@ -172,7 +181,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 // Mock model-bank
@@ -206,6 +215,12 @@ describe('AiAgentService.execAgent - appContext.newThread', () => {
     mockMessageCreate.mockResolvedValue({ id: 'msg-1' });
     mockSpineMessageId.mockReset().mockResolvedValue(undefined);
     mockThreadCreate.mockReset().mockResolvedValue({ id: 'thread-new' });
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
 
     service = new AiAgentService(mockDb, userId);
   });

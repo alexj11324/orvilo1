@@ -5,7 +5,7 @@ import { AiModelReasoningConfigSchema, CreateAiModelSchema, UpdateAiModelSchema 
 describe('AI model mutation schemas', () => {
   it('strips deployment-owned compatibility metadata from user mutations', () => {
     const agentCompatibility = {
-      serverDefaultHeterogeneousProfiles: ['kimi-code/anthropic-v1'],
+      deploymentOwnedProfiles: ['some-profile-v1'],
     };
 
     expect(

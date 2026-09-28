@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "Recharger",
   "workingPanel.browser.actions.stop": "Arrêter le chargement",
   "workingPanel.browser.addressPlaceholder": "Rechercher ou entrer une adresse",
-  "workingPanel.browser.agentControlling": "L'agent utilise le navigateur",
-  "workingPanel.browser.agentCursor": "Agent",
   "workingPanel.browser.context.elementAdded": "Élément ajouté au contexte de discussion",
   "workingPanel.browser.context.elementTitle": "Élément",
   "workingPanel.browser.context.failed": "Impossible d'ajouter le contexte de l'élément",

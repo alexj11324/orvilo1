@@ -9,7 +9,6 @@ const CHAT_ONLY_ACTIONS = new Set<ActionKey>([
   'mention',
   'model',
   'plus',
-  'promptTransform',
   'typo',
   'voiceDictation',
 ]);

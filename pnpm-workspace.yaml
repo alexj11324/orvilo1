@@ -23,6 +23,7 @@ packages:
   - e2e
   - apps/desktop/src/main
   - apps/auth
+  - apps/collaboration-gateway
   - apps/server
   - apps/share
   - apps/workbench

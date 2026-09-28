@@ -1,10 +1,16 @@
-import { chainLangDetect, chainTranslate } from '@orvilo/prompts';
-import { type ChatTranslate, type TracePayload } from '@orvilo/types';
-import { TraceNameMap } from '@orvilo/types';
-import { merge } from '@orvilo/utils';
+import { TRACING_SCENARIOS } from '@orvilo/const';
+import {
+  chainLangDetect,
+  chainTranslate,
+  LANG_DETECT_JSON_SCHEMA,
+  LANG_DETECT_PROMPT_VERSION,
+  TRANSLATE_JSON_SCHEMA,
+  TRANSLATE_PROMPT_VERSION,
+} from '@orvilo/prompts';
+import { type ChatTranslate } from '@orvilo/types';
 
 import { supportLocales } from '@/locales/resources';
-import { chatService } from '@/services/chat';
+import { aiChatService } from '@/services/aiChat';
 import { messageService } from '@/services/message';
 import { dbMessageSelectors } from '@/store/chat/selectors';
 import { type ChatStore } from '@/store/chat/store';
@@ -33,22 +39,14 @@ export class ChatTranslateActionImpl {
     await this.#get().updateMessageTranslate(id, false);
   };
 
-  getCurrentTracePayload = (data: Partial<TracePayload>): TracePayload => {
-    return {
-      sessionId: this.#get().activeAgentId,
-      topicId: this.#get().activeTopicId,
-      ...data,
-    };
-  };
-
   translateMessage = async (id: string, targetLang: string): Promise<void> => {
-    const { updateMessageTranslate, internal_dispatchMessage } = this.#get();
+    const { updateMessageTranslate } = this.#get();
 
     const message = dbMessageSelectors.getDbMessageById(id)(this.#get());
     if (!message) return;
 
     // Get current agent for translation
-    const translationSetting = systemAgentSelectors.translation(useUserStore.getState());
+    const { model, provider } = systemAgentSelectors.translation(useUserStore.getState());
 
     // create translate extra
     await updateMessageTranslate(id, { content: '', from: '', to: targetLang });
@@ -69,46 +67,51 @@ export class ChatTranslateActionImpl {
     this.#get().associateMessageWithOperation(id, operationId);
 
     try {
-      let content = '';
-      let from = '';
+      const abortController = new AbortController();
 
-      // detect from language
-      chatService.fetchPresetTaskResult({
-        onFinish: async (data) => {
-          if (data && supportLocales.includes(data)) from = data;
-
-          await updateMessageTranslate(id, { content, from, to: targetLang });
+      // detect source language — a bound judgment, resolved from the topic's agent
+      const detectEnvelope = await aiChatService.generateJSON(
+        {
+          ...chainLangDetect(message.content),
+          model,
+          provider,
+          schema: LANG_DETECT_JSON_SCHEMA,
+          tracing: {
+            agentId: message.agentId,
+            promptVersion: LANG_DETECT_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.LangDetect,
+            schemaName: LANG_DETECT_JSON_SCHEMA.name,
+            topicId: message.topicId,
+          },
         },
-        params: merge(translationSetting, chainLangDetect(message.content)),
-        trace: this.#get().getCurrentTracePayload({ traceName: TraceNameMap.LanguageDetect }),
-      });
+        abortController,
+      );
+
+      const detected = (detectEnvelope?.data as { locale?: string } | undefined)?.locale;
+      const from = detected && supportLocales.includes(detected) ? detected : '';
 
       // translate to target language
-      await chatService.fetchPresetTaskResult({
-        onFinish: async (translatedContent) => {
-          await updateMessageTranslate(id, { content: translatedContent, from, to: targetLang });
-          this.#get().completeOperation(operationId);
+      const envelope = await aiChatService.generateJSON(
+        {
+          ...chainTranslate(message.content, targetLang),
+          model,
+          provider,
+          schema: TRANSLATE_JSON_SCHEMA,
+          tracing: {
+            agentId: message.agentId,
+            promptVersion: TRANSLATE_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.MessageTranslate,
+            schemaName: TRANSLATE_JSON_SCHEMA.name,
+            topicId: message.topicId,
+          },
         },
-        onMessageHandle: (chunk) => {
-          switch (chunk.type) {
-            case 'text': {
-              content += chunk.text;
-              internal_dispatchMessage(
-                {
-                  id,
-                  key: 'translate',
-                  type: 'updateMessageExtra',
-                  value: { content, from, to: targetLang },
-                },
-                { operationId },
-              );
-              break;
-            }
-          }
-        },
-        params: merge(translationSetting, chainTranslate(message.content, targetLang)),
-        trace: this.#get().getCurrentTracePayload({ traceName: TraceNameMap.Translator }),
-      });
+        abortController,
+      );
+
+      const content = (envelope?.data as { translation?: string } | undefined)?.translation ?? '';
+
+      await updateMessageTranslate(id, { content, from, to: targetLang });
+      this.#get().completeOperation(operationId);
     } catch (error) {
       this.#get().failOperation(operationId, {
         message: error instanceof Error ? error.message : String(error),

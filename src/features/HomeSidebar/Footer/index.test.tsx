@@ -28,19 +28,16 @@ interface RenderFooterOptions {
   desktop?: boolean;
   /** `undefined` models a deployment that runs no community server. */
   discordUrl?: string;
-  enableBusinessFeatures?: boolean;
   hideGitHub?: boolean;
   homeSidebar?: boolean;
 }
 
-let mockServerConfigState: Record<string, unknown>;
 let mockUserState: Record<string, unknown>;
 
 const renderFooter = async ({
   billboardItems = [],
   desktop = false,
   discordUrl,
-  enableBusinessFeatures = false,
   homeSidebar = false,
   hideGitHub = true,
 }: RenderFooterOptions = {}) => {
@@ -52,9 +49,6 @@ const renderFooter = async ({
     setItem: vi.fn(),
   });
 
-  mockServerConfigState = {
-    enableBusinessFeatures,
-  };
   mockUserState = {
     defaultSettings: {},
     settings: { general: { isDevMode: false } },
@@ -101,10 +95,19 @@ const renderFooter = async ({
   vi.doMock('@/features/Billboard/MenuItems', () => ({
     useBillboardMenuItems: () => billboardItems,
   }));
-  vi.doMock('@/features/NavPanel', () => ({
+  vi.doMock('@/features/NavPanel/useActiveNavKey', () => ({
     useActiveNavKey: () => (homeSidebar ? 'home' : 'discover'),
   }));
   vi.doMock('@/features/User/UserPanel/ThemeButton', () => ({
+    default: () => null,
+  }));
+  vi.doMock('@/features/RightPanel/ToggleRightPanelButton', () => ({
+    default: () => <span data-testid="toggle-right-panel" />,
+  }));
+  vi.doMock('@/features/User/UserPanel', () => ({
+    default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  }));
+  vi.doMock('@/features/User/UserAvatar', () => ({
     default: () => null,
   }));
   vi.doMock('@/features/Workspace/WorkspaceLink', () => ({
@@ -130,15 +133,6 @@ const renderFooter = async ({
   }
   vi.doMock('@/hooks/useNavLayout', () => ({
     useNavLayout: createNavLayoutState,
-  }));
-  function selectFromServerConfigStore(selector: (state: Record<string, unknown>) => unknown) {
-    return selector(mockServerConfigState);
-  }
-  vi.doMock('@/store/serverConfig', () => ({
-    serverConfigSelectors: {
-      enableBusinessFeatures: (s: Record<string, unknown>) => !!s.enableBusinessFeatures,
-    },
-    useServerConfigStore: selectFromServerConfigStore,
   }));
   function selectFromUserStore(selector: (state: Record<string, unknown>) => unknown) {
     return selector(mockUserState);
@@ -170,10 +164,10 @@ afterEach(() => {
   vi.doUnmock('@/features/Billboard');
   vi.doUnmock('@/features/Billboard/MenuItems');
   vi.doUnmock('@/features/NavPanel');
+  vi.doUnmock('@/features/RightPanel/ToggleRightPanelButton');
   vi.doUnmock('@/features/User/UserPanel/ThemeButton');
   vi.doUnmock('@/features/Workspace/WorkspaceLink');
   vi.doUnmock('@/hooks/useNavLayout');
-  vi.doUnmock('@/store/serverConfig');
   vi.doUnmock('@/store/user');
 });
 
@@ -187,7 +181,7 @@ describe('Footer help menu tracking', () => {
     const getApp = await screen.findByRole('link', { name: 'Get App' });
     const github = screen.getByRole('link', { name: 'GitHub' });
 
-    expect(getApp).toHaveAttribute('href', '/apps');
+    expect(getApp).toHaveAttribute('href', '/settings/about');
     expect(getApp.compareDocumentPosition(github) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   }, 20000);
 
@@ -197,12 +191,15 @@ describe('Footer help menu tracking', () => {
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
 
-    expect(await screen.findByRole('link', { name: 'Get App' })).toHaveAttribute('href', '/apps');
+    expect(await screen.findByRole('link', { name: 'Get App' })).toHaveAttribute(
+      'href',
+      '/settings/about',
+    );
   }, 20000);
 
   it('tracks menu open with the visible item keys', async () => {
     const user = userEvent.setup();
-    await renderFooter({ enableBusinessFeatures: true });
+    await renderFooter();
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
 
@@ -210,25 +207,31 @@ describe('Footer help menu tracking', () => {
       ([event]) => event?.name === 'home_footer_menu_opened',
     );
     expect(openedCall).toBeTruthy();
-    expect((openedCall![0].properties.keys as string).split(',')).toContain('inviteFriend');
+    // `docs` is an unconditional own item, so it stands in for the set.
+    expect((openedCall![0].properties.keys as string).split(',')).toContain('docs');
   }, 20000);
 
-  it('tracks a unified click event when the invite friend entry is clicked', async () => {
+  it('tracks a unified click event when a footer entry is clicked', async () => {
     const user = userEvent.setup();
-    await renderFooter({ enableBusinessFeatures: true });
+    await renderFooter();
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
-    await user.click(await screen.findByText('Invite a friend'));
+    await user.click(await screen.findByText('Feedback'));
 
     expect(analyticsTrack).toHaveBeenCalledWith({
       name: 'home_footer_menu_clicked',
-      properties: { key: 'inviteFriend', spm: 'homepage.footer.inviteFriend.clicked' },
+      properties: { key: 'feedback', spm: 'homepage.footer.feedback.clicked' },
     });
   }, 20000);
 
-  it('does not render the invite friend entry without business features', async () => {
+  // Regression for the retirement. The entry used to be gated on business
+  // features, so the old test could only assert its absence in the disabled
+  // case — which held for a reason that had nothing to do with the entry being
+  // gone. Both the row and the page it linked to were retired, so the
+  // assertion is now unconditional.
+  it('offers no invite friend entry', async () => {
     const user = userEvent.setup();
-    await renderFooter({ enableBusinessFeatures: false });
+    await renderFooter();
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
 
@@ -263,11 +266,21 @@ describe('Footer help menu tracking', () => {
     );
   }, 20000);
 
+  // Linear's bottom bar puts the agent-panel switch next to the avatar on the
+  // right — that affordance belongs to the main (home) sidebar only.
+  it('shows the agent-panel toggle on the home sidebar but not other panels', async () => {
+    await renderFooter({ homeSidebar: true });
+    expect(screen.getByTestId('toggle-right-panel')).toBeInTheDocument();
+
+    cleanup();
+    await renderFooter({ homeSidebar: false });
+    expect(screen.queryByTestId('toggle-right-panel')).not.toBeInTheDocument();
+  });
+
   it('excludes billboard items from the opened keys to keep per-key CTR aligned', async () => {
     const user = userEvent.setup();
     await renderFooter({
       billboardItems: [{ key: 'billboard-promo', label: 'Promo', onClick: vi.fn() }],
-      enableBusinessFeatures: true,
       homeSidebar: true,
     });
 
@@ -278,7 +291,7 @@ describe('Footer help menu tracking', () => {
     );
     const keys = (openedCall![0].properties.keys as string).split(',');
     // own items are tracked and reported as exposure...
-    expect(keys).toContain('inviteFriend');
+    expect(keys).toContain('docs');
     // ...but billboard items (which emit their own billboard_* events) are not,
     // so their CTR denominator never gets an orphaned exposure.
     expect(keys).not.toContain('billboard-promo');

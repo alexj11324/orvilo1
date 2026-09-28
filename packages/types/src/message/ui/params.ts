@@ -141,7 +141,7 @@ export interface SendMessageParams {
    * spawned server-side via `runTask`) to keep follow-up sends pinned to
    * the gateway path even if the user's global runtime preference is local.
    */
-  forceRuntime?: 'client' | 'gateway' | 'hetero';
+  forceRuntime?: 'gateway' | 'hetero';
   /**
    *
    */

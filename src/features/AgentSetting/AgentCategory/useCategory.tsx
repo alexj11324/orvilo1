@@ -1,6 +1,6 @@
 import { Icon } from '@lobehub/ui';
 import { type MenuItemType } from 'antd/es/menu/interface';
-import { Activity, Bot, Handshake, LinkIcon } from 'lucide-react';
+import { Activity, Bot, Handshake, LinkIcon, NotebookText } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +9,8 @@ import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
+import { useUserStore } from '@/store/user';
+import { labPreferSelectors } from '@/store/user/selectors';
 
 interface UseCategoryOptions {
   mobile?: boolean;
@@ -19,6 +21,7 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
   const iconSize = mobile ? 20 : undefined;
   const isInbox = useAgentStore(builtinAgentSelectors.isInboxAgent);
   const { enableAgentSelfIteration } = useServerConfigStore(featureFlagsSelectors);
+  const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   const cateItems: MenuProps['items'] = useMemo(
     () =>
@@ -33,6 +36,11 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           key: ChatSettingsTabs.Opening,
           label: t('agentTab.opening'),
         }) as MenuItemType,
+        enableSelfLearning && {
+          icon: <Icon icon={NotebookText} size={iconSize} />,
+          key: ChatSettingsTabs.Rules,
+          label: t('agentTab.rules'),
+        },
         enableAgentSelfIteration && {
           icon: <Icon icon={Activity} size={iconSize} />,
           key: ChatSettingsTabs.SelfIteration,
@@ -44,7 +52,7 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           label: t('agentTab.connector', 'Connectors'),
         },
       ].filter(Boolean) as MenuProps['items'],
-    [t, isInbox, iconSize, enableAgentSelfIteration],
+    [t, isInbox, iconSize, enableAgentSelfIteration, enableSelfLearning],
   );
 
   return cateItems;

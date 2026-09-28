@@ -1,4 +1,4 @@
-import { InterventionChecker } from '@orvilo/agent-runtime';
+import { InterventionChecker } from '@orvilo/agent-execution';
 import { WebOnboardingApiName, WebOnboardingManifest } from '@orvilo/builtin-tool-web-onboarding';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

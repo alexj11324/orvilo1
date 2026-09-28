@@ -129,6 +129,7 @@ export interface OrviloUser {
   fullName?: string | null;
   id: string;
   interests?: string[];
+  jobTitle?: string | null;
   latestName?: string | null;
   username?: string | null;
 }
@@ -162,14 +163,6 @@ export const UserLabSchema = z.object({
    */
   enableArtifactDeployment: z.boolean().optional(),
   /**
-   * run Claude Code hetero sessions through the Claude Agent SDK instead of CLI spawn
-   */
-  enableClaudeCodeSdk: z.boolean().optional(),
-  /**
-   * run Codex hetero sessions through codex app-server instead of one-shot CLI spawn
-   */
-  enableCodexAppServer: z.boolean().optional(),
-  /**
    * enable displaying two desktop tabs side by side
    */
   enableDesktopSplitView: z.boolean().optional(),
@@ -184,7 +177,6 @@ export const UserLabSchema = z.object({
   /**
    * enable the iMessage channel (BlueBubbles Desktop bridge)
    */
-  enableImessage: z.boolean().optional(),
   /**
    * enable markdown rendering in chat input editor
    */
@@ -245,6 +237,8 @@ export interface UserPreference {
    * context. Stored as id (not slug) so workspace renames don't invalidate it.
    */
   lastWorkspaceId?: string | null;
+  /** Whether teammates can see this user's pointer and presence on the issue they are viewing. */
+  showInCollaboration?: boolean;
   /**
    * Personal-mode counterpart of
    * {@link WorkspaceUserPreference.sidebarHiddenAgentIds}: agents/chat-groups
@@ -294,6 +288,7 @@ export interface UserInitializationState {
   isFreePlan?: boolean;
   /** @deprecated Use onboarding field instead */
   isOnboard?: boolean;
+  jobTitle?: string | null;
   lastName?: string;
   onboarding?: UserOnboarding;
   preference: UserPreference;
@@ -317,7 +312,7 @@ export const OAuthAccountSchema = z.object({
  */
 export interface SSOProvider {
   email?: string;
-  /** Expiration time - Date for better-auth */
+  /** Expiration time */
   expiresAt?: Date | number | null;
   provider: string;
   providerAccountId: string;
@@ -333,6 +328,7 @@ export const UserPreferenceSchema = z
     lastWorkspaceId: z.string().nullish(),
     sidebarHiddenAgentIds: z.array(z.string()).optional(),
     sidebarHiddenGroupIds: z.array(z.string()).optional(),
+    showInCollaboration: z.boolean().optional(),
     terminalFontFamily: z.string().optional(),
     telemetry: z.boolean().nullable(),
     topicGroupMode: z.enum(['byTime', 'byProject', 'flat', 'byStatus']).optional(),

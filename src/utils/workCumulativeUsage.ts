@@ -1,4 +1,4 @@
-import type { Cost, Usage } from '@orvilo/agent-runtime';
+import type { Cost, Usage } from '@orvilo/agent-execution';
 import type { WorkVersionCumulativeUsage } from '@orvilo/types';
 
 const finiteNumberOrNull = (value: unknown): number | null =>

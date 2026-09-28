@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiAgentService } from '../index';
 
 const {
+  mockDispatchHeteroAgent,
   mockGetLatestNonToolMessageId,
   mockGetLatestSpineMessageId,
   mockMessageCreate,
   mockReleaseReservation,
   mockTryReserve,
 } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
   mockGetLatestNonToolMessageId: vi.fn(),
   mockGetLatestSpineMessageId: vi.fn(),
   mockMessageCreate: vi.fn(),
@@ -81,6 +83,7 @@ vi.mock('@/database/models/plugin', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(undefined),
       releaseTaskCallbackReservation: mockReleaseReservation,
@@ -109,7 +112,7 @@ vi.mock('@/database/models/chatGroup', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -120,6 +123,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
       }),
     };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// these tests exercise spine anchoring without touching the gateway.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/server/services/market', () => ({
@@ -162,7 +171,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 vi.mock('model-bank', async (importOriginal) => {
@@ -203,6 +212,12 @@ describe('AiAgentService.execAgent - user turn spine anchoring', () => {
     mockGetLatestNonToolMessageId.mockResolvedValue(undefined);
     mockTryReserve.mockResolvedValue(true);
     mockReleaseReservation.mockResolvedValue(undefined);
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
 
     service = new AiAgentService(mockDb, 'test-user-id');
   });

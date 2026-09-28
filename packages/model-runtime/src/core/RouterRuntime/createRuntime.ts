@@ -23,18 +23,10 @@ import type {
   ChatMethodOptions,
   ChatStreamCallbacks,
   ChatStreamPayload,
-  CreateImageMethodOptions,
-  CreateImagePayload,
-  CreateImageResponse,
-  CreateVideoMethodOptions,
-  CreateVideoPayload,
-  CreateVideoResponse,
   EmbeddingsOptions,
   EmbeddingsPayload,
   GenerateObjectOptions,
   GenerateObjectPayload,
-  HandleCreateVideoWebhookPayload,
-  HandleCreateVideoWebhookResult,
   IOrviloAgentRuntimeErrorType,
   TextToSpeechPayload,
 } from '../../types';
@@ -48,11 +40,7 @@ import { postProcessModelList } from '../../utils/postProcessModelList';
 import { safeParseJSON } from '../../utils/safeParseJSON';
 import { setRuntimeSignatureScopeSource } from '../../utils/signatureScope';
 import type { OrviloRuntimeAI } from '../BaseAI';
-import type {
-  CreateImageOptions,
-  CreateVideoOptions,
-  CustomClientOptions,
-} from '../openaiCompatibleFactory';
+import type { CustomClientOptions } from '../openaiCompatibleFactory';
 import type { ApiType, RuntimeClass } from './apiTypes';
 
 const log = debug('orvilo-model-runtime:router-runtime');
@@ -189,14 +177,6 @@ export interface CreateRouterRuntimeOptions<T extends Record<string, any> = any>
     noUserId?: boolean;
   };
   constructorOptions?: ConstructorOptions<T>;
-  createImage?: (
-    payload: CreateImagePayload,
-    options: CreateImageOptions,
-  ) => Promise<CreateImageResponse>;
-  createVideo?: (
-    payload: CreateVideoPayload,
-    options: CreateVideoOptions,
-  ) => Promise<CreateVideoResponse>;
   customClient?: CustomClientOptions<T>;
   debug?: {
     chatCompletion: () => boolean;
@@ -207,10 +187,6 @@ export interface CreateRouterRuntimeOptions<T extends Record<string, any> = any>
     bizError: IOrviloAgentRuntimeErrorType;
     invalidAPIKey: IOrviloAgentRuntimeErrorType;
   };
-  handleCreateVideoWebhook?: (
-    payload: HandleCreateVideoWebhookPayload,
-    options: CreateVideoOptions,
-  ) => Promise<HandleCreateVideoWebhookResult>;
   id: string;
   models?:
     | ((params: { client: OpenAI; options?: ConstructorOptions<T> }) => Promise<ChatModelCard[]>)
@@ -915,46 +891,6 @@ export const createRouterRuntime = ({
 
         throw e;
       }
-    }
-
-    async createImage(payload: CreateImagePayload, options?: CreateImageMethodOptions) {
-      return this.runWithFallback(
-        payload.model,
-        (runtime) => runtime.createImage!(payload, options),
-        { metadata: options?.metadata, pricingContext: options?.pricingContext },
-      );
-    }
-
-    async createVideo(payload: CreateVideoPayload, options?: CreateVideoMethodOptions) {
-      return this.runWithFallback(
-        payload.model,
-        (runtime) => runtime.createVideo!(payload, options),
-        { metadata: options?.metadata, pricingContext: options?.pricingContext },
-      );
-    }
-
-    async handlePollVideoStatus(inferenceId: string) {
-      const resolvedRouters = await this.resolveRouters();
-      const matchedRouter = this._options.baseURL
-        ? (resolvedRouters.find((router) => router.baseURLPattern?.test(this._options.baseURL!)) ??
-          resolvedRouters.at(-1)!)
-        : resolvedRouters.at(-1)!;
-      const routerOptions = this.normalizeRouterOptions(matchedRouter);
-      const { runtime } = await this.createRuntimeFromOption(matchedRouter, routerOptions[0]);
-
-      if (!runtime.handlePollVideoStatus) {
-        throw new Error('Video polling is not supported by the matched runtime');
-      }
-
-      return runtime.handlePollVideoStatus(inferenceId);
-    }
-
-    async handleCreateVideoWebhook(payload: HandleCreateVideoWebhookPayload) {
-      const model = (payload.body as any)?.model;
-      const resolvedRouters = await this.resolveRouters({ model });
-      const routerOptions = this.normalizeRouterOptions(resolvedRouters[0]);
-      const { runtime } = await this.createRuntimeFromOption(resolvedRouters[0], routerOptions[0]);
-      return runtime.handleCreateVideoWebhook!(payload);
     }
 
     async generateObject(payload: GenerateObjectPayload, options?: GenerateObjectOptions) {

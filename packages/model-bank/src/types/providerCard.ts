@@ -1,4 +1,3 @@
-import type { ModelParamsSchema } from '../standard-parameters';
 import type { AiModelSettings, AiModelType, Pricing } from './aiModel';
 import type { AiProviderSettings } from './aiProvider';
 
@@ -44,7 +43,6 @@ export interface ChatModelCard {
    */
   legacy?: boolean;
   maxOutput?: number;
-  parameters?: ModelParamsSchema;
 
   pricing?: Pricing;
 

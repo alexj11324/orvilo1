@@ -1,19 +1,19 @@
 'use client';
 
-import { Flexbox, Icon, NeuralNetworkLoading, ScrollShadow, SearchBar } from '@lobehub/ui';
-import { Button, Checkbox, Text, useModalContext } from '@lobehub/ui/base-ui';
+import { Flexbox, Icon, ScrollShadow, SearchBar } from '@lobehub/ui';
+import { Button, Checkbox, Progress, Text, useModalContext } from '@lobehub/ui/base-ui';
 import type {
   HeteroSessionDigest,
   HeteroSessionDirGroup,
   HeteroSessionDirPref,
   HeteroSessionImportStatus,
 } from '@orvilo/types';
-import { Progress } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { Check, FolderSearch, TriangleAlert, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { electronHeteroSessionService } from '@/services/electron/heteroSession';
 import { topicService } from '@/services/topic';
 import { useChatStore } from '@/store/chat';

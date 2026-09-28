@@ -9,8 +9,9 @@
  * spawns (`lh`, a script, a test harness), and each one can attribute its output
  * back to this topic without the agent having to pass ids it cannot see.
  *
- * Read by `lh verify ingest-report`, which stamps them onto the report's
- * `metadata.origin`.
+ * Read by the CLI commands that attribute their output back to this topic —
+ * `lh notify`, `lh doc`, `lh goal` and `lh verify plan state` all resolve the
+ * conversation from these instead of asking the agent for ids it cannot see.
  */
 export interface OrviloSessionEnvIds {
   agentId?: string | null;

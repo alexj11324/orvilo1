@@ -34,14 +34,29 @@ export interface MessageActionItem extends ActionIconGroupItemType {
 export type MessageActionItemOrDivider = MessageActionItem | { type: 'divider' };
 
 /**
- * Action slot reference. A registered action key (e.g. `'copy'`) or the
- * reserved `'divider'` literal.
+ * A submenu slot: one menu entry that opens a nested list of actions. The
+ * `key` names the registered action supplying the label/icon and `children`
+ * lists the action keys nested under it. Structurally identical to the
+ * `MessageActionGroupSlot` the action bar resolves at render time — declared
+ * here so route-layer `useActionsBarConfig` menus can keep submenu groups
+ * when they override a role's default menu.
+ */
+export interface MessageActionGroupSlot {
+  /** Action keys to nest, in order. */
+  children: string[];
+  /** Registry key of the action that provides the submenu's label and icon. */
+  key: string;
+}
+
+/**
+ * Action slot reference. A registered action key (e.g. `'copy'`), the
+ * reserved `'divider'` literal, or a submenu group slot.
  *
  * Uses declarative keys rather than pre-built items so per-message action
  * construction stays lazy and per-session/role config lives at the route
  * layer (see `useActionsBarConfig`).
  */
-export type MessageActionSlot = string;
+export type MessageActionSlot = string | MessageActionGroupSlot;
 
 /**
  * Action configuration for a specific message type. Lists of registered

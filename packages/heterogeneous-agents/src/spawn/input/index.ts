@@ -12,11 +12,7 @@ export {
   type HeteroExecImageRef,
 } from '../../protocol';
 export {
-  type AgentInputPlan,
-  buildAgentInput,
   type BuildAgentInputOptions,
-} from './buildAgentInput';
-export {
   materializeImageToPath,
   type NormalizedImage,
   normalizeImage,

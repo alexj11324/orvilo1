@@ -138,8 +138,13 @@ jobs:
 
           A version, not a deployment: it takes no production traffic. Assets are served
           from that same origin, so the page also renders through the gateway — point
-          \`workbench\`'s override at that host on staging in 鳥居番, then open
-          <https://gateway-staging.aspectlylabs.com/acceptance>."
+          \`workbench\`'s override at that host on staging in 鳥居番, then open an
+          agent-document path (\`/agent/<aid>/docs/<docId>\`) on that host.
+
+          The standalone acceptance / verify trees this preview used to be checked
+          through were retired, so there is no \`/acceptance\` entry point to open any
+          more; the workbench now serves the agent-document reader and its exit
+          redirects."
           id=$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
             --jq "map(select(.body | startswith(\"${marker}\"))) | .[0].id // empty")
           if [ -n "$id" ]; then

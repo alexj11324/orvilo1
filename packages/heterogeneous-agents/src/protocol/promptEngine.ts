@@ -32,8 +32,9 @@ const defaultContextProviders = [topicReferenceGuidanceProvider];
 
 /**
  * Builds the semantic prompt shared by every heterogeneous-agent transport.
- * Providers add Orvilo context before the user message; CLI-specific wire
- * serialization remains the responsibility of `buildAgentInput`.
+ * Providers add Orvilo context before the user message; per-agent wire
+ * serialization (ACP prompt blocks, exec stdin payloads) lives under
+ * `./spawn` / `execStdinPayload`.
  */
 export class HeterogeneousPromptEngine {
   constructor(

@@ -4,7 +4,6 @@ import type { PartialDeep } from 'type-fest';
 import type {
   GlobalLLMProviderKey,
   UserDefaultAgent,
-  UserImageConfig,
   UserServiceModelConfig,
 } from './user/settings';
 
@@ -26,6 +25,11 @@ export type IFeatureFlagsState = {
    */
   enableAgentShare: boolean | undefined;
   enableAuthCaptcha: boolean | undefined;
+  /**
+   * CAID rollout admission: user-level half of `caid_dispatch`. Workspace-granted
+   * admission does not reflect here; server gates the actual dispatch decision.
+   */
+  enableCaidDispatch: boolean | undefined;
   enableCheckUpdates: boolean | undefined;
   enableDevDock: boolean | undefined;
   enableKnowledgeBase: boolean | undefined;
@@ -38,7 +42,6 @@ export type IFeatureFlagsState = {
   hideDocs: boolean | undefined;
   hideGitHub: boolean | undefined;
   isAgentEditable: boolean | undefined;
-  showAiImage: boolean | undefined;
   showApiKeyManage: boolean | undefined;
   showChangelog: boolean | undefined;
   showCloudPromotion: boolean | undefined;
@@ -98,6 +101,12 @@ export interface GlobalServerConfig {
    */
   agentGatewayUrl?: string;
   aiProvider: ServerLanguageModel;
+  /**
+   * Accounts portal origin (`https://accounts.aspectlylabs.com`). The app's
+   * sign-in surface redirects there; the portal owns the Clerk session and
+   * calls back `/api/auth/clerk` to mint the `orvilo_auth` cookie.
+   */
+  authAccountsUrl?: string;
   defaultAgent?: PartialDeep<UserDefaultAgent>;
   disableEmailPassword?: boolean;
   enableBusinessFeatures?: boolean;
@@ -116,10 +125,9 @@ export interface GlobalServerConfig {
   enableMultimodalUnderstanding?: boolean;
   enableOrviloSkill?: boolean;
   enableUploadFileToServer?: boolean;
-  image?: PartialDeep<UserImageConfig>;
   memory?: GlobalMemoryConfig;
   multimodalUnderstanding?: MultimodalUnderstandingConfig;
-  oAuthSSOProviders?: string[];
+
   systemAgent?: PartialDeep<UserServiceModelConfig>;
   telemetry: {
     langfuse?: boolean;

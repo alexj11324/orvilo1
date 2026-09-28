@@ -83,7 +83,7 @@ export function generateRootManPage(program: Command, version: string) {
     ...formatSynopsisLines(),
     '.SH DESCRIPTION',
     escapeRoff(
-      `${program.name()} is the command-line interface for ${CLI_PRODUCT_NAME}. It provides authentication, device gateway connectivity, content generation, resource search, and management commands for agents, files, models, providers, plugins, knowledge bases, threads, topics, and related resources.`,
+      `${program.name()} is the command-line interface for ${CLI_PRODUCT_NAME}. It provides authentication, device gateway connectivity, content generation, resource search, and management commands for agents, files, plugins, knowledge bases, threads, topics, and related resources.`,
     ),
     '.PP',
     'For command-specific manuals, use the built-in manual command:',

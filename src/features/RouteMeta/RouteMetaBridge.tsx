@@ -53,7 +53,9 @@ const translateTitleKey = (titleKey: string | undefined, translate: Translate) =
 };
 
 const RouteMetaBridge = memo(() => {
-  const { t } = useTranslation('electron');
+  // Route titleKeys live in either `electron` (navigation.*) or `common`
+  // (tab.*, navPanel.*) — bind both so either resolves.
+  const { t } = useTranslation(['electron', 'common']);
   const location = useLocation();
   const setCurrentRouteMeta = useElectronStore((s) => s.setCurrentRouteMeta);
   const matched = useMatchedRouteMeta();

@@ -119,6 +119,10 @@ export class UserService {
     return lambdaClient.user.updateFullName.mutate(fullName);
   };
 
+  updateJobTitle = async (jobTitle: string) => {
+    return lambdaClient.user.updateJobTitle.mutate(jobTitle);
+  };
+
   updateUsername = async (username: string) => {
     return lambdaClient.user.updateUsername.mutate(username);
   };

@@ -1,94 +1,68 @@
 // @vitest-environment node
-import { TRPCError } from '@trpc/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   businessConst: { ENABLE_BUSINESS_FEATURES: true },
-  getFlags: vi.fn(),
 }));
 
 vi.mock('@orvilo/business-const', () => mocks.businessConst);
-vi.mock('@/server/featureFlags', () => ({
-  getServerFeatureFlagsStateFromRuntimeConfig: mocks.getFlags,
-}));
 
-const { assertAgentShareCreationEnabled, assertAgentShareVisitorEnabled } =
-  await import('../agentShareFeatureGate');
+const {
+  assertAgentShareCreationEnabled,
+  assertAgentShareVisitorEnabled,
+  assertAgentShareVisitorExecutionEnabled,
+} = await import('../agentShareFeatureGate');
 
-describe('assertAgentShareCreationEnabled', () => {
-  beforeEach(() => {
+/**
+ * Publishing and running shared agents are retired. These gates sit on the two
+ * capabilities that are gone, so the assertions are deliberately about refusal
+ * being unconditional: the previous cases here covered a rollout flag granting
+ * access, and a flag-driven path is exactly what the retirement must not leave
+ * behind for an old client or a still-valid visitor token to reach.
+ */
+describe('retired capabilities', () => {
+  it('refuses publishing regardless of deployment or account', async () => {
     mocks.businessConst.ENABLE_BUSINESS_FEATURES = true;
-    mocks.getFlags.mockReset();
+
+    expect(() => assertAgentShareCreationEnabled()).toThrow(
+      expect.objectContaining({ code: 'FORBIDDEN' }),
+    );
   });
 
-  it('rejects on deployments without business features regardless of flags', async () => {
+  it('refuses publishing even where the deployment supports sharing', async () => {
     mocks.businessConst.ENABLE_BUSINESS_FEATURES = false;
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: true });
 
-    await expect(assertAgentShareCreationEnabled('user-1')).rejects.toMatchObject({
-      code: 'FORBIDDEN',
-    });
-    // The compile-time gate short-circuits: a self-hosted deployment cannot
-    // reach the flag evaluation at all, even with FEATURE_FLAGS=+agent_share.
-    expect(mocks.getFlags).not.toHaveBeenCalled();
+    expect(() => assertAgentShareCreationEnabled()).toThrow(
+      expect.objectContaining({ code: 'FORBIDDEN' }),
+    );
   });
 
-  it('rejects users outside the grayscale whitelist', async () => {
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: false });
-
-    await expect(assertAgentShareCreationEnabled('user-1')).rejects.toBeInstanceOf(TRPCError);
-    expect(mocks.getFlags).toHaveBeenCalledWith('user-1');
-  });
-
-  it('fails closed when the flag is unconfigured', async () => {
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: undefined });
-
-    await expect(assertAgentShareCreationEnabled('user-1')).rejects.toMatchObject({
-      code: 'FORBIDDEN',
-    });
-  });
-
-  it('admits whitelisted users', async () => {
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: true });
-
-    await expect(assertAgentShareCreationEnabled('user-1')).resolves.toBeUndefined();
+  it('refuses starting a visitor run', () => {
+    expect(() => assertAgentShareVisitorExecutionEnabled()).toThrow(
+      expect.objectContaining({ code: 'FORBIDDEN' }),
+    );
   });
 });
 
+/**
+ * Visitor access to an EXISTING share is not retired: owners still review and
+ * revoke, an old link still resolves so it can explain itself, and an in-flight
+ * run can still be interrupted. That is why this gate keeps its original
+ * deployment-only behaviour rather than refusing outright.
+ */
 describe('assertAgentShareVisitorEnabled', () => {
-  beforeEach(() => {
-    mocks.businessConst.ENABLE_BUSINESS_FEATURES = true;
-    mocks.getFlags.mockReset();
-  });
-
-  it('rejects on deployments without business features regardless of flags', async () => {
+  it('rejects on deployments without business features', () => {
     mocks.businessConst.ENABLE_BUSINESS_FEATURES = false;
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: true });
 
     expect(() => assertAgentShareVisitorEnabled()).toThrow(
       expect.objectContaining({
         code: 'FORBIDDEN',
       }),
     );
-    expect(mocks.getFlags).not.toHaveBeenCalled();
   });
 
-  it('admits visitors outside the grayscale whitelist', async () => {
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: false });
-
-    expect(() => assertAgentShareVisitorEnabled()).not.toThrow();
-    expect(mocks.getFlags).not.toHaveBeenCalled();
-  });
-
-  it('admits visitors when the flag is unconfigured', async () => {
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: undefined });
-
-    expect(() => assertAgentShareVisitorEnabled()).not.toThrow();
-    expect(mocks.getFlags).not.toHaveBeenCalled();
-  });
-
-  it('admits whitelisted visitors', async () => {
-    mocks.getFlags.mockResolvedValue({ enableAgentShare: true });
+  it('admits reads on a deployment that supports sharing', () => {
+    mocks.businessConst.ENABLE_BUSINESS_FEATURES = true;
 
     expect(() => assertAgentShareVisitorEnabled()).not.toThrow();
   });

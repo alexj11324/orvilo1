@@ -75,6 +75,7 @@ const createAcpProcess = ({
   child.stderr = stderr;
   child.kill = vi.fn(() => {
     child.killed = true;
+    queueMicrotask(() => child.emit('close', null, 'SIGTERM'));
     return true;
   });
   child.stdin = {
@@ -476,7 +477,7 @@ describe('GrokAcpSession', () => {
       expect(requests.some(({ method }) => method === 'session/prompt')).toBe(true);
     });
 
-    session.interrupt();
+    void session.interrupt();
     await run;
 
     const cancel = requests.find(({ method }) => method === 'session/cancel');

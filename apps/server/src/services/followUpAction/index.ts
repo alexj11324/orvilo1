@@ -8,9 +8,11 @@ import {
 import type { FollowUpChip, FollowUpExtractInput, FollowUpExtractResult } from '@orvilo/types';
 import debug from 'debug';
 
+import { TopicModel } from '@/database/models/topic';
 import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorMessage } from '@/database/utils/shareVisitor';
 import { AiGenerationService } from '@/server/services/aiGeneration';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { RawResponseSchema } from './schema';
 
@@ -67,6 +69,8 @@ export class FollowUpActionService {
 
     const chain = chainFollowUpAction({ assistantText: text, hint });
     const { model, provider } = modelConfig;
+    // The chip judgment binds to the agent that owns this topic.
+    const topic = await new TopicModel(this.db, this.userId, this.workspaceId).findById(topicId);
 
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     let raw: unknown;
@@ -79,6 +83,11 @@ export class FollowUpActionService {
           schema: FOLLOW_UP_JSON_SCHEMA,
         },
         {
+          judgment: {
+            binding: { agentId: topic?.agentId },
+            purpose: 'followUp.extract',
+          },
+          kind: 'judgment',
           metadata: { topicId },
           tracing: {
             promptVersion: FOLLOW_UP_PROMPT_VERSION,
@@ -89,6 +98,9 @@ export class FollowUpActionService {
         },
       );
     } catch (error) {
+      // A missing authorized binding is an explicit block — surface it to the
+      // caller rather than silently degrading to empty chips.
+      if (isAcpJudgmentBindingError(error)) throw error;
       log('LLM call failed: %O', error);
       return EMPTY_RESULT(row.id);
     }

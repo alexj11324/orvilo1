@@ -4,6 +4,13 @@ import pc from 'picocolors';
 import { getTrpcClient } from '../api/client';
 import { log } from '../utils/logger';
 
+// The dispatched run's admission fence rides in via `ORVILO_RUN_GENERATION`;
+// echoing it lets the server drop stale-generation notify callbacks.
+const parseRunGenerationEnv = (): number | undefined => {
+  const parsed = Number.parseInt(process.env.ORVILO_RUN_GENERATION ?? '', 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
 export function registerNotifyCommand(program: Command) {
   program
     .command('notify')
@@ -55,6 +62,7 @@ export function registerNotifyCommand(program: Command) {
             messageId: options.messageId,
             operationId: process.env.ORVILO_OPERATION_ID,
             role: options.role,
+            runGeneration: parseRunGenerationEnv(),
             threadId: options.threadId,
             topicId: options.topic,
           });

@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import { isProgrammaticTestCheck } from '@orvilo/const/verify';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
@@ -98,6 +99,8 @@ export class GoalCriteriaGeneratorService {
   ) {}
 
   async generate(params: {
+    /** Goal's coordinator agent — the authorized ACP binding, when known. */
+    agentId?: string | null;
     context?: string;
     goal: string;
     maxCriteria?: number;
@@ -108,6 +111,8 @@ export class GoalCriteriaGeneratorService {
   }
 
   async generatePlan(params: {
+    /** Goal's coordinator agent — the authorized ACP binding, when known. */
+    agentId?: string | null;
     context?: string;
     goal: string;
     maxCriteria?: number;
@@ -123,6 +128,16 @@ export class GoalCriteriaGeneratorService {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          binding: {
+            agentId: params.agentId,
+            // Acceptance criteria are the verify agent's domain; it is the
+            // standing builtin binding when the goal has no coordinator yet.
+            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+          },
+          purpose: 'goal.criteriaDraft',
+        },
+        kind: 'judgment',
         metadata: { trigger: 'goal_criteria_draft' },
         tracing: {
           promptVersion: GOAL_CRITERIA_DRAFT_PROMPT_VERSION,
@@ -151,7 +166,11 @@ export class GoalCriteriaGeneratorService {
    * any model/schema failure so the coordinator can fall back to a single
    * task seeded from the raw requirement instead of stalling the goal.
    */
-  async decompose(params: { requirement: string }): Promise<GoalDecompositionDraft | undefined> {
+  async decompose(params: {
+    /** The goal's coordinator agent — the authorized ACP judgment binding. */
+    agentId?: string | null;
+    requirement: string;
+  }): Promise<GoalDecompositionDraft | undefined> {
     const modelConfig = await resolveGoalModelConfig(this.db, this.userId);
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
@@ -162,6 +181,11 @@ export class GoalCriteriaGeneratorService {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          binding: { agentId: params.agentId },
+          purpose: 'goal.decompose',
+        },
+        kind: 'judgment',
         metadata: { trigger: 'goal_decompose' },
         tracing: {
           promptVersion: GOAL_DECOMPOSE_PROMPT_VERSION,

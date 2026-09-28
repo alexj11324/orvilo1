@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentEvalRunModel, AgentEvalRunTopicModel } from '@/database/models/agentEval';
 import { topics } from '@/database/schemas';
 import { AgentEvalRunService } from '@/server/services/agentEvalRun';
-import { AgentRuntimeService } from '@/server/services/agentRuntime/AgentRuntimeService';
+import { AgentRuntimeService } from '@/server/services/agentExecution/AgentRuntimeService';
 
 import { cleanupDB, serverDB, setupEvalChain, setupMultiCaseRun, userId } from './_setup';
 
-vi.mock('@/server/services/agentRuntime/AgentRuntimeService', () => ({
+vi.mock('@/server/services/agentExecution/AgentRuntimeService', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       interruptOperation: vi.fn().mockResolvedValue(true),

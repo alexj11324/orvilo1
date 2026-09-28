@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
     activeTaskId: 'T-1' as string | undefined,
     taskDetailMap: {
       'T-1': { agentId: 'agt_1', name: 'Ship the thing' },
-    } as Record<string, { agentId?: string | null; name?: string | null }>,
+    } as Record<string, Record<string, unknown>>,
   },
   toastSuccess: vi.fn(),
   workspaceSlug: 'ws-slug' as string | undefined,
@@ -89,5 +89,28 @@ describe('useTaskCopyActions', () => {
 
     expect(mocks.copyToClipboard).not.toHaveBeenCalled();
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('copies the `task/<identifier>` branch only when the task is workspace-bound', async () => {
+    // No workspace binding → no branch exists, so the action must not surface.
+    const plain = renderHook(() => useTaskCopyActions());
+    expect(plain.result.current.hasBranch).toBe(false);
+    await plain.result.current.copyBranch();
+    expect(mocks.copyToClipboard).not.toHaveBeenCalled();
+    plain.unmount();
+
+    mocks.taskState.taskDetailMap = {
+      'T-1': {
+        agentId: 'agt_1',
+        config: { workspace: { provider: 'git', repoPath: '/repo' } },
+        identifier: 'T-1',
+        name: 'Ship the thing',
+      },
+    };
+    const bound = renderHook(() => useTaskCopyActions());
+    expect(bound.result.current.hasBranch).toBe(true);
+    await bound.result.current.copyBranch();
+    expect(mocks.copyToClipboard).toHaveBeenCalledWith('task/T-1');
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('taskDetail.copyBranchSuccess');
   });
 });

@@ -25,12 +25,8 @@ const {
   mockValidateOIDCJWT: vi.fn(),
 }));
 
-vi.mock('@/auth', () => ({
-  auth: {
-    api: {
-      getSession: mockGetSession,
-    },
-  },
+vi.mock('@/server/services/auth', () => ({
+  resolveAuthSessionFromHeaders: mockGetSession,
 }));
 
 vi.mock('@/database/core/db-adaptor', () => ({
@@ -207,7 +203,7 @@ describe('createLambdaContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExtractTraceContext.mockReturnValue(undefined);
-    mockGetSession.mockResolvedValue({ user: { id: 'session-user' } });
+    mockGetSession.mockResolvedValue({ userId: 'session-user' });
     mockAssertOIDCUserActive.mockResolvedValue(undefined);
     mockIsOIDCUserInactiveError.mockReturnValue(false);
     mockValidateOIDCJWT.mockResolvedValue({

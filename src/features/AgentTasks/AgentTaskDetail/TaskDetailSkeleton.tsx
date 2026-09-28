@@ -6,9 +6,10 @@ import { memo } from 'react';
 
 import SkeletonBar from '@/components/Skeleton/Bar';
 import NavHeader from '@/features/NavHeader';
-import WideScreenContainer from '@/features/WideScreenContainer';
+import { WorkSurface, WorkSurfaceDocument } from '@/features/WorkSurface';
 import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 
+import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import { taskDetailLayoutStyles as layout } from './taskDetailLayoutStyles';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -70,34 +71,36 @@ const TaskDetailBodySkeleton = () => (
           ))}
         </div>
       </div>
-    </div>
 
-    <Flexbox gap={24} style={{ paddingBottom: 120 }}>
-      <Flexbox gap={12}>
-        <SkeletonBar height={14} width={'94%'} />
-        <SkeletonBar height={14} width={'88%'} />
-        <SkeletonBar height={14} width={'72%'} />
-      </Flexbox>
-
-      <Flexbox gap={12}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <SkeletonBar height={16} radius={'50%'} width={16} />
-          <SkeletonBar height={18} width={112} />
+      {/* Same grid child as the real body column — the skeleton mirrors the
+          two-column layout instead of painting a full-width block. */}
+      <Flexbox className={layout.body} gap={24}>
+        <Flexbox gap={12}>
+          <SkeletonBar height={14} width={'94%'} />
+          <SkeletonBar height={14} width={'88%'} />
+          <SkeletonBar height={14} width={'72%'} />
         </Flexbox>
-        <Flexbox className={styles.acceptance}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Flexbox key={index}>
-              {index > 0 && <div className={styles.divider} />}
-              <Flexbox horizontal align={'center'} gap={10} padding={'12px'}>
-                <SkeletonBar height={16} radius={'50%'} width={16} />
-                <SkeletonBar height={12} width={24} />
-                <SkeletonBar height={14} width={`${58 + index * 9}%`} />
+
+        <Flexbox gap={12}>
+          <Flexbox horizontal align={'center'} gap={8}>
+            <SkeletonBar height={16} radius={'50%'} width={16} />
+            <SkeletonBar height={18} width={112} />
+          </Flexbox>
+          <Flexbox className={styles.acceptance}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Flexbox key={index}>
+                {index > 0 && <div className={styles.divider} />}
+                <Flexbox horizontal align={'center'} gap={10} padding={'12px'}>
+                  <SkeletonBar height={16} radius={'50%'} width={16} />
+                  <SkeletonBar height={12} width={24} />
+                  <SkeletonBar height={14} width={`${58 + index * 9}%`} />
+                </Flexbox>
               </Flexbox>
-            </Flexbox>
-          ))}
+            ))}
+          </Flexbox>
         </Flexbox>
       </Flexbox>
-    </Flexbox>
+    </div>
   </Flexbox>
 );
 
@@ -105,14 +108,12 @@ const TaskDetailSkeleton = memo<RouteSkeletonProps>(({ chrome = 'page' }) =>
   chrome === 'body' ? (
     <TaskDetailBodySkeleton />
   ) : (
-    <Flexbox flex={1} height={'100%'}>
+    <WorkSurface>
       <NavHeader />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer>
-          <TaskDetailBodySkeleton />
-        </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
+        <TaskDetailBodySkeleton />
+      </WorkSurfaceDocument>
+    </WorkSurface>
   ),
 );
 

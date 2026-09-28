@@ -27,8 +27,8 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 /**
- * 一个方向的全部经验 —— 画像上的习惯清单会把「已养成」折起来；这里是完整的、不折叠的清单，
- * 供想逐条过一遍的人用。数据和画像同源（同一份 overview），所以两边看到的可靠度一致。
+ * 一个方向的全部规则。数据与概览页同源（同一份 overview），只是把范围收窄到一个方向并去掉
+ * 搜索框旁边的「全部」链接 —— 这里就是那个「全部」。
  */
 const ExperienceList = memo(() => {
   const { t } = useTranslation('selfLearning');
@@ -103,7 +103,6 @@ const ExperienceList = memo(() => {
                   />
                 ) : (
                   <HabitList
-                    defaultStableOpen
                     agentId={activeAgentId}
                     habits={habits}
                     onChanged={() => void mutate()}

@@ -1036,33 +1036,6 @@ export class TopicModel {
     }));
   };
 
-  /**
-   * Recent topics from the same IM channel, most-recent first. Matches the
-   * channel via the `metadata.bot.platformThreadId` path written at topic
-   * creation (see `ChatTopicBotContext`). Used to pre-inject cross-session
-   * history on platforms that can't read chat history at runtime (e.g. WeChat,
-   * whose `readMessages` throws), so a fresh topic still knows what the channel
-   * was just talking about.
-   */
-  findRecentByBotThread = async (
-    platformThreadId: string,
-    { limit = 3 }: { limit?: number } = {},
-  ): Promise<TopicItem[]> => {
-    if (!platformThreadId) return [];
-
-    return this.db
-      .select()
-      .from(topics)
-      .where(
-        and(
-          this.ownership(),
-          sql`${topics.metadata} -> 'bot' ->> 'platformThreadId' = ${platformThreadId}`,
-        ),
-      )
-      .orderBy(desc(topics.updatedAt))
-      .limit(limit);
-  };
-
   queryByKeyword = async (
     keyword: string,
     scope?: string | null | TopicKeywordScope,
@@ -2644,32 +2617,6 @@ export class TopicModel {
       );
 
     return result[0]?.total ?? 0;
-  };
-
-  /**
-   * Resets the memory-extraction state of all the caller's topics back to
-   * `pending`, clearing any previous run summary. Used by "purge all
-   * memories": after memories are deleted, topics keep `userMemoryExtractStatus =
-   * 'completed'`, so `isTopicExtracted()` skips them forever and nothing can
-   * ever be re-extracted. Resetting to `pending` makes the next memory
-   * analysis re-process them. Fixes #18498.
-   *
-   * Scoped by `userId` only (not `mine()`): `deleteAll` removes every memory
-   * belonging to the caller regardless of workspace scope, so the reset must
-   * cover topics across personal and all workspace scopes alike, otherwise
-   * topics in the other scope keep `completed` and stay stuck behind the
-   * extraction skip gate.
-   */
-  resetMemoryExtractStatus = async () => {
-    return this.db
-      .update(topics)
-      .set({
-        metadata: sql`jsonb_set(
-          jsonb_set(${topics.metadata}, '{userMemoryExtractStatus}', to_jsonb('pending'::text), true),
-          '{userMemoryExtractRunState}', '{}'::jsonb, true
-        )`,
-      })
-      .where(eq(topics.userId, this.userId));
   };
 
   // **************** Scheduled run (backend cron) *************** //

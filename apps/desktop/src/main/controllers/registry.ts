@@ -3,7 +3,6 @@ import type { CreateServicesResult, IpcServiceConstructor, MergeIpcService } fro
 import AuthCtr from './AuthCtr';
 import AuvCtr from './AuvCtr';
 import BinaryCtr from './BinaryCtr';
-import BrowserControlCtr from './BrowserControlCtr';
 import BrowserSidebarCtr from './BrowserSidebarCtr';
 import BrowserWindowsCtr from './BrowserWindowsCtr';
 import CliCtr from './CliCtr';
@@ -12,7 +11,6 @@ import DevtoolsCtr from './DevtoolsCtr';
 import GatewayConnectionCtr from './GatewayConnectionCtr';
 import GitCtr from './GitCtr';
 import HeterogeneousAgentCtr from './HeterogeneousAgentCtr';
-import ImessageBridgeCtr from './ImessageBridgeCtr';
 import LocalDatabaseCtr from './LocalDatabaseCtr';
 import LocalFileCtr from './LocalFileCtr';
 import McpCtr from './McpCtr';
@@ -38,7 +36,6 @@ export const controllerIpcConstructors = [
   HeterogeneousAgentCtr,
   AuthCtr,
   AuvCtr,
-  BrowserControlCtr,
   BrowserSidebarCtr,
   BrowserWindowsCtr,
   CliCtr,
@@ -48,7 +45,6 @@ export const controllerIpcConstructors = [
   GitCtr,
   LocalDatabaseCtr,
   LocalFileCtr,
-  ImessageBridgeCtr,
   McpCtr,
   McpInstallCtr,
   MenuController,

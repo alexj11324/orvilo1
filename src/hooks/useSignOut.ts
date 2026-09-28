@@ -1,8 +1,6 @@
 import { useCallback } from 'react';
 
 import { isDesktop } from '@/const/version';
-import { navigateToDesktopOnboarding } from '@/features/DesktopOnboarding/navigation';
-import { DesktopOnboardingScreen } from '@/features/DesktopOnboarding/types';
 import { useUserStore } from '@/store/user';
 
 export const useSignOut = () => {
@@ -23,7 +21,9 @@ export const useSignOut = () => {
       console.error(error);
     } finally {
       signOut();
-      navigateToDesktopOnboarding(DesktopOnboardingScreen.Login);
+      // The unified onboarding owns the signed-out journey on every client;
+      // its desktop auth gate restarts the system-browser OIDC round trip.
+      location.href = '/onboarding';
     }
   }, [signOut]);
 };

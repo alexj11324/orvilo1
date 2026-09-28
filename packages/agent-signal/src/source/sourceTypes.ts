@@ -9,7 +9,6 @@ export const AGENT_SIGNAL_SOURCE_TYPES = {
   agentSelfFeedbackIntentDeclared: 'agent.self_feedback_intent.declared',
   agentSelfReflectionRequested: 'agent.self_reflection.requested',
   agentUserMessage: 'agent.user.message',
-  botMessageMerged: 'bot.message.merged',
   clientGatewayError: 'client.gateway.error',
   clientGatewayRuntimeEnd: 'client.gateway.runtime_end',
   clientGatewayStepComplete: 'client.gateway.step_complete',
@@ -120,15 +119,6 @@ export interface AgentSignalSourcePayloadMap {
     trigger?: string;
     /** Message that initiated the source or run, usually the user message. */
     triggerMessageId?: string;
-  };
-  [AGENT_SIGNAL_SOURCE_TYPES.botMessageMerged]: {
-    agentId?: string;
-    applicationId?: string;
-    message: string;
-    platform?: string;
-    platformThreadId?: string;
-    serializedContext?: string;
-    topicId?: string;
   };
   [AGENT_SIGNAL_SOURCE_TYPES.clientGatewayError]: {
     agentId?: string;
@@ -301,9 +291,6 @@ export type SourceRuntimeBeforeStep = AgentSignalSourceVariant<'runtime.before_s
 /** Runtime after-step source variant. */
 export type SourceRuntimeAfterStep = AgentSignalSourceVariant<'runtime.after_step'>;
 
-/** Bot-message merged source variant. */
-export type SourceBotMessageMerged = AgentSignalSourceVariant<'bot.message.merged'>;
-
 /** Client gateway stream-start source variant. */
 export type SourceClientGatewayStreamStart =
   AgentSignalSourceVariant<'client.gateway.stream_start'>;
@@ -350,8 +337,7 @@ export type SourceEventAgentSelfFeedbackIntentDeclared =
 
 /** Normalized tool outcome source event. */
 export type SourceEventToolOutcome =
-  | AgentSignalSourceEvent<'tool.outcome.completed'>
-  | AgentSignalSourceEvent<'tool.outcome.failed'>;
+  AgentSignalSourceEvent<'tool.outcome.completed'> | AgentSignalSourceEvent<'tool.outcome.failed'>;
 
 /** Source types accepted by browser producers through the authenticated edge. */
 export const AGENT_SIGNAL_CLIENT_SOURCE_TYPES = [

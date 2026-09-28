@@ -84,14 +84,20 @@ export class AgentService {
    *
    * This ensures the frontend always receives a complete config with model/provider.
    */
-  async getBuiltinAgent(slug: string) {
+  // The merged config still carries the source row's `workspaceId` (it flows
+  // through `cleanObject(agent)`); the client uses it to reject a response
+  // resolved against a different scope than the partition it would pin.
+  async getBuiltinAgent(
+    slug: string,
+  ): Promise<(OrviloAgentConfig & { workspaceId?: string | null }) | null> {
     // Fetch agent and defaultAgentConfig in parallel
     const [agent, defaultAgentConfig] = await Promise.all([
       this.agentModel.getBuiltinAgent(slug),
       this.userModel.getUserSettingsDefaultAgentConfig(),
     ]);
 
-    const mergedConfig = this.mergeDefaultConfig(agent, defaultAgentConfig);
+    const mergedConfig: (OrviloAgentConfig & { workspaceId?: string | null }) | null =
+      this.mergeDefaultConfig(agent, defaultAgentConfig);
     if (!mergedConfig) return null;
 
     return this.applyBuiltinIdentity(mergedConfig, slug);

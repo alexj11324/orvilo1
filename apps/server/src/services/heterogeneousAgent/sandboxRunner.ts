@@ -6,6 +6,7 @@ import {
   buildHeteroExecStdinPayload,
   type HeteroExecImageRef,
 } from '@orvilo/heterogeneous-agents/protocol';
+import type { AcpBuiltinToolSpec } from '@orvilo/types';
 import { repoToLocalDir } from '@orvilo/types';
 import debug from 'debug';
 
@@ -25,6 +26,12 @@ export interface SandboxRunParams {
    * the CLI can pass it through the heteroIngest payload, removing the need for the server
    * to re-read topic.metadata.runningOperation on every cold Lambda start. */
   assistantMessageId: string;
+  /**
+   * Server-backed builtin tools resolved for this run — injected as
+   * `ORVILO_BUILTIN_TOOLS` (base64 JSON) so `lh hetero exec` mounts them on
+   * the per-run `orvilo_cc` MCP server.
+   */
+  builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
   /** GitHub OAuth token for cloning private repos. */
   githubToken?: string;
@@ -34,10 +41,22 @@ export interface SandboxRunParams {
    * the CLI gets vision input.
    */
   imageList?: HeteroExecImageRef[];
-  /** Operation-scoped JWT injected as ORVILO_JWT env in the sandbox. */
+  /**
+   * JWT injected as `ORVILO_JWT` env in the sandbox. The dispatch passes a
+   * user-scoped `cli-sandbox` token here (NOT the operation token): the narrow
+   * `hetero-operation` token is rejected by `oidcAuth`, and CC capabilities
+   * hitting user-scoped endpoints (e.g. file upload) would 401.
+   */
   jwt: string;
   marketService: MarketService;
   operationId: string;
+  /**
+   * Operation-scoped JWT (capabilities: ingest/finish/intervention:read and,
+   * when `builtinTools` is non-empty, `hetero:tool:exec`). Injected as
+   * `ORVILO_OPERATION_JWT` — the CLI prefers it for builtin-tool callbacks
+   * while `ORVILO_JWT` stays the user-scoped sandbox token.
+   */
+  operationJwt?: string;
   prompt: string;
   /** GitHub repos to clone before running the agent (e.g. ['owner/repo', ...]). */
   repos?: string[];
@@ -129,10 +148,12 @@ export async function spawnHeteroSandbox(params: SandboxRunParams): Promise<void
     agentType,
     args: extraArgs,
     assistantMessageId,
+    builtinTools,
     githubToken,
     jwt,
     marketService,
     operationId,
+    operationJwt,
     prompt,
     repos,
     resumeSessionId,
@@ -193,6 +214,17 @@ export async function spawnHeteroSandbox(params: SandboxRunParams): Promise<void
     `ORVILO_SERVER=${shellQuote(serverUrl)}`,
     `ORVILO_ASSISTANT_MESSAGE_ID=${shellQuote(assistantMessageId)}`,
     ...(workspaceId ? [`ORVILO_WORKSPACE_ID=${shellQuote(workspaceId)}`] : []),
+    // The operation-scoped token travels separately from `ORVILO_JWT` (which is
+    // the user-scoped sandbox token) so builtin-tool callbacks keep their
+    // `hetero:tool:exec` capability instead of falling back to user auth.
+    ...(operationJwt ? [`ORVILO_OPERATION_JWT=${shellQuote(operationJwt)}`] : []),
+    // Builtin tool surface for the per-run `orvilo_cc` MCP server, base64'd so
+    // arbitrary manifest JSON survives the shell unquoted.
+    ...(builtinTools?.length
+      ? [
+          `ORVILO_BUILTIN_TOOLS=${shellQuote(Buffer.from(JSON.stringify(builtinTools)).toString('base64'))}`,
+        ]
+      : []),
     // Inject GitHub token so CC can authenticate git operations and GitHub API
     // calls inside the sandbox (e.g. gh CLI, git push, API requests).
     ...(githubToken ? [`GITHUB_TOKEN=${shellQuote(githubToken)}`] : []),

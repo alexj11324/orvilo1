@@ -12,9 +12,13 @@ vi.mock('@/database/core/db-adaptor', () => ({
 }));
 
 // `assertAgentShareCreationEnabled` (`_helpers/agentShareFeatureGate.ts`) runs
-// for real in this suite — only its own two dependencies are mocked
-// (`mockGetFeatureFlagsState` below, and this mutable business-const object)
-// — so the router tests exercise the actual gate, not a stand-in.
+// for real in this suite, so the router tests exercise the actual gate.
+//
+// It has no inputs to mock: §6.5 retired the publish chain by *removing* the
+// `enableAgentShare` branch rather than inverting it, so the refusal reads no
+// deployment flag and no per-user capability. The flag mock below therefore
+// exists to be asserted *unconsulted* — a regression that reintroduces a flag
+// gate would show up as a call on it.
 const mocks = vi.hoisted(() => ({
   businessConst: { ENABLE_BUSINESS_FEATURES: true },
 }));
@@ -110,18 +114,23 @@ describe('agentShareRouter', () => {
     expect(mockGetByAgentId).not.toHaveBeenCalled();
   });
 
-  it('enables a private share by default', async () => {
+  // §6.5 retires publishing an agent to external visitors. No share can be
+  // created, for either visibility: a row that cannot be published is not a
+  // half-open door, it is a row nothing can use, and leaving creation open
+  // would keep the capability reachable to whoever gets the `link` value past
+  // the `updateVisibility` gate afterwards.
+  it('refuses to create a share, for either visibility, without reading the capability flag', async () => {
     const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
 
-    await expect(caller.enableShare({ agentId: 'agent-1' })).resolves.toEqual(share);
-    expect(mockCreate).toHaveBeenCalledWith('agent-1', undefined);
-  });
+    await expect(caller.enableShare({ agentId: 'agent-1' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      caller.enableShare({ agentId: 'agent-1', visibility: 'link' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
 
-  it('enables a share with an explicit visibility', async () => {
-    const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
-
-    await caller.enableShare({ agentId: 'agent-1', visibility: 'link' });
-    expect(mockCreate).toHaveBeenCalledWith('agent-1', 'link');
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockGetFeatureFlagsState).not.toHaveBeenCalled();
   });
 
   it('returns null when a personal agent has no share', async () => {
@@ -261,15 +270,16 @@ describe('agentShareRouter', () => {
 
   // Disabling is a pause, not a revocation: it flips the row to `private` and
   // never deletes it, so the share id and slug (i.e. the link already handed
-  // out) survive and re-enabling republishes the same url.
+  // out) survive. Since §6.5 retired publishing, re-enabling is refused — the
+  // row survives so that an owner can still review and revoke what exists, not
+  // so that it can be republished.
   it('disables an existing share by making it private, keeping the row', async () => {
     const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
 
-    await caller.updateVisibility({ agentId: 'agent-1', visibility: 'link' });
     const disabled = await caller.disableShare({ agentId: 'agent-1' });
 
-    expect(mockUpdateVisibility).toHaveBeenNthCalledWith(1, 'agent-1', 'link');
-    expect(mockUpdateVisibility).toHaveBeenNthCalledWith(2, 'agent-1', 'private');
+    expect(mockUpdateVisibility).toHaveBeenCalledWith('agent-1', 'private');
+    expect(mockUpdateVisibility).toHaveBeenCalledTimes(1);
     expect(disabled.id).toBe('share-1');
   });
 
@@ -333,33 +343,39 @@ describe('agentShareRouter', () => {
     });
   });
 
-  describe('publish capability', () => {
-    it('rejects enabling a share on a deployment without business features, even when the flag is on', async () => {
-      mocks.businessConst.ENABLE_BUSINESS_FEATURES = false;
-      mockGetFeatureFlagsState.mockResolvedValue({ enableAgentShare: true });
+  // §6.5 retires publishing to visitors unconditionally. The refusal is a
+  // complete choke point rather than a flag-gated one: a persisted feature
+  // flag, an older client or a still-valid visitor token must not be able to
+  // re-open it, so there is no branch for a configuration to switch on. These
+  // cases pin that — including that the capability flag is no longer read at
+  // all, which is what makes the retirement un-reopenable rather than merely
+  // off by default.
+  //
+  // A separate "deployment without business features" case used to sit here. It
+  // passed both before and after the retirement (the old gate refused on that
+  // config too), so it pinned nothing about this change and is gone; the deploy
+  // flag's real consumer is the read-path gate, covered in
+  // `_helpers/__tests__/agentShareFeatureGate.test.ts`, `share.test.ts` and
+  // `shareChat.test.ts`.
+  describe('publishing to visitors is retired', () => {
+    it.each([
+      ['the capability on', { enableAgentShare: true }],
+      ['the capability off', { enableAgentShare: false }],
+      ['the capability unconfigured', {}],
+    ])('refuses to create a share with %s, and never reads the flag', async (_label, flags) => {
+      mockGetFeatureFlagsState.mockResolvedValue(flags);
       const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
 
       await expect(caller.enableShare({ agentId: 'agent-1' })).rejects.toMatchObject({
         code: 'FORBIDDEN',
       });
-      // The compile-time gate short-circuits before the flag is even read.
+      expect(mockCreate).not.toHaveBeenCalled();
       expect(mockGetFeatureFlagsState).not.toHaveBeenCalled();
-      expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it('rejects enabling a share when the capability is off for this user', async () => {
-      mockGetFeatureFlagsState.mockResolvedValue({ enableAgentShare: false });
-      const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
-
-      await expect(caller.enableShare({ agentId: 'agent-1' })).rejects.toMatchObject({
-        code: 'FORBIDDEN',
-      });
-      expect(mockGetFeatureFlagsState).toHaveBeenCalledWith('user-1');
-      expect(mockCreate).not.toHaveBeenCalled();
-    });
-
-    it('rejects publishing an existing share when the capability is off', async () => {
-      mockGetFeatureFlagsState.mockResolvedValue({ enableAgentShare: false });
+    // The `link` visibility is the publish action on an existing row, so it is
+    // refused while `private` (below) is not.
+    it('refuses to publish an existing share by setting it to a link', async () => {
       const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
 
       await expect(
@@ -368,8 +384,10 @@ describe('agentShareRouter', () => {
       expect(mockUpdateVisibility).not.toHaveBeenCalled();
     });
 
-    it('still lets a user unpublish, read and manage a share when the capability is off', async () => {
-      mockGetFeatureFlagsState.mockResolvedValue({ enableAgentShare: false });
+    // The promise the refusal message makes: an owner can still take a share
+    // down, read it and manage it. Retiring publishing must not strand existing
+    // shares in a state nobody can revoke.
+    it('still lets an owner unpublish, read and manage an existing share', async () => {
       const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
 
       await caller.updateVisibility({ agentId: 'agent-1', visibility: 'private' });
@@ -379,18 +397,6 @@ describe('agentShareRouter', () => {
 
       expect(mockUpdateVisibility).toHaveBeenCalledWith('agent-1', 'private');
       expect(mockUpdateVisibility).toHaveBeenCalledTimes(2);
-    });
-
-    // Fails closed: an unconfigured flag is treated the same as `false`, not
-    // as "open" — a deployment must explicitly opt a user in.
-    it('rejects publishing when the capability is unconfigured', async () => {
-      mockGetFeatureFlagsState.mockResolvedValue({});
-      const caller = agentShareRouter.createCaller(await createContextInner({ userId: 'user-1' }));
-
-      await expect(caller.enableShare({ agentId: 'agent-1' })).rejects.toMatchObject({
-        code: 'FORBIDDEN',
-      });
-      expect(mockCreate).not.toHaveBeenCalled();
     });
   });
 

@@ -15,12 +15,113 @@ export type QuotaReadingRow = QuotaDisplayReading;
 export interface QuotaAccountRow {
   displayName?: string | null;
   email?: string | null;
+  enabled?: boolean | null;
   externalAccountId?: string | null;
   organizationId?: string | null;
   planTier?: string | null;
+  provider?: string | null;
   rateLimitTier?: string | null;
+  status?: string | null;
   updatedAt?: Date | string | null;
 }
+
+/**
+ * Panel-side snapshot: the wire type plus flags the menu composes locally for
+ * presentation — they never cross IPC/RPC.
+ */
+export interface ClaudeCodePanelSnapshot extends ClaudeCodeQuotaSnapshot {
+  /**
+   * The painted identity is the last confirmed one for this context — the
+   * current live sample failed to verify it (fetch error / non-ok status).
+   * Never render this as a current confirmed identity.
+   */
+  identityUnverified?: boolean;
+  /**
+   * The live sample's identity was confirmed for this execution context but
+   * its readings could not be bound to a persisted account row (the ingest
+   * failed, or the row is not visible to this user/workspace). The panel still
+   * shows the sample — flagged — rather than borrowing another account's
+   * history.
+   */
+  persistenceFailed?: boolean;
+}
+
+/**
+ * Whether a persisted account row is eligible for observation at all. Rows
+ * whose access was revoked (`enabled: false` / `status: 'disabled'`) keep
+ * their history in the DB for audit but must not render as a live binding.
+ */
+export const isObservableQuotaAccount = (account: QuotaAccountRow, provider: string): boolean =>
+  account.provider === provider && account.enabled !== false && account.status !== 'disabled';
+
+/**
+ * Session-level binding from an execution context (the QuotaMenu `sourceKey`:
+ * provider + execution device + CLI profile env) to the provider identity that
+ * context's live sampler last confirmed. Observation may only paint a
+ * persisted account row when this binding names it — without a binding, an
+ * arbitrary first row would leak another login's windows into this run's
+ * panel. Module-level on purpose: remounting the menu (switching agent or
+ * topic) should not force a reconfirmation against the sampler.
+ */
+const quotaIdentityTrust = new Map<string, string>();
+
+/** The identity a context confirmed, or undefined when never observed. */
+export const trustedQuotaIdentity = (contextKey: string): string | undefined =>
+  quotaIdentityTrust.get(contextKey);
+
+/** Bind a context to the identity its live sample just confirmed. */
+export const trustQuotaIdentity = (contextKey: string, externalAccountId: string): void => {
+  quotaIdentityTrust.set(contextKey, externalAccountId);
+};
+
+/**
+ * Drop every binding whose identity is no longer among the visible account
+ * rows — a revoked or out-of-scope account must not keep painting from trust.
+ * Only call with a successfully fetched list; a failed fetch proves nothing
+ * and would wipe still-valid bindings.
+ */
+export const pruneQuotaIdentityTrust = (visibleExternalAccountIds: ReadonlySet<string>): void => {
+  for (const [contextKey, externalAccountId] of quotaIdentityTrust) {
+    if (!visibleExternalAccountIds.has(externalAccountId)) quotaIdentityTrust.delete(contextKey);
+  }
+};
+
+/** Clear every binding — renderer sign-out and test isolation. */
+export const resetQuotaIdentityTrust = (): void => {
+  quotaIdentityTrust.clear();
+};
+
+/**
+ * Decide which persisted account a live sample authorizes this context to
+ * show, mutating the trust map accordingly:
+ *
+ *   - `live.status === 'ok'` with an `externalAccountId` → (re)binds the
+ *     context to that identity and returns the matching visible account row;
+ *   - `live.status === 'ok'` with NO identifiable identity → REVOKES the
+ *     context's prior confirmation (the current sample may be a different
+ *     login) and returns no account — the panel then renders the sample's own
+ *     windows as unknown, never the previously-confirmed account's history;
+ *   - no successful live sample → returns the still-trusted account, if any,
+ *     for the caller to paint flagged `identityUnverified`.
+ */
+export const resolveQuotaIdentityForLive = <TAccount extends QuotaAccountRow>(params: {
+  accounts: TAccount[];
+  contextKey: string;
+  live: ClaudeCodeQuotaSnapshot | null;
+}): { account?: TAccount; unidentifiableLive?: boolean } => {
+  const { accounts, contextKey, live } = params;
+  if (live?.status === 'ok') {
+    const liveId = live.identity?.externalAccountId;
+    if (!liveId) {
+      quotaIdentityTrust.delete(contextKey);
+      return { unidentifiableLive: true };
+    }
+    quotaIdentityTrust.set(contextKey, liveId);
+    return { account: accounts.find((a) => a.externalAccountId === liveId) };
+  }
+  const trusted = quotaIdentityTrust.get(contextKey);
+  return { account: trusted ? accounts.find((a) => a.externalAccountId === trusted) : undefined };
+};
 
 const toMs = (v: Date | string | null | undefined): number | null => {
   if (v == null) return null;
@@ -89,7 +190,7 @@ export const buildClaudePanelSnapshot = (
   persistedReadings: QuotaReadingRow[],
   live: ClaudeCodeQuotaSnapshot | null,
   now: number = Date.now(),
-): ClaudeCodeQuotaSnapshot => {
+): ClaudeCodePanelSnapshot => {
   const sample = live?.status === 'ok' && liveBelongsToAccount(account, live) ? live : null;
   const readings = sample?.readings?.length
     ? [...persistedReadings, ...sample.readings]

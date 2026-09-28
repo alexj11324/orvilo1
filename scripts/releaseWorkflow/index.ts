@@ -1,13 +1,8 @@
-import { execSync } from 'node:child_process';
-import * as fs from 'node:fs';
-import path from 'node:path';
+import { execFileSync, execSync } from 'node:child_process';
 
 import { confirm, select } from '@inquirer/prompts';
 import { consola } from 'consola';
 import * as semver from 'semver';
-
-const ROOT_DIR = process.cwd();
-const PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'package.json');
 
 // Version type
 type VersionType = 'patch' | 'minor' | 'major';
@@ -22,13 +17,17 @@ function checkGitRepo(): void {
   }
 }
 
-// Get current version from package.json
+// Get the current version from package.json on the canary branch.
+//
+// Read through the git ref rather than the working tree: the release script
+// no longer checks canary out (see fetchCanary), so whatever branch happens
+// to be checked out must not influence the version this release is cut from.
 function getCurrentVersion(): string {
   try {
-    const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, 'utf8'));
+    const pkg = JSON.parse(execSync('git show origin/canary:package.json', { encoding: 'utf8' }));
     return pkg.version;
   } catch {
-    consola.error('❌ Unable to read version from package.json');
+    consola.error('❌ Unable to read package.json from origin/canary');
     process.exit(1);
   }
 }
@@ -106,39 +105,23 @@ Target:     main
   return confirmed;
 }
 
-// Checkout and pull latest dev branch
-function checkoutAndPullDev(): void {
+// Fetch the latest canary branch.
+//
+// `canary` is Orvilo's development trunk and the base every release is cut
+// from. This deliberately does NOT check canary out: in a repository that uses
+// git worktrees, canary is frequently already checked out in a sibling
+// worktree, and `git checkout canary` then fails with "already used by worktree
+// at ...". Everything the release needs — the base commit and the current
+// version — is readable from the remote-tracking ref instead.
+function fetchCanary(): void {
   try {
-    // Check for dev branch
-    const branches = execSync('git branch -a', { encoding: 'utf8' });
-    const hasLocalDev = branches.includes(' dev\n') || branches.startsWith('* dev\n');
-    const hasRemoteDev = branches.includes('remotes/origin/dev');
+    consola.info('📥 Fetching latest canary branch...');
+    execSync('git fetch origin canary', { stdio: 'inherit' });
 
-    if (!hasLocalDev && !hasRemoteDev) {
-      consola.error('❌ Dev branch not found (local or remote)');
-      process.exit(1);
-    }
-
-    consola.info('📥 Fetching latest dev branch...');
-
-    if (hasRemoteDev) {
-      // Checkout from remote dev branch
-      try {
-        execSync('git checkout dev', { stdio: 'ignore' });
-        execSync('git pull origin dev', { stdio: 'inherit' });
-      } catch {
-        // Create from remote if local doesn't exist
-        execSync('git checkout -b dev origin/dev', { stdio: 'inherit' });
-      }
-    } else {
-      // Local dev branch only
-      execSync('git checkout dev', { stdio: 'inherit' });
-      execSync('git pull', { stdio: 'inherit' });
-    }
-
-    consola.success('✅ Switched to latest dev branch');
+    const head = execSync('git rev-parse --verify origin/canary', { encoding: 'utf8' }).trim();
+    consola.success(`✅ Using origin/canary at ${head.slice(0, 7)}`);
   } catch (error) {
-    consola.error('❌ Failed to switch or pull dev branch');
+    consola.error('❌ Failed to fetch origin/canary');
     consola.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
@@ -149,8 +132,8 @@ function createReleaseBranch(version: string): void {
   const branchName = `release/v${version}`;
 
   try {
-    consola.info(`🌿 Creating branch: ${branchName}...`);
-    execSync(`git checkout -b ${branchName}`, { stdio: 'inherit' });
+    consola.info(`🌿 Creating branch: ${branchName} (based on origin/canary)...`);
+    execSync(`git checkout -b ${branchName} origin/canary`, { stdio: 'inherit' });
     consola.success(`✅ Created and switched to branch: ${branchName}`);
   } catch (error) {
     consola.error(`❌ Failed to create branch or commit: ${branchName}`);
@@ -182,7 +165,7 @@ function createPullRequest(version: string): void {
 This branch contains changes for the upcoming v${version} release.
 
 ### Change Type
-- Checked out from dev branch and merged to main branch
+- Cut from the canary branch and merged to the main branch
 
 ### Release Process
 1. ✅ Release branch created
@@ -196,15 +179,26 @@ Created by release script`;
   try {
     consola.info('🔀 Creating Pull Request...');
 
-    // Create PR using gh CLI
-    const cmd = `gh pr create \
-      --title "${title}" \
-      --body "${body}" \
-      --base main \
-      --head release/v${version} \
-      --label "release"`;
-
-    execSync(cmd, { stdio: 'inherit' });
+    // Create PR using gh CLI. execFileSync with an argv array keeps the
+    // multi-line body from being re-parsed by a shell.
+    execFileSync(
+      'gh',
+      [
+        'pr',
+        'create',
+        '--title',
+        title,
+        '--body',
+        body,
+        '--base',
+        'main',
+        '--head',
+        `release/v${version}`,
+        '--label',
+        'release',
+      ],
+      { stdio: 'inherit' },
+    );
     consola.success('✅ PR created successfully!');
   } catch (error) {
     consola.error('❌ Failed to create PR');
@@ -247,8 +241,8 @@ async function main(): Promise<void> {
   // 1. Check Git repository
   checkGitRepo();
 
-  // 2. Checkout and pull latest dev branch (ensure we have the latest version)
-  checkoutAndPullDev();
+  // 2. Fetch latest canary (ensure we have the latest version to bump from)
+  fetchCanary();
 
   // 3. Get version type
   let versionType = getVersionTypeFromArgs();

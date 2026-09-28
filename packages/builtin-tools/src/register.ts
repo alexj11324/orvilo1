@@ -24,11 +24,6 @@ import {
 } from '@orvilo/builtin-tool-agent-management/client';
 import { AuvIdentifier, AuvInspectors } from '@orvilo/builtin-tool-auv/client';
 import {
-  BrowserInspectors,
-  BrowserManifest,
-  BrowserRenders,
-} from '@orvilo/builtin-tool-browser/client';
-import {
   ClaudeCodeApiName,
   ClaudeCodeIdentifier,
   ClaudeCodeInspectors,
@@ -65,11 +60,6 @@ import {
   GroupManagementStreamings,
 } from '@orvilo/builtin-tool-group-management/client';
 import {
-  ImageGenerationInspectors,
-  ImageGenerationManifest,
-  ImageGenerationRenders,
-} from '@orvilo/builtin-tool-image-generation/client';
-import {
   KnowledgeBaseInspectors,
   KnowledgeBaseManifest,
   KnowledgeBaseRenders,
@@ -93,13 +83,6 @@ import {
   MemoryStreamings,
 } from '@orvilo/builtin-tool-memory/client';
 import {
-  MessageInspectors,
-  MessageInterventions,
-  MessageManifest,
-  MessageRenders,
-  MessageStreamings,
-} from '@orvilo/builtin-tool-message/client';
-import {
   OrviloAgentInspectors,
   OrviloAgentInterventions,
   OrviloAgentManifest,
@@ -121,11 +104,6 @@ import {
   SelfFeedbackIntentInspectors,
   selfFeedbackIntentManifest,
 } from '@orvilo/builtin-tool-self-iteration/client';
-import {
-  SkillStoreInspectors,
-  SkillStoreManifest,
-  SkillStoreRenders,
-} from '@orvilo/builtin-tool-skill-store/client';
 import {
   SkillsInspectors,
   SkillsManifest,
@@ -173,6 +151,7 @@ import type {
   BuiltinStreaming,
 } from '@orvilo/types';
 
+import { BrowserIdentifier, BrowserRenders } from './browser';
 import { CodexInspectors, CodexRenders } from './codex';
 import { GithubIdentifier, GithubInspectors, GithubRenders } from './github';
 import { registerBuiltinInspectors } from './inspectors';
@@ -192,6 +171,43 @@ const QODER_IDENTIFIER = 'qoder';
 const OPENCODE_IDENTIFIER = 'opencode';
 const PI_IDENTIFIER = 'pi';
 const KIMI_CODE_IDENTIFIER = 'kimi-code';
+const AMP_IDENTIFIER = 'amp';
+const CODEBUDDY_IDENTIFIER = 'codebuddy';
+const CODEX_IDENTIFIER = 'codex';
+
+/**
+ * Standard-ACP providers whose permission/elicitation requests surface as
+ * `askUserQuestion` tool calls stamped with the provider identifier — the
+ * AskUserBridge reuses the Claude Code form for all of them.
+ */
+const STANDARD_ACP_ASK_USER_IDENTIFIERS = [
+  AMP_IDENTIFIER,
+  CODEBUDDY_IDENTIFIER,
+  CODEX_IDENTIFIER,
+  KIMI_CODE_IDENTIFIER,
+  OPENCODE_IDENTIFIER,
+  PI_IDENTIFIER,
+];
+
+/** Per-identifier apiName map carrying just the shared askUserQuestion surface. */
+const standardAcpAskUserSurfaces = <T>(surface: T): Record<string, Record<string, T>> =>
+  Object.fromEntries(
+    STANDARD_ACP_ASK_USER_IDENTIFIERS.map((identifier) => [
+      identifier,
+      { [ClaudeCodeApiName.AskUserQuestion]: surface },
+    ]),
+  );
+
+/** Merge the shared askUserQuestion surface into an identifier's existing apiName map. */
+const withAskUserQuestion = <T>(surface: T, existing?: Record<string, T>): Record<string, T> => ({
+  ...existing,
+  [ClaudeCodeApiName.AskUserQuestion]: surface,
+});
+
+const askUserQuestionRender = ClaudeCodeRenders[ClaudeCodeApiName.AskUserQuestion] as BuiltinRender;
+const askUserQuestionInspector = ClaudeCodeInspectors[
+  ClaudeCodeApiName.AskUserQuestion
+] as BuiltinInspector;
 
 const heterogeneousCliInspectors: Record<string, BuiltinInspector> = {
   bash: createRunCommandInspector(
@@ -225,6 +241,9 @@ export const registerBuiltinToolSurfaces = (): void => {
     [AgentBuilderManifest.identifier]: AgentBuilderRenders as Record<string, BuiltinRender>,
     [AgentDocumentsManifest.identifier]: AgentDocumentsRenders as Record<string, BuiltinRender>,
     [AgentManagementManifest.identifier]: AgentManagementRenders as Record<string, BuiltinRender>,
+    // Retired `orvilo-browser`: render-only registration so persisted
+    // conversations keep displaying historical screenshots/page dumps.
+    [BrowserIdentifier]: BrowserRenders,
     [ClaudeCodeIdentifier]: ClaudeCodeRenders as Record<string, BuiltinRender>,
     [DROID_IDENTIFIER]: {
       [ClaudeCodeApiName.AskUserQuestion]: ClaudeCodeRenders[ClaudeCodeApiName.AskUserQuestion],
@@ -233,6 +252,8 @@ export const registerBuiltinToolSurfaces = (): void => {
       [ClaudeCodeApiName.AskUserQuestion]: ClaudeCodeRenders[ClaudeCodeApiName.AskUserQuestion],
     },
     [QODER_IDENTIFIER]: ClaudeCodeRenders as Record<string, BuiltinRender>,
+    [AMP_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender),
+    [CODEBUDDY_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender),
     [CloudSandboxManifest.identifier]: CloudSandboxRenders as Record<string, BuiltinRender>,
     [GroupAgentBuilderManifest.identifier]: GroupAgentBuilderRenders as Record<
       string,
@@ -240,30 +261,29 @@ export const registerBuiltinToolSurfaces = (): void => {
     >,
     [GroupManagementManifest.identifier]: GroupManagementRenders as Record<string, BuiltinRender>,
     [GoalManifest.identifier]: GoalRenders as Record<string, BuiltinRender>,
-    [ImageGenerationManifest.identifier]: ImageGenerationRenders as Record<string, BuiltinRender>,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseRenders as Record<string, BuiltinRender>,
     [OrviloAgentManifest.identifier]: OrviloAgentRenders as Record<string, BuiltinRender>,
-    [BrowserManifest.identifier]: BrowserRenders as Record<string, BuiltinRender>,
     [LocalSystemManifest.identifier]: LocalSystemRenders as Record<string, BuiltinRender>,
     [MemoryManifest.identifier]: MemoryRenders as Record<string, BuiltinRender>,
-    [MessageManifest.identifier]: MessageRenders as Record<string, BuiltinRender>,
     [NotebookIdentifier]: NotebookRenders,
     [PageAgentManifest.identifier]: PageAgentRenders as Record<string, BuiltinRender>,
     [RemoteDeviceManifest.identifier]: RemoteDeviceRenders as Record<string, BuiltinRender>,
-    [SkillStoreManifest.identifier]: SkillStoreRenders as Record<string, BuiltinRender>,
     [SkillsManifest.identifier]: SkillsRenders as Record<string, BuiltinRender>,
     [TaskManifest.identifier]: TaskRenders as Record<string, BuiltinRender>,
     [UserInteractionIdentifier]: UserInteractionRenders as Record<string, BuiltinRender>,
     [OrviloActivatorManifest.identifier]: OrviloActivatorRenders as Record<string, BuiltinRender>,
     [WebBrowsingManifest.identifier]: WebBrowsingRenders as Record<string, BuiltinRender>,
     [WebOnboardingManifest.identifier]: WebOnboardingRenders as Record<string, BuiltinRender>,
-    [OPENCODE_IDENTIFIER]: heterogeneousCliRenders,
-    [PI_IDENTIFIER]: heterogeneousCliRenders,
-    [KIMI_CODE_IDENTIFIER]: KimiCodeRenders as Record<string, BuiltinRender>,
-    codex: {
+    [OPENCODE_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender, heterogeneousCliRenders),
+    [PI_IDENTIFIER]: withAskUserQuestion(askUserQuestionRender, heterogeneousCliRenders),
+    [KIMI_CODE_IDENTIFIER]: withAskUserQuestion(
+      askUserQuestionRender,
+      KimiCodeRenders as Record<string, BuiltinRender>,
+    ),
+    codex: withAskUserQuestion(askUserQuestionRender, {
       ...CodexRenders,
       command_execution: RunCommandRender as BuiltinRender,
-    },
+    }),
     [GithubIdentifier]: GithubRenders,
     [LinearIdentifier]: LinearRenders,
   });
@@ -290,6 +310,8 @@ export const registerBuiltinToolSurfaces = (): void => {
       [ClaudeCodeApiName.AskUserQuestion]: ClaudeCodeInspectors[ClaudeCodeApiName.AskUserQuestion],
     },
     [QODER_IDENTIFIER]: ClaudeCodeInspectors as Record<string, BuiltinInspector>,
+    [AMP_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector),
+    [CODEBUDDY_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector),
     [CloudSandboxManifest.identifier]: CloudSandboxInspectors as Record<string, BuiltinInspector>,
     [GroupAgentBuilderManifest.identifier]: GroupAgentBuilderInspectors as Record<
       string,
@@ -301,16 +323,10 @@ export const registerBuiltinToolSurfaces = (): void => {
     >,
     [GoalManifest.identifier]: GoalInspectors as Record<string, BuiltinInspector>,
     [GoalSupervisorManifest.identifier]: GoalSupervisorInspectors,
-    [ImageGenerationManifest.identifier]: ImageGenerationInspectors as Record<
-      string,
-      BuiltinInspector
-    >,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseInspectors as Record<string, BuiltinInspector>,
     [OrviloAgentManifest.identifier]: OrviloAgentInspectors as Record<string, BuiltinInspector>,
-    [BrowserManifest.identifier]: BrowserInspectors as Record<string, BuiltinInspector>,
     [LocalSystemManifest.identifier]: LocalSystemInspectors as Record<string, BuiltinInspector>,
     [MemoryManifest.identifier]: MemoryInspectors as Record<string, BuiltinInspector>,
-    [MessageManifest.identifier]: MessageInspectors as Record<string, BuiltinInspector>,
     [PageAgentManifest.identifier]: PageAgentInspectors as Record<string, BuiltinInspector>,
     [RemoteDeviceManifest.identifier]: RemoteDeviceInspectors as Record<string, BuiltinInspector>,
     [OrviloActivatorManifest.identifier]: OrviloActivatorInspectors as Record<
@@ -321,16 +337,18 @@ export const registerBuiltinToolSurfaces = (): void => {
       string,
       BuiltinInspector
     >,
-    [SkillStoreManifest.identifier]: SkillStoreInspectors as Record<string, BuiltinInspector>,
     [SkillsManifest.identifier]: SkillsInspectors as Record<string, BuiltinInspector>,
     [TaskManifest.identifier]: TaskInspectors as Record<string, BuiltinInspector>,
     [UserInteractionIdentifier]: UserInteractionInspectors as Record<string, BuiltinInspector>,
     [WebBrowsingManifest.identifier]: WebBrowsingInspectors as Record<string, BuiltinInspector>,
     [WebOnboardingManifest.identifier]: WebOnboardingInspectors as Record<string, BuiltinInspector>,
-    [OPENCODE_IDENTIFIER]: heterogeneousCliInspectors,
-    [PI_IDENTIFIER]: heterogeneousCliInspectors,
-    [KIMI_CODE_IDENTIFIER]: KimiCodeInspectors,
-    'codex': CodexInspectors,
+    [OPENCODE_IDENTIFIER]: withAskUserQuestion(
+      askUserQuestionInspector,
+      heterogeneousCliInspectors,
+    ),
+    [PI_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector, heterogeneousCliInspectors),
+    [KIMI_CODE_IDENTIFIER]: withAskUserQuestion(askUserQuestionInspector, KimiCodeInspectors),
+    'codex': withAskUserQuestion(askUserQuestionInspector, CodexInspectors),
     [GithubIdentifier]: GithubInspectors,
     [LinearIdentifier]: LinearInspectors,
     [TwitterIdentifier]: TwitterInspectors,
@@ -360,7 +378,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     [OrviloAgentManifest.identifier]: OrviloAgentStreamings as Record<string, BuiltinStreaming>,
     [LocalSystemManifest.identifier]: LocalSystemStreamings as Record<string, BuiltinStreaming>,
     [MemoryManifest.identifier]: MemoryStreamings as Record<string, BuiltinStreaming>,
-    [MessageManifest.identifier]: MessageStreamings as Record<string, BuiltinStreaming>,
     [OPENCODE_IDENTIFIER]: heterogeneousCliStreamings,
     [PageAgentManifest.identifier]: PageAgentStreamings as Record<string, BuiltinStreaming>,
     [PI_IDENTIFIER]: heterogeneousCliStreamings,
@@ -381,6 +398,9 @@ export const registerBuiltinToolSurfaces = (): void => {
         ClaudeCodeInterventions[ClaudeCodeApiName.AskUserQuestion],
     },
     [QODER_IDENTIFIER]: ClaudeCodeInterventions as Record<string, BuiltinIntervention>,
+    ...standardAcpAskUserSurfaces(
+      ClaudeCodeInterventions[ClaudeCodeApiName.AskUserQuestion] as BuiltinIntervention,
+    ),
     [CloudSandboxManifest.identifier]: CloudSandboxInterventions as Record<
       string,
       BuiltinIntervention
@@ -396,7 +416,6 @@ export const registerBuiltinToolSurfaces = (): void => {
     >,
     [LocalSystemIdentifier]: LocalSystemInterventions as Record<string, BuiltinIntervention>,
     [MemoryManifest.identifier]: MemoryInterventions as Record<string, BuiltinIntervention>,
-    [MessageManifest.identifier]: MessageInterventions as Record<string, BuiltinIntervention>,
     [TaskManifest.identifier]: TaskInterventions as Record<string, BuiltinIntervention>,
     [UserInteractionIdentifier]: UserInteractionInterventions as Record<
       string,

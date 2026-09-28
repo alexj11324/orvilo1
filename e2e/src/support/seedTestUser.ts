@@ -1,7 +1,5 @@
 import { randomBytes } from 'node:crypto';
 
-import bcrypt from 'bcryptjs';
-
 const runId = process.env.E2E_RUN_ID || process.env.GITHUB_RUN_ID || 'local';
 const workerId = process.env.CUCUMBER_WORKER_ID || process.env.E2E_WORKER_ID || 'local';
 const testScope = runId === 'local' ? workerId : `${runId}_${workerId}`;
@@ -18,14 +16,6 @@ export const TEST_USER = {
   password: 'TestPassword123!',
   username: isParallelWorker ? `e2e_test_user_${workerSuffix}` : 'e2e_test_user',
 };
-
-/**
- * Create a bcrypt password hash
- * Better Auth supports bcrypt for passwords migrated from Clerk
- */
-async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
-}
 
 /**
  * Seed test user into the database for e2e testing
@@ -48,14 +38,6 @@ export async function seedTestUser(): Promise<void> {
     console.log('🔌 Connected to database for test user seeding');
 
     const now = new Date().toISOString();
-    // Use fixed account ID to avoid conflicts when multiple workers run concurrently
-    const accountId = isParallelWorker
-      ? `e2e_test_account_${workerSuffix}`
-      : 'e2e_test_account_001';
-
-    // Use upsert to handle concurrent worker execution
-    // Insert user or do nothing if already exists (handles all unique constraints)
-    const passwordHash = await hashPassword(TEST_USER.password);
 
     // Use ON CONFLICT DO NOTHING to handle all unique constraint conflicts
     // This is safe because we're using fixed test user credentials
@@ -78,24 +60,8 @@ export async function seedTestUser(): Promise<void> {
       ],
     );
 
-    // Create account record with password (for credential login)
-    await client.query(
-      `INSERT INTO accounts (id, user_id, account_id, provider_id, password, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $6)
-       ON CONFLICT DO NOTHING`,
-      [
-        accountId,
-        TEST_USER.id,
-        TEST_USER.email, // account_id is email for credential provider
-        'credential', // provider_id
-        passwordHash,
-        now,
-      ],
-    );
-
     console.log('✅ Test user seeded successfully');
     console.log(`   Email: ${TEST_USER.email}`);
-    console.log(`   Password: ${TEST_USER.password}`);
   } catch (error) {
     console.error('❌ Failed to seed test user:', error);
     throw error;
@@ -155,9 +121,6 @@ export async function cleanupTestUser(): Promise<void> {
 
     // Delete sessions first (foreign key)
     await client.query('DELETE FROM auth_sessions WHERE user_id = $1', [TEST_USER.id]);
-
-    // Delete accounts (foreign key)
-    await client.query('DELETE FROM accounts WHERE user_id = $1', [TEST_USER.id]);
 
     // Delete user
     await client.query('DELETE FROM users WHERE id = $1', [TEST_USER.id]);

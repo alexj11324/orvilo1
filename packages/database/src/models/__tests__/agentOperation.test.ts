@@ -109,6 +109,24 @@ describe('AgentOperationModel', () => {
       expect(row?.metadata).toEqual({ agentSignal });
     });
 
+    it('stamps executionEngine into metadata so traces can prove which engine ran', async () => {
+      const model = new AgentOperationModel(serverDB, userId);
+      const operationId = 'op-start-engine';
+
+      await model.recordStart({
+        // Caller metadata must merge with (and never override) the engine stamp.
+        executionEngine: 'hetero',
+        metadata: { assistantMessageId: 'msg-x', executionEngine: 'forged' },
+        operationId,
+      });
+
+      const row = await model.findById(operationId);
+      expect(row?.metadata).toEqual({
+        assistantMessageId: 'msg-x',
+        executionEngine: 'hetero',
+      });
+    });
+
     it('is idempotent on the primary key', async () => {
       const model = new AgentOperationModel(serverDB, userId);
       const operationId = 'op-start-2';
@@ -210,99 +228,6 @@ describe('AgentOperationModel', () => {
       ).resolves.toBe(false);
       expect((await model.findById(operationId))?.metadata).not.toHaveProperty(
         'agentInterventionPreparation',
-      );
-    });
-  });
-
-  describe('server-default relay invocation attestation', () => {
-    it('records the first accepted invocation and reuses it for matching retries', async () => {
-      const model = new AgentOperationModel(serverDB, userId);
-      const operationId = 'op-server-default-relay';
-      await model.recordStart({
-        metadata: {
-          agentType: 'trae',
-          preserved: true,
-          serverDefaultHeterogeneous: true,
-        },
-        model: 'gpt-5.4',
-        operationId,
-        provider: 'orvilo',
-      });
-      const first = {
-        acceptedAt: '2026-09-01T00:00:00.000Z',
-        agentType: 'trae',
-        ingress: 'openai-responses' as const,
-        model: 'gpt-5.4',
-        operationId,
-        provider: 'orvilo',
-      };
-
-      await expect(model.recordServerDefaultRelayInvocation(operationId, first)).resolves.toEqual(
-        first,
-      );
-      await expect(
-        model.recordServerDefaultRelayInvocation(operationId, {
-          ...first,
-          acceptedAt: '2026-09-01T00:01:00.000Z',
-        }),
-      ).resolves.toEqual(first);
-
-      expect((await model.findById(operationId))?.metadata).toEqual({
-        agentType: 'trae',
-        preserved: true,
-        serverDefaultHeterogeneous: true,
-        serverDefaultRelayInvocation: first,
-      });
-    });
-
-    it('rejects an unmarked, mismatched, terminal, or foreign operation', async () => {
-      const model = new AgentOperationModel(serverDB, userId);
-      const otherOwner = new AgentOperationModel(serverDB, otherUserId);
-      const invocation = {
-        acceptedAt: '2026-09-01T00:00:00.000Z',
-        agentType: 'trae',
-        ingress: 'openai-responses' as const,
-        model: 'gpt-5.4',
-        operationId: 'op-relay-authority',
-        provider: 'orvilo',
-      };
-
-      await model.recordStart({
-        metadata: { agentType: 'trae' },
-        model: invocation.model,
-        operationId: invocation.operationId,
-        provider: invocation.provider,
-      });
-      await expect(
-        model.recordServerDefaultRelayInvocation(invocation.operationId, invocation),
-      ).resolves.toBeNull();
-
-      await serverDB
-        .update(agentOperations)
-        .set({ metadata: { agentType: 'trae', serverDefaultHeterogeneous: true } })
-        .where(eq(agentOperations.id, invocation.operationId));
-      await expect(
-        model.recordServerDefaultRelayInvocation(invocation.operationId, {
-          ...invocation,
-          model: 'gpt-5.5',
-        }),
-      ).resolves.toBeNull();
-      await expect(
-        model.recordServerDefaultRelayInvocation(invocation.operationId, {
-          ...invocation,
-          operationId: 'different-operation',
-        }),
-      ).resolves.toBeNull();
-      await expect(
-        otherOwner.recordServerDefaultRelayInvocation(invocation.operationId, invocation),
-      ).resolves.toBeNull();
-
-      await model.settleRunning(invocation.operationId, 'done');
-      await expect(
-        model.recordServerDefaultRelayInvocation(invocation.operationId, invocation),
-      ).resolves.toBeNull();
-      expect((await model.findById(invocation.operationId))?.metadata).not.toHaveProperty(
-        'serverDefaultRelayInvocation',
       );
     });
   });

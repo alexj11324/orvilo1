@@ -10,7 +10,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
 
       font-size: 24px;
       font-weight: 600;
-      line-height: 1.3;
+      line-height: 1.25;
     }
   `,
 

@@ -1,6 +1,9 @@
 import type * as ChildProcessModule from 'node:child_process';
 import type * as CryptoModule from 'node:crypto';
 import { EventEmitter } from 'node:events';
+import { mkdtemp, rm, symlink } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 import { deriveDeviceId, deriveScopedFallbackId } from '@orvilo/device-identity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +11,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { App } from '@/core/App';
 import AuvService from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
-import ImessageBridgeService from '@/services/imessageBridgeSrv';
 
 import GatewayConnectionCtr from '../GatewayConnectionCtr';
 import HeterogeneousAgentCtr from '../HeterogeneousAgentCtr';
@@ -40,7 +42,6 @@ const { ipcMainHandleMock, MockGatewayClient } = vi.hoisted(() => {
     });
 
     sendToolCallResponse = vi.fn();
-    sendMessageApiResponse = vi.fn();
     sendAgentRunAck = vi.fn();
 
     constructor(options: any) {
@@ -96,19 +97,6 @@ const { ipcMainHandleMock, MockGatewayClient } = vi.hoisted(() => {
           type: 'mcp',
         },
         type: 'tool_call_request',
-      });
-    }
-
-    simulateMessageApiRequest(
-      platform: string,
-      apiName: string,
-      payload: Record<string, unknown>,
-      requestId = 'msg-req-1',
-    ) {
-      this.emit('message_api_request', {
-        api: { apiName, payload, platform },
-        requestId,
-        type: 'message_api_request',
       });
     }
 
@@ -218,16 +206,13 @@ vi.mock('@orvilo/device-gateway-client', () => ({
   GatewayClient: MockGatewayClient,
 }));
 
-vi.mock('@/services/imessageBridgeSrv', () => ({
-  default: class ImessageBridgeService {},
-}));
-
 vi.mock('fast-glob', () => ({ default: vi.fn().mockResolvedValue([]) }));
 vi.mock('fflate', () => ({ unzipSync: vi.fn() }));
 
 // ─── Mock Controllers ───
 
 const mockLocalFileCtr = {
+  getSkillDirectoryDeps: vi.fn().mockReturnValue({}),
   handleEditFile: vi.fn().mockResolvedValue({ success: true }),
   handleGlobFiles: vi.fn().mockResolvedValue({ files: [] }),
   handleGrepContent: vi.fn().mockResolvedValue({ matches: [] }),
@@ -262,10 +247,6 @@ const mockHeterogeneousAgentCtr = {
   spawnLhHeteroExec: vi.fn().mockResolvedValue({ status: 'accepted' }),
   startSession: vi.fn().mockResolvedValue({ sessionId: 'mock-session-id' }),
 } as unknown as HeterogeneousAgentCtr;
-
-const mockImessageBridgeSrv = {
-  handleGatewayMessageApi: vi.fn().mockResolvedValue({ ok: true }),
-} as unknown as ImessageBridgeService;
 
 const mockAuvSrv = {
   runCommand: vi.fn().mockResolvedValue({
@@ -303,7 +284,6 @@ const mockApp = {
   getService: vi.fn((Cls) => {
     if (Cls === AuvService) return mockAuvSrv;
     if (Cls === GatewayConnectionService) return mockGatewayConnectionSrv;
-    if (Cls === ImessageBridgeService) return mockImessageBridgeSrv;
     return null;
   }),
   storeManager: { get: mockStoreGet, set: mockStoreSet },
@@ -904,66 +884,6 @@ describe('GatewayConnectionCtr', () => {
     });
   });
 
-  describe('message API routing', () => {
-    async function connectAndOpen() {
-      ctr.afterFirstFrame();
-      await vi.advanceTimersByTimeAsync(0);
-      const client = MockGatewayClient.lastInstance!;
-      client.simulateConnected();
-      return client;
-    }
-
-    it('should route iMessage message API requests to the iMessage bridge service', async () => {
-      vi.mocked(mockImessageBridgeSrv.handleGatewayMessageApi).mockResolvedValueOnce({
-        guid: 'sent-1',
-      });
-      const client = await connectAndOpen();
-
-      client.simulateMessageApiRequest(
-        'imessage',
-        'sendText',
-        {
-          applicationId: 'home-mac-mini',
-          chatGuid: 'iMessage;-;chat-1',
-          message: 'hello',
-        },
-        'msg-req-42',
-      );
-      await vi.advanceTimersByTimeAsync(0);
-
-      expect(mockImessageBridgeSrv.handleGatewayMessageApi).toHaveBeenCalledWith('sendText', {
-        applicationId: 'home-mac-mini',
-        chatGuid: 'iMessage;-;chat-1',
-        message: 'hello',
-      });
-      expect(client.sendMessageApiResponse).toHaveBeenCalledWith({
-        requestId: 'msg-req-42',
-        result: {
-          content: JSON.stringify({ guid: 'sent-1' }),
-          success: true,
-        },
-      });
-    });
-
-    it('should send message_api_response with error for unsupported platforms', async () => {
-      const client = await connectAndOpen();
-
-      client.simulateMessageApiRequest('unsupported', 'sendText', {}, 'msg-req-err');
-      await vi.advanceTimersByTimeAsync(0);
-
-      const errorMsg =
-        'Message API "unsupported/sendText" is not available on this device. It may not be supported in the current desktop version.';
-      expect(client.sendMessageApiResponse).toHaveBeenCalledWith({
-        requestId: 'msg-req-err',
-        result: {
-          content: errorMsg,
-          error: errorMsg,
-          success: false,
-        },
-      });
-    });
-  });
-
   // ─── Auth Expired ───
 
   describe('auth_expired handling', () => {
@@ -1288,6 +1208,64 @@ describe('GatewayConnectionCtr', () => {
 
         expect(killSpy).toHaveBeenCalledWith(-67900, 'SIGINT');
         expect(killSpy).toHaveBeenCalledWith(-67900, 'SIGKILL');
+        killSpy.mockRestore();
+      });
+    });
+
+    // Regression: a retried agent_run_request after a lost ack reuses the same
+    // idempotency key (= operationId). The device must ack the already-accepted
+    // run instead of spawning a duplicate process.
+    describe('agent run redelivery dedupe', () => {
+      const spawnOnce = async (operationId: string, runGeneration = 1) => {
+        let capturedOnChildSpawned: ((child: any) => void) | undefined;
+        vi.mocked(mockHeterogeneousAgentCtr.spawnLhHeteroExec).mockImplementationOnce(
+          (params: any) => {
+            capturedOnChildSpawned = params.onChildSpawned;
+            return Promise.resolve({ status: 'accepted' });
+          },
+        );
+
+        const client = await connectAndOpen();
+        client.simulateAgentRunRequest('claude-code', operationId, 'hi', 'mock-jwt', {
+          runGeneration,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+
+        const mockChild = new EventEmitter() as any;
+        mockChild.pid = 31337;
+        capturedOnChildSpawned?.(mockChild);
+        return client;
+      };
+
+      it('acks a retried request for a live run without respawning', async () => {
+        const client = await spawnOnce('op-dedupe');
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+
+        client.simulateAgentRunRequest('claude-code', 'op-dedupe', 'hi', 'mock-jwt', {
+          runGeneration: 1,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+        expect(client.sendAgentRunAck).toHaveBeenLastCalledWith({
+          operationId: 'op-dedupe',
+          status: 'accepted',
+        });
+      });
+
+      it('stops the stale writer and respawns on a newer runGeneration', async () => {
+        const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+        const client = await spawnOnce('op-supersede', 1);
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(1);
+
+        client.simulateAgentRunRequest('claude-code', 'op-supersede', 'hi', 'mock-jwt', {
+          runGeneration: 2,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(killSpy).toHaveBeenCalledWith(-31337, 'SIGKILL');
+        expect(mockHeterogeneousAgentCtr.spawnLhHeteroExec).toHaveBeenCalledTimes(2);
         killSpy.mockRestore();
       });
     });
@@ -2087,6 +2065,40 @@ describe('GatewayConnectionCtr', () => {
         hostname: 'mock-hostname',
         platform: process.platform,
       });
+    });
+  });
+
+  describe('getActiveWorktreeWriter', () => {
+    it('SA01-A: matches a writer registered under a symlink alias of the path', async () => {
+      // A run's cwd may be spelled through a symlink — the writer check must
+      // compare canonical identities, not raw strings, or a cleanup asks
+      // "is anyone writing /real/dir" and misses the run at /link/dir.
+      const real = await mkdtemp(path.join(os.tmpdir(), 'gw-writer-real-'));
+      const link = `${real}-link`;
+      await symlink(real, link);
+      try {
+        (ctr as any).platformTasks.set('task-1', {
+          agentType: 'local-cli',
+          cwd: link,
+          operationId: 'op-1',
+          pid: 4321,
+          topicId: 'tp-1',
+        });
+
+        const writer = await (ctr as any).deviceControlDeps.getActiveWorktreeWriter(real);
+        expect(writer).toMatchObject({ operationId: 'op-1', pid: 4321, topicId: 'tp-1' });
+
+        // A genuinely different path still reports no writer.
+        const other = await mkdtemp(path.join(os.tmpdir(), 'gw-writer-other-'));
+        try {
+          expect(await (ctr as any).deviceControlDeps.getActiveWorktreeWriter(other)).toBeNull();
+        } finally {
+          await rm(other, { force: true, recursive: true });
+        }
+      } finally {
+        await rm(link, { force: true });
+        await rm(real, { force: true, recursive: true });
+      }
     });
   });
 });

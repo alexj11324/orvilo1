@@ -1,0 +1,18 @@
+---
+title: 'Clearer Workspace Slug Conflicts'
+description: >-
+  Creating a workspace with a slug that is already taken now returns a proper
+  conflict error instead of an unexplained server failure.
+tags:
+  - Workspaces
+  - API
+---
+
+# Clearer Workspace Slug Conflicts
+
+Creating a workspace whose slug is already taken now fails with a clear conflict error, so API callers and retry logic can tell "pick another slug" apart from a genuine server failure. The same correction applies to delegated task creation, where a duplicate input previously surfaced as an internal error.
+
+## Improvements and fixes
+
+- **Duplicate workspace slugs report a conflict.** The workspace-create endpoint now detects the wrapped database error and returns a conflict instead of a generic server error.
+- **Delegated task inputs fail cleanly on duplicates.** The agent-delegation path recognizes wrapped unique-violation errors the same way.

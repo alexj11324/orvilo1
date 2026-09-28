@@ -29,14 +29,16 @@ describe('GlobalService', () => {
       // Arrange
       const mockVersion = '1.0.0';
       (fetch as Mock).mockResolvedValue({
-        json: () => Promise.resolve({ version: mockVersion }),
+        json: () => Promise.resolve({ tag_name: mockVersion }),
       });
 
       // Act
       const version = await globalService.getLatestVersion();
 
       // Assert
-      expect(fetch).toHaveBeenCalledWith('https://registry.npmmirror.com/@lobehub/chat/latest');
+      expect(fetch).toHaveBeenCalledWith(
+        'https://api.github.com/repos/alexj11324/orvilo1/releases/latest',
+      );
       expect(version).toBe(mockVersion);
     });
 

@@ -5,6 +5,7 @@ import SettingHeader from '@/features/Settings/features/SettingHeader';
 import ChatAppearance from '../chat-appearance/features/ChatAppearance';
 import Appearance from '../common/features/Appearance';
 import Common from '../common/features/Common/Common';
+import Collaboration from './features/Collaboration';
 import Desktop from './features/Desktop';
 import Font from './features/Font';
 
@@ -19,6 +20,7 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
       {showSettingHeader && <SettingHeader title={t('tab.appearance')} />}
       <Common />
       <Appearance />
+      <Collaboration />
       <Desktop />
       <Font />
       <ChatAppearance />

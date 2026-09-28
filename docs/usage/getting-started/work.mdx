@@ -1,0 +1,176 @@
+---
+title: Inbox and My issues
+description: >-
+  Find what needs a decision, the work assigned to you, saved views, and team
+  triage. The sidebar is Inbox, My issues, Reviews, and Agent, with Workspace
+  and Teams as sections.
+tags:
+  - Inbox
+  - My issues
+  - Saved Views
+  - Teams
+  - Task
+  - Navigation
+---
+
+# Inbox and My issues
+
+The left sidebar is a fixed personal work surface: **Inbox**, **My issues**, **Reviews**, and **Agent**, then **Workspace**, **Teams**, and **Favorites**. They are not a second notification product.
+
+The same tasks and approvals show up here. Opening Inbox does not create a parallel queue, and My issues does not replace the Tasks list you still use to create and schedule work.
+
+## Where to look
+
+| Surface       | What it is for                                                                                                                                                    |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Inbox**     | Decide on approvals, transfers, and agent prompts. Scan later activity.                                                                                           |
+| **My issues** | Lists of work assigned to you, created by you, subscribed, or in your activity union (`/my-issues`).                                                              |
+| **Reviews**   | Its own page (`/reviews`): work waiting on you, and reviews you requested.                                                                                        |
+| **Agent**     | Opens `/agents`. A first-level row, not an accordion.                                                                                                             |
+| **Workspace** | Projects, Views, Members (`/members` directory of people, agents, and invitations), and More (Automations, Resource, workspace settings).                         |
+| **Teams**     | Workspace teams you have joined, plus that team's work. Hidden when you are in personal (no-workspace) mode.                                                      |
+| **Tasks**     | Create, assign, and schedule tasks. Reachable as `/tasks` and from My issues / Views — not a first-level sidebar item. The header search row also creates a task. |
+
+Click the bell or **Inbox** in the sidebar to open `/inbox`. Native desktop notification clicks open the same Inbox. Chat Home is still the conversation summary — it is not this work inbox.
+
+## Inbox
+
+Inbox has two tabs:
+
+- **Needs you** — cards that still require a decision (approve, decline, withdraw, or reply).
+- **Activity** — updates you can read, archive, or snooze.
+
+Filter the list with **All**, **Unread**, **Mentions**, **Snoozed**, or **Archived**.
+
+Open a card to preview it. Depending on the source you may see:
+
+- **Approve** / **Decline** — act on the original request. The inbox does not invent a second approval.
+- **Withdraw** — cancel an outgoing request you sent.
+- **Send reply** — give an agent the extra input it asked for.
+- **Open** — jump to the task, or to an allowlisted GitHub / Linear URL.
+
+**Archive**, **Snooze**, and **Mark unread** live on the card's **More actions** menu. Snooze offers **1 hour**, **Later today** (18:00), **Tomorrow** (09:00), and **Next week** (Monday 09:00). Newer activity on the same item brings it back and does not extend any source deadline.
+
+**Mark all as read** and **Archive all** apply to the current tab and filter. Archive all can clear ordinary activity; it does not make a pending Needs-you request disappear or change the underlying task.
+
+If some inbox sources fail to load, a warning stays on the page. Remaining cards are still current — that warning is not an empty inbox.
+
+Requests you sent (outgoing transfers) can keep the unread badge honest so you can track them. They do not appear in **Needs you** as if you still had to approve yourself.
+
+### Keyboard
+
+On the Inbox list, with focus outside a text field:
+
+| Action                              | Keys                   |
+| ----------------------------------- | ---------------------- |
+| Move selection                      | `J` / `K` or `↓` / `↑` |
+| Open the selected card              | `Enter`                |
+| Back from detail on a narrow screen | `Esc`                  |
+
+These keys are page-local. They do not fire while you type in an editor, a comment box, or the Command Menu, and they are not listed under customizable Shortcuts.
+
+## My issues
+
+Open **My issues** in the sidebar (`/my-issues`). Older `/my-work` links redirect here. Tabs:
+
+| Tab            | What you see                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| **Assigned**   | Tasks whose assignee is you. Independent of whether you have a notification.                  |
+| **Created**    | Tasks you created. Imported work with no creator does not pretend you filed it.               |
+| **Subscribed** | Tasks you chose to follow. Unsubscribe does not drop you as assignee or reviewer.             |
+| **Activity**   | The union of assigned, created, reviewer, delegated, and subscribed work — one activity list. |
+
+**Delegated to agents** is a filter chip (`?delegated=1`), not a tab. It keeps only work you explicitly handed off (an execution grant you started). Owning the Agent is not enough. Review work lives on **Reviews**, not on this page.
+
+**No project** limits the list to work that is not in a project. It does not assign a default project.
+
+Tabs can switch **List** / **Board** from the toolbar. The board is the same Kanban as Tasks, narrowed to that slice. Hidden columns collapse in place. Completing a parent with open subtasks still asks whether to cascade. Saved views and team boards use that same Kanban, filled from the view or team's query. Dragging follows the team's workflow, and a column with more than one state asks you to pick the exact one. Blocked work cannot be moved to Done until the blockers finish.
+
+**Save as view** (on Assigned and Created) stores a private copy of that list and opens it under Views. Subscribed and Activity cannot be saved that way — those lists are not a self-contained query.
+
+On a readable task, **Subscribe** / **Unsubscribe** is a follow row. It is not a chat mute and not a model API key.
+
+Bookmarks that used `/tasks?collection=mine&scope=assigned` or `scope=created` open the matching My issues tab. `/my-work?tab=review` opens `/reviews`. Other task URLs, including scheduled-task paths, stay on Tasks.
+
+## Reviews
+
+Open **Reviews** in the sidebar (`/reviews`). Tabs:
+
+| Tab         | What you see                                                                                                                                                                                                         |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **For me**  | Tasks waiting on you as reviewer, plus readable pull-request approvals that are not tasks. Opening a PR uses an allowlisted GitHub or Linear URL; it does not create a Task and does not approve with the app token. |
+| **Created** | Reviews you requested, including your created tasks that already have a reviewer.                                                                                                                                    |
+
+## Views
+
+**Views** (`/views`) lists built-in views first, then views you own or that were shared with you. Search the list from the toolbar.
+
+Built-in views (they cannot be overwritten or deleted):
+
+- **All tasks**
+- **Blocked**
+- **In progress**
+- **Review**
+- **All projects**
+
+Opening a task view uses the same list/board chrome as My issues. Opening a project view (including **All projects**) lists matching projects with status, identifier, and last-updated — the same row language as **Projects**. Project views can also switch to a board.
+
+**New view** opens a dialog: pick tasks or projects, add filters from the field list (status, assignee, team, project, and the rest of the registry), choose list or board grouping, name it, and share. Filters you cannot express in that builder stay in the saved query — they are not dropped on save. On a view you own, the same editor lives in **Edit view**. Sharing is **Only me**, **This workspace**, or **This team** (team requires choosing a team). Visitors evaluate `currentUser` as themselves — a shared "assigned to me" list shows the visitor's assignments, not the author's. Shared definitions do not include identifiers the visitor cannot read.
+
+From My issues, **Save as view** creates a private copy of Assigned or Created. Subscribed and Activity cannot be saved that way.
+
+A view that needs repair shows that it must be fixed before it can return results. It will not silently drop a broken condition and dump the whole workspace.
+
+Pin a view with the favorite control on the view page. Use **Save as** on an existing view to copy it instead of editing the original.
+
+## Teams
+
+**Teams** is a workspace surface. In personal mode the sidebar hides it, Command Menu recents and work search omit teams, and the Teams page asks you to switch to a workspace.
+
+In a workspace, the sidebar **Your teams** list is teams you have joined. Public teams you have not joined stay on the `/teams` directory. Search that directory and open a team. The team page has:
+
+- **Home** — description, members (linked to `/members`), the live cycle, top projects and views, and jumps into Issues / Triage / Projects / Views. It does not stack the task list.
+- **Issues** — the team's current tasks, as a list or a board (the same Kanban as Tasks). Scopes **All**, **Active**, and **Backlog** live in the URL (`?scope=`). **No project** and **Cycle** filters apply here. List/Board is only on this tab.
+- **Triage** — inbound work waiting for a human. Shown only when the team allows triage. **Accept** and **Decline** stay on the row. **Mark duplicate**, **Reassign**, and **Move to team** live under **More actions**. Mark duplicate searches readable tasks, not just the loaded page. Accepting triage keeps the task on the team; it does not start an Agent run by itself.
+- **Projects** / **Views** — projects this team participates in, and views shared with the team.
+
+If the team already has cycles, a **Cycle** filter is available on Issues and Triage. There is no separate Cycles manager in this increment.
+
+Linear-linked issues must be moved between teams in Linear. Orvilo will tell you that instead of rewriting the external issue.
+
+Private teams you are not a member of do not appear in the sidebar, the directory, search, or Command Menu. Guessing a private team's URL does not reveal that it exists.
+
+## Recents and Favorites
+
+**Recents** in the sidebar and Command Menu are pages you visited (tasks, projects, views, and — in a workspace — teams). They are not a "recently updated" feed.
+
+On a recent row, **⋯** can **Pin** a task, project, view, or team. Rename and delete stay on documents, tasks, and topics. If a type has nothing to do, the menu is hidden instead of opening empty.
+
+**Favorites** keep typed pins. The sidebar shows a page of them (default 5; 10 / 15 / 20 from the section menu). **More** opens the full list with search. Up / down arrows reorder the complete list, so the last visible row can swap with an overflow item.
+
+## Command Menu
+
+`⌘ + K` / `Ctrl + K` still searches Agents, Topics, settings, and actions. It also finds work you can read:
+
+| Type        | Jump to                        |
+| ----------- | ------------------------------ |
+| **Task**    | The task detail page           |
+| **Project** | The project                    |
+| **Team**    | The team (workspace mode only) |
+| **View**    | The saved or built-in view     |
+
+Prefix a query with `type:task`, `type:project`, `type:team`, or `type:savedView` (or `is:` instead of `type:`) to limit results. Opening the menu also shows recent visits of those types.
+
+## What did not change
+
+- Creating a task, assigning an Agent, reviewing results, and scheduling still happen on the [Task](/docs/usage/getting-started/task) itself. Open `/tasks` from Command Menu or a deep link; the header search row also creates a task.
+- Chat notifications and Home conversation summaries are separate from Inbox.
+- There is no Pulse, Initiatives, or Customers sidebar in this increment.
+
+<Cards>
+  <Card href={'/docs/usage/getting-started/task'} title={'Task'} />
+
+  <Card href={'/docs/usage/user-interface/command-menu'} title={'Command Menu'} />
+
+  <Card href={'/docs/usage/user-interface/shortcuts'} title={'Keyboard Shortcuts'} />
+</Cards>

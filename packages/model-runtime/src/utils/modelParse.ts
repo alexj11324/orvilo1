@@ -34,12 +34,6 @@ export const MODEL_LIST_CONFIGS = {
     reasoningKeywords: ['-3-7', '3.7', '-4'],
     visionKeywords: ['claude'],
   },
-  comfyui: {
-    // ComfyUI models are image generation models, no chat capabilities
-    functionCallKeywords: [],
-    reasoningKeywords: [],
-    visionKeywords: [],
-  },
   deepseek: {
     functionCallKeywords: ['v3', 'v4', 'r1', 'deepseek-chat'],
     reasoningKeywords: ['r1', 'deepseek-reasoner', 'v3.', 'v4'],
@@ -117,18 +111,6 @@ export const MODEL_LIST_CONFIGS = {
     reasoningKeywords: ['qvq', 'qwq', 'qwen3', '!-instruct-', '!-coder-'],
     visionKeywords: ['qvq', '-vl', '-omni', 'qwen3.'],
   },
-  replicate: {
-    imageOutputKeywords: [
-      'flux',
-      'stable-diffusion',
-      'sdxl',
-      'ideogram',
-      'canny',
-      'depth',
-      'fill',
-      'redux',
-    ],
-  },
   v0: {
     functionCallKeywords: ['v0'],
     reasoningKeywords: ['v0-1.5'],
@@ -171,7 +153,6 @@ export const MODEL_LIST_CONFIGS = {
 // Model owner (provider) keyword configuration
 export const MODEL_OWNER_DETECTION_CONFIG = {
   anthropic: ['claude'],
-  comfyui: ['comfyui/'], // ComfyUI models detection - all ComfyUI models have comfyui/ prefix
   deepseek: ['deepseek'],
   google: ['gemini', 'imagen', 'gemma'],
   inclusionai: ['ling-', 'ming-', 'ring-'],
@@ -183,7 +164,6 @@ export const MODEL_OWNER_DETECTION_CONFIG = {
   moonshot: ['moonshot', 'kimi'],
   openai: ['o1', 'o3', 'o4', 'gpt-'],
   qwen: ['qwen', 'qwq', 'qvq'],
-  replicate: [],
   v0: ['v0'],
   volcengine: ['doubao'],
   wenxin: ['ernie', 'qianfan'],
@@ -201,27 +181,6 @@ export const isDeepSeekV4FamilyModel = (model: string | undefined): boolean =>
 export const isDeepSeekThinkingEligibleModel = (model: string | undefined): boolean =>
   typeof model === 'string' &&
   (model.toLowerCase().includes('deepseek-reasoner') || isDeepSeekV4FamilyModel(model));
-
-// Image model keyword configuration
-export const IMAGE_MODEL_KEYWORDS = [
-  'dall-e',
-  'dalle',
-  'midjourney',
-  'stable-diffusion',
-  'sd',
-  'flux',
-  'imagen',
-  'firefly',
-  'cogview',
-  'wanxiang',
-  'DESCRIBE',
-  'UPSCALE',
-  '!gemini', // Exclude gemini models, they are chat models even if they contain -image
-  '-image',
-  '^V3',
-  '^V_2',
-  '^V_1',
-] as const;
 
 const AI_MODEL_TYPE_SET = new Set<AiModelType>(AiModelTypeSchema.options);
 
@@ -551,20 +510,10 @@ const processModelCard = (
     knownModel?.type ||
     (isKeywordListMatch(
       model.id.toLowerCase(),
-      IMAGE_MODEL_KEYWORDS.map((k) => k.toLowerCase()),
+      EMBEDDING_MODEL_KEYWORDS.map((k) => k.toLowerCase()),
     )
-      ? 'image'
-      : isKeywordListMatch(
-            model.id.toLowerCase(),
-            EMBEDDING_MODEL_KEYWORDS.map((k) => k.toLowerCase()),
-          )
-        ? 'embedding'
-        : 'chat');
-
-  // image model can't find parameters
-  if (modelType === 'image' && !model.parameters && !knownModel?.parameters) {
-    return undefined;
-  }
+      ? 'embedding'
+      : 'chat');
 
   const mergedSettings = mergeSettings(model.settings, knownModel?.settings, options);
 
@@ -653,10 +602,6 @@ const processModelCard = (
       knownModel?.abilities?.search ??
       ((isKeywordListMatch(model.id.toLowerCase(), searchKeywords) && !isExcludedModel) || false),
     type: modelType,
-    // current, only image model use the parameters field
-    ...(modelType === 'image' && {
-      parameters: model.parameters ?? knownModel?.parameters,
-    }),
     ...(mergedSettings ? { settings: mergedSettings } : {}),
     video:
       model.video ??

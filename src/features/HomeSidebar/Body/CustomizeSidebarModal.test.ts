@@ -1,34 +1,62 @@
 import { describe, expect, it } from 'vitest';
 
-import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
+import { getVisibleSidebarSections } from './CustomizeSidebarModal';
 
-import { getAvailableSidebarItems, getSortableSidebarItemIds } from './CustomizeSidebarModal';
-
+/**
+ * The fixed IA retires the old drag-sort customizer: core destinations stay
+ * pinned and only optional sections can be hidden. This suite guards the
+ * offer list the dialog is built from.
+ */
 describe('CustomizeSidebarModal', () => {
-  it('keeps Memory available in personal mode', () => {
-    const items = getAvailableSidebarItems(false);
-
-    expect(items.some((item) => item.id === 'memory')).toBe(true);
+  it('offers the fixed-IA sections in contract order', () => {
+    expect(getVisibleSidebarSections(true).map((section) => section.id)).toEqual([
+      'inbox',
+      'my-work',
+      'reviews',
+      'agent',
+      'drafts',
+      'workspace',
+      'favorites',
+      'teams',
+    ]);
   });
 
-  it('allows Projects to be reordered and hidden', () => {
-    expect(getAvailableSidebarItems(false).some((item) => item.id === 'project')).toBe(true);
-    expect(getSortableSidebarItemIds(false).has('project')).toBe(true);
+  it('keeps core destinations pinned (not hideable)', () => {
+    const pinned = getVisibleSidebarSections(true)
+      .filter((section) => section.alwaysVisible)
+      .map((section) => section.id);
+
+    expect(pinned).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'drafts']);
   });
 
-  it('removes Memory from workspace mode customization', () => {
-    const items = getAvailableSidebarItems(true);
+  it('never offers retired sidebar keys', () => {
+    const retired = [
+      'home',
+      'tasks',
+      'automations',
+      'resource',
+      'recents',
+      'private',
+      'project',
+      'views',
+      'community',
+      'image',
+      'memory',
+      'page',
+      'pages',
+    ];
+    const offered = new Set(
+      [...getVisibleSidebarSections(false), ...getVisibleSidebarSections(true)].map(
+        (section) => section.id,
+      ),
+    );
 
-    expect(items.some((item) => item.id === 'memory')).toBe(false);
+    for (const id of retired) expect(offered.has(id)).toBe(false);
   });
 
-  it('keeps the spacer in the sortable item set', () => {
-    expect(getSortableSidebarItemIds(false).has(SIDEBAR_SPACER_ID)).toBe(true);
-    expect(getSortableSidebarItemIds(true).has(SIDEBAR_SPACER_ID)).toBe(true);
-  });
-
-  it('keeps workspace-only exclusions in the sortable item set', () => {
-    expect(getSortableSidebarItemIds(false).has('memory')).toBe(true);
-    expect(getSortableSidebarItemIds(true).has('memory')).toBe(false);
+  it('excludes the workspace-only Your teams group in personal mode', () => {
+    const ids = getVisibleSidebarSections(false).map((section) => section.id);
+    expect(ids).not.toContain('teams');
+    expect(getVisibleSidebarSections(true).map((section) => section.id)).toContain('teams');
   });
 });

@@ -344,64 +344,6 @@ describe('parseModelString', () => {
     });
   });
 
-  describe('FAL image models', () => {
-    it('should correctly parse FAL image model ids with slash and custom display names', async () => {
-      const result = await parseModelString(
-        'fal',
-        '-all,+fal-ai/flux-kontext/dev=KontextDev,+fal-ai/flux-pro/kontext=KontextPro,+fal-ai/flux/schnell=Schnell,+fal-ai/imagen4/preview=Imagen4',
-      );
-      expect(result.add).toEqual([
-        {
-          id: 'fal-ai/flux-kontext/dev',
-          displayName: 'KontextDev',
-          abilities: {},
-          type: 'image',
-        },
-        {
-          id: 'fal-ai/flux-pro/kontext',
-          displayName: 'KontextPro',
-          abilities: {},
-          type: 'image',
-        },
-        {
-          id: 'fal-ai/flux/schnell',
-          displayName: 'Schnell',
-          abilities: {},
-          type: 'image',
-        },
-        {
-          id: 'fal-ai/imagen4/preview',
-          displayName: 'Imagen4',
-          abilities: {},
-          type: 'image',
-        },
-      ]);
-      expect(result.removeAll).toBe(true);
-      expect(result.removed).toEqual(['all']);
-    });
-
-    it('should correctly parse FAL image model ids with slash (no displayName)', async () => {
-      const result = await parseModelString(
-        'fal',
-        '-all,+fal-ai/flux-kontext/dev,+fal-ai/flux-pro/kontext',
-      );
-      expect(result.add).toEqual([
-        {
-          id: 'fal-ai/flux-kontext/dev',
-          abilities: {},
-          type: 'image',
-        },
-        {
-          id: 'fal-ai/flux-pro/kontext',
-          abilities: {},
-          type: 'image',
-        },
-      ]);
-      expect(result.removeAll).toBe(true);
-      expect(result.removed).toEqual(['all']);
-    });
-  });
-
   describe('deployment name', () => {
     it('should have no deployment name', async () => {
       const result = await parseModelString('test-provider', 'model1=Model 1', true);

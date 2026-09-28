@@ -3,7 +3,16 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { messages, nextauthAccounts, topics, users, userSettings } from '../../schemas';
+import {
+  messages,
+  nextauthAccounts,
+  projects,
+  tasks,
+  topics,
+  users,
+  userSettings,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import type { ListUsersForMemoryExtractorCursor } from '../user';
 import { UserModel, UserNotFoundError } from '../user';
@@ -105,6 +114,15 @@ describe('UserModel', () => {
   });
 
   describe('getUserState', () => {
+    it('persists and clears a job title without changing another user', async () => {
+      await userModel.updateUser({ jobTitle: 'Software engineer' });
+      expect((await userModel.getUserState(mockDecryptor)).jobTitle).toBe('Software engineer');
+      const otherModel = new UserModel(serverDB, otherUserId);
+      expect((await otherModel.getUserState(mockDecryptor)).jobTitle).toBeNull();
+      await userModel.updateUser({ jobTitle: null });
+      expect((await userModel.getUserState(mockDecryptor)).jobTitle).toBeNull();
+    });
+
     it('should return user state with settings', async () => {
       // Create user settings
       await serverDB.insert(userSettings).values({
@@ -637,6 +655,14 @@ describe('UserModel', () => {
 
     describe('deleteUser', () => {
       it('should delete a user', async () => {
+        await serverDB.insert(tasks).values({
+          createdByUserId: userId,
+          id: 'personal-task-deleted-with-user',
+          identifier: 'PERSONAL-DELETE',
+          instruction: 'Personal task content',
+          seq: 1,
+        });
+
         await UserModel.deleteUser(serverDB, userId);
 
         const user = await serverDB.query.users.findFirst({
@@ -644,6 +670,52 @@ describe('UserModel', () => {
         });
 
         expect(user).toBeUndefined();
+        await expect(
+          serverDB.query.tasks.findFirst({
+            where: eq(tasks.id, 'personal-task-deleted-with-user'),
+          }),
+        ).resolves.toBeUndefined();
+      });
+
+      it('deletes personal projects but keeps workspace projects on owner removal', async () => {
+        // The workspace is owned by another user so it survives the delete;
+        // `projects.user_id` set-nulls there while personal rows must be
+        // removed explicitly — otherwise they linger ownerless forever.
+        const [ws] = await serverDB
+          .insert(workspaces)
+          .values({
+            name: 'delete-user-ws',
+            primaryOwnerId: otherUserId,
+            slug: 'delete-user-ws',
+          })
+          .returning();
+        await serverDB.insert(projects).values([
+          {
+            id: 'proj-personal-deleted',
+            identifier: 'PERS',
+            name: 'Personal project',
+            userId,
+          },
+          {
+            id: 'proj-workspace-survives',
+            identifier: 'WKSP',
+            name: 'Workspace project',
+            userId,
+            workspaceId: ws.id,
+          },
+        ]);
+
+        await UserModel.deleteUser(serverDB, userId);
+
+        await expect(
+          serverDB.query.projects.findFirst({ where: eq(projects.id, 'proj-personal-deleted') }),
+        ).resolves.toBeUndefined();
+
+        const surviving = await serverDB.query.projects.findFirst({
+          where: eq(projects.id, 'proj-workspace-survives'),
+        });
+        expect(surviving).toBeDefined();
+        expect(surviving?.userId).toBeNull();
       });
 
       it('purges share-visitor topics and messages when the visitor is deleted', async () => {
@@ -890,6 +962,24 @@ describe('UserModel', () => {
 
         // Empty whitelist should not filter (same as no whitelist)
         expect(result.map((u) => u.id)).toEqual(['user-1', 'user-2']);
+      });
+
+      it('should exclude users who disabled memory while keeping missing settings enabled', async () => {
+        await serverDB.delete(users);
+        await serverDB.insert(users).values([
+          { id: 'user-on', createdAt: new Date('2024-01-01T00:00:00Z') },
+          { id: 'user-off', createdAt: new Date('2024-01-02T00:00:00Z') },
+          { id: 'user-default', createdAt: new Date('2024-01-03T00:00:00Z') }, // no settings row
+        ]);
+
+        await serverDB.insert(userSettings).values([
+          { id: 'user-on', memory: { enabled: true } },
+          { id: 'user-off', memory: { enabled: false } },
+        ]);
+
+        const result = await UserModel.listUsersForMemoryExtractor(serverDB);
+
+        expect(result.map((u) => u.id)).toEqual(['user-on', 'user-default']);
       });
     });
 

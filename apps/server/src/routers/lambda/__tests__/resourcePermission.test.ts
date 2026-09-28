@@ -190,6 +190,37 @@ describe('resourcePermissionRouter.getGeneralAccess', () => {
 
     expect(result.accessLevel).toBe('view');
   });
+
+  // Regression: the workspace gate used to reject every unfiled row outright,
+  // so a group created before workspace activation could never report access —
+  // its Agents-page context menu collapsed to "Open in New Window" forever.
+  it("admits the caller's own unfiled row (union scope)", async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'user_member',
+      visibility: 'private',
+      workspaceId: null,
+    } as any);
+    canManageMock.mockResolvedValue(true);
+
+    const result = await caller().getGeneralAccess({
+      resourceId: 'group-1',
+      resourceType: 'agentGroup',
+    });
+
+    expect(result).toMatchObject({ canManage: true, creatorId: 'user_member' });
+  });
+
+  it("still hides another user's unfiled row", async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'user_other',
+      visibility: 'public',
+      workspaceId: null,
+    } as any);
+
+    await expect(
+      caller().getGeneralAccess({ resourceId: 'group-2', resourceType: 'agentGroup' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
 });
 
 /**

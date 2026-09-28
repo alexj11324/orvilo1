@@ -5,11 +5,12 @@
 >
 > This file previously served as the writable project layer. Its entries use
 > Wrong approach / Why it's wrong / What it breaks / Correct approach. The
-> generic, product-independent mistake catalogue lives in the
-> installed skill's `references/common-mistakes.md` (read-only in this repo,
-> updated by PR to `@orvilo/cli`) — read BOTH layers before a run. When an entry
-> here turns out to be product-independent, genericize it (drop the Orvilo
-> nouns) and PR it upstream.
+> generic, product-independent mistake catalogue it used to pair with lived in
+> the acceptance skill (`references/common-mistakes.md`, read-only here and
+> updated by PR to `@orvilo/cli`); that skill was retired with the standalone
+> acceptance platform, so this is now the only layer. When an entry here turns
+> out to be product-independent, genericize it (drop the Orvilo nouns) — there
+> is no upstream catalogue to PR it to any more.
 >
 > Most of the historically accumulated cases were promoted to the generic layer;
 > what remains here is the Orvilo-platform-specific residue (the verify /

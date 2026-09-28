@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { lambdaClient, toolsClient } from '@/libs/trpc/client';
+import { toolsClient } from '@/libs/trpc/client';
 
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 15_000;
@@ -20,27 +20,7 @@ export interface SocialProfile {
   username: string;
 }
 
-export interface ClaimableResource {
-  description?: string;
-  id: number;
-  identifier: string;
-  name?: string;
-  parsedUrl?: {
-    fullName: string;
-    owner: string;
-    repo: string;
-  };
-  type: 'plugin' | 'skill';
-  url?: string;
-}
-
-export interface ClaimableResources {
-  plugins: ClaimableResource[];
-  skills: ClaimableResource[];
-}
-
 interface UseSocialConnectOptions {
-  onClaimableResourcesFound?: (resources: ClaimableResources) => void;
   onConnectSuccess?: (profile: SocialProfile) => void;
   onDisconnectSuccess?: () => void;
   provider: SocialProvider;
@@ -50,7 +30,6 @@ export const useSocialConnect = ({
   provider,
   onConnectSuccess,
   onDisconnectSuccess,
-  onClaimableResourcesFound,
 }: UseSocialConnectOptions) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isWaitingAuth, setIsWaitingAuth] = useState(false);
@@ -110,31 +89,16 @@ export const useSocialConnect = ({
     }
   }, [provider]);
 
-  // Check for claimable resources
-  const checkClaimableResources = useCallback(async () => {
-    try {
-      const result = await lambdaClient.market.socialProfile.scanClaimableResources.query();
-      if (result.plugins.length > 0 || result.skills.length > 0) {
-        onClaimableResourcesFound?.(result);
-      }
-      return result;
-    } catch (err) {
-      console.error('[SocialConnect] Failed to scan claimable resources:', err);
-      return { plugins: [], skills: [] };
-    }
-  }, [onClaimableResourcesFound]);
-
   const handleConnectedProfile = useCallback(
-    async (newProfile: SocialProfile) => {
+    (newProfile: SocialProfile) => {
       if (authCompletedRef.current) return;
 
       authCompletedRef.current = true;
       cleanup();
       setProfile(newProfile);
       onConnectSuccess?.(newProfile);
-      await checkClaimableResources();
     },
-    [checkClaimableResources, cleanup, onConnectSuccess],
+    [cleanup, onConnectSuccess],
   );
 
   const confirmConnection = useCallback(async () => {
@@ -142,7 +106,7 @@ export const useSocialConnect = ({
 
     if (!newProfile) return false;
 
-    await handleConnectedProfile(newProfile);
+    handleConnectedProfile(newProfile);
 
     return true;
   }, [fetchProfile, handleConnectedProfile]);

@@ -1,5 +1,9 @@
 # 本地运行 E2E 测试
 
+> 本文档只覆盖 **Docker e2e 路径**（`e2e/scripts/setup.ts` + `postgres-e2e` 容器 `:5433` + app `:3006`）。
+> 本地开发的权威文档是 [docs/development/local-setup.md](../../docs/development/local-setup.md)——
+> 无 Docker 的机器走其中的 dockerless（brew）路径（app `:3010` + Postgres `:5432` db `orvilo`）。
+
 ## 前置要求
 
 - Docker Desktop 已安装并**正在运行**
@@ -98,27 +102,41 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres \
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres \
   DATABASE_DRIVER=node \
   KEY_VAULTS_SECRET=LA7n9k3JdEcbSgml2sxfw+4TV1AzaaFU5+R176aQz4s= \
-  AUTH_SECRET=e2e-test-secret-key-for-better-auth-32chars! \
   SKIP_LINT=1 \
   bun run build
 ```
 
-### Step 5: 启动应用服务器
+### Step 5: 启动 mock 服务与应用服务器
 
-**重要**: 必须在**项目根目录**运行！
+Agent 发消息走 gateway mode（服务端 runtime + Agent Gateway WS 扇出），E2E 需要两个本地 stand-in。先启动 mock 服务（fake Agent Gateway :3407 + OpenAI 兼容 mock LLM :3406）：
+
+```bash
+# 项目根目录，常驻进程
+bun e2e/scripts/mockServices.ts
+```
+
+另开终端启动应用服务器。**重要**: 必须在**项目根目录**运行！
 
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres \
   DATABASE_DRIVER=node \
   KEY_VAULTS_SECRET=LA7n9k3JdEcbSgml2sxfw+4TV1AzaaFU5+R176aQz4s= \
-  AUTH_SECRET=e2e-test-secret-key-for-better-auth-32chars! \
   NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION=0 \
   S3_ACCESS_KEY_ID=e2e-mock-access-key \
   S3_SECRET_ACCESS_KEY=e2e-mock-secret-key \
   S3_BUCKET=e2e-mock-bucket \
   S3_ENDPOINT=https://e2e-mock-s3.localhost \
+  ENABLE_AGENT_GATEWAY=1 \
+  AGENT_GATEWAY_URL=http://localhost:3407 \
+  AGENT_GATEWAY_SERVICE_TOKEN=e2e-mock-service-token \
+  DEEPSEEK_API_KEY=e2e-mock-key \
+  DEEPSEEK_PROXY_URL=http://localhost:3406/v1 \
+  OPENAI_API_KEY=e2e-mock-key \
+  OPENAI_PROXY_URL=http://localhost:3406/v1 \
   bunx next start -p 3006
 ```
+
+> `setup.ts --start` 会自动完成以上两步（含 mock 服务幂等启动）。缺了 mock 服务时，发消息场景会失败并在 BeforeAll 打印可达性警告。
 
 ## 环境变量参考
 
@@ -129,7 +147,6 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres \
 | `DATABASE_URL`                        | `postgresql://postgres:postgres@localhost:5433/postgres` | 数据库连接     |
 | `DATABASE_DRIVER`                     | `node`                                                   | 数据库驱动     |
 | `KEY_VAULTS_SECRET`                   | `LA7n9k3JdEcbSgml2sxfw+4TV1AzaaFU5+R176aQz4s=`           | 密钥保险库密钥 |
-| `AUTH_SECRET`                         | `e2e-test-secret-key-for-better-auth-32chars!`           | 认证密钥       |
 | `NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION` | `0`                                                      | 禁用邮箱验证   |
 
 ### S3 Mock 变量（必需）
@@ -189,7 +206,7 @@ docker stop postgres-e2e && docker rm postgres-e2e
 lsof -ti:3006 | xargs kill -9
 ```
 
-### BeforeAll hook errored: net::ERR_CONNECTION_REFUSED
+### BeforeAll hook errored: net::ERR\_CONNECTION\_REFUSED
 
 **原因**: 服务器未启动或未就绪
 

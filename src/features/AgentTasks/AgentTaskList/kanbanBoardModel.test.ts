@@ -9,14 +9,20 @@ import {
   canDropTaskIntoKanbanColumn,
   computeKanbanPosition,
   effectiveTaskPosition,
+  externalVisibleKanbanColumns,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
   getKanbanColumnHeaderVariant,
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
   KANBAN_STATUS_COLUMN_KEY,
+  KANBAN_WORKFLOW_COLUMN_KEY,
+  kanbanBoardCapabilities,
+  kanbanColumnAllowsCreate,
+  kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
+  kanbanCreateTaskProjectId,
   kanbanStatusColumnsExcludedBy,
   normalizeKanbanGroupBy,
   placeKanbanCardInColumn,
@@ -74,6 +80,9 @@ describe('kanbanBoardModel', () => {
     expect(normalizeKanbanGroupBy('member')).toBe('member');
     expect(normalizeKanbanGroupBy('priority')).toBe('priority');
     expect(normalizeKanbanGroupBy('none')).toBe('status');
+    // A stored 'milestone' pick travels here too — the board has no milestone
+    // columns, so it lands on the same status fallback as 'none'.
+    expect(normalizeKanbanGroupBy('milestone')).toBe('status');
   });
 
   it('keeps the column header in skeleton mode for every loading group shape', () => {
@@ -196,7 +205,7 @@ describe('kanbanBoardModel', () => {
   });
 
   describe('status columns', () => {
-    it('maps every task status into one of the five merged columns', () => {
+    it('keeps legacy execution statuses in their merged columns', () => {
       expect(KANBAN_STATUS_COLUMN_KEY.failed).toBe('needsInput');
       expect(KANBAN_STATUS_COLUMN_KEY.paused).toBe('needsInput');
       expect(KANBAN_STATUS_COLUMN_KEY.scheduled).toBe('running');
@@ -206,14 +215,36 @@ describe('kanbanBoardModel', () => {
       );
     });
 
-    it('marks running non-droppable and writes paused for needsInput drops', () => {
+    it('uses business workflow categories for linked tasks even when execution disagrees', () => {
+      const linkedDone = task('linked', null, null, {
+        status: 'paused',
+        workflowCategory: 'done',
+        workflowStateId: 'linear-state-done',
+      });
+
+      expect(KANBAN_WORKFLOW_COLUMN_KEY.done).toBe('done');
+      expect(taskKanbanColumnKey(linkedDone, 'status')).toBe('done');
+      expect(taskMatchesKanbanColumn(linkedDone, 'status', 'needsInput')).toBe(false);
+    });
+
+    it('keeps execution-only running closed while linked tasks can target mapped workflow states', () => {
       const running = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'running')!;
       const needsInput = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'needsInput')!;
+      const legacyTask = task('legacy');
+      const linkedTask = task('linked', null, null, {
+        workflowCategory: 'backlog',
+        workflowStateId: 'linear-state-backlog',
+      });
 
-      expect(running.droppable).toBe(false);
+      expect(running.droppable).toBe(true);
       expect(running.targetStatus).toBeNull();
+      expect(canDropTaskIntoKanbanColumn(legacyTask, 'status', running)).toBe(false);
+      expect(canDropTaskIntoKanbanColumn(linkedTask, 'status', running)).toBe(true);
       expect(needsInput.droppable).toBe(true);
       expect(needsInput.targetStatus).toBe('paused');
+      expect(getKanbanTaskPatch('status', needsInput, linkedTask)).toEqual({
+        workflowCategory: 'in_review',
+      });
     });
 
     it('treats a failed task dropped back on needsInput as already inside — no status rewrite', () => {
@@ -382,7 +413,9 @@ describe('kanbanBoardModel', () => {
       });
     });
 
-    it('prefers the My tasks scope over the other scopes', () => {
+    it('prefers the My tasks scope over the agent scopes, but keeps the project filter', () => {
+      // My Work's board composes scope + project: "Delegated × No project" is a
+      // real query, so projectId rides along while agentId is dropped.
       const query = buildKanbanGroupQuery({
         agentId: 'agt_1',
         groupBy: 'status',
@@ -393,8 +426,30 @@ describe('kanbanBoardModel', () => {
       expect(query).toEqual({
         excludeStatuses: undefined,
         groupBy: 'status',
+        projectId: 'proj_1',
         scope: 'created',
       });
+    });
+
+    it('keeps a null No-project filter on My tasks without locking create-task', () => {
+      // Regression: My Work passes projectId: null into KanbanBoard. The grouped
+      // query must keep that IS NULL filter, but createTaskModal only accepts a
+      // concrete id (`string | undefined`) — forwarding null failed typecheck.
+      expect(
+        buildKanbanGroupQuery({
+          groupBy: 'status',
+          myTaskScope: 'assigned',
+          projectId: null,
+        }),
+      ).toEqual({
+        excludeStatuses: undefined,
+        groupBy: 'status',
+        projectId: null,
+        scope: 'assigned',
+      });
+      expect(kanbanCreateTaskProjectId(null)).toBeUndefined();
+      expect(kanbanCreateTaskProjectId(undefined)).toBeUndefined();
+      expect(kanbanCreateTaskProjectId('proj_1')).toBe('proj_1');
     });
 
     it('carries the status exclusions through every scope', () => {
@@ -446,7 +501,7 @@ describe('kanbanBoardModel', () => {
       );
     });
 
-    it('rejects a release over a non-droppable column even when the card is parked there', () => {
+    it('rejects a legacy release over a column with no execution-status target', () => {
       // The preview moved the id into `running` before the last over was
       // rejected — the release column is still the truth.
       const columns = { backlog: [], done: [], running: ['T-1'] };
@@ -456,8 +511,8 @@ describe('kanbanBoardModel', () => {
     });
 
     it('keeps a same-column reorder inside `running` legal', () => {
-      // `running` is closed to incoming status writes, but reordering a member
-      // writes position only — membership is checked before the droppable gate.
+      // `running` is closed to incoming legacy status writes, but reordering a
+      // member writes position only — membership is checked first.
       const columns = { running: ['T-1', 'T-2'] };
       expect(
         resolveKanbanDropColumn(
@@ -478,10 +533,11 @@ describe('kanbanBoardModel', () => {
   });
 
   describe('kanbanColumnMoveScope', () => {
-    it('scopes a merged status column by its member statuses', () => {
+    it('scopes a workflow column by linked category or legacy execution statuses', () => {
       const column = STATUS_KANBAN_COLUMNS.find((c) => c.key === 'needsInput')!;
       expect(kanbanColumnMoveScope('status', column)).toEqual({
         statuses: ['paused', 'failed'],
+        workflowCategories: ['in_review'],
       });
     });
 
@@ -518,5 +574,127 @@ describe('kanbanBoardModel', () => {
       };
       expect(kanbanColumnMoveScope('priority', priorityColumn)).toEqual({ priority: 4 });
     });
+  });
+});
+
+describe('kanbanBoardCapabilities', () => {
+  it('manual boards allow both reorder and cross-group moves', () => {
+    expect(kanbanBoardCapabilities({ movable: true, sortMode: 'manual' })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: true,
+    });
+  });
+
+  it('defaults an unset sortMode to manual', () => {
+    expect(kanbanBoardCapabilities({ movable: true })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: true,
+    });
+  });
+
+  it('field-sorted views refuse same-column position writes but keep moves', () => {
+    expect(kanbanBoardCapabilities({ movable: true, sortMode: 'field' })).toEqual({
+      canMoveAcrossGroups: true,
+      canReorderWithinGroup: false,
+    });
+  });
+
+  it('movable=false disables both capabilities regardless of sortMode', () => {
+    for (const sortMode of ['field', 'manual', undefined] as const) {
+      expect(kanbanBoardCapabilities({ movable: false, sortMode })).toEqual({
+        canMoveAcrossGroups: false,
+        canReorderWithinGroup: false,
+      });
+    }
+  });
+});
+
+describe('kanbanColumnAllowsCreate', () => {
+  const base = { groupBy: 'status', myTaskScope: false };
+
+  it('offers create on the backlog column of store and work-query boards', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog' })).toBe(true);
+    // Team boards render `wf:`-prefixed columns — matching only the raw
+    // 'backlog' key silently removed their create entry.
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:backlog',
+        createContext: { teamId: 'team-1' },
+        external: true,
+      }),
+    ).toBe(true);
+  });
+
+  it('offers create on every column of a status-grouped board (Linear per-column +)', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'in_progress' })).toBe(true);
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:in_progress',
+        createContext: { teamId: 'team-1' },
+        external: true,
+      }),
+    ).toBe(true);
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog', groupBy: 'assignee' })).toBe(
+      false,
+    );
+  });
+
+  it('presets the clicked column dimension on the created issue', () => {
+    expect(kanbanColumnCreatePreset('backlog')).toEqual({ status: 'backlog' });
+    expect(kanbanColumnCreatePreset('wf:in_progress')).toEqual({
+      workflowCategory: 'in_progress',
+    });
+    expect(kanbanColumnCreatePreset('st:paused')).toEqual({ status: 'paused' });
+  });
+
+  it('refuses create in my-task scope and on external boards without a team context', () => {
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'backlog', myTaskScope: true })).toBe(
+      false,
+    );
+    expect(kanbanColumnAllowsCreate({ ...base, columnKey: 'wf:backlog', external: true })).toBe(
+      false,
+    );
+    expect(
+      kanbanColumnAllowsCreate({
+        ...base,
+        columnKey: 'wf:backlog',
+        createContext: { teamOptions: [{ id: 'team-1', name: 'Team' }] },
+        external: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe('externalVisibleKanbanColumns', () => {
+  const columns: KanbanColumnDefinition[] = ['wf:todo', 'wf:in_progress', 'wf:done'].map((key) => ({
+    droppable: true,
+    key,
+    targetStatus: null,
+  }));
+
+  it('keeps only columns whose group carries tasks — empty and unreturned groups hide', () => {
+    const visible = externalVisibleKanbanColumns(columns, [
+      group('wf:todo', [task('1')]),
+      group('wf:done', []),
+    ]);
+    expect(visible.map((column) => column.key)).toEqual(['wf:todo']);
+  });
+
+  it('counts paged groups by total, not by the loaded page length', () => {
+    const paged = group('wf:todo', [task('1')]);
+    paged.total = 40;
+    const visible = externalVisibleKanbanColumns(columns, [paged]);
+    expect(visible.map((column) => column.key)).toEqual(['wf:todo']);
+  });
+
+  it('keeps every column when the whole board is empty', () => {
+    const visible = externalVisibleKanbanColumns(columns, [
+      group('wf:todo', []),
+      group('wf:done', []),
+    ]);
+    expect(visible.map((column) => column.key)).toEqual(columns.map((column) => column.key));
+    expect(externalVisibleKanbanColumns(columns, [])).toEqual(columns);
   });
 });

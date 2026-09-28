@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react';
 
+import { DEFAULT_MENU as ASSISTANT_DEFAULT_MENU } from '@/features/Conversation/Messages/Assistant/Actions';
+import { DEFAULT_MENU as ASSISTANT_GROUP_DEFAULT_MENU } from '@/features/Conversation/Messages/AssistantGroup/Actions';
 import { type ActionsBarConfig, type MessageActionSlot } from '@/features/Conversation/types';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -25,8 +27,15 @@ const HETERO_USER: { bar: MessageActionSlot[]; menu: MessageActionSlot[] } = {
 
 const HETERO_ASSISTANT: { bar: MessageActionSlot[]; menu: MessageActionSlot[] } = {
   bar: ['copy'],
-  menu: ['copy', 'divider', 'select', 'divider', 'del'],
+  menu: ['copy', 'copyAsMarkdown', 'divider', 'select', 'divider', 'del'],
 };
+
+/**
+ * Inserts `copyAsMarkdown` right after `copy` in a slot list — the reference's
+ * `Copy as markdown` sits beside the plain copy action on assistant messages.
+ */
+const withCopyAsMarkdown = (slots: MessageActionSlot[]): MessageActionSlot[] =>
+  slots.flatMap((slot) => (slot === 'copy' ? [slot, 'copyAsMarkdown'] : [slot]));
 
 export const useActionsBarConfig = (): ActionsBarConfig => {
   const isHeteroAgent = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
@@ -40,6 +49,12 @@ export const useActionsBarConfig = (): ActionsBarConfig => {
       };
     }
 
-    return {};
+    // Keep each role's default bar/menu but extend the assistant menus with
+    // `copyAsMarkdown` — the audit's chat-options parity item on the agent
+    // surface. Overriding `menu` only leaves the default bar untouched.
+    return {
+      assistant: { menu: withCopyAsMarkdown(ASSISTANT_DEFAULT_MENU) },
+      assistantGroup: { menu: withCopyAsMarkdown(ASSISTANT_GROUP_DEFAULT_MENU) },
+    };
   }, [isHeteroAgent]);
 };

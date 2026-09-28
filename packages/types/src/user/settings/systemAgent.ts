@@ -15,7 +15,6 @@ export interface UserSystemAgentConfig {
   /** Model used to draft expertise domains and extract reusable experience from conversations. */
   expertise: SystemAgentItem;
   followUpAction: SystemAgentItem;
-  generationTopic: SystemAgentItem;
   /** Model used to turn a persistent goal into its standing acceptance criteria. */
   goal: SystemAgentItem;
   historyCompress: SystemAgentItem;

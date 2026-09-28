@@ -1,19 +1,17 @@
 ---
 title: Email Service Configuration
 description: >-
-  Configure Orvilo email service for email verification, password reset, and
-  magic link login.
+  Configure the Orvilo email service for transactional mail such as workspace
+  invitations and notifications.
 tags:
   - Email Service
   - SMTP
   - Resend
-  - Email Verification
-  - Magic Link
 ---
 
 # Email Service Configuration
 
-Email service is used for email verification, password reset, and magic link delivery. Orvilo supports two email service providers.
+Orvilo sends transactional email (workspace invitations, notifications) through one of two providers. Sign-in email flows (verification, magic link) are handled by the accounts portal and configured in Clerk, not here.
 
 ## Nodemailer (SMTP)
 
@@ -47,26 +45,6 @@ Send emails via SMTP protocol, suitable for users with existing email services. 
   Before using Resend, you need to [verify your sending domain](https://resend.com/docs/dashboard/domains/introduction), otherwise emails can only be sent to your own address.
 </Callout>
 
-## Email Verification
+## Portal Sign-In Email Flows
 
-Enable email verification to ensure users own the email addresses they register with (off by default):
-
-| Environment Variable      | Type     | Description                                                 |
-| ------------------------- | -------- | ----------------------------------------------------------- |
-| `AUTH_EMAIL_VERIFICATION` | Optional | Set to `1` to require email verification after registration |
-
-<Callout type={'info'}>
-  Email verification requires a working email service (SMTP or Resend) configured above. When enabled, users must verify their email address before they can sign in.
-</Callout>
-
-## Magic Link (Passwordless) Login
-
-Enable magic-link login (depends on a working email provider above, off by default):
-
-| Environment Variable     | Type     | Description                                                         |
-| ------------------------ | -------- | ------------------------------------------------------------------- |
-| `AUTH_ENABLE_MAGIC_LINK` | Optional | Set to `1` to enable passwordless magic-link login (off by default) |
-
-<Callout type={'tip'}>
-  Go to [Environment Variables](/docs/self-hosting/environment-variables/auth#better-auth) for detailed information on all Better Auth variables.
-</Callout>
+Email verification (`AUTH_EMAIL_VERIFICATION`) and magic-link login (`AUTH_ENABLE_MAGIC_LINK`) are portal-side features: the flags are forwarded to the accounts portal, and Clerk sends those emails. They do not use the SMTP/Resend configuration above.

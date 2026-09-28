@@ -13,6 +13,7 @@ import {
   type GoalGraphView,
 } from '@/features/AgentGoals/ProcessControl/goalGraphViewModel';
 import { KindDot } from '@/features/AgentGoals/ProcessControl/shared';
+import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
@@ -147,7 +148,16 @@ const Tasks = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph })
           key={view.node.id}
           nodeId={view.node.id}
           extra={
-            <Tag size={'small'}>{t(`goalProcess.nodeStatus.${view.node.status}` as const)}</Tag>
+            <Flexbox horizontal align={'center'} gap={6}>
+              {view.integration && (
+                <RunIntegrationTag
+                  integration={view.integration}
+                  taskId={view.node.taskId ?? undefined}
+                  topicId={view.integration.topicId}
+                />
+              )}
+              <Tag size={'small'}>{t(`goalProcess.nodeStatus.${view.node.status}` as const)}</Tag>
+            </Flexbox>
           }
         />
       ))}
@@ -201,20 +211,34 @@ Findings.displayName = 'GoalMetricFindings';
  * The draft is local and commits on blur / Enter: the goal graph polls while
  * the goal runs, and binding the field straight to the snapshot would wipe
  * half-typed digits on every refresh.
+ *
+ * `BUDGET_FIELDS` mirrors the router's zod contract per dimension, so a value
+ * the form accepts cannot be one the server rejects. `null` clears a cap;
+ * parallelism falls back to the coordinator's default rather than becoming
+ * unbounded, which is why its blank label differs.
  */
+const BUDGET_FIELDS = {
+  maxConcurrentTasks: { max: 10, min: 1 },
+  maxRounds: { min: 0 },
+  maxTotalCost: { min: 0, money: true },
+} as const;
+
 const BudgetField = memo<{
   cap: number | null;
+  field: keyof typeof BUDGET_FIELDS;
   goalId: string;
   label: string;
-  /** `maxTotalCost` is money and takes a `$`; `maxRounds` is a plain count. */
-  money?: boolean;
+  /** Blank input meaning — 'uncapped' for budgets, 'auto' for parallelism. */
+  placeholder?: string;
   used: number;
-}>(({ cap, goalId, label, money, used }) => {
+}>(({ cap, field, goalId, label, placeholder, used }) => {
   const { t } = useTranslation('chat');
   const { allowed: canEdit } = usePermission('create_content');
   const setGoalBudget = useGoalStore((s) => s.setGoalBudget);
   const [draft, setDraft] = useState<number | null>(cap);
   const [saving, setSaving] = useState(false);
+  const meta = BUDGET_FIELDS[field];
+  const money = 'money' in meta && meta.money;
 
   // Re-seed from the server whenever it disagrees and the user is not mid-edit.
   const [committed, setCommitted] = useState(cap);
@@ -227,8 +251,8 @@ const BudgetField = memo<{
     if (!canEdit || draft === cap) return;
     // A cap below what the goal already spent would park it immediately; that
     // is a legitimate way to stop a goal, so it is allowed — only nonsense
-    // (negative, zero) is refused, matching the router's `positive()`.
-    if (draft !== null && draft <= 0) {
+    // (below the field's floor) is refused, matching the router's bounds.
+    if (draft !== null && (draft < meta.min || ('max' in meta && draft > meta.max))) {
       setDraft(cap);
       return;
     }
@@ -237,7 +261,14 @@ const BudgetField = memo<{
       setSaving(true);
       // Only the field that changed is sent: `setBudget` treats an omitted
       // dimension as untouched, so editing the cost cap keeps the round cap.
-      await setGoalBudget(goalId, money ? { maxTotalCost: draft } : { maxRounds: draft });
+      await setGoalBudget(
+        goalId,
+        field === 'maxTotalCost'
+          ? { maxTotalCost: draft }
+          : field === 'maxRounds'
+            ? { maxRounds: draft }
+            : { maxConcurrentTasks: draft },
+      );
     } catch (error) {
       console.error('[GoalMetricBudget] Failed to save:', error);
       toast.error(t('goalProcess.metricDetail.budget.saveFailed'));
@@ -261,8 +292,8 @@ const BudgetField = memo<{
           className={styles.mono}
           controls={false}
           disabled={!canEdit || saving}
-          min={0}
-          placeholder={t('goalProcess.metricDetail.budget.uncapped')}
+          min={meta.min}
+          placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
           size={'small'}
           style={{ width: 120 }}
           value={draft}
@@ -382,26 +413,40 @@ CostBreakdown.displayName = 'GoalMetricCostBreakdown';
 
 const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }) => {
   const { t } = useTranslation('chat');
-  const { maxRounds, maxTotalCost } = graph.goal;
+  const { config, maxRounds, maxTotalCost } = graph.goal;
   const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
   const spend = snapshot?.spend;
+  // In-flight Tasks are what the cap bounds — the coordinator counts the same
+  // population when deciding whether the frontier may dispatch further.
+  const inFlight = graph.nodes.filter(
+    (view) => view.node.kind === 'task' && view.node.status === 'active',
+  ).length;
 
   return (
     <Flexbox gap={20}>
       <Flexbox gap={14}>
         <span className={styles.label}>{t('goalProcess.metricDetail.budget.controlTitle')}</span>
         <BudgetField
-          money
           cap={maxTotalCost}
+          field={'maxTotalCost'}
           goalId={goalId}
           label={t('goalProcess.metricDetail.budget.totalCost')}
           used={spend?.totalCost ?? 0}
         />
         <BudgetField
           cap={maxRounds}
+          field={'maxRounds'}
           goalId={goalId}
           label={t('goalProcess.metricDetail.budget.rounds')}
           used={spend?.runs ?? 0}
+        />
+        <BudgetField
+          cap={config?.maxConcurrentTasks ?? null}
+          field={'maxConcurrentTasks'}
+          goalId={goalId}
+          label={t('goalProcess.metricDetail.budget.parallelism')}
+          placeholder={t('goalProcess.metricDetail.budget.parallelismAuto')}
+          used={inFlight}
         />
         {/* Raising a cap is how a user restarts a goal the coordinator parked on
             one — say so, because the alternative gesture (Resume) looks like the

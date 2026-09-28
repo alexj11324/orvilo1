@@ -1,0 +1,30 @@
+name: Linear tokens
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  linear-tokens:
+    name: Linear Tokens
+    runs-on: ubuntu-latest
+    steps:
+      # pull_request_target runs this workflow from the protected base branch.
+      # Do not check out or execute code from the PR: otherwise a PR could
+      # alter its own required check.
+      - uses: actions/checkout@v6
+
+      - name: Diff the PR and fetch its body
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr diff "$PR_NUMBER" > /tmp/pr.diff
+          gh pr view "$PR_NUMBER" --json body --jq .body > /tmp/pr-body.txt
+
+      - name: Enforce Linear type/icon scale on parity surfaces
+        run: node .github/scripts/require-linear-tokens.mjs /tmp/pr.diff /tmp/pr-body.txt

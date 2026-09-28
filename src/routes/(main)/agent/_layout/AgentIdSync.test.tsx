@@ -4,11 +4,12 @@
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useAgentStore } from '@/store/agent';
 import { initialState as initialChatState } from '@/store/chat/initialState';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import { useChatStore } from '@/store/chat/store';
 
-import AgentIdSync from './AgentIdSync';
+import AgentIdSync, { getAgentRouteSuffix } from './AgentIdSync';
 
 const useParamsMock = vi.hoisted(() => vi.fn());
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -41,6 +42,8 @@ describe('AgentIdSync', () => {
     useLocationMock.mockReset();
     useInitAgentConfigMock.mockReset();
     useLocationMock.mockReturnValue({ pathname: '/agent/agent-1' });
+
+    useAgentStore.setState({ builtinAgentIdMap: {} });
 
     useChatStore.setState(
       {
@@ -107,5 +110,31 @@ describe('AgentIdSync', () => {
     expect(useChatStore.getState().portalStack).toEqual([]);
     expect(useChatStore.getState().showPortal).toBe(false);
     expect(useChatStore.getState().activeTopicId).toBe('topic-1');
+  });
+
+  it('resolves a workspace-prefixed inbox slug without inventing a topic segment', () => {
+    useAgentStore.setState({ builtinAgentIdMap: { inbox: 'agt-inbox' } });
+    useParamsMock.mockReturnValue({ aid: 'inbox', workspaceSlug: 'ws-useragenttes' });
+    useSearchParamsMock.mockReturnValue([new URLSearchParams(''), vi.fn()]);
+    useLocationMock.mockReturnValue({ pathname: '/ws-useragenttes/agent/inbox' });
+
+    render(<AgentIdSync />);
+
+    expect(useNavigateMock).toHaveBeenCalledWith('/agent/agt-inbox', { replace: true });
+  });
+});
+
+describe('getAgentRouteSuffix', () => {
+  it('does not turn a workspace prefix into a topic suffix', () => {
+    expect(getAgentRouteSuffix('/ws-useragenttes/agent/inbox', 'inbox')).toBe('');
+  });
+
+  it('preserves real child paths on workspace-prefixed routes', () => {
+    expect(getAgentRouteSuffix('/ws-useragenttes/agent/inbox/profile', 'inbox')).toBe('/profile');
+    expect(getAgentRouteSuffix('/ws-useragenttes/agent/inbox/topic-1', 'inbox')).toBe('/topic-1');
+  });
+
+  it('preserves real child paths on unprefixed routes', () => {
+    expect(getAgentRouteSuffix('/agent/inbox/profile', 'inbox')).toBe('/profile');
   });
 });

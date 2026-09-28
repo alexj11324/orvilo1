@@ -4,11 +4,23 @@
  * without going through OAuth.
  *
  * Usage:
+ *   bun run workflow:seed-user-info -- <email> [--fullName="..."] [--username="..."]
  *   tsx scripts/seedUserInfo/index.ts <email> [--fullName="..."] [--username="..."]
+ *
+ * Env:
+ *   DATABASE_URL   (required) target Postgres connection string; exits 1 when unset
+ *   NODE_ENV       (optional) selects layered .env.[env] / .env.[env].local files
+ *
+ * Guard rail: explicit-target seed — writes ONLY the single user row matched by
+ * the required <email> argument and is idempotent (re-running sets the same
+ * values), so no extra confirmation gate (see scripts/README.md → Guard rails).
  *
  * Defaults when flags are omitted:
  *   fullName = "Innei"
  *   username = derived from the email local part
+ *
+ * Exit behavior: 0 on success; 1 when email is missing, the user is not found,
+ * or DATABASE_URL is unset.
  */
 import * as dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';

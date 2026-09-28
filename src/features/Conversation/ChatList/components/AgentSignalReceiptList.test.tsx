@@ -243,7 +243,7 @@ describe('AgentSignalReceiptList', () => {
     expect(mocks.openDocument).toHaveBeenCalledWith('index-document-1', 'index-agent-document-1');
   });
 
-  it('navigates memory receipts to the memory surface', () => {
+  it('keeps a memory receipt without a surviving layer as a status card', () => {
     render(
       <AgentSignalReceiptList
         receipts={[
@@ -268,9 +268,14 @@ describe('AgentSignalReceiptList', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Remember this PR review workflow/ }));
+    // Nothing narrows this receipt to a layer, so there is no page left to open
+    // — four of the five layer routes are retired, and the old fallback was the
+    // `/memory` browsing home, which is gone with them.
+    expect(screen.getByText('Remember this PR review workflow')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Remember this PR review workflow'));
 
-    expect(mocks.navigate).toHaveBeenCalledWith('/memory');
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(screen.queryByText('Open')).not.toBeInTheDocument();
   });
 
   it('opens legacy preference memory receipts without layer metadata on the preferences route', () => {

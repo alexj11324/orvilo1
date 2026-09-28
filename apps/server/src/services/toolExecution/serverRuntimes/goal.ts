@@ -2,6 +2,7 @@ import {
   buildGoalRequirement,
   GoalIdentifier,
   resolveGoalAttemptBudget,
+  resolveGoalConcurrency,
   resolveGoalScheduleConfig,
 } from '@orvilo/builtin-tool-goal';
 
@@ -30,6 +31,7 @@ export const goalRuntime: ServerRuntimeRegistration = {
         criteria: Array<{ description?: string; instruction?: string; title: string }>;
         deadline?: string | null;
         instruction: string;
+        maxConcurrentTasks?: number | null;
         maxIterations?: number | null;
         maxTotalCost?: number | null;
         name: string;
@@ -44,10 +46,12 @@ export const goalRuntime: ServerRuntimeRegistration = {
         try {
           const goalService = new GoalService(serverDB, userId, workspaceId ?? undefined);
           const scheduleConfig = resolveGoalScheduleConfig(args.deadline);
+          const maxConcurrentTasks = resolveGoalConcurrency(args.maxConcurrentTasks);
           const graph = await goalService.create({
             agentId,
             createdByAgentId: agentId,
             config: {
+              ...(maxConcurrentTasks !== undefined ? { maxConcurrentTasks } : {}),
               recovery: { maxAttemptsPerTask: resolveGoalAttemptBudget(args.maxIterations) },
               ...(scheduleConfig ? { schedule: scheduleConfig } : {}),
             },

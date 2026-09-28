@@ -192,40 +192,18 @@ describe('acceptanceRouter purge', () => {
       );
     });
 
-    it('detaches each manageable row in a batch by default and collects the rest', async () => {
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-      const [foreign] = await serverDB
-        .insert(acceptances)
-        .values({ subjectId: randomUUID(), subjectType: 'standalone', userId: strangerId })
-        .returning();
-
-      const res = await caller(ownerId).removeBatch({ ids: [personalId, foreign.id] });
-
-      expect(res).toEqual({ deleted: 1, failedIds: [foreign.id] });
-      expect(purgeMocks.purgeAcceptance).not.toHaveBeenCalled();
-      expect(
-        await serverDB.query.acceptances.findFirst({ where: eq(acceptances.id, personalId) }),
-      ).toBeUndefined();
-    });
-
-    it('purges each manageable row in a batch when asked', async () => {
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-      const [foreign] = await serverDB
-        .insert(acceptances)
-        .values({ subjectId: randomUUID(), subjectType: 'standalone', userId: strangerId })
-        .returning();
-
-      const res = await caller(ownerId).removeBatch({ ids: [personalId, foreign.id], purge: true });
-
-      expect(res).toEqual({ deleted: 1, failedIds: [foreign.id] });
-      expect(purgeMocks.purgeAcceptance).toHaveBeenCalledTimes(1);
-      expect(purgeMocks.purgeAcceptance).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        ownerId,
-        undefined,
-        personalId,
+    // The batch delete belonged to the standalone acceptance list's
+    // multi-selection. It is retired with that surface, so the procedure must
+    // not resolve at all — an acceptance is deleted one at a time, from the
+    // task panel that owns it.
+    it('no longer exposes a batch delete', () => {
+      const procedures = Object.keys(
+        (acceptanceRouter as unknown as { _def: { procedures: Record<string, unknown> } })._def
+          .procedures,
       );
+
+      expect(procedures).not.toContain('removeBatch');
+      expect(procedures).toContain('remove');
     });
   });
 });

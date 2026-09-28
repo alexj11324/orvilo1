@@ -1,4 +1,4 @@
-import type { AIChatModelCard, AIImageModelCard } from '../types/aiModel';
+import type { AIChatModelCard } from '../types/aiModel';
 
 const azureChatModels: AIChatModelCard[] = [
   {
@@ -738,66 +738,6 @@ const azureChatModels: AIChatModelCard[] = [
   },
 ];
 
-const azureImageModels: AIImageModelCard[] = [
-  {
-    description: 'ChatGPT Image 1',
-    displayName: 'GPT Image 1',
-    enabled: true,
-    id: 'gpt-image-1',
-    parameters: {
-      imageUrl: { default: null },
-      prompt: { default: '' },
-      size: {
-        default: 'auto',
-        enum: ['auto', '1024x1024', '1536x1024', '1024x1536'],
-      },
-    },
-    type: 'image',
-  },
-  {
-    description: 'DALL·E 3',
-    displayName: 'DALL·E 3',
-    id: 'dall-e-3',
-    parameters: {
-      imageUrl: { default: null },
-      prompt: { default: '' },
-      size: {
-        default: 'auto',
-        enum: ['auto', '1024x1024', '1792x1024', '1024x1792'],
-      },
-    },
-    type: 'image',
-  },
-  {
-    description: 'FLUX.1 Kontext [pro]',
-    displayName: 'FLUX.1 Kontext [pro]',
-    enabled: true,
-    id: 'FLUX.1-Kontext-pro',
-    parameters: {
-      imageUrl: { default: null },
-      prompt: { default: '' },
-      size: {
-        default: 'auto',
-        enum: ['auto', '1024x1024', '1792x1024', '1024x1792'],
-      },
-    },
-    releasedAt: '2025-06-23',
-    type: 'image',
-  },
-  {
-    description: 'FLUX.1.1 Pro',
-    displayName: 'FLUX.1.1 Pro',
-    enabled: true,
-    id: 'FLUX-1.1-pro',
-    parameters: {
-      imageUrl: { default: null },
-      prompt: { default: '' },
-    },
-    releasedAt: '2025-06-23',
-    type: 'image',
-  },
-];
-
-export const allModels = [...azureChatModels, ...azureImageModels];
+export const allModels = [...azureChatModels];
 
 export default allModels;

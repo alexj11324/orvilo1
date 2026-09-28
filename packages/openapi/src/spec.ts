@@ -82,25 +82,6 @@ const resourceSchemas: Record<string, SchemaObject> = {
     required: ['id', 'name', 'createdAt', 'updatedAt'],
     type: 'object',
   },
-  ChatResponse: {
-    additionalProperties: false,
-    properties: {
-      content: { type: 'string' },
-      model: nullableString,
-      provider: nullableString,
-      usage: {
-        additionalProperties: false,
-        properties: {
-          completion_tokens: { type: ['integer', 'null'] },
-          prompt_tokens: { type: ['integer', 'null'] },
-          total_tokens: { type: ['integer', 'null'] },
-        },
-        type: ['object', 'null'],
-      },
-    },
-    required: ['content'],
-    type: 'object',
-  },
   EvalRun: {
     additionalProperties: false,
     properties: {
@@ -278,26 +259,6 @@ const resourceSchemas: Record<string, SchemaObject> = {
     required: ['id', 'code', 'name', 'category', 'createdAt', 'updatedAt'],
     type: 'object',
   },
-  Provider: {
-    additionalProperties: false,
-    properties: {
-      checkModel: nullableString,
-      config: nullableObject,
-      createdAt: dateTime,
-      description: nullableString,
-      enabled: nullableBoolean,
-      fetchOnClient: nullableBoolean,
-      id: { type: 'string' },
-      logo: nullableString,
-      name: nullableString,
-      settings: nullableObject,
-      sort: { type: ['integer', 'null'] },
-      source: nullableString,
-      updatedAt: dateTime,
-    },
-    required: ['id', 'createdAt', 'updatedAt'],
-    type: 'object',
-  },
   Role: {
     additionalProperties: false,
     properties: {
@@ -423,7 +384,6 @@ const groupResources: Record<string, { listKey: string; schema: string }> = {
   'mcp-servers': { listKey: 'mcpServers', schema: 'McpServer' },
   'models': { listKey: 'models', schema: 'Model' },
   'permissions': { listKey: 'permissions', schema: 'Permission' },
-  'providers': { listKey: 'providers', schema: 'Provider' },
   'roles': { listKey: 'roles', schema: 'Role' },
   'topics': { listKey: 'topics', schema: 'Topic' },
   'users': { listKey: 'users', schema: 'User' },
@@ -471,28 +431,6 @@ const getSuccessSchema = (group: string, rest: string, method: string): SchemaOb
       required: ['id', 'object', 'output', 'status'],
       type: 'object',
     };
-  }
-
-  if (group === 'chat') {
-    if (rest === 'translate') {
-      return successEnvelope({
-        additionalProperties: false,
-        properties: { translatedText: { type: 'string' } },
-        required: ['translatedText'],
-        type: 'object',
-      });
-    }
-
-    if (rest === 'generate-reply') {
-      return successEnvelope({
-        additionalProperties: false,
-        properties: { reply: { type: 'string' } },
-        required: ['reply'],
-        type: 'object',
-      });
-    }
-
-    return successEnvelope(ref('ChatResponse'));
   }
 
   if (group === 'eval') return successEnvelope(evalResponseSchema(method, rest));

@@ -1524,14 +1524,16 @@ describe('AgentGroupRepository', () => {
       expect(await wsRepo.findByIdWithAgents(group.id)).not.toBeNull();
     });
 
-    it('keeps personal groups out of workspace-scoped reads', async () => {
+    it("keeps the owner's unfiled groups reachable in workspace-scoped reads", async () => {
       const personalRepo = new AgentGroupRepository(serverDB, userId);
       const { group } = await personalRepo.createGroupWithSupervisor({ title: 'Personal Group' });
 
       expect(group.workspaceId).toBeNull();
 
+      // Unfiled groups follow their owner into workspace scope — activating a
+      // workspace must not hide them.
       const wsRepo = new AgentGroupRepository(serverDB, userId, workspaceId);
-      expect(await wsRepo.findByIdWithAgents(group.id)).toBeNull();
+      expect(await wsRepo.findByIdWithAgents(group.id)).toMatchObject({ id: group.id });
     });
 
     it('transfers a workspace group with members and conversation data to the target scope', async () => {

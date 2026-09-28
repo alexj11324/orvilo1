@@ -1,3 +1,20 @@
+/**
+ * installFtsSearchSyncCapture — install the FTS sync capture infrastructure
+ * (outbox triggers/channels) into the server database.
+ *
+ * Usage:
+ *   bun run db:install-fts-search-capture   # package script: cross-env MIGRATION_DB=1 tsx ./scripts/installFtsSearchSyncCapture/index.ts
+ *
+ * Env:
+ *   DATABASE_URL   (required) target Postgres connection string
+ *   NODE_ENV       (optional) selects layered .env.[env] / .env.[env].local files
+ *
+ * Guard rail: bootstrap/install script — intentionally runs in CI/bootstrap
+ * with no extra confirmation (see scripts/README.md → Guard rails); it retries
+ * through the shared migration lock (runWithLockRetry).
+ *
+ * Exit behavior: 0 on success; non-zero on failure.
+ */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

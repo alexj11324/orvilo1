@@ -1,6 +1,9 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
+import { builtinSkills } from '@orvilo/builtin-skills';
+import { isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
+import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
 import type {
   ExecAgentResult,
   ExecGroupAgentParams,
@@ -10,10 +13,14 @@ import type {
   ExecVirtualSubAgentParams,
   ScheduleAgentRunParams,
   ScheduleAgentRunResult,
-  UserInterventionConfig,
   WorkingDirConfig,
 } from '@orvilo/types';
-import { getWorkingDirEffectivePath, RequestTrigger } from '@orvilo/types';
+import {
+  getActivePluginIds,
+  getWorkingDirEffectivePath,
+  RequestTrigger,
+  resolveOrviloCliAgentType,
+} from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -24,7 +31,6 @@ import {
 } from '@/business/server/agent-run/agentInterventionIdentity';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { AgentShareModel } from '@/database/models/agentShare';
 import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
 import { DeviceModel } from '@/database/models/device';
@@ -36,40 +42,31 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { AgentService } from '@/server/services/agent';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
-import type {
-  AgentExecutionParams,
-  AgentExecutionResult,
-  AgentRuntimeServiceOptions,
-  AgentStepContinuation,
-  SubAgentBridgeParams,
-} from '@/server/services/agentRuntime';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
-import { getAbortError, throwIfAborted } from '@/server/services/agentRuntime/abort';
+import {
+  AgentRuntimeService,
+  type AgentRuntimeServiceOptions,
+} from '@/server/services/agentExecution';
+import { getAbortError, throwIfAborted } from '@/server/services/agentExecution/abort';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
   GroupActionMemberBridgeParams,
-} from '@/server/services/agentRuntime/types';
+  SubAgentBridgeParams,
+} from '@/server/services/agentExecution/types';
+import { AgentStartError } from '@/server/services/agentExecution/types';
 import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
-import { createGraphAwareAgentFactory } from './helpers/agentFactory';
 import { createGroupActionMemberBridgeHook } from './hooks/threadRunHooks';
 import { InterventionController } from './intervention/InterventionController';
 import type { ApprovalClaimState } from './pipeline/approvalResume';
-import {
-  buildApprovalResumeContext,
-  claimApprovalResume,
-  tryReuseInterventionContinuation,
-} from './pipeline/approvalResume';
+import { claimApprovalResume, tryReuseInterventionContinuation } from './pipeline/approvalResume';
 import { dispatchHeteroAgent } from './pipeline/heteroDispatch';
-import { createHistoryMessagesLoader, prepareOperation } from './pipeline/operationPrep';
+import { resolveExternalToolSurface } from './pipeline/resolveExternalToolSurface';
 import { resolveRunAgentConfig } from './pipeline/resolveRunAgentConfig';
-import { startOperation } from './pipeline/startOperation';
-import { discoverTools } from './pipeline/toolDiscovery';
+import { resolveRunToolSurface } from './pipeline/runToolSurface';
 import { resolveNewTopicSnapshot, setupTurn } from './pipeline/turnSetup';
-import { applyShareGateToAgentConfig } from './shareGate';
 import type { SubAgentRunDeps } from './subAgentRuns';
 import { execAgentMember, execAgentThreadRun } from './subAgentRuns';
 import { acquireTopicStartReservation } from './topicStartReservation';
@@ -112,6 +109,8 @@ export class AiAgentService {
    * entirely.
    */
   private readonly withholdGatewayToken: boolean;
+  private readonly includeShareVisitor: boolean;
+  private readonly runtimeOptions?: AgentRuntimeServiceOptions;
 
   constructor(
     db: OrviloDatabase,
@@ -136,7 +135,9 @@ export class AiAgentService {
     this.workspaceId = options?.workspaceId;
     this.withholdGatewayToken = options?.withholdGatewayToken ?? false;
     const wsId = this.workspaceId;
-    const includeShareVisitor = options?.includeShareVisitor ?? false;
+    this.includeShareVisitor = options?.includeShareVisitor ?? false;
+    this.runtimeOptions = options?.runtimeOptions;
+    const includeShareVisitor = this.includeShareVisitor;
     const messageModelOptions = { includeShareVisitor };
     const topicModelOptions = { includeShareVisitor };
     this.agentDocumentsService = new AgentDocumentsService(db, userId, wsId);
@@ -150,26 +151,7 @@ export class AiAgentService {
     this.taskModel = new TaskModel(db, userId, wsId);
     this.threadModel = new ThreadModel(db, userId, wsId);
     this.topicModel = new TopicModel(db, userId, wsId, undefined, topicModelOptions);
-    this.agentRuntimeService = new AgentRuntimeService(db, userId, {
-      ...options?.runtimeOptions,
-      includeShareVisitor,
-      agentFactory: createGraphAwareAgentFactory(options?.runtimeOptions?.agentFactory),
-      // ── Runtime delegate ─────────────────────────────────────────────────
-      // Operations the runtime delegates back UP to this layer. The dependency
-      // arrow is one-way (AiAgentService → AgentRuntimeService), so the runtime
-      // can't import us; instead we hand it the callbacks it needs to trigger
-      // high-level pipelines mid-step. See AgentRuntimeDelegate. New high-level
-      // capabilities the runtime calls into go in this `delegate` object.
-      //
-      // Arrow fields are auto-bound, so no `.bind(this)`.
-      delegate: {
-        execSubAgent: this.execSubAgent,
-        execVirtualSubAgent: this.execVirtualSubAgent,
-        execGroupMember: this.execGroupMember,
-        verifyShareRunStillAuthorized: this.verifyShareRunStillAuthorized,
-      },
-      workspaceId: wsId,
-    });
+    this.agentRuntimeService = this.createIsolatedRuntime();
 
     // marketService is used for creds, sandbox, skills etc.
     // Read accessToken from DB; if options.marketAccessToken is provided, use it as override.
@@ -292,31 +274,25 @@ export class AiAgentService {
   }
 
   /**
-   * Execute a single agent step against this service's runtime.
+   * Build an isolated {@link AgentRuntimeService} that shares this service's
+   * share-visitor flag and workspace scope — plus caller-supplied option
+   * overrides (e.g. a custom stream/state manager for tests or synchronous
+   * drivers). `includeShareVisitor`/`workspaceId` are pinned to this service's
+   * values and cannot be overridden.
    *
-   * Delegates to the internal AgentRuntimeService, which is already wired with
-   * the agent-invocation fork callbacks. The QStash step worker drives stepping
-   * through here so `orvilo-agent.callSubAgent` can fork virtual sub-agents —
-   * building a bare runtime there would lose the callback and fail with
-   * SUB_AGENT_UNAVAILABLE.
+   * Callers that operate on an operation outside `execAgent`'s pipeline —
+   * the OpenResponses wait-for-completion path, or the durable intervention
+   * bridges — must come through here so their models stay workspace-scoped.
+   * A bare `new AgentRuntimeService` would be personal-scoped and the
+   * tool-message backfill / resume barrier could miss workspace rows.
    */
-  executeStep(params: AgentExecutionParams): Promise<AgentExecutionResult> {
-    return this.agentRuntimeService.executeStep(params);
-  }
-
-  /** Mint a lock owner that spans a whole inline step loop. */
-  createOperationLockOwner(operationId: string): string {
-    return this.agentRuntimeService.createOperationLockOwner(operationId);
-  }
-
-  /** Publish a step that an inline loop deferred instead of running. */
-  scheduleContinuation(continuation: AgentStepContinuation): Promise<void> {
-    return this.agentRuntimeService.scheduleContinuation(continuation);
-  }
-
-  /** Release a lock retained across an inline step loop. */
-  releaseOperationLock(operationId: string, stepLockOwner: string): Promise<void> {
-    return this.agentRuntimeService.releaseOperationLock(operationId, stepLockOwner);
+  createIsolatedRuntime(overrides: AgentRuntimeServiceOptions = {}): AgentRuntimeService {
+    return new AgentRuntimeService(this.db, this.userId, {
+      ...this.runtimeOptions,
+      ...overrides,
+      includeShareVisitor: this.includeShareVisitor,
+      workspaceId: this.workspaceId,
+    });
   }
 
   /**
@@ -423,11 +399,7 @@ export class AiAgentService {
     const resolvedAgentId = agentConfig.id;
 
     const titleSource = markdownToTxt(prompt);
-    const snapshot = await resolveNewTopicSnapshot(
-      { db: this.db, userId: this.userId, workspaceId: this.workspaceId },
-      agentConfig,
-      { model, provider },
-    );
+    const snapshot = resolveNewTopicSnapshot(agentConfig, { model, provider });
     const topic = await this.topicModel.create({
       ...snapshot,
       agentId: resolvedAgentId,
@@ -490,6 +462,18 @@ export class AiAgentService {
    *   → AgentRuntimeService.createOperation(...)
    */
   async execAgent(inputParams: InternalExecAgentParams): Promise<ExecAgentResult> {
+    // `autoStart:false` was the lobehub deferred-start contract. Under ACP
+    // every accepted run is dispatched inside this call — there is no queued
+    // intent left for a later `startExecution` to release — so reject BEFORE
+    // any side effect (thread/message/operation rows, topic reservation,
+    // dispatch) instead of silently starting anyway.
+    if (inputParams.autoStart === false) {
+      throw new AgentStartError(
+        'deferred_start_unsupported',
+        'autoStart:false is not supported — every accepted run is dispatched immediately. To defer a run to a later time, use scheduleAgentRun.',
+      );
+    }
+
     // Creating the thread here (rather than inside the turn) means a run that
     // asked for one is already a thread run by the time the reservation check
     // below reads `appContext.threadId` — same isolation as a follow-up inside
@@ -542,6 +526,12 @@ export class AiAgentService {
       });
       if (interruption.deviceCancellationConfirmed === false) {
         throw new Error('Replaced heterogeneous agent process did not confirm termination');
+      }
+      // P20: an `unknown` cancel means the stop signal never provably landed —
+      // the previous writer may still be active on the device. Starting a
+      // replacement would double-write, so fail closed instead.
+      if (interruption.cancelState === 'unknown') {
+        throw new Error('Replaced remote agent process cancellation outcome is unknown');
       }
     }
     const reserved = await acquireTopicStartReservation({
@@ -669,43 +659,34 @@ export class AiAgentService {
       slug,
       prompt,
       appContext,
-      autoStart = true,
-      botContext,
-      botSender,
+      beforeOperationStart,
       createdThreadId,
       clientIp,
       userAgent,
       deviceId: requestedDeviceId,
       localDeviceId,
-      botPlatformContext,
-      discordContext,
-      existingMessageIds = [],
       fileIds: attachedFileIds,
       files,
-      functionTools,
       hooks,
       instructions,
       chatConfigOverride,
       toolModeOverride,
       model: modelOverride,
       provider: providerOverride,
-      stream,
       title,
       trigger,
       cronJobId,
       taskId,
       evalContext,
-      evalRuntime,
       maxSteps,
       disableLocalSystem,
-      initialStepCount,
+      disableSelfFeedbackIntentTool,
+      disableTools,
       signal,
       skipTaskVerification,
-      userInterventionConfig: requestedUserInterventionConfig = { approvalMode: 'headless' },
-      queueRetries,
-      queueRetryDelay,
       parentMessageId,
       parentOperationId,
+      requiredToolIds,
       resume,
       resumeApproval,
       resumeApprovals,
@@ -713,34 +694,8 @@ export class AiAgentService {
       approvalResolutionRequestId: providedApprovalResolutionRequestId,
       approvalSourceOperationId: providedApprovalSourceOperationId,
       selectedToolIds,
-      shareGate,
-      mentionedAgents,
       suppressUserMessage,
-      ephemeralUserMessage,
     } = params;
-
-    // Agent Share visitor runs execute under the CREATOR's credentials (see
-    // `shareChat.ts` `execAgent` → `AiAgentService.execAgent({ shareGate })`)
-    // with no visitor-facing approval UI at all, so no approval can ever be
-    // WAITED for: `headless` is the only mode that converts an intervention
-    // into an immediate blocked tool result ('always'-policy calls become
-    // `resolve_blocked_tools`) instead of parking the run on
-    // `request_human_approve` forever. Forced unconditionally — overriding
-    // whatever the caller passed — so a future execAgent call site cannot
-    // reintroduce a waiting mode by omission.
-    //
-    // `headless` DOES auto-run overridable ('required') interventions. That is
-    // acceptable here only because of the two share-specific layers on top:
-    // `applyShareGateToInterventionRequiredApis` strips every
-    // intervention-gated API from what the model is offered, and
-    // `isShareBlockedBuiltinDispatch` re-blocks intervention-gated (and
-    // non-enabled, and data-rule-violating) builtin calls at the executor
-    // dispatch site — re-reading the UNSTRIPPED manifest, since the assembly
-    // strip removes the very intervention config the runtime would otherwise
-    // consult. No 'required' builtin API can execute through either layer.
-    const userInterventionConfig: UserInterventionConfig = shareGate
-      ? { approvalMode: 'headless' }
-      : requestedUserInterventionConfig;
 
     // Honour client-minted row ids on a FRESH send only. Resume / regeneration
     // replays reach this method too (resumeApproval, resumeToolResult,
@@ -817,7 +772,6 @@ export class AiAgentService {
       assistantAgentId,
       canManageAgent,
       conversationAgentId,
-      disabledPluginIds,
       isPublicWorkspaceAgent,
       memberDeviceOverride,
       persistAgentId,
@@ -836,16 +790,10 @@ export class AiAgentService {
         instructions,
         modelOverride,
         providerOverride,
-        shareVisitorUserId: shareGate?.visitorUserId,
         throwIfExecutionAborted,
         toolModeOverride,
       },
     );
-
-    // Share-visitor runs must never see the creator's files/knowledge bases.
-    // Applied to the resolved config before anything downstream (knowledge
-    // flags, tools engine, context snapshot) reads it.
-    if (shareGate) applyShareGateToAgentConfig(agentConfig);
 
     let resumeParentMessage: Awaited<ReturnType<MessageModel['findById']>>;
 
@@ -908,27 +856,21 @@ export class AiAgentService {
 
     // Stages 2.6–2.7 — claim the human decision(s) before anything below reads
     // message history (see `pipeline/approvalResume`).
-    const {
-      approvalOwnerAssistantId,
-      approvalSourceOperationId,
-      approvalSourceToolMessageIds,
-      approvedToolEntries,
-      batchApprovalAnchorId,
-      resumeApprovalPlugin,
-    } = await claimApprovalResume(
-      { messageModel: this.messageModel },
-      {
-        appContext,
-        approvalClaim,
-        approvalDecisions,
-        parentMessageId,
-        providedApprovalResolutionRequestId,
-        providedApprovalSourceOperationId,
-        resumeApprovals,
-        resumeParentMessage,
-        resumeToolResult,
-      },
-    );
+    const { approvalSourceOperationId, approvalSourceToolMessageIds, batchApprovalAnchorId } =
+      await claimApprovalResume(
+        { messageModel: this.messageModel },
+        {
+          appContext,
+          approvalClaim,
+          approvalDecisions,
+          parentMessageId,
+          providedApprovalResolutionRequestId,
+          providedApprovalSourceOperationId,
+          resumeApprovals,
+          resumeParentMessage,
+          resumeToolResult,
+        },
+      );
 
     // Deterministic continuation identity for a generic (v2) approval claim.
     // Also consumed by the turn setup below: a crash-safe re-entry must find
@@ -988,8 +930,6 @@ export class AiAgentService {
         assistantAgentId,
         attachedFileIds,
         batchApprovalAnchorId,
-        botContext,
-        botSender,
         clientIds,
         continuationAssistantId,
         conversationAgentId,
@@ -1005,7 +945,6 @@ export class AiAgentService {
         resolvedAgentId,
         resume,
         runFromHistory,
-        shareGate,
         throwIfExecutionAborted,
         title,
         trigger,
@@ -1014,8 +953,6 @@ export class AiAgentService {
     assistantMessageRef.current = turn.assistantMessageId;
     const {
       canUseDevice,
-      deviceAccessReason,
-      isHeteroAgent,
       model,
       provider,
       requestTriggerMetadata,
@@ -1024,296 +961,80 @@ export class AiAgentService {
       topicId,
     } = turn;
 
-    // Shared context for the extracted execAgent pipeline stages
-    // (`pipeline/*`). Built after the turn rows exist so every stage sees the
-    // persisted anchors; `agentConfig` stays the same mutable object so stage
-    // systemRole appends remain visible to `createOperation` below.
+    // Shared context for the ACP dispatch (`pipeline/heteroDispatch`). Built
+    // after the turn rows exist so the dispatch sees the persisted anchors;
+    // `agentConfig` stays the same mutable object so stage systemRole appends
+    // remain visible to the run.
     const runContext: ExecRunContext = {
       agentConfig,
       appContext,
       assistantMessageId: turn.assistantMessageId,
       canUseDevice,
-      deviceAccessReason,
       model,
       parentMessageId,
       persistAgentId,
       prompt,
       provider,
       resolvedAgentId,
-      shareGate,
       topicId,
       trigger,
       userMessageId: turn.userMessageId,
     };
 
-    if (isHeteroAgent) {
-      return dispatchHeteroAgent(
-        {
-          bindTopicWorkingDirectory: (p) => this.bindTopicWorkingDirectory(p),
-          db: this.db,
-          getMarketService: () => this.getMarketService(),
-          messageModel: this.messageModel,
-          resolveDeviceWorkspaceId: (deviceId) => this.resolveDeviceWorkspaceId(deviceId),
-          topicModel: this.topicModel,
-          userId: this.userId,
-          withholdGatewayToken: this.withholdGatewayToken,
-          workspaceId: this.workspaceId,
-        },
-        runContext,
-        {
-          canManageAgent,
-          effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
-          heteroType: turn.heteroType,
-          heterogeneousProvider: turn.heterogeneousProvider,
-          hooks,
-          isPublicWorkspaceAgent,
-          localDeviceId,
-          maxSteps,
-          memberDeviceOverride,
-          operationTaskId,
-          parentOperationId,
-          pinnedHeterogeneousTopicModel: turn.pinnedHeterogeneousTopicModel,
-          requestTrigger: requestTriggerMetadata.trigger,
-          requestedDeviceId: turn.effectiveRequestedDeviceId,
-          runAttachments,
-          selfMessageIds,
-          skipTaskVerification,
-          topicStartOwnerOperationId: params.topicStartOwnerOperationId,
-        },
-      );
-    }
-
-    // 4. Fetch user settings (memory config + timezone)
-    // Agent-level memory config takes priority; fallback to user-level setting
-    const agentMemoryEnabled = agentConfig.chatConfig?.memory?.enabled;
-    let globalMemoryEnabled = agentMemoryEnabled ?? false;
-    let enableExpertise = false;
-    let userTimezone: string | undefined;
-    try {
-      const userModel = new UserModel(this.db, this.userId);
-      const settings = await userModel.getUserSettings();
-      const memorySettings = settings?.memory as { enabled?: boolean } | undefined;
-
-      globalMemoryEnabled = agentMemoryEnabled ?? memorySettings?.enabled !== false;
-
-      // Timezone drives the session-date placeholder rendered back to whoever
-      // is actually conversing. In a share-visitor run that is the VISITOR,
-      // not the creator whose settings this block otherwise reads — memory /
-      // expertise intentionally stay creator-scoped below (gated by
-      // `allowReadMemory`), but the timezone has no such gate and must not
-      // leak the creator's own setting into a visitor's turn.
-      if (shareGate) {
-        const visitorSettings = await new UserModel(
-          this.db,
-          shareGate.visitorUserId,
-        ).getUserSettings();
-        const visitorGeneralSettings = visitorSettings?.general as
-          { timezone?: string } | undefined;
-        userTimezone = visitorGeneralSettings?.timezone;
-      } else {
-        const generalSettings = settings?.general as { timezone?: string } | undefined;
-        userTimezone = generalSettings?.timezone;
-      }
-    } catch (error) {
-      log('execAgent: failed to fetch user settings: %O', error);
-    }
-    try {
-      const preference = await new UserModel(this.db, this.userId).getUserPreference();
-      enableExpertise = preference?.lab?.enableSelfLearning === true;
-    } catch (error) {
-      console.error('Failed to resolve expertise injection Lab preference:', error);
-    }
-    // Share visitors only get the creator's memory (persona + learned
-    // expertise) when the share explicitly allows it — both surfaces would
-    // otherwise leak the creator's personal context into visitor turns.
-    if (shareGate && !shareGate.shareConfig.allowReadMemory) {
-      globalMemoryEnabled = false;
-      enableExpertise = false;
-    }
-    log(
-      'execAgent: globalMemoryEnabled=%s, timezone=%s',
-      globalMemoryEnabled,
-      userTimezone ?? 'default',
+    // The retired loop mounted Orvilo builtin tools/skills directly; ACP runs
+    // receive them as a per-run MCP surface (`builtinToolSpecs`) plus inline
+    // capability instructions (`capabilityContext`) — see `runToolSurface`.
+    // Non-builtin ids (connectors, installed MCP plugins) are resolved against
+    // the caller's own rows first; mounts carry no credentials — the exec
+    // callback re-resolves the connection at call time.
+    const externalCandidates = [
+      ...new Set([
+        ...(additionalPluginIds ?? []),
+        ...(exclusivePluginIds ?? []),
+        ...(requiredToolIds ?? []),
+        ...(selectedToolIds ?? []),
+        ...getActivePluginIds(agentConfig.plugins),
+      ]),
+    ].filter(
+      (identifier) =>
+        !isBuiltinToolIdentifier(identifier) &&
+        !builtinSkills.some((skill) => skill.identifier === identifier),
     );
+    const externalTools = await resolveExternalToolSurface({
+      agentId: resolvedAgentId,
+      candidateIds: externalCandidates,
+      db: this.db,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    const toolSurface = resolveRunToolSurface({
+      additionalPluginIds,
+      agentPlugins: agentConfig.plugins,
+      disableLocalSystem,
+      disableSelfFeedbackIntentTool,
+      disableTools,
+      enableAgentMode: agentConfig.chatConfig?.enableAgentMode,
+      exclusivePluginIds,
+      externalTools,
+      requiredToolIds,
+      selectedToolIds,
+      // MCP-mountable harnesses are the standard-ACP runtimes; remote platform
+      // types and the non-standard adapters (cursor/devin/droid/grok/trae)
+      // never see a spec, so they never advertise uncallable tools.
+      supportsBuiltinToolMount: ACP_RUNTIME_AGENT_TYPES.has(
+        turn.heteroType === 'orvilo'
+          ? resolveOrviloCliAgentType(turn.heterogeneousProvider?.engine)
+          : turn.heteroType,
+      ),
+    });
 
-    // History loader shared by tool discovery (media-availability probe) and
-    // the operation-prep message assembly (see `pipeline/operationPrep`).
-    const loadHistoryMessages = createHistoryMessagesLoader(
+    const dispatchResult = await dispatchHeteroAgent(
       {
-        db: this.db,
-        isShareVisitorRun: !!shareGate,
-        messageModel: this.messageModel,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      },
-      {
-        appContext,
-        effectiveResume,
-        existingMessageIds,
-        parentMessageId,
-        resumeParentMessage,
-        selfMessageIds,
-      },
-    );
-
-    // When the user @-mentions agents (multi-mention, non-group), enable the
-    // agent-management tool for this run so the supervisor can `callAgent` to
-    // delegate. Mirrors the client runtime, which injects a callAgent manifest.
-    // Single-mention takes a client-only deterministic-router path and never
-    // reaches here. The delegation *context* (which agents were mentioned) is
-    // injected separately via `initialContext.mentionedAgents` below.
-    const hasMentionedAgents = !appContext?.groupId && !!mentionedAgents?.length;
-
-    // Stage 5 (5a–5f) — tool discovery (see `pipeline/toolDiscovery`).
-    const discovery = await discoverTools(
-      {
-        agentDocumentsService: this.agentDocumentsService,
-        composioService: this.composioService,
-        connectorModel: this.connectorModel,
-        connectorToolModel: this.connectorToolModel,
+        bindTopicWorkingDirectory: (p) => this.bindTopicWorkingDirectory(p),
         db: this.db,
         getMarketService: () => this.getMarketService(),
         messageModel: this.messageModel,
-        pluginModel: this.pluginModel,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      },
-      runContext,
-      {
-        additionalPluginIds,
-        agentSlug,
-        attachedFileIds,
-        botContext,
-        disableLocalSystem,
-        disableSelfFeedbackIntentTool: params.disableSelfFeedbackIntentTool,
-        disableTools: params.disableTools,
-        disabledPluginIds,
-        discordContext,
-        exclusivePluginIds,
-        files,
-        functionTools,
-        globalMemoryEnabled,
-        hasMentionedAgents,
-        isFixedDeviceTarget: turn.isFixedDeviceTarget,
-        loadHistoryMessages,
-        localDeviceId,
-        requestTrigger: requestTriggerMetadata.trigger,
-        requestedDeviceId: turn.effectiveRequestedDeviceId,
-        selectedToolIds,
-        throwIfExecutionAborted,
-        topicBoundDeviceId: turn.topicBoundDeviceId,
-      },
-    );
-
-    // 15. Generate operation ID: agt_{timestamp}_{agentId}_{topicId}_{random}
-    const timestamp = Date.now();
-    const operationId =
-      continuationOperationId ?? `op_${timestamp}_${resolvedAgentId}_${topicId}_${nanoid(8)}`;
-
-    // Stages 9.4–18 — device system info, agent-management context, persona
-    // memory, history + message assembly, the base initial runtime context,
-    // workspace init, the OperationSkillSet, and the expertise snapshot
-    // (see `pipeline/operationPrep`).
-    const prep = await prepareOperation(
-      {
-        agentDocumentsService: this.agentDocumentsService,
-        agentModel: this.agentModel,
-        bindTopicWorkingDirectory: (p) => this.bindTopicWorkingDirectory(p),
-        db: this.db,
-        topicModel: this.topicModel,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      },
-      runContext,
-      {
-        botPlatformContext,
-        disabledPluginIds,
-        discovery,
-        ephemeralUserMessage,
-        globalMemoryEnabled,
-        hasMentionedAgents,
-        loadHistoryMessages,
-        mentionedAgents,
-        operationId,
-        runAttachments,
-        runFromHistory,
-        throwIfExecutionAborted,
-      },
-    );
-
-    // 16b/16c — override the initial context with the human decision
-    // (see `pipeline/approvalResume`). Pure; no-op on a fresh send.
-    const initialContext = buildApprovalResumeContext({
-      approvalOwnerAssistantId,
-      approvedToolEntries,
-      assistantMessageId: turn.assistantMessageId,
-      initialContext: prep.initialContext,
-      messageCount: prep.allMessages.length,
-      operationId,
-      parentMessageId,
-      resumeApproval,
-      resumeApprovalPlugin,
-      resumeApprovals,
-      resumeToolResult,
-    });
-
-    // 17. Log final operation parameters summary
-    log(
-      'execAgent: creating operation %s with params: model=%s, provider=%s, tools=%d, messages=%d, manifests=%d',
-      operationId,
-      model,
-      provider,
-      discovery.tools?.length ?? 0,
-      prep.allMessages.length,
-      Object.keys(discovery.toolManifestMap).length,
-    );
-
-    // Claim the child slot on the supervisor's runningOperation marker LAST,
-    // immediately before startup. The marker vanishes when the supervisor is
-    // cancelled or settled, so every awaited preparation step above widens the
-    // claim→start race window — an orphaned child would start against a
-    // marker that no longer lists it. Claiming here keeps the window minimal;
-    // a failed claim only wastes the preparation reads (its lone write — the
-    // topic cwd pin — is additive and idempotent).
-    if (params.topicStartOwnerOperationId) {
-      const attached = await this.topicModel.appendRunningOperationChild(
-        topicId,
-        params.topicStartOwnerOperationId,
-        {
-          assistantMessageId: turn.assistantMessageId,
-          operationId,
-          orchestrationRole: appContext?.orchestrationRole,
-          scope: appContext?.scope ?? undefined,
-          threadId: appContext?.threadId ?? undefined,
-        },
-      );
-      if (!attached) {
-        const errorMessage = 'Group supervisor finished before this member could start.';
-        await updateAbortedAssistantMessage(errorMessage);
-        return {
-          agentId: resolvedAgentId,
-          assistantMessageId: turn.assistantMessageId,
-          autoStarted: false,
-          createdAt: new Date().toISOString(),
-          error: errorMessage,
-          message: errorMessage,
-          operationId,
-          status: 'error',
-          success: false,
-          timestamp: new Date().toISOString(),
-          topicId,
-          userMessageId: turn.userMessageId ?? parentMessageId ?? '',
-        };
-      }
-    }
-
-    // 19. Create the operation via AgentRuntimeService, persist the reconnect
-    // marker, and mint the gateway token (see `pipeline/startOperation`).
-    return startOperation(
-      {
-        agentRuntimeService: this.agentRuntimeService,
-        messageModel: this.messageModel,
-        retirePendingApprovalOperation: (opId) => this.retirePendingApprovalOperation(opId),
+        resolveDeviceWorkspaceId: (deviceId) => this.resolveDeviceWorkspaceId(deviceId),
         topicModel: this.topicModel,
         userId: this.userId,
         withholdGatewayToken: this.withholdGatewayToken,
@@ -1321,39 +1042,47 @@ export class AiAgentService {
       },
       runContext,
       {
-        approvalClaim,
-        approvalSourceOperationId,
-        approvalSourceToolMessageIds,
-        autoStart,
-        botContext,
-        botPlatformContext,
+        beforeOperationStart,
+        builtinToolSpecs: toolSurface.builtinToolSpecs,
+        canManageAgent,
+        externalToolMounts: toolSurface.externalTools,
+        toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
-        discordContext,
-        discovery,
-        enableExpertise,
-        evalContext,
-        evalRuntime,
+        effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
+        // Skill content, mounted-tool usage guidance and eval env prompts all
+        // ride the ACP system-context channel — the retired loop consumed them
+        // as live tool definitions / `evalContext` during operation prep.
+        extraSystemContext:
+          [toolSurface.capabilityContext, evalContext?.envPrompt].filter(Boolean).join('\n\n') ||
+          undefined,
+        heteroType: turn.heteroType,
+        heterogeneousProvider: turn.heterogeneousProvider,
         hooks,
-        initialContext,
-        initialStepCount,
+        isPublicWorkspaceAgent,
+        localDeviceId,
         maxSteps,
-        operationId,
+        memberDeviceOverride,
         operationTaskId,
         parentOperationId,
-        prep,
-        providedApprovalResolutionRequestId,
-        queueRetries,
-        queueRetryDelay,
-        signal,
+        pinnedHeterogeneousTopicModel: turn.pinnedHeterogeneousTopicModel,
+        requestTrigger: requestTriggerMetadata.trigger,
+        requestedDeviceId: turn.effectiveRequestedDeviceId,
+        runAttachments,
+        selfMessageIds,
         skipTaskVerification,
-        stream,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,
-        updateAbortedAssistantMessage,
         userAgent,
-        userInterventionConfig,
-        userTimezone,
+        userInterventionConfig: params.userInterventionConfig,
       },
     );
+
+    // A resolved dispatch means the continuation durably exists — the op row
+    // was persisted inside `dispatchHeteroAgent`. Mark it so the approval
+    // rollback guard restores claimed rows only when the run never started;
+    // legacy (non-generic) claims have no other marker after the retired
+    // createOperation path stopped receiving `approvalClaim`.
+    approvalClaim.continuationPrepared = true;
+    return dispatchResult;
   }
 
   /**
@@ -1389,10 +1118,7 @@ export class AiAgentService {
         newTopic?.title ||
         fallbackTitleSource.slice(0, 50) + (fallbackTitleSource.length > 50 ? '...' : '');
       const agentConfig = await this.resolvePrecreatedTopicConfig(agentId);
-      const snapshot = await resolveNewTopicSnapshot(
-        { db: this.db, userId: this.userId, workspaceId: this.workspaceId },
-        agentConfig,
-      );
+      const snapshot = resolveNewTopicSnapshot(agentConfig);
       const topicItem = await this.topicModel.create({
         ...snapshot,
         agentId,
@@ -1436,37 +1162,25 @@ export class AiAgentService {
   }
 
   /**
-   * `AgentRuntimeDelegate.verifyShareRunStillAuthorized` implementation — see
-   * `AgentShareModel.isRunStillAuthorized`'s JSDoc for what "authorized" means
-   * and why a per-step recheck (not only at step 0) is what actually stops a
-   * revoked share's run: nothing tears down an operation that already exists,
-   * and the visitor's own Stop button breaks the instant the share goes
-   * private, so the step loop has to re-prove authorization itself.
-   *
-   * A plain top-level `db` read (not scoped to `this.userId`/workspace):
-   * `agent_shares` has no ownership predicate applicable here — this call runs
-   * from inside the CREATOR's own runtime step, so `this.db` is already the
-   * correct connection.
-   *
-   * Arrow field (not a method) so it stays bound when handed to
-   * AgentRuntimeService.
-   */
-  verifyShareRunStillAuthorized = async (params: {
-    agentId: string;
-    shareId: string;
-  }): Promise<boolean> => AgentShareModel.isRunStillAuthorized(this.db, params);
-
-  /**
    * Execute an agent in an isolated Thread context.
    *
-   * Group/callAgent paths use this entry. It does not mark the child as a
-   * virtual sub-agent and it does not install the async completion bridge.
+   * Group/callAgent, direct-mention, and client `callSubAgent` transports use
+   * this entry. It does not install the async completion bridge — callers poll
+   * `getSubAgentTaskStatus` — and only marks the child as a sub-agent when the
+   * caller passes `isSubAgent` (the `callSubAgent` transport does).
    */
   // Arrow field (not a method) so it stays bound when handed to AgentRuntimeService.
   execSubAgent = async (params: ExecSubAgentParams): Promise<ExecSubAgentResult> =>
     execAgentThreadRun(this.subAgentRunDeps, params, {
-      isSubAgent: false,
+      chatConfig: params.chatConfig,
+      // `callSubAgent` transports mark the child as a sub-agent so it cannot
+      // recursively spawn; direct-mention dispatch intentionally does not.
+      isSubAgent: params.isSubAgent === true,
       logScope: 'execSubAgent',
+      // Spawn-site resolved overrides (client `callSubAgent` / execSubAgentTask
+      // carry them; group members leave them undefined and keep their own).
+      model: params.model,
+      provider: params.provider,
     });
 
   /**
@@ -1534,24 +1248,6 @@ export class AiAgentService {
         },
       );
 
-      // Enforce the requested timeout: if the member op is still running when the
-      // deadline passes, the watchdog interrupts it and bridges a `timeout`
-      // completion so the supervisor doesn't stay parked indefinitely.
-      if (result.success && result.operationId && params.timeout && params.timeout > 0) {
-        await this.agentRuntimeService.scheduleGroupMemberTimeout(
-          {
-            anchorMessageId: params.anchorMessageId,
-            expectedMembers: params.expectedMembers,
-            groupToolMessageId: params.groupToolMessageId,
-            memberOperationId: result.operationId,
-            mode: 'isolated',
-            onComplete: params.onComplete,
-            parentOperationId: params.parentOperationId,
-          },
-          params.timeout,
-        );
-      }
-
       return {
         error: result.error,
         operationId: result.operationId,
@@ -1572,6 +1268,7 @@ export class AiAgentService {
     threadId?: string;
     topicId?: string;
   }): Promise<{
+    cancelState?: 'confirmed' | 'none' | 'requested' | 'unknown';
     deviceCancellationConfirmed?: boolean;
     operationId?: string;
     success: boolean;

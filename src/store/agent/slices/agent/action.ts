@@ -16,7 +16,7 @@ import type { PartialDeep } from 'type-fest';
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { MESSAGE_CANCEL_FLAT } from '@/const/message';
 import { analyticsClient } from '@/libs/analytics/client';
-import { mutate, useClientDataSWR, useClientDataSWRWithSync } from '@/libs/swr';
+import { mutate, useClientDataSWRWithSync } from '@/libs/swr';
 import { agentConfigKeys, builtinAgentKeys } from '@/libs/swr/keys';
 import { getCacheScope } from '@/libs/swr/useCacheScope';
 import type { AvailableAgentItem, CreateAgentParams, CreateAgentResult } from '@/services/agent';
@@ -27,7 +27,6 @@ import {
   agentDocumentSWRKeys,
   resolveAgentDocumentsContext,
 } from '@/services/agentDocument';
-import { aiAgentService } from '@/services/aiAgent';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
 import type { StoreSetter } from '@/store/types';
@@ -470,11 +469,6 @@ export class AgentSliceActionImpl {
       },
     );
   };
-
-  useFetchServerDefaultHeterogeneousCapability = (enabled: boolean) =>
-    useClientDataSWR(enabled ? agentConfigKeys.serverDefaultHeterogeneousCapability() : null, () =>
-      aiAgentService.getServerDefaultHeterogeneousCapability(),
-    );
 
   /**
    * Re-trigger the agent config fetch after a failure. Clears the recorded

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   fetchTaskDetail: vi.fn(),
   navigate: vi.fn(),
   openTopicDrawer: vi.fn(),
+  projects: [] as { id: string; name: string }[],
   taskDetailMap: {} as Record<string, unknown>,
   updateTask: vi.fn(),
 }));
@@ -19,7 +20,15 @@ const mocks = vi.hoisted(() => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     i18n: { language: 'en-US' },
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    // Emulate i18next's {{slot}} interpolation so assertions read real copy.
+    t: (key: string, options?: Record<string, unknown>) => {
+      const template = String(options?.defaultValue ?? key);
+      return Object.entries(options ?? {}).reduce(
+        (acc, [slot, value]) =>
+          slot === 'defaultValue' ? acc : acc.replace(`{{${slot}}}`, String(value)),
+        template,
+      );
+    },
   }),
 }));
 
@@ -50,7 +59,18 @@ vi.mock('@/store/task', () => ({
     }),
 }));
 
-vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
+vi.mock('@/store/project', () => ({
+  useCurrentProjectList: () => mocks.projects,
+  useProjectStore: (selector: any) =>
+    selector({
+      useFetchProjectList: () => ({}),
+    }),
+}));
+
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) => ({
+  // Keep the real module store helpers (getActiveWorkspaceSlug and friends) —
+  // useWorkspaceAwareNavigate reads them on every navigate.
+  ...(await importOriginal<object>()),
   useActiveWorkspaceId: () => mocks.activeWorkspaceId,
 }));
 
@@ -118,6 +138,7 @@ describe('TaskBoardCard', () => {
     mocks.fetchTaskDetail.mockReset();
     mocks.navigate.mockClear();
     mocks.openTopicDrawer.mockClear();
+    mocks.projects = [];
     mocks.updateTask.mockClear();
     mocks.taskDetailMap = {};
   });
@@ -133,7 +154,8 @@ describe('TaskBoardCard', () => {
     expect(screen.getByText('Hourly trend update')).toBeInTheDocument();
     expect(document.querySelector('[data-status-icon="backlog"]')).toBeInTheDocument();
     expect(screen.getByTestId('priority')).toBeInTheDocument();
-    expect(screen.getByText('Sep 15')).toBeInTheDocument();
+    // Linear cards stamp the creation date — "Created <date>".
+    expect(screen.getByText('Created Sep 15')).toBeInTheDocument();
     // Executor slot (top-right) shows the agent; owner slot (meta row) the member.
     expect(document.querySelector('[data-agent-avatar="agt_owner"]')).toBeInTheDocument();
     expect(document.querySelector('[data-user-avatar="user-1"]')).toBeInTheDocument();
@@ -200,5 +222,16 @@ describe('TaskBoardCard', () => {
     fireEvent.click(container.querySelector('[data-task-board-card]')!);
 
     expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('renders the project chip only when the projectId resolves to a name', () => {
+    mocks.projects = [{ id: 'proj-1', name: 'Voyager Launch' }];
+    const { rerender } = render(<TaskBoardCard task={createTask({ projectId: 'proj-1' })} />);
+    expect(screen.getByText('Voyager Launch')).toBeInTheDocument();
+
+    // Unknown ids render nothing — never a raw projectId.
+    rerender(<TaskBoardCard task={createTask({ projectId: 'proj-gone' })} />);
+    expect(screen.queryByText('Voyager Launch')).not.toBeInTheDocument();
+    expect(screen.queryByText('proj-gone')).not.toBeInTheDocument();
   });
 });

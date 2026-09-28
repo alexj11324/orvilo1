@@ -3,4 +3,6 @@ import { buildAuthMeta } from '../lib/seo';
 
 export const meta = () => buildAuthMeta(resolveAuthLocale(), '/reset-password');
 
-export { default } from '@/features/Auth/ResetPassword';
+// Account creation, verification and password reset all live on the accounts
+// portal (Clerk) now — the shared sign-in bounce forwards there.
+export { default } from '@/features/Auth/SignIn';

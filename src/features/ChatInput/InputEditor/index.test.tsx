@@ -150,7 +150,6 @@ vi.mock('@/hooks/useIMECompositionEvent', () => ({
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ allowed: permission.allowed, reason: '' }),
 }));
-vi.mock('@/services/chat', () => ({ chatService: { fetchPresetTaskResult: vi.fn() } }));
 vi.mock('@/services/aiChat', () => ({
   aiChatService: {
     generateJSON: mocks.generateJSON,

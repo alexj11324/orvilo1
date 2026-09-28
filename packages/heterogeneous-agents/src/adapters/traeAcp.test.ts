@@ -83,7 +83,22 @@ describe('TraeAcpAdapter', () => {
         toolCallId: 'tool-1',
       },
     ]);
-    expect(dataFor(events, 'tool_end')).toEqual([{ isSuccess: true, toolCallId: 'tool-1' }]);
+    expect(dataFor(events, 'tool_end')).toEqual([
+      {
+        isSuccess: true,
+        payload: {
+          toolCalling: {
+            apiName: 'Run command',
+            arguments: '{"command":"pwd"}',
+            id: 'tool-1',
+            identifier: 'trae',
+            type: 'default',
+          },
+        },
+        result: { content: 'done', success: true },
+        toolCallId: 'tool-1',
+      },
+    ]);
     expect(dataFor(events, 'stream_end')).toEqual([{ stopReason: 'end_turn' }]);
     expect(dataFor(events, 'step_complete')).toEqual([]);
     expect(dataFor(events, 'agent_runtime_end')).toEqual([{ stopReason: 'end_turn' }]);
@@ -111,7 +126,22 @@ describe('TraeAcpAdapter', () => {
         toolCallId: 'tool-2',
       },
     ]);
-    expect(dataFor(events, 'tool_end')).toEqual([{ isSuccess: false, toolCallId: 'tool-2' }]);
+    expect(dataFor(events, 'tool_end')).toEqual([
+      {
+        isSuccess: false,
+        payload: {
+          toolCalling: {
+            apiName: 'Read file',
+            arguments: '{"path":"missing.ts"}',
+            id: 'tool-2',
+            identifier: 'trae',
+            type: 'default',
+          },
+        },
+        result: { content: '{"message":"not found"}', success: false },
+        toolCallId: 'tool-2',
+      },
+    ]);
   });
 
   it('preserves tool content from a running update when the terminal update only has status', () => {
@@ -203,7 +233,22 @@ describe('TraeAcpAdapter', () => {
     });
     const events = adapter.flush();
 
-    expect(dataFor(events, 'tool_end')).toEqual([{ isSuccess: false, toolCallId: 'tool-pending' }]);
+    expect(dataFor(events, 'tool_end')).toEqual([
+      {
+        isSuccess: false,
+        payload: {
+          toolCalling: {
+            apiName: 'Pending tool',
+            arguments: '{}',
+            id: 'tool-pending',
+            identifier: 'trae',
+            type: 'default',
+          },
+        },
+        result: { content: '', success: false },
+        toolCallId: 'tool-pending',
+      },
+    ]);
     expect(dataFor(events, 'stream_end')).toEqual([{ stopReason: 'end_turn' }]);
     expect(adapter.flush()).toEqual([]);
   });

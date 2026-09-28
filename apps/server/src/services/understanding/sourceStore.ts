@@ -9,7 +9,7 @@ import {
 import type Redis from 'ioredis';
 import { z } from 'zod';
 
-import { getAgentRuntimeRedisClient } from '@/server/modules/AgentRuntime/redis';
+import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redis';
 
 const SOURCE_STORE_PREFIX = 'onboarding_understanding:context';
 const SOURCE_STORE_TTL_SECONDS = 3 * 24 * 60 * 60;

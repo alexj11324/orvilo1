@@ -12,6 +12,7 @@ import {
   MemoryExtractionWorkflowService,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import type { WorkflowContext } from '@/server/workflows/context';
 import { parseWorkflowDate, runStep } from '@/server/workflows/step';
 
@@ -79,7 +80,24 @@ export const processUserTopicsHandler = async (
     );
   };
 
+  let processedUsers = 0;
+
   for (const userId of params.userIds) {
+    // Unified production gate: a user who disabled memory never fans out topic
+    // extraction, no matter which entry scheduled this run.
+    const memoryEnabledStepName = `memory:user-memory:extract:users:${userId}:memory-enabled-check`;
+    const memoryEnabledGuard = await checkGuard(context, WORKFLOW_PATH, {
+      stepName: memoryEnabledStepName,
+    });
+    if (!memoryEnabledGuard.result) return memoryEnabledGuard.response;
+
+    const memoryEnabled = await runStep(context, memoryEnabledStepName, () =>
+      isUserMemoryExtractionEnabled(userId),
+    );
+    if (!memoryEnabled) {
+      continue;
+    }
+
     if (params.asyncTaskId) {
       // NOTICE: Cooperative cascading cancellation for the workflow tree.
       // A cancelled root task should stop at user-topic pagination and avoid enqueuing topic batches.
@@ -257,7 +275,9 @@ export const processUserTopicsHandler = async (
       );
       await appendHourlyWorkflowRunId(params.hourlyTaskId, result.workflowRunId);
     }
+
+    processedUsers += 1;
   }
 
-  return { processedUsers: params.userIds.length };
+  return { processedUsers };
 };

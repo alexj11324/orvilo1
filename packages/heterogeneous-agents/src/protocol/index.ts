@@ -5,7 +5,7 @@
  * sandbox runner) can depend on it without dragging in the spawn machinery.
  *
  * Executor-side helpers that materialize this contract (`normalizeImage`,
- * `buildAgentInput`, `spawnAgent`, …) live under `./spawn` instead.
+ * `spawnAgent`, …) live under `./spawn` instead.
  */
 export type {
   HeterogeneousAgentCancellationResult,

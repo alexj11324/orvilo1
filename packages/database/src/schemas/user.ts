@@ -18,6 +18,7 @@ export const users = pgTable(
     firstName: text('first_name'),
     lastName: text('last_name'),
     fullName: text('full_name'),
+    jobTitle: varchar('job_title', { length: 128 }),
     interests: varchar('interests', { length: 64 }).array(),
 
     /** @deprecated */
@@ -27,23 +28,19 @@ export const users = pgTable(
     // Time user was created in Clerk
     clerkCreatedAt: timestamptz('clerk_created_at'),
 
-    // Required by better-auth
     emailVerified: boolean('email_verified').default(false).notNull(),
     // Required by nextauth, all null allowed
     emailVerifiedAt: timestamptz('email_verified_at'),
 
     preference: jsonb('preference').$defaultFn(() => DEFAULT_PREFERENCE),
 
-    // better-auth admin
     role: text('role'),
     banned: boolean('banned').default(false),
     banReason: text('ban_reason'),
     banExpires: timestamptz('ban_expires'),
 
-    // better-auth two-factor
     twoFactorEnabled: boolean('two_factor_enabled').default(false),
 
-    // better-auth phone number
     phoneNumberVerified: boolean('phone_number_verified'),
     lastActiveAt: timestamptz('last_active_at').notNull().defaultNow(),
 

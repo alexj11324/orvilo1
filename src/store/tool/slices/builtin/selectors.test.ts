@@ -134,12 +134,6 @@ describe('builtinToolSelectors', () => {
         },
         {
           hidden: true,
-          identifier: 'orvilo-skill-store',
-          manifest: { api: [], identifier: 'orvilo-skill-store', meta: {}, systemRole: '' },
-          type: 'builtin',
-        },
-        {
-          hidden: true,
           identifier: 'tool-1',
           manifest: { api: [], identifier: 'tool-1', meta: { title: 'Tool 1' }, systemRole: '' },
           type: 'builtin',
@@ -162,9 +156,9 @@ describe('builtinToolSelectors', () => {
       const result = builtinToolSelectors.fixedDisplayMetaList({ isManualMode: true })(fixedState);
       const ids = result.map((item) => item.identifier);
 
-      // activator + skill-store are stripped from defaults in manual mode, so they aren't on.
+      // The activation-mode-controlled discovery tools are stripped from the
+      // defaults in manual mode, so they are not on.
       expect(ids).not.toContain('orvilo-activator');
-      expect(ids).not.toContain('orvilo-skill-store');
       // orvilo-agent stays on in manual mode.
       expect(ids).toContain('orvilo-agent');
     });
@@ -241,17 +235,6 @@ describe('builtinToolSelectors', () => {
           },
           {
             hidden: true,
-            identifier: 'orvilo-skill-store',
-            manifest: {
-              api: [],
-              identifier: 'orvilo-skill-store',
-              meta: { title: 'Skill Store' },
-              systemRole: '',
-            },
-            type: 'builtin',
-          },
-          {
-            hidden: true,
             identifier: 'orvilo-agent-management',
             manifest: {
               api: [],
@@ -303,17 +286,15 @@ describe('builtinToolSelectors', () => {
         'profile-tool',
       ]);
       expect(autoExcluded).toEqual(
-        expect.arrayContaining(['orvilo-web-browsing', 'orvilo-verify', 'orvilo-skill-store']),
+        expect.arrayContaining(['orvilo-web-browsing', 'orvilo-verify']),
       );
       expect(manualVisible.map((item) => item.identifier)).toEqual([
-        'orvilo-skill-store',
         'orvilo-agent-management',
         'profile-tool',
       ]);
       expect(manualExcluded).toEqual(
         expect.arrayContaining(['orvilo-web-browsing', 'orvilo-verify']),
       );
-      expect(manualExcluded).not.toContain('orvilo-skill-store');
       expect(manualExcluded).not.toContain('orvilo-agent-management');
     });
   });

@@ -1,61 +1,61 @@
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-interface GlobalStateMock {
-  toggleCommandMenu: () => void;
-}
-
-const mocks = vi.hoisted(() => ({
-  activeWorkspaceSlug: null as string | null,
-  showMarket: true,
-}));
-
-vi.mock('@/config/routes', () => ({
-  getRouteById: (id: string) => ({
-    icon: () => id,
-  }),
-}));
+import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/store/global', () => ({
-  useGlobalStore: (selector: (state: GlobalStateMock) => unknown) =>
+  useGlobalStore: (selector: (state: { toggleCommandMenu: () => void }) => unknown) =>
     selector({ toggleCommandMenu: vi.fn() }),
 }));
 
 vi.mock('@/store/serverConfig', () => ({
   featureFlagsSelectors: {},
-  useServerConfigStore: () => ({
-    hideGitHub: false,
-    showMarket: mocks.showMarket,
-  }),
+  useServerConfigStore: () => ({ hideGitHub: false }),
 }));
 
-vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
-  useActiveWorkspaceSlug: () => mocks.activeWorkspaceSlug,
-}));
+/**
+ * Keys retired from the primary sidebar by the Linear IA convergence. They must
+ * not render from any code path — routes stay reachable, the sidebar does not.
+ */
+const RETIRED_SIDEBAR_KEYS = [
+  'community',
+  'image',
+  'memory',
+  'pages',
+  'home',
+  'tasks',
+  'automations',
+  'resource',
+  'recents',
+  'private',
+  'project',
+  'views',
+];
+
+const renderedKeys = async () => {
+  const { useNavLayout } = await import('./useNavLayout');
+  const { result } = renderHook(() => useNavLayout());
+  return [...result.current.topNavItems, ...result.current.bottomMenuItems].map((item) => item.key);
+};
 
 describe('useNavLayout', () => {
-  beforeEach(() => {
-    mocks.activeWorkspaceSlug = null;
-    mocks.showMarket = true;
+  it.each(RETIRED_SIDEBAR_KEYS)('never renders the retired "%s" destination', async (key) => {
+    expect(await renderedKeys()).not.toContain(key);
   });
 
-  it('keeps Memory visible in personal mode', async () => {
+  it('keeps the fixed primary entries: inbox, my work, reviews, agent', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
+    const keys = result.current.topNavItems.map((item) => item.key);
 
-    const memoryItem = result.current.bottomMenuItems.find((item) => item.key === 'memory');
-
-    expect(memoryItem?.hidden).not.toBe(true);
-  });
-
-  it('hides Memory in workspace mode', async () => {
-    mocks.activeWorkspaceSlug = 'orvilo-team';
-
-    const { useNavLayout } = await import('./useNavLayout');
-    const { result } = renderHook(() => useNavLayout());
-
-    const memoryItem = result.current.bottomMenuItems.find((item) => item.key === 'memory');
-
-    expect(memoryItem?.hidden).toBe(true);
+    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'drafts']);
+    expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
+    expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
+      '/my-issues',
+    );
+    expect(result.current.topNavItems.find((item) => item.key === 'reviews')?.url).toBe('/reviews');
+    // Agent lands on the workspace session (builtin inbox agent), not the
+    // agents view-all list — `/agent` alone has no index and redirects away.
+    expect(result.current.topNavItems.find((item) => item.key === 'agent')?.url).toBe(
+      '/agent/inbox',
+    );
   });
 });

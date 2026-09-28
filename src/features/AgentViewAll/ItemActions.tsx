@@ -1,10 +1,9 @@
 'use client';
 
 import type { MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { ActionIcon, DropdownMenu } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
-import { EllipsisIcon, EyeIcon, EyeOffIcon } from 'lucide-react';
+import { EllipsisIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -47,21 +46,12 @@ interface ItemActionsProps {
    * only entry.
    */
   hideTrigger?: boolean;
-  /**
-   * Merge the sidebar show/hide toggle in as the first menu item. Every
-   * surface that can toggle sets it: cards have no other affordance, and rows
-   * carry the standalone eye icon as a shortcut but still need the action
-   * where users look for a row's actions — its right-click menu.
-   */
-  includeSidebarToggle?: boolean;
   item: SidebarAgentItem;
   /**
    * Hands the filtered menu-items getter back to the row/card, which feeds it
    * to its ContextMenuTrigger so right-click shows the same menu as "…".
    */
   onMenuReady?: (getItems: () => MenuProps['items']) => void;
-  onToggleSidebar?: (item: SidebarAgentItem) => void;
-  sidebarHidden?: boolean;
 }
 
 interface ActionsDropdownProps extends Omit<ItemActionsProps, 'anchor'> {
@@ -69,62 +59,35 @@ interface ActionsDropdownProps extends Omit<ItemActionsProps, 'anchor'> {
 }
 
 /** Shared "…" trigger: adapts a sidebar item menu for the flat view-all list. */
-const ActionsDropdown = memo<ActionsDropdownProps>(
-  ({
-    getMenuItems,
-    hideTrigger,
-    includeSidebarToggle,
-    item,
-    onMenuReady,
-    onToggleSidebar,
-    sidebarHidden,
-  }) => {
-    const { t } = useTranslation('common');
+const ActionsDropdown = memo<ActionsDropdownProps>(({ getMenuItems, hideTrigger, onMenuReady }) => {
+  const { t } = useTranslation('common');
 
-    const items = useMemo(
-      () => (): MenuProps['items'] => {
-        // Pin and move-to-group organize the sidebar; they're meaningless in
-        // this flat view-all list, so drop them (and any dividers left over).
-        const menu = collapseDividers(
-          (getMenuItems() ?? []).filter(
-            (menuItem) =>
-              !menuItem || !['hideFromSidebar', 'moveGroup', 'pin'].includes(String(menuItem.key)),
-          ),
-        );
-        if (!includeSidebarToggle || !onToggleSidebar) return menu;
-        return [
-          {
-            icon: <Icon icon={sidebarHidden ? EyeIcon : EyeOffIcon} />,
-            key: 'sidebar',
-            label: sidebarHidden
-              ? t('agentViewAll.addToSidebar')
-              : t('agentViewAll.removeFromSidebar'),
-            onClick: ({ domEvent }: any) => {
-              domEvent?.stopPropagation();
-              onToggleSidebar(item);
-            },
-          },
-          { type: 'divider' as const },
-          ...menu,
-        ];
-      },
-      [getMenuItems, includeSidebarToggle, item, onToggleSidebar, sidebarHidden, t],
-    );
+  const items = useMemo(
+    () => (): MenuProps['items'] =>
+      // Pin and move-to-group organize the sidebar; they're meaningless in
+      // this flat view-all list, so drop them (and any dividers left over).
+      collapseDividers(
+        (getMenuItems() ?? []).filter(
+          (menuItem) =>
+            !menuItem || !['hideFromSidebar', 'moveGroup', 'pin'].includes(String(menuItem.key)),
+        ),
+      ),
+    [getMenuItems],
+  );
 
-    // Expose the same filtered items to the row/card's right-click trigger.
-    useEffect(() => {
-      onMenuReady?.(items);
-    }, [items, onMenuReady]);
+  // Expose the same filtered items to the row/card's right-click trigger.
+  useEffect(() => {
+    onMenuReady?.(items);
+  }, [items, onMenuReady]);
 
-    if (hideTrigger) return null;
+  if (hideTrigger) return null;
 
-    return (
-      <DropdownMenu items={items}>
-        <ActionIcon icon={EllipsisIcon} size={'small'} title={t('more')} />
-      </DropdownMenu>
-    );
-  },
-);
+  return (
+    <DropdownMenu items={items}>
+      <ActionIcon icon={EllipsisIcon} size={'small'} title={t('more')} />
+    </DropdownMenu>
+  );
+});
 
 ActionsDropdown.displayName = 'ActionsDropdown';
 

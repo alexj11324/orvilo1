@@ -54,18 +54,11 @@ const mockGlobalConfigDependencies = (
       AUTH_DISABLE_EMAIL_PASSWORD: false,
       AUTH_EMAIL_VERIFICATION: false,
       AUTH_ENABLE_MAGIC_LINK: false,
-      AUTH_SSO_PROVIDERS: '',
     },
   }));
 
   vi.doMock('@/envs/file', () => ({
     fileEnv: {},
-  }));
-
-  vi.doMock('@/envs/image', () => ({
-    imageEnv: {
-      AI_IMAGE_DEFAULT_IMAGE_NUM: undefined,
-    },
   }));
 
   vi.doMock('@/envs/knowledge', () => ({
@@ -82,10 +75,6 @@ const mockGlobalConfigDependencies = (
 
   vi.doMock('@/envs/tools', () => ({
     toolsEnv: { TOOL_NAME_MAX_LENGTH: options.toolNameMaxLengthEnv },
-  }));
-
-  vi.doMock('@/libs/better-auth/utils/server', () => ({
-    parseSSOProviders: vi.fn(() => []),
   }));
 
   vi.doMock('@/server/globalConfig/parseSystemAgent', () => ({

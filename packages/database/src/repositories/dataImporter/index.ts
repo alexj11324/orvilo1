@@ -62,24 +62,6 @@ const IMPORT_TABLE_CONFIG: TableImportConfig[] = [
     uniqueConstraints: ['identifier'],
   },
   {
-    conflictStrategy: 'skip',
-    preserveId: true,
-    table: 'aiProviders',
-    uniqueConstraints: ['id'],
-  },
-  {
-    conflictStrategy: 'skip',
-    preserveId: true, // Need to preserve original ID
-    relations: [
-      {
-        field: 'providerId',
-        sourceTable: 'aiProviders',
-      },
-    ],
-    table: 'aiModels',
-    uniqueConstraints: ['id', 'providerId'],
-  },
-  {
     table: 'sessionGroups',
     uniqueConstraints: [],
   },

@@ -9,7 +9,6 @@ import Mention from './Mention';
 import Model from './Model';
 import Params from './Params';
 import Plus from './Plus';
-import PromptTransform from './PromptTransform';
 import Search from './Search';
 import ContextWindow from './Token';
 import Tools from './Tools';
@@ -28,7 +27,6 @@ export const actionMap = {
   mention: Mention,
   model: Model,
   params: Params,
-  promptTransform: PromptTransform,
   search: Search,
   temperature: Params,
   tools: Tools,

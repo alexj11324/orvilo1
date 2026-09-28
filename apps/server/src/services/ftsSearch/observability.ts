@@ -57,99 +57,129 @@ export interface FtsSearchBackendOperationAttributes {
 
 type FtsSearchBackendOperationBaseAttributes = Omit<FtsSearchBackendOperationAttributes, 'result'>;
 
-const meter = metrics.getMeter('fts-search-backend');
-const tracer = trace.getTracer('fts.search.backend');
+// Instruments are created lazily: the esbuild-split Hatchet worker bundle can evaluate this
+// module before the OpenTelemetry API's init wrapper runs, so module-scope getMeter calls are unsafe.
+const createFtsSearchInstruments = () => {
+  const meter = metrics.getMeter('fts-search-backend');
+  const tracer = trace.getTracer('fts.search.backend');
 
-const operationCounter = meter.createCounter('fts_search_backend_operations_total', {
-  description:
-    'Full-text search backend operations grouped by provider, entity, operation, and result.',
-  unit: '{operation}',
-});
+  const operationCounter = meter.createCounter('fts_search_backend_operations_total', {
+    description:
+      'Full-text search backend operations grouped by provider, entity, operation, and result.',
+    unit: '{operation}',
+  });
 
-const operationDuration = meter.createHistogram('fts_search_backend_operation_duration', {
-  description:
-    'Full-text search backend operation duration by provider, entity, operation, and result.',
-  unit: 'ms',
-});
-
-const resultCount = meter.createHistogram('fts_search_backend_result_count', {
-  description: 'Requested, candidate, and hydrated product result counts for successful searches.',
-});
-
-const elasticsearchRequests = meter.createCounter('fts_search_elasticsearch_requests_total', {
-  description: 'Actual Elasticsearch search requests grouped by entity and result.',
-  unit: '{request}',
-});
-
-const elasticsearchRequestDuration = meter.createHistogram(
-  'fts_search_elasticsearch_request_duration',
-  {
-    description: 'End-to-end Elasticsearch search request duration including response parsing.',
+  const operationDuration = meter.createHistogram('fts_search_backend_operation_duration', {
+    description:
+      'Full-text search backend operation duration by provider, entity, operation, and result.',
     unit: 'ms',
-  },
-);
+  });
 
-const elasticsearchRequestBytes = meter.createHistogram('fts_search_elasticsearch_request_size', {
-  description: 'Serialized Elasticsearch search request body size.',
-  unit: 'By',
-});
+  const resultCount = meter.createHistogram('fts_search_backend_result_count', {
+    description:
+      'Requested, candidate, and hydrated product result counts for successful searches.',
+  });
 
-const elasticsearchOriginalQueryCharacters = meter.createHistogram(
-  'fts_search_elasticsearch_original_query_characters',
-  {
-    description: 'Unicode code points in the original Elasticsearch lexical query.',
-    unit: '{character}',
-  },
-);
+  const elasticsearchRequests = meter.createCounter('fts_search_elasticsearch_requests_total', {
+    description: 'Actual Elasticsearch search requests grouped by entity and result.',
+    unit: '{request}',
+  });
 
-const elasticsearchExecutedQueryCharacters = meter.createHistogram(
-  'fts_search_elasticsearch_executed_query_characters',
-  {
-    description: 'Unicode code points sent in the bounded Elasticsearch lexical query.',
-    unit: '{character}',
-  },
-);
+  const elasticsearchRequestDuration = meter.createHistogram(
+    'fts_search_elasticsearch_request_duration',
+    {
+      description: 'End-to-end Elasticsearch search request duration including response parsing.',
+      unit: 'ms',
+    },
+  );
 
-const elasticsearchServerTook = meter.createHistogram('fts_search_elasticsearch_server_took', {
-  description: 'Elasticsearch-reported server processing time for successful search requests.',
-  unit: 'ms',
-});
-
-const elasticsearchResponseContentLength = meter.createHistogram(
-  'fts_search_elasticsearch_response_content_length',
-  {
-    description: 'Elasticsearch search response Content-Length when provided.',
+  const elasticsearchRequestBytes = meter.createHistogram('fts_search_elasticsearch_request_size', {
+    description: 'Serialized Elasticsearch search request body size.',
     unit: 'By',
-  },
-);
+  });
 
-const elasticsearchResponseDecodedBytes = meter.createHistogram(
-  'fts_search_elasticsearch_response_decoded_size',
-  {
-    description: 'Decoded Elasticsearch search response body size.',
-    unit: 'By',
-  },
-);
+  const elasticsearchOriginalQueryCharacters = meter.createHistogram(
+    'fts_search_elasticsearch_original_query_characters',
+    {
+      description: 'Unicode code points in the original Elasticsearch lexical query.',
+      unit: '{character}',
+    },
+  );
 
-const elasticsearchResponseHits = meter.createHistogram('fts_search_elasticsearch_response_hits', {
-  description: 'Hits returned by each Elasticsearch search request.',
-});
+  const elasticsearchExecutedQueryCharacters = meter.createHistogram(
+    'fts_search_elasticsearch_executed_query_characters',
+    {
+      description: 'Unicode code points sent in the bounded Elasticsearch lexical query.',
+      unit: '{character}',
+    },
+  );
 
-const userMemoryLexicalDecisions = meter.createCounter(
-  'fts_search_user_memory_lexical_decisions_total',
-  {
-    description: 'User-memory lexical search decisions grouped by bounded source and decision.',
-    unit: '{decision}',
-  },
-);
+  const elasticsearchServerTook = meter.createHistogram('fts_search_elasticsearch_server_took', {
+    description: 'Elasticsearch-reported server processing time for successful search requests.',
+    unit: 'ms',
+  });
 
-const userMemoryLexicalQueryCharacters = meter.createHistogram(
-  'fts_search_user_memory_lexical_query_characters',
-  {
-    description: 'Unicode code points considered for user-memory lexical retrieval.',
-    unit: '{character}',
-  },
-);
+  const elasticsearchResponseContentLength = meter.createHistogram(
+    'fts_search_elasticsearch_response_content_length',
+    {
+      description: 'Elasticsearch search response Content-Length when provided.',
+      unit: 'By',
+    },
+  );
+
+  const elasticsearchResponseDecodedBytes = meter.createHistogram(
+    'fts_search_elasticsearch_response_decoded_size',
+    {
+      description: 'Decoded Elasticsearch search response body size.',
+      unit: 'By',
+    },
+  );
+
+  const elasticsearchResponseHits = meter.createHistogram(
+    'fts_search_elasticsearch_response_hits',
+    {
+      description: 'Hits returned by each Elasticsearch search request.',
+    },
+  );
+
+  const userMemoryLexicalDecisions = meter.createCounter(
+    'fts_search_user_memory_lexical_decisions_total',
+    {
+      description: 'User-memory lexical search decisions grouped by bounded source and decision.',
+      unit: '{decision}',
+    },
+  );
+
+  const userMemoryLexicalQueryCharacters = meter.createHistogram(
+    'fts_search_user_memory_lexical_query_characters',
+    {
+      description: 'Unicode code points considered for user-memory lexical retrieval.',
+      unit: '{character}',
+    },
+  );
+
+  return {
+    elasticsearchExecutedQueryCharacters,
+    elasticsearchOriginalQueryCharacters,
+    elasticsearchRequestBytes,
+    elasticsearchRequestDuration,
+    elasticsearchRequests,
+    elasticsearchResponseContentLength,
+    elasticsearchResponseDecodedBytes,
+    elasticsearchResponseHits,
+    elasticsearchServerTook,
+    operationCounter,
+    operationDuration,
+    resultCount,
+    tracer,
+    userMemoryLexicalDecisions,
+    userMemoryLexicalQueryCharacters,
+  };
+};
+
+let ftsSearchInstruments: ReturnType<typeof createFtsSearchInstruments> | undefined;
+
+const instruments = () => (ftsSearchInstruments ??= createFtsSearchInstruments());
 
 const recordSafely = (operation: string, record: () => void): void => {
   try {
@@ -179,6 +209,7 @@ const finishOperation = (
 ) => {
   const metricAttributes = buildFtsSearchBackendMetricAttributes({ ...attributes, result });
   recordSafely('operation metrics', () => {
+    const { operationCounter, operationDuration } = instruments();
     operationCounter.add(1, metricAttributes);
     operationDuration.record(Date.now() - startedAt, metricAttributes);
     span.setAttribute('fts.search.backend.result', result);
@@ -210,6 +241,17 @@ export const recordElasticsearchFtsSearchRequest = (input: {
   usage: FtsSearchUsage;
 }): void => {
   recordSafely('Elasticsearch search request', () => {
+    const {
+      elasticsearchExecutedQueryCharacters,
+      elasticsearchOriginalQueryCharacters,
+      elasticsearchRequestBytes,
+      elasticsearchRequestDuration,
+      elasticsearchRequests,
+      elasticsearchResponseContentLength,
+      elasticsearchResponseDecodedBytes,
+      elasticsearchResponseHits,
+      elasticsearchServerTook,
+    } = instruments();
     const histogramAttributes: Attributes = {
       entity: input.entity,
       pagination: input.pagination,
@@ -251,6 +293,7 @@ export const recordUserMemoryLexicalSearchDecision = (input: {
   source: UserMemoryLexicalSearchSource;
 }): void => {
   recordSafely('user-memory lexical search decision', () => {
+    const { userMemoryLexicalDecisions, userMemoryLexicalQueryCharacters } = instruments();
     const attributes: Attributes = { decision: input.decision, source: input.source };
     userMemoryLexicalDecisions.add(1, attributes);
     userMemoryLexicalQueryCharacters.record(input.queryCharacters, attributes);
@@ -263,6 +306,7 @@ const recordFtsSearchBackendResult = (
   response: FtsSearchBackendResponse,
 ): void => {
   recordSafely('search result counts', () => {
+    const { resultCount } = instruments();
     const requestedLimit = request.pagination.limit;
     const hasValidRequestedLimit =
       typeof requestedLimit === 'number' && Number.isFinite(requestedLimit) && requestedLimit > 0;
@@ -286,7 +330,7 @@ export const observeFtsSearchBackendOperation = async <Result>(
   attributes: FtsSearchBackendOperationBaseAttributes,
   operation: () => Promise<Result>,
 ): Promise<Result> =>
-  tracer.startActiveSpan(
+  instruments().tracer.startActiveSpan(
     `fts.search.backend.${attributes.operation}`,
     {
       attributes: {

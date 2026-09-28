@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => {
 
   return {
     echoTranslationKeys: false,
+    translationNamespaces: undefined as string | string[] | undefined,
     getSnapshot: () => store.matches,
     setCurrentRouteMeta: vi.fn(),
     setMatches: store.setMatches,
@@ -67,9 +68,12 @@ vi.mock('@/store/electron', () => ({
 }));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => (mocks.echoTranslationKeys ? key : `translated:${key}`),
-  }),
+  useTranslation: (namespaces?: string | string[]) => {
+    mocks.translationNamespaces = namespaces;
+    return {
+      t: (key: string) => (mocks.echoTranslationKeys ? key : `translated:${key}`),
+    };
+  },
 }));
 
 vi.mock('react-router', async () => {
@@ -300,5 +304,22 @@ describe('RouteMetaBridge', () => {
     await waitFor(() => {
       expect(document.title).toBe(BRANDING_NAME);
     });
+  });
+
+  it('binds both electron and common namespaces — tab.*/navPanel.* titleKeys resolve', () => {
+    mocks.setMatches([
+      {
+        data: undefined,
+        handle: { meta: { titleKey: 'tab.myWork' } },
+        id: 'routes/my-issues',
+        params: {},
+        pathname: '/my-issues',
+      },
+    ]);
+
+    render(<RouteMetaBridge />);
+
+    expect(mocks.translationNamespaces).toEqual(['electron', 'common']);
+    expect(document.title).toBe(`translated:tab.myWork · ${BRANDING_NAME}`);
   });
 });

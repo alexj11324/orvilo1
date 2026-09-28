@@ -345,7 +345,11 @@ describe('TaskRecommendationService', () => {
     });
     expect(persisted.createdTaskIds).toEqual({ 'recommendation-1': 'task-1' });
     expect(runTask).toHaveBeenCalledTimes(1);
-    expect(runTask).toHaveBeenCalledWith({ taskId: 'task-1' });
+    expect(runTask).toHaveBeenCalledWith({
+      idempotencyKey:
+        'onboarding:topic-1:session:session-1:recommendation:recommendation-1:task:task-1',
+      taskId: 'task-1',
+    });
   });
 
   /** @example A failed immediate kickoff leaves the durable task available for manual retry. */
@@ -384,7 +388,11 @@ describe('TaskRecommendationService', () => {
       }),
     ).resolves.toEqual({ 'recommendation-1': 'task-1' });
 
-    expect(runTask).toHaveBeenCalledWith({ taskId: 'task-1' });
+    expect(runTask).toHaveBeenCalledWith({
+      idempotencyKey:
+        'onboarding:topic-1:session:session-1:recommendation:recommendation-1:task:task-1',
+      taskId: 'task-1',
+    });
     expect(consoleError).toHaveBeenCalledWith(
       '[TaskRecommendationService] failed to start onboarding task:',
       expect.any(Error),

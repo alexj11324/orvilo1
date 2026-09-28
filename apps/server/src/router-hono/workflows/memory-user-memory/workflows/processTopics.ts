@@ -14,6 +14,7 @@ import {
   MemoryExtractionWorkflowService,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import type { WorkflowContext } from '@/server/workflows/context';
 import { WorkflowAbort } from '@/server/workflows/context';
 import { runStep } from '@/server/workflows/step';
@@ -91,6 +92,32 @@ export const processTopicsHandler = (context: WorkflowContext<MemoryExtractionPa
         }
 
         const userId = payload.userIds[0];
+
+        // Unified production gate: a user who disabled memory never fans out
+        // per-topic extraction or persona updates, no matter the entry point.
+        const memoryEnabledStepName = `memory:user-memory:extract:users:${userId}:memory-enabled-check`;
+        const memoryEnabledGuard = await checkGuard(context, WORKFLOW_PATH, {
+          response: { processedTopics: 0, processedUsers: 0 },
+          stepName: memoryEnabledStepName,
+        });
+        if (!memoryEnabledGuard.result) {
+          span.setStatus({ code: SpanStatusCode.OK });
+          return memoryEnabledGuard.response;
+        }
+
+        const memoryEnabled = await runStep(context, memoryEnabledStepName, () =>
+          isUserMemoryExtractionEnabled(userId),
+        );
+        if (!memoryEnabled) {
+          span.setStatus({ code: SpanStatusCode.OK });
+          return {
+            message: 'User memory is disabled, skip topic batch.',
+            processedTopics: 0,
+            processedUsers: 0,
+            skipped: true,
+          };
+        }
+
         if (payload.asyncTaskId && userId) {
           // NOTICE: Cooperative cascading cancellation for the workflow tree.
           // If cancelled, stop before fan-out into per-topic child workflows.

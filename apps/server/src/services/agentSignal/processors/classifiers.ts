@@ -304,8 +304,10 @@ export const classifySatisfaction = async (
 
   try {
     payload = await services.satisfactionClassifier.classify({
+      agentId: source.payload.agentId,
       message,
       serializedContext: source.payload.serializedContext,
+      topicId: source.payload.topicId,
     });
   } catch (error) {
     if (!isMalformedStructuredOutputError(error)) throw error;

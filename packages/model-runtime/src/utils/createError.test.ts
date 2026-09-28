@@ -58,18 +58,4 @@ describe('AgentRuntimeError', () => {
       });
     });
   });
-
-  describe('createImage', () => {
-    it('should return the same CreateImageErrorPayload', () => {
-      const errorPayload = {
-        error: { message: 'Image creation failed' },
-        errorType: AgentRuntimeErrorType.ModelNotFound,
-        provider: 'dalle',
-      };
-
-      const result = AgentRuntimeError.createImage(errorPayload);
-      expect(result).toBe(errorPayload);
-      expect(result).toEqual(errorPayload);
-    });
-  });
 });

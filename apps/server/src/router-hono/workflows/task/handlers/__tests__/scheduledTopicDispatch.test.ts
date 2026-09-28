@@ -285,6 +285,52 @@ describe('scheduledTopicDispatch', () => {
     expect(mocks.clearScheduledRun).toHaveBeenCalledWith({}, 'topic-1', 'active');
   });
 
+  it('discards a schedule parked on a share-visitor topic before claiming it', async () => {
+    // Visitor execution is retired, but a visitor topic can still carry a
+    // parked schedule from before retirement (`delayed_start`, or a
+    // `resume_after_rate_limit` continuation). `getDueScheduledTopics` is
+    // system-level and does not apply the visitor exclusion, so the row
+    // reaches this loop. Dispatching it would re-enter `execAgent`
+    // creator-scoped with no share gate — the exact bypass retirement exists
+    // to close. Drop the schedule instead of claiming; the topic/history stay
+    // readable through the share's read paths.
+    mocks.getDueScheduledTopics.mockResolvedValue([
+      { ...topic(resumeAfterRateLimit), senderId: 'visitor-1' },
+    ]);
+
+    const response = await dispatch();
+
+    await expect(response.json()).resolves.toMatchObject({
+      claimed: 0,
+      discarded: 1,
+      dispatched: 0,
+    });
+    expect(mocks.claimScheduledTopic).not.toHaveBeenCalled();
+    expect(mocks.execAgent).not.toHaveBeenCalled();
+    // 'active', not 'running': nothing ever started — the schedule is dead.
+    expect(mocks.clearScheduledRun).toHaveBeenCalledWith({}, 'topic-1', 'active');
+  });
+
+  it('still dispatches ordinary due topics sitting next to a discarded visitor one', async () => {
+    mocks.getDueScheduledTopics.mockResolvedValue([
+      { ...topic(resumeAfterRateLimit), senderId: 'visitor-1' },
+      { ...topic(delayedStart), id: 'topic-2' },
+    ]);
+
+    const response = await dispatch();
+
+    await expect(response.json()).resolves.toMatchObject({
+      claimed: 1,
+      discarded: 1,
+      dispatched: 1,
+    });
+    expect(mocks.claimScheduledTopic).toHaveBeenCalledTimes(1);
+    expect(mocks.execAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.execAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ appContext: { topicId: 'topic-2' } }),
+    );
+  });
+
   it('skips a topic another replica already claimed', async () => {
     mocks.getDueScheduledTopics.mockResolvedValue([topic(delayedStart)]);
     mocks.claimScheduledTopic.mockResolvedValue(false);

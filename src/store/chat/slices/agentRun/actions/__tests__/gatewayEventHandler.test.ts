@@ -1,5 +1,5 @@
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
-import { createAdapter } from '@orvilo/heterogeneous-agents';
+import { createLiveAdapter } from '@orvilo/heterogeneous-agents';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { messageService } from '@/services/message';
@@ -863,23 +863,21 @@ describe('createGatewayEventHandler', () => {
       const handler = createHandler(store);
       const onAfterCall = vi.fn().mockResolvedValue(undefined);
       getExecutorMock.mockReturnValueOnce({ onAfterCall });
-      const adapter = createAdapter('kimi-code');
+      const adapter = createLiveAdapter('kimi-code');
 
       adapter.adapt({
-        role: 'assistant',
-        tool_calls: [
-          {
-            function: {
-              arguments: JSON.stringify({ command: 'git worktree add /tmp/kimi-wt' }),
-              name: 'Shell',
-            },
-            id: 'kimi-shell-1',
-            type: 'function',
-          },
-        ],
+        name: 'Shell',
+        rawInput: { command: 'git worktree add /tmp/kimi-wt' },
+        sessionUpdate: 'tool_call',
+        toolCallId: 'kimi-shell-1',
       });
       const toolEnd = adapter
-        .adapt({ content: 'created', role: 'tool', tool_call_id: 'kimi-shell-1' })
+        .adapt({
+          output: 'created',
+          sessionUpdate: 'tool_call_update',
+          status: 'completed',
+          toolCallId: 'kimi-shell-1',
+        })
         .find((event) => event.type === 'tool_end');
 
       expect(toolEnd).toBeDefined();

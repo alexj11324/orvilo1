@@ -1629,6 +1629,37 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
         { name: 'Kubernetes personal base', userId, workspaceId: null },
         { name: 'Kubernetes workspace base', userId, workspaceId },
       ]);
+
+      // Rows that must NEVER surface in either scope: another user's unfiled
+      // rows and rows in a workspace the caller doesn't belong to. Their
+      // titles deliberately avoid 'personal'/'workspace' so the scoped
+      // assertions below catch a leak by title.
+      await serverDB.insert(workspaces).values({
+        id: 'search-foreign-workspace',
+        name: 'Foreign Workspace',
+        primaryOwnerId: otherUserId,
+        slug: 'search-foreign-workspace',
+      });
+
+      await serverDB.insert(topics).values([
+        { title: 'Foreign-scope kubernetes topic', userId: otherUserId, workspaceId: null },
+        {
+          title: 'Foreign-scope kubernetes workspace topic',
+          userId: otherUserId,
+          workspaceId: 'search-foreign-workspace',
+        },
+      ]);
+
+      await serverDB.insert(files).values([
+        {
+          fileType: 'text/plain',
+          name: 'kubernetes-foreign-scope.txt',
+          size: 10,
+          url: 'file://kubernetes-foreign-scope.txt',
+          userId: otherUserId,
+          workspaceId: null,
+        },
+      ]);
     });
 
     /**
@@ -1640,11 +1671,18 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
      */
     const expectEveryHitScopedTo = (
       results: FtsSearchResult[],
-      scope: 'personal' | 'workspace',
+      scope: 'personal' | 'workspace' | 'workspace-union',
     ) => {
       expect(results.length).toBeGreaterThan(0);
 
-      const foreign = results.filter((r) => !r.title.toLowerCase().includes(scope));
+      // Workspace mode follows the union contract in `buildWorkspaceWhere`:
+      // the caller's own unfiled rows (`workspace_id IS NULL`, written before
+      // workspace provisioning) travel into workspace scope, so 'personal'
+      // fixtures legitimately appear alongside 'workspace' ones.
+      const allowed = scope === 'workspace-union' ? ['personal', 'workspace'] : [scope];
+      const foreign = results.filter(
+        (r) => !allowed.some((s) => r.title.toLowerCase().includes(s)),
+      );
       expect(foreign.map((r) => `${r.type}: ${r.title}`)).toEqual([]);
 
       // every rewritten search method is represented
@@ -1657,12 +1695,16 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
       expectEveryHitScopedTo(results, 'personal');
     });
 
-    it('should never surface personal rows in workspace mode', async () => {
+    it('limits workspace mode to the union of workspace rows and own unfiled rows', async () => {
       const results = await new FtsSearchRepo(serverDB, userId, workspaceId).search({
         query: 'Kubernetes',
       });
 
-      expectEveryHitScopedTo(results, 'workspace');
+      expectEveryHitScopedTo(results, 'workspace-union');
+
+      // Pin the union so it isn't silently tightened back to strict scoping:
+      // the caller's own unfiled rows must actually surface.
+      expect(results.some((r) => r.title.toLowerCase().includes('personal'))).toBe(true);
     });
 
     it('keeps agent-scoped search exact in workspace mode', async () => {
@@ -1826,30 +1868,57 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
       sql: string;
     }
 
+    /**
+     * pg_search's BM25 index can briefly hold ctids a concurrent test-file
+     * writer already removed — the `@@@` scan then crashes with XX000
+     * `item_pointer_is_valid` instead of returning rows. The inconsistency is
+     * transient: retrying the identical query re-reads a settled heap.
+     */
+    const isTransientBm25ScanError = (error: unknown): boolean => {
+      // nodeDrizzle rethrows as `Failed query: ...` with the postgres
+      // diagnostics on `.cause` — walk the chain to reach them.
+      let err = error as { cause?: unknown; code?: string; message?: string } | undefined;
+      while (err) {
+        if (err.code === 'XX000' || err.message?.includes('item_pointer_is_valid')) return true;
+        err = err.cause as typeof err;
+      }
+      return false;
+    };
+
     /** Runs a search against the test DB and returns every BM25 statement it emitted. */
     const captureScanSql = async (options?: {
       agentId?: string;
       workspaceId?: string;
     }): Promise<CapturedStatement[]> => {
-      const captured: CapturedStatement[] = [];
       loggingPool ??= new NodePool({ connectionString: process.env.DATABASE_TEST_URL });
-      const db = nodeDrizzle(loggingPool, {
-        logger: {
-          logQuery: (query: string, params: unknown[]) => captured.push({ params, sql: query }),
-        },
-        schema,
-      });
 
-      await new FtsSearchRepo(
-        db as unknown as OrviloDatabase,
-        userId,
-        options?.workspaceId,
-      ).search({
-        agentId: options?.agentId,
-        query: 'kubernetes',
-      });
+      const maxAttempts = 4;
+      for (let attempt = 1; ; attempt++) {
+        const captured: CapturedStatement[] = [];
+        const db = nodeDrizzle(loggingPool, {
+          logger: {
+            logQuery: (query: string, params: unknown[]) => captured.push({ params, sql: query }),
+          },
+          schema,
+        });
 
-      return captured.filter(({ sql }) => sql.includes('@@@'));
+        try {
+          await new FtsSearchRepo(
+            db as unknown as OrviloDatabase,
+            userId,
+            options?.workspaceId,
+          ).search({
+            agentId: options?.agentId,
+            query: 'kubernetes',
+          });
+        } catch (error) {
+          if (attempt === maxAttempts || !isTransientBm25ScanError(error)) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+          continue;
+        }
+
+        return captured.filter(({ sql }) => sql.includes('@@@'));
+      }
     };
 
     /** Body of the first parenthesised subquery, i.e. the isolated BM25 scan. */

@@ -155,7 +155,7 @@ Always adapt to user's language. Use natural descriptions, not raw field names.
 
 **Plugins:**
 - Array of enabled plugin identifiers
-- Common plugins: "orvilo-web-browsing", "orvilo-image-generation", "orvilo-artifacts"
+- Common plugins: "orvilo-web-browsing", "orvilo-agent-documents", "orvilo-artifacts"
 - Plugins extend agent capabilities with external tools
 
 **Metadata:**
@@ -268,11 +268,11 @@ Action: Use updateConfig with { config: { params: { temperature: 0.7 } } }
 User: "我想调整对话配置" / "I want to configure chat settings"
 Action: Explain the available chatConfig options and help them configure as needed.
 
-User: "帮我安装网页浏览和图片生成这两个插件" / "Install web browsing and image generation plugins for me"
+User: "帮我安装网页浏览和文档处理这两个插件" / "Install web browsing and document plugins for me"
 Action: Install plugins one by one:
 1. First, use installPlugin to install "orvilo-web-browsing", explain what it does
 2. Wait for confirmation of success
-3. Then, use installPlugin to install "orvilo-image-generation", explain what it does
+3. Then, use installPlugin to install "orvilo-agent-documents", explain what it does
 4. Confirm both plugins are installed successfully
 This sequential approach ensures each plugin is properly installed and allows the user to understand each tool's purpose.
 </examples>

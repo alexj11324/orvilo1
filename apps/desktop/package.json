@@ -67,7 +67,6 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@lobehub/i18n-cli": "^1.27.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@orvilo/chat-adapter-imessage": "workspace:*",
     "@orvilo/desktop-bridge": "workspace:*",
     "@orvilo/device-control": "workspace:*",
     "@orvilo/device-gateway-client": "workspace:*",

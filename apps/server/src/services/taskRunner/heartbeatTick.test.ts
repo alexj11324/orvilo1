@@ -65,6 +65,7 @@ describe('runHeartbeatTick', () => {
 
   const baseTask = (overrides: Partial<Record<string, unknown>> = {}) => ({
     automationMode: 'heartbeat',
+    executionGeneration: 0,
     heartbeatInterval: 30,
     id: taskId,
     identifier: 'T-1',
@@ -110,6 +111,30 @@ describe('runHeartbeatTick', () => {
     expect(cancelTick).not.toHaveBeenCalled();
   });
 
+  it('re-arms when a project policy temporarily rejects the heartbeat', async () => {
+    mockSelectTask.mockResolvedValue([baseTask({ context: { scheduler: { tickToken: 'old' } } })]);
+    mockRunner.runTask.mockRejectedValue(
+      new TRPCError({ code: 'PRECONDITION_FAILED', message: 'project_auto_dispatch_disabled' }),
+    );
+
+    expect(await runHeartbeatTick(taskId, userId, 'old')).toEqual({
+      ran: false,
+      reason: 'human-waiting',
+    });
+    expect(scheduleTick).toHaveBeenCalledWith({
+      delay: 30,
+      taskId,
+      userId,
+      tickToken: expect.any(String),
+    });
+    expect(commitTick).toHaveBeenCalledWith(
+      taskId,
+      'old',
+      30,
+      expect.objectContaining({ tickMessageId: 'next-message' }),
+    );
+  });
+
   it('cancels the deferred message when pause or a newer tick wins the CAS', async () => {
     mockSelectTask.mockResolvedValue([baseTask()]);
     mockRunner.runTask.mockRejectedValue(new TaskDependencyError('Blocked', 'PRECONDITION_FAILED'));
@@ -143,7 +168,11 @@ describe('runHeartbeatTick', () => {
     expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
       excludeTypes: ['error'],
     });
-    expect(mockRunner.runTask).toHaveBeenCalledWith({ taskId, trigger: 'heartbeat' });
+    expect(mockRunner.runTask).toHaveBeenCalledWith({
+      idempotencyKey: `heartbeat:tick:task:${taskId}:generation:1`,
+      taskId,
+      trigger: 'heartbeat',
+    });
   });
 
   it('still skips when a non-error urgent brief requires human input', async () => {

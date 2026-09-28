@@ -32,18 +32,9 @@ export type AcceptanceBundle = Awaited<ReturnType<typeof lambdaClient.acceptance
 export type AcceptanceBySubject = Awaited<
   ReturnType<typeof lambdaClient.acceptance.getBySubject.query>
 >;
-export type AcceptanceListItem = Awaited<
-  ReturnType<typeof lambdaClient.acceptance.list.query>
->[number];
-
-export type AcceptanceListPage = Awaited<ReturnType<typeof lambdaClient.acceptance.listPage.query>>;
-
 export type AcceptancePurgePreview = Awaited<
   ReturnType<typeof lambdaClient.acceptance.purgePreview.query>
 >;
-
-/** The list's status split, shared by the flat and paged reads. */
-export type AcceptanceListFilter = 'active' | 'all' | 'completed';
 
 /** The lifecycle states a reviewer may set by hand from the acceptance list. */
 export type AcceptanceStatusOverride = 'accepted' | 'closed' | 'delivered' | 'rejected';
@@ -167,9 +158,6 @@ export interface GenerateDraftPlanInput {
 
 /** Client wrapper around the `verify` lambda router. */
 export class VerifyService {
-  startFlow = (input: Parameters<typeof lambdaClient.acceptance.startFlow.mutate>[0]) =>
-    lambdaClient.acceptance.startFlow.mutate(input);
-
   reviewFlowStep = (input: Parameters<typeof lambdaClient.acceptance.reviewFlowStep.mutate>[0]) =>
     lambdaClient.acceptance.reviewFlowStep.mutate(input);
 
@@ -194,45 +182,6 @@ export class VerifyService {
     subjectId: string,
     requirement: string,
   ) => lambdaClient.acceptance.saveGoal.mutate({ requirement, subjectId, subjectType });
-
-  listAcceptances = (options?: {
-    filter?: 'active' | 'all' | 'completed';
-    /** Widen the recency window (server-capped) — the merge picker asks for more. */
-    limit?: number;
-    projectId?: string;
-    q?: string;
-    quiet?: boolean;
-  }): Promise<AcceptanceListItem[]> =>
-    lambdaClient.acceptance.list.query(
-      options
-        ? {
-            filter: options.filter,
-            limit: options.limit,
-            projectId: options.projectId,
-            q: options.q,
-          }
-        : undefined,
-      options?.quiet ? { context: { showNotification: false } } : undefined,
-    );
-
-  /** One keyset page of the acceptance feed — what the list panel scrolls. */
-  listAcceptancePage = (params: {
-    cursor?: string;
-    filter?: AcceptanceListFilter;
-    limit?: number;
-    projectId?: string;
-  }): Promise<AcceptanceListPage> => lambdaClient.acceptance.listPage.query(params);
-
-  /**
-   * Acceptance status for a known set of subjects. `listAcceptances` is capped
-   * at the newest rows across every subject type, so a list surface deriving
-   * per-row state must ask about its own subjects instead.
-   */
-  listAcceptanceStatuses = (
-    subjectType: AcceptanceSubjectType,
-    subjectIds: string[],
-  ): Promise<Array<{ status: string; subjectId: string }>> =>
-    lambdaClient.acceptance.listStatusesBySubjects.query({ subjectIds, subjectType });
 
   acceptDelivery = (id: string, comment?: string) =>
     lambdaClient.acceptance.accept.mutate({ comment, id });
@@ -305,47 +254,9 @@ export class VerifyService {
       topicId: input.topicId,
     });
 
-  /** Stamp the aggregate `repairing` after the send-back dispatch. */
-  markAcceptanceRepairing = (id: string) => lambdaClient.acceptance.markRepairing.mutate({ id });
-
-  /** Rename the acceptance's sidebar entry (a metadata title override). */
-  renameAcceptance = (id: string, title: string) =>
-    lambdaClient.acceptance.rename.mutate({ id, title });
-
-  /**
-   * File the acceptance under a project (`null` takes it out of one). Only the
-   * grouping moves — the delivery and its rounds stay exactly where they are.
-   */
-  setAcceptanceProject = (id: string, projectId: string | null) =>
-    lambdaClient.acceptance.setProject.mutate({ id, projectId });
-
-  /**
-   * Batch twin of `setAcceptanceProject` for the list's multi-selection. Rows
-   * the caller cannot write come back in `failedIds` instead of failing the
-   * whole sweep.
-   */
-  setAcceptanceProjectBatch = (ids: string[], projectId: string | null) =>
-    lambdaClient.acceptance.setProjectBatch.mutate({ ids, projectId });
-
   /** Owner override of the acceptance's decision state from the list. */
   updateAcceptanceStatus = (id: string, status: AcceptanceStatusOverride) =>
     lambdaClient.acceptance.updateStatus.mutate({ id, status });
-
-  /**
-   * Sweep a multi-selection into one decision state. Reports what landed —
-   * rows that could not take the transition come back in `failedIds` instead
-   * of failing the whole sweep.
-   */
-  updateAcceptanceStatusBatch = (ids: string[], status: AcceptanceStatusOverride) =>
-    lambdaClient.acceptance.updateStatusBatch.mutate({ ids, status });
-
-  /**
-   * Fold one acceptance into another — the source's checks (and the rounds /
-   * evidence behind them) move onto the target, and the source entry is
-   * removed. Returns what the merge actually moved.
-   */
-  mergeAcceptance = (sourceId: string, targetId: string) =>
-    lambdaClient.acceptance.merge.mutate({ sourceId, targetId });
 
   getAcceptancePurgePreview = (ids: string[]) =>
     lambdaClient.acceptance.purgePreview.query({ ids });
@@ -353,10 +264,6 @@ export class VerifyService {
   /** Delete the acceptance aggregate; its round reports detach unless `purge` removes them too. */
   deleteAcceptance = (id: string, purge?: boolean) =>
     lambdaClient.acceptance.remove.mutate({ id, purge });
-
-  /** Batch twin of `deleteAcceptance` for the list's multi-selection. */
-  deleteAcceptanceBatch = (ids: string[], purge?: boolean) =>
-    lambdaClient.acceptance.removeBatch.mutate({ ids, purge });
 
   // ---- per-run plan ----
   getVerifyState = (operationId: string): Promise<VerifyStateResponse | null> =>

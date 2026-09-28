@@ -32,6 +32,12 @@ vi.mock('@orvilo/utils', () => ({
   }),
 }));
 
+vi.mock('./discover', () => ({
+  discoverService: {
+    safeInjectMPToken: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 vi.mock('@/libs/trpc/client', () => ({
   toolsClient: {
     market: {
@@ -52,13 +58,6 @@ vi.mock('@/libs/trpc/client', () => ({
 
 vi.mock('@/utils/electron/ipc', () => ({
   ensureElectronIpc: () => mockElectronIpc,
-}));
-
-vi.mock('./discover', () => ({
-  discoverService: {
-    safeInjectMPToken: vi.fn().mockResolvedValue(undefined),
-    reportPluginCall: vi.fn().mockResolvedValue(undefined),
-  },
 }));
 
 // Mock tool store
@@ -86,7 +85,6 @@ describe('MCPService', () => {
   describe('invokeMcpToolCall', () => {
     it('should invoke tool call with installed plugin', async () => {
       const { toolsClient } = await import('@/libs/trpc/client');
-      const { discoverService } = await import('./discover');
 
       const mockPlugin = {
         customParams: {
@@ -144,9 +142,7 @@ describe('MCPService', () => {
         { signal: undefined },
       );
 
-      // For SSE type, reporting is handled by server-side, frontend should NOT call reportPluginCall
       await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(discoverService.reportPluginCall).not.toHaveBeenCalled();
     });
 
     it('should invoke tool call with custom plugin', async () => {
@@ -246,7 +242,6 @@ describe('MCPService', () => {
 
     it('should handle tool call errors and report them', async () => {
       const { toolsClient } = await import('@/libs/trpc/client');
-      const { discoverService } = await import('./discover');
 
       const mockPlugin = {
         customParams: {
@@ -276,13 +271,10 @@ describe('MCPService', () => {
 
       await expect(mcpService.invokeMcpToolCall(payload, {})).rejects.toThrow('Tool call failed');
 
-      // For SSE type, reporting is handled by server-side, frontend should NOT call reportPluginCall
       await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(discoverService.reportPluginCall).not.toHaveBeenCalled();
     });
 
-    it('should call toolsClient.market.callCloudMcpEndpoint for cloud type and not report from frontend', async () => {
-      const { discoverService } = await import('./discover');
+    it('should call toolsClient.market.callCloudMcpEndpoint for cloud type', async () => {
       const { toolsClient } = await import('@/libs/trpc/client');
 
       // Use cloud type which now reports from server-side
@@ -331,12 +323,6 @@ describe('MCPService', () => {
         },
         toolName: 'cloudMethod',
       });
-
-      // Wait for async reporting
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Cloud type should NOT report from frontend (handled server-side)
-      expect(discoverService.reportPluginCall).not.toHaveBeenCalled();
     });
 
     it('should handle abort signal', async () => {

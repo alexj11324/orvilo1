@@ -106,6 +106,11 @@ e2e/
 ## 本地环境启动
 
 > 详细流程参考 [e2e/docs/local-setup.md](./docs/local-setup.md)
+>
+> 两条本地路径，端口不要混用：
+>
+> - **Docker 路径**（本文档）：`e2e/scripts/setup.ts` + `postgres-e2e` 容器 —— app `:3006`，Postgres `:5433`
+> - **Dockerless（brew）路径**：`init-dev-env.sh` + brew Postgres/Redis —— app `:3010`，Postgres `:5432` db `orvilo`，权威文档见 [docs/development/local-setup.md](../docs/development/local-setup.md)
 
 ### 一键启动（推荐）
 
@@ -172,9 +177,16 @@ BASE_URL=http://localhost:3006 \
 
 ### 核心原理
 
-LLM Mock 通过 Playwright 的 `page.route()` 拦截对 `/webapi/chat/openai` 的请求，返回预设的 SSE 流式响应。
+浏览器侧 client runtime 已退役 ——web 发消息走 gateway mode：服务端进程内 agent runtime 真正调用 LLM（OpenAI 兼容协议），流式事件经 Agent Gateway 的 HTTP push 收进、再经 WS `/ws` 扇出给浏览器订阅者。因此 E2E 需要两个进程级 stand-in，由 `bun e2e/scripts/mockServices.ts` 启动（CI `e2e.yml` 与本地 `setup.ts --start` 已自动拉起）：
 
-### SSE 响应格式
+1. **Mock LLM**（`src/mocks/llm/server.ts`，默认 :3406）— OpenAI 兼容 `POST /v1/chat/completions`（SSE + JSON + `response_format` JSON schema 合成）。服务端经 `DEEPSEEK_API_KEY`/`DEEPSEEK_PROXY_URL`（mini model 走 `OPENAI_*`）env 回退指向它，无需 DB 播种 provider。
+2. **Fake Agent Gateway**（`src/mocks/gateway/server.ts`，默认 :3407）— `POST /api/operations/{init,push-event,tool-execute}` 收服务端推送 + WS `/ws` 实现 `auth`/`resume`（含缓冲事件重放与 `resume_complete` 权威状态）/`heartbeat`/`tool_result`/`interrupt`。
+
+`llmMockManager` 的 `setResponse`/`setResponseContaining`/`setTimingForFragment` 依旧注册确定性响应，只是会持久化到 `$TMPDIR/orvilo-e2e-llm-state.<CUCUMBER_WORKER_ID>.json` 供 mock server 合并读取 —— 按 worker 隔离，并行时互不污染。timing 用 `setTimingForFragment`（按 prompt 片段作用域）而非全局 `setConfig`，避免并行 worker 互相踩踏流式时序。
+
+残留的浏览器侧 `/webapi/chat/*` 拦截（`llmMockManager.setup`）仍保留给任何存量的 client 请求，但已不再是执行路径。
+
+### SSE 响应格式（浏览器拦截器，仅存量路径）
 
 Orvilo 使用特定的 SSE 格式，必须严格匹配：
 
@@ -293,14 +305,17 @@ HEADLESS=false pnpm exec cucumber-js --config cucumber.config.js --tags "@smoke"
 
 ## 环境变量
 
-运行测试需要以下环境变量：
+运行测试需要以下环境变量（Docker 路径取值；dockerless 取值见注释行）：
 
 ```bash
-BASE_URL=http://localhost:3010 # 测试服务器地址
-DATABASE_URL=postgresql://...  # 数据库连接
-DATABASE_DRIVER=node           # 数据库驱动
-KEY_VAULTS_SECRET=...          # 密钥
-AUTH_SECRET=...                # Auth 密钥
+BASE_URL=http://localhost:3006                                      # 测试服务器地址
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres # 数据库连接
+DATABASE_DRIVER=node                                                # 数据库驱动
+KEY_VAULTS_SECRET=...                                               # 密钥
+
+# Dockerless（brew）路径：
+# BASE_URL=http://localhost:3010
+# DATABASE_URL=postgresql://<user>@localhost:5432/orvilo
 
 # 可选：S3 相关（如果测试涉及文件上传）
 S3_ACCESS_KEY_ID=e2e-mock-access-key
@@ -318,7 +333,7 @@ S3_ENDPOINT=https://e2e-mock-s3.localhost
 bun e2e/scripts/setup.ts --clean
 ```
 
-或手动清理：
+或手动清理（Docker 路径）：
 
 ```bash
 # 停止并删除 PostgreSQL 容器

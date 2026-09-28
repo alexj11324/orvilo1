@@ -74,6 +74,7 @@ describe('TaskLifecycleService.maybeRearmHeartbeat', () => {
       scheduler: expect.objectContaining({
         consecutiveFailures: 0,
         tickMessageId: 'msg-new',
+        tickRevision: 1,
         tickToken: expect.any(String),
       }),
     });

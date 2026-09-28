@@ -1,11 +1,10 @@
-import { Center, Icon, Tooltip } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
-import { CircleUser } from 'lucide-react';
+import { Tooltip } from '@lobehub/ui';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
 
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
+import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 
 interface AssigneeUserAvatarProps {
   size?: number;
@@ -18,19 +17,9 @@ const AssigneeUserAvatar = memo<AssigneeUserAvatarProps>(({ userId, size = 18, t
   const displayMeta = useUserDisplayMeta(userId);
 
   if (!displayMeta) {
-    return (
-      <Center
-        height={size}
-        width={size}
-        style={{
-          borderRadius: '50%',
-          color: cssVar.colorTextQuaternary,
-          flexShrink: 0,
-        }}
-      >
-        <Icon icon={CircleUser} size={size} />
-      </Center>
-    );
+    // Unknown / unassigned humans draw the same dashed-circle + silhouette mark
+    // every assignee surface shares.
+    return <UnassignedAssigneeIcon kind={'human'} size={size} />;
   }
 
   const avatar = (

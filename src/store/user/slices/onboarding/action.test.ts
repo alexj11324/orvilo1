@@ -115,6 +115,30 @@ describe('onboarding actions', () => {
       expect(secondCall.finishedAt).toBe(firstCall.finishedAt);
       expect(secondCall.currentStep).toBe(6);
     });
+
+    it('preserves setup metadata when finishing onboarding', async () => {
+      act(() => {
+        useUserStore.setState({
+          onboarding: {
+            setup: { goals: ['roadmaps'], workspaceId: 'workspace-1' },
+            version: CURRENT_ONBOARDING_VERSION,
+          },
+        });
+      });
+
+      const { result } = renderHook(() => useUserStore());
+
+      await act(async () => {
+        await result.current.finishOnboarding();
+      });
+
+      expect(userService.updateOnboarding).toHaveBeenCalledWith({
+        currentStep: 1,
+        finishedAt: expect.any(String),
+        setup: { goals: ['roadmaps'], workspaceId: 'workspace-1' },
+        version: CURRENT_ONBOARDING_VERSION,
+      });
+    });
   });
 
   describe('toggleInboxAgentDefaultPlugin', () => {

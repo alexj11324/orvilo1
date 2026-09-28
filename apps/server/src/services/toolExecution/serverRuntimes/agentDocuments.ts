@@ -11,6 +11,23 @@ import { emitAgentDocumentToolOutcomeSafely } from '@/server/services/agentDocum
 
 import { type ServerRuntimeRegistration } from './types';
 
+/**
+ * The only thing attaching needs from a produced document: the `documents` row
+ * id. Kept structural rather than generic so `withDocumentOutcome` can stay
+ * unconstrained in `T` — constraining it to "has a documentId" made the compiler
+ * infer that constraint (instead of each service method's real return type) as
+ * the handler's return type, which no longer satisfied
+ * `AgentDocumentsExecutionRuntime`. It also rejected `removeDocumentById`, whose
+ * outcome is a `boolean`.
+ */
+interface AttachableDocument {
+  documentId?: string;
+}
+
+/** True for the outcome shapes that carry a document: every mutating API but `removeDocument`. */
+const isAttachableDocument = (value: unknown): value is AttachableDocument =>
+  typeof value === 'object' && value !== null && 'documentId' in value;
+
 export const agentDocumentsRuntime: ServerRuntimeRegistration = {
   factory: (context) => {
     if (!context.userId || !context.serverDB) {
@@ -76,6 +93,23 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
     ) => {
       try {
         const result = await operation();
+        // Attach inside the outcome, not after it. The outcome is the record of
+        // what happened, so it must never report a bare success for a document
+        // the task never received — and a failed attach must not reach the catch
+        // below, which would record a created document as a failed creation.
+        //
+        // Only `created` relations attach, which is exactly the set the old
+        // `pinToTask` wrapper covered: the task receives what the run produced.
+        // Modifying or removing an existing document must not attach it — a pin
+        // on removal would leave the task pointing at a document that is gone.
+        //
+        // `attachToTask` reports rather than throws: the document exists either
+        // way, and the recovery is an idempotent re-attach through
+        // `task.pinDocument` (which generates nothing), not a new run.
+        const attachError =
+          input.relation === 'created' && isAttachableDocument(result)
+            ? await attachToTask(result)
+            : undefined;
         await emitDocumentOutcome({
           agentId: input.agentId,
           agentDocumentId: input.getAgentDocumentId?.(result),
@@ -83,7 +117,9 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
           hintIsSkill: input.hintIsSkill,
           relation: input.relation,
           status: 'succeeded',
-          summary: input.summary,
+          summary: attachError
+            ? `${input.summary} The document itself was created, but attaching it to the task failed (${attachError}); attach it again from the task's artifacts.`
+            : input.summary,
           toolAction: input.toolAction,
         });
         return result;
@@ -102,8 +138,15 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
       }
     };
 
-    const pinToTask = async <T extends { documentId?: string } | undefined>(doc: T): Promise<T> => {
-      if (taskId && doc?.documentId) {
+    /**
+     * Attach a produced document to the owning task, when the run has one.
+     * Never throws: the caller records the failure against an outcome that still
+     * says the document was created. Returns the failure's message, if any.
+     */
+    const attachToTask = async (doc: AttachableDocument): Promise<string | undefined> => {
+      if (!taskId || !doc.documentId) return undefined;
+
+      try {
         // Prefer the workspaceId already threaded through the pipeline; fall
         // back to the owning task row for legacy callers.
         let wsId = context.workspaceId;
@@ -117,8 +160,10 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
         }
         const taskModel = new TaskModel(db, userId, wsId);
         await taskModel.pinDocument(taskId, doc.documentId, 'agent');
+        return undefined;
+      } catch (error) {
+        return (error as Error).message;
       }
-      return doc;
     };
 
     // Work registration is now manifest-driven: each mutating API declares a
@@ -131,37 +176,31 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
     return new AgentDocumentsExecutionRuntime(
       {
         copyDocument: async ({ agentId, id, newTitle }) => {
-          const doc = await pinToTask(
-            await withDocumentOutcome(
-              {
-                agentId,
-                apiName: 'copyDocument',
-                getAgentDocumentId: (result) => result?.id,
-                relation: 'created',
-                summary: 'Agent documents copied a document.',
-                toolAction: 'copy',
-              },
-              () => service.copyDocumentById(id, newTitle, agentId),
-            ),
+          return withDocumentOutcome(
+            {
+              agentId,
+              apiName: 'copyDocument',
+              getAgentDocumentId: (result) => result?.id,
+              relation: 'created',
+              summary: 'Agent documents copied a document.',
+              toolAction: 'copy',
+            },
+            () => service.copyDocumentById(id, newTitle, agentId),
           );
-          return doc;
         },
         createDocument: async ({ agentId, content, hintIsSkill, parentId, title }) => {
-          const doc = await pinToTask(
-            await withDocumentOutcome(
-              {
-                agentId,
-                apiName: 'createDocument',
-                getAgentDocumentId: (result) => result?.id,
-                hintIsSkill,
-                relation: 'created',
-                summary: 'Agent documents created a document.',
-                toolAction: 'create',
-              },
-              () => service.createDocument(agentId, title, content, { hintIsSkill, parentId }),
-            ),
+          return withDocumentOutcome(
+            {
+              agentId,
+              apiName: 'createDocument',
+              getAgentDocumentId: (result) => result?.id,
+              hintIsSkill,
+              relation: 'created',
+              summary: 'Agent documents created a document.',
+              toolAction: 'create',
+            },
+            () => service.createDocument(agentId, title, content, { hintIsSkill, parentId }),
           );
-          return doc;
         },
         createTopicDocument: async ({
           agentId,
@@ -171,25 +210,22 @@ export const agentDocumentsRuntime: ServerRuntimeRegistration = {
           title,
           topicId,
         }) => {
-          const doc = await pinToTask(
-            await withDocumentOutcome(
-              {
-                agentId,
-                apiName: 'createTopicDocument',
-                getAgentDocumentId: (result) => result?.id,
+          return withDocumentOutcome(
+            {
+              agentId,
+              apiName: 'createTopicDocument',
+              getAgentDocumentId: (result) => result?.id,
+              hintIsSkill,
+              relation: 'created',
+              summary: 'Agent documents created a topic document.',
+              toolAction: 'create',
+            },
+            () =>
+              service.createForTopic(agentId, title, content, topicId, {
                 hintIsSkill,
-                relation: 'created',
-                summary: 'Agent documents created a topic document.',
-                toolAction: 'create',
-              },
-              () =>
-                service.createForTopic(agentId, title, content, topicId, {
-                  hintIsSkill,
-                  parentId,
-                }),
-            ),
+                parentId,
+              }),
           );
-          return doc;
         },
         listDocuments: async ({ agentId, parentId, sourceType }) => {
           // Agents discover archived tool results via this path (see

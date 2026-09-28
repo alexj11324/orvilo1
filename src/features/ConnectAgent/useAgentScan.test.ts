@@ -114,4 +114,32 @@ describe('buildConnectAgentConfig', () => {
       }),
     ).toMatchObject({ provider: 'claude-code' });
   });
+
+  it('persists the local execution target with this computer as the bound device', () => {
+    expect(
+      buildConnectAgentConfig({
+        provider: getConnectableProvider('opencode')!,
+        target: { deviceId: 'local-desktop', kind: 'local' },
+      }),
+    ).toMatchObject({
+      agencyConfig: {
+        boundDeviceId: 'local-desktop',
+        executionTarget: 'local',
+        heterogeneousProvider: { command: 'opencode', type: 'opencode' },
+      },
+    });
+  });
+
+  it('still marks the local target when no device id is resolvable', () => {
+    const config = buildConnectAgentConfig({
+      provider: getConnectableProvider('opencode')!,
+      target: { kind: 'local' },
+    });
+
+    expect(config.agencyConfig).toMatchObject({
+      executionTarget: 'local',
+      heterogeneousProvider: { command: 'opencode', type: 'opencode' },
+    });
+    expect(config.agencyConfig).not.toHaveProperty('boundDeviceId');
+  });
 });

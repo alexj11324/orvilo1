@@ -1,8 +1,18 @@
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { QuotaReadingRow } from './quotaViewModel';
-import { buildClaudePanelSnapshot, isQuotaStale, newestCapturedAt } from './quotaViewModel';
+import {
+  buildClaudePanelSnapshot,
+  isObservableQuotaAccount,
+  isQuotaStale,
+  newestCapturedAt,
+  pruneQuotaIdentityTrust,
+  resetQuotaIdentityTrust,
+  resolveQuotaIdentityForLive,
+  trustedQuotaIdentity,
+  trustQuotaIdentity,
+} from './quotaViewModel';
 
 const reset = Date.parse('2026-07-21T14:00:00Z');
 const sessionReset = Date.parse('2026-07-18T20:50:00Z');
@@ -215,6 +225,151 @@ describe('buildClaudePanelSnapshot — folding in a live sample', () => {
     expect(buildClaudePanelSnapshot(account, readings, null, now).session).toMatchObject({
       usedPercent: 43,
     });
+  });
+});
+
+describe('isObservableQuotaAccount', () => {
+  it('keeps only enabled rows of the provider; revoked/disabled rows are not observable', () => {
+    const row = { provider: 'claude-code' };
+
+    expect(isObservableQuotaAccount(row, 'claude-code')).toBe(true);
+    expect(isObservableQuotaAccount({ provider: 'codex' }, 'claude-code')).toBe(false);
+    expect(isObservableQuotaAccount({ ...row, enabled: false }, 'claude-code')).toBe(false);
+    expect(isObservableQuotaAccount({ ...row, status: 'disabled' }, 'claude-code')).toBe(false);
+    // Error/expired rows still describe this account's real history.
+    expect(isObservableQuotaAccount({ ...row, status: 'expired' }, 'claude-code')).toBe(true);
+  });
+});
+
+describe('quota identity trust', () => {
+  beforeEach(() => resetQuotaIdentityTrust());
+
+  it('binds confirmed identities per execution context', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-local');
+    trustQuotaIdentity('claude-code:device-a', 'ext-remote');
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBe('ext-local');
+    expect(trustedQuotaIdentity('claude-code:device-a')).toBe('ext-remote');
+    expect(trustedQuotaIdentity('claude-code:device-b')).toBeUndefined();
+  });
+
+  it('rebinds a context when the live sampler confirms a different login', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-old');
+    trustQuotaIdentity('claude-code:local', 'ext-new');
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBe('ext-new');
+  });
+
+  it('drops bindings whose identity left the visible account set', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-local');
+    trustQuotaIdentity('claude-code:device-a', 'ext-remote');
+
+    // ext-remote was revoked or fell out of this user/workspace's scope.
+    pruneQuotaIdentityTrust(new Set(['ext-local']));
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBe('ext-local');
+    expect(trustedQuotaIdentity('claude-code:device-a')).toBeUndefined();
+  });
+
+  it('reset clears every binding', () => {
+    trustQuotaIdentity('claude-code:local', 'ext-local');
+    resetQuotaIdentityTrust();
+
+    expect(trustedQuotaIdentity('claude-code:local')).toBeUndefined();
+  });
+});
+
+describe('resolveQuotaIdentityForLive', () => {
+  beforeEach(() => resetQuotaIdentityTrust());
+
+  const contextKey = 'claude-code:local';
+  const accountA = { externalAccountId: 'ext-a', id: 'a' };
+  const accountB = { externalAccountId: 'ext-b', id: 'b' };
+  const okSample = (externalAccountId?: string): ClaudeCodeQuotaSnapshot => ({
+    error: null,
+    ...(externalAccountId ? { identity: { externalAccountId } } : {}),
+    provider: 'claude-code',
+    scopedWeekly: null,
+    session: null,
+    status: 'ok',
+    updatedAt: now,
+    weekly: null,
+  });
+
+  it('an ok sample with no identity revokes the context confirmation', () => {
+    // A → unidentifiable: the current sample cannot be attributed, so the
+    // previously confirmed account must drop immediately — nothing may keep
+    // painting A as the current login.
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const first = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: okSample(),
+    });
+
+    expect(first.unidentifiableLive).toBe(true);
+    expect(first.account).toBeUndefined();
+    expect(trustedQuotaIdentity(contextKey)).toBeUndefined();
+  });
+
+  it('A → unidentifiable → B rebinds only after B samples an identity', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+    resolveQuotaIdentityForLive({ accounts: [accountA, accountB], contextKey, live: okSample() });
+
+    const next = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: okSample('ext-b'),
+    });
+
+    expect(next.account?.externalAccountId).toBe('ext-b');
+    expect(trustedQuotaIdentity(contextKey)).toBe('ext-b');
+  });
+
+  it('an ok sample rebinds directly between two identifiable logins', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const res = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: okSample('ext-b'),
+    });
+
+    expect(res.account?.externalAccountId).toBe('ext-b');
+    expect(trustedQuotaIdentity(contextKey)).toBe('ext-b');
+  });
+
+  it('a failed live probe keeps the trusted account for the unverified view', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const res = resolveQuotaIdentityForLive({
+      accounts: [accountA, accountB],
+      contextKey,
+      live: { ...okSample(), error: 'fetch failed', status: 'error' },
+    });
+
+    expect(res.unidentifiableLive).toBeUndefined();
+    expect(res.account?.externalAccountId).toBe('ext-a');
+  });
+
+  it('no live sample at all also keeps the trusted account flagged by the caller', () => {
+    trustQuotaIdentity(contextKey, 'ext-a');
+
+    const res = resolveQuotaIdentityForLive({ accounts: [accountA], contextKey, live: null });
+
+    expect(res.account?.externalAccountId).toBe('ext-a');
+  });
+
+  it('an unidentifiable ok sample with no prior confirmation returns nothing', () => {
+    const res = resolveQuotaIdentityForLive({
+      accounts: [accountA],
+      contextKey,
+      live: okSample(),
+    });
+
+    expect(res.account).toBeUndefined();
+    expect(trustedQuotaIdentity(contextKey)).toBeUndefined();
   });
 });
 

@@ -6,7 +6,7 @@ import { AGENT_CHAT_URL, GROUP_CHAT_URL } from '@orvilo/const';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { formatNotificationRelativeTime } from '@/features/HomeSidebar/Header/components/InboxModal/formatNotificationRelativeTime';
+import { formatNotificationRelativeTime } from '@/features/ResourceTransferRequest/formatNotificationRelativeTime';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useClientDataSWR } from '@/libs/swr';
 import type {

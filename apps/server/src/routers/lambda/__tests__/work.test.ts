@@ -41,6 +41,12 @@ vi.mock('@/database/models/work', () => ({
     };
   }),
 }));
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
 
 // Imported after the mocks above are registered.
 const { workRouter } = await import('../work');

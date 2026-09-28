@@ -37,16 +37,36 @@ vi.mock('@/hooks/usePermission', () => ({
   }),
 }));
 
-// The hook reads feature flags (`hideDocs`) from the server-config store,
-// which only exists behind its Provider.
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <Provider createStore={() => initServerConfigStore({})}>{children}</Provider>
-);
+// The hook reads feature flags (`hideDocs`) and `serverConfig`
+// (`enableBusinessFeatures`) from the server-config store, which only exists
+// behind its Provider.
+const makeWrapper =
+  ({ enableBusinessFeatures = false } = {}) =>
+  ({ children }: { children: ReactNode }) => (
+    <Provider
+      createStore={() =>
+        initServerConfigStore({
+          serverConfig: {
+            aiProvider: {},
+            enableBusinessFeatures,
+            telemetry: {},
+          },
+        })
+      }
+    >
+      {children}
+    </Provider>
+  );
+
+const wrapper = makeWrapper();
+const businessWrapper = makeWrapper({ enableBusinessFeatures: true });
 
 const initialUserStoreState = useUserStore.getState();
 
-const getItemKeys = () => {
-  const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+const getItemKeys = (renderWrapper = wrapper) => {
+  const { result } = renderHook(() => useWorkspaceSettingCategory(), {
+    wrapper: renderWrapper,
+  });
 
   return result.current.flatMap((group) => group.items.map((item) => item.key));
 };
@@ -83,7 +103,6 @@ describe('workspace settings useCategory', () => {
       WorkspaceSettingsTabs.Profile,
       WorkspaceSettingsTabs.Appearance,
       WorkspaceSettingsTabs.Hotkey,
-      WorkspaceSettingsTabs.Messenger,
     ]);
     expect(generalGroup?.items.map((item) => item.key)).not.toContain(
       WorkspaceSettingsTabs.Profile,
@@ -111,7 +130,17 @@ describe('workspace settings useCategory', () => {
     expect(getItemKeys()).not.toContain(WorkspaceSettingsTabs.OAuthApps);
   });
 
-  it('shows OAuth Apps when the Labs preference is enabled', () => {
+  it('offers the new Imports entry without the retired Linear sync entry', () => {
+    const itemKeys = getItemKeys();
+
+    expect(itemKeys).toContain(WorkspaceSettingsTabs.Imports);
+    expect(itemKeys).not.toContain(WorkspaceSettingsTabs.Linear);
+  });
+
+  it('never lists OAuth Apps, even while the retired Labs preference is still set', () => {
+    // The workspace tab pointed at the self-built console, which is retired; the
+    // stored `enableOAuthApps` preference must not bring the row (and with it a
+    // link to a route that no longer exists) back.
     useUserStore.setState({
       preference: {
         ...initialUserStoreState.preference,
@@ -123,14 +152,8 @@ describe('workspace settings useCategory', () => {
     const developerGroup = result.current.find(
       (group) => group.key === WorkspaceSettingsGroupKey.Developer,
     );
-    const agentGroup = result.current.find(
-      (group) => group.key === WorkspaceSettingsGroupKey.Agent,
-    );
 
-    expect(developerGroup?.items.map((item) => item.key)).toContain(
-      WorkspaceSettingsTabs.OAuthApps,
-    );
-    expect(agentGroup?.items.map((item) => item.key)).not.toContain(
+    expect(developerGroup?.items.map((item) => item.key)).not.toContain(
       WorkspaceSettingsTabs.OAuthApps,
     );
   });
@@ -177,32 +200,45 @@ describe('workspace settings useCategory', () => {
     ]);
   });
 
-  it('adds OAuth Apps to the viewer Developer group when the Labs preference is enabled', () => {
-    mocks.canCreateContent = false;
-    mocks.canManageWorkspace = false;
-    useUserStore.setState({
-      preference: {
-        ...initialUserStoreState.preference,
-        lab: { ...initialUserStoreState.preference.lab, enableOAuthApps: true },
-      },
-    });
-
+  // The business (subscription) pages only exist where the deployment ships
+  // business features; on other deployments the whole group stays out of the
+  // nav — the routes are overlay injection points, not pages to advertise.
+  it('hides the Subscription group when business features are off', () => {
     const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
-    const developerGroup = result.current.find(
-      (group) => group.key === WorkspaceSettingsGroupKey.Developer,
+    const itemKeys = getItemKeys();
+
+    expect(
+      result.current.some((group) => group.key === WorkspaceSettingsGroupKey.Subscription),
+    ).toBe(false);
+    for (const tab of [
+      WorkspaceSettingsTabs.Plans,
+      WorkspaceSettingsTabs.Usage,
+      WorkspaceSettingsTabs.Credits,
+      WorkspaceSettingsTabs.Budget,
+      WorkspaceSettingsTabs.Billing,
+    ]) {
+      expect(itemKeys).not.toContain(tab);
+    }
+  });
+
+  // The audit-log surface was deleted — no page, route or nav entry. The nav
+  // must never offer it again on any build.
+  it('never lists Audit logs', () => {
+    const { result } = renderHook(() => useWorkspaceSettingCategory(), { wrapper });
+    const adminGroup = result.current.find(
+      (group) => group.key === WorkspaceSettingsGroupKey.Admin,
     );
 
-    expect(developerGroup?.items.map((item) => item.key)).toEqual([
-      WorkspaceSettingsTabs.Advanced,
-      WorkspaceSettingsTabs.OAuthApps,
-      WorkspaceSettingsTabs.Labs,
-    ]);
+    expect(adminGroup?.items.map((item) => item.key)).toEqual([WorkspaceSettingsTabs.Storage]);
+
+    const businessItemKeys = getItemKeys(businessWrapper);
+    expect(businessItemKeys).not.toContain(WorkspaceSettingsTabs.AuditLog);
   });
 
   // Admin-or-higher reads the billing numbers; the pages keep the
   // money-moving controls behind the narrower manage_subscription gate.
   it('shows Credits and Billing to roles that may view billing', () => {
-    const itemKeys = getItemKeys();
+    const itemKeys = getItemKeys(businessWrapper);
 
     expect(itemKeys).toContain(WorkspaceSettingsTabs.Credits);
     expect(itemKeys).toContain(WorkspaceSettingsTabs.Billing);
@@ -211,7 +247,7 @@ describe('workspace settings useCategory', () => {
   it('hides financial settings below Admin', () => {
     mocks.canViewBilling = false;
 
-    const itemKeys = getItemKeys();
+    const itemKeys = getItemKeys(businessWrapper);
 
     expect(itemKeys).not.toContain(WorkspaceSettingsTabs.Credits);
     expect(itemKeys).not.toContain(WorkspaceSettingsTabs.Billing);

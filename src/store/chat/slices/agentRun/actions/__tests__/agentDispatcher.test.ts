@@ -3,24 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { selectRuntimeType } from '../dispatch/agentDispatcher';
 
 const heteroProvider = { command: 'claude', type: 'claude-code' as const };
-const apiHeteroProvider = {
-  apiConfig: { model: 'claude-test', providerId: 'anthropic' },
-  authMode: 'api' as const,
-  command: 'claude',
-  type: 'claude-code' as const,
-};
-const serverDefaultApiHeteroProvider = {
-  apiConfig: { model: 'claude-sonnet', source: 'server-default' as const },
-  authMode: 'api' as const,
-  command: 'claude',
-  type: 'claude-code' as const,
-};
-const codexApiHeteroProvider = {
-  apiConfig: { model: 'gpt-test', providerId: 'openai' },
-  authMode: 'api' as const,
-  command: 'codex',
-  type: 'codex' as const,
-};
 const remoteHeteroProvider = { type: 'openclaw' as const };
 const remoteHeteroProviderHermes = { type: 'hermes' as const };
 
@@ -28,8 +10,10 @@ describe('selectRuntimeType', () => {
   describe('on web (isDesktop = false)', () => {
     const opts = { isDesktop: false };
 
-    it('returns client when no signal is set', () => {
-      expect(selectRuntimeType({ isGatewayMode: false }, opts)).toBe('client');
+    it('throws AGENT_BINDING_REQUIRED when no signal is set', () => {
+      expect(() => selectRuntimeType({ isGatewayMode: false }, opts)).toThrow(
+        /AGENT_BINDING_REQUIRED/,
+      );
     });
 
     it('returns gateway when gateway mode is enabled', () => {
@@ -64,13 +48,19 @@ describe('selectRuntimeType', () => {
   describe('on desktop (isDesktop = true)', () => {
     const opts = { isDesktop: true };
 
-    it('returns hetero for local CLI agents (claude-code, codex)', () => {
+    it('returns gateway for unconfigured local CLI agents — pending target resolves server-side', () => {
+      // An unset execution target resolves to `none` on every client now — the
+      // viewing desktop never silently becomes the execution host. Interactive
+      // surfaces persist an explicit `local` + boundDeviceId binding first
+      // (device switcher mount default); a truly unconfigured hetero run goes
+      // to Gateway where the server plan fails loudly with a pick-a-device
+      // error.
       expect(
         selectRuntimeType({ heterogeneousProvider: heteroProvider, isGatewayMode: true }, opts),
-      ).toBe('hetero');
+      ).toBe('gateway');
       expect(
         selectRuntimeType({ heterogeneousProvider: heteroProvider, isGatewayMode: false }, opts),
-      ).toBe('hetero');
+      ).toBe('gateway');
     });
 
     it('routes remote platform agents (openclaw/hermes) to gateway even on desktop', () => {
@@ -89,155 +79,15 @@ describe('selectRuntimeType', () => {
       ).toBe('gateway');
     });
 
-    it('falls back to gateway/client when no hetero provider', () => {
+    it('falls back to gateway / throws AGENT_BINDING_REQUIRED when no hetero provider', () => {
       expect(selectRuntimeType({ isGatewayMode: true }, opts)).toBe('gateway');
-      expect(selectRuntimeType({ isGatewayMode: false }, opts)).toBe('client');
+      expect(() => selectRuntimeType({ isGatewayMode: false }, opts)).toThrow(
+        /AGENT_BINDING_REQUIRED/,
+      );
     });
   });
 
   describe('executionTarget routing for local CLI hetero', () => {
-    it('allows Claude Code API mode only for Desktop local execution', () => {
-      expect(
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: apiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toBe('hetero');
-
-      expect(() =>
-        selectRuntimeType(
-          {
-            executionTarget: 'sandbox',
-            heterogeneousProvider: apiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toThrow(/Desktop local execution/);
-
-      expect(() =>
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: apiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: false },
-        ),
-      ).toThrow(/Desktop local execution/);
-    });
-
-    it('allows the deployment-default API source only for Desktop local execution', () => {
-      expect(
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: serverDefaultApiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toBe('hetero');
-
-      expect(() =>
-        selectRuntimeType(
-          {
-            executionTarget: 'sandbox',
-            heterogeneousProvider: serverDefaultApiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toThrow(/Desktop local execution/);
-
-      expect(() =>
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: serverDefaultApiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: false },
-        ),
-      ).toThrow(/Desktop local execution/);
-    });
-
-    it('applies the same Desktop-local guard to Codex provider binding', () => {
-      expect(
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: codexApiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toBe('hetero');
-
-      expect(() =>
-        selectRuntimeType(
-          {
-            executionTarget: 'sandbox',
-            heterogeneousProvider: codexApiHeteroProvider,
-            isGatewayMode: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toThrow(/Desktop local execution/);
-    });
-
-    it.each(['client', 'gateway'] as const)(
-      'rejects API mode inherited from the %s parent runtime',
-      (parentRuntime) => {
-        expect(() =>
-          selectRuntimeType(
-            {
-              executionTarget: 'local',
-              heterogeneousProvider: apiHeteroProvider,
-              isGatewayMode: false,
-              parentRuntime,
-            },
-            { isDesktop: true },
-          ),
-        ).toThrow(/Desktop local execution/);
-      },
-    );
-
-    it('allows API mode inherited from the Desktop hetero parent runtime', () => {
-      expect(
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: apiHeteroProvider,
-            isGatewayMode: false,
-            parentRuntime: 'hetero',
-          },
-          { isDesktop: true },
-        ),
-      ).toBe('hetero');
-    });
-
-    it.each(['client', 'gateway', 'hetero'] as const)(
-      'rejects every %s parent runtime for API mode on web',
-      (parentRuntime) => {
-        expect(() =>
-          selectRuntimeType(
-            {
-              executionTarget: 'local',
-              heterogeneousProvider: apiHeteroProvider,
-              isGatewayMode: false,
-              parentRuntime,
-            },
-            { isDesktop: false },
-          ),
-        ).toThrow(/Desktop local execution/);
-      },
-    );
-
     it('routes to gateway when executionTarget = device on desktop', () => {
       expect(
         selectRuntimeType(
@@ -309,13 +159,15 @@ describe('selectRuntimeType', () => {
       ).toBe('gateway');
     });
 
-    it('preserves legacy default when executionTarget is unset (desktop → hetero, web → gateway)', () => {
+    it('keeps an unset executionTarget pending → gateway on every client', () => {
+      // no viewer-derived default anymore: desktop does not silently take the
+      // in-process `hetero` transport for an unconfigured agent either
       expect(
         selectRuntimeType(
           { heterogeneousProvider: heteroProvider, isGatewayMode: false },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
       expect(
         selectRuntimeType(
           { heterogeneousProvider: heteroProvider, isGatewayMode: false },
@@ -347,56 +199,7 @@ describe('selectRuntimeType', () => {
     });
   });
 
-  describe('isWorkspaceAgent — provider binding resolves credentials in the personal scope only', () => {
-    // Regression: the author of a workspace agent (or a member with an explicit
-    // local override) has workspaceScoped=false and CAN spawn in-process, but
-    // their binding was configured against workspace-scoped providers while
-    // Desktop main resolves the reference in the personal scope. A colliding
-    // personal provider id would silently supply different credentials, so the
-    // run must be rejected before IPC.
-    it('rejects API mode for workspace agents even when the author could run locally', () => {
-      expect(() =>
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: apiHeteroProvider,
-            isGatewayMode: false,
-            isWorkspaceAgent: true,
-            workspaceScoped: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toThrow(/not supported for workspace agents/);
-
-      expect(() =>
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: codexApiHeteroProvider,
-            isGatewayMode: false,
-            isWorkspaceAgent: true,
-            workspaceScoped: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toThrow(/not supported for workspace agents/);
-    });
-
-    it('keeps deployment-default API workspace agents spawnable by their author', () => {
-      expect(
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: serverDefaultApiHeteroProvider,
-            isGatewayMode: false,
-            isWorkspaceAgent: true,
-            workspaceScoped: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toBe('hetero');
-    });
-
+  describe('isWorkspaceAgent', () => {
     it('keeps subscription-auth workspace agents spawnable by their author', () => {
       expect(
         selectRuntimeType(
@@ -411,20 +214,6 @@ describe('selectRuntimeType', () => {
         ),
       ).toBe('hetero');
     });
-
-    it('keeps API mode working for personal agents', () => {
-      expect(
-        selectRuntimeType(
-          {
-            executionTarget: 'local',
-            heterogeneousProvider: apiHeteroProvider,
-            isGatewayMode: false,
-            isWorkspaceAgent: false,
-          },
-          { isDesktop: true },
-        ),
-      ).toBe('hetero');
-    });
   });
 
   describe('parentRuntime override', () => {
@@ -432,13 +221,13 @@ describe('selectRuntimeType', () => {
       expect(
         selectRuntimeType(
           {
-            parentRuntime: 'client',
             heterogeneousProvider: heteroProvider,
             isGatewayMode: true,
+            parentRuntime: 'gateway',
           },
           { isDesktop: true },
         ),
-      ).toBe('client');
+      ).toBe('gateway');
 
       expect(
         selectRuntimeType({ parentRuntime: 'gateway', isGatewayMode: false }, { isDesktop: false }),

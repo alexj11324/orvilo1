@@ -1044,3 +1044,148 @@ describe('takeover and dependent work', () => {
     ).not.toBe('retired');
   });
 });
+
+describe('CAID incremental plan patches', () => {
+  type PatchOp =
+    | {
+        dependsOn?: string[];
+        key?: string;
+        op: 'append';
+        task: { title: string; description: string };
+      }
+    | { nodeId: string; op: 'replace'; description?: string; title?: string }
+    | { nodeId: string; op: 'retire' };
+  const patchPlan = (patches: PatchOp[], expectedPlanRevision = 0) => ({
+    action: 'patch' as const,
+    expectedPlanRevision,
+    patches,
+    reason: 'Extend the plan without disturbing running work',
+    strategy: 'caid' as const,
+  });
+
+  /** First turn commits a task; that task fails and the coordinator hands a
+   * takeover turn back to the manager — the graph keeps a contract-bound node. */
+  const takeoverTurn = async () => {
+    const { id, state, op } = await start();
+    await manager().submit(id, state.token, op.id, taskPlan);
+    await ops().recordCompletion(op.id, { status: 'done' });
+    await service().tick(id);
+    const created = await service().tick(id);
+    const taskId = created.taskId!;
+    const topicId = `failed-topic-${++seq}`;
+    const failureId = `failed-op-${seq}`;
+    await db.insert(topics).values({ id: topicId, userId });
+    await ops().recordStart({ operationId: failureId, taskId, topicId });
+    await ops().recordCompletion(failureId, {
+      status: 'error',
+      completionReason: 'error',
+      error: { message: 'fetch failed: ECONNRESET' },
+    });
+    await db.insert(taskTopics).values({
+      userId,
+      taskId,
+      topicId,
+      operationId: failureId,
+      seq: 1,
+      status: 'failed',
+      trigger: 'goal',
+    });
+    await new TaskModel(db, userId).update(taskId, {
+      status: 'failed',
+      error: 'ECONNRESET',
+      totalTopics: 1,
+    });
+    await service().tick(id);
+    const next = (await model().findById(id))!.config!.managerState!;
+    const nextOp = (await ops().findByTopicSourceMessage(
+      next.topicId,
+      `msg_goal_manager_${next.token}`,
+    ))!;
+    const boundNode = (await service().graph(id)).nodes.find((n) => n.kind === 'task')!;
+    return { boundNode, id, next, nextOp, taskId };
+  };
+
+  it('appends nodes on a takeover turn while the bound sibling stays untouched', async () => {
+    const { boundNode, id, next, nextOp } = await takeoverTurn();
+    await manager().submit(id, next.token, nextOp.id, {
+      ...patchPlan([
+        {
+          op: 'append',
+          task: { title: 'Later work', description: 'Do it after the stuck node resolves' },
+          dependsOn: [boundNode.id],
+        },
+      ]),
+    });
+
+    const graph = await service().graph(id);
+    const appended = graph.nodes.find((n) => n.title === 'Later work')!;
+    expect(appended.status).toBe('proposed');
+    expect(
+      graph.edges.some(
+        (e) =>
+          e.kind === 'depends_on' &&
+          e.sourceNodeId === appended.id &&
+          e.targetNodeId === boundNode.id,
+      ),
+    ).toBe(true);
+    expect((await model().findById(id))!.config!.caidPlan!.revision).toBe(1);
+  });
+
+  it('rejects a stale expectedPlanRevision without applying anything', async () => {
+    const { id, state, op } = await start();
+    await expect(
+      manager().submit(id, state.token, op.id, {
+        ...patchPlan([{ op: 'append', task: { title: 'T', description: 'D' } }], 7),
+      }),
+    ).rejects.toThrow('Stale plan revision');
+    expect((await service().graph(id)).nodes.filter((n) => n.kind === 'task')).toHaveLength(0);
+    expect((await model().findById(id))!.config!.caidPlan).toBeUndefined();
+  });
+
+  it('refuses a batch whose dependsOn keys would cycle', async () => {
+    const { id, state, op } = await start();
+    await expect(
+      manager().submit(id, state.token, op.id, {
+        ...patchPlan([
+          { key: 'a', op: 'append', task: { title: 'A', description: 'A' }, dependsOn: ['b'] },
+          { key: 'b', op: 'append', task: { title: 'B', description: 'B' }, dependsOn: ['a'] },
+        ]),
+      }),
+    ).rejects.toThrow('cycle');
+    expect((await service().graph(id)).nodes.filter((n) => n.kind === 'task')).toHaveLength(0);
+  });
+
+  it('refuses replace/retire on nodes bound to a contract', async () => {
+    const { boundNode, id, next, nextOp } = await takeoverTurn();
+    await expect(
+      manager().submit(id, next.token, nextOp.id, {
+        ...patchPlan([{ nodeId: boundNode.id, op: 'retire' }]),
+      }),
+    ).rejects.toThrow('bound to a running contract');
+    await expect(
+      manager().submit(id, next.token, nextOp.id, {
+        ...patchPlan([{ nodeId: boundNode.id, op: 'replace', title: 'Rewrite' }]),
+      }),
+    ).rejects.toThrow('bound to a running contract');
+    expect((await service().graph(id)).nodes.find((n) => n.id === boundNode.id)!.status).not.toBe(
+      'retired',
+    );
+  });
+
+  it('refuses to retire a node a same-batch append depends on', async () => {
+    const { boundNode, id, next, nextOp } = await takeoverTurn();
+    await expect(
+      manager().submit(id, next.token, nextOp.id, {
+        ...patchPlan([
+          {
+            op: 'append',
+            task: { title: 'Dependent', description: 'Needs the bound node' },
+            dependsOn: [boundNode.id],
+          },
+          { nodeId: boundNode.id, op: 'retire' },
+        ]),
+      }),
+    ).rejects.toThrow('has dependents');
+    expect((await service().graph(id)).nodes.find((n) => n.title === 'Dependent')).toBeUndefined();
+  });
+});

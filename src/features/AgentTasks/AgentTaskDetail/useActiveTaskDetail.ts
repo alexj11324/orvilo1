@@ -6,7 +6,7 @@ import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
-interface ActiveTaskDetailState {
+export interface ActiveTaskDetailState {
   /** A transient fetch failure (network / 500) with no cached detail — distinct from a resolved not-found. Render a reload state, not a 404. */
   error?: unknown;
   /**

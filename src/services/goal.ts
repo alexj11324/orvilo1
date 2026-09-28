@@ -102,6 +102,7 @@ class GoalService {
   setBudget = async (params: {
     deadline?: string | null;
     id: string;
+    maxConcurrentTasks?: number | null;
     maxRounds?: number | null;
     maxTotalCost?: number | null;
   }) => lambdaClient.goal.setBudget.mutate(params);

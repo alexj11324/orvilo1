@@ -46,30 +46,6 @@ class AgentQuotaService {
   listUsageTurns = async (accountId: string, sinceDays?: number) =>
     lambdaClient.agentQuota.listUsageTurns.query({ accountId, sinceDays });
 
-  listBindings = async (agentId: string) => lambdaClient.agentQuota.listBindings.query({ agentId });
-
-  /** UI "switch account": pin one account for an agent (Manual mode). */
-  switchAccount = async (agentId: string, accountId: string) =>
-    lambdaClient.agentQuota.switchAccount.mutate({ accountId, agentId });
-
-  bindAccount = async (
-    agentId: string,
-    accountId: string,
-    role: 'pinned' | 'pool' | 'disabled' = 'pool',
-  ) => lambdaClient.agentQuota.bindAccount.mutate({ accountId, agentId, role });
-
-  /** Remove a binding row entirely (drop the account from this agent's pool). */
-  unbindAccount = async (bindingId: string) =>
-    lambdaClient.agentQuota.unbindAccount.mutate({ id: bindingId });
-
-  /** Edit account info (display label, enabled flag). */
-  updateAccount = async (id: string, value: { enabled?: boolean; label?: string }) =>
-    lambdaClient.agentQuota.updateAccount.mutate({ id, value });
-
-  /** Who the load balancer would pick right now (Auto mode preview + reason). */
-  selectAccountForAgent = async (agentId: string, modelScope?: string) =>
-    lambdaClient.agentQuota.selectAccountForAgent.query({ agentId, modelScope });
-
   /** One assistant turn's consumption → usage ledger (idempotent by message id). */
   recordUsage = async (params: {
     agentId?: string;

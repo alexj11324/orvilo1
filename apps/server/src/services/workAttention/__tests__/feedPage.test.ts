@@ -1,0 +1,216 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { NotificationItem } from '@/database/schemas/notification';
+
+import { buildInboxFeed, buildInboxFeedCard, type InboxFeedDeps } from '../feedPage';
+
+const row = (overrides: Partial<NotificationItem> = {}): NotificationItem =>
+  ({
+    actionKind: null,
+    actionRequestId: null,
+    actionUrl: '/task/t1',
+    activityVersion: 1,
+    archivedAt: null,
+    category: 'workspace',
+    content: 'Assigned to you',
+    context: null,
+    createdAt: new Date('2026-09-18T00:00:00Z'),
+    dedupeKey: 'd1',
+    episodeKey: 'task:t1:assignee',
+    id: 'n1',
+    isArchived: false,
+    isRead: false,
+    kind: 'update',
+    lastActivityAt: new Date('2026-09-18T01:00:00Z'),
+    latestFeedRevision: 1,
+    metadata: null,
+    projectionVersion: 1,
+    readVersion: 0,
+    resolvedAt: null,
+    resourceId: 't1',
+    resourceType: 'task',
+    snoozedUntil: null,
+    sourceEventId: 'evt-1',
+    threadKey: null,
+    title: 'Stored name',
+    type: 'task_assigned',
+    updatedAt: new Date('2026-09-18T01:00:00Z'),
+    userId: 'u1',
+    workspaceId: 'ws1',
+    ...overrides,
+  }) as NotificationItem;
+
+describe('buildInboxFeed', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns a partial envelope instead of an empty success when a source is down', async () => {
+    const page = await buildInboxFeed({
+      actionSources: {
+        listPendingForActorSettled: async () => ({
+          pending: [],
+          unavailable: ['resource_transfer'],
+        }),
+      },
+      notificationModel: {
+        ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
+        listFeed: async () => [],
+      },
+      projectModel: { findByIds: async () => [] },
+      taskModel: { findByIds: async () => [] },
+    });
+
+    expect(page.cards).toEqual([]);
+    expect(page.partial).toBe(true);
+    expect(page.sourceUnavailable).toEqual(['resource_transfer']);
+    expect(page.lastReconciledAt).toEqual(expect.any(String));
+  });
+
+  it('overlays live task and project titles from findByIds', async () => {
+    const page = await buildInboxFeed({
+      actionSources: {
+        listPendingForActorSettled: async () => ({ pending: [], unavailable: [] }),
+      },
+      notificationModel: {
+        ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
+        listFeed: async () => [
+          row(),
+          row({
+            id: 'n2',
+            resourceId: 'p1',
+            resourceType: 'project',
+            title: 'Old project',
+          }),
+        ],
+      },
+      projectModel: { findByIds: async () => [{ id: 'p1', name: 'Live project' }] },
+      taskModel: {
+        findByIds: async () => [{ id: 't1', instruction: 'ignored', name: 'Live task' }],
+      },
+    });
+
+    expect(page.partial).toBe(false);
+    expect(page.cards.map((card) => card.title)).toEqual(['Live task', 'Live project']);
+  });
+
+  it('keeps stored titles when live lookup fails instead of emptying the feed', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const page = await buildInboxFeed({
+      actionSources: {
+        listPendingForActorSettled: async () => ({ pending: [], unavailable: [] }),
+      },
+      notificationModel: {
+        ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
+        listFeed: async () => [row()],
+      },
+      projectModel: { findByIds: async () => [] },
+      taskModel: {
+        findByIds: async () => {
+          throw new Error('acl lookup down');
+        },
+      },
+    });
+    error.mockRestore();
+
+    expect(page.cards).toHaveLength(1);
+    expect(page.cards[0]?.title).toBe('Stored name');
+    expect(page.partial).toBe(false);
+  });
+
+  it('reports hasMore at the page cap by looking one row past it', async () => {
+    const seen: Array<{ lookahead?: boolean; limit?: number }> = [];
+    const page = await buildInboxFeed({
+      actionSources: {
+        listPendingForActorSettled: async () => ({ pending: [], unavailable: [] }),
+      },
+      input: { limit: 50 },
+      notificationModel: {
+        ensureActionCards: async () => undefined,
+        findFeedRowById: async () => null,
+        listFeed: async (input) => {
+          seen.push(input ?? {});
+          return Array.from({ length: 51 }, (_, i) => row({ id: `n${i}` }));
+        },
+      },
+      projectModel: { findByIds: async () => [] },
+      taskModel: { findByIds: async () => [] },
+    });
+
+    // The 50-row cap must apply to the page size, not the lookahead fetch —
+    // asking for limit+1 hits the model's own clamp and hasMore stays false.
+    expect(seen).toEqual([{ limit: 50, lookahead: true }]);
+    expect(page.hasMore).toBe(true);
+    expect(page.cards).toHaveLength(50);
+    expect(page.nextCursor).toBe('n49');
+  });
+});
+
+describe('buildInboxFeedCard', () => {
+  const deps = (overrides: Partial<InboxFeedDeps> = {}): InboxFeedDeps => ({
+    actionSources: {
+      listPendingForActorSettled: async () => ({ pending: [], unavailable: [] }),
+    },
+    notificationModel: {
+      ensureActionCards: async () => undefined,
+      findFeedRowById: async () => null as NotificationItem | null,
+      listFeed: async () => [],
+    },
+    projectModel: { findByIds: async () => [] },
+    taskModel: { findByIds: async () => [] },
+    ...overrides,
+  });
+
+  it('returns null when the row is absent — a dead deep link resolves empty', async () => {
+    expect(await buildInboxFeedCard(deps(), 'missing')).toBeNull();
+  });
+
+  it('returns the card with live title overlay, identical to the feed pipeline', async () => {
+    const found = await buildInboxFeedCard(
+      deps({
+        notificationModel: {
+          ensureActionCards: async () => undefined,
+          findFeedRowById: async () => row(),
+          listFeed: async () => [],
+        },
+        taskModel: {
+          findByIds: async () => [{ id: 't1', instruction: 'ignored', name: 'Live task' }],
+        },
+      }),
+      'n1',
+    );
+
+    expect(found?.notificationId).toBe('n1');
+    expect(found?.title).toBe('Live task');
+  });
+
+  it('runs the pending-source projection before the row lookup', async () => {
+    const calls: string[] = [];
+    await buildInboxFeedCard(
+      deps({
+        actionSources: {
+          listPendingForActorSettled: async () => {
+            calls.push('pending');
+            return { pending: [], unavailable: [] };
+          },
+        },
+        notificationModel: {
+          ensureActionCards: async () => {
+            calls.push('ensure');
+          },
+          findFeedRowById: async () => {
+            calls.push('lookup');
+            return row();
+          },
+          listFeed: async () => [],
+        },
+      }),
+      'n1',
+    );
+
+    expect(calls).toEqual(['pending', 'ensure', 'lookup']);
+  });
+});

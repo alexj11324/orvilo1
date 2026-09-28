@@ -24,6 +24,13 @@ const mockKnowledgeBaseModelUpdate = vi.fn();
 const mockDocumentModelFindByIds = vi.fn();
 const mockFileModelFindByIds = vi.fn();
 
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
+
 vi.mock('@/business/server/lambda-routers/file', () => ({
   businessFileTransferStorageCheck: routerMocks.businessFileTransferStorageCheck,
 }));

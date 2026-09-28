@@ -89,7 +89,7 @@ export const createOpenAIStreamResponse = (options: {
 import {
   InMemoryAgentStateManager,
   InMemoryStreamEventManager,
-} from '@/server/modules/AgentRuntime';
+} from '@/server/modules/AgentExecution';
 
 const stateManager = new InMemoryAgentStateManager();
 const streamEventManager = new InMemoryStreamEventManager();

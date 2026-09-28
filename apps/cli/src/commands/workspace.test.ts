@@ -365,7 +365,7 @@ describe('workspace command', () => {
       await run('workspace', 'invite', 'a@example.com');
 
       expect(mockClient.workspaceMember.invite.mutate).toHaveBeenCalledWith({
-        email: 'a@example.com',
+        emails: ['a@example.com'],
         role: 'member',
       });
     });

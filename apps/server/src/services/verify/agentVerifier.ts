@@ -6,7 +6,7 @@ import debug from 'debug';
 import { AgentModel } from '@/database/models/agent';
 import { DocumentModel } from '@/database/models/document';
 import type { OrviloDatabase } from '@/database/type';
-import type { AgentHook, AgentHookEvent } from '@/server/services/agentRuntime/hooks/types';
+import type { AgentHook, AgentHookEvent } from '@/server/services/agentExecution/hooks/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import type { VerifierAgentRunner } from './executor';

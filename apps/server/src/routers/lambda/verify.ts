@@ -1,4 +1,3 @@
-import { AcceptanceSkill } from '@orvilo/builtin-skills';
 import {
   normalizeVerifySurface,
   verifyRunScenarios,
@@ -41,6 +40,7 @@ import { isUuid } from '@/database/utils/uuid';
 import { publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { FileService } from '@/server/services/file';
 import { GoalCriteriaGeneratorService } from '@/server/services/goal/criteriaGenerator';
 import {
@@ -55,21 +55,6 @@ import {
 } from '@/server/services/verify';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
-
-/**
- * Skills that `verify.getSkillBundle` will materialize to a builder's disk via
- * `lh acceptance init`. Keyed by identifier; add future pullable skills here. The
- * portable acceptance skill lives in @orvilo/builtin-skills but is intentionally
- * NOT in its `builtinSkills` runtime array (kept out of the homogeneous agent
- * runtime / tool picker), so it is referenced directly here.
- *
- * The legacy `verify` identifier is kept as an alias so cached callers passing
- * `--skill verify` still resolve during the deprecation window.
- */
-const PULLABLE_SKILLS: Record<string, typeof AcceptanceSkill> = {
-  [AcceptanceSkill.identifier]: AcceptanceSkill,
-  verify: AcceptanceSkill,
-};
 
 const verifierTypeSchema = z.enum(['program', 'agent', 'llm']);
 const onFailSchema = z.enum(['manual', 'auto_repair']);
@@ -561,6 +546,17 @@ export const verifyRouter = router({
       try {
         return await ctx.planGenerator.generateCriteria(input);
       } catch (error) {
+        // Missing ACP judgment binding is a precondition, not a 500: the user
+        // must bind a judgment agent (or the operator must set one) first.
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -591,6 +587,17 @@ export const verifyRouter = router({
       try {
         return await ctx.goalCriteriaGenerator.generate(input);
       } catch (error) {
+        // Missing ACP judgment binding is a precondition, not a 500: the user
+        // must bind a judgment agent (or the operator must set one) first.
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -619,6 +626,17 @@ export const verifyRouter = router({
       try {
         return await ctx.goalCriteriaGenerator.generatePlan(input);
       } catch (error) {
+        // Missing ACP judgment binding is a precondition, not a 500: the user
+        // must bind a judgment agent (or the operator must set one) first.
+        if (isAcpJudgmentBindingError(error)) {
+          const trpcError = new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: 'ACP_JUDGMENT_NO_BINDING',
+          });
+          markSilentTRPCErrorLog(trpcError.cause);
+          throw trpcError;
+        }
         const errorType = (error as { errorType?: unknown } | null)?.errorType;
         if (errorType === AgentRuntimeErrorType.InvalidProviderAPIKey) {
           const trpcError = new TRPCError({
@@ -679,34 +697,6 @@ export const verifyRouter = router({
         provider: row.provider ?? null,
       };
     }),
-
-  /**
-   * Serve a pullable skill bundle (`SKILL.md` + inline resource files) by
-   * identifier so `lh verify init` can materialize it into a builder's working
-   * directory. Dynamic-by-design: the source is the server's deployed
-   * `@orvilo/builtin-skills`, so updating the skill + redeploying reaches every
-   * builder on the next pull — no CLI re-release. Auth-gated (verifyProcedure);
-   * returns NOT_FOUND for any identifier not in the pullable registry.
-   */
-  getSkillBundle: verifyProcedure.input(z.object({ identifier: z.string() })).query(({ input }) => {
-    const skill = PULLABLE_SKILLS[input.identifier];
-    if (!skill)
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `No pullable skill with identifier "${input.identifier}"`,
-      });
-    return {
-      content: skill.content,
-      files: Object.fromEntries(
-        Object.entries(skill.resources ?? {}).map(([path, meta]) => [path, meta.content ?? '']),
-      ),
-      identifier: skill.identifier,
-      name: skill.name,
-      // The skill's own declared version, so an installer can compare a copy
-      // already on disk against the latest bundle.
-      version: skill.version,
-    };
-  }),
 
   getVerifyState: verifyProcedure
     .input(z.object({ operationId: z.string() }))
@@ -1196,8 +1186,10 @@ export const verifyRouter = router({
    * Flip who can read this round's report page beyond its creator. Creation
    * defaults are scope-dependent (personal → public, workspace → private) and
    * acceptance-attached rounds inherit their aggregate; this is the deliberate
-   * per-round override. Note `acceptance.setVisibility` cascades over rounds,
-   * so the aggregate flip wins over earlier per-round choices.
+   * per-round override. The acceptance-level flip (`acceptance.setVisibility`)
+   * used to cascade over rounds; it was retired with the standalone Acceptance
+   * platform, so this per-round override is now the only way to publish a
+   * report beyond its creator.
    */
   setRunVisibility: verifyWriteProcedure
     .input(z.object({ verifyRunId: z.string(), visibility: z.enum(verifyVisibilities) }))

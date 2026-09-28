@@ -508,7 +508,43 @@ describe('runHeteroTask retry ownership', () => {
   });
 
   it.each(['openclaw', 'hermes'] as const)(
-    'ignores the stale %s close callback after an exact task retry',
+    'acks a redelivered %s task without killing or duplicating the live run',
+    async (agentType) => {
+      // Gateway retries the tool call after a lost ack with the same taskId —
+      // the tracked run is still alive, so the daemon returns the existing
+      // acceptance instead of killing it.
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const child = makeMockChild(1111);
+      spawnMock.mockReturnValueOnce(child);
+
+      await runHeteroTask({
+        agentType,
+        operationId: 'op-1',
+        prompt: 'first attempt',
+        runGeneration: 1,
+        taskId: 'task-retry',
+        topicId: 'topic-retry',
+      });
+      const result = await runHeteroTask({
+        agentType,
+        operationId: 'op-1',
+        prompt: 'first attempt',
+        runGeneration: 1,
+        taskId: 'task-retry',
+        topicId: 'topic-retry',
+      });
+
+      expect(JSON.parse(result)).toEqual({ deduped: true, pid: 1111, taskId: 'task-retry' });
+      expect(spawnMock).toHaveBeenCalledTimes(1);
+      // Only liveness probes (signal 0) ran — the live run was never signalled.
+      expect(killSpy).not.toHaveBeenCalledWith(expect.anything(), 'SIGTERM');
+      expect(killSpy).not.toHaveBeenCalledWith(expect.anything(), 'SIGKILL');
+      expect(taskStore['task-retry']).toEqual(expect.objectContaining({ pid: 1111 }));
+    },
+  );
+
+  it.each(['openclaw', 'hermes'] as const)(
+    'ignores the stale %s close callback after a superseding retry',
     async (agentType) => {
       const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
       const oldChild = makeMockChild(1111);
@@ -519,18 +555,22 @@ describe('runHeteroTask retry ownership', () => {
         agentType,
         operationId: 'op-old',
         prompt: 'first attempt',
+        runGeneration: 1,
         taskId: 'task-retry',
         topicId: 'topic-retry',
       });
+      // A retry carrying a NEWER generation means the server fenced the old
+      // writer off — the daemon stops it and respawns.
       await runHeteroTask({
         agentType,
         operationId: 'op-replacement',
         prompt: 'retry',
+        runGeneration: 2,
         taskId: 'task-retry',
         topicId: 'topic-retry',
       });
 
-      expect(killSpy).toHaveBeenCalledWith(1111, 'SIGTERM');
+      expect(killSpy).toHaveBeenCalledWith(-1111, 'SIGKILL');
       expect(taskStore['task-retry']).toEqual(expect.objectContaining({ pid: 2222 }));
 
       oldChild._emit('close', null, 'SIGTERM');
@@ -540,6 +580,7 @@ describe('runHeteroTask retry ownership', () => {
       expect(getTrpcClientMock).not.toHaveBeenCalled();
       expect(notifyMutateMock).not.toHaveBeenCalled();
     },
+    15_000,
   );
 });
 

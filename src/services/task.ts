@@ -5,6 +5,7 @@ import type {
   TaskIntentAnalysis,
   TaskMoveScope,
   TaskStatus,
+  TaskWorkflowCategory,
 } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
@@ -45,12 +46,17 @@ class TaskService {
       key: string;
       limit?: number;
       offset?: number;
-      statuses: string[];
+      statuses?: TaskStatus[];
+      workflowCategories?: TaskWorkflowCategory[];
     }>;
     parentTaskId?: string | null;
-    projectId?: string;
-    /** "My tasks" narrowing: assigned to the caller, or created by them. */
-    scope?: 'assigned' | 'created';
+    /** `null` narrows to tasks with no project — the board's "No project" chip. */
+    projectId?: string | null;
+    /**
+     * "My tasks" narrowing: assigned to the caller, created by them, or
+     * delegated by them to an agent.
+     */
+    scope?: 'assigned' | 'created' | 'delegated';
     visibility?: 'private' | 'public';
   }) =>
     lambdaClient.task.groupList.query({
@@ -122,7 +128,7 @@ class TaskService {
     editorData?: unknown;
     /** Periodic-execution interval in seconds for `automationMode: 'heartbeat'`. */
     heartbeatInterval?: number;
-    /** Bind a goal entity (`goals` row) to the created task. */
+    /** Prefix of the generated task identifier (`PREFIX-1`). Defaults to `T` server-side. */
     identifierPrefix?: string;
     instruction: string;
     name?: string;
@@ -131,7 +137,11 @@ class TaskService {
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
+    status?: TaskStatus;
+    teamId?: string;
     visibility?: 'private' | 'public';
+    /** Business-workflow board target; the server resolves its exact mapped Linear state. */
+    workflowCategory?: TaskWorkflowCategory;
   }) => lambdaClient.task.create.mutate(params);
 
   updateVisibility = async (id: string, visibility: 'private' | 'public') =>
@@ -191,6 +201,8 @@ class TaskService {
        * with `updateStatusCascade` — callers check subtasks first.
        */
       status?: TaskStatus;
+      /** Business-workflow target; the server resolves the exact mapped Linear state. */
+      workflowCategory?: TaskWorkflowCategory;
     },
   ) => lambdaClient.task.update.mutate({ id, ...data });
 
@@ -227,15 +239,36 @@ class TaskService {
     },
   ) => lambdaClient.task.updateStatusCascade.mutate({ id, status, ...move });
 
-  run = async (id: string, params?: { continueTopicId?: string; prompt?: string }) =>
-    lambdaClient.task.run.mutate({ id, ...params });
+  run = async (
+    id: string,
+    params?: {
+      continueTopicId?: string;
+      idempotencyKey?: string;
+      intent?: 'continue' | 'repair' | 'authorized_replan';
+      prompt?: string;
+      replanApprovalId?: string;
+      sourceContractId?: string;
+    },
+  ) =>
+    lambdaClient.task.run.mutate({
+      id,
+      // A replan retry must land on the same dispatch — the consumed approval
+      // is bound to that dispatch, so a fresh key would demand a new grant.
+      idempotencyKey:
+        params?.idempotencyKey ??
+        (params?.intent === 'authorized_replan' && params.replanApprovalId
+          ? `replan:${id}:${params.replanApprovalId}`
+          : crypto.randomUUID()),
+      ...params,
+    });
 
   retryIntegration = async (id: string, topicId: string) =>
     lambdaClient.task.retryIntegration.mutate({ id, topicId });
 
   previewSubtaskLayers = async (id: string) => lambdaClient.task.previewSubtaskLayers.query({ id });
 
-  runReadySubtasks = async (id: string) => lambdaClient.task.runReadySubtasks.mutate({ id });
+  runReadySubtasks = async (id: string, requestId = crypto.randomUUID()) =>
+    lambdaClient.task.runReadySubtasks.mutate({ id, requestId });
 
   addComment = async (
     id: string,
@@ -260,18 +293,16 @@ class TaskService {
     type: 'blocks' | 'relates' = 'blocks',
   ) => lambdaClient.task.addDependency.mutate({ dependsOnId, taskId, type });
 
-  removeDependency = async (taskId: string, dependsOnId: string) =>
-    lambdaClient.task.removeDependency.mutate({ dependsOnId, taskId });
+  removeDependency = async (taskId: string, dependsOnId: string, type?: 'blocks' | 'relates') =>
+    lambdaClient.task.removeDependency.mutate({ dependsOnId, taskId, type });
+
+  removeIssueRelation = async (taskId: string, relationId: string) =>
+    lambdaClient.task.removeDependency.mutate({ relationId, taskId });
 
   reorderSubtasks = async (id: string, order: string[]) =>
     lambdaClient.task.reorderSubtasks.mutate({ id, order });
 
   cancelTopic = async (topicId: string) => lambdaClient.task.cancelTopic.mutate({ topicId });
-
-  steerTopic = async (
-    id: string,
-    params: { fileIds?: string[]; interrupt?: boolean; message: string; topicId: string },
-  ) => lambdaClient.task.steer.mutate({ id, ...params });
 
   deleteTopic = async (topicId: string) => lambdaClient.task.deleteTopic.mutate({ topicId });
 

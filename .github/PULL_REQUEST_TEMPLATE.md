@@ -16,9 +16,9 @@
 - [ ] Added/updated tests
 - [ ] No tests needed
 
-<!-- Acceptance round for user-visible changes (AGENTS.md → Acceptance); or state why none is needed -->
+<!-- For user-visible changes: where the verification evidence lives (PR attachment or CI artifact) and the commit SHA it proves; or state why none is needed (AGENTS.md → Verification Evidence) -->
 
-- Acceptance: ...
+- Verification evidence: ...
 
 #### 🔗 Related Issue
 

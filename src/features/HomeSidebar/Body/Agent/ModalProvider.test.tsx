@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   createAgentModalProps: undefined as
     | {
         onCreateBlank: () => Promise<void> | void;
-        onOpenSkills?: (identifier: string) => void;
       }
     | undefined,
   navigate: vi.fn(),
@@ -46,10 +45,7 @@ vi.mock('@/features/EditingPopover', () => ({
 }));
 
 vi.mock('@/features/HomeSidebar/hooks/useCreateModal', () => ({
-  openCreateAgentModal: (props: {
-    onCreateBlank: () => Promise<void> | void;
-    onOpenSkills?: (identifier: string) => void;
-  }) => {
+  openCreateAgentModal: (props: { onCreateBlank: () => Promise<void> | void }) => {
     mocks.createAgentModalProps = props;
     return { close: mocks.closeCreateAgentModal };
   },
@@ -155,18 +151,6 @@ describe('AgentModalProvider', () => {
       expect(mocks.navigate).toHaveBeenCalledWith('/agent/agent-new/profile');
       expect(mocks.refreshAgentList).toHaveBeenCalled();
     });
-  });
-
-  it('opens the Skills tab from the create modal skill completion state', async () => {
-    renderProvider();
-
-    fireEvent.click(screen.getByText('Open create agent modal'));
-    await waitFor(() => expect(mocks.createAgentModalProps).toBeDefined());
-    mocks.createAgentModalProps!.onOpenSkills?.('product-requirements-writer');
-
-    expect(mocks.navigate).toHaveBeenCalledWith(
-      '/settings/skill?skill=product-requirements-writer',
-    );
   });
 
   it('loads deferred selection modals when their interactions request them', async () => {

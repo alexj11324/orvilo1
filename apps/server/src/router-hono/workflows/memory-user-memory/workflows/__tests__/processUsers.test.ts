@@ -7,6 +7,7 @@ import { processUsersHandler } from '../processUsers';
 
 const mocks = vi.hoisted(() => ({
   createExecutor: vi.fn(),
+  filterMemoryExtractionEnabledUsers: vi.fn(),
   getUsers: vi.fn(),
   triggerProcessUserTopics: vi.fn(),
   triggerProcessUsers: vi.fn(),
@@ -35,6 +36,10 @@ vi.mock('@/server/services/memory/userMemory/extract', () => ({
 vi.mock('@/database/models/asyncTask', () => ({ AsyncTaskModel: class {} }));
 vi.mock('@/database/server', () => ({ getServerDB: vi.fn() }));
 
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  filterMemoryExtractionEnabledUsers: mocks.filterMemoryExtractionEnabledUsers,
+}));
+
 vi.mock('../runGuard', () => ({
   checkGuard: vi.fn().mockResolvedValue({ result: true }),
   ensureWorkflowStarted: vi.fn().mockResolvedValue({ started: true }),
@@ -50,6 +55,10 @@ describe('processUsersHandler', () => {
     });
     mocks.triggerProcessUserTopics.mockResolvedValue({ workflowRunId: 'user-topics-run' });
     mocks.triggerProcessUsers.mockResolvedValue({ workflowRunId: 'next-users-run' });
+    mocks.filterMemoryExtractionEnabledUsers.mockImplementation(async (userIds: string[]) => ({
+      enabledUserIds: userIds,
+      skippedUserIds: [],
+    }));
   });
 
   it('returns scheduling statistics without enqueueing child workflows when dryRun is enabled', async () => {
@@ -71,5 +80,29 @@ describe('processUsersHandler', () => {
     });
     expect(mocks.triggerProcessUserTopics).not.toHaveBeenCalled();
     expect(mocks.triggerProcessUsers).not.toHaveBeenCalled();
+  });
+
+  it('drops explicit users who disabled memory before fan-out', async () => {
+    mocks.filterMemoryExtractionEnabledUsers.mockResolvedValue({
+      enabledUserIds: ['user-1'],
+      skippedUserIds: ['user-2'],
+    });
+
+    const result = await processUsersHandler({
+      requestPayload: {
+        baseUrl: 'https://app.example.com',
+        sources: [MemorySourceType.ChatTopic],
+        userIds: ['user-1', 'user-2'],
+      },
+      run: createStepRunner(),
+    } as never);
+
+    expect(mocks.filterMemoryExtractionEnabledUsers).toHaveBeenCalledWith(['user-1', 'user-2']);
+    expect(result).toMatchObject({ processedUsers: 1 });
+    expect(mocks.triggerProcessUserTopics).toHaveBeenCalledTimes(1);
+    expect(mocks.triggerProcessUserTopics).toHaveBeenCalledWith(
+      expect.objectContaining({ userIds: ['user-1'] }),
+      expect.anything(),
+    );
   });
 });

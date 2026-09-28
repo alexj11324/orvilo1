@@ -2,7 +2,7 @@ import { FileGoalTraceStore, type IGoalTraceStore } from '@orvilo/agent-tracing'
 
 import { S3GoalTraceStore } from '@/server/modules/GoalTracing';
 
-import { shouldUseAgentS3Tracing } from '../agentRuntime/snapshotStore';
+import { shouldUseAgentS3Tracing } from '../agentExecution/snapshotStore';
 
 /**
  * Constructor injection for tests. Defaults are statically imported — never

@@ -1,19 +1,22 @@
 import { LOADING_FLAT } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
+import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
   getNativeHeteroSessionBindingKey,
-  HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
   isLocalHeterogeneousType,
   isRemoteHeterogeneousType,
 } from '@orvilo/heterogeneous-agents';
 import type {
+  AcpBuiltinToolSpec,
+  AgentRunAdmissionState,
   DeviceUnavailableErrorData,
   ErrorType,
   ExecAgentResult,
   HeterogeneousTopicPin,
   OrviloAgentAgencyConfig,
   RequestTrigger,
+  UserInterventionConfig,
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
@@ -26,20 +29,22 @@ import {
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
+import { eq, sql } from 'drizzle-orm';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DeviceModel } from '@/database/models/device';
 import type { MessageModel } from '@/database/models/message';
 import type { TopicModel } from '@/database/models/topic';
+import { agentOperations } from '@/database/schemas';
 import { resolveExecutionPlan, resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJwt';
 import {
   createAgentStateManager,
   createStreamEventManager,
-} from '@/server/modules/AgentRuntime/factory';
-import { CompletionLifecycle } from '@/server/services/agentRuntime/CompletionLifecycle';
-import { hookDispatcher } from '@/server/services/agentRuntime/hooks';
-import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
+} from '@/server/modules/AgentExecution/factory';
+import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import { hookDispatcher } from '@/server/services/agentExecution/hooks';
+import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';
@@ -47,6 +52,15 @@ import { HeterogeneousAgentService } from '@/server/services/heterogeneousAgent'
 import type { ConversationHistoryEntry } from '@/server/services/heterogeneousAgent/cloudHeteroContext';
 import { buildCloudHeteroContext } from '@/server/services/heterogeneousAgent/cloudHeteroContext';
 import { buildRemoteDeviceHeteroContext } from '@/server/services/heterogeneousAgent/remoteDeviceHeteroContext';
+import {
+  classifyRemoteDispatchFailure,
+  createRemoteRunAdmission,
+  loadRemoteRunRecord,
+  markRemoteRunRunning,
+  readRemoteRunAdmission,
+  type RemoteRunChannel,
+  writeRemoteRunAdmission,
+} from '@/server/services/heterogeneousAgent/runAdmission';
 import type { MarketService } from '@/server/services/market';
 
 import {
@@ -55,8 +69,10 @@ import {
   resolveHeteroDispatchErrorType,
   supportsCloudHeterogeneousSandbox,
 } from '../helpers/heteroErrors';
+import { pruneRegeneratedBranch } from '../pruneRegeneratedBranch';
 import { resolveDeviceWorkingDirectoryConfig } from '../resolveDeviceWorkingDirectory';
 import type { ExecRunContext } from '../types';
+import type { ExternalToolSurfaceEntry, ToolSurfaceOutcome } from './runToolSurface';
 
 const log = debug('orvilo-server:ai-agent-service');
 
@@ -195,13 +211,16 @@ const finalizeHeteroDispatchError = async (
  * op row + its task failed, and closes the UI stream out from under a run that
  * is still producing output.
  *
- * Two cheap reads tell a stranded dispatch apart from a live one:
+ * Three cheap reads tell a stranded dispatch apart from a live one:
  *
  * 1. `agent_operations.status` — anything other than `running` means the run
  *    reached `heteroFinish` (or a park) on its own. Nothing left to finalize.
  * 2. `topics.metadata.heteroCurrentMsgId` — the ingest path repoints this at
  *    every assistant turn it persists, scoped by `operationId`. It naming THIS
  *    operation is proof the sandbox is alive and writing.
+ * 3. `agent_operations.metadata.remoteAdmission.state === 'running'` — the
+ *    same evidence as (2) for notify-based remote agents that never repoint
+ *    `heteroCurrentMsgId`.
  *
  * When neither fires the sandbox really never came up and the caller finalizes
  * as before. A run that passes this probe and then dies is not stranded: the
@@ -238,6 +257,19 @@ const hasHeteroRunStarted = async (
       return true;
     }
 
+    // The admission ledger is the third probe: a producer batch already flipped
+    // it to `running` (see markRemoteRunRunning in heteroIngest), which is the
+    // same evidence as heteroCurrentMsgId for notify-based remote agents that
+    // never write that pointer.
+    const admission = readRemoteRunAdmission(operation?.metadata);
+    if (admission?.state === 'running') {
+      log(
+        'hasHeteroRunStarted: op=%s admission already running — skipping spawn-failure finalize',
+        operationId,
+      );
+      return true;
+    }
+
     return false;
   } catch (err) {
     // A probe that cannot read must not swallow a real spawn failure: fall
@@ -251,9 +283,171 @@ const hasHeteroRunStarted = async (
   }
 };
 
+/**
+ * Mint the admission record for a remote dispatch BEFORE the gateway call so
+ * a crash mid-dispatch still leaves a durable `pending` intent. Idempotent:
+ * the same operationId can only ever create one record.
+ *
+ * Ledger fields pin the contract identities: `idempotencyKey` is the
+ * operationId (which is also the task id the device dedupes on), `generation`
+ * is the run fence (1 for the first admission of an operation), and the
+ * device triple records the exact execution host so cancel/status always
+ * address the same device — never a substitute.
+ */
+const writeDispatchAdmission = async (
+  deps: HeteroDispatchDeps,
+  params: {
+    channel: RemoteRunChannel;
+    deviceId?: string;
+    deviceUserId?: string;
+    deviceWorkspaceId?: string;
+    operationId: string;
+  },
+): Promise<void> => {
+  try {
+    await createRemoteRunAdmission(deps.db, params.operationId, {
+      channel: params.channel,
+      deviceId: params.deviceId,
+      deviceUserId: params.deviceUserId,
+      deviceWorkspaceId: params.deviceWorkspaceId,
+      generation: 1,
+      idempotencyKey: params.operationId,
+    });
+  } catch (err) {
+    // The admission write is the audit trail, not the dispatch gate — the
+    // operation row (recordStart) is already the durable intent, so a ledger
+    // hiccup must not block an otherwise healthy dispatch.
+    log('writeDispatchAdmission failed op=%s (non-fatal): %O', params.operationId, err);
+  }
+};
+
+/**
+ * Settle the admission ledger after a remote dispatch call and classify what
+ * the caller may do next:
+ *
+ * - `'acknowledged'` — the gateway/host accepted the run, or the failure was
+ *   ambiguous but the liveness probe proves it is already producing events.
+ *   The caller continues to the normal `autoStarted` success return.
+ * - `'terminal'` — a definite refusal (offline device, rejected request,
+ *   unauthorized): nothing ran. The caller finalizes through
+ *   `finalizeHeteroDispatchError` exactly as before.
+ * - `'unknown'` — the ack was lost and no sign of life: the operation row,
+ *   topic marker and stream stay OPEN so a device that is in fact running can
+ *   still deliver its events; the caller returns `success:false` +
+ *   `error:'OUTCOME_UNKNOWN'` instead of a fabricated failure. This is the
+ *   P20 fix for the zombie-run hazard: the old code finalized every dispatch
+ *   failure, which could leave a live device writing into a settled marker.
+ */
+const settleRemoteDispatchOutcome = async (
+  deps: HeteroDispatchDeps,
+  params: {
+    error?: string;
+    errorCode?: string;
+    operationId: string;
+    success: boolean;
+    topicId: string;
+  },
+): Promise<{
+  admissionState: AgentRunAdmissionState;
+  outcome: 'acknowledged' | 'terminal' | 'unknown';
+}> => {
+  const { errorCode, operationId, topicId } = params;
+
+  if (params.success) {
+    await writeRemoteRunAdmission(deps.db, operationId, { state: 'acknowledged' }).catch((err) =>
+      log('remoteAdmission acknowledged write failed op=%s: %O', operationId, err),
+    );
+    return { admissionState: 'acknowledged', outcome: 'acknowledged' };
+  }
+
+  // No transport code means the device produced an authoritative answer
+  // (explicit rejection / tool failure) — definite, not ambiguous.
+  const admissionState = errorCode ? classifyRemoteDispatchFailure(errorCode) : 'rejected';
+  const failureWriteApplied = await writeRemoteRunAdmission(deps.db, operationId, {
+    errorCode: errorCode ?? params.error,
+    reason: params.error,
+    state: admissionState,
+  }).catch((err) => {
+    log('remoteAdmission failure write failed op=%s: %O', operationId, err);
+    return false;
+  });
+
+  if (admissionState !== 'unknown') {
+    if (failureWriteApplied) return { admissionState, outcome: 'terminal' };
+
+    // The guarded write was refused: the ledger is already ahead of this
+    // failure signal — either a producer callback already proved liveness
+    // (running/acknowledged — this failure is stale and must NOT finalize the
+    // run) or a terminal verdict was already recorded (idempotent).
+    const record = await loadRemoteRunRecord(deps.db, operationId).catch((err) => {
+      log('remoteAdmission re-read failed op=%s: %O', operationId, err);
+      return undefined;
+    });
+    const currentState = record?.admission?.state;
+    if (currentState === 'running' || currentState === 'acknowledged') {
+      log(
+        'remoteAdmission failure signal dropped op=%s — ledger already %s',
+        operationId,
+        currentState,
+      );
+      return { admissionState: currentState, outcome: 'acknowledged' };
+    }
+    if (currentState === 'rejected' || currentState === 'offline') {
+      return { admissionState: currentState, outcome: 'terminal' };
+    }
+    if (currentState === 'unknown') {
+      // An ambiguous signal was already recorded — keep the run open.
+      return { admissionState: 'unknown', outcome: 'unknown' };
+    }
+    // Record missing or unreadable: the transport still gave a DEFINITE
+    // answer (`rejected`/`offline` — nothing launched), and no ledger state
+    // contradicts it. Treat as terminal rather than parking the run on an
+    // admission that may not even exist.
+    return { admissionState, outcome: 'terminal' };
+  }
+
+  if (await hasHeteroRunStarted(deps, { operationId, topicId })) {
+    await markRemoteRunRunning(deps.db, operationId).catch((err) =>
+      log('remoteAdmission running write failed op=%s: %O', operationId, err),
+    );
+    return { admissionState: 'running', outcome: 'acknowledged' };
+  }
+
+  return { admissionState: 'unknown', outcome: 'unknown' };
+};
+
 export interface HeteroDispatchInput {
+  /**
+   * Runs inside the operation's commit window — after the id is minted,
+   * before the durable row exists. Task runners use it to revalidate their
+   * reservation and bind the operationId transactionally; the post-return
+   * registration path covers callers that don't.
+   */
+  beforeOperationStart?: (input: { operationId: string; topicId: string }) => Promise<void>;
+  /**
+   * Server-backed builtin tools resolved for this run. The execution host
+   * (desktop, device daemon, cloud sandbox) mounts each spec on its per-run
+   * MCP server; invocations call back to the server with the operation JWT.
+   */
+  builtinToolSpecs?: AcpBuiltinToolSpec[];
   canManageAgent: boolean;
+  /** Source attribution persisted onto the operation row's appContext. */
+  clientIp?: string;
   effectiveRequestedDeviceId?: string;
+  /**
+   * External (connector / installed-plugin MCP) tools mounted on the same
+   * per-run MCP surface — persisted on the operation as
+   * `metadata.externalTools` (identifier → api names + source only) so the
+   * `execBuiltinTool` callback re-resolves credentials at call time and keeps
+   * them out of operation metadata entirely.
+   */
+  externalToolMounts?: Record<string, ExternalToolSurfaceEntry>;
+  /**
+   * Extra caller-supplied context appended after the persona/provider system
+   * context (e.g. eval `envPrompt`). Replaces the legacy `evalContext` channel
+   * that the retired server-side loop consumed during operation prep.
+   */
+  extraSystemContext?: string;
   heterogeneousProvider?: OrviloAgentAgencyConfig['heterogeneousProvider'];
   heteroType: HeterogeneousAgentType;
   hooks?: AgentHook[];
@@ -270,7 +464,21 @@ export interface HeteroDispatchInput {
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
   skipTaskVerification?: boolean;
+  /**
+   * Per-tool mount outcomes from `resolveRunToolSurface` — persisted into the
+   * operation's metadata so a mounted/unsupported/unauthorized/failed record
+   * survives the debug log into traces.
+   */
+  toolSurfaceOutcomes?: ToolSurfaceOutcome[];
   topicStartOwnerOperationId?: string;
+  /** Source attribution persisted onto the operation row's appContext. */
+  userAgent?: string;
+  /**
+   * Caller-declared intervention mode (`ExecAgentParams.userInterventionConfig`).
+   * Persisted as `appContext.interventionApprovalMode` so the exec-time
+   * approval gate knows whether this run can reach a human.
+   */
+  userInterventionConfig?: UserInterventionConfig;
 }
 
 /**
@@ -295,7 +503,6 @@ export const dispatchHeteroAgent = async (
     appContext,
     assistantMessageId,
     canUseDevice,
-    deviceAccessReason,
     parentMessageId,
     persistAgentId,
     prompt,
@@ -305,8 +512,14 @@ export const dispatchHeteroAgent = async (
     userMessageId,
   } = ctx;
   const {
+    beforeOperationStart,
+    builtinToolSpecs,
     canManageAgent,
+    externalToolMounts,
+    toolSurfaceOutcomes,
+    clientIp,
     effectiveRequestedDeviceId,
+    extraSystemContext,
     heteroType,
     heterogeneousProvider,
     hooks,
@@ -323,6 +536,8 @@ export const dispatchHeteroAgent = async (
     selfMessageIds,
     skipTaskVerification,
     topicStartOwnerOperationId,
+    userAgent,
+    userInterventionConfig,
   } = input;
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
@@ -344,6 +559,16 @@ export const dispatchHeteroAgent = async (
   if (hooks?.length) hookDispatcher.register(operationId, hooks);
   const serializedHooks = hookDispatcher.getSerializedHooks(operationId);
 
+  // Caller persistence (taskRunner's reservation revalidation + operation
+  // registration) runs in the commit window — after the id is minted, before
+  // the durable row exists, same slot the retired loop's startOperation used.
+  try {
+    await beforeOperationStart?.({ operationId, topicId });
+  } catch (error) {
+    hookDispatcher.unregister(operationId);
+    throw error;
+  }
+
   // Persist a first-class agent_operations row for the hetero run. The id is
   // generated here (authoritative) and flows through to heteroIngest /
   // heteroFinish unchanged. Without this row the run is invisible to the
@@ -358,12 +583,65 @@ export const dispatchHeteroAgent = async (
     deps.workspaceId,
   ).recordStart({
     agentId: persistAgentId,
-    appContext: { ...appContext, sourceMessageId: userMessageId },
+    appContext: {
+      ...appContext,
+      clientIp,
+      // Headless runs cannot reach a human — `execAcpExternalTool` refuses
+      // `needs_approval` calls outright instead of treating the absence of an
+      // interaction surface as approval.
+      interventionApprovalMode: userInterventionConfig?.approvalMode,
+      sourceMessageId: userMessageId,
+      userAgent,
+    },
     chatGroupId: appContext?.groupId ?? null,
+    // Engine provenance: the heterogeneous/ACP dispatch — never the in-process
+    // runtime loop — owns this operation. `heteroAgentType` records the CLI
+    // family actually spawned (`orvilo` resolves to its engine's family), so a
+    // trace can prove which adapter drove the run.
+    executionEngine: 'hetero',
     maxSteps,
     metadata: {
       _hooks: serializedHooks,
       assistantMessageId,
+      // Server-executed builtin tool allowlist for this run (P70c): the
+      // `execBuiltinTool` callback rejects any identifier/apiName outside
+      // this map, so a captured operation token cannot reach runtimes the
+      // dispatch-time tool surface never resolved.
+      ...(builtinToolSpecs?.length
+        ? {
+            builtinTools: Object.fromEntries(
+              builtinToolSpecs.map((spec) => [spec.identifier, spec.apis.map((api) => api.name)]),
+            ),
+          }
+        : {}),
+      heteroAgentType: heteroCliAgentType,
+      // Per-tool mount contract for this run — mounted/unsupported/
+      // unauthorized/failed with reasons, so a degraded surface is
+      // inspectable from the operation record instead of a lost debug log.
+      ...(toolSurfaceOutcomes?.length
+        ? {
+            toolSurface: Object.fromEntries(
+              toolSurfaceOutcomes.map((o) => [
+                o.identifier,
+                { kind: o.kind, reason: o.reason, status: o.status },
+              ]),
+            ),
+          }
+        : {}),
+      // External mounts share the builtin-tool callback wire but re-resolve
+      // their connection (fresh OAuth token / customParams.mcp) on each call.
+      // Persist api names + source + the identity pins the exec callback
+      // re-authorizes against — never transport params or secrets.
+      ...(externalToolMounts && Object.keys(externalToolMounts).length
+        ? {
+            externalTools: Object.fromEntries(
+              Object.entries(externalToolMounts).map(([identifier, entry]) => [
+                identifier,
+                { apis: entry.apis.map((api) => api.name), pins: entry.pins, source: entry.source },
+              ]),
+            ),
+          }
+        : {}),
     },
     operationId,
     parentOperationId,
@@ -392,7 +670,14 @@ export const dispatchHeteroAgent = async (
   let operationJwt: string;
   try {
     operationJwt = await signHeteroOperationJWT({
-      capabilities: ['hetero:ingest', 'hetero:finish', 'hetero:intervention:read'],
+      capabilities: [
+        'hetero:ingest',
+        'hetero:finish',
+        'hetero:intervention:read',
+        // Only granted when the run actually mounts builtin tools — the
+        // `execBuiltinTool` endpoint rejects the capability otherwise.
+        ...(builtinToolSpecs?.length ? (['hetero:tool:exec'] as const) : []),
+      ],
       operationId,
       userId: deps.userId,
       workspaceId: deps.workspaceId,
@@ -431,10 +716,19 @@ export const dispatchHeteroAgent = async (
       // and authorized upstream. An agent-share visitor run executes under
       // the creator's identity, so without the opt-in `query()`'s
       // creator-facing default would hand the agent an empty history.
-      const recentMsgs = await deps.messageModel.query(
+      let recentMsgs = await deps.messageModel.query(
         { topicId, pageSize: 200 },
         { allowShareVisitor: true },
       );
+      // A resume/regenerate run anchors on `parentMessageId`: the flat topic
+      // query still contains the anchor's old answer branch (and, for a
+      // middle-turn regenerate, the later turns that continued from it). Drop
+      // that branch — including members hidden inside compaction groups — or
+      // the CLI would "continue" an already-answered turn.
+      if (parentMessageId) {
+        const tree = await deps.messageModel.queryTopicMessageTree({ topicId });
+        recentMsgs = pruneRegeneratedBranch(recentMsgs, tree, parentMessageId);
+      }
       const turns = recentMsgs
         .filter(
           (m) =>
@@ -460,10 +754,13 @@ export const dispatchHeteroAgent = async (
   // retry; successful same-session runs never consume the duplicate history.
   // For the builtin Orvilo harness the agent's `systemRole` persona leads the
   // injected context — external CLI harnesses keep their own identity.
-  const agentSystemContext = resolveHeteroAgentSystemContext(
-    heterogeneousProvider,
-    agentConfig.systemRole,
-  );
+  const agentSystemContext =
+    [
+      resolveHeteroAgentSystemContext(heterogeneousProvider, agentConfig.systemRole),
+      extraSystemContext?.trim(),
+    ]
+      .filter(Boolean)
+      .join('\n\n') || undefined;
   const systemContext = buildCloudHeteroContext({
     agentSystemContext,
     conversationHistory: resumeSessionId ? undefined : conversationHistory,
@@ -505,6 +802,7 @@ export const dispatchHeteroAgent = async (
     // may predate `--type orvilo` support.
     agentType: heteroCliAgentType,
     assistantMessageId,
+    builtinTools: builtinToolSpecs?.length ? builtinToolSpecs : undefined,
     githubToken,
     imageList: heteroImageList,
     jwt: operationJwt,
@@ -690,45 +988,16 @@ export const dispatchHeteroAgent = async (
     }
   };
 
-  if (agentConfig.agencyConfig?.heterogeneousProvider?.authMode === 'api') {
-    await finalizeHeteroDispatchError(deps, {
-      agentId: resolvedAgentId,
-      assistantMessageId,
-      detail: HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-      message: 'Provider-bound heterogeneous agents do not support this execution target',
-      operationId,
-      topicId,
-    });
-    return {
-      agentId: resolvedAgentId,
-      assistantMessageId,
-      autoStarted: false,
-      createdAt: new Date().toISOString(),
-      error: HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
-      message: 'Heterogeneous agent provider binding requires Desktop local execution',
-      operationId,
-      status: 'error',
-      success: false,
-      timestamp: new Date().toISOString(),
-      topicId,
-      userMessageId: userMessageId ?? parentMessageId ?? '',
-    };
-  }
-
   // Notify-based platform agents (openclaw / hermes) communicate back via
   // agentNotify.notify. A local run uses the requesting desktop's device ID;
   // a remote run uses agencyConfig.boundDeviceId. Both use the gateway transport,
   // so open the stream before the first notify arrives.
 
   if (isRemoteHetero) {
-    // Platform task agents require either this desktop or a connected device — there is no sandbox to
-    // degrade to, so a denied sender (external bot user) is refused
-    // outright instead of reaching the owner's machine.
+    // Platform task agents require either this desktop or a connected device —
+    // there is no sandbox to degrade to when device access is denied.
     if (!canUseDevice) {
-      log(
-        'execAgent: device access denied for remote hetero dispatch (reason=%s)',
-        deviceAccessReason,
-      );
+      log('execAgent: device access denied for remote hetero dispatch (reason=%s)');
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
@@ -801,10 +1070,23 @@ export const dispatchHeteroAgent = async (
       remoteDeviceId,
       remoteDeviceWorkspaceId,
     );
+
+    // Durable admission BEFORE the dispatch: the record survives a crash or a
+    // lost ack, carries the idempotency key (operationId = the device-side
+    // taskId) and the exact execution-host binding for later cancel/status.
+    await writeDispatchAdmission(deps, {
+      channel: 'tool_call',
+      deviceId: remoteDeviceId,
+      deviceUserId: remoteDeviceUserId,
+      deviceWorkspaceId: remoteDeviceWorkspaceId,
+      operationId,
+    });
+
     const result = authorizationError
       ? {
           content: 'The workspace device is no longer registered or visible for this run.',
           error: 'DEVICE_NOT_FOUND',
+          errorCode: DeviceTransportErrorCode.DeviceNotFound,
           errorData: authorizationError,
           success: false,
         }
@@ -820,10 +1102,12 @@ export const dispatchHeteroAgent = async (
               agentId: resolvedAgentId,
               agentType: heteroType,
               cwd: undefined,
+              idempotencyKey: operationId,
               operationId,
               parentOperationId: topicStartOwnerOperationId,
               platformAgentId: agentConfig.agencyConfig?.heterogeneousProvider?.platformAgentId,
               prompt,
+              runGeneration: 1,
               taskId: operationId,
               topicId,
               // Scope notify callbacks to the same workspace as the dispatched
@@ -836,7 +1120,48 @@ export const dispatchHeteroAgent = async (
           },
           120_000, // hetero tasks can take longer than the default 30 s
         );
-    if (!result.success) {
+    const dispatchOutcome = await settleRemoteDispatchOutcome(deps, {
+      error: result.error,
+      errorCode: result.errorCode,
+      operationId,
+      success: result.success,
+      topicId,
+    });
+    if (dispatchOutcome.outcome === 'unknown') {
+      // Ambiguous ack: the request may have reached the device — a 120 s tool
+      // timeout does NOT prove the task never launched, and the notify
+      // callbacks would still arrive. Keep the operation row, topic marker and
+      // stream open so they can land, and return an IN-PROGRESS result
+      // (`success: true` + `status: 'unknown'` + `remoteAdmission: 'unknown'`)
+      // so consumers keep the run live instead of terminalizing a possibly-
+      // running host. The watchdog reaps a truly dead admission.
+      log(
+        'execAgent: remote hetero dispatch outcome unknown (device may be running) op=%s error=%s',
+        operationId,
+        result.error,
+      );
+      return {
+        agentId: resolvedAgentId,
+        assistantMessageId,
+        autoStarted: true,
+        createdAt: new Date().toISOString(),
+        errorData: result.errorData,
+        heteroType,
+        message:
+          'Dispatch acknowledgement was lost; the run may still be executing on the device. Do not retry the same operation.',
+        operationId,
+        remoteAdmission: 'unknown',
+        status: 'unknown',
+        success: true,
+        timestamp: new Date().toISOString(),
+        token: deps.withholdGatewayToken
+          ? undefined
+          : await signUserJWT(deps.userId).catch(() => undefined),
+        topicId,
+        userMessageId: userMessageId ?? parentMessageId ?? '',
+      };
+    }
+    if (dispatchOutcome.outcome === 'terminal') {
       log('execAgent: remote hetero dispatch failed: %s', result.error);
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
@@ -857,6 +1182,7 @@ export const dispatchHeteroAgent = async (
         errorData: result.errorData,
         message: 'Remote hetero agent dispatch failed',
         operationId,
+        remoteAdmission: dispatchOutcome.admissionState,
         status: 'error',
         success: false,
         timestamp: new Date().toISOString(),
@@ -872,15 +1198,14 @@ export const dispatchHeteroAgent = async (
     //   - executionTarget 'device' → dispatch to boundDeviceId (errors if unset)
     //   - executionTarget 'local' + boundDeviceId (desktop sync opened on web)
     //     → dispatch to that device
-    //   - everything else ('sandbox' / unbound 'local' / 'none' / unset) → cloud
-    //     sandbox when the provider supports it; Amp and OpenCode remain
-    //     unrouted because they require a local or connected device
+    //   - explicit 'sandbox' → cloud sandbox
+    //   - 'none' / unset / unbound 'local' → pending: fails loudly below with an
+    //     actionable "pick a device / cloud sandbox" error — never an implicit
+    //     cloud fallback and never whichever client happened to send the run
     // `onlineDeviceIds` is intentionally omitted: hetero dispatch trusts
     // the binding and fails loudly at the gateway if the device is offline.
     // `canUseDevice` degrades device-capable targets to the sandbox when
-    // available, or leaves device-only providers unrouted, for denied
-    // senders (e.g. external bot users). Without this a synced local/device
-    // binding would let them run on the owner's machine.
+    // available, or leaves device-only providers unrouted.
 
     // Register the op with the agent-gateway DO before dispatch, mirroring
     // the remote-hetero branch above. Local CLI hetero (claude-code / codex)
@@ -976,6 +1301,30 @@ export const dispatchHeteroAgent = async (
         topicId,
       });
 
+      // Persist the device-scoped tool context the `execBuiltinTool` callback
+      // rebuilds `ToolExecutionContext` from: which device + cwd device-proxy
+      // runtimes (localSystem/remoteDevice/browser) should target. Lives on the
+      // op row — durable across Lambda instances, unlike the Redis metadata —
+      // and is written only when this run actually mounts builtin tools.
+      if (builtinToolSpecs?.length) {
+        try {
+          await deps.db
+            .update(agentOperations)
+            .set({
+              metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
+                builtinToolContext: {
+                  activeDeviceId: dispatchDeviceId,
+                  activeDeviceScope: dispatchWorkspaceId ? 'workspace' : 'personal',
+                  workingDirectory: deviceCwd,
+                },
+              })}::jsonb`,
+            })
+            .where(eq(agentOperations.id, operationId));
+        } catch (err) {
+          log('execAgent: failed to persist builtinToolContext: %O', err);
+        }
+      }
+
       // Build only device-relevant context instead of reusing the cloud-sandbox one
       // (which describes an ephemeral /workspace + pre-cloned repos and would mislead
       // the agent). The spawned CLI already receives deviceCwd as its actual cwd.
@@ -997,14 +1346,34 @@ export const dispatchHeteroAgent = async (
         dispatchDeviceId,
         dispatchWorkspaceId,
       );
+
+      // Durable admission BEFORE the gateway call — see writeDispatchAdmission.
+      await writeDispatchAdmission(deps, {
+        channel: 'agent_run_request',
+        deviceId: dispatchDeviceId,
+        deviceUserId: deps.userId,
+        deviceWorkspaceId: dispatchWorkspaceId,
+        operationId,
+      });
+
       const result = authorizationError
-        ? { error: 'DEVICE_NOT_FOUND', errorData: authorizationError, success: false }
+        ? {
+            error: 'DEVICE_NOT_FOUND',
+            errorCode: DeviceTransportErrorCode.DeviceNotFound,
+            errorData: authorizationError,
+            success: false,
+          }
         : await deviceGateway.dispatchAgentRun({
             ...heteroParams,
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
+            // The device dedupes agent_run_request on this key (= the task id
+            // it already tracks for cancelHeteroTask), so a gateway retry can
+            // never spawn a duplicate execution of this operation.
+            idempotencyKey: operationId,
             resumeFallbackSystemContext: deviceResumeFallbackSystemContext,
+            runGeneration: 1,
             systemContext: deviceSystemContext,
             // Route to the workspace pool when this is a workspace device; the
             // operation JWT stays member-scoped (the run belongs to the member).
@@ -1014,7 +1383,43 @@ export const dispatchHeteroAgent = async (
             // device still has to write back under `deps.workspaceId`.
             ingestWorkspaceId: deps.workspaceId,
           });
-      if (!result.success) {
+      const dispatchOutcome = await settleRemoteDispatchOutcome(deps, {
+        error: result.error,
+        errorCode: result.errorCode,
+        operationId,
+        success: result.success,
+        topicId,
+      });
+      if (dispatchOutcome.outcome === 'unknown') {
+        // Ambiguous ack — keep the run open and report an in-progress result;
+        // see the remote-hetero branch above.
+        log(
+          'execAgent: hetero device dispatch outcome unknown (device may be running) op=%s error=%s',
+          operationId,
+          result.error,
+        );
+        return {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          autoStarted: true,
+          createdAt: new Date().toISOString(),
+          errorData: result.errorData,
+          heteroType,
+          message:
+            'Dispatch acknowledgement was lost; the run may still be executing on the device. Do not retry the same operation.',
+          operationId,
+          remoteAdmission: 'unknown',
+          status: 'unknown',
+          success: true,
+          timestamp: new Date().toISOString(),
+          token: deps.withholdGatewayToken
+            ? undefined
+            : await signUserJWT(deps.userId).catch(() => undefined),
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        };
+      }
+      if (dispatchOutcome.outcome === 'terminal') {
         log('execAgent: hetero device dispatch failed: %s', result.error);
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
@@ -1035,6 +1440,7 @@ export const dispatchHeteroAgent = async (
           errorData: result.errorData,
           message: 'Hetero agent device dispatch failed',
           operationId,
+          remoteAdmission: dispatchOutcome.admissionState,
           status: 'error',
           success: false,
           timestamp: new Date().toISOString(),
@@ -1107,12 +1513,37 @@ export const dispatchHeteroAgent = async (
       // ownership-gated on heteroIngest/heteroFinish) with a run-length TTL
       // so it outlives a multi-hour run.
       const sandboxJwt = await signUserJWT(deps.userId, '4h');
+      // Durable admission BEFORE the spawn — the sandbox is the execution host
+      // for this channel; `deviceId` stays absent by design.
+      await writeDispatchAdmission(deps, { channel: 'cloud_sandbox', operationId });
+
+      // Same builtinToolContext contract as the device branch — sandbox runs
+      // have no bound device but do have a working directory (`/workspace`).
+      if (builtinToolSpecs?.length) {
+        try {
+          await deps.db
+            .update(agentOperations)
+            .set({
+              metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
+                builtinToolContext: { workingDirectory: '/workspace' },
+              })}::jsonb`,
+            })
+            .where(eq(agentOperations.id, operationId));
+        } catch (err) {
+          log('execAgent: failed to persist builtinToolContext: %O', err);
+        }
+      }
+
       spawnHeteroSandbox({
         ...heteroParams,
         agentType: heteroCliAgentType as 'claude-code' | 'codex',
         args: heteroExecArgs,
         jwt: sandboxJwt,
         marketService,
+        // `heteroParams.jwt` (the operation token) is overridden above for
+        // user-scoped sandbox calls; re-forward it under its own key so the
+        // CLI's builtin-tool callbacks keep `hetero:tool:exec`.
+        operationJwt,
         workspaceId: deps.workspaceId,
       }).catch(async (err) => {
         // Fire-and-forget: execAgent has already returned `autoStarted`, and
@@ -1125,7 +1556,18 @@ export const dispatchHeteroAgent = async (
         // call is the only dispatch failure that can land AFTER the agent
         // started, so a rejection here is not by itself evidence that nothing
         // ran — see `hasHeteroRunStarted`.
-        if (await hasHeteroRunStarted(deps, { operationId, topicId })) return;
+        if (await hasHeteroRunStarted(deps, { operationId, topicId })) {
+          await markRemoteRunRunning(deps.db, operationId).catch(() => undefined);
+          return;
+        }
+
+        // The spawn ack is ambiguous (a gateway 504 can arrive after the
+        // sandbox booted): record `unknown` so the ledger stays honest even
+        // though the run is finalized as failed below.
+        await writeRemoteRunAdmission(deps.db, operationId, {
+          reason: err instanceof Error ? err.message : String(err),
+          state: 'unknown',
+        }).catch(() => undefined);
 
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,

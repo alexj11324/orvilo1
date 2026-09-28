@@ -21,6 +21,7 @@ import { useAcceptanceBySubject } from '@/features/Acceptance';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useOpenAcceptanceInPanel } from './useOpenAcceptanceInPanel';
 
@@ -134,7 +135,7 @@ const TaskAcceptanceStateRow = memo(() => {
       {/* The sidebar form is narrower than several labels; one line with an
           ellipsis keeps every row the same height, and the `title` above
           still carries the full label and hint on hover. */}
-      <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+      <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
         {label}
       </Text>
     </Block>

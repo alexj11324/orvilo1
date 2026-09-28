@@ -9,6 +9,11 @@ import { externalRuntimeModules } from './external-runtime-deps.config.mjs';
 import { getNativeExternalDependencies } from './native-deps.config.mjs';
 import { rendererMainHashArtifact, resolveMainHash } from './scripts/mainHash.mjs';
 import {
+  isPreAppInitModule,
+  PRE_APP_INIT_CHUNK,
+  preAppInitOrderGuard,
+} from './scripts/preAppInitChunk.mjs';
+import {
   applyDesktopViteConfigExtension,
   isCloudDesktopBuild,
   loadDesktopEnv,
@@ -76,6 +81,9 @@ export default defineConfig(async (env) => {
           manualChunks(id: string) {
             const normalizedId = id.replaceAll('\\', '/').split('?')[0];
 
+            // Must be required by the entry before `main-app`; see preAppInitChunk.mjs.
+            if (isPreAppInitModule(id)) return PRE_APP_INIT_CHUNK;
+
             if (/apps\/desktop\/src\/main\/core\/App\.ts$/.test(normalizedId)) {
               return 'main-app';
             }
@@ -127,6 +135,7 @@ export default defineConfig(async (env) => {
       viteOsPlatformResolve(),
       zodCompiler(),
       rendererMainHashArtifact(mainHash),
+      preAppInitOrderGuard(),
       viteCompletionSounds({ aiffDir: path.resolve(__dirname, 'resources/sounds') }),
     ],
     publicDir: false,

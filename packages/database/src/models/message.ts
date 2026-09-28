@@ -1242,7 +1242,7 @@ export class MessageModel {
   };
 
   /**
-   * Exact per-topic turn count for one role, used by `maxTurnsPerTopic`.
+   * Exact per-topic turn count for one role.
    *
    * MUST NOT reuse {@link MessageModel.count}: its `analyticsConditions()` ANDs
    * in `notShareVisitorMessage()`, which excludes every message whose topic has
@@ -1251,10 +1251,10 @@ export class MessageModel {
    * separately), but it would make `count()` return 0 forever for a share
    * topic, silently disabling the turn cap.
    *
-   * Safe without a visitor/ownership check here: the caller (shareChat router /
-   * `reserveShareVisitorTurn`) already resolved and authorized the topic, and
-   * `this.ownership()` matches because share messages carry the creator's
-   * `userId` (the model is constructed with `share.ownerId`).
+   * Safe without a visitor/ownership check here: callers already resolved
+   * and authorized the topic, and `this.ownership()` matches because share
+   * messages carry the creator's `userId` (a share-runtime model is
+   * constructed with `share.ownerId`).
    */
   countByTopic = async ({ role, topicId }: { role: string; topicId: string }): Promise<number> => {
     const result = await this.db
@@ -3484,6 +3484,113 @@ export class MessageModel {
       const result = await trx.insert(messages).values(messagesToInsert);
 
       return result;
+    });
+  };
+
+  /**
+   * Copy a topic's top-level transcript into an isolation thread.
+   * Sub-agent `inheritMessages` seeding uses this so the spawned run sees the
+   * conversation that produced the request. Row ids are remapped (PK) and
+   * `parentId` is re-pointed inside the copied set; `message_plugins` rows
+   * (minus `intervention` — approval state belongs to the live run) and
+   * `messages_files` links are copied so call ↔ result pairing and file
+   * attachments survive into the child's context. `createdAt` is preserved so
+   * the transcript orders before the instruction row written next.
+   *
+   * Per-row runtime/attribution fields (clientId, favorite, observationId,
+   * quotaId, sessionId, traceId, usage) do NOT carry over.
+   */
+  copyMessagesToThread = async (params: {
+    agentId: string;
+    threadId: string;
+    topicId: string;
+  }): Promise<number> => {
+    const { agentId, threadId, topicId } = params;
+    const agentCondition = await this.buildAgentCondition(agentId);
+
+    const rows = await this.db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          this.ownership(),
+          agentCondition,
+          eq(messages.topicId, topicId),
+          isNull(messages.threadId),
+          isNull(messages.messageGroupId),
+          ne(messages.role, 'task'),
+        ),
+      )
+      .orderBy(asc(messages.createdAt), asc(messages.id));
+
+    if (rows.length === 0) return 0;
+
+    const idMap = new Map(rows.map((m) => [m.id, idGenerator('messages')]));
+    const sourceIds = rows.map((m) => m.id);
+
+    return this.db.transaction(async (trx) => {
+      await trx.insert(messages).values(
+        rows.map((m) =>
+          buildWorkspacePayload(
+            { userId: this.userId, workspaceId: this.workspaceId },
+            {
+              ...m,
+              clientId: null,
+              favorite: null,
+              id: idMap.get(m.id)!,
+              observationId: null,
+              parentId: m.parentId ? (idMap.get(m.parentId) ?? null) : null,
+              quotaId: null,
+              sessionId: null,
+              threadId,
+              traceId: null,
+              usage: null,
+            },
+          ),
+        ),
+      );
+
+      const sourcePluginRows = await trx
+        .select()
+        .from(messagePlugins)
+        .where(
+          and(
+            inArray(messagePlugins.id, sourceIds),
+            buildWorkspaceWhere(
+              { userId: this.userId, workspaceId: this.workspaceId },
+              messagePlugins,
+            ),
+          ),
+        );
+
+      if (sourcePluginRows.length > 0) {
+        await trx.insert(messagePlugins).values(
+          // `clientId` stays unset — the (clientId, userId) unique index must
+          // not collide with the source rows.
+          sourcePluginRows.map(({ clientId: _clientId, id, intervention: _i, ...p }) => ({
+            ...p,
+            id: idMap.get(id)!,
+          })),
+        );
+      }
+
+      const sourceFileLinks = await trx
+        .select()
+        .from(messagesFiles)
+        .where(inArray(messagesFiles.messageId, sourceIds));
+
+      if (sourceFileLinks.length > 0) {
+        await trx.insert(messagesFiles).values(
+          sourceFileLinks.map((f) => ({
+            fileId: f.fileId,
+            messageId: idMap.get(f.messageId)!,
+            userId: this.userId,
+            workspaceId: this.workspaceId ?? null,
+          })),
+        );
+      }
+
+      return rows.length;
     });
   };
 

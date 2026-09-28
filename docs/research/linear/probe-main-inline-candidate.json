@@ -1,0 +1,149 @@
+{
+  "elements": [
+    {
+      "i": 6151,
+      "parent": 6150,
+      "tag": "BUTTON",
+      "ariaLabel": "状态",
+      "text": "进行中",
+      "box": {
+        "x": 392,
+        "y": 287,
+        "width": 75.828125,
+        "height": 28,
+        "top": 287,
+        "right": 467.828125,
+        "bottom": 315,
+        "left": 392
+      },
+      "style": {
+        "borderRadius": "9999px",
+        "fontSize": "13px",
+        "fontWeight": "500",
+        "padding": "3px 6px",
+        "gap": "8px"
+      },
+      "behavior": {
+        "isButton": true,
+        "interactionVerification": "not-tested"
+      }
+    },
+    {
+      "i": 6185,
+      "parent": 6184,
+      "tag": "svg",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": null
+      },
+      "box": {
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "i": 6186,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M8 2v4"
+      }
+    },
+    {
+      "i": 6187,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M16 2v4"
+      }
+    },
+    {
+      "i": 6189,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M3 10h18"
+      }
+    },
+    {
+      "i": 6190,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M8 14h.01"
+      }
+    },
+    {
+      "i": 6191,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M12 14h.01"
+      }
+    },
+    {
+      "i": 6192,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M16 14h.01"
+      }
+    },
+    {
+      "i": 6193,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M8 18h.01"
+      }
+    },
+    {
+      "i": 6194,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M12 18h.01"
+      }
+    },
+    {
+      "i": 6195,
+      "parent": 6185,
+      "tag": "path",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": "M16 18h.01"
+      }
+    },
+    {
+      "i": 6209,
+      "parent": 6208,
+      "tag": "svg",
+      "svg": {
+        "viewBox": "0 0 24 24",
+        "path": null
+      },
+      "box": {
+        "width": 16,
+        "height": 16
+      }
+    }
+  ],
+  "meta": {
+    "source": "Electron CDP 9222, local synthetic project",
+    "appRevision": "3cd53b71",
+    "url": "app://renderer/ws-useragenttes/project/parity-test-project/overview",
+    "viewport": {
+      "w": 1686,
+      "h": 986,
+      "dpr": 2
+    }
+  }
+}

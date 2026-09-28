@@ -51,7 +51,10 @@ const createAcpProcess = (
     stdout.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
 
   Object.assign(child, {
-    kill: vi.fn(() => true),
+    kill: vi.fn(() => {
+      queueMicrotask(() => child.emit('close', null, 'SIGTERM'));
+      return true;
+    }),
     killed: false,
     pid: 987_654,
     stderr,
@@ -559,7 +562,7 @@ describe('DroidAcpSession', () => {
     const run = session.run();
     await vi.waitFor(() => expect(promptRequestId).toBeDefined());
 
-    session.interrupt();
+    void session.interrupt();
     await run;
 
     expect(fake.requests).toContainEqual({

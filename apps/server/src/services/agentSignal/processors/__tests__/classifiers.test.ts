@@ -111,8 +111,10 @@ describe('classifier processors', () => {
     });
 
     expect(classify).toHaveBeenCalledWith({
+      agentId: 'agent_1',
       message: 'Please keep replies tighter.',
       serializedContext: 'topic=repo-review',
+      topicId: 'topic_1',
     });
     expect(result).toEqual({
       reason: 'classified feedback satisfaction',

@@ -1,0 +1,30 @@
+---
+title: 'Sign-In Moves to the Accounts Portal'
+description: >-
+  Sign-in, sign-up, and password reset now happen on the accounts portal,
+  and the app trusts the portal's Clerk session through a shared cookie.
+tags:
+  - Accounts
+  - Authentication
+---
+
+# Sign-In Moves to the Accounts Portal
+
+Sign-in is now owned entirely by the accounts portal at
+accounts.aspectlylabs.com. The app's own sign-in, sign-up, verify-email, and
+reset-password pages forward to the portal instead of rendering local forms,
+and signing out ends the portal session too.
+
+Once you are signed in on the portal, the app exchanges the portal's Clerk
+session for an Orvilo session cookie, so returning to the app lands you
+signed in without a second login. Existing sessions keep working until they
+expire; afterwards you simply sign in once on the portal.
+
+Password and single-sign-on management now live on the portal as well — the
+Settings rows for password and connected accounts describe that instead of
+offering local controls. Desktop and CLI authorization flows are unchanged.
+
+## Improvements and fixes
+
+- Sign-out now lands on the portal and ends the Clerk session, instead of
+  dropping only the app's local session cookie.

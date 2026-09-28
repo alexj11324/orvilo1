@@ -13,7 +13,7 @@ import { publishResourceEvent } from '../../resourceEvents';
 import { DocumentHistoryService } from '../history';
 import { DocumentService } from '../index';
 
-vi.mock('@/server/modules/AgentRuntime/redis', () => ({ getAgentRuntimeRedisClient: () => null }));
+vi.mock('@/server/modules/AgentExecution/redis', () => ({ getAgentRuntimeRedisClient: () => null }));
 vi.mock('@/database/models/document');
 vi.mock('@/database/models/file');
 vi.mock('@/database/models/knowledgeBase');

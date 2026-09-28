@@ -1,6 +1,5 @@
 import type { BuiltinToolManifest } from '@orvilo/types';
 
-import { isDesktop } from './const';
 import { systemPrompt } from './systemRole';
 import {
   OrviloAgentApiName,
@@ -251,13 +250,6 @@ export const OrviloAgentManifest: BuiltinToolManifest = {
               'Whether to inherit context messages from the parent conversation. Default is false.',
             type: 'boolean',
           },
-          ...(isDesktop && {
-            runInClient: {
-              description:
-                'Whether to run on the desktop client (for local file/shell access). MUST be true when the sub-agent requires local-system tools. Default is false (server execution).',
-              type: 'boolean',
-            },
-          }),
           timeout: {
             description: 'Optional timeout in milliseconds. Default is 30 minutes.',
             type: 'number',

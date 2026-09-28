@@ -9,8 +9,8 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import LevelSlider from '@/components/LevelSlider';
 import { FORM_STYLE } from '@/const/layoutTokens';
-import LevelSlider from '@/features/ModelSwitchPanel/components/ControlsForm/LevelSlider';
 import { usePermission } from '@/hooks/usePermission';
 import { useSaveState } from '@/hooks/useSaveState';
 import { useUserStore } from '@/store/user';

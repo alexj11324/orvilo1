@@ -15,6 +15,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
 
+import FavoriteToggle from './FavoriteToggle';
 import HeaderActions from './HeaderActions';
 import ShareButton from './ShareButton';
 import Tags from './Tags';
@@ -170,6 +171,9 @@ const Header = memo(() => {
               />
             )}
             <Tags />
+            {/* Reference header order: title → favorite switch → chat options
+                → toolbar. The toggle self-hides on the new-chat surface. */}
+            <FavoriteToggle />
             <HeaderActions />
           </Flexbox>
         }

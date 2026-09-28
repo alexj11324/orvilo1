@@ -8,6 +8,7 @@ import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
 import { executeLegacyMigrationSave } from './legacyPluginMigration';
+import { waitForOAuthPopup } from './oauthPopup';
 
 interface CustomConnectorModalProps {
   connectorId?: string;
@@ -25,50 +26,13 @@ interface CustomConnectorModalProps {
   onClose: () => void;
   onEditSuccess?: () => void;
   open: boolean;
+  /**
+   * Create-mode seed (a curated hosted-MCP preset). When set the form opens
+   * pre-filled with the preset's identifier, endpoint and auth type; the user
+   * can still edit everything before saving.
+   */
+  presetPlugin?: OrviloToolCustomPlugin;
 }
-
-interface OAuthPopupResult {
-  error?: string;
-  status: 'success' | 'error' | 'dismissed';
-  synced?: boolean;
-}
-
-/**
- * Wait for an already-opened popup to report the OAuth result. The popup MUST be
- * opened synchronously from the user's click (see DevModal) and then navigated
- * to the authorize URL. The callback page posts a message before attempting
- * `window.close()`, so the message signal is reliable even when the browser
- * refuses to close a cross-origin-navigated popup.
- */
-const waitForOAuthPopup = (popup: Window, connectorId: string): Promise<OAuthPopupResult> =>
-  new Promise((resolve) => {
-    const cleanup = () => {
-      window.removeEventListener('message', onMessage);
-      clearInterval(timer);
-    };
-
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data;
-      if (!data || data.type !== 'orvilo-connector-oauth') return;
-      if (data.connectorId && data.connectorId !== connectorId) return;
-      cleanup();
-      resolve(
-        data.success
-          ? { status: 'success', synced: data.synced }
-          : { error: data.error, status: 'error' },
-      );
-    };
-
-    window.addEventListener('message', onMessage);
-
-    const timer = setInterval(() => {
-      if (popup.closed) {
-        cleanup();
-        resolve({ status: 'dismissed' });
-      }
-    }, 800);
-  });
 
 /** Drop empty key/value pairs a user may have left behind in an editor. */
 const cleanRecord = (record?: Record<string, string>): Record<string, string> | undefined => {
@@ -95,7 +59,7 @@ const cleanRecord = (record?: Record<string, string>): Record<string, string> | 
  * - Clears credentials when the server URL changes
  */
 const CustomConnectorModal = memo<CustomConnectorModalProps>(
-  ({ open, onClose, connectorId, legacyPlugin, onEditSuccess }) => {
+  ({ open, onClose, connectorId, legacyPlugin, presetPlugin, onEditSuccess }) => {
     const createConnector = useToolStore((s) => s.createConnector);
     const deleteConnector = useToolStore((s) => s.deleteConnector);
     const updateConnector = useToolStore((s) => s.updateConnector);
@@ -150,9 +114,11 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
     //
     // Migration mode skips the fetch — the legacy `customParams.mcp` blob is
     // already in the shape DevModal expects, so we hand it through unchanged.
+    // Create mode simply hands through the optional preset seed.
     const editValue = useMemo((): OrviloToolCustomPlugin | undefined => {
       if (isMigrationMode) return legacyPlugin;
-      if (!isEditMode || !connector || editFetchedData === null) return undefined;
+      if (!isEditMode) return presetPlugin;
+      if (!connector || editFetchedData === null) return undefined;
 
       const c = connector as typeof connector & {
         mcpStdioConfig?: { args?: string[]; command?: string; env?: Record<string, string> };
@@ -199,7 +165,7 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
         identifier: connector.identifier,
         type: 'customPlugin' as const,
       };
-    }, [isEditMode, isMigrationMode, legacyPlugin, connector, editFetchedData]);
+    }, [isEditMode, isMigrationMode, legacyPlugin, presetPlugin, connector, editFetchedData]);
 
     const handleSave = async (
       value: OrviloToolCustomPlugin,

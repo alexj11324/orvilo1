@@ -1,18 +1,22 @@
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createWriteStream } from 'node:fs';
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
+  ACP_RUNTIME_AGENT_TYPES,
   HETEROGENEOUS_AGENT_CONFIGS,
   isBuiltinHeterogeneousType,
   isLocalHeterogeneousType,
   LOCAL_HETEROGENEOUS_AGENT_TYPES,
 } from '@orvilo/heterogeneous-agents';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
-import { OrviloBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
+import {
+  buildAcpBuiltinToolExtras,
+  decodeAcpBuiltinToolSpecs,
+  OrviloBuiltinMcpServer,
+} from '@orvilo/heterogeneous-agents/builtinMcp';
 import { HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV } from '@orvilo/heterogeneous-agents/protocol';
 import { resolveHeteroSpawnCommand } from '@orvilo/heterogeneous-agents/resolveCliCommand';
 import type {
@@ -32,7 +36,12 @@ import { isOrviloEngineKind, ORVILO_ENGINE_KINDS, resolveOrviloCliAgentType } fr
 import { isRecord } from '@orvilo/utils/object';
 import type { Command } from 'commander';
 
-import { getTrpcClient } from '../api/client';
+import { createLambdaClient, getTrpcClient } from '../api/client';
+import { resolveServerUrl } from '../settings';
+import {
+  persistChildResultInboxRecord,
+  resolvePersistentToolCallId,
+} from '../utils/childResultInbox';
 import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
 import { HeteroTraceRecorder } from '../utils/HeteroTraceRecorder';
 import { log } from '../utils/logger';
@@ -55,22 +64,25 @@ const CODEX_REASONING_EFFORT_CONFIG_KEY = 'model_reasoning_effort';
 const CODEX_SERVICE_TIER_CONFIG_KEY = 'service_tier';
 
 /**
- * Patterns that indicate a `--resume <sessionId>` run should be retried
- * without `--resume`.  Two classes of failure:
+ * Patterns that indicate a `--resume <sessionId>` run (an ACP `session/load`
+ * request under the hood) should be retried without resuming.  Two classes of
+ * failure:
  *
  *   1. Session file missing (sandbox recycled): the container is ephemeral
- *      (~1 h idle TTL), so a new sandbox has an empty `~/.claude/projects/`
- *      and the stored session id is stale.
+ *      (~1 h idle TTL), so a new sandbox has an empty session store and the
+ *      stored session id is stale.
  *
  *   2. Context overflow (long conversation): the resumed session carries all
  *      accumulated history; when the combined token count exceeds the model's
- *      context window the API rejects the request immediately after CC
- *      initialises.  Starting fresh (no `--resume`) drops the old history and
- *      lets CC respond to the new prompt alone.
+ *      context window the agent rejects the request immediately after the
+ *      session loads.  Starting fresh drops the old history and lets the agent
+ *      respond to the new prompt alone.
  *
  * Checked against:
- *   - `error` stream events emitted by the CC adapter from CC's result event
- *   - Accumulated stderr output (fallback when CC exits without a result event)
+ *   - `error` stream events emitted by the session adapter (including ACP
+ *     `session/load` RPC errors)
+ *   - Accumulated stderr output (fallback when the agent exits without a
+ *     structured result event)
  */
 const RESUME_RETRY_PATTERNS = [
   // Session file missing — sandbox was recycled
@@ -102,7 +114,8 @@ interface ExecOptions {
   effort?: string;
   /**
    * Builtin Orvilo engine selection (`--type orvilo` only): `claude-sdk` or
-   * `codex-app-server`. Resolves to the engine's CLI family for this exec.
+   * `codex-app-server`. Resolves to the engine's ACP runtime (`claude-code` →
+   * `claude-agent-acp`, `codex` → `codex-acp`) for this exec.
    */
   engine?: string;
   image?: string[];
@@ -113,8 +126,8 @@ interface ExecOptions {
   operationId?: string;
   prompt?: string;
   /**
-   * When set, persist the agent process's RAW stdout/stderr (pre-adapter
-   * stream-json) under `<rawDump>/<timestamp>-<operationId>/` for debugging.
+   * When set, persist the agent process's RAW stdout/stderr (pre-adapter ACP
+   * wire traffic) under `<rawDump>/<timestamp>-<operationId>/` for debugging.
    * Independent of `--render` and the server ingest path.
    */
   rawDump?: string;
@@ -330,10 +343,10 @@ interface RawStreamDumpAttempt {
 }
 
 /**
- * Persists the agent process's RAW stdout/stderr — the untouched stream-json,
- * BEFORE the adapter — to disk for post-hoc debugging. The adapted/ingested
- * view can't tell a CC-side empty `tool_result` apart from an adapter
- * extraction bug; the raw dump can.
+ * Persists the agent process's RAW stdout/stderr — the untouched ACP wire
+ * traffic, BEFORE the adapter — to disk for post-hoc debugging. The
+ * adapted/ingested view can't tell an agent-side empty `tool_result` apart
+ * from an adapter extraction bug; the raw dump can.
  *
  * Enabled via `lh hetero exec --raw-dump <dir>`. Each exec gets its own
  * `<dir>/<timestamp>-<operationId>/` session folder; each spawn attempt (the
@@ -487,12 +500,14 @@ const exec = async (options: ExecOptions): Promise<void> => {
   let uploadImage: UploadHeterogeneousImage | undefined;
   if (serverIngest) {
     const client = await getTrpcClient();
+    const runGenerationEnv = Number.parseInt(process.env.ORVILO_RUN_GENERATION ?? '', 10);
     sink = new TrpcIngestSink(
       client,
       agentType,
       operationId,
       options.topic!,
       process.env.ORVILO_ASSISTANT_MESSAGE_ID,
+      Number.isNaN(runGenerationEnv) ? undefined : runGenerationEnv,
     );
     serverIngester = new CoalescingBatchIngester(sink);
 
@@ -538,20 +553,112 @@ const exec = async (options: ExecOptions): Promise<void> => {
   //     `submitHeteroIntervention`) and resolves the pending bridge call.
   // The bridge's own 5-min timeout is the backstop, so a dropped poll or an
   // absent user never strands CC.
+  //
+  // ─── Server-backed builtin tools (P70c) ────────────────────────────────────
+  //
+  // `ORVILO_BUILTIN_TOOLS` carries the dispatch-time allowlist
+  // (`AcpBuiltinToolSpec[]`, base64). Each api mounts as an `orvilo_cc` extra
+  // tool; invocations call `aiAgent.heteroExecBuiltinTool` with the
+  // operation-scoped JWT (`ORVILO_OPERATION_JWT` — distinct from `ORVILO_JWT`,
+  // which the desktop may have replaced with a device token). Deferred
+  // orchestration calls poll `heteroAwaitBuiltinToolChildren` until the forked
+  // child operations settle.
+  const builtinToolSpecs = decodeAcpBuiltinToolSpecs(process.env.ORVILO_BUILTIN_TOOLS);
+  const mountBuiltinTools =
+    serverIngest && builtinToolSpecs.length > 0 && ACP_RUNTIME_AGENT_TYPES.has(agentType);
+  if (builtinToolSpecs.length > 0 && !mountBuiltinTools) {
+    log.warn(
+      `Ignoring ORVILO_BUILTIN_TOOLS (${builtinToolSpecs.length} spec(s)) — ` +
+        `${agentType} cannot mount an MCP server here`,
+    );
+  }
+
+  // The builtin-tool caller authenticates with the capability-scoped
+  // operation token — NOT whatever `ORVILO_JWT` currently holds.
+  let builtinToolClient: ReturnType<typeof createLambdaClient> | undefined;
+  const getBuiltinToolClient = () => {
+    if (!builtinToolClient) {
+      const token = process.env.ORVILO_OPERATION_JWT ?? process.env.ORVILO_JWT;
+      if (!token) throw new Error('ORVILO_OPERATION_JWT is required for builtin tool calls');
+      builtinToolClient = createLambdaClient(
+        { serverUrl: resolveServerUrl(), token, tokenType: 'jwt' },
+        process.env.ORVILO_WORKSPACE_ID,
+      );
+    }
+    return builtinToolClient;
+  };
+  const builtinExtras = mountBuiltinTools
+    ? buildAcpBuiltinToolExtras(builtinToolSpecs, {
+        // v2 delivery ledger: settle returns `offered` receipts; the ack is
+        // the durable consume (lost responses replay instead of losing the
+        // result).
+        ackChildResults: (input) =>
+          getBuiltinToolClient().aiAgent.heteroAckChildResultDeliveries.mutate(input),
+        awaitChildren: (input) =>
+          getBuiltinToolClient().aiAgent.heteroAwaitBuiltinToolChildren.query(input),
+        exec: (input) => getBuiltinToolClient().aiAgent.heteroExecBuiltinTool.mutate(input),
+        // SA04-A: the host's durable inbox — settled child results land in
+        // ~/.orvilo/inbox/ BEFORE the ack flips their receipts to `acked`, so
+        // a crash between receive and ack stays recoverable and the retried
+        // call reuses the same stable invocation id.
+        persistChildResultInbox: (input) => persistChildResultInboxRecord(input),
+        // SC-SB06/P1-A: durable request→invocation map — a resend reuses the
+        // first minted toolCallId, a new occurrence (even same-args) gets a
+        // fresh one. ~/.orvilo/inbox/<op>.calls.jsonl persists it across
+        // restarts so a crash doesn't fork the invocation identity.
+        resolveToolCallId: (input) => resolvePersistentToolCallId(input),
+        // F04: `needs_approval` external tools park as `acp_tool_approval_pending`;
+        // surface the permission card on the run's AskUser bridge. No bridge
+        // (headless producer) cancels immediately — the server receipt stays
+        // pending and the call is refused.
+        requestApproval: async ({ apiName, args, expiresAt, identifier, toolCallId, windowId }) => {
+          if (!askBridge) {
+            return { cancelReason: 'session_ended' as const, cancelled: true };
+          }
+          const argsPreview = JSON.stringify(args);
+          return askBridge.pending(
+            {
+              arguments: {
+                questions: [
+                  {
+                    header: `${identifier}.${apiName}`,
+                    multiSelect: false,
+                    options: [
+                      { id: 'approve', label: 'Approve' },
+                      { id: 'deny', label: 'Deny' },
+                    ],
+                    question:
+                      `Allow tool "${identifier}.${apiName}" to run?\n\n` +
+                      (argsPreview.length > 2000 ? `${argsPreview.slice(0, 2000)}…` : argsPreview),
+                  },
+                ],
+              },
+              interactionKind: 'permission',
+              toolCallId,
+              windowId,
+            },
+            {
+              timeoutMs: expiresAt === undefined ? undefined : Math.max(1, expiresAt - Date.now()),
+            },
+          );
+        },
+      })
+    : [];
+
   const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
   let askServer: OrviloBuiltinMcpServer | undefined;
   let askBridge: AskUserBridge | undefined;
-  let askMcpConfigPath: string | undefined;
+  // ACP `session/new` `mcpServers` entries — the `orvilo_cc` AskUserQuestion /
+  // browser-tools HTTP server mounted for agents that speak MCP over ACP.
+  let askMcpServers: Record<string, unknown>[] | undefined;
   const askPollAbort = new AbortController();
-  if (
-    serverIngest &&
-    (agentType === 'claude-code' ||
-      agentType === 'cursor' ||
-      agentType === 'droid' ||
-      agentType === 'devin' ||
-      agentType === 'qoder') &&
-    serverIngester
-  ) {
+  const askSupported =
+    agentType === 'claude-code' ||
+    agentType === 'cursor' ||
+    agentType === 'droid' ||
+    agentType === 'devin' ||
+    agentType === 'qoder';
+  if (serverIngest && (askSupported || mountBuiltinTools) && serverIngester) {
     if (agentType === 'cursor' || agentType === 'droid') {
       askBridge = new AskUserBridge(operationId, {
         identifier: agentType === 'cursor' ? 'claude-code' : agentType,
@@ -563,83 +670,93 @@ const exec = async (options: ExecOptions): Promise<void> => {
         provider: 'devin',
       });
     } else {
-      askServer = new OrviloBuiltinMcpServer();
+      askServer = new OrviloBuiltinMcpServer({
+        extraTools: builtinExtras,
+        // Standard-ACP runtimes that never had the AskUser bridge (amp, codex,
+        // kimi-code, opencode, pi, codebuddy) mount `orvilo_cc` for builtin
+        // tools only — no `ask_user_question` on their tool surface.
+        includeAskUserTool: askSupported,
+      });
       await askServer.start();
-      askBridge = askServer.registerOperation(
-        operationId,
-        new AskUserBridge(operationId, { identifier: agentType, provider: agentType }),
-      );
-      askMcpConfigPath = path.join(os.tmpdir(), `orvilo-cc-mcp-${operationId}.json`);
-      await writeFile(
-        askMcpConfigPath,
-        JSON.stringify({
-          mcpServers: {
-            orvilo_cc: {
-              alwaysLoad: true,
-              type: 'http',
-              url: askServer.urlForOperation(operationId),
-            },
-          },
-        }),
-        'utf8',
-      );
+      if (askSupported) {
+        askBridge = askServer.registerOperation(
+          operationId,
+          new AskUserBridge(operationId, { identifier: agentType, provider: agentType }),
+        );
+      } else {
+        // Non-askSupported standard-ACP runtimes still get a bridge — builtin
+        // tool approvals (`needs_approval` permission cards) ride it even
+        // though no `ask_user_question` tool is mounted.
+        askBridge = askServer.registerOperation(operationId);
+      }
+      // Standard-ACP agents mount the server through `session/new`'s
+      // `mcpServers` — no temp `mcp.json` file.
+      askMcpServers = [
+        {
+          name: 'orvilo_cc',
+          type: 'http',
+          url: askServer.urlForOperation(operationId),
+        },
+      ];
     }
 
-    // (i) Forward every bridge event into the same ordered durable ingest path
-    // as CC's. Browser submit already XADDed a response for producer delivery,
-    // but that is only transport acceptance. The bridge echo after resolve is
-    // the producer ACK (producerAck=true + resolutionRequestId) that transitions
-    // Cloud from `resolving` to terminal. Persistence de-dupes transitions by
-    // (operationId, toolCallId, transition).
-    void (async () => {
-      for await (const event of askBridge!.events()) {
-        serverIngester!.push(event as AgentStreamEvent);
-      }
-    })();
+    if (askBridge) {
+      // (i) Forward every bridge event into the same ordered durable ingest path
+      // as CC's. Browser submit already XADDed a response for producer delivery,
+      // but that is only transport acceptance. The bridge echo after resolve is
+      // the producer ACK (producerAck=true + resolutionRequestId) that transitions
+      // Cloud from `resolving` to terminal. Persistence de-dupes transitions by
+      // (operationId, toolCallId, transition).
+      void (async () => {
+        for await (const event of askBridge!.events()) {
+          serverIngester!.push(event as AgentStreamEvent);
+        }
+      })();
 
-    // (ii) Long-poll the server for the user's answer — only while a question is
-    // actually pending, so an idle run holds no server invocation.
-    void (async () => {
-      const client = await getTrpcClient();
-      // Start at the beginning of this operation stream. A response can be
-      // published after `pendingCount` flips but before the first XREAD; `$`
-      // would skip that already-present response and strand the CLI until the
-      // bridge timeout. Unknown/stale tool ids are harmless (`resolve` no-ops).
-      let lastEventId = '0-0';
-      while (!askPollAbort.signal.aborted) {
-        if (askBridge!.pendingCount === 0) {
-          await sleep(200);
-          continue;
-        }
-        try {
-          const res = await client.aiAgent.waitInterventionResponse.query({
-            lastEventId,
-            operationId,
-          });
-          lastEventId = res.lastEventId;
-          for (const event of res.events) {
-            const data = event.data as {
-              cancelReason?: 'session_ended' | 'timeout' | 'user_cancelled';
-              cancelled?: boolean;
-              result?: unknown;
-              resolutionRequestId?: string;
-              toolCallId: string;
-            };
-            // Idempotent: resolve() no-ops on an unknown / already-settled id.
-            askBridge!.resolve(data.toolCallId, {
-              cancelReason: data.cancelReason,
-              cancelled: data.cancelled,
-              result: data.result,
-              resolutionRequestId: data.resolutionRequestId,
-            });
+      // (ii) Long-poll the server for the user's answer — only while a question is
+      // actually pending, so an idle run holds no server invocation.
+      void (async () => {
+        const client = await getTrpcClient();
+        // Start at the beginning of this operation stream. A response can be
+        // published after `pendingCount` flips but before the first XREAD; `$`
+        // would skip that already-present response and strand the CLI until the
+        // bridge timeout. Unknown/stale tool ids are harmless (`resolve` no-ops).
+        let lastEventId = '0-0';
+        while (!askPollAbort.signal.aborted) {
+          if (askBridge!.pendingCount === 0) {
+            await sleep(200);
+            continue;
           }
-        } catch {
-          // Transient (server hiccup / token refresh) — back off and retry.
-          // The bridge's 10-min timeout still bounds the overall wait.
-          await sleep(1000);
+          try {
+            const res = await client.aiAgent.waitInterventionResponse.query({
+              lastEventId,
+              operationId,
+            });
+            lastEventId = res.lastEventId;
+            for (const event of res.events) {
+              const data = event.data as {
+                cancelReason?: 'session_ended' | 'timeout' | 'user_cancelled';
+                cancelled?: boolean;
+                result?: unknown;
+                resolutionRequestId?: string;
+                toolCallId: string;
+              };
+              // Idempotent: resolve() no-ops on an unknown / already-settled id.
+              askBridge!.resolve(data.toolCallId, {
+                cancelReason: data.cancelReason,
+                cancelled: data.cancelled,
+                result: data.result,
+                resolutionRequestId: data.resolutionRequestId,
+              });
+            }
+          } catch {
+            // Transient (server hiccup / token refresh) — back off and retry.
+            // The bridge's 10-min timeout still bounds the overall wait.
+            await sleep(1000);
+          }
         }
-      }
-    })();
+      })();
+    }
   }
 
   /**
@@ -912,15 +1029,13 @@ const exec = async (options: ExecOptions): Promise<void> => {
     };
   };
 
-  // ─── First run (with --resume if provided) ───────────────────────────────
+  // ─── First run (ACP session/load when --resume is provided) ──────────────
 
   const interceptResume = !!options.resume;
   const extraArgs = [
     // Selector args (model/effort/speed) translate against the CLI family — for
     // orvilo the engine already resolved `agentType` to `claude-code`/`codex`.
     ...(buildExtraArgs({ ...options, type: agentType }) ?? []),
-    // Point the supported CLI at the orvilo_cc AskUserQuestion MCP server we just mounted.
-    ...(askMcpConfigPath ? ['--mcp-config', askMcpConfigPath] : []),
   ];
   // Resolve the CLI binary once, up front, and reuse it for both the initial
   // run and the resume-retry. For each provider's default bare command
@@ -943,12 +1058,8 @@ const exec = async (options: ExecOptions): Promise<void> => {
       detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
       env: commandEnv,
       extraArgs,
+      mcpServers: askMcpServers,
       permissionMode,
-      // Device and sandbox executions are observed through the same gateway
-      // stream as native server agents. Ask Claude Code for content-block
-      // deltas so the current conversation receives text while the process is
-      // running instead of seeing only the terminal assistant snapshot.
-      includePartialMessages: agentType === 'claude-code',
       initialModel:
         agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
           ? options.model
@@ -962,19 +1073,19 @@ const exec = async (options: ExecOptions): Promise<void> => {
     'attempt-1',
   );
 
-  // ─── Auto-retry without --resume when the session cannot be used ─────────
+  // ─── Auto-retry without resume when the ACP session cannot be loaded ─────
   //
   // Two classes of failure detected via `RESUME_RETRY_PATTERNS`:
   //   A. Sandbox recycled: container is ephemeral (~1 h idle TTL); new sandbox
-  //      has no CC session files so `--resume <staleId>` is rejected with a
-  //      "no conversation found" error.
+  //      has no agent session files so ACP `session/load` is rejected with a
+  //      "session not found" error.
   //   B. Context overflow: the resumed session carries accumulated history that
-  //      pushes the combined token count past the model limit; the API rejects
-  //      the call with a "prompt is too long" error.
+  //      pushes the combined token count past the model limit; the agent
+  //      rejects the call with a "prompt is too long" error.
   //
-  // In both cases we transparently restart CC without `--resume` so it starts a
-  // fresh session.  The server's `heteroSessionId` is updated with the new id,
-  // breaking the stale-session loop.
+  // In both cases we transparently restart the agent without `session/load` so
+  // it starts a fresh session.  The server's `heteroSessionId` is updated with
+  // the new id, breaking the stale-session loop.
   let result = first;
   if (!first.cancelled && first.resumeNotFound) {
     log.info('Resume failed (session not found or context overflow) — retrying without --resume');
@@ -987,11 +1098,11 @@ const exec = async (options: ExecOptions): Promise<void> => {
         detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
         env: commandEnv,
         extraArgs,
-        includePartialMessages: agentType === 'claude-code',
         initialModel:
           agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
             ? options.model
             : undefined,
+        mcpServers: askMcpServers,
         operationId,
         permissionMode,
         prompt: resolved.resumeFallbackPrompt ?? resolved.prompt,
@@ -1082,14 +1193,13 @@ const exec = async (options: ExecOptions): Promise<void> => {
   operationTokenRenewal?.stop();
 
   // Tear down the AskUserQuestion MCP: stop polling, cancel any in-flight
-  // pending (→ CC's tool returns cleanly), close the server, drop the temp
-  // config. Best-effort — the process is about to exit anyway.
+  // pending (→ CC's tool returns cleanly), close the server. Best-effort —
+  // the process is about to exit anyway.
   askPollAbort.abort();
   if (askServer) {
     askServer.unregisterOperation(operationId);
     await askServer.stop().catch(() => {});
   } else askBridge?.cancelAll('session_ended');
-  if (askMcpConfigPath) await unlink(askMcpConfigPath).catch(() => {});
 
   if (code !== null) {
     const hasRunError =
@@ -1161,7 +1271,7 @@ export function registerHeteroCommand(program: Command) {
     )
     .option(
       '--raw-dump <dir>',
-      'Persist the agent process RAW stdout/stderr (pre-adapter stream-json) under <dir>/<timestamp>-<operationId>/ for debugging. Each spawn attempt writes its own .stdout.jsonl / .stderr.log. Best-effort; never affects the run.',
+      'Persist the agent process RAW stdout/stderr (pre-adapter ACP wire traffic) under <dir>/<timestamp>-<operationId>/ for debugging. Each spawn attempt writes its own .stdout.jsonl / .stderr.log. Best-effort; never affects the run.',
     )
     .action(exec);
 }

@@ -14,15 +14,11 @@ export type LabStage = 'alpha' | 'beta';
 type LabFeatureI18nKey =
   | 'agentGraphConfig'
   | 'artifactDeployment'
-  | 'claudeCodeSdk'
-  | 'codexAppServer'
   | 'desktopSplitView'
   | 'evalCapture'
   | 'heteroSessionImport'
-  | 'imessage'
   | 'inputMarkdown'
   | 'messageTextSelectionActions'
-  | 'oauthApps'
   | 'projects'
   | 'selfLearning'
   | 'topicAcceptance';
@@ -71,12 +67,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     stage: 'alpha',
   },
   {
-    flag: 'enableEvalCapture',
-    i18nKey: 'evalCapture',
-    searchKeywords: ['eval', 'test case', 'capture', 'regression', 'benchmark'],
-    stage: 'alpha',
-  },
-  {
     flag: 'enableTopicAcceptance',
     i18nKey: 'topicAcceptance',
     searchKeywords: ['acceptance', 'checklist'],
@@ -89,12 +79,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     stage: 'alpha',
   },
   {
-    flag: 'enableOAuthApps',
-    i18nKey: 'oauthApps',
-    searchKeywords: ['oauth', 'oauth apps'],
-    stage: 'beta',
-  },
-  {
     flag: 'enableArtifactDeployment',
     i18nKey: 'artifactDeployment',
     searchKeywords: ['artifact', 'deploy', 'publish'],
@@ -105,27 +89,6 @@ export const LAB_FEATURES: LabFeatureItem[] = [
     flag: 'enableDesktopSplitView',
     i18nKey: 'desktopSplitView',
     searchKeywords: ['split view', 'split tab'],
-    stage: 'alpha',
-  },
-  {
-    desktopOnly: true,
-    flag: 'enableImessage',
-    i18nKey: 'imessage',
-    searchKeywords: ['imessage', 'bluebubbles'],
-    stage: 'alpha',
-  },
-  {
-    desktopOnly: true,
-    flag: 'enableClaudeCodeSdk',
-    i18nKey: 'claudeCodeSdk',
-    searchKeywords: ['claude code', 'claude sdk'],
-    stage: 'alpha',
-  },
-  {
-    desktopOnly: true,
-    flag: 'enableCodexAppServer',
-    i18nKey: 'codexAppServer',
-    searchKeywords: ['codex', 'app server'],
     stage: 'alpha',
   },
   // rides on the Claude Code hetero-agent stack: scans local CLI transcripts

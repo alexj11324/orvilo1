@@ -85,6 +85,14 @@ vi.mock('@/layout/AuthProvider', async () => {
   };
 });
 
+vi.mock('@/features/Electron/AuthRequiredModal', () => ({
+  default: () => <div data-testid="auth-required-modal" />,
+}));
+
+vi.mock('@/layout/AuthProvider/SessionAuth/WebSessionAuthRecovery', () => ({
+  default: () => <div data-testid="web-session-auth-recovery" />,
+}));
+
 vi.mock('@/layout/AuthProvider/MarketAuth', async () => {
   const React = await import('react');
 
@@ -213,6 +221,19 @@ describe('SPAGlobalProvider', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it('mounts the web session-auth recovery adapter for every route', () => {
+    // Routes that skip the main (main) layout — /onboarding, mobile, popup —
+    // still need a session-auth subscriber, so the adapter lives here.
+    render(
+      <SPAGlobalProvider>
+        <div />
+      </SPAGlobalProvider>,
+    );
+
+    expect(screen.getByTestId('web-session-auth-recovery')).toBeInTheDocument();
+    expect(screen.queryByTestId('auth-required-modal')).toBeNull();
   });
 
   it('provides Market auth from the SPA global provider', () => {

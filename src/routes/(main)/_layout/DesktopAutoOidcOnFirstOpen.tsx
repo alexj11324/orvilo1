@@ -2,7 +2,7 @@
 
 import { memo, useEffect } from 'react';
 
-import { getDesktopOnboardingCompleted } from '@/features/DesktopOnboarding/storage';
+import { getDesktopOnboardingEverCompleted } from '@/features/DesktopOnboarding/storage';
 import { useElectronStore } from '@/store/electron';
 import {
   getDesktopAutoOidcFirstOpenHandled,
@@ -29,9 +29,11 @@ const DesktopAutoOidcOnFirstOpen = memo(() => {
   useEffect(() => {
     if (!isInitRemoteServerConfig) return;
 
-    // Don't auto-trigger during onboarding flow
-    // Check localStorage flag which persists across sign-out
-    if (!getDesktopOnboardingCompleted()) return;
+    // Don't auto-trigger during onboarding flow. The ever-completed marker
+    // (localStorage) is the persistent hint here — the session-scoped flag
+    // this used to read cleared on every launch, so a returning user would
+    // never have auto-connected anyway.
+    if (!getDesktopOnboardingEverCompleted()) return;
 
     // If already connected, don't auto-trigger
     if (dataSyncConfig.active) return;

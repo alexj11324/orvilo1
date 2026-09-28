@@ -22,6 +22,7 @@ import ChatList from '@/features/Conversation/ChatList';
 import { ConversationProvider } from '@/features/Conversation/ConversationProvider';
 import { TaskCardScopeProvider } from '@/features/Conversation/Markdown/plugins/Task';
 import MessageItem from '@/features/Conversation/Messages';
+import { useGlobalOverlayHost } from '@/features/GlobalOverlays/globalHostContext';
 import { useShareModal } from '@/features/ShareModal';
 import { LazySharePopover as SharePopover } from '@/features/SharePopover/lazy';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -125,8 +126,22 @@ export const TopicChatDrawerBody = memo<TopicChatDrawerBodyProps>(
 
 TopicChatDrawerBody.displayName = 'TopicChatDrawerBody';
 
-const TopicChatDrawer = memo(() => {
+export interface TopicChatDrawerProps {
+  /**
+   * Marks this instance as the app-wide host's own drawer.
+   *
+   * The page-level instances (task detail, automation detail, the two portals)
+   * are plain `<TopicChatDrawer />`. On the main tree `GlobalOverlays` hosts the
+   * drawer as well, and both would open a panel for the same topic, so a plain
+   * instance renders nothing inside a tree that has a global host. Trees without
+   * one — the mobile layouts — are unaffected: the context defaults to `false`.
+   */
+  asGlobalHost?: boolean;
+}
+
+const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   const { t } = useTranslation(['chat', 'common']);
+  const hostedByOverlay = useGlobalOverlayHost();
   const navigate = useWorkspaceAwareNavigate();
   const [expanded, setExpanded] = useState(false);
   const topicId = useTaskStore(taskDetailSelectors.activeTopicDrawerTopicId);
@@ -322,6 +337,12 @@ const TopicChatDrawer = memo(() => {
       )}
     </Flexbox>
   );
+
+  // A tree that already mounts the app-wide host owns the panel; this
+  // page-level instance stands down so one open topic renders one panel. The
+  // bail-out sits after every hook and skips only the panel — the tree without
+  // a host (mobile) reaches the same `return` as before.
+  if (hostedByOverlay && !asGlobalHost) return null;
 
   // Freeze title/actions/body during the close animation so the panel keeps
   // its last rendered state instead of flashing to the empty/"untitled" view

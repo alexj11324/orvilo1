@@ -1,11 +1,17 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 
-import { InMemoryStreamEventManager } from '@/server/modules/AgentRuntime/InMemoryStreamEventManager';
+import { MessageModel } from '@/database/models/message';
+import { InMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
 import type {
   StreamChunkData,
   StreamEvent,
-} from '@/server/modules/AgentRuntime/StreamEventManager';
-import { AgentRuntimeService } from '@/server/services/agentRuntime';
+} from '@/server/modules/AgentExecution/StreamEventManager';
+import type { AgentRuntimeService } from '@/server/services/agentExecution';
+import {
+  extractTextFromMessage,
+  findLastAssistantMessage,
+  normalizeCompletionMessages,
+} from '@/server/services/agentExecution/CompletionLifecycle';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { BaseService } from '../common/base.service';
@@ -21,12 +27,34 @@ import type {
 } from '../types/responses.type';
 
 /**
+ * How long to wait for a delegated run (callAgent / callSubAgent) to resume
+ * the parked parent out-of-band before reporting it as `incomplete`. The
+ * child run resumes the parent through the shared state manager in whichever
+ * process handles the completion callback, so polling durable state is the
+ * only way to observe it.
+ */
+const DELEGATED_RUN_WAIT_MS = 5 * 60_000;
+const DELEGATED_RUN_POLL_MS = 2_000;
+
+// Mirrors `isParkedStatus` in @orvilo/agent-execution — kept local because this
+// package must not take a runtime dependency on the server-side runtime bundle.
+const isParked = (status: AgentState['status']): boolean =>
+  status === 'waiting_for_human' || status === 'waiting_for_async_tool';
+
+// Terminal run statuses — the only states that may produce a completed or
+// failed response. A `running`/`idle` parent observed mid-resume is still
+// generating and must never be reported as finished.
+const isTerminalRunStatus = (status: AgentState['status']): boolean =>
+  status === 'done' || status === 'error' || status === 'interrupted';
+
+/**
  * Response API Service
  * Handles OpenResponses protocol request execution via AiAgentService.execAgent
  *
  * The `model` field is treated as an agent ID.
- * Execution is delegated to execAgent (background mode),
- * with executeSync used when synchronous results are needed.
+ * Execution is delegated to execAgent (dispatched onto an ACP execution
+ * binding); synchronous responses poll the durable status surface until the
+ * run settles.
  */
 export class ResponsesService extends BaseService {
   /**
@@ -35,22 +63,6 @@ export class ResponsesService extends BaseService {
   private extractHostedToolIds(tools?: Tool[] | null): string[] {
     if (!tools) return [];
     return tools.filter((t) => t.type !== 'function').map((t) => t.type);
-  }
-
-  /**
-   * Extract function tool definitions from tools array
-   */
-  private extractFunctionTools(
-    tools?: Tool[] | null,
-  ): Array<{ description?: string; name: string; parameters?: Record<string, any> }> {
-    if (!tools) return [];
-    return tools
-      .filter((t): t is Tool & { type: 'function' } => t.type === 'function')
-      .map((t) => ({
-        description: (t as any).description,
-        name: (t as any).name,
-        parameters: (t as any).parameters,
-      }));
   }
 
   /**
@@ -256,8 +268,138 @@ export class ResponsesService extends BaseService {
   }
 
   /**
+   * Wait for a delegated run (callAgent / callSubAgent) to reach a real
+   * terminal state. The child completes out-of-band and resumes the parent
+   * through the shared state manager — a waiter cannot resume it
+   * itself, so poll the durable state until the run settles (or the wait
+   * budget expires). Parked → `running` is NOT terminal: the resumed parent
+   * is still generating its answer, and reporting it early produced the
+   * premature-completed bug this wait exists to prevent.
+   * `client_tool_execution` parks return immediately: they resume from the
+   * caller, not the server.
+   */
+  private async awaitDelegatedRun(
+    agentRuntimeService: AgentRuntimeService,
+    operationId: string,
+    state: AgentState,
+  ): Promise<AgentState> {
+    const deadline = Date.now() + DELEGATED_RUN_WAIT_MS;
+    let current = state;
+
+    while (Date.now() < deadline) {
+      if (isTerminalRunStatus(current.status)) break;
+      if (isParked(current.status) && current.interruption?.reason === 'client_tool_execution') {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, DELEGATED_RUN_POLL_MS));
+      const refreshed = await agentRuntimeService.loadAgentState(operationId);
+      if (refreshed) current = refreshed;
+    }
+
+    return current;
+  }
+
+  /**
+   * Wait for a dispatched run to settle. Under ACP there is no in-process
+   * step loop: hetero runs never write a state blob, so this polls the
+   * durable status surface (`getOperationStatus` falls back to the
+   * `agent_operations` row / remote admission ledger) and synthesizes a
+   * minimal settled state for the downstream status/output mapping. P70e
+   * owns the real Responses-API rewrite; this keeps the endpoint compiling
+   * and honestly reporting `done`/`error`/`incomplete`.
+   */
+  private async awaitRunCompletion(
+    agentRuntimeService: AgentRuntimeService,
+    operationId: string,
+    topicId?: string | null,
+  ): Promise<AgentState> {
+    const deadline = Date.now() + DELEGATED_RUN_WAIT_MS;
+    while (Date.now() < deadline) {
+      const snapshot = await agentRuntimeService.loadAgentState(operationId);
+      if (snapshot && isTerminalRunStatus(snapshot.status)) return snapshot;
+
+      const status = await agentRuntimeService
+        .getOperationStatus({ operationId })
+        .catch(() => null);
+      if (!status) {
+        return {
+          lastModified: new Date().toISOString(),
+          status: 'error',
+          stepCount: 0,
+        } as AgentState;
+      }
+      if (!status.isActive) {
+        if (snapshot) return snapshot;
+        const settled = {
+          lastModified: status.currentState.lastModified,
+          status: status.currentState.status,
+          stepCount: status.currentState.stepCount,
+          usage: status.currentState.usage,
+        } as AgentState;
+        // Hetero runs write assistant content to the topic rather than a state
+        // blob — surface the final answer so the response output isn't empty.
+        const finalText = topicId ? await this.findLastAssistantText(topicId) : '';
+        if (finalText) {
+          settled.messages = [{ content: finalText, role: 'assistant' }] as AgentState['messages'];
+        }
+        return settled;
+      }
+      await new Promise((resolve) => setTimeout(resolve, DELEGATED_RUN_POLL_MS));
+    }
+    return (
+      (await agentRuntimeService.loadAgentState(operationId)) ??
+      ({
+        lastModified: new Date().toISOString(),
+        status: 'running',
+        stepCount: 0,
+      } as AgentState)
+    );
+  }
+
+  /** Final assistant text for a completed run's topic, if any. */
+  private async findLastAssistantText(topicId: string): Promise<string> {
+    const messageModel = new MessageModel(this.db, this.userId, this.workspaceId);
+    const messages = await messageModel.query({ topicId }, { allowShareVisitor: true });
+    const lastAssistant = findLastAssistantMessage(normalizeCompletionMessages(messages));
+    return extractTextFromMessage(lastAssistant) ?? '';
+  }
+
+  /**
+   * Map a settled run state onto the response status contract. Only `done`
+   * completes; `error` and `interrupted` fail/cancel distinctly; parked or
+   * still-running states at the wait deadline report `incomplete` with a
+   * null completion time — never `completed`.
+   */
+  private mapFinalRunState(finalState: AgentState | undefined): {
+    completedAt: number | null;
+    incompleteDetails?: { reason: string };
+    status: 'completed' | 'failed' | 'incomplete';
+  } {
+    const status = finalState?.status;
+    if (status === 'done') {
+      return { completedAt: Math.floor(Date.now() / 1000), status: 'completed' };
+    }
+    if (status === 'error') {
+      return { completedAt: Math.floor(Date.now() / 1000), status: 'failed' };
+    }
+    if (status === 'interrupted') {
+      return {
+        completedAt: null,
+        incompleteDetails: { reason: 'interrupted' },
+        status: 'incomplete',
+      };
+    }
+    // Parked (delegated child, human approval, async tool, client tool) or a
+    // non-terminal run at the deadline — the reason names what still blocks
+    // completion so callers can decide whether to keep waiting.
+    const reason =
+      (finalState && isParked(status!) && finalState.interruption?.reason) || status || 'unknown';
+    return { completedAt: null, incompleteDetails: { reason }, status: 'incomplete' };
+  }
+
+  /**
    * Create a response (non-streaming)
-   * Calls execAgent with autoStart: false, then executeSync to wait for completion
+   * Calls execAgent, then polls the durable status surface until the run settles
    */
   async createResponse(params: CreateResponseRequest): Promise<ResponseObject> {
     const createdAt = Math.floor(Date.now() / 1000);
@@ -287,10 +429,11 @@ export class ResponsesService extends BaseService {
         prompt: prompt.slice(0, 50),
       });
 
-      // 1. Create agent operation without auto-start
+      // 1. Create the agent operation and dispatch it — under ACP the
+      // operation executes on its execution binding; we then poll the durable
+      // status surface below instead of driving an in-process step loop.
       // model field is used as agentId
       const additionalPluginIds = this.extractHostedToolIds(params.tools);
-      const functionTools = this.extractFunctionTools(params.tools);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
@@ -298,8 +441,7 @@ export class ResponsesService extends BaseService {
         additionalPluginIds: additionalPluginIds.length > 0 ? additionalPluginIds : undefined,
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
-        autoStart: false,
-        functionTools: functionTools.length > 0 ? functionTools : undefined,
+        autoStart: true,
         instructions,
         prompt,
         stream: false,
@@ -313,34 +455,35 @@ export class ResponsesService extends BaseService {
       // Generate response ID encoding topicId for multi-turn support
       const responseId = this.generateResponseId(execResult.topicId);
 
-      // 2. Execute synchronously to completion
-      const agentRuntimeService = new AgentRuntimeService(this.db, this.userId, {
-        queueService: null,
-        workspaceId: this.workspaceId,
-      });
-      const finalState = await agentRuntimeService.executeSync(execResult.operationId);
+      // 2. Wait for the dispatched run to settle — under ACP the operation
+      // executes on its execution binding, so this polls the durable status
+      // surface instead of driving an in-process step loop.
+      const agentRuntimeService = aiAgentService.createIsolatedRuntime();
+      let finalState = await this.awaitRunCompletion(
+        agentRuntimeService,
+        execResult.operationId,
+        execResult.topicId,
+      );
+      finalState = await this.awaitDelegatedRun(
+        agentRuntimeService,
+        execResult.operationId,
+        finalState,
+      );
 
       // 3. Extract results from final state
       const { output, outputText } = this.extractOutputItems(finalState, responseId);
       const usage = this.extractUsage(finalState);
-
-      const isClientToolInterrupt =
-        finalState.status === 'waiting_for_async_tool' &&
-        finalState.interruption?.reason === 'client_tool_execution';
+      const mapped = this.mapFinalRunState(finalState);
 
       return this.buildResponseObject({
-        completedAt: isClientToolInterrupt ? null : Math.floor(Date.now() / 1000),
+        completedAt: mapped.completedAt,
         createdAt,
         id: responseId,
-        incompleteDetails: isClientToolInterrupt ? { reason: 'client_tool_execution' } : undefined,
+        incompleteDetails: mapped.incompleteDetails,
         output,
         outputText,
         params,
-        status: isClientToolInterrupt
-          ? 'incomplete'
-          : finalState.status === 'error'
-            ? 'failed'
-            : 'completed',
+        status: mapped.status,
         usage,
       });
     } catch (error) {
@@ -392,7 +535,6 @@ export class ResponsesService extends BaseService {
       // 1. Create agent operation (before generating responseId so we have topicId)
       // model field is used as agentId
       const additionalPluginIds = this.extractHostedToolIds(params.tools);
-      const functionTools = this.extractFunctionTools(params.tools);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
       });
@@ -400,8 +542,7 @@ export class ResponsesService extends BaseService {
         additionalPluginIds: additionalPluginIds.length > 0 ? additionalPluginIds : undefined,
         agentId: model,
         appContext: previousTopicId ? { topicId: previousTopicId } : undefined,
-        autoStart: false,
-        functionTools: functionTools.length > 0 ? functionTools : undefined,
+        autoStart: true,
         instructions,
         prompt,
         stream: true,
@@ -434,12 +575,11 @@ export class ResponsesService extends BaseService {
         type: 'response.in_progress' as const,
       };
 
-      // 2. Create AgentRuntimeService with custom stream manager for event subscription
+      // 2. Create an isolated runtime with a custom stream manager for event
+      // subscription.
       const streamEventManager = new InMemoryStreamEventManager();
-      const agentRuntimeService = new AgentRuntimeService(this.db, this.userId, {
-        queueService: null,
+      const agentRuntimeService = aiAgentService.createIsolatedRuntime({
         streamEventManager,
-        workspaceId: this.workspaceId,
       });
 
       // 3. Setup async event queue to bridge push events → pull-based generator
@@ -465,10 +605,13 @@ export class ResponsesService extends BaseService {
           }
         });
 
-      // 4. Start execution in background
+      // 4. Wait for the dispatched run to settle in the background
       let finalState: AgentState | undefined;
-      const executionPromise = agentRuntimeService
-        .executeSync(operationId)
+      const executionPromise = this.awaitRunCompletion(
+        agentRuntimeService,
+        operationId,
+        execResult.topicId,
+      )
         .then((state) => {
           finalState = state;
         })
@@ -743,6 +886,10 @@ export class ResponsesService extends BaseService {
       await executionPromise;
       unsubscribe();
 
+      if (finalState) {
+        finalState = await this.awaitDelegatedRun(agentRuntimeService, operationId, finalState);
+      }
+
       // If no text came through streaming, extract from final state
       if (!accumulatedText && finalState) {
         accumulatedText = this.extractAssistantContent(finalState);
@@ -757,51 +904,35 @@ export class ResponsesService extends BaseService {
         ? this.extractOutputItems(finalState, responseId)
         : { output: [], outputText: accumulatedText };
 
-      // Determine if agent was interrupted for client tool execution
-      const isClientToolInterrupt =
-        finalState?.status === 'waiting_for_async_tool' &&
-        finalState?.interruption?.reason === 'client_tool_execution';
+      // Terminal mapping shared with the sync path — a still-running or
+      // parked run reports incomplete, never completed.
+      const mapped = this.mapFinalRunState(finalState);
+      const terminalType =
+        mapped.status === 'completed'
+          ? ('response.completed' as const)
+          : mapped.status === 'failed'
+            ? ('response.failed' as const)
+            : ('response.incomplete' as const);
 
-      if (isClientToolInterrupt) {
-        yield {
-          response: {
-            ...response,
-            completed_at: null,
-            incomplete_details: { reason: 'client_tool_execution' },
-            output: fullOutput.output,
-            output_text: fullOutput.outputText || accumulatedText,
-            status: 'incomplete' as any,
-            usage: {
-              input_tokens: usage.input_tokens,
-              input_tokens_details: { cached_tokens: 0 },
-              output_tokens: usage.output_tokens,
-              output_tokens_details: { reasoning_tokens: 0 },
-              total_tokens: usage.total_tokens,
-            },
+      yield {
+        response: {
+          ...response,
+          completed_at: mapped.completedAt,
+          incomplete_details: mapped.incompleteDetails ?? null,
+          output: fullOutput.output,
+          output_text: fullOutput.outputText || accumulatedText,
+          status: mapped.status as any,
+          usage: {
+            input_tokens: usage.input_tokens,
+            input_tokens_details: { cached_tokens: 0 },
+            output_tokens: usage.output_tokens,
+            output_tokens_details: { reasoning_tokens: 0 },
+            total_tokens: usage.total_tokens,
           },
-          sequence_number: sequenceNumber,
-          type: 'response.incomplete' as const,
-        };
-      } else {
-        yield {
-          response: {
-            ...response,
-            completed_at: Math.floor(Date.now() / 1000),
-            output: fullOutput.output,
-            output_text: fullOutput.outputText || accumulatedText,
-            status: (finalState?.status === 'error' ? 'failed' : 'completed') as any,
-            usage: {
-              input_tokens: usage.input_tokens,
-              input_tokens_details: { cached_tokens: 0 },
-              output_tokens: usage.output_tokens,
-              output_tokens_details: { reasoning_tokens: 0 },
-              total_tokens: usage.total_tokens,
-            },
-          },
-          sequence_number: sequenceNumber,
-          type: 'response.completed' as const,
-        };
-      }
+        },
+        sequence_number: sequenceNumber,
+        type: terminalType,
+      };
     } catch (error) {
       const errorResponseId = this.generateResponseId();
       this.log('error', 'Streaming response failed', { error, responseId: errorResponseId });

@@ -10,15 +10,12 @@ import { OrviloAzureOpenAI } from './providers/azureOpenai';
 import { OrviloBaichuanAI } from './providers/baichuan';
 import { OrviloBailianCodingPlanAI } from './providers/bailianCodingPlan';
 import { OrviloBedrockAI } from './providers/bedrock';
-import { OrviloBflAI } from './providers/bfl';
 import { OrviloCerebrasAI } from './providers/cerebras';
 import { OrviloGPTAI } from './providers/chatGPT';
 import { OrviloCloudflareAI } from './providers/cloudflare';
 import { OrviloCohereAI } from './providers/cohere';
 import { OrviloCometAPIAI } from './providers/cometapi';
-import { OrviloComfyUI } from './providers/comfyui';
 import { OrviloDeepSeekAI } from './providers/deepseek';
-import { OrviloFalAI } from './providers/fal';
 import { OrviloFireworksAI } from './providers/fireworksai';
 import { OrviloGiteeAI } from './providers/giteeai';
 import { OrviloGithubAI } from './providers/github';
@@ -56,7 +53,6 @@ import { OrviloPerplexityAI } from './providers/perplexity';
 import { OrviloPPIOAI } from './providers/ppio';
 import { OrviloQiniuAI } from './providers/qiniu';
 import { OrviloQwenAI } from './providers/qwen';
-import { OrviloReplicateAI } from './providers/replicate';
 import { OrviloSambaNovaAI } from './providers/sambanova';
 import { OrviloSearch1API } from './providers/search1api';
 import { OrviloSenseNovaAI } from './providers/sensenova';
@@ -97,15 +93,12 @@ export const providerRuntimeMap = {
   azureai: OrviloAzureAI,
   baichuan: OrviloBaichuanAI,
   bedrock: OrviloBedrockAI,
-  bfl: OrviloBflAI,
   cerebras: OrviloCerebrasAI,
   chatgpt: OrviloGPTAI,
   cloudflare: OrviloCloudflareAI,
   cohere: OrviloCohereAI,
   cometapi: OrviloCometAPIAI,
-  comfyui: OrviloComfyUI,
   deepseek: OrviloDeepSeekAI,
-  fal: OrviloFalAI,
   fireworksai: OrviloFireworksAI,
   giteeai: OrviloGiteeAI,
   github: OrviloGithubAI,
@@ -143,7 +136,6 @@ export const providerRuntimeMap = {
   ppio: OrviloPPIOAI,
   qiniu: OrviloQiniuAI,
   qwen: OrviloQwenAI,
-  replicate: OrviloReplicateAI,
   router: OrviloNewAPIAI,
   sambanova: OrviloSambaNovaAI,
   search1api: OrviloSearch1API,

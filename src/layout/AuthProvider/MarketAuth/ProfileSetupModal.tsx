@@ -1,9 +1,8 @@
 'use client';
 
 import { Center, Flexbox, Icon, Input, TextArea, Tooltip } from '@lobehub/ui';
-import { confirmModal, Text, toast } from '@lobehub/ui/base-ui';
-import { type UploadProps } from 'antd';
-import { Form, Upload } from 'antd';
+import { confirmModal, Text, toast, Upload } from '@lobehub/ui/base-ui';
+import { Form } from 'antd';
 import { cssVar } from 'antd-style';
 import { CircleHelp, Globe, ImagePlus, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
@@ -22,7 +21,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import SocialConnectButton from './SocialConnectButton';
 import { type MarketUserProfile } from './types';
-import useSocialConnect, { type ClaimableResources } from './useSocialConnect';
+import useSocialConnect from './useSocialConnect';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB limit
 
@@ -37,10 +36,6 @@ interface ProfileSetupModalProps {
    */
   isFirstTimeSetup?: boolean;
   onClose: () => void;
-  /**
-   * Callback to show claim resources modal (managed by parent)
-   */
-  onShowClaimResources?: (resources: ClaimableResources) => void;
   /**
    * Callback when profile is successfully updated
    */
@@ -63,7 +58,6 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
   ({
     open,
     onClose,
-    onShowClaimResources,
     onSuccess,
     accessToken,
     defaultDisplayName,
@@ -99,20 +93,11 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
     const uploadWithProgress = useFileStore((s) => s.uploadWithProgress);
 
     // Social connect hooks
-    const handleClaimableResourcesFound = useCallback(
-      (resources: ClaimableResources) => {
-        onShowClaimResources?.(resources);
-      },
-      [onShowClaimResources],
-    );
-
     const githubConnect = useSocialConnect({
-      onClaimableResourcesFound: handleClaimableResourcesFound,
       provider: 'github',
     });
 
     const twitterConnect = useSocialConnect({
-      onClaimableResourcesFound: handleClaimableResourcesFound,
       provider: 'twitter',
     });
 
@@ -192,13 +177,10 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
     }, []);
 
     // Handle banner upload
-    const handleBannerUpload: UploadProps['customRequest'] = useCallback(
-      async (options: Parameters<NonNullable<UploadProps['customRequest']>>[0]) => {
-        const file = options.file as File;
-
+    const handleBannerUpload = useCallback(
+      async (file: File) => {
         if (file.size > MAX_FILE_SIZE) {
           toast.error(t('profileSetup.errors.fileTooLarge'));
-          options.onError?.(new Error('File too large'));
           return;
         }
 
@@ -207,12 +189,10 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
           const result = await uploadWithProgress({ file });
           if (result?.url) {
             setBannerUrl(result.url);
-            options.onSuccess?.(result);
           }
         } catch (error) {
           console.error('[ProfileSetupModal] Banner upload failed:', error);
           toast.error(t('profileSetup.errors.uploadFailed'));
-          options.onError?.(error as Error);
         } finally {
           setBannerUploading(false);
         }
@@ -274,24 +254,6 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
           userName: values.userName || null,
         };
 
-        // Check for claimable resources after saving (if GitHub is connected)
-        if (githubConnect.profile) {
-          try {
-            const claimResult =
-              await lambdaClient.market.socialProfile.scanClaimableResources.query();
-            if (claimResult.plugins.length > 0 || claimResult.skills.length > 0) {
-              // Close profile modal first, then show claim modal via parent callback
-              onSuccess?.(userProfile);
-              onClose();
-              // Trigger claim modal in parent (MarketAuthProvider)
-              onShowClaimResources?.(claimResult);
-              return;
-            }
-          } catch (err) {
-            console.error('[ProfileSetupModal] Failed to scan claimable resources:', err);
-          }
-        }
-
         onSuccess?.(userProfile);
         onClose();
       } catch (error) {
@@ -320,7 +282,6 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
       githubConnect.profile,
       twitterConnect.profile,
       onClose,
-      onShowClaimResources,
       onSuccess,
       t,
     ]);
@@ -492,9 +453,8 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                 <Flexbox gap={8} width="100%">
                   <Upload
                     accept="image/*"
-                    customRequest={handleBannerUpload}
+                    beforeUpload={handleBannerUpload}
                     maxCount={1}
-                    showUploadList={false}
                     style={{ display: 'block', width: '100%' }}
                   >
                     <div

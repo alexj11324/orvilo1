@@ -9,7 +9,6 @@ import {
   type HeterogeneousToolStateSnapshot,
   type MessageMetadata,
   type MessagePluginItem,
-  type ModelRankItem,
   type UIChatMessage,
   type UpdateMessageParams,
   type UpdateMessageRAGParams,
@@ -199,10 +198,6 @@ export class MessageService {
     startDate?: string;
   }): Promise<number> => {
     return lambdaClient.message.countWords.query(params);
-  };
-
-  rankModels = async (): Promise<ModelRankItem[]> => {
-    return lambdaClient.message.rankModels.query();
   };
 
   getHeatmaps = async (): Promise<HeatmapsProps['data']> => {

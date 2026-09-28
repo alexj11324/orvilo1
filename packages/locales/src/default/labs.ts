@@ -13,12 +13,6 @@ export default {
   'features.assistantMessageGroup.desc':
     'Group agent messages and their tool call results together for display',
   'features.assistantMessageGroup.title': 'Agent Message Grouping',
-  'features.claudeCodeSdk.desc':
-    'Run Claude Code sessions through the Claude Agent SDK instead of spawning the CLI. Enables richer streaming and session control.',
-  'features.claudeCodeSdk.title': 'Claude Code SDK Runtime',
-  'features.codexAppServer.desc':
-    'Run Codex sessions through the local app-server instead of one-shot CLI processes. Enables token streaming and native turn control.',
-  'features.codexAppServer.title': 'Codex App Server Runtime',
   'features.desktopSplitView.desc':
     'Show two desktop tabs side by side, with independent navigation and a resizable divider.',
   'features.desktopSplitView.title': 'Split Tab View',
@@ -28,9 +22,6 @@ export default {
     'Adds a message action that captures a conversation turn — its prior context, input and the answer it produced — as an evaluation test case.',
   'features.evalCapture.title': 'Save a turn as an eval case',
   'features.heteroSessionImport.title': 'Local Agent Session Import',
-  'features.imessage.desc':
-    'Connect agents to iMessage through the local Orvilo Desktop BlueBubbles bridge.',
-  'features.imessage.title': 'iMessage Channel',
   'features.inAppBrowser.desc':
     'Show the Browser tab in the conversation side panel: an embedded browser that opens search results in place and lets agents browse visibly.',
   'features.inAppBrowser.title': 'In-App Browser',

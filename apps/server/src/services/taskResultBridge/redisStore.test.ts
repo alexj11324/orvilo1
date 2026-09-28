@@ -119,26 +119,6 @@ describe('TaskResultCallbackRedisStore', () => {
     await expect(store.areDelivered(['operation-1', 'operation-2'])).resolves.toBe(true);
   });
 
-  it('stores a monotonic per-operation delivery checkpoint', async () => {
-    redis.eval.mockResolvedValue(2);
-    const store = new TaskResultCallbackRedisStore(
-      'user-1',
-      'topic-1',
-      undefined,
-      redis as unknown as Redis,
-    );
-
-    await store.markDeliveryChunk('creator-operation-1', 2);
-
-    expect(redis.eval).toHaveBeenCalledWith(
-      expect.stringContaining('if next > current'),
-      1,
-      'task-result-callback:delivery:creator-operation-1',
-      2,
-      6 * 60 * 60,
-    );
-  });
-
   it('returns due recovery scopes and prunes expired scope metadata', async () => {
     redis.zrange.mockResolvedValue(['valid-scope', 'expired-scope']);
     redis.hgetall

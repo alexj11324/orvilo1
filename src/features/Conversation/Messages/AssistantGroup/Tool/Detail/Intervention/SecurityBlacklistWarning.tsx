@@ -1,6 +1,6 @@
 import { Flexbox } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
-import { DEFAULT_SECURITY_BLACKLIST, InterventionChecker } from '@orvilo/agent-runtime';
+import { DEFAULT_SECURITY_BLACKLIST, InterventionChecker } from '@orvilo/agent-execution';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

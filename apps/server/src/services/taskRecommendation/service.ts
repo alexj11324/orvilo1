@@ -25,6 +25,7 @@ import { ConnectorDataService } from '@/server/services/connectorData';
 import { OnboardingService } from '@/server/services/onboarding';
 import { resolveSystemAgentModelConfig } from '@/server/services/systemAgent/modelConfig';
 import { TaskRunnerService } from '@/server/services/taskRunner';
+import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 
 import { TaskRecommendationConfigurator } from './config';
 import { TaskRecommendationMaterializer } from './materializer';
@@ -379,7 +380,15 @@ export class TaskRecommendationService {
       if (result.status === 'not-found') throw new TaskRecommendationNotFoundError();
       if (result.created) {
         try {
-          await this.dependencies.runner.runTask({ taskId: result.taskId });
+          await this.dependencies.runner.runTask({
+            idempotencyKey: taskRunIdempotencyKey.onboardingRecommendation({
+              recommendationId: recommendation.id,
+              sessionId: input.sessionId,
+              taskId: result.taskId,
+              topicId: input.topicId,
+            }),
+            taskId: result.taskId,
+          });
         } catch (error) {
           // TaskRunnerService keeps a failed kickoff visible as a paused task with the error
           // attached. Do not fail onboarding after the durable task and idempotency mapping

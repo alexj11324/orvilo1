@@ -17,8 +17,8 @@ import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useKnowledgeBaseStore } from '@/store/library';
+import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
-import { getLibraryListAsyncState } from '../Layout/Body/LibraryList/state';
 import SectionTitle from './SectionTitle';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({

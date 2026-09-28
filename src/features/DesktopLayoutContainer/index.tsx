@@ -40,7 +40,13 @@ const DesktopLayoutContainer: FC<PropsWithChildren> = ({ children }) => {
     <Flexbox
       className={styles.outerContainer}
       height={'100%'}
-      padding={8}
+      // Linear parity: no inline-start inset. The main region must begin at the
+      // nav panel's own divider (244 sidebar + 1px border = 245), because the
+      // whole shell budget — 787 left column, 669 content column, 360 right rail
+      // — is measured from that edge. An 8px start gutter pushes every one of
+      // those 8px right and the deviation is invisible in isolation.
+      paddingBlock={8}
+      paddingInline={'0 8px'}
       style={outerCssVariables}
       width={'100%'}
     >

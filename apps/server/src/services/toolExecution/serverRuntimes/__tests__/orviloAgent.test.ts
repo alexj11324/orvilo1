@@ -69,7 +69,7 @@ vi.mock('@/server/services/file', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: (...args: any[]) => mockInitModelRuntimeFromDB(...args),
+  initModelRuntimeFromDeploymentConfig: (...args: any[]) => mockInitModelRuntimeFromDB(...args),
 }));
 
 vi.mock('@orvilo/model-runtime', () => ({
@@ -383,7 +383,6 @@ describe('orviloAgentRuntime', () => {
     });
 
     expect(mockInitModelRuntimeFromDB).toHaveBeenCalledWith(
-      baseContext.serverDB,
       'user-1',
       'test-provider',
       'workspace-1',
@@ -846,12 +845,18 @@ describe('orviloAgentRuntime', () => {
         .mockResolvedValue({ started: true, subOperationId: 'sub-op-1', threadId: 'thread-1' });
 
       const result = await runtime.callSubAgent(
-        { description: 'Research', instruction: 'Find the answer', timeout: 1000 },
+        {
+          description: 'Research',
+          inheritMessages: true,
+          instruction: 'Find the answer',
+          timeout: 1000,
+        },
         { ...baseContext, subAgent: { run } } as ToolExecutionContext,
       );
 
       expect(run).toHaveBeenCalledWith({
         description: 'Research',
+        inheritMessages: true,
         instruction: 'Find the answer',
         timeout: 1000,
       });

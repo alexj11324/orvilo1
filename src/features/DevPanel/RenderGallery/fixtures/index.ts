@@ -16,16 +16,13 @@ import orviloAgent from './orvilo-agent';
 import orviloAgentBuilder from './orvilo-agent-builder';
 import orviloAgentDocuments from './orvilo-agent-documents';
 import orviloAgentManagement from './orvilo-agent-management';
-import orviloBrowser from './orvilo-browser';
 import orviloCloudSandbox from './orvilo-cloud-sandbox';
 import orviloGroupAgentBuilder from './orvilo-group-agent-builder';
 import orviloGroupManagement from './orvilo-group-management';
-import orviloImageGeneration from './orvilo-image-generation';
 import orviloKnowledgeBase from './orvilo-knowledge-base';
 import orviloLocalSystem from './orvilo-local-system';
 import orviloNotebook from './orvilo-notebook';
 import orviloPageAgent from './orvilo-page-agent';
-import orviloSkillStore from './orvilo-skill-store';
 import orviloSkills from './orvilo-skills';
 import orviloTask from './orvilo-task';
 import orviloUserInteraction from './orvilo-user-interaction';
@@ -94,16 +91,13 @@ const toolsetModules: ToolsetFixtureModule[] = [
   orviloAgentDocuments,
   orviloAgentManagement,
   orviloAuv,
-  orviloBrowser,
   orviloCloudSandbox,
   orviloGroupAgentBuilder,
   orviloGroupManagement,
-  orviloImageGeneration,
   orviloKnowledgeBase,
   orviloLocalSystem,
   orviloNotebook,
   orviloPageAgent,
-  orviloSkillStore,
   orviloSkills,
   orviloTask,
   orviloUserInteraction,

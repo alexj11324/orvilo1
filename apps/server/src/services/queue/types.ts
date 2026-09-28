@@ -1,4 +1,4 @@
-import { type AgentRuntimeContext } from '@orvilo/agent-runtime';
+import { type AgentRuntimeContext } from '@orvilo/agent-execution';
 
 export interface QueueMessage {
   context?: AgentRuntimeContext;

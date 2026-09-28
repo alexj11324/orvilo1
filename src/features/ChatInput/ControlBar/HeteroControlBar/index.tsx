@@ -14,7 +14,6 @@ import { ActivityIcon, CircleAlertIcon, RadioTowerIcon, TimerResetIcon } from 'l
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ChatInputCredits from '@/business/client/features/ChatInputCredits';
 import HeteroDeviceSwitcher from '@/features/ChatInput/ControlBar/HeteroDeviceSwitcher';
 import WorkspaceControls from '@/features/ChatInput/ControlBar/WorkspaceControls';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
@@ -135,7 +134,9 @@ const HeteroControlBar = memo(() => {
   const [runtimeStatus, setRuntimeStatus] = useState<HeterogeneousAgentRuntimeStatus>();
 
   useWatchBroadcast('heteroAgentRuntimeStatus', (status) => {
-    if (status.transport !== 'claude-sdk') return;
+    // 'claude-sdk' is the legacy in-process transport label kept for archived
+    // statuses; live Claude Code ACP runs report 'claude-code-acp'.
+    if (status.transport !== 'claude-sdk' && status.transport !== 'claude-code-acp') return;
     setRuntimeStatus(status);
   });
 
@@ -152,11 +153,6 @@ const HeteroControlBar = memo(() => {
     workspaceScoped,
   });
   const isLocalHeteroExecution = executionTarget === 'local';
-  // Subscription windows (5h / weekly) only exist when the CLI is signed into
-  // a Claude / Codex account. API mode bills the bound provider key instead,
-  // so the remaining-quota chip in the corner would be stale or empty.
-  const isSubscriptionAuth = (heteroProvider?.authMode ?? 'subscription') === 'subscription';
-  const shouldShowApiCredits = heteroProvider?.authMode === 'api';
   // An explicit bound device (including web's device-upgraded "local" pick)
   // samples quota through the gateway; `auto` has no concrete device to ask
   // and the cloud sandbox has no sampler, so both stay quota-less.
@@ -166,9 +162,7 @@ const HeteroControlBar = memo(() => {
   // provider type — an orvilo claude-sdk session is a Claude subscription run.
   const heteroCliType = resolveHeteroCliAgentType(heteroProvider);
   const shouldShowClaudeQuota =
-    isSubscriptionAuth &&
-    heteroCliType === 'claude-code' &&
-    (isLocalHeteroExecution || !!quotaDeviceId);
+    heteroCliType === 'claude-code' && (isLocalHeteroExecution || !!quotaDeviceId);
 
   if (isAccessLoading) return null;
 
@@ -179,7 +173,6 @@ const HeteroControlBar = memo(() => {
     return (
       <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
         <HeteroDeviceSwitcher agentId={agentId} />
-        {shouldShowApiCredits && <ChatInputCredits />}
       </Flexbox>
     );
   }
@@ -196,12 +189,13 @@ const HeteroControlBar = memo(() => {
         <Flexbox horizontal align={'center'} className={styles.leftGroup} gap={4}>
           <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
         </Flexbox>
-        {(shouldShowApiCredits || (shouldShowClaudeQuota && quotaDeviceId)) && (
+        {shouldShowClaudeQuota && quotaDeviceId && (
           <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
-            {shouldShowApiCredits && <ChatInputCredits />}
-            {shouldShowClaudeQuota && quotaDeviceId && (
-              <ClaudeCodeQuotaMenu deviceId={quotaDeviceId} env={heteroProvider?.env} />
-            )}
+            <ClaudeCodeQuotaMenu
+              agentId={agentId}
+              deviceId={quotaDeviceId}
+              env={heteroProvider?.env}
+            />
           </Flexbox>
         )}
       </Flexbox>
@@ -224,14 +218,13 @@ const HeteroControlBar = memo(() => {
     </div>
   );
   // Codex quota still needs the local CLI (spawned over IPC), so it stays
-  // desktop-local; the SDK runtime badge likewise reports this desktop's own
-  // in-process runtime, not a remote device's.
-  const shouldShowCodexQuota =
-    isSubscriptionAuth && heteroCliType === 'codex' && isLocalHeteroExecution;
+  // desktop-local; the runtime badge likewise reports this desktop's own ACP
+  // runtime, not a remote device's.
+  const shouldShowCodexQuota = heteroCliType === 'codex' && isLocalHeteroExecution;
   const shouldShowSdkRuntime =
     heteroCliType === 'claude-code' &&
     isLocalHeteroExecution &&
-    runtimeStatus?.transport === 'claude-sdk' &&
+    (runtimeStatus?.transport === 'claude-sdk' || runtimeStatus?.transport === 'claude-code-acp') &&
     visibleSdkRuntimeStates.has(runtimeStatus.state);
   const sdkRuntimeClassName =
     runtimeStatus?.state === 'monitoring'
@@ -273,12 +266,15 @@ const HeteroControlBar = memo(() => {
         <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
       </Flexbox>
       <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
-        {shouldShowApiCredits && <ChatInputCredits />}
         {shouldShowCodexQuota && (
           <CodexQuotaMenu command={heteroProvider?.command} env={heteroProvider?.env} />
         )}
         {shouldShowClaudeQuota && (
-          <ClaudeCodeQuotaMenu deviceId={quotaDeviceId} env={heteroProvider?.env} />
+          <ClaudeCodeQuotaMenu
+            agentId={agentId}
+            deviceId={quotaDeviceId}
+            env={heteroProvider?.env}
+          />
         )}
         {sdkRuntimeBadge}
         <Tooltip title={tChat('heteroAgent.fullAccess.tooltip')}>{fullAccessBadge}</Tooltip>

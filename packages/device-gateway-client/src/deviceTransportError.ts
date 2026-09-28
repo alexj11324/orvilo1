@@ -177,28 +177,46 @@ const isTimeoutError = (error: unknown): boolean => {
   return name === 'TimeoutError' || name === 'AbortError';
 };
 
-const NETWORK_ERROR_MARKERS = [
-  'fetch failed',
-  'socket hang up',
+// Provably pre-connect failures: DNS resolution or the TCP handshake never
+// completed, so the HTTP request could not have left this process. Delivery
+// is ruled out — nothing on the device side can have run.
+const PRE_CONNECT_NETWORK_ERROR_MARKERS = [
   'connection refused',
-  'connection reset',
   'econnrefused',
-  'econnreset',
   'enotfound',
   'eai_again',
+  'getaddrinfo',
+];
+
+// Ambiguous transport failures: the connection may have been established and
+// the request may have been delivered before the failure was observed
+// (mid-request reset, hang-up, or a read timeout).
+const AMBIGUOUS_NETWORK_ERROR_MARKERS = [
+  'fetch failed',
+  'socket hang up',
+  'connection reset',
+  'econnreset',
   'etimedout',
   'network',
 ];
 
-const isNetworkError = (error: unknown, message: string): boolean => {
+const networkErrorHaystack = (error: unknown, message: string): string => {
   const code = (error as { cause?: { code?: unknown }; code?: unknown } | null)?.code;
   const causeCode = (error as { cause?: { code?: unknown } } | null)?.cause?.code;
-  const haystack = [message, code, causeCode]
+  return [message, code, causeCode]
     .filter((value) => typeof value === 'string')
     .join(' ')
     .toLowerCase();
+};
 
-  return NETWORK_ERROR_MARKERS.some((marker) => haystack.includes(marker));
+const isPreConnectNetworkError = (error: unknown, message: string): boolean => {
+  const haystack = networkErrorHaystack(error, message);
+  return PRE_CONNECT_NETWORK_ERROR_MARKERS.some((marker) => haystack.includes(marker));
+};
+
+const isAmbiguousNetworkError = (error: unknown, message: string): boolean => {
+  const haystack = networkErrorHaystack(error, message);
+  return AMBIGUOUS_NETWORK_ERROR_MARKERS.some((marker) => haystack.includes(marker));
 };
 
 /**
@@ -222,11 +240,19 @@ export const describeGatewayRequestFailure = (
     };
   }
 
-  if (isNetworkError(error, message)) {
+  if (isPreConnectNetworkError(error, message)) {
     return {
       code: DeviceTransportErrorCode.GatewayUnreachable,
       content: `Could not reach the device gateway to relay this ${operation}, so it never ran on the device. This is a network failure between the server and the gateway. Retry once; if it persists, report it to the user rather than retrying in a loop.`,
       error: `${DeviceTransportErrorCode.GatewayUnreachable}: ${message}`,
+    };
+  }
+
+  if (isAmbiguousNetworkError(error, message)) {
+    return {
+      code: DeviceTransportErrorCode.GatewayError,
+      content: `The connection to the device gateway failed mid-request while relaying this ${operation}, so it is unclear whether the device ran it. Check the current state before repeating anything that writes or has side effects. Underlying error: ${message}`,
+      error: `${DeviceTransportErrorCode.GatewayError}: ${message}`,
     };
   }
 

@@ -426,9 +426,12 @@ export class FileModel {
         size: files.size,
         updatedAt: files.updatedAt,
         uploader: {
+          // `id` MUST be the first selected field — see queryWithWhere's sender
+          // selection in ../message.ts for why (drizzle left-join nested-object
+          // nullification reads the first column).
+          id: users.id,
           avatar: users.avatar,
           fullName: users.fullName,
-          id: users.id,
           username: users.username,
         },
         url: files.url,

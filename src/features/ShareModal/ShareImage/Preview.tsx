@@ -70,7 +70,11 @@ const Preview = memo<PreviewProps>(
           ? agentByIdSelectors.getAgentModelById(resolvedHeaderAgentId)(s)
           : undefined,
         resolvedHeaderAgentId
-          ? filterToolIds(agentByIdSelectors.getAgentPluginsById(resolvedHeaderAgentId)(s))
+          ? // Configured tools render on any viewer — the target device owns
+            // the capability decision at run time.
+            filterToolIds(agentByIdSelectors.getAgentPluginsById(resolvedHeaderAgentId)(s), {
+              canExecuteOnDevice: true,
+            })
           : undefined,
         resolvedHeaderAgentId
           ? builtinAgentSelectors.inboxAgentId(s) === resolvedHeaderAgentId

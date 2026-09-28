@@ -16,7 +16,6 @@ import {
   Package,
   Pin,
   Settings,
-  Store,
   Trash2,
   Wrench,
   Zap,
@@ -27,7 +26,6 @@ import { useTranslation } from 'react-i18next';
 
 import { openConnectorEditDrawer } from '@/features/Connectors/CustomConnectorModal/imperative';
 import { openPluginEditDrawer } from '@/features/PluginDevModal/imperative';
-import { createSkillStoreModal } from '@/features/SkillStore';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCheckPluginsIsInstalled } from '@/hooks/useCheckPluginsIsInstalled';
 import { useFetchInstalledPlugins } from '@/hooks/useFetchInstalledPlugins';
@@ -53,8 +51,6 @@ import { closeToolDetailPopovers } from '../components/useDetailPopoverState';
 import ComposioServerItem from './ComposioServerItem';
 import ComposioSkillIcon from './ComposioSkillIcon';
 import { SKILL_ICON_GAP, SKILL_ICON_SIZE, SKILL_TRAILING_CONTROL_SIZE } from './constants';
-import MarketAgentSkillPopoverContent from './MarketAgentSkillPopoverContent';
-import MarketSkillIcon from './MarketSkillIcon';
 import OrviloSkillIcon from './OrviloSkillIcon';
 import OrviloSkillServerItem from './OrviloSkillServerItem';
 import SkillRow from './SkillRow';
@@ -445,19 +441,13 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   const [autoModeLoading, setAutoModeLoading] = useState(false);
   const { allowed: canEdit } = usePermission('edit_own_content');
   const list = useToolStore(pluginSelectors.installedPluginMetaList, isEqual);
-  const [
-    uninstallPlugin,
-    removeComposioConnection,
-    deleteAgentSkill,
-    uninstallBuiltinTool,
-    deleteConnector,
-  ] = useToolStore((s) => [
-    s.uninstallCustomPlugin,
-    s.removeComposioConnection,
-    s.deleteAgentSkill,
-    s.uninstallBuiltinTool,
-    s.deleteConnector,
-  ]);
+  const [uninstallPlugin, removeComposioConnection, uninstallBuiltinTool, deleteConnector] =
+    useToolStore((s) => [
+      s.uninstallCustomPlugin,
+      s.removeComposioConnection,
+      s.uninstallBuiltinTool,
+      s.deleteConnector,
+    ]);
   const [checked, togglePlugin, setPluginMode] = useAgentStore((s) => [
     // Pinned identifiers only (getAgentPluginsById already excludes disabled).
     agentByIdSelectors.getAgentPluginsById(agentId)(s),
@@ -790,10 +780,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   const allOrviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
   const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
 
-  // Agent Skills related state
+  // Builtin Agent Skills related state
   const installedBuiltinSkills = useToolStore(builtinToolSelectors.installedBuiltinSkills, isEqual);
-  const marketAgentSkills = useToolStore(agentSkillsSelectors.getMarketAgentSkills, isEqual);
-  const userAgentSkills = useToolStore(agentSkillsSelectors.getUserAgentSkills, isEqual);
+  const agentSkills = useToolStore(agentSkillsSelectors.getAgentSkills, isEqual);
 
   // Custom connectors (user-added OAuth MCP servers) from the connector store
   const customConnectors = useToolStore(connectorSelectors.customConnectors, isEqual);
@@ -817,6 +806,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
 
   useFetchInstalledPlugins();
   useFetchUninstalledBuiltinTools(true);
+  // Populates the identifier set below. Platform skills are no longer rendered
+  // as their own rows here, but they must still be kept off the builtin list so
+  // they cannot reappear as builtin rows.
   useFetchAgentSkills(true);
   useCheckPluginsIsInstalled(plugins);
 
@@ -851,14 +843,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       ),
     [connectorCatalog],
   );
-  // Get all skill identifier sets (used for filtering builtinList)
+  // Every identifier the shared builtin meta list already carries as a skill.
+  // Platform skills get no rows of their own any more, so without this filter
+  // the ones still attached to the account would leak back in as builtin rows.
   const allSkillIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     for (const s of installedBuiltinSkills) ids.add(s.identifier);
-    for (const s of marketAgentSkills) ids.add(s.identifier);
-    for (const s of userAgentSkills) ids.add(s.identifier);
+    for (const s of agentSkills) ids.add(s.identifier);
     return ids;
-  }, [installedBuiltinSkills, marketAgentSkills, userAgentSkills]);
+  }, [installedBuiltinSkills, agentSkills]);
 
   // Filter out connectors and skills from builtinList (they are displayed separately)
   const filteredBuiltinList = useMemo(() => {
@@ -1261,69 +1254,6 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     [installedBuiltinSkills, t, createManagedSkillItem],
   );
 
-  // Market Agent Skills list items (grouped under Community)
-  const marketAgentSkillItems = useMemo(
-    () =>
-      marketAgentSkills.map((skill) => {
-        const icon = (
-          <MarketSkillIcon identifier={skill.identifier} name={skill.name} size={SKILL_ICON_SIZE} />
-        );
-        const popoverContent = (
-          <MarketAgentSkillPopoverContent
-            description={skill.description}
-            identifier={skill.identifier}
-            name={skill.name}
-            sourceLabel={t('skillStore.tabs.community')}
-          />
-        );
-
-        return createManagedSkillItem({
-          badge: <Icon icon={SkillsIcon} size={12} />,
-          deleteConfig: {
-            displayName: skill.name,
-            onDelete: () => deleteAgentSkill(skill.id),
-          },
-          icon,
-          id: skill.identifier,
-          popoverContent,
-          searchText: `${skill.name} ${skill.identifier}`,
-          title: skill.name,
-        });
-      }),
-    [marketAgentSkills, t, createManagedSkillItem, deleteAgentSkill],
-  );
-
-  // User Agent Skills list items (grouped under Custom)
-  const userAgentSkillItems = useMemo(
-    () =>
-      userAgentSkills.map((skill) => {
-        const icon = <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />;
-        const popoverContent = (
-          <ToolItemDetailPopover
-            description={skill.description}
-            icon={<Icon icon={SkillsIcon} size={36} />}
-            identifier={skill.identifier}
-            sourceLabel={t('skillStore.tabs.custom')}
-            title={skill.name}
-          />
-        );
-
-        return createManagedSkillItem({
-          badge: <Icon icon={SkillsIcon} size={12} />,
-          deleteConfig: {
-            displayName: skill.name,
-            onDelete: () => deleteAgentSkill(skill.id),
-          },
-          icon,
-          id: skill.identifier,
-          popoverContent,
-          searchText: `${skill.name} ${skill.identifier}`,
-          title: skill.name,
-        });
-      }),
-    [userAgentSkills, t, createManagedSkillItem, deleteAgentSkill],
-  );
-
   // Custom connector list items (user-added OAuth MCP servers).
   // Toggling adds the connector identifier to agents.plugins[] — the same field
   // the runtime resolves connectors from, so they become callable immediately.
@@ -1480,15 +1410,11 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     ...skillItems,
   ];
 
-  // Build Community group children (Market Agent Skills + community plugins)
-  const communityGroupChildren: ItemType[] = [
-    ...marketAgentSkillItems,
-    ...communityPlugins.map(mapPluginToItem),
-  ];
+  // Build Community group children (community plugins)
+  const communityGroupChildren: ItemType[] = communityPlugins.map(mapPluginToItem);
 
-  // Build Custom group children (User Agent Skills + custom plugins + custom connectors)
+  // Build Custom group children (custom plugins + custom connectors)
   const customGroupChildren: ItemType[] = [
-    ...userAgentSkillItems,
     ...customPlugins.map(mapPluginToItem),
     ...customConnectorItems,
   ];
@@ -1619,19 +1545,6 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   const marketFooter =
     allSkillItems.length > 0 || fixedItems.length > 0 ? (
       <>
-        <button
-          aria-label={t('plus.addSkills', { ns: 'chat' })}
-          className={cx(styles.addSkillRow)}
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            closeDropdown?.();
-            createSkillStoreModal();
-          }}
-        >
-          <Icon icon={Store} size={SKILL_ICON_SIZE} />
-          <span className={cx(styles.addSkillLabel)}>{t('plus.addSkills', { ns: 'chat' })}</span>
-        </button>
         <button
           aria-label={t('tools.plugins.management')}
           className={cx(styles.addSkillRow)}
@@ -1946,38 +1859,8 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         };
       });
 
-    // Enabled Market Agent Skills
-    const enabledMarketAgentSkillItems = marketAgentSkills
-      .filter((skill) => checked.includes(skill.identifier))
-      .map((skill) => ({
-        icon: (
-          <MarketSkillIcon identifier={skill.identifier} name={skill.name} size={SKILL_ICON_SIZE} />
-        ),
-        key: skill.identifier,
-        label: (
-          <ToolItem
-            checked={true}
-            disabled={!canEdit}
-            id={skill.identifier}
-            label={skill.name}
-            onUpdate={async () => {
-              if (!canEdit) return;
-              await togglePlugin(skill.identifier);
-            }}
-          />
-        ),
-        popoverContent: (
-          <MarketAgentSkillPopoverContent
-            description={skill.description}
-            identifier={skill.identifier}
-            name={skill.name}
-            sourceLabel={t('skillStore.tabs.community')}
-          />
-        ),
-      }));
-
-    // Community group (Market Agent Skills + community plugins)
-    const allCommunityItems = [...enabledMarketAgentSkillItems, ...enabledCommunityPlugins];
+    // Community group (community plugins)
+    const allCommunityItems: ItemType[] = enabledCommunityPlugins;
     if (allCommunityItems.length > 0) {
       installedItems.push({
         children: allCommunityItems,
@@ -1987,37 +1870,8 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       });
     }
 
-    // Enabled User Agent Skills
-    const enabledUserAgentSkillItems = userAgentSkills
-      .filter((skill) => checked.includes(skill.identifier))
-      .map((skill) => ({
-        icon: <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />,
-        key: skill.identifier,
-        label: (
-          <ToolItem
-            checked={true}
-            disabled={!canEdit}
-            id={skill.identifier}
-            label={skill.name}
-            onUpdate={async () => {
-              if (!canEdit) return;
-              await togglePlugin(skill.identifier);
-            }}
-          />
-        ),
-        popoverContent: (
-          <ToolItemDetailPopover
-            description={skill.description}
-            icon={<Icon icon={SkillsIcon} size={36} />}
-            identifier={skill.identifier}
-            sourceLabel={t('skillStore.tabs.custom')}
-            title={skill.name}
-          />
-        ),
-      }));
-
-    // Custom group (User Agent Skills + custom plugins)
-    const allCustomItems = [...enabledUserAgentSkillItems, ...enabledCustomPlugins];
+    // Custom group (custom plugins)
+    const allCustomItems: ItemType[] = enabledCustomPlugins;
     if (allCustomItems.length > 0) {
       installedItems.push({
         children: allCustomItems,
@@ -2031,8 +1885,6 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   }, [
     filteredBuiltinList,
     installedBuiltinSkills,
-    marketAgentSkills,
-    userAgentSkills,
     communityPlugins,
     customPlugins,
     composioServerItems,

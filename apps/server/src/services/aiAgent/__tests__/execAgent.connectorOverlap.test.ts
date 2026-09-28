@@ -2,12 +2,14 @@ import type * as ModelBankModule from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
+import type { ExternalToolSurfaceEntry } from '../pipeline/runToolSurface';
 
 const {
   mockConnectorQueryByIdentifiers,
   mockConnectorToolQueryAll,
   mockCreateOperation,
   mockCreateServerAgentToolsEngine,
+  mockDispatchHeteroAgent,
   mockGetAgentConfig,
   mockMessageCreate,
   mockPluginQuery,
@@ -19,6 +21,7 @@ const {
     generateToolsDetailed: vi.fn().mockReturnValue({ enabledToolIds: [], tools: [] }),
     getEnabledPluginManifests: vi.fn().mockReturnValue(new Map()),
   }),
+  mockDispatchHeteroAgent: vi.fn(),
   mockGetAgentConfig: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockPluginQuery: vi.fn().mockResolvedValue([]),
@@ -81,9 +84,9 @@ vi.mock('@/database/models/connector', () => ({
 vi.mock('@/database/models/connectorTool', () => ({
   ConnectorToolModel: vi.fn().mockImplementation(function () {
     return {
-      queryAllByConnectorIds: mockConnectorToolQueryAll,
+      queryAllByConnectorIds: vi.fn().mockResolvedValue([]),
       queryByConnector: vi.fn().mockResolvedValue([]),
-      queryByConnectorIds: vi.fn().mockResolvedValue([]),
+      queryByConnectorIds: mockConnectorToolQueryAll,
     };
   }),
 }));
@@ -95,6 +98,7 @@ vi.mock('@/database/models/topic', () => ({
       tryReserveTaskCallback: vi.fn().mockResolvedValue(true),
       create: vi.fn().mockResolvedValue({ id: 'topic-1' }),
       findById: vi.fn().mockResolvedValue(null),
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -109,10 +113,16 @@ vi.mock('@/database/models/thread', () => ({
   }),
 }));
 
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return { createOperation: mockCreateOperation };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary and
+// assert on the tool surface carried into it (`builtinToolSpecs`).
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 vi.mock('@/server/services/market', () => ({
@@ -150,7 +160,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: { isConfigured: false, queryDeviceList: vi.fn().mockResolvedValue([]) },
 }));
 
-vi.mock('@/server/modules/ModelRuntime', () => ({ initModelRuntimeFromDB: vi.fn() }));
+vi.mock('@/server/modules/ModelRuntime', () => ({ initModelRuntimeFromDeploymentConfig: vi.fn() }));
 
 vi.mock('model-bank', async (importOriginal) => {
   const actual = await importOriginal<typeof ModelBankModule>();
@@ -180,8 +190,23 @@ const connectorOf = (over: Record<string, unknown>) => ({
   ...over,
 });
 
-const installedPluginsArg = () =>
-  mockCreateServerAgentToolsEngine.mock.calls[0][0].installedPlugins as any[];
+// Under ACP the run's tool surface is `builtinToolSpecs` on the dispatch
+// input; connector-backed plugins are no longer resolved into it at all.
+const builtinSpecIds = () =>
+  (mockDispatchHeteroAgent.mock.calls[0][2].builtinToolSpecs as any[]).map(
+    (spec) => spec.identifier,
+  );
+
+// Connector/MCP-resolved tools ride a separate `externalToolMounts` record
+// keyed by candidate identifier — disjoint from `builtinToolSpecs`.
+const externalMounts = () =>
+  (mockDispatchHeteroAgent.mock.calls[0][2].externalToolMounts ?? {}) as Record<
+    string,
+    Pick<ExternalToolSurfaceEntry, 'apis' | 'source'>
+  >;
+const externalMountIds = () => Object.keys(externalMounts());
+const externalMountToolNames = () =>
+  Object.values(externalMounts()).flatMap((entry) => entry.apis.map((api) => api.name));
 
 describe('AiAgentService.execAgent - connector/plugin overlap', () => {
   let service: AiAgentService;
@@ -204,10 +229,16 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
       systemRole: 'You are a helper',
     });
     mockPluginQuery.mockResolvedValue([pluginA]);
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
     service = new AiAgentService({} as any, 'test-user-id');
   });
 
-  it('keeps a same-named plugin when the connector is disabled', async () => {
+  it('ignores a same-named connector that is disabled', async () => {
     mockConnectorQueryByIdentifiers.mockResolvedValue([connectorOf({ isEnabled: false })]);
     mockConnectorToolQueryAll.mockResolvedValue([
       { permission: 'auto', toolName: 'x', userConnectorId: 'c1' },
@@ -215,26 +246,50 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(installedPluginsArg().some((p) => p.identifier === 'plugin-a')).toBe(true);
+    // 'plugin-a' is not a builtin tool — nothing mounts on the ACP surface.
+    // The connector store IS consulted now (external-tool discovery is the
+    // contract); a disabled connector stops before its tools are fetched.
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+    expect(builtinSpecIds()).not.toContain('plugin-a');
+    expect(mockConnectorQueryByIdentifiers).toHaveBeenCalledWith(['plugin-a'], 'agent-1');
+    expect(mockConnectorToolQueryAll).not.toHaveBeenCalled();
+    expect(externalMountIds()).not.toContain('plugin-a');
   });
 
-  it('keeps a same-named plugin when the connector has no synced tools', async () => {
+  it('ignores a same-named connector with no synced tools', async () => {
     mockConnectorQueryByIdentifiers.mockResolvedValue([connectorOf({ isEnabled: true })]);
     mockConnectorToolQueryAll.mockResolvedValue([]);
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(installedPluginsArg().some((p) => p.identifier === 'plugin-a')).toBe(true);
+    expect(builtinSpecIds()).not.toContain('plugin-a');
+    expect(mockConnectorQueryByIdentifiers).toHaveBeenCalledWith(['plugin-a'], 'agent-1');
+    // Enabled → the tool inventory is fetched and finds nothing to mount.
+    expect(mockConnectorToolQueryAll).toHaveBeenCalledWith(['c1']);
+    expect(externalMountIds()).not.toContain('plugin-a');
   });
 
-  it('replaces the plugin when the connector actually produces tools', async () => {
+  it('mounts a same-named connector tool as external, never as builtin', async () => {
     mockConnectorQueryByIdentifiers.mockResolvedValue([connectorOf({ isEnabled: true })]);
     mockConnectorToolQueryAll.mockResolvedValue([
-      { permission: 'auto', toolName: 'x', userConnectorId: 'c1' },
+      { permission: 'auto', toolName: 'connector-tool-x', userConnectorId: 'c1' },
     ]);
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' } as any);
 
-    expect(installedPluginsArg().some((p) => p.identifier === 'plugin-a')).toBe(false);
+    // The connector's synced tools DO mount — under the connector identifier —
+    // but only through the external surface (per-run MCP wire), and the
+    // installed-plugin path (empty manifest map) contributes nothing, so a
+    // connector row can no longer shadow or replace the plugin entry.
+    expect(mockConnectorQueryByIdentifiers).toHaveBeenCalledWith(['plugin-a'], 'agent-1');
+    expect(mockConnectorToolQueryAll).toHaveBeenCalledWith(['c1']);
+    expect(externalMounts()['plugin-a']?.source).toBe('connector');
+    expect(externalMountToolNames()).toEqual(['connector-tool-x']);
+    const pluginASpec = (mockDispatchHeteroAgent.mock.calls[0][2].builtinToolSpecs as any[]).find(
+      (spec) => spec.identifier === 'plugin-a',
+    );
+    expect(pluginASpec?.apis.map((api: { name: string }) => api.name)).toEqual([
+      'connector-tool-x',
+    ]);
   });
 });

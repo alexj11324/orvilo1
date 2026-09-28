@@ -15,6 +15,7 @@ const autoRenameTopicTitleMock = vi.hoisted(() => vi.fn());
 const removeTopicMock = vi.hoisted(() => vi.fn());
 const updateTopicTitleMock = vi.hoisted(() => vi.fn());
 const useLocationMock = vi.hoisted(() => vi.fn());
+const dbMessagesMapMock = vi.hoisted(() => ({ value: {} as Record<string, unknown[]> }));
 
 vi.mock('@/business/client/hooks/useAuthorInfo', () => ({
   useAuthorInfo: () => ({ fullName: 'Miao Miao' }),
@@ -66,29 +67,33 @@ vi.mock('@/store/chat/selectors', () => ({
 }));
 
 vi.mock('@/store/chat', () => ({
-  useChatStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      activeAgentId: 'agent-1',
-      activeTopicId: 'topic-other-pane',
-      topics: {
-        'topic-1': {
-          favorite: false,
-          id: 'topic-1',
-          title: 'Topic 1',
-          updatedAt: '2026-05-27T00:15:00.000Z',
-          userId: 'user-1',
+  useChatStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        activeAgentId: 'agent-1',
+        activeTopicId: 'topic-other-pane',
+        topics: {
+          'topic-1': {
+            favorite: false,
+            id: 'topic-1',
+            title: 'Topic 1',
+            updatedAt: '2026-05-27T00:15:00.000Z',
+            userId: 'user-1',
+          },
+          'topic-other-pane': {
+            id: 'topic-other-pane',
+            title: 'Other pane topic',
+          },
         },
-        'topic-other-pane': {
-          id: 'topic-other-pane',
-          title: 'Other pane topic',
-        },
-      },
-      autoRenameTopicTitle: autoRenameTopicTitleMock,
-      favoriteTopic: favoriteTopicMock,
-      removeTopic: removeTopicMock,
-      updateTopicTitle: updateTopicTitleMock,
-      workingDirectory: '/tmp/workdir',
-    }),
+        autoRenameTopicTitle: autoRenameTopicTitleMock,
+        favoriteTopic: favoriteTopicMock,
+        removeTopic: removeTopicMock,
+        updateTopicTitle: updateTopicTitleMock,
+        workingDirectory: '/tmp/workdir',
+      }),
+    // `useChatStore.getState()` is used by the transcript-copy menu item.
+    { getState: () => ({ dbMessagesMap: dbMessagesMapMock.value }) },
+  ),
 }));
 
 vi.mock('@/store/global', () => ({
@@ -141,6 +146,35 @@ describe('Conversation header action menu', () => {
     expect(copiedText).toBe('topic-1');
     expect(document.querySelector('textarea')).toBeNull();
   });
+  it('copies the active topic transcript as markdown', async () => {
+    useLocationMock.mockReturnValue({ pathname: '/agent/agent-1' });
+    dbMessagesMapMock.value = {
+      'main_agent-1_topic-1': [
+        { content: 'First question', id: 'm1', role: 'user' },
+        { content: 'First answer', id: 'm2', role: 'assistant' },
+        // Internal rows are skipped by the transcript builder.
+        { content: '{"tool":true}', id: 'm3', role: 'tool' },
+      ],
+    };
+    vi.spyOn(navigator, 'clipboard', 'get').mockReturnValue(undefined as never);
+    let copiedText: string | undefined;
+    const copy = vi.fn(() => {
+      copiedText = (document.activeElement as HTMLTextAreaElement).value;
+      return true;
+    });
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: copy });
+    const { result } = renderHook(() => useMenu());
+    const item = result.current
+      .menuItems()
+      .find((item) => isActionItem(item) && item.key === 'copyAsMarkdown');
+    if (!isActionItem(item)) throw new Error('Expected copyAsMarkdown menu item');
+
+    await item.onClick?.();
+
+    expect(copiedText).toBe('First question\n\nFirst answer');
+    dbMessagesMapMock.value = {};
+  });
+
   it('includes the desktop popup-window action for the active topic', () => {
     useLocationMock.mockReturnValue({ pathname: '/agent/agent-1' });
 

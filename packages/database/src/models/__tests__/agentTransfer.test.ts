@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import {
-  agentBotProviders,
   agentCronJobs,
   agentDocuments,
   agents,
@@ -383,13 +382,6 @@ describe('AgentModel.transferAgent', () => {
       updatedAt: originalUpdatedAt,
       userId,
     });
-    await serverDB.insert(agentBotProviders).values({
-      agentId: agent.id,
-      applicationId: 'timestamp-app',
-      platform: 'discord',
-      updatedAt: originalUpdatedAt,
-      userId,
-    });
 
     await model.transferAgent(agent.id, wsId1, userId, 'private');
 
@@ -435,13 +427,9 @@ describe('AgentModel.transferAgent', () => {
         .select({ updatedAt: taskComments.updatedAt })
         .from(taskComments)
         .where(eq(taskComments.id, 'timestamp-comment')),
-      serverDB
-        .select({ updatedAt: agentBotProviders.updatedAt })
-        .from(agentBotProviders)
-        .where(eq(agentBotProviders.agentId, agent.id)),
     ]);
 
-    expect(timestampRows).toHaveLength(12);
+    expect(timestampRows).toHaveLength(11);
     for (const [row] of timestampRows) expect(row.updatedAt).toEqual(originalUpdatedAt);
 
     const [transferredAgent] = await serverDB
@@ -618,28 +606,6 @@ describe('AgentModel.transferAgent', () => {
       }
     },
   );
-
-  it('should update bot providers', async () => {
-    const model = new AgentModel(serverDB, userId);
-    const agent = await model.create({ title: 'Agent' });
-
-    await serverDB.insert(agentBotProviders).values({
-      agentId: agent.id,
-      userId,
-      platform: 'discord',
-      applicationId: 'app-1',
-      credentials: 'encrypted-creds',
-    });
-
-    await model.transferAgent(agent.id, wsId1, userId);
-
-    const [bot] = await serverDB
-      .select()
-      .from(agentBotProviders)
-      .where(eq(agentBotProviders.agentId, agent.id));
-    expect(bot.workspaceId).toBe(wsId1);
-    expect(bot.userId).toBe(userId);
-  });
 
   it('should transfer tasks assigned to the agent and their child records', async () => {
     const model = new AgentModel(serverDB, userId, wsId1);

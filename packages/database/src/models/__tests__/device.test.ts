@@ -200,12 +200,13 @@ describe('DeviceModel', () => {
           workspaceId: wsId,
         },
       ]);
-      // a personal device must not appear
+      // the owner's unfiled device follows them into the workspace view —
+      // activating a workspace never hides their own enrollments
       await deviceModel.register({ deviceId: 'p1', identitySource: 'machine-id' });
 
       const wsModel = new DeviceModel(serverDB, userId, wsId);
       const ids = (await wsModel.queryWorkspaceDevices()).map((d) => d.deviceId).sort();
-      expect(ids).toEqual(['w1', 'w2']);
+      expect(ids).toEqual(['p1', 'w1', 'w2']);
     });
 
     it('queryWorkspaceDevices returns [] without workspace context', async () => {

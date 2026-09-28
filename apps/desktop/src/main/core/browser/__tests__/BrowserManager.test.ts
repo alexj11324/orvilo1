@@ -370,7 +370,7 @@ describe('BrowserManager', () => {
 
       await manager.initializeBrowsers();
 
-      expect(manager.browsers.get('app')?.options.path).toBe('/desktop-onboarding');
+      expect(manager.browsers.get('app')?.options.path).toBe('/onboarding');
       expect(mockApp.storeManager.set).toHaveBeenCalledWith('pendingRestoreRoute', '');
     });
 
@@ -443,7 +443,7 @@ describe('BrowserManager', () => {
 
       await manager.initializeBrowsers();
 
-      expect(manager.browsers.get('app')?.options.path).toBe('/desktop-onboarding');
+      expect(manager.browsers.get('app')?.options.path).toBe('/onboarding');
     });
   });
 

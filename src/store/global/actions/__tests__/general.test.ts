@@ -100,14 +100,22 @@ describe('generalActionSlice', () => {
       const { result } = renderHook(() => useGlobalStore());
       const saveToLocalStorageSpy = vi.spyOn(result.current.statusStorage, 'saveToLocalStorage');
 
+      // Start away from the default: `list` is what a fresh store already
+      // holds, and writing a value that is already there is a no-op.
       act(() => {
         useGlobalStore.setState({ isStatusInit: true });
         result.current.updateSystemStatus({ taskListViewMode: 'kanban' });
       });
 
-      expect(result.current.status.taskListViewMode).toBe('kanban');
+      saveToLocalStorageSpy.mockClear();
+
+      act(() => {
+        result.current.updateSystemStatus({ taskListViewMode: 'list' });
+      });
+
+      expect(result.current.status.taskListViewMode).toBe('list');
       expect(saveToLocalStorageSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ taskListViewMode: 'kanban' }),
+        expect.objectContaining({ taskListViewMode: 'list' }),
       );
     });
 

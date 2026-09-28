@@ -1585,11 +1585,11 @@ describe('MessageModel Query Tests', () => {
       expect(ownTranscript.items.map((item) => item.id)).toEqual(['creator-direct-msg']);
     });
 
-    it('keeps countByTopic working for the visitor turn cap when the runtime opts in', async () => {
-      // The per-topic turn cap depends on counting visitor messages, and after
-      // the ownership() flip the default scope excludes visitor rows. The
-      // share runtime (`reserveShareVisitorTurn` in
-      // `shareVisitorAbuseGuards.ts`) constructs `MessageModel` with
+    it('keeps countByTopic working when the runtime opts in', async () => {
+      // The share runtime historically counted visitor messages for the
+      // per-topic turn cap, and after the ownership() flip the default scope
+      // excludes visitor rows. Runtime paths that must still see a persisted
+      // visitor transcript construct `MessageModel` with
       // `includeShareVisitor: true`; mirror that opt-in here.
       const defaultCount = await messageModel.countByTopic({
         role: 'user',

@@ -16,17 +16,20 @@ describe('workspace utils', () => {
       expect(built.params).toStrictEqual(['user-1']);
     });
 
-    it('scopes workspace reads with visibility filter when the column is present', () => {
+    it("scopes workspace reads with visibility filter plus the caller's unfiled rows", () => {
       const condition = buildWorkspaceWhere({ userId: 'user-1', workspaceId: 'ws-1' }, agents);
       const built = new PgDialect().sqlToQuery(condition);
 
       // Workspace mode: every member sees public rows; private rows are
       // restricted to their creator. NULL is treated as public for backwards
       // compatibility with rows that pre-date the `visibility` column.
+      // `OR (workspace_id IS NULL AND user_id = me)` — the caller's own
+      // unfiled rows follow them into the workspace; other members never
+      // match that branch.
       expect(built.sql).toBe(
-        '("agents"."workspace_id" = $1 and ("agents"."visibility" is null or "agents"."visibility" = $2 or ("agents"."visibility" = $3 and "agents"."user_id" = $4)))',
+        '(("agents"."workspace_id" = $1 and ("agents"."visibility" is null or "agents"."visibility" = $2 or ("agents"."visibility" = $3 and "agents"."user_id" = $4))) or ("agents"."workspace_id" is null and "agents"."user_id" = $5))',
       );
-      expect(built.params).toStrictEqual(['ws-1', 'public', 'private', 'user-1']);
+      expect(built.params).toStrictEqual(['ws-1', 'public', 'private', 'user-1', 'user-1']);
     });
 
     it('omits visibility filter when the cols object has no visibility column', () => {
@@ -36,8 +39,10 @@ describe('workspace utils', () => {
       );
       const built = new PgDialect().sqlToQuery(condition);
 
-      expect(built.sql).toBe('"agents"."workspace_id" = $1');
-      expect(built.params).toStrictEqual(['ws-1']);
+      expect(built.sql).toBe(
+        '("agents"."workspace_id" = $1 or ("agents"."workspace_id" is null and "agents"."user_id" = $2))',
+      );
+      expect(built.params).toStrictEqual(['ws-1', 'user-1']);
     });
 
     it('drops the caller-private branch when the executing agent is public', () => {
@@ -60,6 +65,23 @@ describe('workspace utils', () => {
       expect(built.params).toStrictEqual(['ws-1', 'public']);
     });
 
+    it('keeps unfiled rows out for a public executing agent', () => {
+      // The adopt-on-read branch is caller-private by construction; a public
+      // agent must not inherit it even though it runs under the caller's
+      // session.
+      const condition = buildWorkspaceWhere(
+        {
+          callerAgentVisibility: 'public',
+          userId: 'user-1',
+          workspaceId: 'ws-1',
+        },
+        agents,
+      );
+      const built = new PgDialect().sqlToQuery(condition);
+
+      expect(built.sql).not.toContain('"workspace_id" is null');
+    });
+
     it('keeps the caller-private branch when the executing agent is private', () => {
       // Private agents run under their owner's session — they should retain
       // read access to that owner's private rows.
@@ -74,9 +96,9 @@ describe('workspace utils', () => {
       const built = new PgDialect().sqlToQuery(condition);
 
       expect(built.sql).toBe(
-        '("agents"."workspace_id" = $1 and ("agents"."visibility" is null or "agents"."visibility" = $2 or ("agents"."visibility" = $3 and "agents"."user_id" = $4)))',
+        '(("agents"."workspace_id" = $1 and ("agents"."visibility" is null or "agents"."visibility" = $2 or ("agents"."visibility" = $3 and "agents"."user_id" = $4))) or ("agents"."workspace_id" is null and "agents"."user_id" = $5))',
       );
-      expect(built.params).toStrictEqual(['ws-1', 'public', 'private', 'user-1']);
+      expect(built.params).toStrictEqual(['ws-1', 'public', 'private', 'user-1', 'user-1']);
     });
 
     it('leaves the standard filter in place when callerAgentVisibility is null (unresolved)', () => {
@@ -93,9 +115,9 @@ describe('workspace utils', () => {
       const built = new PgDialect().sqlToQuery(condition);
 
       expect(built.sql).toBe(
-        '("agents"."workspace_id" = $1 and ("agents"."visibility" is null or "agents"."visibility" = $2 or ("agents"."visibility" = $3 and "agents"."user_id" = $4)))',
+        '(("agents"."workspace_id" = $1 and ("agents"."visibility" is null or "agents"."visibility" = $2 or ("agents"."visibility" = $3 and "agents"."user_id" = $4))) or ("agents"."workspace_id" is null and "agents"."user_id" = $5))',
       );
-      expect(built.params).toStrictEqual(['ws-1', 'public', 'private', 'user-1']);
+      expect(built.params).toStrictEqual(['ws-1', 'public', 'private', 'user-1', 'user-1']);
     });
 
     it('ignores callerAgentVisibility in personal mode (no workspaceId)', () => {

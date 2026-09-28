@@ -10,7 +10,6 @@ import {
 import { createTRPCReact } from '@trpc/react-query';
 import { observable } from '@trpc/server/observable';
 import debug from 'debug';
-import { type ModelProvider } from 'model-bank';
 import superjson from 'superjson';
 
 import { isDesktop } from '@/const/version';
@@ -91,27 +90,21 @@ const errorHandlingLink: TRPCLink<LambdaRouter> = () => {
                     });
                   }
                 } else {
-                  // Non-market 401: handle as before (Orvilo session expired)
+                  // Non-market 401: the Orvilo session expired. Emit the shared
+                  // event — each platform's session-auth adapter owns the
+                  // recovery (web redirects to /signin, the desktop modal
+                  // restarts the system-browser OIDC round trip).
                   const now = Date.now();
                   if (now - last401Time > MIN_401_INTERVAL) {
                     last401Time = now;
-                    // Desktop app doesn't have the web auth routes like `/signin`,
-                    // so skip the login redirect/notification there.
-                    if (!isDesktop) {
-                      const { getUserStoreState } = await import('@/store/user/store');
-                      const { isSignedIn, logout } = getUserStoreState();
-                      // If user is still marked as signed in but got 401,
-                      // session is invalid - clear client state first
-                      if (isSignedIn) {
-                        const params = new URLSearchParams({ callbackUrl: location.toString() });
-                        params.set('reason', 'sessionExpired');
-                        await logout({ redirectTo: `/signin?${params.toString()}` });
-                      } else {
-                        const { loginRequired } =
-                          await import('@/components/Error/loginRequiredNotification');
-                        loginRequired.redirect({ reason: 'sessionExpired' });
-                      }
-                    }
+                    const { sessionAuthEvents } =
+                      await import('@/layout/AuthProvider/SessionAuth/events');
+                    sessionAuthEvents.emit('session-auth-expired', {
+                      path: op.path,
+                      reason: `trpc ${op.path} -> 401`,
+                      source: 'trpc',
+                      timestamp: now,
+                    });
                   }
                 }
                 // Mark error as non-retryable to prevent SWR infinite retry loop
@@ -164,20 +157,7 @@ const linkOptions = {
     // dynamic import to avoid circular dependency
     const { createHeaderWithAuth } = await import('@/services/_auth');
 
-    let provider: ModelProvider | undefined;
-    // for image page, we need to get the provider from the store
-    log('Getting provider from store for image page: %s', location.pathname);
-    if (location.pathname === '/image') {
-      const { getImageStoreState } = await import('@/store/image');
-      const { imageGenerationConfigSelectors } =
-        await import('@/store/image/slices/generationConfig/selectors');
-      provider = imageGenerationConfigSelectors.provider(getImageStoreState()) as ModelProvider;
-      log('Getting provider from store for image page: %s', provider);
-    }
-
-    // Only include provider in JWT for image operations
-    // For other operations (like knowledge base embedding), let server use its own config
-    const headers = await createHeaderWithAuth(provider ? { provider } : undefined);
+    const headers = await createHeaderWithAuth();
 
     // Let business layer contribute extra headers (e.g. workspace context in Cloud).
     // Community ships an empty stub at this slot.
@@ -248,15 +228,17 @@ export const lambdaClient = createTRPCClient<LambdaRouter>({
  * from the personal settings page — pin the workspace header per client
  * instead. The override runs after the business headers merge, so it wins.
  */
-export const createWorkspaceLambdaClient = (workspaceId: string) => {
+export const createWorkspaceLambdaClient = (workspaceId: string | null) => {
   const scopedLinkOptions = {
     ...linkOptions,
-    headers: async () => ({
-      ...(await linkOptions.headers()),
-      // Same contract as the cloud business headers slot / the server's
-      // `WORKSPACE_ID_HEADER` (src/app/(backend)/webapi/_utils/workspace.ts).
-      'X-Workspace-Id': workspaceId,
-    }),
+    headers: async () => {
+      const headers = { ...(await linkOptions.headers()) } as Record<string, string>;
+      // Override the currently active workspace, including an explicit
+      // personal scope after the user navigates into a workspace.
+      if (workspaceId) headers['X-Workspace-Id'] = workspaceId;
+      else delete headers['X-Workspace-Id'];
+      return headers;
+    },
   };
   return createTRPCClient<LambdaRouter>({
     links: [

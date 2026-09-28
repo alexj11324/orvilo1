@@ -3,6 +3,8 @@
 import { Block, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { MessagesSquare } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +20,11 @@ import { useAgentStore } from '@/store/agent';
 
 import { lessonSectionLabel } from '../helpers';
 import { useExpertiseDomain, useExpertiseLesson } from '../hooks';
+
+// `.fromNow()` below needs the plugin. Extending here rather than relying on `src/initialize`
+// keeps the module renderable on its own — the same thing `ApiKey.tsx` and
+// `AgentDocumentsGroup.tsx` do. `dayjs.extend` is idempotent.
+dayjs.extend(relativeTime);
 
 const styles = createStaticStyles(({ css }) => ({
   body: css`
@@ -126,6 +133,23 @@ const LessonDetail = memo(() => {
                       })}
                     </Text>
                     {data.lesson.layer && <Tag>{data.lesson.layer}</Tag>}
+                    {/* Only worth a tag when it is NOT active: the list only ever shows
+                        active rules, so this is the stale-deep-link case. */}
+                    {data.lesson.status !== 'active' && (
+                      <Tag color={'orange'}>{t(`rules.detail.status.${data.lesson.status}`)}</Tag>
+                    )}
+                    {/* The real revision counter, not an invented version number — S60 forbids
+                        faking one, and this table has the chain to back it up. */}
+                    {data.lesson.currentRevision > 1 && (
+                      <Text fontSize={12} type={'secondary'}>
+                        {t('rules.detail.revision', { revision: data.lesson.currentRevision })}
+                      </Text>
+                    )}
+                    <Text fontSize={12} type={'secondary'}>
+                      {t('rules.detail.updatedAt', {
+                        time: dayjs(data.lesson.updatedAt).fromNow(),
+                      })}
+                    </Text>
                   </Flexbox>
                   {domainError && (
                     <Text fontSize={12.5} type={'danger'}>

@@ -95,6 +95,8 @@ export const isAnonymousScope = (scope: string): boolean => scope.startsWith(`${
 const isIdentityResolved = (s: UserStore): boolean =>
   isDesktop ? Boolean(s.isIdentityResolved) : Boolean(authSelectors.isLoaded(s));
 
+export { isIdentityResolved };
+
 /**
  * The effective cache scope for the *current* moment.
  *

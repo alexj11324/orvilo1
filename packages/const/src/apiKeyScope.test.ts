@@ -100,9 +100,6 @@ describe('requiredApiKeyScopeForTrpc', () => {
     expect(requiredApiKeyScopeForTrpc('aiChat.outputJSON', 'mutation')).toEqual({
       scopes: ['model:invoke'],
     });
-    expect(requiredApiKeyScopeForTrpc('image.createImage', 'mutation')).toEqual({
-      scopes: ['model:invoke'],
-    });
   });
 
   it('stacks procedure-level extra scopes on the namespace rule', () => {
@@ -116,10 +113,6 @@ describe('requiredApiKeyScopeForTrpc', () => {
     // agent-run execution needs the full chat + model tier on top of agent:write
     expect(requiredApiKeyScopeForTrpc('aiAgent.execAgent', 'mutation')).toEqual({
       scopes: ['agent:write', 'chat:write', 'model:invoke'],
-    });
-    // provider connectivity test sends a real model request
-    expect(requiredApiKeyScopeForTrpc('aiProvider.checkProviderConnectivity', 'mutation')).toEqual({
-      scopes: ['model:write', 'model:invoke'],
     });
     // MCP tool execution needs agent:write on top of the model tier
     expect(requiredApiKeyScopeForTrpc('mcp.callTool', 'mutation')).toEqual({
@@ -137,6 +130,9 @@ describe('requiredApiKeyScopeForTrpc', () => {
 
   it('blocks sensitive namespaces for restricted keys', () => {
     expect(requiredApiKeyScopeForTrpc('apiKey.createApiKey', 'mutation')).toEqual({
+      blocked: true,
+    });
+    expect(requiredApiKeyScopeForTrpc('linearImport.start', 'mutation')).toEqual({
       blocked: true,
     });
     expect(requiredApiKeyScopeForTrpc('subscription.getSubscription', 'query')).toEqual({
@@ -175,13 +171,52 @@ describe('requiredApiKeyScopeForTrpc', () => {
       blocked: true,
     });
     // the rest of the market surface keeps its agent scopes
-    expect(requiredApiKeyScopeForTrpc('market.getAgentsByPlugin', 'query')).toEqual({
+    expect(requiredApiKeyScopeForTrpc('market.getMcpDetail', 'query')).toEqual({
       scopes: ['agent:read'],
     });
   });
 
   it('fails closed on unknown namespaces', () => {
     expect(requiredApiKeyScopeForTrpc('brandNewRouter.doThing', 'mutation')).toEqual({
+      blocked: true,
+    });
+  });
+
+  it('categorizes workAttention as personal attention with agent extras', () => {
+    expect(requiredApiKeyScopeForTrpc('workAttention.feed', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.feedSummary', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.favoriteList', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.subscribe', 'mutation')).toEqual({
+      scopes: ['user:write'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.myWork', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.query', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.count', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.facet', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.search', 'query')).toEqual({
+      scopes: ['user:read', 'agent:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.savedViewCreate', 'mutation')).toEqual({
+      scopes: ['user:write', 'agent:write'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.triage', 'mutation')).toEqual({
+      scopes: ['user:write', 'agent:write'],
+    });
+    expect(requiredApiKeyScopeForTrpc('workAttention.decide', 'mutation')).toEqual({
       blocked: true,
     });
   });

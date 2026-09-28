@@ -17,8 +17,8 @@ export const resolveNavPanelKey = (
       return grandchildSegment === 'docs' ? 'agent-docs' : 'agent';
     }
 
-    case 'eval': {
-      return childSegment === 'bench' ? 'evalBench' : 'eval';
+    case 'community': {
+      return 'discover';
     }
 
     case 'group': {
@@ -33,8 +33,8 @@ export const resolveNavPanelKey = (
       return 'memory';
     }
 
-    case 'project': {
-      return 'project';
+    case 'page': {
+      return 'page';
     }
 
     case 'resource': {

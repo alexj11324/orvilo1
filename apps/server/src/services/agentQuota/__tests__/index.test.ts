@@ -146,31 +146,6 @@ describe('AgentQuotaService.listLatestReadings', () => {
       expect.objectContaining({ limitType: 'weekly_scoped', resetsAt: null, scopeKey: 'Fable' }),
     );
   });
-
-  it('counts a rolled-over session window as free when balancing accounts', async () => {
-    // Left at 100% six hours ago: that window has since reset, so the account
-    // is idle — not benched behind an exhausted session.
-    const account = await service.ingestSnapshot({
-      identity,
-      provider: 'claude-code',
-      readings: [
-        weeklyReading,
-        {
-          capturedAt: now - 6 * HOUR,
-          limitType: 'session',
-          resetsAt: now - HOUR,
-          scopeKey: '',
-          utilization: 100,
-        },
-      ],
-    });
-
-    const [load] = await service.resolveAccountLoads([account.id], now);
-
-    expect(load.sessionUtil).toBe(0);
-    expect(load.rateLimitedUntil).toBeNull();
-    expect(load.weeklyUtil).toBe(21);
-  });
 });
 
 describe('AgentQuotaService.recordUsage', () => {

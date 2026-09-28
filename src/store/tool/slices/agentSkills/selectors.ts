@@ -1,4 +1,4 @@
-import type { OrviloToolMeta, SkillItem, SkillListItem } from '@orvilo/types';
+import type { OrviloToolMeta, SkillListItem } from '@orvilo/types';
 
 import type { ToolStoreState } from '../../initialState';
 
@@ -14,11 +14,6 @@ const getAgentSkillByIdentifier =
   (identifier: string) =>
   (s: ToolStoreState): SkillListItem | undefined =>
     (s.agentSkills || []).find((skill) => skill.identifier === identifier);
-
-const getAgentSkillDetail =
-  (id: string) =>
-  (s: ToolStoreState): SkillItem | undefined =>
-    s.agentSkillDetailMap?.[id];
 
 const isAgentSkill =
   (identifier: string) =>
@@ -45,7 +40,6 @@ const agentSkillMetaList = (s: ToolStoreState): OrviloToolMeta[] =>
 export const agentSkillsSelectors = {
   agentSkillMetaList,
   getAgentSkillByIdentifier,
-  getAgentSkillDetail,
   getAgentSkills,
   getMarketAgentSkills,
   getUserAgentSkills,

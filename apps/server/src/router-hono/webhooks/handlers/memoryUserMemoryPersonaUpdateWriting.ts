@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getServerDB } from '@/database/server';
 import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import { MemoryExtractionWorkflowService } from '@/server/services/memory/userMemory/extract';
+import { filterMemoryExtractionEnabledUsers } from '@/server/services/memory/userMemory/gate';
 import {
   buildUserPersonaJobInput,
   UserPersonaService,
@@ -52,9 +53,24 @@ export const memoryUserMemoryPersonaUpdateWriting = async (c: Context) => {
       return c.json({ error: 'userId or userIds is required' }, 400);
     }
 
+    // Unified production gate: persona writing is memory production, so users
+    // who disabled memory are dropped before any workflow or inline compose.
+    const { enabledUserIds, skippedUserIds } = await filterMemoryExtractionEnabledUsers(
+      params.userIds,
+    );
+    if (enabledUserIds.length === 0) {
+      return c.json(
+        {
+          message: 'Every target user has memory disabled; nothing scheduled.',
+          skippedUserIds,
+        },
+        200,
+      );
+    }
+
     if (params.mode === 'workflow') {
       const results = await Promise.all(
-        params.userIds.map(async (userId) => {
+        enabledUserIds.map(async (userId) => {
           const { workflowRunId } = await MemoryExtractionWorkflowService.triggerPersonaUpdate(
             userId,
             params.baseUrl,
@@ -65,7 +81,10 @@ export const memoryUserMemoryPersonaUpdateWriting = async (c: Context) => {
         }),
       );
 
-      return c.json({ message: 'User persona update scheduled via workflow.', results }, 202);
+      return c.json(
+        { message: 'User persona update scheduled via workflow.', results, skippedUserIds },
+        202,
+      );
     }
 
     const db = await getServerDB();
@@ -73,7 +92,7 @@ export const memoryUserMemoryPersonaUpdateWriting = async (c: Context) => {
     const service = new UserPersonaService(db);
     const results = [];
 
-    for (const userId of params.userIds) {
+    for (const userId of enabledUserIds) {
       const context = await buildUserPersonaJobInput(db, userId);
       const result = await service.composeWriting({ ...context, userId });
       results.push({ userId, ...result });

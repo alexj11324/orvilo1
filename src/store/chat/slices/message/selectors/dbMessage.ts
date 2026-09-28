@@ -1,7 +1,7 @@
 import {
   extractActivatedSkillsFromMessages,
   extractTodosFromMessages,
-} from '@orvilo/agent-runtime';
+} from '@orvilo/agent-execution';
 import { OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { type StepActivatedSkill, type StepContextTodos, type UIChatMessage } from '@orvilo/types';
 

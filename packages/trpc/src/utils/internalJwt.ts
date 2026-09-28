@@ -13,7 +13,7 @@ export const HETERO_OPERATION_JWT_AUDIENCE = 'urn:orvilo:hetero-operation';
 export const HETERO_OPERATION_JWT_PURPOSE = 'hetero-operation';
 
 export type HeteroOperationCapability =
-  'hetero:finish' | 'hetero:ingest' | 'hetero:intervention:read' | 'model:invoke';
+  'hetero:finish' | 'hetero:ingest' | 'hetero:intervention:read' | 'hetero:tool:exec';
 
 export interface HeteroOperationJwtClaims {
   aud: typeof HETERO_OPERATION_JWT_AUDIENCE;
@@ -185,9 +185,15 @@ export const validateHeteroOperationClaims = (
     typeof payload.exp !== 'number' ||
     !Array.isArray(capabilities) ||
     !capabilities.every((capability) =>
-      ['model:invoke', 'hetero:ingest', 'hetero:finish', 'hetero:intervention:read'].includes(
-        capability as string,
-      ),
+      [
+        // `model:invoke` remains accepted on read so tokens minted before the
+        // relay retirement stay valid until they expire.
+        'model:invoke',
+        'hetero:ingest',
+        'hetero:finish',
+        'hetero:intervention:read',
+        'hetero:tool:exec',
+      ].includes(capability as string),
     ) ||
     (payload.model !== undefined && typeof payload.model !== 'string') ||
     (payload.provider_id !== undefined && typeof payload.provider_id !== 'string') ||

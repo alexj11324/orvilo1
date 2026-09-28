@@ -73,6 +73,8 @@ class WorkService {
     cursor?: string | null;
     limit?: number;
     originAgentId?: string | null;
+    /** Narrow to the Works a project is associated with (`project_works`). */
+    projectId?: string | null;
     provider?: WorkSkillProvider;
     type?: WorkType | null;
     visibility?: WorkVisibility;

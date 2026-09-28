@@ -5,8 +5,8 @@ import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
 
 import { lambdaClient } from '@/libs/trpc/client';
-import { type StreamEvent } from '@/services/agentRuntime';
-import { agentRuntimeClient } from '@/services/agentRuntime';
+import { type StreamEvent } from '@/services/agentExecution';
+import { agentStreamClient } from '@/services/agentExecution';
 import { type ChatStore } from '@/store/chat/store';
 import { type StoreSetter } from '@/store/types';
 import { setNamespace } from '@/utils/storeDebug';
@@ -192,7 +192,7 @@ export class ChatGroupChatActionImpl {
 
       // 11. Connect to SSE stream
       // Server will automatically close the connection after sending agent_runtime_end event
-      const eventSource = agentRuntimeClient.createStreamConnection(result.operationId, {
+      const eventSource = agentStreamClient.createStreamConnection(result.operationId, {
         includeHistory: false,
         onConnect: () => {
           log('Stream connected to %s', result.operationId);

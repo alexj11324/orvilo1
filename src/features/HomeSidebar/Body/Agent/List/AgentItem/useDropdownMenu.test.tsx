@@ -24,7 +24,6 @@ const mocks = vi.hoisted(() => ({
   },
   navigate: vi.fn(),
   openAgentInNewWindow: vi.fn(),
-  setSidebarItemVisible: vi.fn(),
   transferMenuItems: null as null | { key: string; label: string }[],
 }));
 
@@ -66,13 +65,6 @@ vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
 }));
 
 vi.mock('@/features/VisibilityConfirmContent', () => ({ default: () => null }));
-
-vi.mock('../../useSidebarItemVisibility', () => ({
-  useSidebarItemVisibility: () => ({
-    isSidebarItemVisible: () => true,
-    setSidebarItemVisible: mocks.setSidebarItemVisible,
-  }),
-}));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
@@ -166,7 +158,6 @@ describe('useAgentDropdownMenu', () => {
 
     expect(getMenuKeys(result.current())).toEqual([
       'pin',
-      'hideFromSidebar',
       'openInNewWindow',
       'duplicate',
       'moveGroup',
@@ -253,33 +244,7 @@ describe('useAgentDropdownMenu', () => {
       }),
     );
 
-    expect(getMenuKeys(result.current())).toEqual(['hideFromSidebar', 'openInNewWindow']);
-  });
-
-  it('hides an Agent through the caller sidebar preference', async () => {
-    const { result } = renderHook(() =>
-      useAgentDropdownMenu({
-        anchor: null,
-        group: undefined,
-        id: 'agent-1',
-        openCreateGroupModal: vi.fn(),
-        pinned: false,
-        title: 'Public Agent',
-        userId: 'member-1',
-        visibility: 'public',
-      }),
-    );
-
-    const hideItem = (result.current() ?? []).find(
-      (item) => item && typeof item === 'object' && item.key === 'hideFromSidebar',
-    );
-    if (!hideItem || !('onClick' in hideItem) || !hideItem.onClick) {
-      throw new Error('Expected hide-from-sidebar menu item');
-    }
-
-    await hideItem.onClick({ domEvent: { stopPropagation: vi.fn() } } as never);
-
-    expect(mocks.setSidebarItemVisible).toHaveBeenCalledWith('agent-1', false);
+    expect(getMenuKeys(result.current())).toEqual(['openInNewWindow']);
   });
 
   it('tells the user to wait when delete is refused by a pending history migration', async () => {
@@ -359,7 +324,6 @@ describe('useAgentDropdownMenu', () => {
 
     expect(getMenuLayout(result.current())).toEqual([
       'pin',
-      'hideFromSidebar',
       'openInNewWindow',
       'divider',
       'rename',

@@ -2,13 +2,13 @@ import { act, renderHook } from '@testing-library/react';
 import { type Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { chatService } from '@/services/chat';
+import { aiChatService } from '@/services/aiChat';
 import { messageService } from '@/services/message';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
 import { useChatStore } from '../../store';
 
-// Mock messageService and chatService
+// Mock messageService and aiChatService
 vi.mock('@/services/message', () => ({
   messageService: {
     updateMessageTTS: vi.fn(),
@@ -17,9 +17,9 @@ vi.mock('@/services/message', () => ({
   },
 }));
 
-vi.mock('@/services/chat', () => ({
-  chatService: {
-    fetchPresetTaskResult: vi.fn(),
+vi.mock('@/services/aiChat', () => ({
+  aiChatService: {
+    generateJSON: vi.fn(),
   },
 }));
 
@@ -72,13 +72,15 @@ describe('ChatEnhanceAction', () => {
       });
 
       // First call for language detection
-      (chatService.fetchPresetTaskResult as Mock).mockImplementationOnce(async ({ onFinish }) => {
-        if (onFinish) await onFinish(detectedLang);
+      (aiChatService.generateJSON as Mock).mockResolvedValueOnce({
+        data: { locale: detectedLang },
+        tracingId: 'tracing-1',
       });
 
       // Second call for translation
-      (chatService.fetchPresetTaskResult as Mock).mockImplementationOnce(async ({ onFinish }) => {
-        if (onFinish) await onFinish(translatedText);
+      (aiChatService.generateJSON as Mock).mockResolvedValueOnce({
+        data: { translation: translatedText },
+        tracingId: 'tracing-2',
       });
 
       const { result } = renderHook(() => useChatStore());
@@ -87,8 +89,12 @@ describe('ChatEnhanceAction', () => {
         await result.current.translateMessage(messageId, targetLang);
       });
 
-      expect(messageService.updateMessageTranslate).toHaveBeenCalled();
-      expect(chatService.fetchPresetTaskResult).toHaveBeenCalledTimes(2);
+      expect(aiChatService.generateJSON).toHaveBeenCalledTimes(2);
+      expect(messageService.updateMessageTranslate).toHaveBeenLastCalledWith(messageId, {
+        content: translatedText,
+        from: detectedLang,
+        to: targetLang,
+      });
     });
   });
 

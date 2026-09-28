@@ -10,12 +10,14 @@ import { Command } from 'cmdk';
 import dayjs from 'dayjs';
 import {
   Brain,
-  ChevronRight,
   FileText,
+  Filter,
   Folder,
   Library,
+  ListTodo,
   MessageCircle,
   MessageSquare,
+  MoreHorizontalIcon,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -23,38 +25,35 @@ import { memo, type ReactNode, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
-import { useCommandMenuContext } from '@/features/CommandMenu/CommandMenuContext';
+import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
+import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { useImageStore } from '@/store/image';
-import { generationTopicSelectors as imageGenerationTopicSelectors } from '@/store/image/slices/generationTopic/selectors';
-import { useVideoStore } from '@/store/video';
-import { generationTopicSelectors as videoGenerationTopicSelectors } from '@/store/video/slices/generationTopic/selectors';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import type { CommandMenuResultClick } from './analytics';
 import { CommandItem } from './components';
 import { styles } from './styles';
-import { type ValidSearchType } from './utils/queryParser';
+import type { CommandMenuSearchResult, CommandMenuWorkResult } from './types';
+import { groupSearchResults } from './utils/groupResults';
+import { isValidSearchType, type ValidSearchType } from './utils/queryParser';
+import { isActionableResult } from './utils/resultActions';
 import { createVisibleResultPositionMap } from './utils/visibleResultPosition';
+
+export type { CommandMenuSearchResult, CommandMenuWorkResult } from './types';
 
 interface SearchResultsProps {
   isLoading: boolean;
   onClose: () => void;
+  /** Open the result-action submenu for a task/project row (⋯ or →). */
+  onOpenResultActions: (result: CommandMenuWorkResult) => void;
   onResultClick: (input: CommandMenuResultClick) => void;
   onSetTypeFilter: (typeFilter: ValidSearchType | undefined) => void;
   onTypeFilterChange: () => void;
   onVisibleResultCountChange: (count: number) => void;
-  results: FtsSearchResult[];
+  results: CommandMenuSearchResult[];
   searchQuery: string;
   typeFilter: ValidSearchType | undefined;
-}
-
-interface LocalGenerationTopicResult {
-  createdAt: Date;
-  id: string;
-  title: string;
-  updatedAt: Date;
 }
 
 /**
@@ -64,6 +63,7 @@ const SearchResults = memo<SearchResultsProps>(
   ({
     isLoading,
     onClose,
+    onOpenResultActions,
     onResultClick,
     onSetTypeFilter,
     onTypeFilterChange,
@@ -73,18 +73,27 @@ const SearchResults = memo<SearchResultsProps>(
     typeFilter,
   }) => {
     const { t } = useTranslation('common');
-    const { t: tImage } = useTranslation('image');
-    const { t: tVideo } = useTranslation('video');
     const navigate = useWorkspaceAwareNavigate();
-    const { menuContext } = useCommandMenuContext();
-    const imageTopics = useImageStore(imageGenerationTopicSelectors.generationTopics);
-    const activeImageTopicId = useImageStore((s) => s.activeGenerationTopicId);
-    const videoTopics = useVideoStore(videoGenerationTopicSelectors.generationTopics);
-    const activeVideoTopicId = useVideoStore((s) => s.activeGenerationTopicId);
 
-    const handleNavigate = (result: FtsSearchResult, position: number) => {
+    const handleNavigate = (result: CommandMenuSearchResult, position: number) => {
       onResultClick({ position, resultType: result.type });
       switch (result.type) {
+        case 'task': {
+          navigate(taskDetailPath(result.id, undefined, result.title));
+          break;
+        }
+        case 'team': {
+          navigate(`/teams/${result.id}`);
+          break;
+        }
+        case 'project': {
+          navigate(`/project/${result.id}`);
+          break;
+        }
+        case 'savedView': {
+          navigate(`/views/${result.id}`);
+          break;
+        }
         case 'agent': {
           navigate(`/agent/${result.id}?agent=${result.id}`);
           break;
@@ -158,8 +167,20 @@ const SearchResults = memo<SearchResultsProps>(
       onClose();
     };
 
-    const getIcon = (type: FtsSearchResult['type']) => {
+    const getIcon = (type: CommandMenuSearchResult['type']) => {
       switch (type) {
+        case 'task': {
+          return <ListTodo size={16} />;
+        }
+        case 'team': {
+          return <Users size={16} />;
+        }
+        case 'project': {
+          return <PROJECT_ENTITY_ICON size={16} />;
+        }
+        case 'savedView': {
+          return <Filter size={16} />;
+        }
         case 'agent': {
           return <Sparkles size={16} />;
         }
@@ -190,55 +211,41 @@ const SearchResults = memo<SearchResultsProps>(
       }
     };
 
-    const getTypeLabel = (type: FtsSearchResult['type']) => {
+    const getTypeLabel = (type: CommandMenuSearchResult['type']) => {
       switch (type) {
-        case 'agent': {
-          return t('cmdk.search.agent');
+        case 'page':
+        case 'pageContent': {
+          return t('cmdk.search.page');
         }
-        case 'chatGroup': {
-          return t('cmdk.search.chatGroup');
-        }
-        case 'topic': {
-          return t('cmdk.search.topic');
-        }
-        case 'message': {
-          return t('cmdk.search.message');
-        }
-        case 'file': {
-          return t('cmdk.search.file');
-        }
-        case 'page': {
-          return t('cmdk.search.file');
-        }
-        case 'folder': {
-          return t('cmdk.search.folder');
-        }
-        case 'memory': {
-          return t('cmdk.search.memory');
-        }
-        case 'knowledgeBase': {
-          return t('cmdk.search.knowledgeBase');
+        default: {
+          return t(`cmdk.search.${type}`);
         }
       }
     };
 
-    const getItemValue = (result: FtsSearchResult) => {
-      const meta = [result.title, result.description].filter(Boolean).join(' ');
-      // Prefix with "search-result" to ensure these items rank after built-in commands
-      // Include ID to ensure uniqueness when multiple items have the same title
+    // Group headings are plural ("Tasks", "Projects"…) — Linear-style labeled
+    // sections. Every renderable type has a `cmdk.search.<type>s` key; the
+    // singular label is the fallback for any type that slips through.
+    const getGroupHeading = (type: string) =>
+      t(`cmdk.search.${type}s` as any, { defaultValue: getTypeLabel(type as any) });
+
+    const resultTitle = (result: CommandMenuSearchResult) =>
+      result.type === 'savedView' ? savedViewTitle(result.id, result.title, t) : result.title;
+
+    const getItemValue = (result: CommandMenuSearchResult) => {
+      const meta = [resultTitle(result), result.description].filter(Boolean).join(' ');
       return `search-result ${result.type} ${result.id} ${meta}`.trim();
     };
 
-    const getDescription = (result: FtsSearchResult) => {
+    const getDescription = (result: CommandMenuSearchResult) => {
       if (!result.description) return null;
-      // Sanitize markdown content for message search results
       if (result.type === 'message') {
         return markdownToTxt(result.description);
       }
       return result.description;
     };
 
-    const getSubtitle = (result: FtsSearchResult): ReactNode => {
+    const getSubtitle = (result: CommandMenuSearchResult): ReactNode => {
       const description = getDescription(result);
 
       // Topic results: prefix with agent identity (avatar + title) so users can
@@ -290,117 +297,52 @@ const SearchResults = memo<SearchResultsProps>(
       onSetTypeFilter(type);
     };
 
-    const localImageTopicResults: LocalGenerationTopicResult[] =
-      menuContext === 'painting'
-        ? (imageTopics || [])
-            .filter((topic) => {
-              const title = topic.title || tImage('topic.untitled');
-              return title.toLowerCase().includes(searchQuery.toLowerCase());
-            })
-            .sort((a, b) => {
-              if (a.id === activeImageTopicId) return -1;
-              if (b.id === activeImageTopicId) return 1;
-              return b.updatedAt.getTime() - a.updatedAt.getTime();
-            })
-            .slice(0, 8)
-            .map((topic) => ({
-              createdAt: topic.createdAt,
-              id: topic.id,
-              title: topic.title || tImage('topic.untitled'),
-              updatedAt: topic.updatedAt,
-            }))
-        : [];
-
-    const localVideoTopicResults: LocalGenerationTopicResult[] =
-      menuContext === 'video'
-        ? (videoTopics || [])
-            .filter((topic) => {
-              const title = topic.title || tVideo('topic.untitled');
-              return title.toLowerCase().includes(searchQuery.toLowerCase());
-            })
-            .sort((a, b) => {
-              if (a.id === activeVideoTopicId) return -1;
-              if (b.id === activeVideoTopicId) return 1;
-              return b.updatedAt.getTime() - a.updatedAt.getTime();
-            })
-            .slice(0, 8)
-            .map((topic) => ({
-              createdAt: topic.createdAt,
-              id: topic.id,
-              title: topic.title || tVideo('topic.untitled'),
-              updatedAt: topic.updatedAt,
-            }))
-        : [];
-
-    const availableResults = results.filter(
-      (result) => !['mcp', 'plugin', 'communityAgent'].includes(result.type),
+    const groups = groupSearchResults(results);
+    const hasResults = groups.length > 0;
+    const visibleResultPositions = createVisibleResultPositionMap<CommandMenuSearchResult>(
+      groups.map((group) => group.items),
+      0,
     );
-    const hasResults = availableResults.length > 0;
-    const hasLocalTopicResults =
-      localImageTopicResults.length > 0 || localVideoTopicResults.length > 0;
-
-    // Group results by type
-    const messageResults = availableResults.filter((r) => r.type === 'message');
-    const chatGroupResults = availableResults.filter((r) => r.type === 'chatGroup');
-    const agentResults = availableResults.filter((r) => r.type === 'agent');
-    const topicResults = availableResults.filter((r) => r.type === 'topic');
-    const fileResults = availableResults.filter((r) => r.type === 'file');
-    const pageResults = availableResults.filter((r) => r.type === 'page');
-    const folderResults = availableResults.filter((r) => r.type === 'folder');
-    const memoryResults = availableResults.filter((r) => r.type === 'memory');
-    const knowledgeBaseResults = availableResults.filter((r) => r.type === 'knowledgeBase');
-    const localResultCount = localImageTopicResults.length + localVideoTopicResults.length;
-    const visibleResultPositions = createVisibleResultPositionMap<FtsSearchResult>(
-      [
-        messageResults,
-        agentResults,
-        chatGroupResults,
-        topicResults,
-        memoryResults,
-        fileResults,
-        pageResults,
-        folderResults,
-        knowledgeBaseResults,
-      ],
-      localResultCount,
-    );
-    const visibleResultCount = localResultCount + visibleResultPositions.size;
+    const visibleResultCount = visibleResultPositions.size;
 
     useLayoutEffect(() => {
       onVisibleResultCountChange(visibleResultCount);
     }, [onVisibleResultCountChange, visibleResultCount]);
 
     // Don't render anything if no supported results and not loading.
-    if (!hasResults && !hasLocalTopicResults && !isLoading && typeFilter) {
+    if (!hasResults && !isLoading && typeFilter) {
       return null;
     }
 
-    // Render a single result item with type prefix (like "Message > content")
-    const renderResultItem = (result: FtsSearchResult) => {
-      const typeLabel = getTypeLabel(result.type);
+    const renderActionsAffordance = (target: CommandMenuWorkResult) => (
+      <button
+        aria-label={t('cmdk.resultActions.label')}
+        className={styles.itemActionsButton}
+        tabIndex={-1}
+        title={`${t('cmdk.resultActions.label')} →`}
+        type="button"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenResultActions(target);
+        }}
+      >
+        <span className={styles.itemActionsKey}>→</span>
+        <MoreHorizontalIcon size={14} />
+      </button>
+    );
+
+    // Render a single result item. The group heading already names the type,
+    // so the title needs no inline "Type ›" prefix.
+    const renderResultItem = (result: CommandMenuSearchResult) => {
       const subtitle = getSubtitle(result);
 
-      // Hide type prefix when filtering by specific type
-      const showTypePrefix = !typeFilter;
-
-      // Create title with or without type prefix
-      const titleWithPrefix = showTypePrefix ? (
-        <>
-          <span style={{ opacity: 0.5 }}>{typeLabel}</span>
-          <ChevronRight
-            size={14}
-            style={{
-              display: 'inline',
-              marginInline: '6px',
-              opacity: 0.5,
-              verticalAlign: 'middle',
-            }}
-          />
-          {result.title}
-        </>
-      ) : (
-        result.title
-      );
+      // Task/project rows get a Linear-style actions affordance (⋯ button or
+      // → on the highlighted row) that drills into the result-action submenu
+      // without leaving the palette.
+      const trailingLabel = isActionableResult(result)
+        ? renderActionsAffordance(result)
+        : undefined;
 
       return (
         <CommandItem
@@ -408,7 +350,8 @@ const SearchResults = memo<SearchResultsProps>(
           description={subtitle}
           icon={getIcon(result.type)}
           key={result.id}
-          title={titleWithPrefix}
+          title={resultTitle(result)}
+          trailingLabel={trailingLabel}
           value={getItemValue(result)}
           variant="detailed"
           onSelect={() => handleNavigate(result, visibleResultPositions.get(result) ?? 1)}
@@ -446,147 +389,16 @@ const SearchResults = memo<SearchResultsProps>(
 
     return (
       <>
-        {localImageTopicResults.length > 0 && (
-          <Command.Group forceMount>
-            {localImageTopicResults.map((result, index) => {
-              const formattedDate = dayjs(result.updatedAt).format('MMM D, YYYY');
-              return (
-                <CommandItem
-                  forceMount
-                  description={formattedDate}
-                  icon={<MessageSquare size={16} />}
-                  key={`image-topic-${result.id}`}
-                  value={`local-image-topic ${result.id} ${result.title}`}
-                  variant="detailed"
-                  title={
-                    <>
-                      <span style={{ opacity: 0.5 }}>{t('tab.image')}</span>
-                      <ChevronRight
-                        size={14}
-                        style={{
-                          display: 'inline',
-                          marginInline: '6px',
-                          opacity: 0.5,
-                          verticalAlign: 'middle',
-                        }}
-                      />
-                      {result.title}
-                    </>
-                  }
-                  onSelect={() => {
-                    onResultClick({ position: index + 1, resultType: 'imageTopic' });
-                    navigate(`/image?topic=${result.id}`);
-                    onClose();
-                  }}
-                />
-              );
-            })}
+        {/* Search results grouped under labeled section headings (Linear-style):
+            the heading names the result type, items keep server rank order. */}
+        {groups.map(({ items, type }) => (
+          <Command.Group forceMount heading={getGroupHeading(type)} key={type}>
+            {items.map((result) => renderResultItem(result))}
+            {/* `page` renders as a group but is not a `type:` filter target,
+                so it gets no "search more" drill-in. */}
+            {isValidSearchType(type) && renderSearchMore(type, items.length)}
           </Command.Group>
-        )}
-
-        {localVideoTopicResults.length > 0 && (
-          <Command.Group forceMount>
-            {localVideoTopicResults.map((result, index) => {
-              const formattedDate = dayjs(result.updatedAt).format('MMM D, YYYY');
-              return (
-                <CommandItem
-                  forceMount
-                  description={formattedDate}
-                  icon={<MessageSquare size={16} />}
-                  key={`video-topic-${result.id}`}
-                  value={`local-video-topic ${result.id} ${result.title}`}
-                  variant="detailed"
-                  title={
-                    <>
-                      <span style={{ opacity: 0.5 }}>{t('tab.video')}</span>
-                      <ChevronRight
-                        size={14}
-                        style={{
-                          display: 'inline',
-                          marginInline: '6px',
-                          opacity: 0.5,
-                          verticalAlign: 'middle',
-                        }}
-                      />
-                      {result.title}
-                    </>
-                  }
-                  onSelect={() => {
-                    onResultClick({
-                      position: localImageTopicResults.length + index + 1,
-                      resultType: 'videoTopic',
-                    });
-                    navigate(`/video?topic=${result.id}`);
-                    onClose();
-                  }}
-                />
-              );
-            })}
-          </Command.Group>
-        )}
-
-        {/* Render search results grouped by type without headers */}
-        {messageResults.length > 0 && (
-          <Command.Group forceMount>
-            {messageResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('message', messageResults.length)}
-          </Command.Group>
-        )}
-
-        {agentResults.length > 0 && (
-          <Command.Group forceMount>
-            {agentResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('agent', agentResults.length)}
-          </Command.Group>
-        )}
-
-        {chatGroupResults.length > 0 && (
-          <Command.Group forceMount>
-            {chatGroupResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('chatGroup', chatGroupResults.length)}
-          </Command.Group>
-        )}
-
-        {topicResults.length > 0 && (
-          <Command.Group forceMount>
-            {topicResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('topic', topicResults.length)}
-          </Command.Group>
-        )}
-
-        {memoryResults.length > 0 && (
-          <Command.Group forceMount>
-            {memoryResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('memory', memoryResults.length)}
-          </Command.Group>
-        )}
-
-        {fileResults.length > 0 && (
-          <Command.Group forceMount>
-            {fileResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('file', fileResults.length)}
-          </Command.Group>
-        )}
-
-        {pageResults.length > 0 && (
-          <Command.Group forceMount>
-            {pageResults.map((result) => renderResultItem(result))}
-          </Command.Group>
-        )}
-
-        {folderResults.length > 0 && (
-          <Command.Group forceMount>
-            {folderResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('folder', folderResults.length)}
-          </Command.Group>
-        )}
-
-        {knowledgeBaseResults.length > 0 && (
-          <Command.Group forceMount>
-            {knowledgeBaseResults.map((result) => renderResultItem(result))}
-            {renderSearchMore('knowledgeBase', knowledgeBaseResults.length)}
-          </Command.Group>
-        )}
+        ))}
 
         {/* Show loading skeleton below existing results */}
         {isLoading && (

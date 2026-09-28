@@ -8,7 +8,7 @@ import type {
 } from '../schemas';
 import { ConnectorToolPermission as Permission, userConnectorTools } from '../schemas';
 import type { OrviloDatabase } from '../type';
-import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import { buildStrictWorkspaceWhere, buildWorkspacePayload } from '../utils/workspace';
 
 export interface SyncToolInput {
   crudType: ToolCRUDType;
@@ -33,8 +33,13 @@ export class ConnectorToolModel {
     this.workspaceId = workspaceId;
   }
 
+  // Tools execute against a per-scope connector instance — the personal
+  // connector's tool must never surface in a workspace-scoped run.
   private ownership = () =>
-    buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, userConnectorTools);
+    buildStrictWorkspaceWhere(
+      { userId: this.userId, workspaceId: this.workspaceId },
+      userConnectorTools,
+    );
 
   findById = async (toolId: string): Promise<UserConnectorToolItem | undefined> => {
     const [row] = await this.db

@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "إعادة تحميل",
   "workingPanel.browser.actions.stop": "إيقاف التحميل",
   "workingPanel.browser.addressPlaceholder": "ابحث أو أدخل العنوان",
-  "workingPanel.browser.agentControlling": "الوكيل يستخدم المتصفح",
-  "workingPanel.browser.agentCursor": "الوكيل",
   "workingPanel.browser.context.elementAdded": "تمت إضافة العنصر إلى سياق الدردشة",
   "workingPanel.browser.context.elementTitle": "عنصر",
   "workingPanel.browser.context.failed": "تعذر إضافة سياق العنصر",

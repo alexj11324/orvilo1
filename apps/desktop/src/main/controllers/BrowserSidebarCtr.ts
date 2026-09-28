@@ -2,7 +2,6 @@ import type {
   BrowserSidebarCaptureResult,
   BrowserSidebarImportResult,
   BrowserSidebarNavigateParams,
-  BrowserSidebarOverlayLabelsParams,
   BrowserSidebarPickedElement,
   BrowserSidebarPickElementParams,
   BrowserSidebarPickElementResult,
@@ -14,7 +13,6 @@ import type {
 import type { WebContents } from 'electron';
 import { session as electronSession, shell, webContents as electronWebContents } from 'electron';
 
-import type { AgentOverlayLabels } from '@/modules/browser/agentOverlayScript';
 import type { PickedElementPayload } from '@/modules/browser/elementPickerScript';
 import {
   ELEMENT_PICKER_CANCEL_SCRIPT,
@@ -36,11 +34,6 @@ const DEFAULT_BROWSER_URL = 'about:blank';
 const HTTP_URL_PATTERN = /^https?:\/\//i;
 const LOCAL_URL_PATTERN = /^(?:localhost|127(?:\.\d{1,3}){3}|\[?::1\]?)(?::\d+)?(?:[/?#].*)?$/i;
 const SUPPORTED_PROTOCOLS = new Set(['about:', 'http:', 'https:']);
-
-const DEFAULT_OVERLAY_LABELS: AgentOverlayLabels = {
-  controlling: 'Agent is controlling this page',
-  cursor: 'Agent',
-};
 
 /**
  * Wide enough that page text stays legible for the model, while keeping a
@@ -99,7 +92,6 @@ export default class BrowserSidebarCtr extends ControllerModule {
       webContentsId: number;
     }
   >();
-  private overlayLabels: AgentOverlayLabels = DEFAULT_OVERLAY_LABELS;
   private wiredWebContents = new Set<number>();
   /**
    * Bumped on every cancel, per session. `pickElement` awaits a pre-cancel
@@ -357,23 +349,11 @@ export default class BrowserSidebarCtr extends ControllerModule {
     return { success: true };
   }
 
-  /** The overlay is drawn inside the page, so its copy has to come from the renderer. */
-  @IpcMethod()
-  setOverlayLabels(params: BrowserSidebarOverlayLabelsParams): BrowserSidebarResult {
-    this.overlayLabels = { controlling: params.controlling, cursor: params.cursor };
-    return { success: true };
-  }
-
-  /** Accessors for sibling controllers (BrowserControlCtr drives the pages). */
-  getSessionWebContents(sessionId: string): WebContents | undefined {
+  private getSessionWebContents(sessionId: string): WebContents | undefined {
     const page = this.pages.get(sessionId);
     if (!page) return undefined;
     const webContents = electronWebContents.fromId(page.webContentsId);
     return webContents && !webContents.isDestroyed() ? webContents : undefined;
-  }
-
-  getOverlayLabels(): AgentOverlayLabels {
-    return this.overlayLabels;
   }
 
   private configureBrowserSession(): void {

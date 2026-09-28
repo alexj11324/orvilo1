@@ -6,8 +6,6 @@ import type {
   AgentEvalRunTopicItem,
   AgentEvalTestCaseItem,
   AgentItem,
-  AiModelSelectItem,
-  AiProviderSelectItem,
   FileItem,
   KnowledgeBaseItem,
   MessageItem,
@@ -62,22 +60,6 @@ export const PUBLIC_USER_FIELDS = [
   'username',
 ] as const satisfies readonly (keyof UserItem)[];
 
-export const PUBLIC_PROVIDER_FIELDS = [
-  'checkModel',
-  'config',
-  'createdAt',
-  'description',
-  'enabled',
-  'fetchOnClient',
-  'id',
-  'logo',
-  'name',
-  'settings',
-  'sort',
-  'source',
-  'updatedAt',
-] as const satisfies readonly (keyof AiProviderSelectItem)[];
-
 export const PUBLIC_MODEL_FIELDS = [
   'abilities',
   'config',
@@ -97,7 +79,33 @@ export const PUBLIC_MODEL_FIELDS = [
   'source',
   'type',
   'updatedAt',
-] as const satisfies readonly (keyof AiModelSelectItem)[];
+] as const satisfies readonly (keyof PublicModel)[];
+
+/**
+ * Model rows used to come from the `ai_models` table; with provider management
+ * retired the catalog items served by {@link ModelService} are deployment-owned
+ * and simply lack the database-only columns, so every field is optional here.
+ */
+export interface PublicModel {
+  abilities?: unknown;
+  config?: unknown;
+  contextWindowTokens?: number;
+  createdAt?: unknown;
+  description?: string;
+  displayName?: string;
+  enabled?: boolean;
+  id?: string;
+  organization?: string;
+  parameters?: unknown;
+  pricing?: unknown;
+  providerId?: string;
+  releasedAt?: string;
+  settings?: unknown;
+  sort?: number;
+  source?: string;
+  type?: string;
+  updatedAt?: unknown;
+}
 
 export const PUBLIC_FILE_FIELDS = [
   'createdAt',
@@ -282,8 +290,6 @@ export type PublicAgent = Pick<AgentItem, (typeof PUBLIC_AGENT_FIELDS)[number]> 
   plugins: ReturnType<typeof parsePluginEntry>[];
 };
 export type PublicUser = Pick<UserItem, (typeof PUBLIC_USER_FIELDS)[number]>;
-export type PublicProvider = Pick<AiProviderSelectItem, (typeof PUBLIC_PROVIDER_FIELDS)[number]>;
-export type PublicModel = Pick<AiModelSelectItem, (typeof PUBLIC_MODEL_FIELDS)[number]>;
 export type PublicFile = Pick<FileItem, (typeof PUBLIC_FILE_FIELDS)[number]>;
 export type PublicKnowledgeBase = Pick<
   KnowledgeBaseItem,
@@ -317,10 +323,7 @@ export const projectPublicAgent = (value: AgentItem): PublicAgent => ({
 export const projectPublicUser = (value: UserItem): PublicUser =>
   pickPublicFields(value, PUBLIC_USER_FIELDS);
 
-export const projectPublicProvider = (value: AiProviderSelectItem): PublicProvider =>
-  pickPublicFields(value, PUBLIC_PROVIDER_FIELDS);
-
-export const projectPublicModel = (value: AiModelSelectItem): PublicModel =>
+export const projectPublicModel = (value: PublicModel): PublicModel =>
   pickPublicFields(value, PUBLIC_MODEL_FIELDS);
 
 export const projectPublicFile = (value: FileItem): PublicFile =>

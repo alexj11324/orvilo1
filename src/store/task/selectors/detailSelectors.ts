@@ -1,4 +1,4 @@
-import type { TaskDetailData, TaskVerifyConfig } from '@orvilo/types';
+import type { TaskDetailData, TaskLabelSummary, TaskVerifyConfig } from '@orvilo/types';
 
 import type { SaveStatus } from '@/types/saveState';
 
@@ -20,6 +20,10 @@ const activeTaskName = (s: TaskStoreState) => activeTaskDetail(s)?.name;
 
 const activeTaskStatus = (s: TaskStoreState) => activeTaskDetail(s)?.status;
 
+const activeTaskWorkflowCategory = (s: TaskStoreState) => activeTaskDetail(s)?.workflowCategory;
+
+const activeTaskWorkflowStateId = (s: TaskStoreState) => activeTaskDetail(s)?.workflowStateId;
+
 const activeTaskPriority = (s: TaskStoreState) => activeTaskDetail(s)?.priority ?? 0;
 
 const activeTaskVisibility = (s: TaskStoreState): 'private' | 'public' =>
@@ -28,6 +32,12 @@ const activeTaskVisibility = (s: TaskStoreState): 'private' | 'public' =>
 const activeTaskCreatedByUserId = (s: TaskStoreState) => activeTaskDetail(s)?.createdByUserId;
 
 const activeTaskInstruction = (s: TaskStoreState) => activeTaskDetail(s)?.instruction;
+
+// Labels assigned to the task (Linear-style issue labels) — chips on the
+// properties rail. A shared empty constant keeps the selector referentially
+// stable for tasks with no labels.
+const EMPTY_LABELS: TaskLabelSummary[] = [];
+const activeTaskLabels = (s: TaskStoreState) => activeTaskDetail(s)?.labels ?? EMPTY_LABELS;
 
 const activeTaskInstructionRevision = (s: TaskStoreState) =>
   (s.activeTaskId ? s.taskInstructionRevisionMap[s.activeTaskId] : undefined) ?? 0;
@@ -154,6 +164,7 @@ export const taskDetailSelectors = {
   activeTaskId,
   activeTaskInstruction,
   activeTaskInstructionRevision,
+  activeTaskLabels,
   activeTaskName,
   activeTaskParent,
   activeTaskPeriodicInterval,
@@ -170,6 +181,8 @@ export const taskDetailSelectors = {
   activeTaskVisibility,
   activeTaskWorkspace,
   activeTaskWorkspaceId,
+  activeTaskWorkflowCategory,
+  activeTaskWorkflowStateId,
   activeTopicDrawerTopicId,
   canCancelActiveTask,
   canPauseActiveTask,

@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
 import {
@@ -79,6 +80,13 @@ export class TaskIntentService {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          // Pre-creation intent reading binds to the builtin task agent; a
+          // missing binding surfaces as an explicit block to the caller.
+          binding: { slug: BUILTIN_AGENT_SLUGS.taskAgent },
+          purpose: 'task.intent',
+        },
+        kind: 'judgment',
         metadata: { trigger: 'task_intent' },
         tracing: {
           promptVersion: TASK_INTENT_PROMPT_VERSION,
@@ -121,6 +129,11 @@ export class TaskIntentService {
         thinking: { type: 'disabled' },
       },
       {
+        judgment: {
+          binding: { slug: BUILTIN_AGENT_SLUGS.taskAgent },
+          purpose: 'task.instruction',
+        },
+        kind: 'judgment',
         metadata: { trigger: 'task_instruction' },
         tracing: {
           promptVersion: TASK_INSTRUCTION_PROMPT_VERSION,

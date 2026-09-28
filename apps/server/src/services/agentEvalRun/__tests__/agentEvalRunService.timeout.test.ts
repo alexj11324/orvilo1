@@ -4,15 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentEvalRunModel, AgentEvalRunTopicModel } from '@/database/models/agentEval';
 import { agentEvalRuns, agentEvalRunTopics } from '@/database/schemas';
 import { AgentEvalRunService } from '@/server/services/agentEvalRun';
-import { AgentRuntimeService } from '@/server/services/agentRuntime/AgentRuntimeService';
+import { AgentRuntimeService } from '@/server/services/agentExecution/AgentRuntimeService';
 
 import { cleanupDB, serverDB, setupMultiCaseRun, userId } from './_setup';
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
-vi.mock('@/server/services/agentRuntime/AgentRuntimeService', () => ({
+vi.mock('@/server/services/agentExecution/AgentRuntimeService', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       interruptOperation: vi.fn().mockResolvedValue(true),
@@ -292,8 +292,9 @@ describe('AgentEvalRunService', () => {
         config: { timeout: 1_200_000 },
       });
 
-      // Verify AgentRuntimeService was instantiated
-      expect(AgentRuntimeService).toHaveBeenCalledWith(serverDB, userId);
+      // Verify AgentRuntimeService was instantiated (via the AiAgentService
+      // isolated-runtime facade — options object carries delegate wiring)
+      expect(AgentRuntimeService).toHaveBeenCalledWith(serverDB, userId, expect.any(Object));
 
       // Verify interruptOperation was called for both operationIds
       const mockInstance = vi.mocked(AgentRuntimeService).mock.results[0].value;

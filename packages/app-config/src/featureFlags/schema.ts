@@ -26,7 +26,6 @@ export const FeatureFlagsSchema = z.object({
    */
   agent_share: FeatureFlagValue.optional(),
 
-  ai_image: FeatureFlagValue.optional(),
   speech_to_text: FeatureFlagValue.optional(),
   voice_dictation: FeatureFlagValue.optional(),
   token_counter: FeatureFlagValue.optional(),
@@ -38,6 +37,16 @@ export const FeatureFlagsSchema = z.object({
   knowledge_base: FeatureFlagValue.optional(),
 
   rag_eval: FeatureFlagValue.optional(),
+
+  /**
+   * CAID rollout gate: controls NEW orchestrated dispatches (goal fan-out and
+   * planner/orchestrator wakes). Off by default everywhere — an admin enables it
+   * per deployment (boolean), per user (id list), or per workspace via
+   * `caid_dispatch_workspaces`. Settlement of existing runs, corrective runs,
+   * and manual/schedule/heartbeat wakes are unaffected.
+   */
+  caid_dispatch: FeatureFlagValue.optional(),
+  caid_dispatch_workspaces: z.array(z.string()).optional(),
 
   // internal flag
   agent_self_iteration: FeatureFlagValue.optional(),
@@ -90,14 +99,14 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   // gate, so setting this env-side does not enable the feature there.
   agent_share: false,
 
-  ai_image: true,
-
   check_updates: true,
   welcome_suggest: true,
   token_counter: true,
 
   knowledge_base: true,
   rag_eval: false,
+
+  caid_dispatch: false,
 
   agent_self_iteration: isDev,
   agent_onboarding: isDev,
@@ -128,14 +137,15 @@ export const mapFeatureFlagsEnvToState = (
     isAgentEditable: evaluateFeatureFlag(config.edit_agent, userId),
 
     enableAgentShare: evaluateFeatureFlag(config.agent_share, userId),
+    // User-level half of the CAID rollout gate — workspace-scoped grants are
+    // evaluated server-side (see apps/server featureFlags/caidAdmission).
+    enableCaidDispatch: evaluateFeatureFlag(config.caid_dispatch, userId),
     showProvider: evaluateFeatureFlag(config.provider_settings, userId),
 
     showOpenAIApiKey: evaluateFeatureFlag(config.openai_api_key, userId),
     showOpenAIProxyUrl: evaluateFeatureFlag(config.openai_proxy_url, userId),
 
     showApiKeyManage: evaluateFeatureFlag(config.api_key_manage, userId),
-
-    showAiImage: evaluateFeatureFlag(config.ai_image, userId),
     showChangelog: evaluateFeatureFlag(config.changelog, userId),
 
     enableCheckUpdates: evaluateFeatureFlag(config.check_updates, userId),

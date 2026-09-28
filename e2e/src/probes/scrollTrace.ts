@@ -14,6 +14,11 @@ const TRACE_KEY = '__orviloE2EScrollTrace';
 const MIN_SLIDE_FRAMES = 4;
 const JUMP_SHARE = 0.9;
 
+export interface ScrollCallRecord {
+  behavior: ScrollBehavior | 'assign';
+  top: number | undefined;
+}
+
 export const classifyScrollTrace = (samples: number[]): ScrollTraceSummary => {
   const deltas = samples.slice(1).map((value, i) => value - samples[i]);
   const moving = deltas.filter((d) => d !== 0);
@@ -31,10 +36,30 @@ export const classifyScrollTrace = (samples: number[]): ScrollTraceSummary => {
 
 // Injected as source text: the tsx/esbuild transform wraps named inner
 // functions in a `__name` helper that does not exist in the page.
+// Programmatic scrolls are recorded too: the pin drives its transition through
+// `Element.prototype.scrollTo({ behavior: 'smooth' })`. Playwright's Chromium
+// collapses smooth scrolling into a single instant frame (no compositor
+// animation), so a multi-frame slide is never observable in this environment —
+// the regression guard instead asserts the smooth-scroll call was issued.
 const START_SCRIPT = `(() => {
   const key = ${JSON.stringify(TRACE_KEY)};
   if (window[key]) cancelAnimationFrame(window[key].raf);
-  const trace = { raf: 0, samples: [] };
+  if (!Element.prototype.__orviloScrollToWrapped) {
+    const origScrollTo = Element.prototype.scrollTo;
+    Element.prototype.scrollTo = function (...args) {
+      const traceRef = window[key];
+      if (traceRef) {
+        const a0 = args[0];
+        traceRef.calls.push({
+          behavior: typeof a0 === 'object' && a0 ? a0.behavior || 'auto' : 'assign',
+          top: typeof a0 === 'object' && a0 ? a0.top : args[1],
+        });
+      }
+      return origScrollTo.apply(this, args);
+    };
+    Element.prototype.__orviloScrollToWrapped = true;
+  }
+  const trace = { raf: 0, samples: [], calls: [] };
   const tick = () => {
     let el = document.querySelector('.message-wrapper');
     while (el) {
@@ -52,16 +77,24 @@ const START_SCRIPT = `(() => {
 const STOP_SCRIPT = `(() => {
   const key = ${JSON.stringify(TRACE_KEY)};
   const trace = window[key];
-  if (!trace) return [];
+  if (!trace) return { samples: [], calls: [] };
   cancelAnimationFrame(trace.raf);
   delete window[key];
-  return trace.samples.filter((v) => !Number.isNaN(v));
+  return {
+    calls: trace.calls,
+    samples: trace.samples.filter((v) => !Number.isNaN(v)),
+  };
 })()`;
+
+export interface ScrollTraceResult {
+  calls: ScrollCallRecord[];
+  samples: number[];
+}
 
 export const startScrollTrace = async (page: Page): Promise<void> => {
   await page.evaluate(START_SCRIPT);
 };
 
-export const stopScrollTrace = async (page: Page): Promise<number[]> => {
-  return page.evaluate<number[]>(STOP_SCRIPT);
+export const stopScrollTrace = async (page: Page): Promise<ScrollTraceResult> => {
+  return page.evaluate<ScrollTraceResult>(STOP_SCRIPT);
 };

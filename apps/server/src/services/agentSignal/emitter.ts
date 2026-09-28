@@ -7,7 +7,6 @@ import {
   type SourceAgentExecutionCompleted,
   type SourceAgentExecutionFailed,
   type SourceAgentUserMessage,
-  type SourceBotMessageMerged,
   type SourceRuntimeAfterStep,
   type SourceRuntimeBeforeStep,
 } from '@orvilo/agent-signal/source';
@@ -70,10 +69,6 @@ export interface QueuedAgentSignalEmissionResult {
 
 export type RuntimeAgentSignalSourceInput<TSourceType extends RuntimeProducerSourceType> =
   AgentSignalSourceEventInput<TSourceType>;
-
-export type BotAgentSignalSourceInput = AgentSignalSourceEventInput<
-  SourceBotMessageMerged['sourceType']
->;
 
 export type UserMessageAgentSignalSourceInput = AgentSignalSourceEventInput<
   SourceAgentUserMessage['sourceType']

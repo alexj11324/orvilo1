@@ -6,8 +6,6 @@ import { toast } from '@lobehub/ui/base-ui';
 import { CircleCheck, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { mutate as globalMutate } from '@/libs/swr';
-import { isAcceptanceListKey } from '@/libs/swr/keys';
 import { verifyService } from '@/services/verify';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
@@ -27,7 +25,6 @@ const AcceptanceStatusControl = () => {
     try {
       await verifyService.updateAcceptanceStatus(data.acceptance.id, status);
       await mutate();
-      void globalMutate(isAcceptanceListKey);
       toast.success(t('acceptance.workspace.statusSuccess'));
     } catch {
       toast.error(t('acceptance.workspace.statusError'));

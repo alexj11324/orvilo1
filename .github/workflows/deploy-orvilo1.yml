@@ -1,38 +1,91 @@
 name: Build and deploy orvilo1
 
-# 这个仓库是 Orvilo 的 fork。上游那一批 workflow 依赖 Orvilo 自己的
-# secrets（DOCKER_REGISTRY_*、ORVILO_CLOUD_TOKEN、Apple 证书等），在本仓库
-# 一律跑不通，需要单独清理。本文件是 orvilo1 自己的发布管线。
+# 生产部署管线。
 #
-# 构建与部署分开是有意的：
-#   - push 到 main 就构建并推镜像 —— 快，且能立刻发现构建坏了
-#   - 部署默认不自动跑，要手动 dispatch 时勾 deploy
-# 生产主机是共享的（同机还有 20+ 个其他产品的容器），而当前还没有测试门禁
-# 挡在构建前面，所以不该让每次提交都直接上生产。
+# 构建、提升、部署三段分开是有意的：
+#   - push 到 canary 只构建并推不可变的 sha-<commit> 镜像 —— 快，且能立刻发现构建坏了
+#   - promote 等到该 commit 的 Required Quality Gate（test.yml）变绿后，才把
+#     :canary / :main 浮动标签指过去 —— 测试未过或还在跑的提交永远不会成为生产候选
+#   - 部署要手动 dispatch 时勾 deploy，同样先验门禁再按镜像 digest 部署
+# 生产主机是共享的（同机还有 20+ 个其他产品的容器），所以每次上线都必须有
+# 精确 SHA 的质量证据，不能拿浮动标签或旧提交的绿灯充数。
+#
+# canary 是开发主干，同时也是生产代码线；main 是发布快照。
+# 完整模型见 docs/development/branch-model.md。
 
 on:
   push:
-    branches: [main]
+    branches: [canary]
   workflow_dispatch:
     inputs:
+      build:
+        description: '手动触发时也构建镜像（用于部署非 canary 分支，分支没有 push 构建产物）'
+        type: boolean
+        default: false
       deploy:
         description: '构建完成后部署到生产主机'
         type: boolean
         default: false
+      retag_main_from:
+        description: '可选：把 :canary 浮动标签指到这个已有 sha-* 镜像（不动构建/部署，用于修正污染的标签）'
+        required: false
 
 permissions:
   contents: read
   packages: write
+  checks: read
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
   COMPOSE_DIR: /var/lib/orvilo1/docker-compose/deploy
 
 jobs:
+  retag-main:
+    if: github.event_name == 'workflow_dispatch' && inputs.retag_main_from != ''
+    runs-on: ubuntu-latest
+    # 与 promote 串行：手动修标签不能和自动提升交错写同一批浮动标签。
+    concurrency:
+      group: orvilo1-image-promotion
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 手动 retag 也走同一道门禁：人工按钮不是绕过质量证据的后门。
+      - name: Require the quality gate for the source commit
+        uses: ./.github/actions/require-quality-gate
+        with:
+          sha: ${{ inputs.retag_main_from }}
+          wait_seconds: '0'
+
+      - name: Repoint the floating tag to an existing sha image
+        env:
+          # Passed through the environment rather than interpolated into the
+          # script body: this value comes from a workflow_dispatch input, and
+          # inlining it would let a crafted value break out of the quoting.
+          SOURCE_SHA: ${{ inputs.retag_main_from }}
+        run: |
+          docker buildx imagetools inspect "${IMAGE}:sha-${SOURCE_SHA}"
+          docker buildx imagetools create \
+            -t "${IMAGE}:canary" \
+            -t "${IMAGE}:main" \
+            "${IMAGE}:sha-${SOURCE_SHA}"
+          echo ":canary and :main -> sha-${SOURCE_SHA}"
+
   build:
     # push 才构建。手动部署不需要重建 —— 镜像按 commit 不可变，同一个 sha
     # 的镜像内容必然相同，而一次 Next.js 生产构建要十几分钟。
-    if: github.event_name == 'push'
+    # 例外：workflow_dispatch 显式勾 build，用于给没有 push 构建产物的
+    # 分支（验收部署等）产出 sha-<commit> 镜像。
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build && inputs.retag_main_from == '')
     # 部署目标是 aarch64，这里用 GitHub 的 arm64 runner 原生构建，
     # 不走 QEMU —— 那会让一次 Next.js 生产构建慢到不可接受。
     runs-on: ubuntu-24.04-arm
@@ -50,6 +103,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 构建只推不可变的 sha-<commit> 标签。:canary / :main 浮动标签改由
+      # promote job 在该 commit 的 Required Quality Gate 变绿之后提升——
+      # 测试没过的 commit 永远不会被浮动标签指向。
+      - name: Compute tags
+        id: tags
+        run: |
+          {
+            echo "tags<<EOF"
+            echo "${IMAGE}:sha-${GITHUB_SHA}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         id: build
         uses: docker/build-push-action@v6
@@ -58,9 +123,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/arm64
           push: true
-          tags: |
-            ${{ env.IMAGE }}:main
-            ${{ env.IMAGE }}:sha-${{ github.sha }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -74,16 +137,117 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| 镜像 | \`${IMAGE}:main\` |"
+            echo "| 镜像 | \`${IMAGE}:sha-${SHA}\` |"
             echo "| 提交 | \`${SHA}\` |"
             echo "| digest | \`${DIGEST}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  promote:
+    # 把 :canary / :main 浮动标签提升到刚构建的 sha 镜像——但只在该 commit
+    # 的 Required Quality Gate 变绿之后。门禁失败/取消/超时都不会动标签。
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    # 只有最新的 canary 提交值得完成提升：新 push 取消仍在等旧 commit 门禁的
+    # 任务；同组串行保证标签按提交顺序前进，旧构建晚完成也不能让标签倒退。
+    concurrency:
+      group: orvilo1-image-promotion
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for the quality gate on this commit
+        uses: ./.github/actions/require-quality-gate
+        with:
+          sha: ${{ github.sha }}
+          wait_seconds: '3600'
+
+      - name: Promote floating tags to this commit's image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # 等门禁期间 canary 可能又前进了：只有仍是分支尖端的 commit 才配
+          # 拿浮动标签，否则留给更新的 promote 去指。
+          tip=$(gh api "repos/${{ github.repository }}/branches/canary" --jq .commit.sha)
+          if [ "$tip" != "${{ github.sha }}" ]; then
+            echo "canary tip moved to $tip — this promote is superseded, leaving tags alone."
+            exit 0
+          fi
+          docker buildx imagetools create \
+            -t "${IMAGE}:canary" \
+            -t "${IMAGE}:main" \
+            "${IMAGE}:sha-${GITHUB_SHA}"
+          echo ":canary and :main -> sha-${GITHUB_SHA} (quality gate green)"
+
   deploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    # build 未勾选时它会被 skipped —— 部署已有镜像仍要允许；只有 build
+    # 真跑了且失败时才不该部署。always() 让 skipped 不阻塞本 job。
+    needs: build
+    if: always() && github.event_name == 'workflow_dispatch' && inputs.deploy && inputs.retag_main_from == '' && (needs.build.result == 'success' || needs.build.result == 'skipped')
     runs-on: ubuntu-latest
     environment: production
+    # 生产部署串行：两次手动 deploy 不能交错 pull/up 同一批容器。
+    concurrency:
+      group: orvilo1-production-deploy
+      cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 部署前置质量核验：人工 dispatch 不是绕过测试的后门。最多等 30 分钟
+      # 让刚合入 commit 的 Test CI 收尾；失败、缺失或超时一律不部署。
+      - name: Wait for the quality gate on this commit
+        uses: ./.github/actions/require-quality-gate
+        with:
+          sha: ${{ github.sha }}
+          wait_seconds: '1800'
+
+      # 部署按 digest 固定而不是 sha-* 标签：标签可被后续 promote 移动，
+      # digest 不会。从这里起源码 SHA ↔ 镜像 digest ↔ 门禁证据一一对应。
+      - name: Resolve the pinned image digest
+        id: image
+        env:
+          BUILT_DIGEST: ${{ needs.build.outputs.digest }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag="${IMAGE}:sha-${SHA}"
+          digest="$BUILT_DIGEST"
+          if [ -z "$digest" ]; then
+            # 部署已有镜像（本次 workflow 没构建）：digest 就是 registry 里
+            # 存储的 manifest/index 字节流的 sha256。
+            digest="sha256:$(docker buildx imagetools inspect "$tag" --raw | sha256sum | cut -d' ' -f1)"
+          fi
+          [ -n "$digest" ] && [ "$digest" != "sha256:" ] || { echo "::error::无法解析 $tag 的 digest"; exit 1; }
+          echo "ref=${IMAGE}@${digest}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### 部署镜像已固定"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| 提交 | \`${SHA}\` |"
+            echo "| 镜像 | \`${IMAGE}@${digest}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Set up SSH
         env:
           SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
@@ -95,20 +259,71 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
+      # 主机上的 compose 定义不是手工维护的：每次部署先把仓库里的
+      # docker-compose/deploy/ 同步上去，新增服务（如 collaboration-gateway）
+      # 才不会因 "no such service" 卡部署。只同步仓库跟踪的文件；
+      # .env 和 orvilo1-production.override.yml 是主机本地文件，不动。
+      - name: Sync compose files to the host
+        env:
+          SSH_HOST: ${{ secrets.ORACLE_HOST }}
+        run: |
+          set -euo pipefail
+          cd docker-compose/deploy
+          tar czf - docker-compose.yml bucket.config.json searxng-settings.yml elasticsearch |
+            ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+              "sudo tar xzf - -C '$COMPOSE_DIR'"
+
+      # .env 仍是主机本地文件（手工配置保留），但 GitHub 里配置的部署变量
+      # 必须能让容器读到 —— env_file: .env 会把文件内所有键注入容器。
+      # 这里把 secrets/vars 渲染成一个带标记的受管块追加进 .env（旧块先删再
+      # 追加，同键更新、不影响块外任何手工配置）。值为空则整体跳过该键。
+      # 新增部署变量：在下方列表加键名 + 配同名 GitHub secret/var 即可。
+      - name: Sync deploy env vars into host .env
+        env:
+          SSH_HOST: ${{ secrets.ORACLE_HOST }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          # vars 留空时用 prod 默认值；覆盖只需在 repo/environment 配同名 var。
+          CLERK_ISSUER: ${{ vars.CLERK_ISSUER || 'https://clerk.aspectlylabs.com' }}
+          CLERK_AUTHORIZED_PARTIES: ${{ vars.CLERK_AUTHORIZED_PARTIES || 'https://accounts.aspectlylabs.com,https://orvilo.aspectlylabs.com' }}
+          AUTH_ACCOUNTS_URL: ${{ vars.AUTH_ACCOUNTS_URL || 'https://accounts.aspectlylabs.com' }}
+          AUTH_COOKIE_DOMAIN: ${{ vars.AUTH_COOKIE_DOMAIN || '.aspectlylabs.com' }}
+        run: |
+          set -euo pipefail
+          {
+            echo '# BEGIN deploy-managed-env (written by deploy-orvilo1.yml — do not edit)'
+            for k in CLERK_SECRET_KEY CLERK_ISSUER CLERK_AUTHORIZED_PARTIES AUTH_ACCOUNTS_URL AUTH_COOKIE_DOMAIN; do
+              v="${!k}"
+              if [ -n "$v" ]; then
+                printf '%s=%s\n' "$k" "$v"
+              else
+                echo "::warning::$k 未配置（GitHub secret/var 为空），跳过" >&2
+              fi
+            done
+            echo '# END deploy-managed-env'
+          } > /tmp/deploy.env
+          if ! grep -qE '^[A-Z_]+=' /tmp/deploy.env; then
+            echo "没有配置任何部署变量，主机 .env 保持不变"
+            exit 0
+          fi
+          scp -i ~/.ssh/deploy_key -o BatchMode=yes /tmp/deploy.env "ubuntu@$SSH_HOST:/tmp/orvilo-deploy.env"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            "sudo sh -c 'cd \"$COMPOSE_DIR\" && touch .env && cp .env .env.pre-deploy.bak && \
+             sed -i \"/# BEGIN deploy-managed-env/,/# END deploy-managed-env/d\" .env && \
+             cat /tmp/orvilo-deploy.env >> .env && rm -f /tmp/orvilo-deploy.env'"
+
       - name: Deploy
         env:
           SSH_HOST: ${{ secrets.ORACLE_HOST }}
           SHA: ${{ github.sha }}
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
         run: |
           set -euo pipefail
-          # Deploy the image built for this exact commit, not :main. Two builds
-          # can overlap and :main would then point at whichever finished last,
-          # so the host could serve something this commit never produced. The
-          # sha tag is immutable, so this is also safe while another build runs.
-          IMAGE_TAG="ghcr.io/${{ github.repository }}:sha-${SHA}"
+          # Deploy the image pinned by digest for this exact commit — not
+          # :canary/:main (floating) and not even sha-<sha> (re-promotable).
+          # What the host pulls is byte-identical to what the gate verified.
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" "
-            docker manifest inspect '$IMAGE_TAG' >/dev/null 2>&1 || {
-              echo \"镜像 $IMAGE_TAG 不存在：该 commit 的 push 构建可能还没跑完，或已失败。\" >&2
+            docker manifest inspect '$IMAGE_REF' >/dev/null 2>&1 || {
+              echo \"镜像 $IMAGE_REF 不存在：该 commit 的 push 构建可能还没跑完，或已失败。\" >&2
               exit 1
             }
           "
@@ -116,10 +331,10 @@ jobs:
             'sudo docker stop orvilo-hatchet-worker 2>/dev/null || true'
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull orvilo hatchet-worker"
+             sudo ORVILO_IMAGE_TAG='$IMAGE_REF' docker compose -f docker-compose.yml -f orvilo1-production.override.yml pull orvilo hatchet-worker collaboration-gateway"
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo ORVILO_IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d orvilo"
+             sudo ORVILO_IMAGE_TAG='$IMAGE_REF' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d orvilo collaboration-gateway"
 
       - name: Verify
         env:
@@ -141,7 +356,7 @@ jobs:
           # reaching new dispatch tables before they exist.
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             "cd $COMPOSE_DIR && \
-             sudo ORVILO_IMAGE_TAG='ghcr.io/${{ github.repository }}:sha-${{ github.sha }}' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d hatchet-worker"
+             sudo ORVILO_IMAGE_TAG='${{ steps.image.outputs.ref }}' docker compose -f docker-compose.yml -f orvilo1-production.override.yml up -d hatchet-worker"
           for i in $(seq 1 30); do
             if ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
                  'sudo docker logs orvilo-hatchet-worker 2>&1 | tail -80' | grep -Eiq 'worker .* listening for actions'; then
@@ -153,3 +368,7 @@ jobs:
           done
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
             'curl -fsS --max-time 20 http://127.0.0.1:3210/api/version'
+          # The cursor gateway is optional at runtime but must not be left
+          # crash-looping after a deploy.
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "ubuntu@$SSH_HOST" \
+            'sudo docker inspect -f "{{.State.Running}}" orvilo-collaboration-gateway | grep -qx true'

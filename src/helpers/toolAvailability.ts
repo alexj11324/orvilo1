@@ -13,32 +13,43 @@ export interface ToolAvailabilityInstalledPlugin {
 }
 
 export interface ToolAvailabilityContext {
+  /**
+   * Whether the *target execution device* can run device-bound executors
+   * (Electron IPC on that device / stdio MCP on that host). Run-side callers
+   * derive this from the execution plan; display-side callers pass `true` so
+   * tools configured for a bound device stay visible regardless of the viewing
+   * client. Defaults to the viewer's platform — correct only when the viewer
+   * is also the executor (a local desktop run).
+   */
+  canExecuteOnDevice?: boolean;
   installedPlugins?: ToolAvailabilityInstalledPlugin[];
-  isDesktop?: boolean;
 }
 
-export const isBuiltinToolAvailableInCurrentEnv = (id: string) => shouldEnableTool(id);
+export const isBuiltinToolAvailableInCurrentEnv = (
+  id: string,
+  context: Pick<ToolAvailabilityContext, 'canExecuteOnDevice'> = {},
+) => shouldEnableTool(id, { canExecuteOnDevice: context.canExecuteOnDevice });
 
 export const isBuiltinSkillAvailableInCurrentEnv = (
   id: string,
-  context: Omit<ToolAvailabilityContext, 'installedPlugins'> = {},
+  context: Pick<ToolAvailabilityContext, 'canExecuteOnDevice'> = {},
 ) => {
-  if (context.isDesktop === undefined) {
+  if (context.canExecuteOnDevice === undefined) {
     return shouldEnableBuiltinSkill(id);
   }
 
   return shouldEnableBuiltinSkill(id, {
-    canExecuteOnDevice: context.isDesktop ?? isDesktop,
+    canExecuteOnDevice: context.canExecuteOnDevice,
   });
 };
 
 export const isInstalledPluginAvailableInCurrentEnv = (
   plugin: ToolAvailabilityInstalledPlugin,
-  context: Omit<ToolAvailabilityContext, 'installedPlugins'> = {},
-) => (context.isDesktop ?? isDesktop) || plugin.customParams?.mcp?.type !== 'stdio';
+  context: Pick<ToolAvailabilityContext, 'canExecuteOnDevice'> = {},
+) => (context.canExecuteOnDevice ?? isDesktop) || plugin.customParams?.mcp?.type !== 'stdio';
 
 export const isToolAvailableInCurrentEnv = (id: string, context: ToolAvailabilityContext = {}) => {
-  if (!isBuiltinToolAvailableInCurrentEnv(id)) return false;
+  if (!isBuiltinToolAvailableInCurrentEnv(id, context)) return false;
   if (!isBuiltinSkillAvailableInCurrentEnv(id, context)) return false;
 
   const plugin = context.installedPlugins?.find((item) => item.identifier === id);

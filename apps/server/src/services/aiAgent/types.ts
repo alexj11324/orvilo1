@@ -1,7 +1,4 @@
-import type { BotPlatformContext } from '@orvilo/context-engine';
 import type {
-  BotSenderMetadata,
-  ChatTopicBotContext,
   ExecAgentParams,
   OrviloAgentChatConfig,
   RuntimeMentionedAgent,
@@ -12,11 +9,8 @@ import type {
 
 import type { EvalContext } from '@/server/modules/Mecha/ContextEngineering/types';
 import type { AgentConfigWithId } from '@/server/services/agent';
-import type { AgentHook } from '@/server/services/agentRuntime/hooks/types';
-import type { EvalRuntimeContext } from '@/server/services/agentRuntime/types';
-
-import type { DeviceAccessReason } from './deviceAccessPolicy';
-import type { AgentShareGate } from './shareGate';
+import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import type { EvalRuntimeContext } from '@/server/services/agentExecution/types';
 
 /**
  * Resolved run state shared by the {@link AiAgentService.execAgent} pipeline
@@ -35,7 +29,6 @@ export interface ExecRunContext {
   /** Persisted assistant placeholder row id (spinner anchor / error sink). */
   assistantMessageId: string;
   canUseDevice: boolean;
-  deviceAccessReason: DeviceAccessReason;
   /** Effective model for this run (topic-pinned model already applied). */
   model: string;
   parentMessageId?: string;
@@ -45,13 +38,6 @@ export interface ExecRunContext {
   provider: string;
   /** The actual executing agent row id resolved from id/slug. */
   resolvedAgentId: string;
-  /**
-   * Shared-agent visitor gate for this run, mirrored from
-   * {@link InternalExecAgentParams.shareGate} so every extracted pipeline stage
-   * can enforce it without threading a separate argument. Undefined for every
-   * ordinary (non-share) run.
-   */
-  shareGate?: AgentShareGate;
   /** Topic id — guaranteed to exist by the time pipeline stages run. */
   topicId: string;
   trigger?: string;
@@ -78,15 +64,8 @@ export interface InternalExecAgentParams extends ExecAgentParams {
    * continuation has been scheduled. Never client-passable.
    */
   approvalSourceOperationId?: string;
-  /** Bot context for topic metadata (platform, applicationId, platformThreadId) */
-  botContext?: ChatTopicBotContext;
-  /** Bot platform context for injecting platform capabilities (e.g. markdown support) */
-  botPlatformContext?: BotPlatformContext;
-  /**
-   * Real platform author of a bot-channel turn, persisted on the inbound user
-   * message as `metadata.botSender` so the UI shows them instead of the owner.
-   */
-  botSender?: BotSenderMetadata;
+  /** Persist caller-owned run metadata before createOperation can execute. */
+  beforeOperationStart?: (input: { operationId: string; topicId: string }) => Promise<void>;
   /**
    * chatConfig overrides (thinking / reasoning-effort extend params) merged over
    * the executing agent's own chatConfig, skipping nulled keys. Internal-only:
@@ -109,7 +88,6 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   /** Disable all tools (no plugins, no system manifests). Useful for eval/benchmark scenarios. */
   disableTools?: boolean;
   /** Discord context for injecting channel/guild info into agent system message */
-  discordContext?: any;
   /**
    * Inject a user-role message into the LLM context for this turn WITHOUT
    * persisting it (no DB row, no Agent Signal). Used for ephemeral orchestration
@@ -138,8 +116,6 @@ export interface InternalExecAgentParams extends ExecAgentParams {
     /** External URL — fetched if no buffer provided */
     url?: string;
   }>;
-  /** Client-side function tools from Response API — injected into LLM with source='client' */
-  functionTools?: Array<{ description?: string; name: string; parameters?: Record<string, any> }>;
   /** External lifecycle hooks (auto-adapt to local/production mode) */
   hooks?: AgentHook[];
   /** Initial step count offset for resumed operations (accumulated from previous runs) */
@@ -166,6 +142,13 @@ export interface InternalExecAgentParams extends ExecAgentParams {
   parentMessageId?: string;
   queueRetries?: number;
   queueRetryDelay?: string;
+  /**
+   * Tool identifiers this run cannot start without — task-tool requirements
+   * and evidence-submission capabilities land here. Every id must resolve to a
+   * mounted outcome before dispatch; a partial mount is an admission error, not
+   * a degraded run. Mutually incompatible with `disableTools`.
+   */
+  requiredToolIds?: string[];
   /** Whether to continue execution from an existing persisted message */
   resume?: boolean;
   /**
@@ -225,12 +208,6 @@ export interface InternalExecAgentParams extends ExecAgentParams {
    * downstream (connectors, installed plugins) keep it to the caller's own tools.
    */
   selectedToolIds?: string[];
-  /**
-   * Shared-agent visitor gate. Set ONLY by the shareChat router after the
-   * share access check — never client-passable. Restricts tools/memory/files at
-   * operation-build time, denies device access, and scopes the visitor's rows.
-   */
-  shareGate?: AgentShareGate;
   /** Abort startup before the agent runtime operation is created */
   signal?: AbortSignal;
   /**

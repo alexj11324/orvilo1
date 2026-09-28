@@ -2334,8 +2334,6 @@
   "workingPanel.browser.actions.reload": "再読み込み",
   "workingPanel.browser.actions.stop": "読み込みを停止",
   "workingPanel.browser.addressPlaceholder": "検索またはアドレスを入力",
-  "workingPanel.browser.agentControlling": "エージェントがブラウザを使用中",
-  "workingPanel.browser.agentCursor": "エージェント",
   "workingPanel.browser.context.elementAdded": "要素がチャットコンテキストに追加されました",
   "workingPanel.browser.context.elementTitle": "要素",
   "workingPanel.browser.context.failed": "要素コンテキストを追加できませんでした",

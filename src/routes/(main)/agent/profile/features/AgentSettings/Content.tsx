@@ -1,7 +1,12 @@
 'use client';
 
 import isEqual from 'fast-deep-equal';
-import { ActivityIcon, GitBranchIcon, MessageSquareHeartIcon } from 'lucide-react';
+import {
+  ActivityIcon,
+  GitBranchIcon,
+  MessageSquareHeartIcon,
+  NotebookTextIcon,
+} from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
@@ -23,6 +28,7 @@ import { labPreferSelectors } from '@/store/user/selectors';
 const TAB_META = {
   [ChatSettingsTabs.Graph]: { icon: GitBranchIcon, labelKey: 'agentTab.graph' },
   [ChatSettingsTabs.Opening]: { icon: MessageSquareHeartIcon, labelKey: 'agentTab.opening' },
+  [ChatSettingsTabs.Rules]: { icon: NotebookTextIcon, labelKey: 'agentTab.rules' },
   [ChatSettingsTabs.SelfIteration]: {
     icon: ActivityIcon,
     labelKey: 'agentTab.selfIteration',
@@ -41,6 +47,7 @@ const Content = memo(() => {
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const { enableAgentSelfIteration } = useServerConfigStore(featureFlagsSelectors);
   const enableAgentGraphConfigLab = useUserStore(labPreferSelectors.enableAgentGraphConfig);
+  const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
   const [tab, setTab] = useState(ChatSettingsTabs.Opening);
   const showGraphTab = enableAgentGraphConfigLab && !isInbox && !isHeterogeneous;
 
@@ -48,10 +55,11 @@ const Content = memo(() => {
     () =>
       [
         ChatSettingsTabs.Opening,
+        enableSelfLearning ? ChatSettingsTabs.Rules : null,
         enableAgentSelfIteration ? ChatSettingsTabs.SelfIteration : null,
         showGraphTab ? ChatSettingsTabs.Graph : null,
       ].filter(Boolean) as ChatSettingsTabs[],
-    [enableAgentSelfIteration, showGraphTab],
+    [enableAgentSelfIteration, enableSelfLearning, showGraphTab],
   );
 
   const activeTab = availableTabs.includes(tab) ? tab : availableTabs[0];

@@ -51,69 +51,6 @@ vi.mock('@/server/services/skill/resource', () => ({
   }),
 }));
 
-// Mock GitHub module
-const normalizeIdentifierPart = (part: string) =>
-  part
-    .replaceAll(/[^\w-]/g, '-')
-    .replaceAll(/-+/g, '-')
-    .replaceAll(/^-|-$/g, '');
-
-const mockGitHubInstance = {
-  downloadRepoZip: vi.fn(),
-  generateIdentifier: vi.fn().mockImplementation(function (info: {
-    owner: string;
-    path?: string;
-    repo: string;
-  }) {
-    const parts = [normalizeIdentifierPart(info.owner), normalizeIdentifierPart(info.repo)];
-    if (info.path) {
-      const lastSegment = info.path.split('/').findLast(Boolean);
-      if (lastSegment) parts.push(normalizeIdentifierPart(lastSegment));
-    }
-    return parts.join('-').toLowerCase();
-  }),
-  parseRepoUrl: vi.fn(),
-};
-vi.mock('@/server/modules/GitHub', () => ({
-  GitHub: vi.fn().mockImplementation(function () {
-    return mockGitHubInstance;
-  }),
-  GitHubNotFoundError: class extends Error {},
-  GitHubParseError: class extends Error {},
-}));
-
-// Mock SkillParser
-const mockParserInstance = {
-  parseSkillMd: vi.fn(),
-  parseZipPackage: vi.fn(),
-};
-vi.mock('@/server/services/skill/parser', () => ({
-  SkillParser: vi.fn().mockImplementation(function () {
-    return mockParserInstance;
-  }),
-}));
-
-const mockMarketServiceInstance = {
-  getSkillDownloadUrl: vi.fn(),
-};
-vi.mock('@/server/services/market', () => ({
-  MarketService: vi.fn().mockImplementation(function () {
-    return mockMarketServiceInstance;
-  }),
-}));
-
-// User-supplied URLs (importFromUrl / importFromMarket download) must be fetched through
-// ssrfSafeFetch (SSRF guard), never raw global fetch. Configure responses on mockSsrfSafeFetch;
-// the raw global fetch is stubbed to throw so any regression back to raw fetch fails loudly
-// (GHSA-53h9-fmjf-frwr / #16536).
-const { mockSsrfSafeFetch } = vi.hoisted(() => ({ mockSsrfSafeFetch: vi.fn() }));
-vi.mock('@orvilo/ssrf-safe-fetch', () => ({ ssrfSafeFetch: mockSsrfSafeFetch }));
-
-const mockFetch = vi.fn(function () {
-  throw new Error('raw global fetch must not be used for user-supplied URLs; use ssrfSafeFetch');
-});
-vi.stubGlobal('fetch', mockFetch);
-
 describe('Skill Router Integration Tests', () => {
   let serverDB: OrviloDatabase;
   let agentDocumentModel: AgentDocumentModel;
@@ -129,6 +66,32 @@ describe('Skill Router Integration Tests', () => {
   afterEach(async () => {
     await cleanupTestUser(serverDB, userId);
   });
+
+  /**
+   * Seed a skill row directly. The router's `create` / import procedures were
+   * retired with the platform Skill-management chain, so the read APIs under
+   * test are exercised against rows inserted through the schema.
+   */
+  const seedSkill = async (values: {
+    content?: string;
+    description: string;
+    identifier: string;
+    name: string;
+  }) => {
+    const [row] = await serverDB
+      .insert(agentSkills)
+      .values({
+        content: values.content,
+        description: values.description,
+        identifier: values.identifier,
+        manifest: { name: values.name, description: values.description },
+        name: values.name,
+        source: 'user',
+        userId,
+      })
+      .returning();
+    return row;
+  };
 
   const getManagedSkillBindingId = async ({
     agentId,
@@ -160,64 +123,22 @@ describe('Skill Router Integration Tests', () => {
     return document.id;
   };
 
-  describe('create', () => {
-    it('should create a new skill', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const result = await caller.create({
-        name: 'Test Skill',
-        content: '# Test Skill\n\nThis is a test skill.',
-        description: 'A skill for testing',
-      });
-
-      expect(result).toBeDefined();
-      expect(result!.name).toBe('Test Skill');
-      expect(result!.content).toBe('# Test Skill\n\nThis is a test skill.');
-      expect(result!.description).toBe('A skill for testing');
-      expect(result!.source).toBe('user');
-      expect(result!.identifier).toMatch(/^user\./);
-    });
-
-    it('should create skill with custom identifier', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const result = await caller.create({
-        name: 'Custom ID Skill',
-        content: '# Custom',
-        description: 'Custom identifier skill',
-        identifier: 'custom.skill.id',
-      });
-
-      expect(result!.identifier).toBe('custom.skill.id');
-    });
-
-    it('should throw error for duplicate identifier', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      await caller.create({
-        name: 'First Skill',
-        content: '# First',
-        description: 'First skill',
-        identifier: 'duplicate.id',
-      });
-
-      await expect(
-        caller.create({
-          name: 'Second Skill',
-          content: '# Second',
-          description: 'Second skill',
-          identifier: 'duplicate.id',
-        }),
-      ).rejects.toThrow();
-    });
-  });
-
   describe('list', () => {
     it('should list all skills for user', async () => {
       const caller = agentSkillsRouter.createCaller(createTestContext(userId));
 
-      await caller.create({ name: 'Skill 1', content: '# Skill 1', description: 'Skill 1 desc' });
-      await caller.create({ name: 'Skill 2', content: '# Skill 2', description: 'Skill 2 desc' });
+      await seedSkill({
+        name: 'Skill 1',
+        content: '# Skill 1',
+        description: 'Skill 1 desc',
+        identifier: 'list.skill-1',
+      });
+      await seedSkill({
+        name: 'Skill 2',
+        content: '# Skill 2',
+        description: 'Skill 2 desc',
+        identifier: 'list.skill-2',
+      });
 
       const result = await caller.list();
 
@@ -262,10 +183,11 @@ describe('Skill Router Integration Tests', () => {
     it('should get skill by id', async () => {
       const caller = agentSkillsRouter.createCaller(createTestContext(userId));
 
-      const created = await caller.create({
+      const created = await seedSkill({
         name: 'Get By ID Skill',
         content: '# Get By ID',
         description: 'Get by ID skill',
+        identifier: 'get-by-id.skill',
       });
 
       const result = await caller.getById({ id: created!.id });
@@ -288,7 +210,7 @@ describe('Skill Router Integration Tests', () => {
     it('should get skill by identifier', async () => {
       const caller = agentSkillsRouter.createCaller(createTestContext(userId));
 
-      await caller.create({
+      await seedSkill({
         name: 'By Identifier',
         content: '# By Identifier',
         description: 'By identifier skill',
@@ -306,10 +228,11 @@ describe('Skill Router Integration Tests', () => {
     it('should get skill by name', async () => {
       const caller = agentSkillsRouter.createCaller(createTestContext(userId));
 
-      await caller.create({
+      await seedSkill({
         name: 'Unique Skill Name',
         content: '# By Name',
         description: 'By name skill',
+        identifier: 'get-by-name.skill',
       });
 
       const result = await caller.getByName({ name: 'Unique Skill Name' });
@@ -331,8 +254,18 @@ describe('Skill Router Integration Tests', () => {
     it('should search skills by name', async () => {
       const caller = agentSkillsRouter.createCaller(createTestContext(userId));
 
-      await caller.create({ name: 'TypeScript Expert', content: '# TS', description: 'TS expert' });
-      await caller.create({ name: 'Python Master', content: '# Py', description: 'Py master' });
+      await seedSkill({
+        name: 'TypeScript Expert',
+        content: '# TS',
+        description: 'TS expert',
+        identifier: 'search.ts-expert',
+      });
+      await seedSkill({
+        name: 'Python Master',
+        content: '# Py',
+        description: 'Py master',
+        identifier: 'search.py-master',
+      });
 
       const result = await caller.search({ query: 'TypeScript' });
 
@@ -366,136 +299,6 @@ describe('Skill Router Integration Tests', () => {
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].name).toBe('Skill A');
-    });
-  });
-
-  describe('update', () => {
-    it('should update skill content', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const created = await caller.create({
-        name: 'Original Name',
-        content: '# Original',
-        description: 'Original description',
-      });
-
-      await caller.update({
-        id: created!.id,
-        content: '# Updated Content',
-      });
-
-      const updated = await caller.getById({ id: created!.id });
-
-      expect(updated?.content).toBe('# Updated Content');
-      // Name should remain unchanged
-      expect(updated?.name).toBe('Original Name');
-    });
-
-    it('should update skill via manifest and sync to top-level fields', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const created = await caller.create({
-        name: 'Original Name',
-        content: '# Test',
-        description: 'Original description',
-      });
-
-      await caller.update({
-        id: created!.id,
-        manifest: {
-          name: 'Updated Name',
-          description: 'Updated description',
-          version: '2.0.0',
-        },
-      });
-
-      const updated = await caller.getById({ id: created!.id });
-
-      // Top-level fields should be synced from manifest
-      expect(updated?.name).toBe('Updated Name');
-      expect(updated?.description).toBe('Updated description');
-      // Manifest should contain all fields
-      expect(updated?.manifest).toMatchObject({
-        name: 'Updated Name',
-        description: 'Updated description',
-        version: '2.0.0',
-      });
-    });
-
-    it('should merge manifest instead of replacing', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const created = await caller.create({
-        name: 'Merge Test',
-        content: '# Test',
-        description: 'Merge test skill',
-      });
-
-      // First update: add version
-      await caller.update({
-        id: created!.id,
-        manifest: {
-          version: '1.0.0',
-        },
-      });
-
-      // Second update: add license (should keep version)
-      await caller.update({
-        id: created!.id,
-        manifest: {
-          license: 'MIT',
-        },
-      });
-
-      const updated = await caller.getById({ id: created!.id });
-
-      // Both version and license should exist
-      expect(updated?.manifest).toMatchObject({
-        name: 'Merge Test',
-        description: 'Merge test skill',
-        version: '1.0.0',
-        license: 'MIT',
-      });
-    });
-  });
-
-  describe('delete', () => {
-    it('should delete skill', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const created = await caller.create({
-        name: 'To Delete',
-        content: '# Delete Me',
-        description: 'To delete skill',
-      });
-
-      await caller.delete({ id: created!.id });
-
-      const deleted = await caller.getById({ id: created!.id });
-
-      expect(deleted).toBeUndefined();
-    });
-
-    it('should not affect other skills when deleting', async () => {
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const skill1 = await caller.create({
-        name: 'Skill 1',
-        content: '# 1',
-        description: 'Skill 1',
-      });
-      const skill2 = await caller.create({
-        name: 'Skill 2',
-        content: '# 2',
-        description: 'Skill 2',
-      });
-
-      await caller.delete({ id: skill1!.id });
-
-      const remaining = await caller.list();
-
-      expect(remaining.data).toHaveLength(1);
-      expect(remaining.data[0].id).toBe(skill2!.id);
     });
   });
 
@@ -830,10 +633,11 @@ describe('Skill Router Integration Tests', () => {
     it('should return empty array for skill without resources', async () => {
       const caller = agentSkillsRouter.createCaller(createTestContext(userId));
 
-      const created = await caller.create({
+      const created = await seedSkill({
         name: 'No Resources',
         content: '# No Resources',
         description: 'Skill without resources',
+        identifier: 'no-resources.list',
       });
 
       const result = await caller.listResources({ id: created!.id });
@@ -863,10 +667,11 @@ describe('Skill Router Integration Tests', () => {
     it('should throw for skill without resources', async () => {
       const caller = agentSkillsRouter.createCaller(createTestContext(userId));
 
-      const created = await caller.create({
+      const created = await seedSkill({
         name: 'No Resources',
         content: '# No Resources',
         description: 'Skill without resources',
+        identifier: 'no-resources.read',
       });
 
       // Skill exists but has no resources, triggers BAD_REQUEST with message
@@ -876,234 +681,14 @@ describe('Skill Router Integration Tests', () => {
     });
   });
 
-  describe('importFromGitHub', () => {
-    it('should import skill from GitHub with subdirectory path', async () => {
-      // Setup mocks
-      mockGitHubInstance.parseRepoUrl.mockReturnValue({
-        branch: 'main',
-        owner: 'openclaw',
-        path: 'skills/skill-creator',
-        repo: 'openclaw',
-      });
-      mockGitHubInstance.downloadRepoZip.mockResolvedValue(Buffer.from('mock-zip-content'));
-      mockParserInstance.parseZipPackage.mockResolvedValue({
-        content: '# Skill Creator\n\nCreate skills easily.',
-        manifest: { name: 'skill-creator', description: 'Create skills' },
-        resources: new Map(),
-        // zipHash undefined to skip globalFiles foreign key (FileService is mocked)
-        zipHash: undefined,
-      });
-
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const result = await caller.importFromGitHub({
-        gitUrl: 'https://github.com/openclaw/openclaw/tree/main/skills/skill-creator',
-      });
-
-      expect(result).toBeDefined();
-      expect(result!.skill.name).toBe('skill-creator');
-      expect(result!.skill.identifier).toBe('openclaw-openclaw-skill-creator');
-      expect(result!.skill.source).toBe('market');
-      expect(result!.skill.manifest).toMatchObject({
-        repository: 'https://github.com/openclaw/openclaw',
-        sourceUrl: 'https://github.com/openclaw/openclaw/tree/main/skills/skill-creator',
-      });
-
-      // Verify parseRepoUrl was called with correct URL
-      expect(mockGitHubInstance.parseRepoUrl).toHaveBeenCalledWith(
-        'https://github.com/openclaw/openclaw/tree/main/skills/skill-creator',
-        undefined,
-      );
-
-      // Verify parseZipPackage was called with basePath and repackSkillZip
-      expect(mockParserInstance.parseZipPackage).toHaveBeenCalledWith(expect.any(Buffer), {
-        basePath: 'skills/skill-creator',
-        repackSkillZip: true,
-      });
-    });
-
-    it('should update existing skill when re-importing from same GitHub path', async () => {
-      mockGitHubInstance.parseRepoUrl.mockReturnValue({
-        branch: 'main',
-        owner: 'alexj11324',
-        path: 'skills/demo',
-        repo: 'skills',
-      });
-      mockGitHubInstance.downloadRepoZip.mockResolvedValue(Buffer.from('mock-zip'));
-
-      let callCount = 0;
-      mockParserInstance.parseZipPackage.mockImplementation(function () {
-        callCount++;
-        return {
-          content: callCount === 1 ? '# Original' : '# Updated Content',
-          manifest: {
-            name: callCount === 1 ? 'Original Name' : 'Updated Name',
-            description: callCount === 1 ? 'Original desc' : 'Updated desc',
-          },
-          resources: new Map(),
-          // zipHash undefined to skip globalFiles foreign key
-          zipHash: undefined,
-        };
-      });
-
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      // First import
-      const first = await caller.importFromGitHub({
-        gitUrl: 'https://github.com/alexj11324/skills/tree/main/skills/demo',
-      });
-      expect(first!.skill.name).toBe('Original Name');
-      expect(first!.skill.content).toBe('# Original');
-
-      // Re-import (should update)
-      const second = await caller.importFromGitHub({
-        gitUrl: 'https://github.com/alexj11324/skills/tree/main/skills/demo',
-      });
-      expect(second!.skill.id).toBe(first!.skill.id); // Same skill updated
-      expect(second!.skill.name).toBe('Updated Name');
-      expect(second!.skill.content).toBe('# Updated Content');
-    });
-  });
-
-  describe('importFromUrl', () => {
-    beforeEach(() => {
-      mockSsrfSafeFetch.mockReset();
-    });
-
-    it('should import skill from URL', async () => {
-      mockSsrfSafeFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: async () => `---
-name: URL Skill
-description: A skill from URL
----
-# URL Skill Content`,
-      });
-
-      mockParserInstance.parseSkillMd.mockReturnValue({
-        content: '# URL Skill Content',
-        manifest: { name: 'URL Skill', description: 'A skill from URL' },
-        raw: 'raw',
-      });
-
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const result = await caller.importFromUrl({
-        url: 'https://example.com/skill.md',
-      });
-
-      expect(result).toBeDefined();
-      expect(result!.status).toBe('created');
-      expect(result!.skill.name).toBe('URL Skill');
-      expect(result!.skill.identifier).toBe('url.example.com.skill');
-      expect(result!.skill.source).toBe('market');
-      expect(result!.skill.manifest).toMatchObject({
-        sourceUrl: 'https://example.com/skill.md',
-      });
-    });
-
-    it('should update existing skill when re-importing from same URL', async () => {
-      mockSsrfSafeFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: async () => 'content',
-      });
-
-      let callCount = 0;
-      mockParserInstance.parseSkillMd.mockImplementation(function () {
-        callCount++;
-        return {
-          content: callCount === 1 ? '# Original' : '# Updated',
-          manifest: {
-            name: callCount === 1 ? 'Original Name' : 'Updated Name',
-            description: callCount === 1 ? 'Original desc' : 'Updated desc',
-          },
-          raw: 'raw',
-        };
-      });
-
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      // First import
-      const first = await caller.importFromUrl({
-        url: 'https://example.com/update-test.md',
-      });
-      expect(first!.status).toBe('created');
-      expect(first!.skill.content).toBe('# Original');
-
-      // Re-import (should update)
-      const second = await caller.importFromUrl({
-        url: 'https://example.com/update-test.md',
-      });
-      expect(second!.skill.id).toBe(first!.skill.id); // Same skill updated
-      expect(second!.skill.name).toBe('Updated Name');
-      expect(second!.skill.content).toBe('# Updated');
-    });
-  });
-
-  describe('importFromMarket', () => {
-    beforeEach(() => {
-      mockSsrfSafeFetch.mockReset();
-      mockMarketServiceInstance.getSkillDownloadUrl.mockReset();
-    });
-
-    it('should keep the market identifier stable when re-importing from market', async () => {
-      mockMarketServiceInstance.getSkillDownloadUrl
-        .mockReturnValueOnce(
-          'https://market.aspectlylabs.com/api/v1/skills/github.owner.repo/download',
-        )
-        .mockReturnValueOnce(
-          'https://market.aspectlylabs.com/api/v1/skills/github.owner.repo/download?version=1.0.0',
-        );
-
-      mockSsrfSafeFetch.mockResolvedValue({
-        arrayBuffer: async () => new ArrayBuffer(8),
-        headers: {
-          get: (key: string) => (key === 'content-type' ? 'application/zip' : null),
-        },
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-      });
-
-      let callCount = 0;
-      mockParserInstance.parseZipPackage.mockImplementation(function () {
-        callCount++;
-        return {
-          content: callCount === 1 ? '# Original' : '# Updated',
-          manifest: {
-            description: callCount === 1 ? 'Original desc' : 'Updated desc',
-            name: callCount === 1 ? 'Original Name' : 'Updated Name',
-          },
-          resources: new Map(),
-          zipHash: undefined,
-        };
-      });
-
-      const caller = agentSkillsRouter.createCaller(createTestContext(userId));
-
-      const first = await caller.importFromMarket({ identifier: 'github.owner.repo' });
-      expect(first!.status).toBe('created');
-      expect(first!.skill.identifier).toBe('github.owner.repo');
-
-      const second = await caller.importFromMarket({ identifier: 'github.owner.repo' });
-      expect(second!.status).toBe('updated');
-      expect(second!.skill.id).toBe(first!.skill.id);
-      expect(second!.skill.identifier).toBe('github.owner.repo');
-      expect(second!.skill.name).toBe('Updated Name');
-      expect(second!.skill.content).toBe('# Updated');
-    });
-  });
-
   describe('user isolation', () => {
     it('should not access skills from other users', async () => {
-      // Create skill for original user
-      const caller1 = agentSkillsRouter.createCaller(createTestContext(userId));
-      await caller1.create({
+      // Seed a skill for the original user
+      await seedSkill({
         name: 'User 1 Skill',
         content: '# User 1',
         description: 'User 1 skill',
+        identifier: 'isolation.user-1',
       });
 
       // Create another user
@@ -1118,44 +703,23 @@ description: A skill from URL
       await cleanupTestUser(serverDB, otherUserId);
     });
 
-    it('should not update skills from other users', async () => {
+    it('never exposes the skills of another user through a read procedure', async () => {
       const caller1 = agentSkillsRouter.createCaller(createTestContext(userId));
-      const created = await caller1.create({
-        name: 'Original',
-        content: '# Original',
-        description: 'Original skill',
-      });
-
-      // Create another user
-      const otherUserId = await createTestUser(serverDB);
-      const caller2 = agentSkillsRouter.createCaller(createTestContext(otherUserId));
-
-      // Another user cannot see the skill, so the update is rejected outright.
-      await expect(
-        caller2.update({ id: created!.id, manifest: { name: 'Hacked' } }),
-      ).rejects.toThrow('Skill not found');
-
-      // Original skill should be unchanged
-      const unchanged = await caller1.getById({ id: created!.id });
-      expect(unchanged?.name).toBe('Original');
-
-      await cleanupTestUser(serverDB, otherUserId);
-    });
-
-    it('should not delete skills from other users', async () => {
-      const caller1 = agentSkillsRouter.createCaller(createTestContext(userId));
-      const created = await caller1.create({
+      const created = await seedSkill({
         name: 'Protected',
         content: '# Protected',
         description: 'Protected skill',
+        identifier: 'isolation.protected',
       });
 
       // Create another user
       const otherUserId = await createTestUser(serverDB);
       const caller2 = agentSkillsRouter.createCaller(createTestContext(otherUserId));
 
-      // Try to delete (should not affect the skill due to userId filter)
-      await caller2.delete({ id: created!.id });
+      // Reads are user-scoped, so the other user resolves nothing — not even by
+      // the identifier that would bypass the id filter.
+      expect(await caller2.getById({ id: created!.id })).toBeUndefined();
+      expect(await caller2.getByIdentifier({ identifier: 'isolation.protected' })).toBeUndefined();
 
       // Original skill should still exist
       const stillExists = await caller1.getById({ id: created!.id });

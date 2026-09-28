@@ -1,12 +1,6 @@
 import { WEB_ONBOARDING } from '@orvilo/builtin-agents';
 import { AuvApiName, AuvIdentifier, AuvManifest } from '@orvilo/builtin-tool-auv/client';
 import {
-  BrowserApiName,
-  BrowserIdentifier,
-  BrowserInspectors,
-  BrowserRenders,
-} from '@orvilo/builtin-tool-browser/client';
-import {
   ClaudeCodeIdentifier as ClaudeCodeToolIdentifier,
   ClaudeCodeInspectors,
   ClaudeCodeInterventions,
@@ -26,8 +20,6 @@ import {
 } from '@orvilo/builtin-tool-local-system/client';
 import { OrviloAgentApiName, OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { RemoteDeviceApiName, RemoteDeviceIdentifier } from '@orvilo/builtin-tool-remote-device';
-import { SkillStoreApiName, SkillStoreIdentifier } from '@orvilo/builtin-tool-skill-store';
-import { SkillStoreInspectors, SkillStoreRenders } from '@orvilo/builtin-tool-skill-store/client';
 import {
   UserInteractionApiName,
   UserInteractionIdentifier,
@@ -57,10 +49,6 @@ describe('builtin tool registry', () => {
 
   beforeAll(() => {
     registerBuiltinToolSurfaces();
-  });
-
-  it('includes skill store in builtin identifiers', () => {
-    expect(builtinToolIdentifiers).toContain(SkillStoreIdentifier);
   });
 
   it('includes web onboarding in builtin identifiers', () => {
@@ -316,13 +304,6 @@ describe('builtin tool registry', () => {
     expect(alwaysOnToolIds).not.toContain(AuvIdentifier);
   });
 
-  it('registers skill store inspectors and renders for market flows', () => {
-    expect(SkillStoreInspectors[SkillStoreApiName.importFromMarket]).toBeDefined();
-    expect(SkillStoreInspectors[SkillStoreApiName.searchSkill]).toBeDefined();
-    expect(SkillStoreRenders[SkillStoreApiName.importFromMarket]).toBeDefined();
-    expect(SkillStoreRenders[SkillStoreApiName.searchSkill]).toBeDefined();
-  });
-
   it('registers group agent builder createGroup inspector', () => {
     expect(builtinToolIdentifiers).toContain(GroupAgentBuilderIdentifier);
     expect(GroupAgentBuilderInspectors[GroupAgentBuilderApiName.createGroup]).toBeDefined();
@@ -355,15 +336,6 @@ describe('builtin tool registry', () => {
     expect(getBuiltinInspector('codex', 'error')).toBeDefined();
   });
 
-  it('registers inspectors and renders for every in-app browser API', () => {
-    for (const apiName of Object.values(BrowserApiName)) {
-      expect(BrowserInspectors[apiName]).toBeDefined();
-      expect(BrowserRenders[apiName]).toBeDefined();
-      expect(getBuiltinInspector(BrowserIdentifier, apiName)).toBe(BrowserInspectors[apiName]);
-      expect(getBuiltinRender(BrowserIdentifier, apiName)).toBe(BrowserRenders[apiName]);
-    }
-  });
-
   it.each(['opencode', 'pi'])('registers shared file and shell surfaces for %s', (identifier) => {
     for (const apiName of ['bash', 'read', 'write']) {
       expect(getBuiltinInspector(identifier, apiName)).toBeDefined();
@@ -392,6 +364,25 @@ describe('builtin tool registry', () => {
       expect(getBuiltinInspector(RemoteDeviceIdentifier, apiName)).toBeDefined();
       expect(getBuiltinRender(RemoteDeviceIdentifier, apiName)).toBeDefined();
     }
+  });
+
+  it('keeps read-only renders for the retired orvilo-browser identifier', () => {
+    for (const apiName of [
+      'click',
+      'fill',
+      'navigate',
+      'press',
+      'readPage',
+      'screenshot',
+      'scroll',
+      'snapshot',
+    ]) {
+      expect(getBuiltinRender('orvilo-browser', apiName)).toBeDefined();
+    }
+
+    // No inspector/manifest/executor — the tool itself is retired.
+    expect(getBuiltinInspector('orvilo-browser', 'screenshot')).toBeUndefined();
+    expect(builtinToolIdentifiers).not.toContain('orvilo-browser');
   });
 
   it('includes user interaction and web onboarding in web onboarding runtime plugins', () => {

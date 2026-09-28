@@ -1,7 +1,7 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { ChevronRightIcon, FlagIcon } from 'lucide-react';
+import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -111,7 +111,7 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
           {entry.bucket === 'running' ? (
             <RunningGlyph />
           ) : (
-            <Icon color={cssVar.colorInfo} icon={FlagIcon} size={16} />
+            <Icon color={cssVar.colorInfo} icon={TargetIcon} size={16} />
           )}
         </span>
         <Text ellipsis className={homeType.itemTitle} style={{ flex: 1, minWidth: 0 }}>

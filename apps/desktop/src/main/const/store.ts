@@ -35,7 +35,6 @@ export const STORE_DEFAULTS: ElectronMainStore = {
   gatewayWorkspaceEnrollments: [],
   heteroSessionDirPrefs: {},
   heteroTracingEnabled: false,
-  imessageBridgeConfigs: [],
   lastWorkspaceSlugByAccount: {},
   locale: 'auto',
   localFileWorkspaceRoots: [],

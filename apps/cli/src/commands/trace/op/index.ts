@@ -2,7 +2,6 @@ import type { Command } from 'commander';
 
 import { registerOpInspectCommand } from './inspect';
 import { registerOpListCommand } from './list';
-import { registerOpReplayCommand } from './replay';
 
 /**
  * `lh trace op` — traces of a single agent operation. Sibling scopes (goal,
@@ -13,5 +12,4 @@ export function registerOpCommand(parent: Command) {
 
   registerOpInspectCommand(op);
   registerOpListCommand(op);
-  registerOpReplayCommand(op);
 }

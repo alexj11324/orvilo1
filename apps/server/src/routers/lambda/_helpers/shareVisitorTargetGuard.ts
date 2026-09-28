@@ -25,7 +25,7 @@ interface ShareVisitorGuardCtx {
  * `updateTranslate`, `TopicModel.update`) are also the write path for
  * legitimate in-flight VISITOR turns: `ServerMessageTransport`,
  * `HeterogeneousPersistenceHandler`, `services/aiAgent/*`,
- * `agentRuntime/CompletionLifecycle`, `AbandonOperationService` and friends all
+ * `agentExecution/CompletionLifecycle`, `AbandonOperationService` and friends all
  * persist a visitor's streaming turn under the creator's identity through the
  * very same methods. Flipping the model defaults to exclude visitor rows would
  * silently break live share streaming, and threading an opt-in flag through

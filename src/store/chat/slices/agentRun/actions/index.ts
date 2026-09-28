@@ -13,8 +13,6 @@ import { type StreamingStatesAction } from './state/streamingStates';
 import { StreamingStatesActionImpl } from './state/streamingStates';
 import { type ClientToolExecutionAction } from './transports/client/clientToolExecution';
 import { ClientToolExecutionActionImpl } from './transports/client/clientToolExecution';
-import { type StreamingExecutorAction } from './transports/client/streamingExecutor';
-import { StreamingExecutorActionImpl } from './transports/client/streamingExecutor';
 import { type GatewayAction } from './transports/gateway/gateway';
 import { GatewayActionImpl } from './transports/gateway/gateway';
 
@@ -23,7 +21,6 @@ export type ChatAgentRunAction = ChatMemoryAction &
   ConversationLifecycleAction &
   ConversationControlAction &
   GatewayAction &
-  StreamingExecutorAction &
   StreamingStatesAction;
 
 export const chatAgentRun: StateCreator<
@@ -42,6 +39,5 @@ export const chatAgentRun: StateCreator<
     new ConversationLifecycleActionImpl(...params),
     new ConversationControlActionImpl(...params),
     new GatewayActionImpl(...params),
-    new StreamingExecutorActionImpl(...params),
     new StreamingStatesActionImpl(...params),
   ]);

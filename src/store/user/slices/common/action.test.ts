@@ -46,6 +46,22 @@ afterEach(() => {
 });
 
 describe('createCommonSlice', () => {
+  it('reflects saved and cleared job titles without a mounted bootstrap subscriber', async () => {
+    useUserStore.setState({ user: { id: 'profile-user', jobTitle: 'Previous title' } });
+    vi.spyOn(userService, 'updateJobTitle').mockResolvedValue({
+      command: 'UPDATE',
+      fields: [],
+      oid: 0,
+      rowCount: 1,
+      rows: [],
+    });
+
+    await useUserStore.getState().updateJobTitle('Software engineer');
+    expect(useUserStore.getState().user?.jobTitle).toBe('Software engineer');
+    await useUserStore.getState().updateJobTitle('');
+    expect(useUserStore.getState().user?.jobTitle).toBeNull();
+  });
+
   describe('isTaskTemplateRecommendationKey', () => {
     it('matches every daily recommendation cache variant', () => {
       expect(

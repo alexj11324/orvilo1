@@ -1,0 +1,75 @@
+# Environments
+
+> Where Orvilo code runs and how each environment is configured.
+> Branch semantics (`canary` = development trunk **and** cloud production line, `main` = release snapshot) are defined in [docs/development/branch-model.md](./development/branch-model.md); this doc covers the deploy targets those branches feed.
+
+## Topology
+
+| Environment | Trigger                                                                                                                                                                                                                                                                                                      | Config source                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Database                                                                                                                                                                                                                          | Access                                                                                                                                                                             | Seed data                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local dev   | Manual — `bun run dev` on a developer machine                                                                                                                                                                                                                                                                | Root `.env` (templates: `.env.example.development`, `.env.example`); `.env.desktop` for the desktop app; when no root `.env` exists, `.agents/acceptance/scripts/init-dev-env.sh` writes a disposable `.records/env/agent-testing-dev.env`                                                                                                                                                                                                                            | Local ParadeDB + Redis + S3: `dev:docker` → `docker-compose/dev/docker-compose.yml`, or `init-dev-env.sh setup-db` (containers `orvilo-agent-testing-postgres` on :5433, `orvilo-agent-testing-redis` on :6380, s3rver on :29000) | Next dev server `http://localhost:3010` (`dev:next`); Vite SPA `http://localhost:9876` (`dev:spa`); the printed Debug Proxy URL loads the local SPA against the production backend | `init-dev-env.sh seed-user` seeds `agent-testing@orvilo.aspectlylabs.com` plus a CLI API key (`.records/env/agent-testing-cli.env`); first login auto-provisions a workspace |
+| CI test     | `push` / `pull_request` → `.github/workflows/test.yml` (Test CI) and `.github/workflows/e2e.yml` (E2E CI)                                                                                                                                                                                                    | Workflow `env:` blocks plus the `.github/actions/setup-env` composite action; E2E stand-ins from `e2e/scripts/mockServices.ts` (mock LLM on :3406, fake agent/device gateway on :3407)                                                                                                                                                                                                                                                                                | E2E: `paradedb/paradedb:latest` service container on :5432 via `DATABASE_URL`, migrated with `bun run db:migrate`; test.yml's database job uses a postgres service via `DATABASE_TEST_URL`; other suites use PGlite or mocks      | None — ephemeral runner; E2E serves the built app at `http://localhost:3006` inside the job only                                                                                   | `e2e/src/support/seedTestUser.ts` seeds `e2e-test@orvilo.aspectlylabs.com` (per-worker suffixed users when `E2E_PARALLEL` > 1); unit tests rely on Vitest mocks              |
+| PR preview  | `pull_request_target` → `.github/workflows/vercel-preview.yml`: `gate` waits for the required checks (Test CI, E2E CI, GitGuardian) on the exact head SHA, then `deploy` creates the deployment through the Vercel API; requires repo variable `VERCEL_PREVIEW_DEPLOYMENT_GATE=open` (quota circuit breaker) | `vercel.json` (`buildCommand: bun run build:vercel`; Git deployments disabled for PR branches so only this gated workflow deploys); Vercel project env vars (Preview scope); secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`                                                                                                                                                                                                                             | Not provisioned by the workflow — whatever the Vercel project's Preview-scope env vars point at                                                                                                                                   | `https://<deployment>.vercel.app`, emitted as `deployment_url` in the job summary and on the `preview` GitHub Environment                                                          | None seeded by the repo                                                                                                                                                      |
+| Production  | Push to `canary` builds `ghcr.io/<repo>:sha-<commit>`; `promote` repoints the `:canary` / `:main` floating tags only after that commit's Required Quality Gate is green; deployment is a manual `workflow_dispatch` with `deploy: true`                                                                      | `.github/workflows/deploy-orvilo1.yml`; secrets `ORACLE_SSH_KEY`, `ORACLE_HOST`; host compose dir `/var/lib/orvilo1/docker-compose/deploy` — the deploy job syncs the repo-tracked files (`docker-compose.yml`, `bucket.config.json`, `searxng-settings.yml`, `elasticsearch/`) from `docker-compose/deploy/` to the host before pulling, so new services never hit `no such service`; `.env` and `orvilo1-production.override.yml` are host-local and left untouched | Production Postgres/Redis on the deploy host — a shared machine that also runs 20+ other products' containers                                                                                                                     | `https://orvilo.aspectlylabs.com`; the deploy verifies `http://127.0.0.1:3210/api/version` on the host                                                                             | None — real user data; DB migrations run at container start and the deploy waits for `migration pass` in the logs before starting `hatchet-worker`                           |
+
+## Cloudflare Worker deploys
+
+Auth and Workbench deploy through `.github/workflows/deploy-auth.yml` and
+`.github/workflows/deploy-workbench.yml`. Each workflow uses GitHub's
+`production` environment and runs on a push to `canary` or a manual dispatch.
+The Share deploy script uses the same R2 settings, and
+`.github/workflows/verify-share.yml` uploads its PR preview. All three Wrangler
+configs target Cloudflare account `d8f6630c7869111a5139bc5ed4d24ace`, which
+owns `aspectlylabs.com`.
+
+Each deploy uploads the app's built assets to the `web-assets` R2 bucket using
+the S3-compatible endpoint `https://d8f6630c7869111a5139bc5ed4d24ace.r2.cloudflarestorage.com`
+and region `auto`, then deploys the Worker. The public asset domain is
+`https://web-assets.aspectlylabs.com`.
+
+The GitHub `production` environment must contain `CLOUDFLARE_API_TOKEN` and
+these six `ASSET_S3_*` secrets: `ASSET_S3_ACCESS_KEY_ID`,
+`ASSET_S3_SECRET_ACCESS_KEY`, `ASSET_S3_BUCKET`, `ASSET_S3_ENDPOINT`,
+`ASSET_S3_PUBLIC_DOMAIN`, and `ASSET_S3_REGION`. Keep credential values in
+Google Secret Manager and GitHub environment secrets; do not commit them.
+The Cloudflare API token is stored in Google Secret Manager as
+`orvilo-auth-cloudflare-api-token`. The R2 key pair belongs to the
+`orvilo-web-assets-uploader-rotated-20260928` account token, scoped to
+`web-assets` with Object Read & Write permission, and is stored in Google Secret Manager as
+`orvilo-asset-s3-access-key-id` and `orvilo-asset-s3-secret-access-key`.
+
+## Production deploy units
+
+A production deploy runs three services from the same `sha-<commit>` image (`docker-compose/deploy/`):
+
+- `orvilo` — the Next.js app; runs database migrations at container start.
+- `hatchet-worker` — the Hatchet queue worker (`profile: hatchet`).
+- `collaboration-gateway` — the standalone presence/cursor WebSocket gateway (`apps/collaboration-gateway`, bundled to `index.cjs`). It verifies room tickets and internal publish tokens with the deployment's `JWKS_KEY` (public part only). The app publishes to it over `COLLABORATION_GATEWAY_URL` (default `http://collaboration-gateway:3012`); browsers dial `COLLABORATION_GATEWAY_PUBLIC_URL` — a `ws(s)://` endpoint that the host's reverse proxy forwards to the gateway port. Without a public URL the feature fails closed: `collaboration.authorize` returns an error and presence stays off — nothing else breaks.
+
+Optional runtime vars: `COLLABORATION_GATEWAY_PORT` (host port for the gateway, default 3012), `COLLABORATION_GATEWAY_PUBLIC_URL` (e.g. `wss://orvilo.aspectlylabs.com/collaboration`).
+
+## GitHub Environment labels
+
+Jobs that produce a deployment carry an `environment:` key so GitHub tracks deployments and can attach per-environment secrets and protection rules:
+
+- `deploy` in `.github/workflows/deploy-orvilo1.yml` → `environment: production`
+- `deploy` in `.github/workflows/vercel-preview.yml` → `environment: preview`, with `url:` bound to the emitted `deployment_url`
+
+`test.yml` and `e2e.yml` intentionally declare none — they are ephemeral CI runs, not deployments.
+
+## There is no staging environment
+
+This is the current design, not a gap. `canary` doubles as the development trunk and the cloud production line: every merge to `canary` builds a deployable image and, once its Required Quality Gate turns green, becomes the production candidate. Dogfooding happens on the same `orvilo.aspectlylabs.com` deployment real users hit. `main` is only a periodic release snapshot for tags and distribution channels — it is not a running environment either.
+
+## Adding a staging tier (optional future work)
+
+Not planned today. If a staging tier is ever needed, it would require roughly:
+
+- A `staging` GitHub Environment with its own secrets/variables scope (and optional protection rules or required reviewers).
+- A code line for staging: either a dedicated `staging` branch, or a `workflow_dispatch` mode that deploys an existing `sha-<commit>` image before promotion.
+- A second deploy job or workflow — reusing `.github/actions/require-quality-gate` so staging keeps the same SHA ↔ image digest ↔ gate evidence contract as production.
+- A separate host or an isolated compose project: the production host is shared, so staging needs distinct project/container names, ports, and its own `docker-compose.*.override.yml`.
+- Separate `DATABASE_URL`, `REDIS_URL`, S3 bucket, and app secrets (`KEY_VAULTS_SECRET`, `AUTH_SECRET`, `JWKS_KEY`) — staging must never share production data.
+- A staging hostname and TLS (e.g. `staging.orvilo.aspectlylabs.com`), with matching `APP_URL` / SSRF config.
+- A data policy: seeded fixtures (in the style of `init-dev-env.sh seed-user`) versus an anonymized production copy.
+- An update to the table above and `AGENTS.md` once the tier exists.

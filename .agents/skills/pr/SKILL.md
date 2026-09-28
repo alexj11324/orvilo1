@@ -21,7 +21,6 @@ user-invocable: true
 - `git log --oneline origin/canary..HEAD` — unpushed commits
 - `gh pr list --head "$(git branch --show-current)" --json number,title,state,url` — existing PR
 - `git diff --stat --stat-count=20 origin/canary..HEAD` — change summary
-- `env -u ORVILO_API_KEY -u ORVILO_CLI_API_KEY -u ORVILO_CLI_HOME ORVILO_SERVER=https://orvilo.aspectlylabs.com lh acceptance run list --json` — the published acceptance round for this branch (match on `branch`); pin the Orvilo production origin instead of relying on a CLI fallback
 
 ### 2. Handle uncommitted changes on default branch
 
@@ -47,9 +46,9 @@ If current branch is `canary`/`main` but there are NO uncommitted changes and no
 - Only link issues with matching scope (avoid large umbrella issues)
 - Skip if no matching issue found
 
-### 5. Acceptance gate
+### 5. Verification evidence gate
 
-A feature or fix needs a published acceptance round before the PR is opened (AGENTS.md → Acceptance). If step 1 found none for this branch, run the `acceptance` skill first and come back with its `https://orvilo.aspectlylabs.com/acceptance/<id>` link. When the delivery was already verified on the real product earlier in the session, that skill's ingest path publishes the existing observations and artifacts directly — no re-run, no re-plan. Pure refactors or tooling changes with no user-visible outcome may skip it — state that in the PR body instead of leaving the line out.
+A feature or fix needs verification evidence attached before the PR is opened (AGENTS.md → Verification Evidence). For new or changed product behavior, exercise the affected outcomes on the real product and attach the evidence to the PR — screenshots, recordings, logs, or test output — or publish it as a GitHub Actions artifact. Record the commit SHA the evidence was produced on, so a reviewer can tell which revision it proves. When the delivery was already verified earlier in the session, attach those observations and artifacts directly — no re-run, no re-plan. Pure refactors or tooling changes with no user-visible outcome may skip it — state that in the PR body instead of leaving the line out.
 
 ### 6. Create PR with `gh pr create --base canary`
 
@@ -57,7 +56,7 @@ A feature or fix needs a published acceptance round before the PR is opened (AGE
 - Body: based on PR template (`.github/PULL_REQUEST_TEMPLATE.md`), fill checkboxes
 - Link related GitHub issues using magic keywords (`Fixes #123`, `Closes #123`)
 - Link Linear issues if applicable (`Fixes ORVILO-xxx`)
-- Put the acceptance link (or the explicit skip reason) under **Test**
+- Put the verification evidence (or the explicit skip reason) under **Test**, naming the commit SHA it was produced on
 - Use HEREDOC for body to preserve formatting
 
 ### 7. Open in browser
@@ -72,7 +71,7 @@ Use `.github/PULL_REQUEST_TEMPLATE.md` as the body structure. Key sections:
 - **Related Issue**: Link GitHub/Linear issues with magic keywords
 - **Description of Change**: Summarize what and why
 - **How to Test**: Describe test approach, check relevant boxes
-- **Acceptance**: the published `https://orvilo.aspectlylabs.com/acceptance/<id>` link, or why the change has no user-visible outcome
+- **Verification evidence**: where the evidence lives (PR attachment or CI artifact) and the commit SHA it proves, or why the change has no user-visible outcome
 
 ## Notes
 

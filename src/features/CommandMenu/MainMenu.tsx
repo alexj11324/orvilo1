@@ -1,13 +1,23 @@
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { Command } from 'cmdk';
-import { Bot, FeatherIcon, LibraryBig, MessageSquarePlusIcon, Monitor, Star } from 'lucide-react';
+import {
+  Bot,
+  FeatherIcon,
+  LibraryBig,
+  ListTodo,
+  MessageSquarePlusIcon,
+  Monitor,
+  Star,
+} from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { openFeedbackModal } from '@/components/FeedbackModal';
 import { getNavigableRoutes, getRouteById } from '@/config/routes';
 import { FEEDBACK } from '@/const/url';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -15,11 +25,13 @@ import { topicSelectors } from '@/store/chat/selectors';
 import { useCommandMenuContext } from './CommandMenuContext';
 import { CommandItem } from './components';
 import ContextCommands from './ContextCommands';
+import RecentsCommands from './RecentsCommands';
 import { useCommandMenu } from './useCommandMenu';
 
 const MainMenu = memo(() => {
   const { pathname, menuContext, setPages, pages, onClose } = useCommandMenuContext();
   const { t } = useTranslation('common');
+  const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
   // While the first send from the new-topic view is still creating the real
   // topic, openNewTopicOrSaveTopic is a no-op — disable the command instead of
@@ -30,16 +42,44 @@ const MainMenu = memo(() => {
     handleCreateSession,
     handleCreateTopic,
     handleCreateLibrary,
+    handleCreateProject,
+    handleCreateTask,
     handleNavigate,
     handleExternalLink,
     handleCreateAgentTeam,
   } = useCommandMenu();
+  const navigableRoutes = getNavigableRoutes().filter(
+    (route) => route.id !== 'teams' || workspaceId,
+  );
 
   return (
     <>
       <ContextCommands />
 
-      <Command.Group>
+      <Command.Group heading={t('cmdk.actions')}>
+        {/* Creating a task leads the list: the product's default working surface
+            is the task board, so the palette's first command should be the one
+            that puts work into it. */}
+        <CommandItem
+          disabled={!canCreate}
+          icon={<ListTodo />}
+          keywords={['task', 'todo', 'create', 'new', 'kanban', 'board']}
+          value="create new task"
+          onSelect={handleCreateTask}
+        >
+          {t('cmdk.newTask')}
+        </CommandItem>
+
+        <CommandItem
+          disabled={!canCreate}
+          icon={<PROJECT_ENTITY_ICON />}
+          keywords={['project', 'create', 'new', 'initiative', 'milestone']}
+          value="create new project"
+          onSelect={handleCreateProject}
+        >
+          {t('cmdk.newProject')}
+        </CommandItem>
+
         <CommandItem
           disabled={!canCreate}
           icon={<Bot />}
@@ -110,8 +150,10 @@ const MainMenu = memo(() => {
         </CommandItem>
       </Command.Group>
 
+      <RecentsCommands />
+
       <Command.Group heading={t('cmdk.navigate')}>
-        {getNavigableRoutes().map((route) => {
+        {navigableRoutes.map((route) => {
           const RouteIcon = route.icon;
           const keywords = route.keywordsKey
             ? t(route.keywordsKey as any).split(' ')

@@ -17,11 +17,9 @@ import { sleep } from '@orvilo/utils/sleep';
 
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
-import ImessageBridgeService from '@/services/imessageBridgeSrv';
 import { createLogger } from '@/utils/logger';
 import { setDesktopUserAgentHeader } from '@/utils/user-agent';
 
-import BrowserControlCtr from './BrowserControlCtr';
 import HeterogeneousAgentCtr from './HeterogeneousAgentCtr';
 import { ControllerModule, createProtocolHandler, IpcMethod } from './index';
 import LocalFileCtr from './LocalFileCtr';
@@ -34,10 +32,9 @@ const deviceProtocolHandler = createProtocolHandler('device');
 
 type AvailableRemotePlatformRuntime = Extract<RemotePlatformCommandRuntime, { available: true }>;
 
-// Mirror of `BrowserManifest.identifier` from `@orvilo/builtin-tool-browser`.
+// Mirror of `AuvManifest.identifier` from `@orvilo/builtin-tool-auv`.
 // Hardcoded (not imported) so the desktop main process keeps zero builtin-tool
 // package deps — importing one risks the @orvilo/types stub runtime leak.
-const BrowserIdentifier = 'orvilo-browser';
 const AuvIdentifier = 'orvilo-computer-use';
 const PLATFORM_CANCEL_GRACE_MS = 2000;
 const PLATFORM_CANCEL_FORCE_MS = 3000;
@@ -87,9 +84,17 @@ function buildNotifyProtocol(lhPath: string, topicId: string): string {
 interface PlatformTaskEntry {
   agentId?: string;
   agentType: string;
+  /**
+   * Process working directory of the run — the provisioned worktree path for
+   * workspace-bound runs. Lets `inspectGitWorktreePath` answer "is a live run
+   * writing here" so the server never double-writes an occupied checkout.
+   */
+  cwd?: string;
   operationId: string;
   parentOperationId?: string;
   pid: number;
+  /** Admission fence echoed back on exit notify callbacks. */
+  runGeneration?: number;
   topicId: string;
   /**
    * Workspace that owns the dispatched topic — used at exit time so the
@@ -167,10 +172,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     return this.app.getController(ShellCommandCtr);
   }
 
-  private get imessageBridgeSrv() {
-    return this.app.getService(ImessageBridgeService);
-  }
-
   private get heterogeneousAgentCtr() {
     return this.app.getController(HeterogeneousAgentCtr);
   }
@@ -199,9 +200,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     srv.setMcpCallHandler((mcpCall) => this.executeMcpCall(mcpCall));
 
     // Wire up message API handler
-    srv.setMessageApiHandler((platform, apiName, payload) =>
-      this.executeMessageApi(platform, apiName, payload),
-    );
 
     // Wire up agent run handler
     srv.setAgentRunHandler((request) => this.executeAgentRun(request));
@@ -293,6 +291,26 @@ export default class GatewayConnectionCtr extends ControllerModule {
   private async executeAgentRun(
     request: AgentRunRequestMessage,
   ): Promise<{ reason?: string; status: 'accepted' | 'rejected' }> {
+    // Idempotent redelivery: the server retries `agent_run_request` after a
+    // lost ack with the same idempotency key (= operationId). A live run
+    // already tracked for this operation IS the accepted run — ack it instead
+    // of spawning a duplicate. A higher runGeneration supersedes: the server
+    // fenced the stale writer off, so it is killed before the respawn.
+    const taskId = request.operationId;
+    const existing = this.platformTasks.get(taskId);
+    if (existing) {
+      const superseded =
+        request.runGeneration != null &&
+        existing.runGeneration != null &&
+        request.runGeneration > existing.runGeneration;
+      if (!superseded) {
+        logger.info(`agent_run_request dedupe: op=${taskId} already active (pid=${existing.pid})`);
+        return { status: 'accepted' };
+      }
+      this.killPlatformProcessTree(existing.pid, 'SIGKILL');
+      await this.waitForPlatformProcessTreeExit(existing.pid, PLATFORM_CANCEL_FORCE_MS);
+    }
+
     try {
       const serverUrl = await this.remoteServerConfigCtr.getRemoteServerUrl();
       if (!serverUrl) {
@@ -321,13 +339,19 @@ export default class GatewayConnectionCtr extends ControllerModule {
         agentType: request.agentType,
         assistantMessageId: request.assistantMessageId,
         args: request.args,
+        builtinTools: request.builtinTools,
         cwd: request.cwd,
         imageList: request.imageList,
         jwt,
         operationId: request.operationId,
+        // `request.jwt` is the operation-scoped token — keep it for builtin
+        // tool callbacks (`hetero:tool:exec`) even though `jwt` above was
+        // swapped for this device's user token (see the comment above).
+        operationJwt: request.jwt,
         prompt: request.prompt,
         resumeFallbackSystemContext: request.resumeFallbackSystemContext,
         resumeSessionId: request.resumeSessionId,
+        runGeneration: request.runGeneration,
         serverUrl,
         systemContext: request.systemContext,
         topicId: request.topicId,
@@ -338,11 +362,12 @@ export default class GatewayConnectionCtr extends ControllerModule {
         onChildSpawned: (child: ChildProcess) => {
           const pid = child.pid;
           if (pid === undefined) return;
-          const taskId = request.operationId;
           this.platformTasks.set(taskId, {
             agentType: request.agentType,
+            cwd: request.cwd,
             operationId: request.operationId,
             pid,
+            runGeneration: request.runGeneration,
             topicId: request.topicId,
             workspaceId: request.ingestWorkspaceId ?? request.workspaceId,
           });
@@ -420,6 +445,18 @@ export default class GatewayConnectionCtr extends ControllerModule {
       readExternalAssetForPublish: (params) =>
         this.localFileCtr.readExternalAssetForPublish(params),
       copyAssetForPublish: (params) => this.localFileCtr.copyAssetForPublish(params),
+      getActiveWorktreeWriter: async (worktreePath: string) => {
+        // Compare canonical identities, not spellings — a run registered under
+        // a symlinked or aliased cwd still owns the same physical directory.
+        const { canonicalizePath } = await import('@orvilo/local-file-shell/git');
+        const target = await canonicalizePath(worktreePath);
+        for (const entry of this.platformTasks.values()) {
+          if (entry.cwd && (await canonicalizePath(entry.cwd)) === target) {
+            return { operationId: entry.operationId, pid: entry.pid, topicId: entry.topicId };
+          }
+        }
+        return null;
+      },
       getProjectFileIndex: (params) => this.localFileCtr.getProjectFileIndex(params),
       listHeterogeneousAgentModels: (params) => this.heterogeneousAgentCtr.listModels(params),
       searchProjectFiles: (params) => this.localFileCtr.searchProjectFiles(params),
@@ -462,20 +499,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     args: unknown,
   ): Promise<BuiltinServerRuntimeOutput> {
     if (identifier === AuvIdentifier) return this.executeAuvToolCall(apiName, args);
-
-    // Browser is a renderer-resident tool: forward to the client executor via
-    // BrowserControlCtr instead of the local-system apiName switch below.
-    if (identifier === BrowserIdentifier) {
-      const result = await this.app
-        .getController(BrowserControlCtr)
-        .runGatewayToolCall(apiName, (args ?? {}) as Record<string, unknown>);
-      return {
-        content: result.content ?? '',
-        error: result.error,
-        state: result.state,
-        success: result.success,
-      };
-    }
 
     // Local-system tools: one dispatch through the shared runtime entry, which
     // owns legacy alias normalization and IPC field mapping. The server runtime
@@ -527,6 +550,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             parentOperationId?: string;
             platformAgentId?: string;
             prompt: string;
+            runGeneration?: number;
             taskId: string;
             topicId: string;
             workspaceId?: string;
@@ -615,20 +639,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
       },
       toolName: apiName,
     });
-  }
-
-  private async executeMessageApi(
-    platform: string,
-    apiName: string,
-    payload: Record<string, unknown>,
-  ): Promise<unknown> {
-    if (platform === 'imessage') {
-      return this.imessageBridgeSrv.handleGatewayMessageApi(apiName, payload);
-    }
-
-    throw new Error(
-      `Message API "${platform}/${apiName}" is not available on this device. It may not be supported in the current desktop version.`,
-    );
   }
 
   // ─── Platform Capability Probing ───
@@ -794,6 +804,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
     parentOperationId?: string;
     platformAgentId?: string;
     prompt: string;
+    runGeneration?: number;
     taskId: string;
     topicId: string;
     workspaceId?: string;
@@ -806,6 +817,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       parentOperationId,
       platformAgentId,
       prompt,
+      runGeneration,
       taskId,
       topicId,
       workspaceId,
@@ -825,9 +837,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
       ...process.env,
       ...(accessToken && { ORVILO_JWT: accessToken }),
       ORVILO_OPERATION_ID: operationId,
+      ...(runGeneration != null && { ORVILO_RUN_GENERATION: String(runGeneration) }),
       ...(serverUrl && { ORVILO_SERVER: serverUrl }),
       ...(workspaceId && { ORVILO_WORKSPACE_ID: workspaceId }),
     };
+    // The child's operation has its own admission record; an ambient generation
+    // from the app's own context would be a stale fence on the wrong operation.
+    if (runGeneration == null) delete childEnv.ORVILO_RUN_GENERATION;
     const sessionKey = parentOperationId ? operationId : topicId;
 
     if (agentType === 'openclaw') {
@@ -882,9 +898,11 @@ export default class GatewayConnectionCtr extends ControllerModule {
       this.platformTasks.set(taskId, {
         agentId,
         agentType,
+        cwd: workDir,
         operationId,
         parentOperationId,
         pid,
+        runGeneration,
         topicId,
         workspaceId,
       });
@@ -906,6 +924,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             content: text,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           }).finally(() =>
@@ -917,6 +936,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
               error: terminalError,
               operationId,
               role: 'assistant',
+              runGeneration,
               topicId,
               workspaceId,
             }),
@@ -928,6 +948,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             done: true,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           });
@@ -978,9 +999,11 @@ export default class GatewayConnectionCtr extends ControllerModule {
       this.platformTasks.set(taskId, {
         agentId,
         agentType,
+        cwd: workDir,
         operationId,
         parentOperationId,
         pid,
+        runGeneration,
         topicId,
         workspaceId,
       });
@@ -1010,6 +1033,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             content: text,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           }).finally(() =>
@@ -1021,6 +1045,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
               error: terminalError,
               operationId,
               role: 'assistant',
+              runGeneration,
               topicId,
               workspaceId,
             }),
@@ -1041,6 +1066,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             content: response,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           }).finally(() =>
@@ -1050,6 +1076,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
               done: true,
               operationId,
               role: 'assistant',
+              runGeneration,
               topicId,
               workspaceId,
             }),
@@ -1061,6 +1088,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
             done: true,
             operationId,
             role: 'assistant',
+            runGeneration,
             topicId,
             workspaceId,
           });
@@ -1189,6 +1217,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
     error?: { message: string; type?: string };
     operationId?: string;
     role: string;
+    runGeneration?: number;
     topicId: string;
     /**
      * Workspace scope for the notify. When set, attaches `X-Workspace-Id` so

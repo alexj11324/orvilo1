@@ -5,7 +5,10 @@ import { checkAuth } from '@/app/(backend)/middleware/auth';
 import { DocumentService } from '@/server/services/document';
 import { subscribeResourceEvents } from '@/server/services/resourceEvents';
 
-import { resolveValidWorkspaceIdFromRequest } from '../../_utils/workspace';
+import {
+  resolveValidWorkspaceIdFromRequest,
+  WorkspaceAccessDeniedError,
+} from '../../_utils/workspace';
 
 const log = debug('api-route:document:events');
 
@@ -29,8 +32,16 @@ export const GET = checkAuth(async (req, { userId, serverDB }) => {
   const documentId = new URL(req.url).searchParams.get('documentId');
   if (!documentId) return jsonError('documentId is required', 400);
 
-  // Access: must be an active member of the (header) workspace...
-  const workspaceId = await resolveValidWorkspaceIdFromRequest({ req, serverDB, userId });
+  // Access: must be an active member of the (header) workspace. An explicitly
+  // addressed workspace the caller can't access reads as "not found" — it is
+  // never silently treated as personal space.
+  let workspaceId: string | undefined;
+  try {
+    workspaceId = await resolveValidWorkspaceIdFromRequest({ req, serverDB, userId });
+  } catch (error) {
+    if (error instanceof WorkspaceAccessDeniedError) return jsonError('workspace not found', 404);
+    throw error;
+  }
   if (!workspaceId) return jsonError('workspace access required', 403);
 
   // ...and the document must be visible within that workspace (findById is

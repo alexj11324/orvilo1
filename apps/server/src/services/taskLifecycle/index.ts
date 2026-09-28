@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { BRANDING_URL } from '@orvilo/business-const';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
@@ -36,17 +34,17 @@ import {
 } from '@/business/server/task/notifyScheduledTaskResult';
 import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
-import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { AiGenerationService } from '@/server/services/aiGeneration';
+import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { SystemAgentService } from '@/server/services/systemAgent';
-import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
 
@@ -100,10 +98,13 @@ const BILLING_ERROR_CODES = new Set<string>([
 ]);
 
 export interface TopicCompleteParams {
+  dispatchFence?: number;
+  dispatchId?: string;
   /** Structured terminal error type (e.g. `InsufficientBudgetForModel`) from the
    *  completion lifecycle event, used to pick the error brief's remedy action. */
   errorCode?: string;
   errorMessage?: string;
+  executionGeneration?: number;
   lastAssistantContent?: string;
   operationId: string;
   reason: string; // 'done' | 'error' | 'interrupted' | ...
@@ -123,7 +124,6 @@ export interface TopicCompleteParams {
 export class TaskLifecycleService {
   private briefModel: BriefModel;
   private db: OrviloDatabase;
-  private messageModel: MessageModel;
   private systemAgentService: SystemAgentService;
   private taskModel: TaskModel;
   private taskTopicModel: TaskTopicModel;
@@ -139,7 +139,6 @@ export class TaskLifecycleService {
     this.taskModel = new TaskModel(db, userId, workspaceId);
     this.taskTopicModel = new TaskTopicModel(db, userId, workspaceId);
     this.briefModel = new BriefModel(db, userId, workspaceId);
-    this.messageModel = new MessageModel(db, userId, workspaceId);
     this.topicModel = new TopicModel(db, userId, workspaceId);
     this.systemAgentService = new SystemAgentService(db, userId, workspaceId);
   }
@@ -161,9 +160,67 @@ export class TaskLifecycleService {
     } = params;
     const reason = rawReason === 'max_steps' || rawReason === 'cost_limit' ? 'done' : rawReason;
 
+    const hasDispatchClaim =
+      params.dispatchId !== undefined ||
+      params.dispatchFence !== undefined ||
+      params.executionGeneration !== undefined;
+    if (hasDispatchClaim) {
+      if (
+        !params.dispatchId ||
+        params.dispatchFence === undefined ||
+        params.executionGeneration === undefined
+      ) {
+        throw new Error('Incomplete Task dispatch claim on completion');
+      }
+      const terminalPhase =
+        reason === 'done' ? 'succeeded' : reason === 'interrupted' ? 'canceled' : 'failed';
+      const settlement = await new TaskDispatchModel(this.db, this.workspaceId).settle({
+        dispatchId: params.dispatchId,
+        expected: ['dispatched', 'running', 'cancel_requested', 'outcome_unknown'],
+        fence: params.dispatchFence,
+        generation: params.executionGeneration,
+        operationId: params.operationId,
+        phase: terminalPhase,
+      });
+      if (!settlement) throw new Error('Task dispatch claim is stale or does not match this run');
+      if (settlement.state === 'already_settled') {
+        log(
+          'Ignored replayed completion: task=%s dispatch=%s generation=%s',
+          taskId,
+          params.dispatchId,
+          params.executionGeneration,
+        );
+        return;
+      }
+      if (!settlement.currentGeneration || !settlement.currentContract) {
+        if (topicId) {
+          const historicalStatus =
+            reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed';
+          await this.taskTopicModel.settleHistoricalRun(
+            taskId,
+            topicId,
+            {
+              dispatchId: params.dispatchId,
+              fence: params.dispatchFence,
+              generation: params.executionGeneration,
+            },
+            historicalStatus,
+            lastAssistantContent,
+          );
+        }
+        log(
+          'Ignored stale execution contract completion: task=%s dispatch=%s generation=%s',
+          taskId,
+          params.dispatchId,
+          params.executionGeneration,
+        );
+        return;
+      }
+    }
+
     log('onTopicComplete: task=%s topic=%s reason=%s', taskIdentifier, topicId, reason);
 
-    if (reason !== 'done' && reason !== 'error') {
+    if (reason !== 'done' && reason !== 'error' && reason !== 'interrupted') {
       log('onTopicComplete: non-terminal task callback ignored reason=%s', reason);
       return;
     }
@@ -180,7 +237,7 @@ export class TaskLifecycleService {
       taskId,
       topicId,
       params.operationId,
-      reason === 'done' ? 'completed' : 'failed',
+      reason === 'done' ? 'completed' : reason === 'interrupted' ? 'canceled' : 'failed',
     );
     if (!claimed) {
       log(
@@ -189,6 +246,11 @@ export class TaskLifecycleService {
         currentTask.currentTopicId,
         topicId,
       );
+      return;
+    }
+
+    if (reason === 'interrupted') {
+      log('onTopicComplete: interrupted run settled without advancing task=%s', taskIdentifier);
       return;
     }
 
@@ -216,6 +278,7 @@ export class TaskLifecycleService {
     let verifySettled = false;
     let lifecycleFailed = false;
     try {
+      const { TaskIntegrationService } = await import('@/server/services/taskIntegration');
       const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
 
       // Whether a confirmed verify plan owns this run's delivery acceptance. Set in
@@ -285,37 +348,6 @@ export class TaskLifecycleService {
           return;
         }
 
-        // A steer that landed after the run's last consumed step must continue
-        // before integration. The continuation reuses this topic's worktree;
-        // integrating first may publish and remove that directory underneath it.
-        if (topicId && !verifyBound) {
-          const steerMessageId = await this.findUnconsumedSteerMessageId(topicId);
-          if (steerMessageId) {
-            try {
-              const { TaskRunnerService } = await import('../taskRunner');
-              await new TaskRunnerService(this.db, this.userId, this.workspaceId).runTask({
-                continueFromMessageId: steerMessageId,
-                continueTopicId: topicId,
-                replaceReservationId: claimed,
-                taskId,
-                trigger: params.runTrigger,
-              });
-              log(
-                'onTopicComplete: continuing topic=%s off late steer message %s',
-                topicId,
-                steerMessageId,
-              );
-              return;
-            } catch (error) {
-              log(
-                'onTopicComplete: late-steer continuation failed for topic=%s (non-fatal): %O',
-                topicId,
-                error,
-              );
-            }
-          }
-        }
-
         // 2c. Workspace-integration gate (CAID merge-back): a provisioned run's
         //    task branch must land on its base before the task may settle. A
         //    merge conflict holds the transition open (task stays 'running')
@@ -349,7 +381,7 @@ export class TaskLifecycleService {
             });
             return;
           }
-          if (integrationOutcome === 'hold') return;
+          if (integrationOutcome === 'hold' || integrationOutcome === 'stale') return;
         }
 
         // 3. Delivery acceptance now runs through Verify: the verify
@@ -740,28 +772,6 @@ export class TaskLifecycleService {
   }
 
   /**
-   * A steer message the just-finished run never saw: the spine tail is a
-   * `metadata.steer` user row without a `steerConsumedBy` stamp (the stamp is
-   * written by the runtime when it loads the message into the working set —
-   * see `AgentRuntimeService.refreshMessagesFromDB`). Only the tail matters:
-   * an earlier unconsumed steer is still inside the continued run's history.
-   */
-  private async findUnconsumedSteerMessageId(topicId: string): Promise<string | undefined> {
-    const tailId = await this.messageModel
-      .getLatestSpineMessageId({ topicId })
-      .catch(() => undefined);
-    if (!tailId) return undefined;
-
-    const tail = await this.messageModel.findById(tailId).catch(() => undefined);
-    if (tail?.role !== 'user') return undefined;
-
-    const metadata = tail.metadata as
-      { steer?: boolean; steerConsumedBy?: string } | null | undefined;
-    if (metadata?.steer !== true || metadata.steerConsumedBy) return undefined;
-    return tail.id;
-  }
-
-  /**
    * Settle a successful child task and advance its sibling dependency graph.
    *
    * This mirrors the completion side effects of TaskService.updateStatus
@@ -988,7 +998,8 @@ export class TaskLifecycleService {
 
     try {
       const scheduler = createTaskSchedulerModule();
-      const tickToken = randomUUID();
+      const tickRevision = (sched.tickRevision ?? 0) + 1;
+      const tickToken = `heartbeat:task:${task.id}:revision:${tickRevision}`;
 
       // Cancel any prior tick (defensive — we usually wouldn't have one
       // pending here, since the prior tick has already fired to bring us
@@ -1009,6 +1020,7 @@ export class TaskLifecycleService {
           consecutiveFailures,
           scheduledAt: new Date().toISOString(),
           tickMessageId,
+          tickRevision,
           tickToken,
         },
       };
@@ -1067,19 +1079,24 @@ export class TaskLifecycleService {
         taskName: currentTask?.name || taskIdentifier,
       });
 
-      const modelRuntime = await initModelRuntimeFromDB(
+      const result = await new AiGenerationService(
         this.db,
         this.userId,
-        provider,
         this.workspaceId,
-      );
-      const result = await modelRuntime.generateObject(
+      ).generateObject(
         {
           messages: payload.messages as any[],
           model,
+          provider,
           schema: { name: TASK_TOPIC_HANDOFF_SCHEMA_NAME, schema: TASK_TOPIC_HANDOFF_SCHEMA },
         },
         {
+          judgment: {
+            binding: { agentId: currentTask?.assigneeAgentId },
+            purpose: 'task.handoff',
+            taskId,
+          },
+          kind: 'judgment',
           metadata: { trigger: 'task_handoff' },
           tracing: {
             promptVersion: TASK_TOPIC_HANDOFF_PROMPT_VERSION,
@@ -1108,6 +1125,12 @@ export class TaskLifecycleService {
 
       log('handoff generated for topic %s: title=%s', topicId, handoff.title);
     } catch (e) {
+      // A missing authorized judgment binding is an explicit block — log it
+      // distinctly so the operator sees the gap instead of a generic warn.
+      if (isAcpJudgmentBindingError(e)) {
+        console.error('[TaskLifecycle] handoff judgment blocked (no ACP binding):', e);
+        return;
+      }
       console.warn('[TaskLifecycle] handoff generation failed:', e);
     }
   }
@@ -1181,19 +1204,24 @@ export class TaskLifecycleService {
           taskName: currentTask.name || taskIdentifier,
         });
 
-        const modelRuntime = await initModelRuntimeFromDB(
+        const judgeResult = (await new AiGenerationService(
           this.db,
           this.userId,
-          provider,
           this.workspaceId,
-        );
-        const judgeResult = (await modelRuntime.generateObject(
+        ).generateObject(
           {
             messages: judgePayload.messages as any[],
             model,
+            provider,
             schema: { name: JUDGE_BRIEF_EMIT_SCHEMA_NAME, schema: JUDGE_BRIEF_EMIT_SCHEMA },
           },
           {
+            judgment: {
+              binding: { agentId: currentTask.assigneeAgentId },
+              purpose: 'task.briefJudge',
+              taskId,
+            },
+            kind: 'judgment',
             metadata: { trigger: 'task_brief_judge' },
             tracing: {
               promptVersion: JUDGE_BRIEF_EMIT_PROMPT_VERSION,
@@ -1246,19 +1274,24 @@ export class TaskLifecycleService {
         taskName: currentTask.name || taskIdentifier,
       });
 
-      const modelRuntime = await initModelRuntimeFromDB(
+      const result = await new AiGenerationService(
         this.db,
         this.userId,
-        provider,
         this.workspaceId,
-      );
-      const result = await modelRuntime.generateObject(
+      ).generateObject(
         {
           messages: payload.messages as any[],
           model,
+          provider,
           schema: { name: GENERATE_BRIEF_SCHEMA_NAME, schema: GENERATE_BRIEF_SCHEMA },
         },
         {
+          judgment: {
+            binding: { agentId: currentTask.assigneeAgentId },
+            purpose: 'task.brief',
+            taskId,
+          },
+          kind: 'judgment',
           metadata: { trigger: 'task_brief' },
           tracing: {
             promptVersion: GENERATE_BRIEF_PROMPT_VERSION,
@@ -1297,6 +1330,22 @@ export class TaskLifecycleService {
 
       log('synthesize: brief created task=%s topic=%s type=%s', taskIdentifier, topicId, briefType);
     } catch (e) {
+      if (isAcpJudgmentBindingError(e)) {
+        // Missing authorized judgment binding → explicit audit marker on the
+        // decision row (emit=false, reason names the block), not a silent skip.
+        console.error('[TaskLifecycle] brief judgment blocked (no ACP binding):', e);
+        await this.taskTopicModel
+          .updateBriefDecision(taskId, topicId, {
+            decidedAt: new Date().toISOString(),
+            emit: false,
+            reason: 'acp_judgment_no_binding',
+            source: 'llm-judge',
+          })
+          .catch((persistError) =>
+            console.warn('[TaskLifecycle] brief decision persist failed:', persistError),
+          );
+        return;
+      }
       console.warn('[TaskLifecycle] brief synthesis failed:', e);
     }
   }

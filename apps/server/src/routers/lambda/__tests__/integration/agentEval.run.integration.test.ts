@@ -21,7 +21,7 @@ import {
 import { AgentEvalRunService } from '@/server/services/agentEvalRun';
 
 // Mock AgentRuntimeService to avoid ApiKeyManager env var access at module level
-vi.mock('@/server/services/agentRuntime/AgentRuntimeService', () => ({
+vi.mock('@/server/services/agentExecution/AgentRuntimeService', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       interruptOperation: vi.fn().mockResolvedValue(true),

@@ -1,6 +1,5 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { cp, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
-import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -54,12 +53,11 @@ const buildPass = (locale, buildDir) => {
   });
 };
 
-// A pass costs about two cores, and the passes after the first one only exist
-// to produce their four documents — their client output is identical and gets
-// thrown away, so they are pure fan-out.
-const CONCURRENCY =
-  Number(process.env.AUTH_BUILD_CONCURRENCY) ||
-  Math.max(1, Math.min(6, availableParallelism() - 2));
+// Every `react-router build` invocation regenerates `.react-router/types` by
+// deleting the directory first; concurrent passes race that removal and die on
+// ENOTEMPTY. The types are identical across locales, so there is nothing to win
+// by overlapping typegen anyway — run the passes serially.
+const CONCURRENCY = Math.max(1, Math.min(Number(process.env.AUTH_BUILD_CONCURRENCY) || 1, 6));
 
 const buildPassAsync = async (locale, buildDir) => {
   const started = Date.now();

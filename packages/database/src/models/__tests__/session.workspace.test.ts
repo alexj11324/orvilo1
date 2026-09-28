@@ -27,7 +27,7 @@ afterEach(async () => {
 });
 
 describe('SessionModel workspace scope', () => {
-  it('isolates personal and workspace sessions for the same user', async () => {
+  it("adopts the owner's unfiled sessions into workspace scope while personal scope stays strict", async () => {
     await serverDB.insert(sessions).values([
       { id: 'personal-session', updatedAt: new Date('2023-01-01'), userId, workspaceId: null },
       {
@@ -41,8 +41,12 @@ describe('SessionModel workspace scope', () => {
     await expect(new SessionModel(serverDB, userId).query()).resolves.toEqual([
       expect.objectContaining({ id: 'personal-session' }),
     ]);
+    // Workspace scope is a superset for the owner: filed rows plus their own
+    // unfiled rows (written before workspaces became mandatory), so activating
+    // a workspace never hides data.
     await expect(new SessionModel(serverDB, userId, workspaceId).query()).resolves.toEqual([
       expect.objectContaining({ id: 'workspace-session' }),
+      expect.objectContaining({ id: 'personal-session' }),
     ]);
   });
 

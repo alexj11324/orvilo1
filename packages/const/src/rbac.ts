@@ -98,6 +98,20 @@ export const PERMISSION_ACTIONS = {
 
   MESSAGE_UPDATE: 'message:update',
 
+  /**
+   * Read the caller's own notification rows. Distinct from `message:read` so
+   * a viewer can open Inbox without a chat grant. Rows are always user-scoped;
+   * this is never a way to read someone else's notifications.
+   */
+  NOTIFICATION_READ: 'notification:read',
+
+  /**
+   * Mark-read / archive / snooze the caller's own notifications. Distinct from
+   * `message:create` so organizing Inbox does not require sending messages, and
+   * does not grant task edits or approvals.
+   */
+  NOTIFICATION_ORGANIZE: 'notification:organize',
+
   // ==================== Translation Management ====================
   TRANSLATION_CREATE: 'translation:create',
 
@@ -256,6 +270,11 @@ export const getAllowedScopesForAction = (
   // deletes across every shared Category.
   if (resource === 'session_group') return ['ALL'];
 
+  // Own-notification organize/read is always user-id scoped in SQL. An OWNER
+  // grant would read as "notifications you authored" while the table has no
+  // author column — every row already belongs to the recipient.
+  if (resource === 'notification') return ['ALL'];
+
   // user resource nuance: create/delete without OWNER; read/update allow OWNER
   if (resource === 'user') {
     if (action === 'create' || action === 'delete') return ['ALL'];
@@ -398,6 +417,8 @@ export const WORKSPACE_ROLE_PERMISSIONS: Record<WorkspaceSystemRoleName, readonl
     `${action('MESSAGE_CREATE')}:all`,
     `${action('MESSAGE_UPDATE')}:all`,
     `${action('MESSAGE_DELETE')}:all`,
+    `${action('NOTIFICATION_READ')}:all`,
+    `${action('NOTIFICATION_ORGANIZE')}:all`,
     `${action('TOPIC_READ')}:all`,
     `${action('TOPIC_CREATE')}:all`,
     `${action('TOPIC_UPDATE')}:all`,
@@ -480,6 +501,8 @@ export const WORKSPACE_ROLE_PERMISSIONS: Record<WorkspaceSystemRoleName, readonl
     `${action('MESSAGE_CREATE')}:owner`,
     `${action('MESSAGE_UPDATE')}:owner`,
     `${action('MESSAGE_DELETE')}:owner`,
+    `${action('NOTIFICATION_READ')}:all`,
+    `${action('NOTIFICATION_ORGANIZE')}:all`,
     `${action('TOPIC_READ')}:all`,
     `${action('TOPIC_CREATE')}:owner`,
     `${action('TOPIC_UPDATE')}:owner`,
@@ -547,6 +570,8 @@ export const WORKSPACE_ROLE_PERMISSIONS: Record<WorkspaceSystemRoleName, readonl
     `${action('MESSAGE_CREATE')}:owner`,
     `${action('MESSAGE_UPDATE')}:owner`,
     `${action('MESSAGE_DELETE')}:owner`,
+    `${action('NOTIFICATION_READ')}:all`,
+    `${action('NOTIFICATION_ORGANIZE')}:all`,
     `${action('TOPIC_READ')}:all`,
     `${action('TOPIC_CREATE')}:owner`,
     `${action('TOPIC_UPDATE')}:owner`,
@@ -589,6 +614,8 @@ export const WORKSPACE_ROLE_PERMISSIONS: Record<WorkspaceSystemRoleName, readonl
     `${action('SESSION_READ')}:all`,
     `${action('SESSION_GROUP_READ')}:all`,
     `${action('MESSAGE_READ')}:all`,
+    `${action('NOTIFICATION_READ')}:all`,
+    `${action('NOTIFICATION_ORGANIZE')}:all`,
     `${action('TOPIC_READ')}:all`,
     `${action('TOPIC_COMMENT_READ')}:all`,
     `${action('FILE_READ')}:all`,
@@ -709,6 +736,8 @@ export const PERSONAL_DEFAULT_PERMISSIONS: readonly string[] = [
   `${action('MESSAGE_CREATE')}:owner`,
   `${action('MESSAGE_UPDATE')}:owner`,
   `${action('MESSAGE_DELETE')}:owner`,
+  `${action('NOTIFICATION_READ')}:all`,
+  `${action('NOTIFICATION_ORGANIZE')}:all`,
   `${action('TOPIC_READ')}:owner`,
   `${action('TOPIC_CREATE')}:owner`,
   `${action('TOPIC_UPDATE')}:owner`,

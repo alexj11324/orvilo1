@@ -373,9 +373,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
   // The in-app browser pages are renderer-retained Electron webviews — desktop only.
   const browserAvailable = isDesktop;
   const terminalAvailable = isDesktop;
-  // Must mint the same key the browser tools do (`sessionIdOf` in
-  // builtin-tool-browser), or the user and the agent would be looking at two
-  // different pages. A draft topic has no id yet, but the panel is openable
+  // A draft topic has no id yet, but the panel is openable
   // there (user types a URL before sending anything), so it borrows a per-agent
   // key until the topic materializes.
   const browserSessionId = topicId

@@ -1,7 +1,9 @@
 import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@cucumber/cucumber';
-import { type Cookie, request } from 'playwright';
+import type { Cookie } from 'playwright';
 
-import { seedTestUser, TEST_USER } from '../support/seedTestUser';
+import { clearMockLLMWorkerState } from '../mocks/llm/registry';
+import { bindTestUserExecutionDevice } from '../support/bindExecutionDevice';
+import { createTestSession, seedTestUser } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
 
@@ -13,6 +15,9 @@ setDefaultTimeout(30_000);
 let baseUrl: string;
 let sessionCookies: Cookie[] = [];
 
+/** Mirrors AUTH_SESSION_COOKIE in packages/database/src/models/authSession.ts. */
+const AUTH_SESSION_COOKIE = 'orvilo_auth';
+
 BeforeAll({ timeout: 600_000 }, async function () {
   console.log('🚀 Starting E2E test suite...');
 
@@ -20,6 +25,35 @@ BeforeAll({ timeout: 600_000 }, async function () {
   baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
 
   console.log(`Base URL: ${baseUrl}`);
+
+  // The browser client runtime is retired — sends run through the server-side
+  // agent runtime in gateway mode. That path needs two stand-ins started by
+  // `bun e2e/scripts/mockServices.ts` (wired into e2e.yml and setup.ts):
+  // the fake Agent Gateway (browser WS channel) and the mock OpenAI-compatible
+  // LLM endpoint (DEEPSEEK_PROXY_URL). Warn loudly when they are missing so a
+  // bare `cucumber-js` invocation fails with an actionable hint instead of a
+  // wall of "message was not persisted" timeouts.
+  const llmPort = process.env.E2E_MOCK_LLM_PORT || '3406';
+  const gatewayPort = process.env.E2E_MOCK_GATEWAY_PORT || '3407';
+  for (const [name, url] of [
+    ['mock LLM', `http://localhost:${llmPort}/health`],
+    ['fake gateway', `http://localhost:${gatewayPort}/health`],
+  ] as const) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) throw new Error(String(res.status));
+      console.log(`   ✓ ${name} healthy (${url})`);
+    } catch {
+      console.warn(
+        `   ⚠️ ${name} is not reachable at ${url} — agent-send scenarios will fail. ` +
+          `Start it with: bun e2e/scripts/mockServices.ts`,
+      );
+    }
+  }
+
+  // Clean slate for this worker's shared mock-LLM registry file — stale
+  // responses from a previous run must not shadow this run's defaults.
+  clearMockLLMWorkerState();
 
   // Seed test user before starting web server
   await seedTestUser();
@@ -34,27 +68,23 @@ BeforeAll({ timeout: 600_000 }, async function () {
     });
   }
 
-  console.log('🔐 Signing in once through the auth API...');
-  const api = await request.newContext({ baseURL: baseUrl });
+  // Web sign-in lives on the accounts portal (Clerk); e2e seeds the app-issued
+  // `orvilo_auth` session row directly and installs the cookie on each context.
+  console.log('🔐 Creating a test session in the database...');
+  const sessionToken = await createTestSession();
 
-  try {
-    const response = await api.post('/api/auth/sign-in/email', {
-      data: {
-        email: TEST_USER.email,
-        password: TEST_USER.password,
+  if (sessionToken) {
+    sessionCookies = [
+      {
+        name: AUTH_SESSION_COOKIE,
+        url: baseUrl,
+        value: sessionToken,
       },
-    });
-
-    if (!response.ok()) {
-      throw new Error(`Auth API sign-in failed: ${response.status()} ${await response.text()}`);
-    }
-
-    sessionCookies = (await api.storageState()).cookies;
-  } finally {
-    await api.dispose();
+    ];
+    console.log(`✅ Test session created, cached ${sessionCookies.length} cookies`);
+  } else {
+    console.warn('⚠️ Could not create a test session (is DATABASE_URL set?)');
   }
-
-  console.log(`✅ Auth API login successful, cached ${sessionCookies.length} cookies`);
 });
 
 Before(async function (this: CustomWorld, { pickle }) {
@@ -73,7 +103,35 @@ Before(async function (this: CustomWorld, { pickle }) {
   if (sessionCookies.length > 0) {
     await this.browserContext.addCookies(sessionCookies);
     console.log('🍪 Session cookies restored');
+
+    // The in-process runtime is retired: web sends resolve a device/sandbox
+    // execution plan, else the run lands on the "No device bound" stub. Bind
+    // the fake-gateway device to the inbox agent (idempotent — also covers
+    // workspaces a scenario just created).
+    try {
+      await bindTestUserExecutionDevice(this.browserContext.request);
+    } catch (error) {
+      console.warn('[e2e] execution-device binding failed:', error);
+    }
   }
+});
+
+// Scroll scenarios need the product's own send-detection verdicts to debug
+// CI-only failures (pg stalls make sends arrive at odd commit boundaries).
+// Enable the hook's debug namespace before any navigation and forward its
+// console lines into the test log.
+Before({ tags: '@scroll' }, async function (this: CustomWorld) {
+  await this.browserContext.addInitScript(() => {
+    try {
+      localStorage.setItem('debug', 'orvilo:conversation:scroll');
+    } catch {
+      // about:blank has no localStorage; the real origin page will set it.
+    }
+  });
+  this.page.on('console', (msg) => {
+    const text = msg.text();
+    if (text.includes('orvilo:conversation:scroll')) console.log(`   [scroll] ${text}`);
+  });
 });
 
 After(async function (this: CustomWorld, { pickle, result }) {

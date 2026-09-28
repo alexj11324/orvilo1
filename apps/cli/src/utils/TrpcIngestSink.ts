@@ -18,6 +18,7 @@ export class TrpcIngestSink implements IngestSink {
     private readonly operationId: string,
     private readonly topicId: string,
     private readonly assistantMessageId?: string,
+    private readonly runGeneration?: number,
   ) {}
 
   async finish(params: Parameters<IngestSink['finish']>[0]): Promise<void> {
@@ -25,6 +26,7 @@ export class TrpcIngestSink implements IngestSink {
       agentType: this.agentType,
       assistantMessageId: this.assistantMessageId,
       operationId: this.operationId,
+      runGeneration: this.runGeneration,
       topicId: this.topicId,
       ...params,
     };
@@ -55,6 +57,7 @@ export class TrpcIngestSink implements IngestSink {
       assistantMessageId: this.assistantMessageId,
       events: events as any,
       operationId: this.operationId,
+      runGeneration: this.runGeneration,
       topicId: this.topicId,
     });
   }

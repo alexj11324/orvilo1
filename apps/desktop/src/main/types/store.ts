@@ -1,7 +1,6 @@
 import type {
   CompletionSoundSettings,
   DataSyncConfig,
-  ImessageBridgeConfig,
   NetworkProxySettings,
   UpdateChannel,
   WindowsShellMode,
@@ -48,7 +47,6 @@ export interface ElectronMainStore {
    */
   heteroSessionDirPrefs: Record<string, HeteroSessionDirPref>;
   heteroTracingEnabled: boolean;
-  imessageBridgeConfigs: ImessageBridgeConfig[];
   /**
    * Per-account memory of the workspace slug the main window was last in
    * (account = OIDC subject; no entry = personal). The next launch of that

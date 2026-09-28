@@ -72,6 +72,9 @@ beforeEach(() => {
     cacheScopeModule.getCacheScope(),
   );
   setScopedMutate(vi.fn() as any);
+  // The builtin-agent init hook waits for the identity round-trip before
+  // fetching (web: authSelectors.isLoaded); mark it resolved so SWR keys arm.
+  useUserStore.setState({ isLoaded: true });
   useAgentStore.setState({
     activeAgentId: undefined,
     agentMap: {},

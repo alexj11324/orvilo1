@@ -4,16 +4,7 @@ import { Flexbox, Icon } from '@lobehub/ui';
 import { Tabs, type TabsItem, Tag } from '@lobehub/ui/base-ui';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { createStaticStyles } from 'antd-style';
-import {
-  BookOpenIcon,
-  BotIcon,
-  CodeIcon,
-  DownloadIcon,
-  HistoryIcon,
-  ListIcon,
-  PackageCheckIcon,
-  SettingsIcon,
-} from 'lucide-react';
+import { BookOpenIcon, CodeIcon, DownloadIcon, PackageCheckIcon, SettingsIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
@@ -59,22 +50,14 @@ interface NavProps {
 const Nav = memo<NavProps>(
   ({ mobile, noSettings, setActiveTab, activeTab = McpNavKey.Overview, inModal }) => {
     const { t } = useTranslation('discover');
-    const {
-      versions,
-      deploymentOptions,
-      toolsCount,
-      resourcesCount,
-      promptsCount,
-      github,
-      identifier,
-    } = useDetailContext();
+    const { deploymentOptions, toolsCount, resourcesCount, promptsCount, github, identifier } =
+      useDetailContext();
 
     // Check if the plugin is installed
     const installedPlugin = useToolStore(pluginSelectors.getInstalledPluginById(identifier));
 
     const deploymentCount = deploymentOptions?.length || 0;
     const schemaCount = Number(toolsCount) + Number(promptsCount) + Number(resourcesCount);
-    const versionCount = versions?.length || 0;
 
     const nav = (
       <Tabs
@@ -135,40 +118,10 @@ const Nav = memo<NavProps>(
                   t('mcp.details.schema.title')
                 ),
             },
-            !inModal && {
-              icon: <Icon icon={ListIcon} size={16} />,
-              key: McpNavKey.Related,
-              label: t('mcp.details.related.title'),
-            },
             {
               icon: <Icon icon={PackageCheckIcon} size={16} />,
               key: McpNavKey.Score,
               label: t('mcp.details.score.title'),
-            },
-            {
-              icon: <Icon icon={BotIcon} size={16} />,
-              key: McpNavKey.Agents,
-              label: t('mcp.details.agents.title'),
-            },
-            !inModal && {
-              icon: <Icon icon={HistoryIcon} size={16} />,
-              key: McpNavKey.Version,
-              label:
-                versionCount > 1 ? (
-                  <Flexbox
-                    horizontal
-                    align={'center'}
-                    gap={6}
-                    style={{
-                      display: 'inline-flex',
-                    }}
-                  >
-                    {t('mcp.details.versions.title')}
-                    <Tag>{versionCount}</Tag>
-                  </Flexbox>
-                ) : (
-                  t('mcp.details.versions.title')
-                ),
             },
           ].filter(Boolean) as TabsItem[]
         }

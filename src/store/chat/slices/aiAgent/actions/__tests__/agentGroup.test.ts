@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { lambdaClient } from '@/libs/trpc/client';
-import { agentRuntimeClient } from '@/services/agentRuntime';
+import { agentStreamClient } from '@/services/agentExecution';
 import { useChatStore } from '@/store/chat/store';
 
 // Mock lambdaClient
@@ -21,9 +21,9 @@ vi.mock('@/libs/trpc/client', () => ({
   },
 }));
 
-// Mock agentRuntimeClient
-vi.mock('@/services/agentRuntime', () => ({
-  agentRuntimeClient: {
+// Mock agentStreamClient
+vi.mock('@/services/agentExecution', () => ({
+  agentStreamClient: {
     createStreamConnection: vi.fn(),
   },
   StreamEvent: {},
@@ -214,7 +214,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         const context = createTestContext();
 
@@ -245,7 +245,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -287,7 +287,7 @@ describe('agentGroup actions', () => {
           capturedState = useChatStore.getState().isCreatingMessage;
           return createMockExecGroupAgentResponse();
         });
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -309,7 +309,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         const context = createTestContext({ topicId: TEST_IDS.TOPIC_ID });
 
@@ -338,7 +338,7 @@ describe('agentGroup actions', () => {
 
         const mockResponse = createMockExecGroupAgentResponse();
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(mockResponse);
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         const context = createTestContext();
 
@@ -367,7 +367,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -396,7 +396,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -417,7 +417,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -448,7 +448,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -457,7 +457,7 @@ describe('agentGroup actions', () => {
           });
         });
 
-        expect(agentRuntimeClient.createStreamConnection).toHaveBeenCalledWith(
+        expect(agentStreamClient.createStreamConnection).toHaveBeenCalledWith(
           TEST_IDS.OPERATION_ID,
           expect.objectContaining({
             includeHistory: false,
@@ -477,7 +477,7 @@ describe('agentGroup actions', () => {
         );
 
         let onDisconnectCallback: (() => void) | undefined;
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockImplementation(
+        vi.mocked(agentStreamClient.createStreamConnection).mockImplementation(
           (_operationId, options) => {
             onDisconnectCallback = options?.onDisconnect;
             return {} as any;
@@ -514,7 +514,7 @@ describe('agentGroup actions', () => {
             topics: mockTopics,
           }),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -542,7 +542,7 @@ describe('agentGroup actions', () => {
             topics: { items: [], total: 1 },
           }),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -566,7 +566,7 @@ describe('agentGroup actions', () => {
             topics: { items: [], total: 1 },
           }),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -593,7 +593,7 @@ describe('agentGroup actions', () => {
             isCreateNewTopic: false,
           }),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -728,7 +728,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({
@@ -752,7 +752,7 @@ describe('agentGroup actions', () => {
         vi.mocked(lambdaClient.aiAgent.execGroupAgent.mutate).mockResolvedValue(
           createMockExecGroupAgentResponse(),
         );
-        vi.mocked(agentRuntimeClient.createStreamConnection).mockReturnValue({} as any);
+        vi.mocked(agentStreamClient.createStreamConnection).mockReturnValue({} as any);
 
         await act(async () => {
           await result.current.sendGroupMessage({

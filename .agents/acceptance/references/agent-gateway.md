@@ -65,7 +65,7 @@ The app's gateway URL flows `AGENT_GATEWAY_URL` →
 the WS URL by swapping `http(s)→ws(s)` and appending `/ws?operationId=…`, so an
 `http://localhost:8787` value Just Works. Server-side, the
 `GatewayStreamNotifier` is wrapped whenever `AGENT_GATEWAY_URL &&
-AGENT_GATEWAY_SERVICE_TOKEN` are set (`AgentRuntime/factory.ts`), and it
+AGENT_GATEWAY_SERVICE_TOKEN` are set (`AgentExecution/factory.ts`), and it
 registers each op with the gateway via `POST /api/operations/init` carrying only
 `{operationId, userId}` — it does **not** upload a per-op public key, which is
 exactly why the gateway must already trust the signing key

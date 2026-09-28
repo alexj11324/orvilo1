@@ -18,6 +18,8 @@ const common = {
   'actions.submit': 'Submit',
   'app.description': 'Where Agents Collaborate',
   'app.name': 'Orvilo',
+  'heteroAgent.permission.allowToContinue': 'Allow {{label}} to continue?',
+  'heteroAgent.permission.header': 'Permission required',
   'status.error': 'Error',
   'status.info': 'Information',
   'status.loading': 'Loading',

@@ -1,0 +1,23 @@
+{
+  "name": "@orvilo/collaboration-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch run src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orvilo/types": "workspace:*",
+    "jose": "^6.2.8",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/ws": "^8.18.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
+  }
+}

@@ -285,6 +285,14 @@ export interface DeviceControlDeps extends SkillDirectoryDeps, WorkspaceScanDeps
    * the RPC with a clear reason.
    */
   enrollWorkspace?: (params: EnrollWorkspaceParams) => Promise<EnrollWorkspaceResult>;
+  /**
+   * Report the live agent run writing inside `worktreePath`, or `null` when the
+   * host's run registry shows none. Optional — a host without a run registry
+   * leaves the dep unset, and the dispatcher then omits `activeWriter` from the
+   * inspection result so callers can distinguish "verified free" from "cannot
+   * answer" (the latter must never be treated as a free path).
+   */
+  getActiveWorktreeWriter?: (worktreePath: string) => Promise<WorktreeActiveWriter | null>;
   /** Read a local file preview (host-gated on desktop; disk read on CLI). */
   getLocalFilePreview: (params: LocalFilePreviewUrlParams) => Promise<LocalFilePreviewResult>;
   /** Build the project file index. */
@@ -305,6 +313,19 @@ export interface DeviceControlDeps extends SkillDirectoryDeps, WorkspaceScanDeps
    * state. Optional, mirroring {@link DeviceControlDeps.enrollWorkspace}.
    */
   unenrollWorkspace?: (params: UnenrollWorkspaceParams) => Promise<{ success: boolean }>;
+}
+
+// ─── Git worktree writer liveness ───
+
+/**
+ * A live agent run whose process working directory is an inspected worktree
+ * path — the device-side "writer presence" signal the server requires before
+ * reusing a provisioned checkout.
+ */
+export interface WorktreeActiveWriter {
+  operationId?: string;
+  pid?: number;
+  topicId?: string;
 }
 
 // ─── Heterogeneous agent model discovery ───

@@ -40,6 +40,7 @@ const mockUnderstandingService = vi.hoisted(() => ({
 const mockCreateUnderstandingService = vi.hoisted(() => vi.fn());
 const mockTaskRecommendationService = vi.hoisted(() => ({ get: vi.fn() }));
 const mockCreateTaskRecommendationService = vi.hoisted(() => vi.fn());
+const mockSetUserPresenceVisibility = vi.hoisted(() => vi.fn());
 
 // Mock modules
 vi.mock('@/server/utils/scheduleAfterResponse', () => ({
@@ -92,6 +93,9 @@ vi.mock('@/server/services/taskRecommendation/service', () => {
     TaskRecommendationNotFoundError,
   };
 });
+vi.mock('@/server/services/collaboration', () => ({
+  getRoomPublisher: () => ({ setUserPresenceVisibility: mockSetUserPresenceVisibility }),
+}));
 vi.mock('@/server/workflows/onboardingUnderstanding', () => {
   class UnderstandingWorkflowUnavailableError extends Error {}
 
@@ -117,6 +121,8 @@ describe('userRouter', () => {
     mockCreateUnderstandingService.mockReset();
     mockTaskRecommendationService.get.mockReset();
     mockCreateTaskRecommendationService.mockReset();
+    mockSetUserPresenceVisibility.mockReset();
+    mockSetUserPresenceVisibility.mockResolvedValue(undefined);
     vi.mocked(getReferralStatus).mockResolvedValue(undefined);
     vi.mocked(getSubscriptionPlan).mockResolvedValue(Plans.Free);
     vi.mocked(onUserActivityForBusiness).mockResolvedValue(undefined);
@@ -828,39 +834,170 @@ describe('userRouter', () => {
     });
   });
 
-  describe('updateSettings', () => {
-    it('should update settings with encrypted key vaults', async () => {
-      const mockSettings = {
-        keyVaults: { openai: { key: 'test-key' } },
-        general: { language: 'en-US' },
-      };
-
-      const mockEncryptedVaults = 'encrypted-data';
-      const mockGateKeeper = {
-        encrypt: vi.fn().mockResolvedValue(mockEncryptedVaults),
-      };
-
-      vi.mocked(KeyVaultsGateKeeper.initWithEnvKey).mockResolvedValue(mockGateKeeper as any);
+  describe('updatePreference', () => {
+    it('conceals all live presence before persisting a personal opt-out', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
       vi.mocked(UserModel).mockImplementation(function () {
-        return {
-          updateSetting: vi.fn().mockResolvedValue({ rowCount: 1 }),
-        } as any;
+        return { getUserPreference, updatePreference } as any;
       });
 
-      await userRouter.createCaller({ ...mockCtx }).updateSettings(mockSettings);
+      await userRouter
+        .createCaller({ ...mockCtx })
+        .updatePreference({ showInCollaboration: false });
 
-      expect(mockGateKeeper.encrypt).toHaveBeenCalledWith(JSON.stringify(mockSettings.keyVaults));
+      expect(updatePreference).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collaborationVisibilityEpoch: expect.any(String),
+          showInCollaboration: false,
+        }),
+      );
+      expect(mockSetUserPresenceVisibility).toHaveBeenCalledWith(
+        mockUserId,
+        false,
+        expect.any(String),
+      );
+      expect(mockSetUserPresenceVisibility.mock.invocationCallOrder[0]).toBeLessThan(
+        updatePreference.mock.invocationCallOrder[0],
+      );
     });
 
-    it('rejects keyVaults updates from restricted keys without model:write', async () => {
-      await expect(
-        namespacedRouter
-          .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
-          .user.updateSettings({ keyVaults: { openai: { key: 'stolen' } } }),
-      ).rejects.toMatchObject({
-        code: 'FORBIDDEN',
-        message: expect.stringContaining('model:write'),
+    it('does not send a control when visibility is already enabled', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
       });
+
+      await userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: true });
+
+      expect(mockSetUserPresenceVisibility).not.toHaveBeenCalled();
+    });
+
+    it('reveals only after persisting the visibility preference', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: false });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: true });
+
+      expect(mockSetUserPresenceVisibility).toHaveBeenCalledWith(
+        mockUserId,
+        true,
+        expect.any(String),
+      );
+      expect(updatePreference.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSetUserPresenceVisibility.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('rolls the preference back to hidden when reveal control fails', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: false });
+      const updatePreference = vi
+        .fn()
+        .mockResolvedValueOnce({ rowCount: 1 })
+        .mockResolvedValueOnce({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+      mockSetUserPresenceVisibility.mockRejectedValueOnce(new Error('gateway unavailable'));
+
+      await expect(
+        userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: true }),
+      ).rejects.toThrow('gateway unavailable');
+      expect(updatePreference.mock.calls[0]?.[0]).toEqual(
+        expect.objectContaining({
+          collaborationVisibilityEpoch: expect.any(String),
+          showInCollaboration: true,
+        }),
+      );
+      expect(updatePreference.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({
+          collaborationVisibilityEpoch: expect.any(String),
+          showInCollaboration: false,
+        }),
+      );
+    });
+
+    it('does not persist the opt-out when stale sockets cannot be concealed', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+      mockSetUserPresenceVisibility.mockRejectedValueOnce(new Error('gateway unavailable'));
+
+      await expect(
+        userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: false }),
+      ).rejects.toThrow('gateway unavailable');
+      expect(updatePreference).not.toHaveBeenCalled();
+    });
+
+    it('compensates concealment if preference persistence fails afterward', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: true });
+      const updatePreference = vi.fn().mockRejectedValue(new Error('database unavailable'));
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await expect(
+        userRouter.createCaller({ ...mockCtx }).updatePreference({ showInCollaboration: false }),
+      ).rejects.toThrow('database unavailable');
+      expect(mockSetUserPresenceVisibility.mock.calls).toEqual([
+        [mockUserId, false, expect.any(String)],
+        [mockUserId, true, undefined],
+      ]);
+    });
+
+    it('does not re-conceal on unrelated saves when the stored preference is already false', async () => {
+      const getUserPreference = vi.fn().mockResolvedValue({ showInCollaboration: false });
+      const updatePreference = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { getUserPreference, updatePreference } as any;
+      });
+
+      await userRouter.createCaller({ ...mockCtx }).updatePreference({
+        hideSyncAlert: true,
+        showInCollaboration: false,
+      });
+
+      expect(mockSetUserPresenceVisibility).not.toHaveBeenCalled();
+      expect(updatePreference).toHaveBeenCalledWith({
+        hideSyncAlert: true,
+        showInCollaboration: false,
+      });
+    });
+  });
+
+  describe('updateSettings', () => {
+    it('ignores keyVaults writes and never persists credentials', async () => {
+      const updateSetting = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { updateSetting } as any;
+      });
+
+      await userRouter.createCaller({ ...mockCtx }).updateSettings({
+        keyVaults: { openai: { key: 'test-key' } },
+        general: { language: 'en-US' },
+      });
+
+      expect(KeyVaultsGateKeeper.initWithEnvKey).not.toHaveBeenCalled();
+      expect(updateSetting).toHaveBeenCalledWith({ general: { language: 'en-US' } });
+    });
+
+    it('accepts but ignores keyVaults writes from restricted keys', async () => {
+      const updateSetting = vi.fn().mockResolvedValue({ rowCount: 1 });
+      vi.mocked(UserModel).mockImplementation(function () {
+        return { updateSetting } as any;
+      });
+
+      await namespacedRouter
+        .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
+        .user.updateSettings({ keyVaults: { openai: { key: 'stolen' } } });
+
+      expect(updateSetting).toHaveBeenCalledWith({});
     });
 
     it('rejects market token updates from restricted keys without model:write', async () => {
@@ -868,17 +1005,6 @@ describe('userRouter', () => {
         namespacedRouter
           .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
           .user.updateSettings({ market: { accessToken: 'x' } } as any),
-      ).rejects.toMatchObject({
-        code: 'FORBIDDEN',
-        message: expect.stringContaining('model:write'),
-      });
-    });
-
-    it('rejects keyVaults clears (null) from restricted keys without model:write', async () => {
-      await expect(
-        namespacedRouter
-          .createCaller({ ...mockCtx, apiKeyScopes: ['user:write'] })
-          .user.updateSettings({ keyVaults: null } as any),
       ).rejects.toMatchObject({
         code: 'FORBIDDEN',
         message: expect.stringContaining('model:write'),
@@ -896,22 +1022,6 @@ describe('userRouter', () => {
       } as any);
 
       expect(updateSetting.mock.calls[0][0]).not.toHaveProperty('keyVaults');
-    });
-
-    it('allows keyVaults updates from restricted keys holding model:write', async () => {
-      const mockGateKeeper = { encrypt: vi.fn().mockResolvedValue('encrypted') };
-      vi.mocked(KeyVaultsGateKeeper.initWithEnvKey).mockResolvedValue(mockGateKeeper as any);
-      vi.mocked(UserModel).mockImplementation(function () {
-        return {
-          updateSetting: vi.fn().mockResolvedValue({ rowCount: 1 }),
-        } as any;
-      });
-
-      await namespacedRouter
-        .createCaller({ ...mockCtx, apiKeyScopes: ['user:write', 'model:write'] })
-        .user.updateSettings({ keyVaults: { openai: { key: 'mine' } } });
-
-      expect(mockGateKeeper.encrypt).toHaveBeenCalled();
     });
 
     it('should update settings without key vaults', async () => {

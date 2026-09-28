@@ -553,6 +553,34 @@ export class GoalGraphModel {
       return node;
     });
 
+  /** Rewrite an un-materialized plan node's title/description (CAID replace patch). */
+  updateNodeText = async (
+    goalId: string,
+    nodeId: string,
+    input: { description?: string; title?: string },
+  ) =>
+    this.db.transaction(async (tx) => {
+      if (!(await this.ownedGoal(goalId, tx))) return undefined;
+      const [node] = await tx
+        .update(goalNodes)
+        .set({
+          ...(input.description === undefined ? {} : { description: input.description }),
+          ...(input.title === undefined ? {} : { title: input.title }),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(goalNodes.goalId, goalId), eq(goalNodes.id, nodeId)))
+        .returning();
+      if (!node) return undefined;
+      await this.appendEvent(tx, goalId, {
+        entityId: node.id,
+        entityType: 'node',
+        eventType: 'updated',
+        reason: 'Plan patch rewrote the node',
+        taskId: node.taskId ?? undefined,
+      });
+      return node;
+    });
+
   updateNodeStatus = async (
     goalId: string,
     nodeId: string,

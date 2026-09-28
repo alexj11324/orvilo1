@@ -1,15 +1,9 @@
 import { type TopicGroupMode } from '@/types/topic';
 
-import type {
-  GlobalState,
-  ModelDetailPanelExpandedKey,
-  SystemStatus,
-  WorkspaceOverridableField,
-} from '../initialState';
+import type { GlobalState, SystemStatus, WorkspaceOverridableField } from '../initialState';
 import {
   DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
   INITIAL_STATUS,
-  MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
   WORKSPACE_OVERRIDABLE_FIELDS,
 } from '../initialState';
 
@@ -64,8 +58,17 @@ export const routeOverlayWrites = (
 
 export const systemStatus = (s: GlobalState) => s.status;
 
+// The Linear parity default `INITIAL_STATUS.leftPanelWidth` (244) sits only 4px
+// above this floor. Raising the floor past 244 silently swallows it: the clamp
+// returns the floor and nothing downstream can tell the parity value was rejected.
 export const NAV_PANEL_MIN_WIDTH = 240;
 export const NAV_PANEL_MAX_WIDTH = 400;
+// Viewport width below which the nav panel auto-collapses into the header
+// toggle instead of pinning a fixed column.
+export const NAV_PANEL_AUTO_COLLAPSE_BELOW = 960;
+// Session flag marking that the current collapsed nav state was set by the
+// narrow-viewport auto-collapse (not by the user), so a wide relaunch restores.
+export const NAV_PANEL_AUTO_COLLAPSED_KEY = 'nav-panel-auto-collapsed';
 
 const normalizeNavPanelWidth = (width: number | string | undefined): number => {
   const parsed = typeof width === 'string' ? Number.parseInt(width) : width;
@@ -101,22 +104,27 @@ const agentPageSize = (s: GlobalState): number => s.status.agentPageSize || 5;
 
 const privateAgentPageSize = (s: GlobalState): number => s.status.privateAgentPageSize || 5;
 
+const favoritePageSize = (s: GlobalState): number => s.status.favoritePageSize || 5;
+
 const recentPageSize = (s: GlobalState): number => s.status.recentPageSize || 5;
 
 const pagePageSize = (s: GlobalState): number => s.status.pagePageSize || 20;
+const taskListViewDefaults = (s: GlobalState) => s.status.taskListViewDefaults;
+
 const taskListViewOptions = (s: GlobalState) =>
   s.status.taskListViewOptions || {
     groupBy: 'status',
-    hideCompleted: true,
+    hideCompleted: false,
     nestedSubTasks: true,
     orderBy: 'updatedAt',
     orderCompletedByRecency: true,
     orderDirection: 'asc',
-    showSubTasks: false,
+    showMilestone: true,
+    showSubTasks: true,
     subGroupBy: 'none',
   };
 
-const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'list';
+const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'kanban';
 
 // Default the inline composer to collapsed so a populated task list keeps the
 // records at the top of the fold; the empty-state hero still shows the full
@@ -124,7 +132,9 @@ const taskListViewMode = (s: GlobalState) => s.status.taskListViewMode ?? 'list'
 const taskCreateInlineCollapsed = (s: GlobalState): boolean =>
   s.status.taskCreateInlineCollapsed ?? true;
 
-export const DEFAULT_KANBAN_HIDDEN_COLUMNS: string[] = ['done', 'canceled'];
+/** `done` stays visible so finished work is part of the default picture;
+ * `canceled` starts folded away. A stored preference always wins. */
+export const DEFAULT_KANBAN_HIDDEN_COLUMNS: string[] = ['canceled'];
 
 const taskKanbanHiddenColumns = (s: GlobalState): string[] =>
   s.status.taskKanbanHiddenColumns ?? DEFAULT_KANBAN_HIDDEN_COLUMNS;
@@ -138,7 +148,7 @@ export const DEFAULT_HIDDEN_SECTIONS: string[] = [];
  * sidebar visibility. `recents` lives in personal mode where the catch-all
  * stream is useful, but in a workspace the agent/project lists are the
  * primary entry points — surfacing recents on top adds noise. */
-export const WORKSPACE_DEFAULT_HIDDEN_SECTIONS: string[] = ['recents'];
+export const WORKSPACE_DEFAULT_HIDDEN_SECTIONS: string[] = [];
 
 /** Sections hidden by default for the given mode. The customize-sidebar
  * "Reset to default" path uses this so resetting in a workspace restores
@@ -153,48 +163,119 @@ const hiddenSidebarSections =
       const overlay = s.status.workspace?.hiddenSidebarSections;
       // Once the user touches sidebar visibility in this workspace the overlay
       // owns the list — including an explicit empty array meaning "show all".
-      if (overlay !== undefined) return overlay;
+      if (overlay !== undefined) return withoutRetiredItems(overlay);
       // Untouched workspace: inherit any personal-mode hides and layer the
-      // workspace defaults on top so `recents` starts collapsed.
+      // workspace defaults on top.
       const personal = s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
       const merged = [...personal];
       for (const k of WORKSPACE_DEFAULT_HIDDEN_SECTIONS) {
         if (!merged.includes(k)) merged.push(k);
       }
-      return merged;
+      return withoutRetiredItems(merged);
     }
-    return s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS;
+    return withoutRetiredItems(s.status.hiddenSidebarSections ?? DEFAULT_HIDDEN_SECTIONS);
   };
+
+/**
+ * Keys the user folded away, in the same `team:<id>` vocabulary as
+ * `sidebarExpandedKeys`. Empty means "nothing was ever folded", which is also
+ * the state of every account that predates the field — those keys default to
+ * expanded (Linear keeps a team's sub-navigation open until you close it).
+ */
+const sidebarCollapsedKeys =
+  (workspaceId: string | null) =>
+  (s: GlobalState): string[] =>
+    readOverridableField(s.status, 'sidebarCollapsedKeys', workspaceId) ?? [];
 
 const sidebarExpandedKeys =
   (workspaceId: string | null) =>
   (s: GlobalState): string[] =>
-    readOverridableField(s.status, 'sidebarExpandedKeys', workspaceId) ??
-    DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS;
+    withoutRetiredItems(
+      readOverridableField(s.status, 'sidebarExpandedKeys', workspaceId) ??
+        DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
+    );
 
 /** Sentinel id representing the flex spacer slot. Its position in `sidebarItems`
  * determines where the sidebar pushes items to the bottom. */
 export const SIDEBAR_SPACER_ID = '__spacer__';
 
+/**
+ * The fixed primary IA (Linear convergence): `sidebarItems` is contract-owned.
+ * Core links (inbox / my-work / reviews) come first, then the optional
+ * accordion sections (agent / workspace / favorites / teams), then the spacer
+ * sentinel. Stored and workspace-synced preferences can only hide optional
+ * sections via `hiddenSidebarSections` — they can never reorder the core
+ * structure, so the selector returns this constant as-is.
+ */
 export const DEFAULT_SIDEBAR_ITEMS: string[] = [
+  'inbox',
+  'my-work',
+  'reviews',
+  'agent',
+  'drafts',
+  'create',
+  'workspace',
+  'favorites',
+  'teams',
+  SIDEBAR_SPACER_ID,
+];
+
+/**
+ * Sidebar keys whose product surface has been withdrawn by the task-first
+ * convergence and the Linear IA swap. See docs/development/product-scope.md
+ * and src/features/Navigation/sidebarContract.ts.
+ *
+ * Retired keys can never resurface: `sidebarItems` ignores stored order
+ * entirely, and `hiddenSidebarSections` / `sidebarExpandedKeys` strip these
+ * keys on the read path so stored, overlaid, and re-synced state all pass
+ * through it. The routes behind them stay reachable as deep links.
+ *
+ * Both spellings of the documents key are listed: the sidebar stores `pages`
+ * (its `SidebarTabKey`), while the route registry uses `page`.
+ */
+export const RETIRED_SIDEBAR_KEYS = new Set([
+  'community',
+  'image',
+  'memory',
+  'page',
+  'pages',
+  // Linear IA convergence: retired from the PRIMARY sidebar. Routes stay
+  // reachable (/tasks, /automations, /resource, /projects) via Workspace → More,
+  // team pages, search and existing deep links — the keys just cannot resurface.
+  'home',
   'tasks',
   'automations',
   'resource',
   'recents',
-  'project',
   'private',
-  'agent',
-  SIDEBAR_SPACER_ID,
-  'image',
-  'memory',
-];
+  'project',
+  'views',
+]);
 
-const RETIRED_SIDEBAR_KEYS = new Set(['community', 'pages']);
+/**
+ * Drop retired keys from a stored sidebar order.
+ *
+ * Idempotent, and returns the original reference when there is nothing to strip.
+ * Reference stability matters because the result feeds a zustand selector: a
+ * freshly built array on every read breaks the store's snapshot bail-out in
+ * `useSyncExternalStore`, which costs a re-render per subscriber and can trip
+ * the "getSnapshot should be cached" warning. Keeping the same reference also
+ * makes a second pass a provable no-op.
+ */
+const withoutRetiredItems = (items: string[]): string[] => {
+  let seen = false;
+  for (const item of items) {
+    if (RETIRED_SIDEBAR_KEYS.has(item)) {
+      seen = true;
+      break;
+    }
+  }
+  return seen ? items.filter((item) => !RETIRED_SIDEBAR_KEYS.has(item)) : items;
+};
 
-/** Items that must stay contiguous in the sidebar list (accordion block).
- * `private` sits above `agent` so workspace users see their personal items
- * first, with the workspace-shared agents right below. */
-export const SIDEBAR_ACCORDION_KEYS = new Set(['recents', 'project', 'private', 'agent']);
+/** The accordion sections of the fixed IA — contiguous in the sidebar list
+ * and the only entries the user may hide via `hiddenSidebarSections`. */
+export const SIDEBAR_ACCORDION_KEYS = new Set(['workspace', 'favorites', 'teams']);
 
 const DEFAULT_BOTTOM_KEYS = new Set(
   DEFAULT_SIDEBAR_ITEMS.slice(DEFAULT_SIDEBAR_ITEMS.indexOf(SIDEBAR_SPACER_ID) + 1),
@@ -207,10 +288,10 @@ const arraysEqual = (a: string[], b: string[]): boolean => {
   return true;
 };
 
-// Invariant: spacer always sits immediately after the recents+agent block. Any
-// stored position is ignored — the spacer is re-anchored on every read so legacy
-// states (e.g. from the move-up/down dropdown that used to leave the spacer
-// floating above the accordion) self-heal.
+// Invariant: the spacer always sits immediately after the accordion block.
+// Any stored position is ignored — the spacer is re-anchored on every read so
+// legacy states (e.g. from the move-up/down dropdown that used to leave the
+// spacer floating above the accordion) self-heal.
 const normalizeSpacerPosition = (order: string[]): string[] => {
   const withoutSpacer = order.filter((k) => k !== SIDEBAR_SPACER_ID);
 
@@ -227,51 +308,6 @@ const normalizeSpacerPosition = (order: string[]): string[] => {
   }
 
   return [...withoutSpacer.slice(0, insertAt), SIDEBAR_SPACER_ID, ...withoutSpacer.slice(insertAt)];
-};
-
-// Backfill missing default keys into their canonical group — top-group defaults
-// slot in just before the accordion (keeping accordion flush with the spacer),
-// bottom-group defaults go after the spacer. Without this split a new top-group
-// default added in a future version would silently appear in the bottom group
-// for existing users.
-const withAllKnownKeys = (order: string[]): string[] => {
-  const activeOrder = order.filter((key) => !RETIRED_SIDEBAR_KEYS.has(key));
-  let nextOrder = activeOrder;
-  if (!activeOrder.includes('project')) {
-    const recentsIndex = activeOrder.indexOf('recents');
-    const firstAgentIndex = activeOrder.findIndex((key) => key === 'private' || key === 'agent');
-    const insertAt =
-      recentsIndex >= 0 ? recentsIndex + 1 : firstAgentIndex >= 0 ? firstAgentIndex : 0;
-    nextOrder = [...activeOrder.slice(0, insertAt), 'project', ...activeOrder.slice(insertAt)];
-  }
-
-  const present = new Set(nextOrder);
-  const missingTop: string[] = [];
-  const missingBottom: string[] = [];
-  for (const k of DEFAULT_SIDEBAR_ITEMS) {
-    if (k === SIDEBAR_SPACER_ID || present.has(k)) continue;
-    (DEFAULT_BOTTOM_KEYS.has(k) ? missingBottom : missingTop).push(k);
-  }
-
-  const withSpacer = normalizeSpacerPosition(nextOrder);
-  if (missingTop.length === 0 && missingBottom.length === 0) return withSpacer;
-
-  const spacerIdx = withSpacer.indexOf(SIDEBAR_SPACER_ID);
-  let accordionStartIdx = spacerIdx;
-  for (let i = 0; i < spacerIdx; i++) {
-    if (SIDEBAR_ACCORDION_KEYS.has(withSpacer[i])) {
-      accordionStartIdx = i;
-      break;
-    }
-  }
-
-  return [
-    ...withSpacer.slice(0, accordionStartIdx),
-    ...missingTop,
-    ...withSpacer.slice(accordionStartIdx, spacerIdx + 1),
-    ...missingBottom,
-    ...withSpacer.slice(spacerIdx + 1),
-  ];
 };
 
 const accordionIndices = (items: string[]): number[] => {
@@ -345,38 +381,17 @@ export const reorderSidebarItems = (items: string[], from: number, to: number): 
   return arraysEqual(normalized, items) ? items : normalized;
 };
 
+/**
+ * The primary IA is a fixed contract (see `features/Navigation/sidebarContract`):
+ * stored or workspace-synced preferences may hide optional sections via
+ * `hiddenSidebarSections`, but they can never reorder the core structure or
+ * resurrect retired keys — the read path always yields the canonical order.
+ * Returning the constant keeps snapshot stability for zustand subscribers.
+ */
 const sidebarItems =
-  (workspaceId: string | null) =>
+  (_workspaceId: string | null) =>
   (s: GlobalState): string[] => {
-    const items = readOverridableField(s.status, 'sidebarItems', workspaceId);
-    if (items && items.length > 0) return withAllKnownKeys(items);
-
-    // Migrate from the legacy `sidebarSectionOrder` (canary) which only stored the
-    // accordion order (e.g. ['agent', 'recents']). Apply that order to the accordion
-    // slot inside the default list so users keep their custom accordion arrangement.
-    const legacy = s.status.sidebarSectionOrder;
-    if (legacy && legacy.length > 0) {
-      const legacyAcc = legacy.filter((k) => SIDEBAR_ACCORDION_KEYS.has(k));
-      if (legacyAcc.length > 0) {
-        const seen = new Set<string>();
-        const merged: string[] = [];
-        for (const k of DEFAULT_SIDEBAR_ITEMS) {
-          if (SIDEBAR_ACCORDION_KEYS.has(k)) {
-            for (const lk of legacyAcc) {
-              if (!seen.has(lk)) {
-                merged.push(lk);
-                seen.add(lk);
-              }
-            }
-          } else if (!seen.has(k)) {
-            merged.push(k);
-            seen.add(k);
-          }
-        }
-        return withAllKnownKeys(merged);
-      }
-    }
-
+    void s;
     return DEFAULT_SIDEBAR_ITEMS;
   };
 const showSystemRole = (s: GlobalState) => s.status.showSystemRole;
@@ -384,7 +399,6 @@ const mobileShowTopic = (s: GlobalState) => s.status.mobileShowTopic;
 const mobileShowPortal = (s: GlobalState) => s.status.mobileShowPortal;
 const showAgentBuilderPanel = (s: GlobalState) => s.status.showAgentBuilderPanel;
 const showHomeRail = (s: GlobalState) => s.status.showHomeRail ?? true;
-const showHomePortrait = (s: GlobalState) => s.status.showHomePortrait ?? true;
 const hiddenHomeWidgets = (s: GlobalState): string[] => s.status.hiddenHomeWidgets ?? [];
 const homeGoalsCollapsed = (s: GlobalState): boolean => s.status.homeGoalsCollapsed ?? false;
 const homeRecentsCount = (s: GlobalState): number => s.status.homeRecentsCount ?? 8;
@@ -397,19 +411,9 @@ const showTerminalPanel = (s: GlobalState) => s.status.showTerminalPanel;
 const terminalPanelHeight = (s: GlobalState) => s.status.terminalPanelHeight || 320;
 const showFilePanel = (s: GlobalState) => s.status.showFilePanel;
 const showVerifyReportPanel = (s: GlobalState) => s.status.showVerifyReportPanel ?? true;
-const showImagePanel = (s: GlobalState) => s.status.showImagePanel;
-const showImageTopicPanel = (s: GlobalState) => s.status.showImageTopicPanel;
 const hidePWAInstaller = (s: GlobalState) => s.status.hidePWAInstaller;
 const isShowCredit = (s: GlobalState) => s.status.isShowCredit;
 const language = (s: GlobalState) => s.status.language || 'auto';
-const modelDetailPanelExpandedKeys = (s: GlobalState): ModelDetailPanelExpandedKey[] => {
-  const collapsedKeys = s.status.modelDetailPanelCollapsedKeys ?? [];
-
-  return MODEL_DETAIL_PANEL_EXPANDABLE_KEYS.filter((key) => !collapsedKeys.includes(key));
-};
-const modelSwitchPanelGroupMode = (s: GlobalState) =>
-  s.status.modelSwitchPanelGroupMode || 'byProvider';
-const modelSwitchPanelWidth = (s: GlobalState) => s.status.modelSwitchPanelWidth || 460;
 const pageAgentPanelWidth = (s: GlobalState) => s.status.pageAgentPanelWidth || 360;
 const workingSidebarWidth = (s: GlobalState) => s.status.workingSidebarWidth || 360;
 
@@ -420,20 +424,14 @@ const portalWidth = (s: GlobalState) => s.status.portalWidth || 400;
 const portalWidths = (s: GlobalState) => s.status.portalWidths;
 const filePanelWidth = (s: GlobalState) => s.status.filePanelWidth;
 const groupAgentBuilderPanelWidth = (s: GlobalState) => s.status.groupAgentBuilderPanelWidth || 360;
-const imagePanelWidth = (s: GlobalState) => s.status.imagePanelWidth;
 const agentListViewMode = (s: GlobalState) => s.status.agentListViewMode || 'list';
 const agentListViewOptions = (s: GlobalState) => s.status.agentListViewOptions;
+const projectListViewOptions = (s: GlobalState) => s.status.projectListViewOptions;
+const teamProjectsViewOptions = (s: GlobalState) => s.status.teamProjectsViewOptions;
 const agentListExpandedGroupKeys = (s: GlobalState) => s.status.agentListExpandedGroupKeys ?? [];
 const agentListSidebarSectionCollapsed = (s: GlobalState) =>
   s.status.agentListSidebarSectionCollapsed ?? false;
-const imageTopicViewMode = (s: GlobalState) => s.status.imageTopicViewMode || 'grid';
-const imageTopicPanelWidth = (s: GlobalState) => s.status.imageTopicPanelWidth;
 const verifyReportPanelWidth = (s: GlobalState) => s.status.verifyReportPanelWidth || 300;
-const videoPanelWidth = (s: GlobalState) => s.status.videoPanelWidth;
-const videoTopicViewMode = (s: GlobalState) => s.status.videoTopicViewMode || 'grid';
-const videoTopicPanelWidth = (s: GlobalState) => s.status.videoTopicPanelWidth;
-const showVideoPanel = (s: GlobalState) => s.status.showVideoPanel;
-const showVideoTopicPanel = (s: GlobalState) => s.status.showVideoTopicPanel;
 const wideScreen = (s: GlobalState) => !s.status.noWideScreen;
 const chatInputHeight = (s: GlobalState) => s.status.chatInputHeight || 64;
 const expandInputActionbar = (s: GlobalState) => s.status.expandInputActionbar;
@@ -468,6 +466,30 @@ const tokenDisplayFormatShort = (s: GlobalState) =>
 
 const homeSelectedAgentId = (s: GlobalState) => s.status.homeSelectedAgentId;
 
+/**
+ * Per (user, workspace) priority-inbox choice. `scopeKey` is the WorkInbox
+ * `inboxPriorityScopeKey` (`userId:workspaceId`); `undefined` means the user
+ * has not decided yet, which is what keeps the onboarding banner visible.
+ */
+const inboxPriorityMode =
+  (scopeKey: string) =>
+  (s: GlobalState): 'all' | 'priority' | undefined =>
+    s.status.inboxPriorityMode?.[scopeKey];
+
+/** Per (user, workspace) inbox "show snoozed" toggle; undefined/false hides. */
+const inboxShowSnoozed =
+  (scopeKey: string) =>
+  (s: GlobalState): boolean | undefined =>
+    s.status.inboxShowSnoozed?.[scopeKey];
+
+/**
+ * Per (user, workspace) My issues display options, keyed by the same scope
+ * key as `inboxPriorityMode` (`userId:workspaceId`), then by tab. The page
+ * normalizes the payload against its per-tab defaults.
+ */
+const myWorkViewOptions = (scopeKey: string) => (s: GlobalState) =>
+  s.status.myWorkViewOptions?.[scopeKey];
+
 export const systemStatusSelectors = {
   agentBuilderPanelWidth,
   agentListExpandedGroupKeys,
@@ -479,6 +501,7 @@ export const systemStatusSelectors = {
   disabledModelProvidersSortType,
   disabledModelsSortType,
   expandInputActionbar,
+  favoritePageSize,
   filePanelWidth,
   getAgentSystemRoleExpanded,
   groupAgentBuilderPanelWidth,
@@ -489,9 +512,8 @@ export const systemStatusSelectors = {
   homeRecentsCount,
   homeSelectedAgentId,
   homeTaskCount,
-  imagePanelWidth,
-  imageTopicViewMode,
-  imageTopicPanelWidth,
+  inboxPriorityMode,
+  inboxShowSnoozed,
   isBannerDismissed,
   isNotificationRead,
   isShowCredit,
@@ -500,30 +522,29 @@ export const systemStatusSelectors = {
   leftPanelWidth,
   mobileShowPortal,
   mobileShowTopic,
-  modelDetailPanelExpandedKeys,
-  modelSwitchPanelGroupMode,
-  modelSwitchPanelWidth,
+  myWorkViewOptions,
   pageAgentPanelWidth,
   pagePageSize,
   portalWidth,
   portalWidths,
+  projectListViewOptions,
   privateAgentPageSize,
   recentPageSize,
   taskCreateInlineCollapsed,
   taskKanbanHiddenColumns,
   taskKanbanHiddenPanelCollapsed,
+  taskListViewDefaults,
   taskListViewMode,
   taskListViewOptions,
+  teamProjectsViewOptions,
+  sidebarCollapsedKeys,
   sidebarExpandedKeys,
   agentSidebarSections,
   sidebarItems,
   sessionGroupKeys,
   showAgentBuilderPanel,
   showFilePanel,
-  showHomePortrait,
   showHomeRail,
-  showImagePanel,
-  showImageTopicPanel,
   showLeftPanel,
   showPageAgentPanel,
   showRightPanel,
@@ -531,17 +552,12 @@ export const systemStatusSelectors = {
   showTaskAgentPanel,
   showTerminalPanel,
   showVerifyReportPanel,
-  showVideoPanel,
-  showVideoTopicPanel,
   systemStatus,
   terminalPanelHeight,
   verifyReportPanelWidth,
   tokenDisplayFormatShort,
   collapsedTopicGroupKeys,
   topicPageSize,
-  videoPanelWidth,
-  videoTopicViewMode,
-  videoTopicPanelWidth,
   wideScreen,
   workingSidebarWidth,
 };

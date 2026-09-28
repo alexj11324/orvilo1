@@ -15,8 +15,6 @@ import type { ChatStreamPayload, OpenAIChatMessage } from '../../types';
 import { getModelPropertyWithFallback } from '../../utils/getFallbackModelProperty';
 import { resolveSafeMaxTokens } from '../../utils/resolveSafeMaxTokens';
 import { sanitizeAnthropicThinkingParts } from '../../utils/sanitizeAnthropicThinkingParts';
-import { createMiniMaxImage } from './createImage';
-import { createMiniMaxVideo } from './createVideo';
 
 const DEFAULT_MINIMAX_BASE_URL = 'https://api.minimaxi.com/v1';
 const DEFAULT_MINIMAX_ANTHROPIC_BASE_URL = 'https://api.minimax.io/anthropic';
@@ -358,17 +356,8 @@ export const openAIParams = {
       });
     },
   },
-  createImage: createMiniMaxImage,
-  createVideo: createMiniMaxVideo,
   debug: {
     chatCompletion: () => process.env.DEBUG_MINIMAX_CHAT_COMPLETION === '1',
-  },
-  handlePollVideoStatus: async (inferenceId: string, options: any) => {
-    const { pollMiniMaxVideoStatus } = await import('./createVideo');
-    return pollMiniMaxVideoStatus(inferenceId, {
-      apiKey: options.apiKey,
-      baseURL: options.baseURL || '',
-    });
   },
   provider: ModelProvider.Minimax,
 } satisfies OpenAICompatibleFactoryOptions;

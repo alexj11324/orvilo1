@@ -1,3 +1,23 @@
+/**
+ * pgSearchCleanup — remove leftover pg_search (ParadeDB) objects after the
+ * Elasticsearch FTS cutover.
+ *
+ * Usage:
+ *   tsx scripts/pgSearchCleanup/index.ts                # --status: read-only inventory (default)
+ *   tsx scripts/pgSearchCleanup/index.ts --apply --yes  # actually drop the objects
+ *
+ * Env:
+ *   DATABASE_URL         (required) target Postgres connection string; throws when unset
+ *   FTS_SEARCH_PROVIDER  (required for --apply) must resolve to elasticsearch —
+ *                        apply mode asserts the cutover already happened
+ *
+ * Guard rail: destructive DDL cleanup — read-only `--status` by default, and
+ * `--apply` additionally requires the explicit `--yes` confirmation plus the
+ * provider assertion (see scripts/README.md → Guard rails).
+ *
+ * Exit behavior: 0 on success; throws (non-zero) on unknown/conflicting flags,
+ * missing DATABASE_URL, or a failed provider assertion.
+ */
 import pg from 'pg';
 
 import { readPgSearchInventory } from './inventory';

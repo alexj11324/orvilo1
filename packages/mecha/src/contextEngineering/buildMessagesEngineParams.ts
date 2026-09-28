@@ -77,9 +77,7 @@ export const buildMessagesEngineParams = (snapshot: ContextSnapshot): MessagesEn
     // --- world (frozen at creation) ---
     ...definedOnly({
       agentGroup: world?.group,
-      botPlatformContext: world?.botPlatformContext,
       connectorOwnershipNote: world?.connectorOwnershipNote,
-      discordContext: world?.discordContext,
       evalContext: world?.evalContext,
       projectInstructions: world?.projectInstructions,
       userMemory: world?.userMemory,

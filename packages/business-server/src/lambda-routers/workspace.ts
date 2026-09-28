@@ -1,14 +1,25 @@
 import { isWorkspaceSlugFormatValid, WORKSPACE_SLUG_MAX, WORKSPACE_SLUG_MIN } from '@orvilo/const';
 import type { WorkspaceItem } from '@orvilo/database/schemas';
+import { users } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
+  cancelOwnershipTransfer,
+  getOwnershipTransferState,
+  requestOwnershipTransfer,
+  respondOwnershipTransfer,
+} from '@/business/server/membershipLifecycle/ownershipTransfer';
+import {
   wsAdminProcedure,
   wsCompatProcedure,
+  wsOwnerProcedure,
   wsProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { WorkspaceModel } from '@/database/models/workspace';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
+import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 
 /**
  * A workspace row as the workspace picker sees it: the stored record plus the
@@ -46,27 +57,70 @@ const cloudOnly = (feature: string): never => {
   });
 };
 
-// Cloud overrides this at the same path with the real workspaceRouter backed by cloudDB.
-// Only the procedures consumed by submodule (open-source) UI and by the CLI are declared
-// here as typed no-op stubs so the contract type-checks; cloud supplies the real
-// implementations. Keep the procedure builders and input schemas aligned with
-// `apps/server/src/routers/lambda/workspace.ts` in the cloud repo — the point of a stub
-// is to represent that contract, so a looser gate here is a real runtime difference.
+const PG_UNIQUE_VIOLATION = '23505';
+
+// Drizzle wraps the raw pg error as `.cause` (sometimes more than once), so a
+// unique violation only surfaces by walking the chain — a top-level
+// code/message check always misses and maps real conflicts to 500s.
+const isUniqueViolation = (error: unknown): boolean => {
+  if (typeof error !== 'object' || error === null) return false;
+  if ((error as { code?: string }).code === PG_UNIQUE_VIOLATION) return true;
+  const message = error instanceof Error ? error.message : '';
+  if (message.includes('duplicate key value') || message.includes('workspaces_slug')) return true;
+  const cause = (error as { cause?: unknown }).cause;
+  return cause !== error && isUniqueViolation(cause);
+};
+
+// The stub list/create/checkSlugAvailable are now real; cloud-only surfaces
+// (market org, statistics, settings) stay declared no-ops so the contract
+// type-checks. Keep the procedure builders and input schemas aligned with
+// `apps/server/src/routers/lambda/workspace.ts` in the cloud repo.
 export const workspaceRouter = router({
   checkSlugAvailable: authedProcedure
-    .input(z.object({ slug: z.string().min(WORKSPACE_SLUG_MIN).max(WORKSPACE_SLUG_MAX) }))
-    .query((): { available: boolean } => ({ available: false })),
+    .use(serverDatabase)
+    .input(z.object({ slug: workspaceSlugSchema }))
+    .query(async ({ input, ctx }): Promise<{ available: boolean }> => {
+      const existing = await new WorkspaceModel(ctx.serverDB, ctx.userId).findBySlug(input.slug);
+      return { available: !existing };
+    }),
 
   create: authedProcedure
+    .use(serverDatabase)
     .input(
       z.object({
         avatar: z.string().optional(),
         description: z.string().max(1000).optional(),
+        // Idempotency key: onboarding checkpoints this id before calling, so
+        // a retried create targets the same row instead of relying on an
+        // uncorrelated slug match to find a lost response.
+        id: z.string().min(1).max(64).optional(),
         name: z.string().min(1).max(255),
         slug: workspaceSlugSchema,
       }),
     )
-    .mutation(async (): Promise<WorkspaceItem> => cloudOnly('Workspace creation')),
+    .mutation(async ({ input, ctx }): Promise<WorkspaceItem> => {
+      const model = new WorkspaceModel(ctx.serverDB, ctx.userId);
+      try {
+        return await model.create(input);
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          // Idempotent recovery: a retried create (double submit, onboarding
+          // replay, a second control client firing the same request) must land
+          // on the workspace the first call made — not on a hard failure. Only
+          // reuse when the caller actually owns the conflicting row; a slug
+          // taken by someone else stays a real CONFLICT.
+          const existing = await model.findBySlug(input.slug);
+          if (existing?.primaryOwnerId === ctx.userId) return existing;
+          throw new TRPCError({ code: 'CONFLICT', message: 'Workspace slug is already taken' });
+        }
+        console.error('[workspace:create]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create workspace',
+        });
+      }
+    }),
 
   ensureMarketOrganization: authedProcedure
     .input(z.object({ autoProvision: z.boolean().optional() }).optional())
@@ -74,6 +128,60 @@ export const workspaceRouter = router({
       throw new TRPCError({
         code: 'NOT_IMPLEMENTED',
         message: 'Workspace market organization is a cloud-only feature.',
+      });
+    }),
+
+  /**
+   * Linear-model provisioning: every account lives inside a workspace — there
+   * is no personal scope. Returns the caller's first workspace (most recently
+   * updated), or creates a default one named after the account on first use.
+   * Safe to call repeatedly: a concurrent double-provision folds back into the
+   * re-read list via the slug unique-violation retry loop.
+   */
+  ensureDefault: authedProcedure
+    .use(serverDatabase)
+    .mutation(async ({ ctx }): Promise<WorkspaceMembershipSummary> => {
+      const model = new WorkspaceModel(ctx.serverDB, ctx.userId);
+      const existing = await model.listUserWorkspaces();
+      if (existing.length > 0) return existing[0];
+
+      const user = await ctx.serverDB.query.users.findFirst({
+        where: eq(users.id, ctx.userId),
+      });
+      const baseName = user?.fullName || user?.username || user?.email?.split('@')[0] || 'Personal';
+      const name = `${baseName}'s workspace`;
+      // Deterministic base keeps the common path idempotent; attempts add a
+      // short suffix only if that base slug was somehow taken.
+      const sanitizedUserId = ctx.userId.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
+      const slugBase = sanitizedUserId ? `ws-${sanitizedUserId.slice(0, 12)}` : 'my-workspace';
+
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const slug =
+          attempt === 0 ? slugBase : `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
+        if (!(await model.findBySlug(slug))) {
+          try {
+            const created = await model.create({ name, slug });
+            return { ...created, role: 'owner' };
+          } catch (error) {
+            if (!isUniqueViolation(error)) {
+              console.error('[workspace:ensureDefault]', error);
+              throw new TRPCError({
+                cause: error,
+                code: 'INTERNAL_SERVER_ERROR',
+                message: 'Failed to provision the default workspace',
+              });
+            }
+            // Lost a slug race — try the next candidate.
+          }
+        }
+      }
+
+      // A concurrent ensure already created this user's workspace.
+      const provisioned = await model.listUserWorkspaces();
+      if (provisioned.length > 0) return provisioned[0];
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to provision the default workspace',
       });
     }),
 
@@ -93,7 +201,117 @@ export const workspaceRouter = router({
     .input(workspaceStatisticsInput)
     .query((): WorkspaceStatistics | null => null),
 
-  list: authedProcedure.query(async (): Promise<WorkspaceMembershipSummary[]> => []),
+  list: authedProcedure
+    .use(serverDatabase)
+    .query(async ({ ctx }): Promise<WorkspaceMembershipSummary[]> => {
+      try {
+        return await new WorkspaceModel(ctx.serverDB, ctx.userId).listUserWorkspaces();
+      } catch (error) {
+        console.error('[workspace:list]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to list workspaces',
+        });
+      }
+    }),
+
+  /**
+   * Owner retracts the still-pending hand-off. The invited member never had
+   * any rights conferred by the request, so cancellation needs no consent.
+   */
+  cancelOwnershipTransfer: wsOwnerProcedure.use(serverDatabase).mutation(async ({ ctx }) => {
+    try {
+      return await cancelOwnershipTransfer(ctx.serverDB, {
+        ipAddress: ctx.clientIp ?? undefined,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId!,
+      });
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[workspace:cancelOwnershipTransfer]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel ownership transfer',
+      });
+    }
+  }),
+
+  /**
+   * The workspace's pending hand-off as seen by its parties (initiator or
+   * invited member); everyone else reads `null` so an in-flight transfer
+   * doesn't leak into the roster.
+   */
+  pendingOwnershipTransfer: wsProcedure.use(serverDatabase).query(async ({ ctx }) => {
+    try {
+      return await getOwnershipTransferState(ctx.serverDB, {
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId!,
+      });
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[workspace:pendingOwnershipTransfer]', error);
+      throw new TRPCError({
+        cause: error,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to load ownership transfer state',
+      });
+    }
+  }),
+
+  /**
+   * Recipient accepts or declines the pending hand-off. Accepting performs
+   * the atomic owner swap; declining keeps the current owner.
+   */
+  respondOwnershipTransfer: wsProcedure
+    .use(serverDatabase)
+    .input(z.object({ accept: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await respondOwnershipTransfer(ctx.serverDB, {
+          accept: input.accept,
+          ipAddress: ctx.clientIp ?? undefined,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId!,
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[workspace:respondOwnershipTransfer]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to respond to ownership transfer',
+        });
+      }
+    }),
+
+  /**
+   * Ownership moves only with the recipient's explicit consent: this creates
+   * a pending request they must accept. The previous immediate-transfer
+   * semantics are retired — see `respondOwnershipTransfer`.
+   */
+  transferOwnership: wsOwnerProcedure
+    .use(serverDatabase)
+    .input(z.object({ newOwnerUserId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await requestOwnershipTransfer(ctx.serverDB, {
+          ipAddress: ctx.clientIp ?? undefined,
+          ownerUserId: ctx.userId,
+          targetUserId: input.newOwnerUserId,
+          workspaceId: ctx.workspaceId!,
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[workspace:transferOwnership]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to request ownership transfer',
+        });
+      }
+    }),
 
   update: wsAdminProcedure
     .input(

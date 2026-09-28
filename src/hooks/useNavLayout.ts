@@ -1,10 +1,14 @@
-import { HomeIcon, SearchIcon } from 'lucide-react';
+import { INBOX_SESSION_ID } from '@orvilo/const';
+import {
+  BotIcon,
+  FilePenLineIcon,
+  GitPullRequestIcon,
+  InboxIcon,
+  SquareUserIcon,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import { getRouteById } from '@/config/routes';
-import { useGlobalStore } from '@/store/global';
 import { SidebarTabKey } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
@@ -35,66 +39,65 @@ export interface NavLayout {
 
 export const useNavLayout = (): NavLayout => {
   const { t } = useTranslation('common');
-  const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
   const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
-  const activeWorkspaceSlug = useActiveWorkspaceSlug();
 
+  // Fixed primary IA (see features/Navigation/sidebarContract): the header
+  // carries the workspace switcher + search/new-issue icons; the body renders
+  // inbox/my-work/reviews/agent as core links (Agent is a flat row to /agent —
+  // the workspace conversation; the /agents management directory stays a
+  // secondary destination under Workspace → More) and the accordion sections
+  // favorites, teams) separately. Retired surfaces keep their routes for deep
+  // links but no sidebar entry.
   const topNavItems = useMemo(
     () =>
       [
         {
-          icon: SearchIcon,
-          key: 'search',
-          onClick: () => toggleCommandMenu(true),
-          title: t('tab.search'),
+          icon: InboxIcon,
+          key: SidebarTabKey.Inbox,
+          title: t('tab.inbox'),
+          url: '/inbox',
         },
         {
-          icon: HomeIcon,
-          key: SidebarTabKey.Home,
-          title: t('tab.home'),
-          url: '/',
+          icon: SquareUserIcon,
+          key: SidebarTabKey.MyWork,
+          title: t('tab.myWork'),
+          url: '/my-issues',
         },
         {
-          icon: getRouteById('tasks')!.icon,
-          key: SidebarTabKey.Tasks,
-          title: t('tab.tasks'),
-          url: '/tasks',
+          icon: GitPullRequestIcon,
+          key: SidebarTabKey.Reviews,
+          title: t('tab.reviews'),
+          url: '/reviews',
         },
         {
-          icon: getRouteById('automations')!.icon,
-          key: SidebarTabKey.Automations,
-          title: t('tab.automations'),
-          url: '/automations',
+          icon: BotIcon,
+          key: SidebarTabKey.Agent,
+          title: t('navPanel.agent'),
+          url: `/agent/${INBOX_SESSION_ID}`,
         },
         {
-          icon: getRouteById('resource')!.icon,
-          key: SidebarTabKey.Resource,
-          title: t('tab.resource'),
-          url: '/resource',
+          icon: FilePenLineIcon,
+          key: SidebarTabKey.Drafts,
+          title: t('drafts.title'),
+          url: '/drafts',
         },
       ] as NavItem[],
-    [t, toggleCommandMenu],
+    [t],
   );
 
-  const bottomMenuItems = useMemo(
-    () =>
-      [
-        {
-          icon: getRouteById('image')!.icon,
-          key: SidebarTabKey.Image,
-          title: t('tab.generation'),
-          url: '/image',
-        },
-        {
-          hidden: !!activeWorkspaceSlug,
-          icon: getRouteById('memory')!.icon,
-          key: SidebarTabKey.Memory,
-          title: t('tab.memory'),
-          url: '/memory',
-        },
-      ] as NavItem[],
-    [t, activeWorkspaceSlug],
-  );
+  // Every destination that used to live here has been retired by the task-first
+  // convergence: community, image/video generation, pages and the memory centre.
+  //
+  // They are removed rather than flagged `hidden` on purpose. HomeSidebar resolves
+  // each persisted `sidebarItems` key against a map built from these two lists, so
+  // an entry deleted here stops rendering even when a stored preference still names
+  // it — a `hidden: true` flag would leave the key resolvable and let a stale or
+  // re-synced preference bring the entry back. Preference-level retirement is
+  // handled separately in the system-status normalizer.
+  //
+  // The list stays part of the NavLayout contract so HomeSidebar keeps one
+  // resolution path for every nav key.
+  const bottomMenuItems = useMemo<NavItem[]>(() => [], []);
 
   const footer = useMemo(
     () => ({
@@ -109,8 +112,8 @@ export const useNavLayout = (): NavLayout => {
   const userPanel = useMemo(
     () => ({
       showDataImporter: false,
-      // Memory now appears in the sidebar by default; drop the duplicate entry
-      // from the user dropdown to keep that menu focused on account / settings.
+      // The memory centre is a retired surface, so it has no entry here either —
+      // the user dropdown stays focused on account / settings.
       showMemory: false,
     }),
     [],

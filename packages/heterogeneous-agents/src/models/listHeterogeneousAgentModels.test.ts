@@ -4,9 +4,16 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { listDroidAcpModelsMock, listTraeAcpModelsMock } = vi.hoisted(() => ({
+const {
+  listDroidAcpModelsMock,
+  listStandardAcpModelsMock,
+  listTraeAcpModelsMock,
+  resolveAcpSpawnTargetMock,
+} = vi.hoisted(() => ({
   listDroidAcpModelsMock: vi.fn(),
+  listStandardAcpModelsMock: vi.fn(),
   listTraeAcpModelsMock: vi.fn(),
+  resolveAcpSpawnTargetMock: vi.fn(),
 }));
 
 vi.mock('node:os', async () => {
@@ -25,6 +32,15 @@ vi.mock('../spawn/traeAcpSession', () => ({
 
 vi.mock('../spawn/droidAcpSession', () => ({
   listDroidAcpModels: listDroidAcpModelsMock,
+}));
+
+// ACP-first catalog discovery is exercised through `resolveAcpSpawnTarget` +
+// `listStandardAcpModels`; these tests target the legacy `--list-models`-style
+// parsers, so the ACP probe is forced to miss and fall through deterministically
+// (an unmocked probe would hang on the bare `execFile` mock).
+vi.mock('../spawn/standardAcpAgents', () => ({
+  listStandardAcpModels: listStandardAcpModelsMock,
+  resolveAcpSpawnTarget: resolveAcpSpawnTargetMock,
 }));
 
 const execFileMock = vi.mocked(childProcess.execFile);
@@ -49,7 +65,10 @@ describe('heterogeneous agent model discovery', () => {
   beforeEach(() => {
     execFileMock.mockReset();
     listDroidAcpModelsMock.mockReset();
+    listStandardAcpModelsMock.mockReset();
     listTraeAcpModelsMock.mockReset();
+    resolveAcpSpawnTargetMock.mockReset();
+    resolveAcpSpawnTargetMock.mockRejectedValue(new Error('no ACP runtime in test'));
   });
 
   afterEach(() => {

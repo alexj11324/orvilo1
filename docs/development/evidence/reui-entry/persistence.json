@@ -1,0 +1,17 @@
+{
+  "matchingWorkspaces": 1,
+  "scope": "localhost test account only",
+  "sourceCommit": "343eea7a5bd35e2682059c55769d52794deedbe7",
+  "user": {
+    "full_name": "Orvilo Design Review",
+    "finished_at": "2026-09-21T20:30:30.931Z",
+    "setup": {
+      "role": "design",
+      "goals": ["roadmaps", "sprints"],
+      "teamSize": "solo",
+      "workspaceName": "Orvilo UI Review",
+      "workspaceSlug": "orvilo-ui-review-20260921",
+      "discoverySource": "linkedin"
+    }
+  }
+}

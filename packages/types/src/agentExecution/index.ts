@@ -1,3 +1,4 @@
+import type { AgentRunAdmissionState } from '../agent/acpExecution';
 import type { OrviloAgentChatConfig } from '../agent/chatConfig';
 import type { CreateThreadWithMessageParams } from '../aiChat';
 import type { DeviceUnavailableErrorData, WorkingDirConfig } from '../device';
@@ -15,6 +16,35 @@ export type AgentSignalOperationKind =
  * carries `agentId/operationId/topicId`). Runtime parsing/validation helpers live
  * server-side in `operationMarker.ts`.
  */
+/**
+ * Run-scoped marker for a retained background judgment executed as an
+ * explicitly-authorized ACP operation (R08). Stamped onto
+ * `appContext.judgment` at dispatch so the `agent_operations` row carries the
+ * consumer identity, the caller's attempt count, and the budget caps the run
+ * was dispatched under — this is the durable record behind every
+ * `kind: 'judgment'` generation.
+ */
+export interface AgentOperationJudgmentContext {
+  /** 1-based attempt index when the caller retries the same judgment. */
+  attempt?: number;
+  /** Budget caps applied to the run — the wait/steps envelope, not a token count. */
+  budget?: {
+    /** Wall-clock milliseconds the caller waited for a terminal state. */
+    maxWaitMs?: number;
+    /** Agent step cap the run was dispatched with. */
+    maxSteps?: number;
+  };
+  /**
+   * Launch identity minted before dispatch. When `execAgent`'s return is lost
+   * (throw, caller abort, or hang past the total budget), the runner looks up
+   * the operation row by this key and interrupts whatever landed — a judgment
+   * never dispatches a second writer for the same launch.
+   */
+  intentKey?: string;
+  /** Stable consumer identifier, e.g. 'verify.judge', 'goal.criteriaDraft'. */
+  purpose: string;
+}
+
 export interface AgentSignalOperationMarker {
   /**
    * The reviewed user agent a resulting receipt should be attributed to. Needed
@@ -76,6 +106,9 @@ export interface ExecAgentAppContext {
   conversationAgentId?: string;
   /** Optional default assignee candidate for task manager prompts */
   defaultTaskAssigneeAgentId?: string;
+  /** Durable Task dispatch claim carried into completion callbacks. */
+  dispatchFence?: number;
+  dispatchId?: string;
   /** Current document ID for page-scoped conversations */
   documentId?: string | null;
   /**
@@ -98,6 +131,7 @@ export interface ExecAgentAppContext {
    * group-agent-builder tool runtime and its context injector read this field.
    */
   editingGroupId?: string;
+  executionGeneration?: number;
   /** Group ID for group chat */
   groupId?: string | null;
   /**
@@ -124,6 +158,13 @@ export interface ExecAgentAppContext {
    * recursive sub-agent dispatch.
    */
   isSubAgent?: boolean;
+  /**
+   * ACP judgment-run marker. Present on operations dispatched by the retained
+   * judgment path (`AiGenerationService.generateObject` with `kind: 'judgment'`
+   * / `runAcpJudgment`) — the durable proof the run was an explicitly
+   * authorized judgment rather than an untracked LLM call.
+   */
+  judgment?: AgentOperationJudgmentContext;
   /**
    * Branch this run into a NEW thread (subtopic) under `topicId`, persisting the
    * turn there instead of on the topic's main spine.
@@ -211,7 +252,12 @@ export interface ExecAgentParams {
   agentId?: string;
   /** Application context for message storage */
   appContext?: ExecAgentAppContext;
-  /** Whether to auto-start execution after creating operation (default: true) */
+  /**
+   * Retired lobehub deferred-start flag. Under ACP every accepted run is
+   * dispatched inside `execAgent` — there is no queued intent a later
+   * `startExecution` could release — so `false` is rejected before any side
+   * effect. Omit it (or pass `true`); to defer a run, use `scheduleAgentRun`.
+   */
   autoStart?: boolean;
   /** Client-minted ids for the rows this run creates (fresh sends only). */
   clientIds?: ExecAgentClientIds;
@@ -331,6 +377,14 @@ export interface ExecAgentResult {
   messageId?: string;
   /** Operation ID for SSE connection */
   operationId: string;
+  /**
+   * Remote-run admission state when this run was dispatched to a device or
+   * sandbox execution host (see `agent_operations.metadata.remoteAdmission`).
+   * `'unknown'` means the dispatch acknowledgement was lost — the run may
+   * still be executing and must not be blindly retried (`OUTCOME_UNKNOWN`).
+   * Absent for in-process (non-remote) runs.
+   */
+  remoteAdmission?: AgentRunAdmissionState;
   /** Operation status */
   status: string;
   /** Whether the operation was created successfully */
@@ -434,14 +488,39 @@ export interface ExecGroupAgentResponse {
 export interface ExecSubAgentParams {
   /** The agent ID to execute */
   agentId: string;
+  /**
+   * chatConfig overrides (thinking / reasoning-effort extend params) for the
+   * spawned run, from the parent agent's `agencyConfig.subagent.chatConfig`.
+   * Merged over the executing agent's own chatConfig, skipping nulled keys.
+   */
+  chatConfig?: Partial<OrviloAgentChatConfig> | null;
   /** The Group ID (optional, only for Group mode) */
   groupId?: string;
+  /**
+   * Seed the isolation thread with the parent conversation's transcript so the
+   * spawned run sees the context that produced the request.
+   */
+  inheritMessages?: boolean;
   /** Instruction/prompt for the agent */
   instruction: string;
+  /**
+   * Mark the spawned run as a sub-agent — trims the manifest (hides
+   * `callSubAgent`) and blocks nested sub-agent dispatch. `callSubAgent`
+   * transports set this; direct-mention and group `callAgent` spawns do not.
+   */
+  isSubAgent?: boolean;
+  /**
+   * Model the spawned run should use, resolved by the spawn site from the
+   * parent agent's `agencyConfig.subagent`. Passed explicitly so the execution
+   * side never re-reads the parent config.
+   */
+  model?: string;
   /** The parent message ID that anchors the isolated thread */
   parentMessageId: string;
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId?: string;
+  /** Provider for {@link model}. */
+  provider?: string;
   /** Timeout in milliseconds (optional) */
   timeout?: number;
   /** Thread title shown in UI */
@@ -470,6 +549,11 @@ export interface ExecVirtualSubAgentParams {
   chatConfig?: Partial<OrviloAgentChatConfig> | null;
   /** The Group ID inherited from the parent operation, when present */
   groupId?: string;
+  /**
+   * Seed the isolation thread with the parent conversation's transcript so the
+   * spawned run sees the context that produced the request.
+   */
+  inheritMessages?: boolean;
   /** Instruction/prompt for the virtual sub-agent */
   instruction: string;
   /**

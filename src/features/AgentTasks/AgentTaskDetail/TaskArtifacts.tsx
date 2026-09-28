@@ -88,6 +88,14 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
           {node.sourceTaskIdentifier}
         </Tag>
       )}
+      {/* Which run produced this — the plan's "trace an artifact back to the
+          specific run". Information only: linking into the conversation needs the
+          run's agent id, which the projection does not carry yet. */}
+      {node.sourceTopicTitle && (
+        <Tag size="small" style={{ flexShrink: 0 }} title={node.sourceTopicTitle}>
+          {node.sourceTopicTitle}
+        </Tag>
+      )}
       {node.createdAt && <Time date={node.createdAt} />}
       <DropdownMenu items={menuItems}>
         <ActionIcon

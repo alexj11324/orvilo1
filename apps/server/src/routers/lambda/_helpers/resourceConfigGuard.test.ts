@@ -14,11 +14,15 @@ import {
 } from './resourceConfigGuard';
 import { getWorkspaceAgentParentGroupIds } from './workspaceAgentGuard';
 
-vi.mock('@/server/services/resourcePermission', () => ({
-  canPerformResourceAction: vi.fn(),
-  getResourceMeta: vi.fn(),
-  isCollaborativeBuiltinAgent: vi.fn(),
-}));
+vi.mock('@/server/services/resourcePermission', async (importOriginal) => {
+  const original = await importOriginal<object>();
+  return {
+    ...original,
+    canPerformResourceAction: vi.fn(),
+    getResourceMeta: vi.fn(),
+    isCollaborativeBuiltinAgent: vi.fn(),
+  };
+});
 vi.mock('./workspaceAgentGuard', () => ({
   getWorkspaceAgentParentGroupIds: vi.fn(),
 }));
@@ -134,6 +138,28 @@ describe('getResourceConfigAccess', () => {
 
   it('rejects metadata from another workspace without evaluating permissions', async () => {
     getResourceMetaMock.mockResolvedValueOnce({ ...meta, workspaceId: 'ws-2' });
+
+    await expect(getResourceConfigAccess(ctx(), 'agent', 'agent-1')).resolves.toBe('none');
+
+    expect(canPerformMock).not.toHaveBeenCalled();
+  });
+
+  // buildWorkspaceWhere's union contract: activating a workspace must not lock
+  // the owner out of their own unfiled (workspace_id IS NULL) rows — they stay
+  // inside the caller's scope. A teammate's unfiled row still reads 'none'.
+  it('admits the caller own unfiled row inside a workspace scope', async () => {
+    getResourceMetaMock.mockResolvedValueOnce({ ...meta, userId: 'member-1', workspaceId: null });
+    canPerformMock.mockResolvedValueOnce(true);
+
+    await expect(getResourceConfigAccess(ctx(), 'agent', 'agent-1')).resolves.toBe('full');
+
+    expect(canPerformMock).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'edit', workspaceId: 'ws-1' }),
+    );
+  });
+
+  it('still rejects a teammate unfiled row inside a workspace scope', async () => {
+    getResourceMetaMock.mockResolvedValueOnce({ ...meta, userId: 'creator', workspaceId: null });
 
     await expect(getResourceConfigAccess(ctx(), 'agent', 'agent-1')).resolves.toBe('none');
 

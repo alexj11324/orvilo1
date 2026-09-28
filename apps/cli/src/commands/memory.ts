@@ -211,61 +211,6 @@ export function registerMemoryCommand(program: Command) {
       console.log();
       console.log(typeof persona === 'string' ? persona : JSON.stringify(persona, null, 2));
     });
-
-  // ── extract ───────────────────────────────────────────
-
-  memory
-    .command('extract')
-    .description('Extract memories from chat history')
-    .option('--from <date>', 'Start date (ISO format)')
-    .option('--to <date>', 'End date (ISO format)')
-    .action(async (options: { from?: string; to?: string }) => {
-      const client = await getTrpcClient();
-
-      const input: { fromDate?: Date; toDate?: Date } = {};
-      if (options.from) input.fromDate = new Date(options.from);
-      if (options.to) input.toDate = new Date(options.to);
-
-      const result = await client.userMemory.requestMemoryFromChatTopic.mutate(input);
-      console.log(`${pc.green('✓')} Memory extraction started`);
-      if ((result as any)?.id) {
-        console.log(`Task ID: ${pc.bold((result as any).id)}`);
-      }
-      console.log(pc.dim('Use "lh memory extract-status" to check progress.'));
-    });
-
-  // ── extract-status ────────────────────────────────────
-
-  memory
-    .command('extract-status')
-    .description('Check memory extraction task status')
-    .option('--task-id <id>', 'Specific task ID to check')
-    .option('--json [fields]', 'Output JSON, optionally specify fields (comma-separated)')
-    .action(async (options: { json?: string | boolean; taskId?: string }) => {
-      const client = await getTrpcClient();
-
-      const input: { taskId?: string } = {};
-      if (options.taskId) input.taskId = options.taskId;
-
-      const result = await client.userMemory.getMemoryExtractionTask.query(input);
-
-      if (options.json !== undefined) {
-        const fields = typeof options.json === 'string' ? options.json : undefined;
-        outputJson(result, fields);
-        return;
-      }
-
-      if (!result) {
-        console.log('No extraction task found.');
-        return;
-      }
-
-      const r = result as any;
-      console.log(pc.bold('Memory Extraction Task'));
-      if (r.id) console.log(`  ID:     ${r.id}`);
-      if (r.status) console.log(`  Status: ${r.status}`);
-      if (r.metadata) console.log(`  Detail: ${JSON.stringify(r.metadata)}`);
-    });
 }
 
 // ── Helpers ─────────────────────────────────────────────────

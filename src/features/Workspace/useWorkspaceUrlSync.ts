@@ -1,12 +1,16 @@
 'use client';
 
-import { useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 
+import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { useSilentSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
-import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
+import { getWorkspaceContextState } from '@/business/client/workspaceContextStore';
 
+import { ensureDefaultWorkspace } from './ensureDefaultWorkspace';
 import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
 
 /**
@@ -15,22 +19,42 @@ import { useWorkspaceSyncPathname } from './useWorkspaceSyncPathname';
  * first segment happens to resemble one.
  *
  * Kept in sync with `sharedMainAreaChildren` (paths) + the personal-only list
- * in router configs. If you add a new root path segment, add it here too.
+ * in router configs. If you add a new root path segment, add it here too —
+ * `__tests__/reservedSegments.test.ts` now enforces exactly that, so the
+ * instruction no longer depends on someone reading this comment. It found five
+ * segments that had drifted out of the set (`agents`, `automations`, `goal`,
+ * `inbox`, `project`); `/inbox` in particular was being treated as an
+ * unresolved workspace slug, so the sync returned early and never switched the
+ * store to personal the way it does for `/tasks`.
  */
-const RESERVED_FIRST_SEGMENTS = new Set([
+export const RESERVED_FIRST_SEGMENTS = new Set([
   // Shared (mirrored under /:workspaceSlug too):
+  'acceptance',
   'agent',
-  'group',
+  'agents',
+  'automations',
   'community',
+  'drafts',
+  'goal',
+  'group',
+  'inbox',
+  'members',
   'memory',
+  'my-issues',
+  'my-work',
   'page',
+  'project',
   'projects',
   'resource',
+  'reviews',
   'image',
   'video',
   'eval',
   'tasks',
   'task',
+  'teams',
+  'verify',
+  'views',
   // Personal-only:
   'a',
   'apps',
@@ -40,13 +64,38 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'share',
   'devtools',
   'desktop-onboarding',
+  'invite',
 ]);
 
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;
 
+// Shared empty array so an unresolved list doesn't create a new dependency
+// identity on every render.
+const EMPTY_LIST: WorkspaceListItem[] = [];
+
 const parseFirstSegment = (pathname: string): string | null => {
   const match = pathname.match(FIRST_SEGMENT_REGEX);
   return match ? match[1] : null;
+};
+
+/** Last workspace the URL resolved to — the target for slug-less paths, which
+ * Linear answers with "the workspace you were in last". */
+const LAST_WORKSPACE_KEY = 'orvilo:last-active-workspace';
+
+const readLastWorkspaceId = (): string | null => {
+  try {
+    return window.localStorage.getItem(LAST_WORKSPACE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const writeLastWorkspaceId = (id: string) => {
+  try {
+    window.localStorage.setItem(LAST_WORKSPACE_KEY, id);
+  } catch {
+    // Private-mode storage denial — the fallback is simply the first workspace.
+  }
 };
 
 /**
@@ -65,22 +114,44 @@ export const isWorkspaceSlugCandidatePath = (pathname: string): boolean => {
 };
 
 /**
- * URL is the source of truth for workspace context.
+ * URL is the source of truth for workspace context — and a workspace context
+ * always exists (Linear's model: even a solo account lives in its own
+ * workspace, so there is no personal scope).
  *
  * - `/{slug}/...` where `slug` is a known workspace → activate that workspace
- * - `/` or `/agent/...` / `/settings/...` etc. (or any non-slug surface) → personal
+ *   and remember it as the last-used target for slug-less paths
+ * - `/` or `/agent/...` / `/settings/...` etc. → activate the last-used (or
+ *   first) workspace; when the account has no workspace yet, provision a
+ *   default one via `ensureDefault`
  * - `/{unknown}/...` (slug not in workspaces) → leave store alone so
  *   `WorkspaceSlugBoundary` can render its 404
  */
 export const useWorkspaceUrlSync = (): void => {
   const pathname = useWorkspaceSyncPathname();
-  const workspaces = useWorkspaces();
+  // `useFetchWorkspaces` (not the array-shaped `useWorkspaces`) because the
+  // reconcile below must distinguish "the list resolved and the membership is
+  // gone" (revocation → drop to personal) from "the list never resolved"
+  // (error / signed out → don't touch a scope we can't verify).
+  const { data: workspaceList } = useFetchWorkspaces();
+  const workspaces = workspaceList ?? EMPTY_LIST;
   const activeId = useActiveWorkspaceId();
+  const activeSlug = useActiveWorkspaceSlug();
   const isLoading = useIsWorkspaceLoading();
   // URL is a passive source, not an explicit user intent — use the silent
   // variant so refreshing or following a `/{slug}` link is not treated as
   // a user-driven switch.
-  const { switchWorkspace, switchToPersonal } = useSilentSwitchWorkspace();
+  const { switchWorkspace } = useSilentSwitchWorkspace();
+
+  // The store's lifetime is bound to this sync: when the slot that hosts it
+  // unmounts (leaving the layouts that provide workspace context), clear the
+  // selection so imperative readers — `X-Workspace-Id`, tool executors — stop
+  // addressing a workspace that is no longer on screen.
+  useEffect(
+    () => () => {
+      getWorkspaceContextState().setActiveWorkspace(null);
+    },
+    [],
+  );
 
   // `useLayoutEffect` (not `useEffect`) so the workspace switch is scheduled
   // before the browser paints. With `useEffect` there is one paintable frame
@@ -98,15 +169,35 @@ export const useWorkspaceUrlSync = (): void => {
     if (first && !RESERVED_FIRST_SEGMENTS.has(first)) {
       const ws = workspaces.find((w) => w.slug === first);
       if (ws) {
-        if (activeId !== ws.id) void switchWorkspace(ws.id);
+        writeLastWorkspaceId(ws.id);
+        // Re-run when the stored slug drifted (rename server-side) even if the
+        // id already matches, so `/{slug}` navigation prefixes keep resolving.
+        if (activeId !== ws.id || activeSlug !== ws.slug) void switchWorkspace(ws.id);
         return;
       }
-      // Unknown slug — let `WorkspaceSlugBoundary` show 404; don't touch the
-      // active workspace.
+      // Unknown slug — `WorkspaceSlugBoundary` shows the 404. Fall through to
+      // the reconcile below: if the active workspace itself vanished from the
+      // membership list it must still be re-scoped, even with its old URL open.
+    }
+
+    // No personal mode: a slug-less path — or an active membership that the
+    // resolved list no longer contains (removed / suspended in another tab, or
+    // a leave that succeeded server-side) — must still resolve to a workspace.
+    // When the account hasn't been provisioned yet, create the default
+    // workspace and let the revalidated list drive the next pass.
+    if (workspaceList === undefined) return;
+
+    const list = workspaceList.some((w) => w.id === activeId)
+      ? workspaceList
+      : workspaceList.filter((w) => w.id !== activeId);
+
+    if (list.length === 0) {
+      ensureDefaultWorkspace().catch(() => undefined);
       return;
     }
 
-    // URL has no workspace slug → personal context.
-    if (activeId !== null) void switchToPersonal();
-  }, [pathname, workspaces, isLoading, activeId, switchWorkspace, switchToPersonal]);
+    const lastId = readLastWorkspaceId();
+    const target = list.find((w) => w.id === lastId) ?? list[0];
+    if (activeId !== target.id || activeSlug !== target.slug) void switchWorkspace(target.id);
+  }, [pathname, workspaces, workspaceList, isLoading, activeId, activeSlug, switchWorkspace]);
 };

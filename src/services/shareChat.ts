@@ -7,17 +7,22 @@ export interface ShareChatExecParams {
   clientIds?: { assistantMessageId?: string; topicId?: string; userMessageId?: string };
   prompt: string;
   shareId: string;
-  /** Absent → the server creates a new visitor topic (counted against the topic cap). */
   topicId?: string | null;
 }
 
 /**
  * Visitor-facing chat APIs for shared agents. Mirrors the slice of
- * `aiAgentService` the gateway transport needs (exec + token refresh) plus the
- * visitor-scoped topic/message reads — all keyed by shareId, authorized
- * server-side against `topics.senderId`.
+ * `aiAgentService` the gateway transport needs (token refresh + interrupt)
+ * plus the visitor-scoped topic/message reads — all keyed by shareId,
+ * authorized server-side against `topics.senderId`.
  */
 class ShareChatService {
+  /**
+   * RETIRED server-side: `shareChat.execAgent` refuses unconditionally now
+   * that visitor execution is gone. Kept so a stale visitor surface (a
+   * persisted in-flight state reaching the gateway transport) degrades to a
+   * clean refusal error rather than a client-side type error.
+   */
   async execAgentTask(
     params: ShareChatExecParams,
     options?: { signal?: AbortSignal },

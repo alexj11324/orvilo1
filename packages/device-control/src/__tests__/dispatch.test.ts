@@ -1,11 +1,29 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { executeDeviceRpc } from '../dispatch';
 import type { DeviceControlDeps } from '../types';
+
+const git = (cwd: string, ...args: string[]): string =>
+  execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+
+/** Real repo on `main` with one commit — claim registry tests need real git. */
+const initRepo = async (): Promise<string> => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'device-control-git-'));
+  execFileSync('git', ['-c', 'init.defaultBranch=main', 'init'], { cwd: dir });
+  git(dir, 'config', 'user.email', 'test@example.com');
+  git(dir, 'config', 'user.name', 'Test');
+  git(dir, 'config', 'commit.gpgsign', 'false');
+  await writeFile(path.join(dir, 'a.txt'), 'hello\n');
+  git(dir, 'add', 'a.txt');
+  git(dir, 'commit', '-m', 'init');
+  return dir;
+};
 
 let root: string;
 let deviceHome: string;
@@ -286,5 +304,175 @@ describe('executeDeviceRpc', () => {
       makeDeps(),
     )) as { success: boolean };
     expect(result.success).toBe(false);
+  });
+
+  it('SA01-A: refuses a claimToken remove when the host has no run registry', async () => {
+    const result = (await executeDeviceRpc(
+      'removeGitWorktree',
+      { claimToken: 'tok-1', path: root, worktreePath: root },
+      makeDeps(),
+    )) as { claimTokenVerified?: boolean; error?: string; success: boolean };
+
+    expect(result.success).toBe(false);
+    expect(result.claimTokenVerified).toBe(false);
+    expect(result.error).toContain('run registry');
+  });
+
+  it('SB01: a claimToken remove is never verified without a registered claim', async () => {
+    // The old contract returned claimTokenVerified after a mere writer check —
+    // any token on any path. Now a non-repo path carries no claims registry at
+    // all, and verification cannot even be attempted.
+    const deps = {
+      ...makeDeps(),
+      getActiveWorktreeWriter: vi.fn(async () => null),
+    };
+    const result = (await executeDeviceRpc(
+      'removeGitWorktree',
+      { claimToken: 'tok-1', path: root, worktreePath: root },
+      deps,
+    )) as { claimTokenVerified?: boolean; error?: string; success: boolean };
+
+    expect(result.success).toBe(false);
+    expect(result.claimTokenVerified).toBe(false);
+    expect(result.error).toContain('claim');
+  });
+
+  it('SB01: add registers the claim, a matching token removes verified, a stale token cannot', async () => {
+    const repo = await initRepo();
+    const parent = await mkdtemp(path.join(tmpdir(), 'device-control-wt-'));
+    const linked = path.join(parent, 'linked');
+    const deps = {
+      ...makeDeps(),
+      getActiveWorktreeWriter: vi.fn(async () => null),
+    };
+    try {
+      const added = (await executeDeviceRpc(
+        'addGitWorktree',
+        { branch: 'task/T-1', claimToken: 'tok-secret', path: repo, worktreePath: linked },
+        deps,
+      )) as { claimRegistered?: boolean; success: boolean };
+      expect(added).toMatchObject({ claimRegistered: true, success: true });
+      expect(existsSync(linked)).toBe(true);
+
+      // A token that was never registered must not touch the directory.
+      const stale = (await executeDeviceRpc(
+        'removeGitWorktree',
+        { claimToken: 'tok-stale', path: repo, worktreePath: linked },
+        deps,
+      )) as { claimTokenVerified?: boolean; error?: string; success: boolean };
+      expect(stale).toMatchObject({ claimTokenVerified: false, success: false });
+      expect(existsSync(linked)).toBe(true);
+
+      const removed = (await executeDeviceRpc(
+        'removeGitWorktree',
+        { claimToken: 'tok-secret', path: repo, worktreePath: linked },
+        deps,
+      )) as { claimTokenVerified?: boolean; success: boolean };
+      expect(removed).toMatchObject({ claimTokenVerified: true, success: true });
+      expect(existsSync(linked)).toBe(false);
+    } finally {
+      await rm(parent, { force: true, recursive: true });
+      await rm(repo, { force: true, recursive: true });
+    }
+  });
+
+  it('SB01: refuses a verified remove while a live writer owns the registered path', async () => {
+    const repo = await initRepo();
+    const parent = await mkdtemp(path.join(tmpdir(), 'device-control-wt-'));
+    const linked = path.join(parent, 'linked');
+    const deps = {
+      ...makeDeps(),
+      getActiveWorktreeWriter: vi.fn(async () => ({ operationId: 'op-live', pid: 42 })),
+    };
+    try {
+      await executeDeviceRpc(
+        'addGitWorktree',
+        { branch: 'task/T-1', claimToken: 'tok-secret', path: repo, worktreePath: linked },
+        deps,
+      );
+
+      const result = (await executeDeviceRpc(
+        'removeGitWorktree',
+        { claimToken: 'tok-secret', path: repo, worktreePath: linked },
+        deps,
+      )) as { claimTokenVerified?: boolean; error?: string; success: boolean };
+
+      expect(result).toMatchObject({ claimTokenVerified: false, success: false });
+      expect(result.error).toContain('live writer');
+      expect(existsSync(linked)).toBe(true);
+      expect(deps.getActiveWorktreeWriter).toHaveBeenCalledWith(linked);
+    } finally {
+      await rm(parent, { force: true, recursive: true });
+      await rm(repo, { force: true, recursive: true });
+    }
+  });
+
+  it('SB01: addGitWorktree without a claim token omits the capability flag', async () => {
+    const repo = await initRepo();
+    const parent = await mkdtemp(path.join(tmpdir(), 'device-control-wt-'));
+    const linked = path.join(parent, 'linked');
+    try {
+      const added = (await executeDeviceRpc(
+        'addGitWorktree',
+        { branch: 'task/T-1', path: repo, worktreePath: linked },
+        makeDeps(),
+      )) as { claimRegistered?: boolean; success: boolean };
+      expect(added.success).toBe(true);
+      expect(added.claimRegistered).toBeUndefined();
+    } finally {
+      await rm(parent, { force: true, recursive: true });
+      await rm(repo, { force: true, recursive: true });
+    }
+  });
+
+  it('SC01: inspectGitWorktreePath advertises the claim capability to callers', async () => {
+    const repo = await initRepo();
+    try {
+      const inspection = (await executeDeviceRpc(
+        'inspectGitWorktreePath',
+        { path: repo, worktreePath: path.join(repo, 'ghost') },
+        makeDeps(),
+      )) as {
+        capabilities?: { worktreeClaims?: boolean };
+        kind: string;
+      };
+      expect(inspection.capabilities?.worktreeClaims).toBe(true);
+    } finally {
+      await rm(repo, { force: true, recursive: true });
+    }
+  });
+
+  it('SC01: a claim-token add runs worktree creation inside the claims mutex', async () => {
+    // The claims registry lock must fence the whole writer admission —
+    // create + register together — not merely the registration write. A
+    // foreign live holder of that lock must therefore block the add too.
+    const repo = await initRepo();
+    const parent = await mkdtemp(path.join(tmpdir(), 'device-control-wt-'));
+    const linked = path.join(parent, 'linked');
+    const lockPath = path.join(repo, '.git', 'orvilo-worktree-claims.json.lock');
+    await writeFile(
+      lockPath,
+      `${JSON.stringify({ hostname: hostname(), pid: process.pid, token: 'foreign' })}\n`,
+      { flag: 'wx' },
+    );
+    try {
+      const pending = executeDeviceRpc(
+        'addGitWorktree',
+        { branch: 'task/T-1', claimToken: 'tok-secret', path: repo, worktreePath: linked },
+        makeDeps(),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const createdWhileHeld = existsSync(linked);
+      await rm(lockPath, { force: true });
+      const added = (await pending) as { claimRegistered?: boolean; success: boolean };
+
+      expect(createdWhileHeld).toBe(false);
+      expect(added).toMatchObject({ claimRegistered: true, success: true });
+      expect(existsSync(linked)).toBe(true);
+    } finally {
+      await rm(lockPath, { force: true });
+      await rm(parent, { force: true, recursive: true });
+      await rm(repo, { force: true, recursive: true });
+    }
   });
 });

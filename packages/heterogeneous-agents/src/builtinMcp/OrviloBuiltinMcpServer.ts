@@ -85,6 +85,15 @@ export interface McpToolResult {
 }
 
 /**
+ * Call-site metadata forwarded to `McpExtraTool` handlers. `_meta` carries
+ * the host's own invocation identity (e.g. `claudecode/toolUseId` for Claude
+ * Code), which handlers use as the stable toolCallId (SA04-A).
+ */
+export interface McpExtraToolCallExtra {
+  _meta?: Record<string, unknown>;
+}
+
+/**
  * An additional tool the producer mounts on this MCP server next to
  * `ask_user_question`. The handler receives the operationId resolved from the
  * MCP session (same `?op=<opId>` routing as the ask-user tool), so one
@@ -92,7 +101,11 @@ export interface McpToolResult {
  */
 export interface McpExtraTool {
   description: string;
-  handler: (operationId: string, args: Record<string, unknown>) => Promise<McpToolResult>;
+  handler: (
+    operationId: string,
+    args: Record<string, unknown>,
+    extra?: McpExtraToolCallExtra,
+  ) => Promise<McpToolResult>;
   inputSchema: z.ZodRawShape;
   name: string;
   title?: string;
@@ -104,6 +117,13 @@ export interface OrviloBuiltinMcpServerOptions {
    * `ask_user_question` (e.g. the desktop's in-app browser control tools).
    */
   extraTools?: McpExtraTool[];
+  /**
+   * Whether to register `ask_user_question`. Default `true`. Set `false` for
+   * harnesses that mount this server only for the producer's extra tools and
+   * have their own (or no) human-in-the-loop channel — e.g. the standard-ACP
+   * runtimes (amp / codex / opencode / …) that never got the AskUser bridge.
+   */
+  includeAskUserTool?: boolean;
   /**
    * Per-call timeout passed to `bridge.pending()`. Default 5 minutes —
    * matches the issue's UX requirement and the tested CC keepalive ceiling.
@@ -362,9 +382,8 @@ export class OrviloBuiltinMcpServer {
       { name: ASK_USER_MCP_SERVER_NAME, version: '1.0.0' },
       { capabilities: { tools: {} } },
     );
-    this.registerAskUserTool(mcp);
+    if (this.options.includeAskUserTool !== false) this.registerAskUserTool(mcp);
     for (const tool of this.options.extraTools ?? []) this.registerExtraTool(mcp, tool);
-
     const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
       onsessionclosed: (sessionId: string) => {
         this.sessionTransports.delete(sessionId);
@@ -413,7 +432,9 @@ export class OrviloBuiltinMcpServer {
           );
         }
         try {
-          return await tool.handler(operationId, (args ?? {}) as Record<string, unknown>);
+          return await tool.handler(operationId, (args ?? {}) as Record<string, unknown>, {
+            _meta: extra._meta,
+          });
         } catch (error) {
           return errorResult(String((error as Error)?.message ?? error));
         }

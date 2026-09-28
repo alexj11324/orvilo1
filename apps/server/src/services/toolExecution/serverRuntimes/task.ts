@@ -24,7 +24,6 @@ import { eq } from 'drizzle-orm';
 
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
 import { AgentModel } from '@/database/models/agent';
-import { MessengerAccountLinkModel } from '@/database/models/messengerAccountLink';
 import { TaskModel } from '@/database/models/task';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceModel } from '@/database/models/workspace';
@@ -176,13 +175,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
     instruction: string;
     assigneeAgentId?: string;
     assigneeUserId?: string;
-    // Bind a goal entity to the created task (see TaskService.createTask).
-    goal?: {
-      maxRounds?: number | null;
-      maxTotalCost?: number | null;
-      requirement?: string | null;
-      title?: string;
-    };
     name: string;
     parentIdentifier?: string;
     priority?: number;
@@ -357,7 +349,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
 
       // The model checks dependencies atomically. Never destroy worktrees or
       // report a successful deletion when that guard rejects or the row is gone.
-      const deleted = await taskModel().delete(task.id);
+      const deleted = await taskModel().delete(task.id, { source: agentId ? 'agent' : 'user' });
       if (!deleted) return { content: `Task not found: ${args.identifier}`, success: false };
       if (integration && snapshot) await integration.cleanupTaskWorktrees(task.id, snapshot);
 
@@ -483,7 +475,10 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         depResults.push(
           applyDeps(
             args.addDependencies,
-            (depId) => taskModel().addDependency(task.id, depId),
+            (depId) =>
+              taskModel().addDependency(task.id, depId, 'blocks', {
+                source: agentId ? 'agent' : 'user',
+              }),
             (depIdentifier) => changes.push(formatDependencyAdded(task.identifier, depIdentifier)),
           ),
         );
@@ -492,7 +487,10 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         depResults.push(
           applyDeps(
             args.removeDependencies,
-            (depId) => taskModel().removeDependency(task.id, depId),
+            (depId) =>
+              taskModel().removeDependency(task.id, depId, {
+                source: agentId ? 'agent' : 'user',
+              }),
             (depIdentifier) =>
               changes.push(formatDependencyRemoved(task.identifier, depIdentifier)),
           ),
@@ -570,33 +568,18 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         const total = page.total;
 
         const memberIds = memberRows.map((m) => m.userId);
-        // Linked IM identities (Discord/Slack/Telegram…) make handle-based
-        // requests ("assign this to @Neko") resolvable by exact platform id
-        // instead of name similarity. Scoped to this workspace: identities a
-        // member linked elsewhere are not exposed to coworkers here.
-        const [profiles, emails, imLinks] = await Promise.all([
+        const [profiles, emails] = await Promise.all([
           UserModel.getDisplayInfoByIds(db, memberIds),
           UserModel.getEmailsByIds(db, memberIds),
-          MessengerAccountLinkModel.findByUserIds(db, memberIds, {
-            workspaceId: workspaceId ?? null,
-          }),
         ]);
         const profileMap = new Map(profiles.map((u) => [u.id, u]));
         const emailMap = new Map(emails.map((u) => [u.id, u.email]));
-        const imMap = new Map<string, string[]>();
-        for (const link of imLinks) {
-          const alias = link.platformUsername
-            ? `${link.platform}:@${link.platformUsername}(${link.platformUserId})`
-            : `${link.platform}:${link.platformUserId}`;
-          imMap.set(link.userId, [...(imMap.get(link.userId) ?? []), alias]);
-        }
 
         const members: TaskAssignableMember[] = memberRows.map((m) => {
           const profile = profileMap.get(m.userId);
           return {
             email: emailMap.get(m.userId),
             id: m.userId,
-            imAccounts: imMap.get(m.userId),
             isSelf: m.userId === userId,
             name: profile?.fullName,
             role: m.role,
@@ -788,6 +771,8 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         const result = await taskCaller().run({
           continueTopicId: args.continueTopicId,
           id,
+          // A tool-initiated continuation declares its intent explicitly.
+          intent: args.continueTopicId ? 'continue' : undefined,
           prompt: args.prompt,
         });
 

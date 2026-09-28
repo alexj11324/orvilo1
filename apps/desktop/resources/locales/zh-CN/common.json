@@ -18,6 +18,8 @@
   "actions.submit": "提交",
   "app.description": "你的 AI 助手协作平台",
   "app.name": "Orvilo",
+  "heteroAgent.permission.allowToContinue": "允许 {{label}} 继续吗？",
+  "heteroAgent.permission.header": "需要权限",
   "status.error": "错误",
   "status.info": "信息",
   "status.loading": "加载中",

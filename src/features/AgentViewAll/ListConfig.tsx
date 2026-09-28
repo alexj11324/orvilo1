@@ -2,7 +2,7 @@
 
 import { type FormItemProps } from '@lobehub/ui';
 import { Flexbox, Form, Icon, Popover } from '@lobehub/ui';
-import { ActionIcon, Select, Switch, Tabs } from '@lobehub/ui/base-ui';
+import { ActionIcon, Select, Tabs } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import {
   ArrowDownWideNarrow,
@@ -106,19 +106,6 @@ const ListConfig = memo<ListConfigProps>(
           </Flexbox>
         ),
         label: t('agentViewAll.form.ordering'),
-      },
-      {
-        children: (
-          <Switch
-            checked={options.showSidebarHidden}
-            size={'small'}
-            onChange={(checked) => {
-              setOptions((prev) => ({ ...prev, showSidebarHidden: checked }));
-            }}
-          />
-        ),
-        minWidth: undefined,
-        label: t('agentViewAll.form.showSidebarHidden'),
       },
     ];
 

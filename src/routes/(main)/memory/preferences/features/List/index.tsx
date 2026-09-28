@@ -2,7 +2,6 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useQueryState } from '@/hooks/useQueryParam';
-import MemoryAnalysis from '@/routes/(main)/memory/features/MemoryAnalysis';
 import MemoryEmpty from '@/routes/(main)/memory/features/MemoryEmpty';
 import { useGlobalStore } from '@/store/global';
 import { useUserMemoryStore } from '@/store/userMemory';
@@ -31,11 +30,7 @@ const PreferencesList = memo<PreferencesListProps>(({ isLoading, searchValue, vi
   const isEmpty = preferences.length === 0;
 
   if (isEmpty) {
-    return (
-      <MemoryEmpty search={Boolean(searchValue)} title={t('preference.empty')}>
-        <MemoryAnalysis />
-      </MemoryEmpty>
-    );
+    return <MemoryEmpty search={Boolean(searchValue)} title={t('preference.empty')} />;
   }
 
   return viewMode === 'timeline' ? (

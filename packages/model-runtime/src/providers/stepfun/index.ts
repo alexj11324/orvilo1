@@ -3,7 +3,6 @@ import { ModelProvider } from 'model-bank';
 
 import type { OpenAICompatibleFactoryOptions } from '../../core/openaiCompatibleFactory';
 import { createOpenAICompatibleRuntime } from '../../core/openaiCompatibleFactory';
-import { createStepfunImage } from './createImage';
 
 export interface StepfunModelCard {
   id: string;
@@ -37,7 +36,6 @@ export const params = {
   debug: {
     chatCompletion: () => process.env.DEBUG_STEPFUN_CHAT_COMPLETION === '1',
   },
-  createImage: createStepfunImage,
   models: async ({ client }) => {
     const { ORVILO_DEFAULT_MODEL_LIST } = await import('model-bank');
 

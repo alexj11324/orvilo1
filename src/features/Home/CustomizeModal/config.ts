@@ -49,7 +49,6 @@ export const HOME_CUSTOMIZE_DEFAULTS = {
   hiddenHomeWidgets: [] as string[],
   homeRecentsCount: 8,
   homeTaskCount: 8,
-  showHomePortrait: true,
 };
 
 export const HOME_COUNT_MIN = 3;
@@ -65,23 +64,16 @@ interface HomePreset {
   // exist, and re-tuning it must not drop the page out of its preset.
   count: number;
   hiddenWidgets: readonly HomeWidgetKey[];
-  showPortrait: boolean;
 }
 
 export const HOME_PRESETS: Record<HomePresetKey, HomePreset> = {
   balanced: {
     count: 5,
     hiddenWidgets: ['unread', 'running', 'news', 'suggestions'],
-    showPortrait: false,
   },
-  full: { count: 8, hiddenWidgets: [], showPortrait: true },
-  minimal: { count: 5, hiddenWidgets: HOME_WIDGET_KEYS, showPortrait: false },
+  full: { count: 8, hiddenWidgets: [] },
+  minimal: { count: 5, hiddenWidgets: HOME_WIDGET_KEYS },
 };
-
-interface HomeVisibilityState {
-  hiddenWidgets: string[];
-  showPortrait: boolean;
-}
 
 /**
  * `usage` is a business-slot widget (`useHomeUsageWidgetActive`): deployments
@@ -104,16 +96,16 @@ export const effectiveHomeWidgetKeys = (usageActive: boolean): readonly HomeWidg
 export const isHomeWidgetHidden = (key: HomeWidgetKey, hiddenWidgets: string[]): boolean =>
   hiddenWidgets.includes(key) || (key === 'scheduledTasks' && hiddenWidgets.includes('tasks'));
 
-const hiddenKeySet = ({ hiddenWidgets }: HomeVisibilityState, usageActive: boolean): Set<string> =>
+const hiddenKeySet = (hiddenWidgets: string[], usageActive: boolean): Set<string> =>
   new Set(
     effectiveHomeWidgetKeys(usageActive).filter((key) => isHomeWidgetHidden(key, hiddenWidgets)),
   );
 
 export const resolveHomePreset = (
-  state: HomeVisibilityState,
+  hiddenWidgets: string[],
   usageActive = false,
 ): HomePresetKey | undefined => {
-  const hidden = hiddenKeySet(state, usageActive);
+  const hidden = hiddenKeySet(hiddenWidgets, usageActive);
   const available = new Set<string>(effectiveHomeWidgetKeys(usageActive));
 
   return HOME_PRESET_KEYS.find((key) => {
@@ -121,9 +113,7 @@ export const resolveHomePreset = (
     const presetHidden = preset.hiddenWidgets.filter((widget) => available.has(widget));
 
     return (
-      preset.showPortrait === state.showPortrait &&
-      presetHidden.length === hidden.size &&
-      presetHidden.every((widget) => hidden.has(widget))
+      presetHidden.length === hidden.size && presetHidden.every((widget) => hidden.has(widget))
     );
   });
 };
@@ -131,9 +121,8 @@ export const resolveHomePreset = (
 // Nothing is left to stack under the composer, so the page stops being a
 // dashboard: the greeting and the composer become one centered block. Derived
 // from the switches rather than stored, so it can never disagree with them.
-export const isHomeMinimalLayout = (state: HomeVisibilityState, usageActive = false): boolean =>
-  !state.showPortrait &&
-  effectiveHomeWidgetKeys(usageActive).every((key) => isHomeWidgetHidden(key, state.hiddenWidgets));
+export const isHomeMinimalLayout = (hiddenWidgets: string[], usageActive = false): boolean =>
+  effectiveHomeWidgetKeys(usageActive).every((key) => isHomeWidgetHidden(key, hiddenWidgets));
 
 // An error banner covers every widget whose content it reports on, not just the
 // one it is named after: the topic feed powers unread AND running, and the briefs

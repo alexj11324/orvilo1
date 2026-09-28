@@ -3,12 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { merge } from '@/utils/merge';
 
 import type { GlobalState } from '../initialState';
-import {
-  DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS,
-  INITIAL_STATUS,
-  initialState,
-  MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
-} from '../initialState';
+import { DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS, INITIAL_STATUS, initialState } from '../initialState';
 import {
   DEFAULT_SIDEBAR_ITEMS,
   readOverridableField,
@@ -133,45 +128,12 @@ describe('systemStatusSelectors', () => {
         ),
       ).toBe(360);
     });
-  });
 
-  describe('modelDetailPanelExpandedKeys', () => {
-    it('should expand every section by default', () => {
-      const s: GlobalState = {
-        ...initialState,
-        status: {
-          ...initialState.status,
-          modelDetailPanelCollapsedKeys: undefined,
-        },
-      };
-
-      expect(systemStatusSelectors.modelDetailPanelExpandedKeys(s)).toEqual(
-        MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
-      );
-    });
-
-    it('should exclude collapsed keys stored by the user', () => {
-      const s: GlobalState = merge(initialState, {
-        status: {
-          modelDetailPanelCollapsedKeys: ['abilities', 'config'],
-        },
-      });
-
-      expect(systemStatusSelectors.modelDetailPanelExpandedKeys(s)).toEqual(['rating', 'pricing']);
-    });
-
-    it('should ignore a legacy persisted expanded-keys array and keep new sections expanded', () => {
-      // before the collapsed-keys migration, an expanded-keys array persisted prior to the
-      // rating section shipping kept it collapsed forever — the legacy field must be inert
-      const s: GlobalState = merge(initialState, {
-        status: {
-          modelDetailPanelExpandedKeys: ['pricing', 'config'],
-        } as never,
-      });
-
-      expect(systemStatusSelectors.modelDetailPanelExpandedKeys(s)).toEqual(
-        MODEL_DETAIL_PANEL_EXPANDABLE_KEYS,
-      );
+    it('should resolve an unpersisted left panel to the Linear parity width, unclamped', () => {
+      // 244 is the reference nav width the whole shell budget is derived from. It sits
+      // 4px above the clamp floor, so this fails both if the default drifts and if the
+      // floor is raised far enough to swallow it.
+      expect(systemStatusSelectors.leftPanelWidth(initialState)).toBe(244);
     });
   });
 
@@ -188,7 +150,9 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
     });
 
-    it('should default legacy status without a task view mode to list', () => {
+    it('should default status without a task view mode to the board', () => {
+      // The global default stays the board — the grouped list is only the
+      // project Issues surface's default, resolved in AgentTasksPage.
       const s: GlobalState = {
         ...initialState,
         status: {
@@ -197,7 +161,46 @@ describe('systemStatusSelectors', () => {
         },
       };
 
+      expect(systemStatusSelectors.taskListViewMode(s)).toBe('kanban');
+    });
+
+    it('keeps an explicitly stored list preference', () => {
+      // A stored `list` is indistinguishable from a deliberate choice, so it is
+      // preserved rather than migrated to the new default.
+      const s: GlobalState = {
+        ...initialState,
+        status: { ...initialState.status, taskListViewMode: 'list' },
+      };
+
       expect(systemStatusSelectors.taskListViewMode(s)).toBe('list');
+    });
+
+    it('leaves the view mode unset and folds only canceled away for a brand-new user', () => {
+      // Unset means "no choice recorded": surfaces pick their own default
+      // (project issues list, other collections board). A stored value is a
+      // deliberate choice and always wins.
+      expect(INITIAL_STATUS.taskListViewMode).toBeUndefined();
+      expect(INITIAL_STATUS.taskKanbanHiddenColumns).toEqual(['canceled']);
+    });
+  });
+
+  describe('taskKanbanHiddenColumns', () => {
+    it('shows the done column by default', () => {
+      const s: GlobalState = {
+        ...initialState,
+        status: { ...initialState.status, taskKanbanHiddenColumns: undefined },
+      };
+
+      expect(systemStatusSelectors.taskKanbanHiddenColumns(s)).toEqual(['canceled']);
+    });
+
+    it('keeps a stored hidden-column preference', () => {
+      const s: GlobalState = {
+        ...initialState,
+        status: { ...initialState.status, taskKanbanHiddenColumns: ['done', 'canceled'] },
+      };
+
+      expect(systemStatusSelectors.taskKanbanHiddenColumns(s)).toEqual(['done', 'canceled']);
     });
   });
 
@@ -206,67 +209,15 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.sidebarItems(null)(initialState)).toEqual(DEFAULT_SIDEBAR_ITEMS);
     });
 
-    it('should re-anchor the spacer immediately after the accordion block', () => {
-      // Stored order has retired and active keys around the accordion.
-      const stored = ['private', 'agent', 'recents', 'tasks', 'image', 'resource', 'memory'];
-      const s: GlobalState = merge(initialState, {
-        status: { sidebarItems: stored },
-      });
-      expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
-        'automations',
-        'private',
-        'agent',
-        'recents',
-        'project',
-        SIDEBAR_SPACER_ID,
-        'tasks',
-        'image',
-        'resource',
-        'memory',
-      ]);
-    });
-
-    it('should preserve a canonically-positioned spacer', () => {
+    it('always yields the canonical order — a stored legacy order cannot reorder or resurrect', () => {
+      // The stored order is a pre-convergence one: retired keys and a custom
+      // arrangement. The fixed IA ignores it entirely.
       const stored = [
-        'project',
-        'recents',
         'private',
         'agent',
-        SIDEBAR_SPACER_ID,
-        'image',
-        'tasks',
-        'resource',
-        'memory',
-      ];
-      const s: GlobalState = merge(initialState, {
-        status: { sidebarItems: stored },
-      });
-      // `automations` is a newer top-group default — backfilled immediately
-      // before the accordion block.
-      expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
-        'automations',
-        'project',
         'recents',
-        'private',
-        'agent',
-        SIDEBAR_SPACER_ID,
-        'image',
-        'tasks',
-        'resource',
-        'memory',
-      ]);
-    });
-
-    it('should re-anchor the spacer when stored above the accordion', () => {
-      // Simulates the dropdown-menu "move agent down" path that previously left
-      // the spacer floating above the accordion block.
-      const stored = [
-        'tasks',
         'pages',
-        SIDEBAR_SPACER_ID,
-        'recents',
-        'private',
-        'agent',
+        'tasks',
         'image',
         'community',
         'resource',
@@ -275,96 +226,78 @@ describe('systemStatusSelectors', () => {
       const s: GlobalState = merge(initialState, {
         status: { sidebarItems: stored },
       });
-      expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual([
-        'tasks',
-        'automations',
-        'recents',
-        'project',
-        'private',
-        'agent',
-        SIDEBAR_SPACER_ID,
-        'image',
-        'resource',
-        'memory',
-      ]);
+      expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual(DEFAULT_SIDEBAR_ITEMS);
     });
 
-    it('should slot missing top-group defaults before the accordion block', () => {
-      const s: GlobalState = merge(initialState, {
-        status: { sidebarItems: ['agent', 'recents'] },
-      });
-      const items = systemStatusSelectors.sidebarItems(null)(s);
-      const spacerIdx = items.indexOf(SIDEBAR_SPACER_ID);
-      // every active known key is present
-      expect(items).toContain('tasks');
-      expect(items).toContain('resource');
-      expect(items).toContain('memory');
-      expect(items).not.toContain('pages');
-      expect(items).not.toContain('community');
-      // accordion block is flush against the spacer, in stored order
-      expect(items[spacerIdx - 3]).toBe('agent');
-      expect(items[spacerIdx - 2]).toBe('recents');
-      expect(items[spacerIdx - 1]).toBe('project');
-      // missing top-group defaults slot in just before the accordion
-      expect(items.indexOf('tasks')).toBeLessThan(spacerIdx - 3);
-      expect(items.indexOf('resource')).toBeLessThan(spacerIdx - 3);
-      // missing bottom-group defaults sit after the spacer
-      expect(items.indexOf('image')).toBeGreaterThan(spacerIdx);
-    });
-
-    it('should migrate legacy `sidebarSectionOrder` accordion order into the default layout', () => {
+    it('ignores legacy `sidebarSectionOrder` — accordion order is contract-owned now', () => {
       const s: GlobalState = merge(initialState, {
         status: { sidebarSectionOrder: ['agent', 'recents'] },
       });
-      const items = systemStatusSelectors.sidebarItems(null)(s);
-      // accordion slot uses the user's legacy order; `private` (added after
-      // the legacy state was saved) is backfilled at the head of the block.
-      expect(items).toEqual([
-        'tasks',
-        'automations',
-        'resource',
-        'private',
-        'agent',
-        'recents',
-        'project',
-        SIDEBAR_SPACER_ID,
-        'image',
-        'memory',
-      ]);
+      expect(systemStatusSelectors.sidebarItems(null)(s)).toEqual(DEFAULT_SIDEBAR_ITEMS);
     });
 
-    it('should preserve legacy accordion order when migrating from `sidebarSectionOrder`', () => {
-      const s: GlobalState = merge(initialState, {
-        status: { sidebarSectionOrder: ['recents', 'agent'] },
-      });
-      const items = systemStatusSelectors.sidebarItems(null)(s);
-      // `private` (new accordion entry not present in legacy state) is
-      // backfilled at the head of the block; recents/agent keep legacy order.
-      expect(items).toEqual([
-        'tasks',
-        'automations',
-        'resource',
-        'private',
-        'recents',
-        'project',
-        'agent',
-        SIDEBAR_SPACER_ID,
-        'image',
-        'memory',
-      ]);
-    });
-
-    it('should prefer `sidebarItems` over legacy `sidebarSectionOrder` when both are set', () => {
+    it('returns the canonical order for a workspace overlay too', () => {
       const s: GlobalState = merge(initialState, {
         status: {
-          sidebarItems: ['pages', 'recents', 'agent', 'community', 'resource', 'memory'],
-          sidebarSectionOrder: ['agent', 'recents'],
+          sidebarItems: ['tasks'],
+          workspace: { sidebarItems: ['automations', 'image', 'recents', 'agent', 'memory'] },
         },
       });
-      const items = systemStatusSelectors.sidebarItems(null)(s);
-      expect(items.indexOf('recents')).toBeLessThan(items.indexOf('agent'));
-      expect(items).not.toContain('pages');
-      expect(items).not.toContain('community');
+      expect(systemStatusSelectors.sidebarItems('ws-1')(s)).toEqual(DEFAULT_SIDEBAR_ITEMS);
+    });
+  });
+
+  describe('retired sidebar items', () => {
+    // Retired keys can never resurface through persisted state: sidebarItems is
+    // a constant now, and hidden/expanded lists still strip them on read.
+    const RETIRED = [
+      'community',
+      'image',
+      'memory',
+      'page',
+      'pages',
+      'home',
+      'tasks',
+      'automations',
+      'resource',
+      'recents',
+      'private',
+      'project',
+      'views',
+    ];
+
+    it.each(RETIRED)(
+      'strips the retired "%s" key from hidden sections and expanded keys',
+      (key) => {
+        const s: GlobalState = merge(initialState, {
+          status: {
+            hiddenSidebarSections: [key],
+            sidebarExpandedKeys: [key],
+          },
+        });
+
+        expect(systemStatusSelectors.hiddenSidebarSections(null)(s)).not.toContain(key);
+        expect(systemStatusSelectors.sidebarExpandedKeys(null)(s)).not.toContain(key);
+      },
+    );
+
+    it('keeps surviving hideable sections in hiddenSidebarSections', () => {
+      const s: GlobalState = merge(initialState, {
+        status: { hiddenSidebarSections: ['workspace', 'favorites'] },
+      });
+
+      expect(systemStatusSelectors.hiddenSidebarSections(null)(s)).toEqual([
+        'workspace',
+        'favorites',
+      ]);
+    });
+
+    it('keeps surviving expanded keys while dropping retired ones', () => {
+      const s: GlobalState = merge(initialState, {
+        status: { sidebarExpandedKeys: ['agent', 'image', 'teams'] },
+      });
+
+      expect(systemStatusSelectors.sidebarExpandedKeys(null)(s)).toEqual(['agent', 'teams']);
     });
   });
 
@@ -393,89 +326,106 @@ describe('systemStatusSelectors', () => {
   });
 
   describe('reorderSidebarItems', () => {
-    // Mirrors the shape returned by the sidebarItems selector — spacer is always
-    // present, anchored immediately after the accordion block.
+    // Synthetic fixture: two top-group slots (alpha + the non-accordion
+    // `agent` flat row), the accordion block (workspace/favorites/teams), the
+    // spacer, then three bottom-group slots. `reorderSidebarItems` is
+    // key-agnostic — it only consults SIDEBAR_ACCORDION_KEYS membership — so
+    // non-accordion names here are placeholders that keep the shape wide
+    // enough to exercise the rules.
     const DEFAULT = [
-      'pages',
-      'recents',
+      'alpha',
       'agent',
+      'workspace',
+      'favorites',
+      'teams',
       SIDEBAR_SPACER_ID,
-      'community',
-      'resource',
-      'memory',
+      'beta',
+      'gamma',
+      'delta',
     ];
 
     it('should move a non-accordion item normally', () => {
-      // move `community` (idx 4) up to idx 0
-      expect(reorderSidebarItems(DEFAULT, 4, 0)).toEqual([
-        'community',
-        'pages',
-        'recents',
+      // move `beta` (idx 6) up to idx 0
+      expect(reorderSidebarItems(DEFAULT, 6, 0)).toEqual([
+        'beta',
+        'alpha',
         'agent',
+        'workspace',
+        'favorites',
+        'teams',
         SIDEBAR_SPACER_ID,
-        'resource',
-        'memory',
+        'gamma',
+        'delta',
       ]);
     });
 
     it('should snap a top-group item past the accordion when dragged between accordion items (drag down)', () => {
-      // `pages` (idx 0) dragged down to idx 2 (between recents & agent) →
+      // `alpha` (idx 0) dragged down to idx 2 (between agent & workspace) →
       // pushed past the accordion, lands in the bottom group.
       expect(reorderSidebarItems(DEFAULT, 0, 2)).toEqual([
-        'recents',
         'agent',
+        'workspace',
+        'favorites',
+        'teams',
         SIDEBAR_SPACER_ID,
-        'pages',
-        'community',
-        'resource',
-        'memory',
+        'alpha',
+        'beta',
+        'gamma',
+        'delta',
       ]);
     });
 
     it('should snap a bottom-group item before the accordion when dragged between accordion items (drag up)', () => {
-      // `community` (idx 4) dragged up to idx 2 (between recents & agent) →
+      // `beta` (idx 6) dragged up to idx 2 (between agent & workspace) →
       // lands ahead of the accordion (top group).
-      expect(reorderSidebarItems(DEFAULT, 4, 2)).toEqual([
-        'pages',
-        'community',
-        'recents',
+      expect(reorderSidebarItems(DEFAULT, 6, 2)).toEqual([
+        'alpha',
         'agent',
+        'beta',
+        'workspace',
+        'favorites',
+        'teams',
         SIDEBAR_SPACER_ID,
-        'resource',
-        'memory',
+        'gamma',
+        'delta',
       ]);
     });
 
-    it('should move the whole accordion block when moving `recents` up past the block boundary', () => {
-      // `recents` (idx 1) moveUp → idx 0. Block [recents, agent] slides to top,
-      // spacer follows it.
+    it('should move the non-accordion `agent` flat row normally past the block', () => {
+      // `agent` (idx 1) moveUp → idx 0. `agent` is a core flat row, not an
+      // accordion member, so this is a plain move — the block stays put.
       expect(reorderSidebarItems(DEFAULT, 1, 0)).toEqual([
-        'recents',
         'agent',
+        'alpha',
+        'workspace',
+        'favorites',
+        'teams',
         SIDEBAR_SPACER_ID,
-        'pages',
-        'community',
-        'resource',
-        'memory',
+        'beta',
+        'gamma',
+        'delta',
       ]);
     });
 
-    it('should snap the accordion back when moving `agent` down past the spacer', () => {
-      // `agent` (idx 2) moveDown → idx 3 (past spacer). Normalization re-anchors
+    it('should snap the accordion back when moving `teams` down past the spacer', () => {
+      // `teams` (idx 4) moveDown → idx 5 (past spacer). Normalization re-anchors
       // the spacer behind the accordion, making the move a visible no-op.
-      expect(reorderSidebarItems(DEFAULT, 2, 3)).toBe(DEFAULT);
+      expect(reorderSidebarItems(DEFAULT, 4, 5)).toBe(DEFAULT);
     });
 
-    it('should swap recents and agent within the block', () => {
-      // `recents` (idx 1) moveDown → idx 2. Within block, so just swap.
+    it('should snap the non-accordion `agent` past the block when dragged down into it', () => {
+      // `agent` (idx 1) moveDown → idx 2 (workspace's slot, the block start).
+      // A non-accordion item dropped into the block snaps past it.
       expect(reorderSidebarItems(DEFAULT, 1, 2)).toEqual([
-        'pages',
-        'agent',
-        'recents',
+        'alpha',
+        'workspace',
+        'favorites',
+        'teams',
         SIDEBAR_SPACER_ID,
-        'community',
-        'resource',
-        'memory',
+        'agent',
+        'beta',
+        'gamma',
+        'delta',
       ]);
     });
 
@@ -484,23 +434,11 @@ describe('systemStatusSelectors', () => {
     });
 
     it('should keep the spacer behind the accordion after moving a non-accordion item', () => {
-      const items = [
-        'tasks',
-        'pages',
-        'recents',
-        'agent',
-        SIDEBAR_SPACER_ID,
-        'image',
-        'community',
-        'resource',
-        'memory',
-      ];
-      // Move `pages` (idx 1) to the very end. Spacer stays right after `agent`.
-      const next = reorderSidebarItems(items, 1, items.length - 1);
+      // Move `alpha` (idx 0) to the very end. Spacer stays right after `teams`.
+      const next = reorderSidebarItems(DEFAULT, 0, DEFAULT.length - 1);
       const spacerIdx = next.indexOf(SIDEBAR_SPACER_ID);
-      expect(next[spacerIdx - 1]).toBe('agent');
-      expect(next[spacerIdx - 2]).toBe('recents');
-      expect(next.at(-1)).toBe('pages');
+      expect(next[spacerIdx - 1]).toBe('teams');
+      expect(next.at(-1)).toBe('alpha');
     });
   });
 
@@ -543,7 +481,7 @@ describe('systemStatusSelectors', () => {
           sidebarExpandedKeys: ['recents', 'agent', 'private'],
           workspace: {
             expandSessionGroupKeys: ['ws-group'],
-            hiddenSidebarSections: ['recents'],
+            hiddenSidebarSections: ['workspace'],
             sidebarExpandedKeys: ['agent'],
           },
         },
@@ -563,7 +501,7 @@ describe('systemStatusSelectors', () => {
 
       it('hiddenSidebarSections prefers overlay in workspace mode', () => {
         expect(systemStatusSelectors.hiddenSidebarSections('ws-1')(stateWithOverlay)).toEqual([
-          'recents',
+          'workspace',
         ]);
       });
 
@@ -580,28 +518,25 @@ describe('systemStatusSelectors', () => {
         );
       });
 
-      it('hides `recents` by default in workspace mode when overlay is untouched', () => {
+      it('shows every section by default in workspace mode when overlay is untouched', () => {
         const s: GlobalState = merge(initialState, {
           status: { hiddenSidebarSections: undefined, workspace: undefined },
         });
-        expect(systemStatusSelectors.hiddenSidebarSections('ws-1')(s)).toEqual(['recents']);
+        expect(systemStatusSelectors.hiddenSidebarSections('ws-1')(s)).toEqual([]);
       });
 
-      it('keeps `recents` visible in personal mode by default', () => {
+      it('keeps everything visible in personal mode by default', () => {
         const s: GlobalState = merge(initialState, {
           status: { hiddenSidebarSections: undefined, workspace: undefined },
         });
         expect(systemStatusSelectors.hiddenSidebarSections(null)(s)).toEqual([]);
       });
 
-      it('layers workspace defaults on top of personal-mode hides when overlay is untouched', () => {
+      it('inherits personal-mode hides into an untouched workspace overlay', () => {
         const s: GlobalState = merge(initialState, {
-          status: { hiddenSidebarSections: ['pages'], workspace: undefined },
+          status: { hiddenSidebarSections: ['favorites'], workspace: undefined },
         });
-        expect(systemStatusSelectors.hiddenSidebarSections('ws-1')(s)).toEqual([
-          'pages',
-          'recents',
-        ]);
+        expect(systemStatusSelectors.hiddenSidebarSections('ws-1')(s)).toEqual(['favorites']);
       });
 
       it('respects an explicit empty overlay as "show everything in this workspace"', () => {

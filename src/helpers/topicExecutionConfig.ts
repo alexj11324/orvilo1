@@ -4,6 +4,7 @@ import {
   type TopicExecutionConfig,
 } from '@orvilo/types';
 
+import { agentGroupByIdSelectors, getChatGroupStoreState } from '@/store/agentGroup';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 
@@ -43,3 +44,19 @@ export const resolveTopicAgencyConfig = (
       ? false
       : workspaceScoped,
 });
+
+/**
+ * Whether `agentId` is the orchestrating supervisor of group `groupId`.
+ * Supervisor turns need the server's group-orchestration callbacks, so runtime
+ * selection reads this to coerce them onto Gateway (see `selectRuntimeType`).
+ */
+export const resolveIsGroupSupervisor = (
+  agentId: string | null | undefined,
+  groupId: string | null | undefined,
+): boolean => {
+  if (!agentId || !groupId) return false;
+  return (
+    agentGroupByIdSelectors.groupById(groupId)(getChatGroupStoreState())?.supervisorAgentId ===
+    agentId
+  );
+};

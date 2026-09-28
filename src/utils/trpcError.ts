@@ -13,3 +13,13 @@ export const isTrpcErrorCode = (error: unknown, code: TRPC_ERROR_CODE_KEY): bool
 
   return (error as { data?: { code?: unknown } }).data?.code === code;
 };
+
+export const trpcErrorMessage = (error: unknown): string | undefined => {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const record = error as { message?: unknown; shape?: { message?: unknown } };
+  if (typeof record.message === 'string' && record.message.length > 0) return record.message;
+  if (typeof record.shape?.message === 'string' && record.shape.message.length > 0) {
+    return record.shape.message;
+  }
+  return undefined;
+};

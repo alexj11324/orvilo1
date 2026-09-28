@@ -5,7 +5,6 @@ import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { lambdaClient } from '@/libs/trpc/client';
 import { agentService } from '@/services/agent';
 import { discoverService } from '@/services/discover';
-import { marketApiService } from '@/services/marketApi';
 import { useAgentStore } from '@/store/agent';
 import { useHomeStore } from '@/store/home';
 
@@ -15,12 +14,6 @@ const generateMarketIdentifier = () => {
   const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz';
   const generate = customAlphabet(alphabet, 8);
   return generate();
-};
-
-const getSourcePath = () => {
-  if (typeof location === 'undefined') return 'onboarding/agent-marketplace';
-
-  return location.pathname;
 };
 
 export interface InstallMarketplaceAgentsResult {
@@ -129,16 +122,16 @@ export const installMarketplaceAgents = async (
   const forkOutcomes =
     prepared.length === 0
       ? []
-      : await marketApiService.forkAgent(
-          prepared.map((p) => ({
+      : await lambdaClient.market.agent.forkAgent.mutate({
+          items: prepared.map((p) => ({
             actAs,
             identifier: p.newIdentifier,
             name: p.detail.title,
             sourceIdentifier: p.sourceId,
-            status: 'published',
-            visibility: 'public',
+            status: 'published' as const,
+            visibility: 'public' as const,
           })),
-        );
+        });
 
   // 5. Parallel local createAgent for successful forks
   const installResults = await Promise.allSettled(
@@ -164,12 +157,6 @@ export const installMarketplaceAgents = async (
           title: fork.agent.name,
         },
         visibility,
-      });
-
-      discoverService.reportAgentEvent({
-        event: 'add',
-        identifier: fork.agent.identifier,
-        source: getSourcePath(),
       });
 
       return { agentId: result.agentId, sourceId };

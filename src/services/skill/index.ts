@@ -1,44 +1,24 @@
 import type {
-  CreateSkillInput,
-  ImportGitHubInput,
-  ImportUrlInput,
-  ImportZipInput,
-  SkillImportResult,
   SkillItem,
   SkillListItem,
   SkillResourceContent,
   SkillResourceTreeNode,
   SkillSource,
-  UpdateSkillInput,
 } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 
+/**
+ * Client for the platform skill read API.
+ *
+ * The create / import / update / delete half of this service was the Skill
+ * management product chain, which is retired — see
+ * `docs/development/hidden-surface-retirement.md`. What remains is the read
+ * surface the agent runtime needs to resolve the skills a user already has
+ * (`skillEngineering`, `skillPreload`, the `orvilo-skills` executors and the
+ * desktop skill runtime).
+ */
 class AgentSkillService {
-  // ===== Create =====
-
-  async createSkill(params: CreateSkillInput): Promise<SkillItem | undefined> {
-    return lambdaClient.agentSkills.create.mutate(params);
-  }
-
-  // ===== Import =====
-
-  async importFromGitHub(params: ImportGitHubInput): Promise<SkillImportResult | undefined> {
-    return lambdaClient.agentSkills.importFromGitHub.mutate(params);
-  }
-
-  async importFromUrl(params: ImportUrlInput): Promise<SkillImportResult | undefined> {
-    return lambdaClient.agentSkills.importFromUrl.mutate(params);
-  }
-
-  async importFromZip(params: ImportZipInput): Promise<SkillImportResult | undefined> {
-    return lambdaClient.agentSkills.importFromZip.mutate(params);
-  }
-
-  async importFromMarket(identifier: string): Promise<SkillImportResult | undefined> {
-    return lambdaClient.agentSkills.importFromMarket.mutate({ identifier });
-  }
-
   // ===== Query =====
 
   async getById(id: string): Promise<SkillItem | undefined> {
@@ -73,23 +53,6 @@ class AgentSkillService {
 
   async readResource(id: string, path: string): Promise<SkillResourceContent> {
     return lambdaClient.agentSkills.readResource.query({ id, path });
-  }
-
-  // ===== Update =====
-
-  async updateSkill(params: UpdateSkillInput): Promise<SkillItem> {
-    return lambdaClient.agentSkills.update.mutate({
-      content: params.content,
-      id: params.id,
-      manifest: params.manifest,
-    });
-  }
-
-  // ===== Delete =====
-
-  // Server keeps delete idempotent: a missing row resolves to undefined.
-  async deleteSkill(id: string): Promise<{ success: boolean } | undefined> {
-    return lambdaClient.agentSkills.delete.mutate({ id });
   }
 }
 

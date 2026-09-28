@@ -14,7 +14,7 @@ import { MessageModel } from '@/database/models/message';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerDefaultFilesConfig } from '@/server/globalConfig';
-import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
+import { initModelRuntimeFromDeploymentConfig } from '@/server/modules/ModelRuntime';
 import { ChunkService } from '@/server/services/chunk';
 import { DocumentService } from '@/server/services/document';
 import { KnowledgeBaseSearchService } from '@/server/services/knowledgeBase';
@@ -130,8 +130,7 @@ export const chunkRouter = router({
       const { model, provider } =
         getServerDefaultFilesConfig().embeddingModel || DEFAULT_FILE_EMBEDDING_MODEL_ITEM;
       // Read user's provider config from database
-      const agentRuntime = await initModelRuntimeFromDB(
-        ctx.serverDB,
+      const agentRuntime = await initModelRuntimeFromDeploymentConfig(
         ctx.userId,
         provider,
         ctx.workspaceId ?? undefined,

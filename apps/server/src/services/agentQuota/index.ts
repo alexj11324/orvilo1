@@ -1,24 +1,17 @@
 import {
-  type AccountLoad,
   calibrateCapacity,
   computeTurnCostUsd,
-  currentUtilization,
-  isScopedWeeklyLimit,
-  isSessionLimit,
-  isWeeklyAllLimit,
   MIN_CALIBRATION_SAMPLES,
   projectWindows,
   type QuotaAccountIdentity,
   type QuotaLimitReading,
   type QuotaTokenUsage,
-  selectAccount,
   windowSecondsForKind,
   windowsToCalibrationIntervals,
 } from '@orvilo/heterogeneous-agents/quota';
 
 import type { AccountIdentityInput, SafeAccount } from '@/database/models/agentQuota';
 import {
-  AgentAccountBindingModel,
   AgentProviderAccountModel,
   AgentQuotaCalibrationModel,
   AgentQuotaSnapshotModel,
@@ -26,18 +19,9 @@ import {
   AgentQuotaWindowModel,
 } from '@/database/models/agentQuota';
 import type { OrviloDatabase } from '@/database/type';
-import {
-  type QuotaAccountCredentialRef,
-  QuotaBindingRole,
-  QuotaCostSource,
-} from '@/database/types/agentQuota';
+import { type QuotaAccountCredentialRef, QuotaCostSource } from '@/database/types/agentQuota';
 
 import { claudeModelPrice } from './pricing';
-
-export interface AccountLoadView extends AccountLoad {
-  capacityUsd?: number;
-  label?: string | null;
-}
 
 /** One assistant turn's spend, as the usage calendar consumes it. */
 export interface QuotaUsageTurn {
@@ -51,14 +35,13 @@ export interface QuotaUsageTurn {
 
 /**
  * Server-side orchestration for the quota data layer: turns the append-only
- * snapshot + ledger facts into windows and calibrated capacity, and resolves
- * which account an agent should run on. The math all lives in the pure
+ * snapshot + ledger facts into windows and calibrated capacity for the
+ * observation UI. The math all lives in the pure
  * `@orvilo/heterogeneous-agents/quota` module; this class only wires it to
  * the database models.
  */
 export class AgentQuotaService {
   private accounts: AgentProviderAccountModel;
-  private bindings: AgentAccountBindingModel;
   private snapshots: AgentQuotaSnapshotModel;
   private ledger: AgentQuotaUsageLedgerModel;
   private windows: AgentQuotaWindowModel;
@@ -66,7 +49,6 @@ export class AgentQuotaService {
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.accounts = new AgentProviderAccountModel(db, userId, workspaceId);
-    this.bindings = new AgentAccountBindingModel(db, userId, workspaceId);
     this.snapshots = new AgentQuotaSnapshotModel(db, userId, workspaceId);
     this.ledger = new AgentQuotaUsageLedgerModel(db, userId, workspaceId);
     this.windows = new AgentQuotaWindowModel(db, userId, workspaceId);
@@ -76,7 +58,7 @@ export class AgentQuotaService {
   /**
    * Full desktop-sampler entry point: resolve (dedupe) the account by its real
    * identity, then persist the batch of readings. Returns the account so the
-   * caller can wire bindings / show it in the switcher.
+   * caller can attribute the readings to it in the observation UI.
    */
   ingestSnapshot = async (params: {
     credentialRef?: QuotaAccountCredentialRef;
@@ -316,114 +298,5 @@ export class AgentQuotaService {
         (row.cacheWriteTokens ?? 0) +
         (row.reasoningTokens ?? 0),
     }));
-  };
-
-  /** Build the LB load view for a set of accounts from their latest readings. */
-  resolveAccountLoads = async (
-    accountIds: string[],
-    now: number = Date.now(),
-  ): Promise<AccountLoadView[]> => {
-    const accounts = await this.accounts.list();
-    const byId = new Map(accounts.map((a) => [a.id, a]));
-
-    return Promise.all(
-      accountIds.map(async (accountId) => {
-        const account = byId.get(accountId);
-        const buckets = await this.listLatestReadings(accountId);
-        const scopedWeeklyUtil: Record<string, number> = {};
-        let sessionUtil = 0;
-        let weeklyUtil = 0;
-        let rateLimitedUntil: number | null = null;
-
-        for (const b of buckets) {
-          // A reading whose window has rolled over describes spend that has
-          // since refilled; counting it would keep an account benched long
-          // after its quota came back.
-          const utilization = currentUtilization(b, now);
-
-          if (isSessionLimit(b)) {
-            sessionUtil = utilization;
-            // `utilization` is already 0 once the window rolled over, so a
-            // stale 100% cannot bench the account past its own reset.
-            if (utilization >= 100 && b.resetsAt) rateLimitedUntil = b.resetsAt;
-          } else if (isScopedWeeklyLimit(b)) {
-            scopedWeeklyUtil[b.scopeKey] = utilization;
-          } else if (isWeeklyAllLimit(b)) {
-            weeklyUtil = Math.max(weeklyUtil, utilization);
-          }
-        }
-
-        const calibration = await this.calibrations.latest(accountId, 'weekly_all');
-
-        return {
-          accountId,
-          capacityUsd: calibration ? Number(calibration.capacityUsd) : undefined,
-          enabled: account?.enabled ?? true,
-          label: account?.label ?? null,
-          priority: 0,
-          rateLimitedUntil,
-          scopedWeeklyUtil,
-          sessionUtil,
-          weeklyUtil,
-        } satisfies AccountLoadView;
-      }),
-    );
-  };
-
-  /**
-   * Pick the account an agent should run on. A pinned binding short-circuits
-   * load balancing (that is the UI "switch account" lock); otherwise the pool
-   * is ranked weekly-headroom-first, scope-aware.
-   *
-   * Returns the credential pointer alongside so the spawn side can act on the
-   * choice (set `CLAUDE_CONFIG_DIR` for a config-dir profile, leave the default
-   * login for keychain) without a second round-trip.
-   */
-  selectForAgent = async (
-    agentId: string,
-    options: { modelScope?: string; now?: number } = {},
-  ): Promise<{
-    accountId: string;
-    credentialMode: string;
-    credentialRef: QuotaAccountCredentialRef | null;
-    externalAccountId: string | null;
-    reason: 'pinned' | 'balanced';
-  } | null> => {
-    const chosen = await this.selectAccountId(agentId, options);
-    if (!chosen) return null;
-
-    const account = await this.accounts.findById(chosen.accountId);
-    if (!account) return null;
-
-    return {
-      accountId: account.id,
-      credentialMode: account.credentialMode,
-      credentialRef: account.credentialRef ?? null,
-      externalAccountId: account.externalAccountId ?? null,
-      reason: chosen.reason,
-    };
-  };
-
-  private selectAccountId = async (
-    agentId: string,
-    options: { modelScope?: string; now?: number },
-  ): Promise<{ accountId: string; reason: 'pinned' | 'balanced' } | null> => {
-    const bindings = (await this.bindings.listByAgent(agentId)).filter((b) => b.enabled);
-    const pinned = bindings.find((b) => b.role === QuotaBindingRole.pinned);
-    if (pinned) return { accountId: pinned.accountId, reason: 'pinned' };
-
-    const pool = bindings.filter((b) => b.role === QuotaBindingRole.pool);
-    if (pool.length === 0) return null;
-
-    const now = options.now ?? Date.now();
-    const loads = await this.resolveAccountLoads(
-      pool.map((b) => b.accountId),
-      now,
-    );
-    const priorityById = new Map(pool.map((b) => [b.accountId, b.priority]));
-    const withPriority = loads.map((l) => ({ ...l, priority: priorityById.get(l.accountId) ?? 0 }));
-
-    const chosen = selectAccount(withPriority, { modelScope: options.modelScope, now });
-    return chosen ? { accountId: chosen.accountId, reason: 'balanced' } : null;
   };
 }

@@ -188,3 +188,9 @@ apps/desktop/resources/sounds/
 
 # Agent working notes and local verification logs (not product code)
 tasks/
+
+# Linear parity reference captures. The reference side is a real private workspace
+# (real issue titles, member names, project URLs), so these stay local. Publishing
+# them was reviewed and refused earlier; do not re-attempt or route around it.
+# Reproduce locally with .agents/acceptance/scripts/cdp-inspect.cjs --shot.
+docs/design-references/

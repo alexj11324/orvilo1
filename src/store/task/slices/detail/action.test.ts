@@ -19,6 +19,7 @@ vi.mock('@/services/task', () => ({
     getDetail: vi.fn(),
     pinDocument: vi.fn(),
     removeDependency: vi.fn(),
+    removeIssueRelation: vi.fn(),
     reorderSubtasks: vi.fn(),
     unpinDocument: vi.fn(),
     update: vi.fn(),
@@ -744,7 +745,19 @@ describe('TaskDetailSliceAction', () => {
 
       await useTaskStore.getState().removeDependency('T-1', 'T-2');
 
-      expect(taskService.removeDependency).toHaveBeenCalledWith('T-1', 'T-2');
+      expect(taskService.removeDependency).toHaveBeenCalledWith('T-1', 'T-2', undefined);
+      expect(mutate).toHaveBeenCalledWith(['task:detail', 'T-1']);
+    });
+  });
+
+  describe('removeIssueRelation', () => {
+    it('removes by opaque edge id and refreshes the viewed issue', async () => {
+      const { mutate } = await import('@/libs/swr');
+      vi.mocked(taskService.removeIssueRelation).mockResolvedValue({ success: true } as any);
+
+      await useTaskStore.getState().removeIssueRelation('T-1', 'edge-id');
+
+      expect(taskService.removeIssueRelation).toHaveBeenCalledWith('T-1', 'edge-id');
       expect(mutate).toHaveBeenCalledWith(['task:detail', 'T-1']);
     });
   });

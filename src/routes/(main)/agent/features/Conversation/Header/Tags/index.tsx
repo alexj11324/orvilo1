@@ -10,6 +10,7 @@ import { topicSelectors } from '@/store/chat/selectors';
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 
+import ChatHistoryTitleMenu from '../../ChatHistory/TitleMenu';
 import MemberCountTag from './MemberCountTag';
 import ThreadSwitcher from './ThreadSwitcher';
 
@@ -45,20 +46,9 @@ const TitleTags = memo(() => {
     <Flexbox allowShrink horizontal align={'center'} gap={6} style={{ marginLeft: 8, minWidth: 0 }}>
       {threadId ? (
         <>
-          <span
-            style={{
-              color: cssVar.colorTextSecondary,
-              flexShrink: 0,
-              fontSize: 14,
-              fontWeight: 500,
-              maxWidth: 200,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {fallbackTopicTitle}
-          </span>
+          {/* The topic crumb keeps the reference's title-trigger behavior:
+              it opens the same chat-history menu as the bare title state. */}
+          <ChatHistoryTitleMenu title={fallbackTopicTitle} />
           <span
             style={{
               color: cssVar.colorTextQuaternary,
@@ -71,19 +61,7 @@ const TitleTags = memo(() => {
           <ThreadSwitcher title={fallbackThreadTitle} />
         </>
       ) : (
-        <span
-          style={{
-            color: cssVar.colorText,
-            fontSize: 14,
-            fontWeight: 600,
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {fallbackTopicTitle}
-        </span>
+        <ChatHistoryTitleMenu title={fallbackTopicTitle} />
       )}
     </Flexbox>
   );

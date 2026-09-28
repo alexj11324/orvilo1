@@ -1,7 +1,6 @@
 /** Shared scope metadata for one AgentSignal chain. */
 export interface AgentSignalScope {
   agentId?: string;
-  botScopeKey?: string;
   taskId?: string;
   topicId?: string;
   userId: string;

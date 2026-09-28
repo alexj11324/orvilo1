@@ -1,0 +1,62 @@
+{
+  "baseline_sha": "fcba39582eb68fa599375e9e848c102d9836ae57",
+  "development_branch": "canary",
+  "env_isolation": {
+    "local_checkout": "user's checkout on main has unrelated uncommitted work — left untouched",
+    "worktree_root": "/Users/alexjiang/Desktop/vibe/orvilo1-wm01",
+    "db": "no shared mutable test database assumed; DB tests run in CI",
+    "credentials": "no production credentials; no .env copied into worktrees"
+  },
+  "existing_capabilities_reused": [
+    "linear_installations workspace OAuth + encrypted tokens + refresh lease/fence",
+    "linear_sync_inbox / linear_sync_outbox durable queues",
+    "linear_project_bindings + linear_issue_links + import receipts",
+    "task_domain_events + task_planning_scopes + task_planning_revisions",
+    "task_dispatches lease/fence + single-active-execution unique index",
+    "tasks.domainRevision/requirementRevision/policyRevision/executionGeneration + human locks",
+    "taskWorkspace fresh worktree per run + remote sandbox contract",
+    "projects auto-create virtual coordinator agent",
+    "githubRepo service: coordinate parse, token resolve, PR/branch/merge queries"
+  ],
+  "merge_base_main_canary": "e271ce94647f02428ec51a9a13da3e59203bf4e5",
+  "migration_journal_head": "0171_linear_workspace_replanning",
+  "next_migration_index": 172,
+  "open_prs_overlap": [
+    {
+      "prs": [37, 38, 39, 40, 41, 42],
+      "scope": "teammates stack: invitations, project members, execution grants, real workspace auth middleware, outbox, collab UI, roster wiring",
+      "state": "OPEN, stacked on canary via feat/teammates-db",
+      "policy": "Team permissions build on real membership once #38 middleware lands; until then no second authz system and no pass-through stubs"
+    },
+    {
+      "prs": [25, 28],
+      "scope": "PR-first delivery review lifecycle + current-generation completion gate",
+      "state": "OPEN (#28 stacked on #25)",
+      "policy": "delivery work reuses the accepted TaskDispatch/PR gates; no parallel review controller"
+    },
+    {
+      "prs": [26],
+      "scope": "prerequisite recovery + private cascade fixes",
+      "state": "OPEN",
+      "policy": "kept in regression list; do not overwrite"
+    },
+    {
+      "prs": [30],
+      "scope": "Hatchet retry/capacity/cancel fixes",
+      "state": "OPEN",
+      "policy": "use current reliable execution framework; assume cancel can fail"
+    },
+    {
+      "prs": [18],
+      "scope": "Vercel preview infra + isolated databases",
+      "state": "OPEN",
+      "policy": "only merged+verified preview isolation counts as available"
+    }
+  ],
+  "recorded_at": "2026-09-17",
+  "release_branch": "main",
+  "release_sha": "75367ebabb93fb85f44525c6220eea5cf60b800e",
+  "repository": "alexj11324/orvilo1",
+  "root_api_router": "apps/server/src/routers/lambda/index.ts",
+  "schema_version": 1
+}

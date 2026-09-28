@@ -1,11 +1,19 @@
 // Disable the auto sort key eslint rule to make the code more logic and readable
 import { toast } from '@lobehub/ui/base-ui';
-import { createCallAgentManifest } from '@orvilo/builtin-tool-agent-management';
 import { GoalIdentifier, isGoalPrompt } from '@orvilo/builtin-tool-goal';
-import { isDesktop, isHeterogeneousAgentModelId, LOADING_FLAT } from '@orvilo/const';
+import {
+  isDesktop,
+  isHeterogeneousAgentModelId,
+  LOADING_FLAT,
+  TRACING_SCENARIOS,
+} from '@orvilo/const';
 import { formatSelectedSkillsContext, formatSelectedToolsContext } from '@orvilo/context-engine';
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
-import { chainCompressContext } from '@orvilo/prompts';
+import {
+  chainCompressContext,
+  COMPRESS_CONTEXT_JSON_SCHEMA,
+  COMPRESS_CONTEXT_PROMPT_VERSION,
+} from '@orvilo/prompts';
 import type {
   ChatAudioItem,
   ChatImageItem,
@@ -47,7 +55,6 @@ import { getTopicAgencyConfig, getTopicWorkspaceScoped } from '@/helpers/topicEx
 import { agentService } from '@/services/agent';
 import { aiAgentService } from '@/services/aiAgent';
 import { aiChatService } from '@/services/aiChat';
-import { chatService } from '@/services/chat';
 import { resolveSelectedSkillsWithContent } from '@/services/chat/mecha/skillPreload';
 import { resolveSelectedToolsWithContent } from '@/services/chat/mecha/toolPreload';
 import { messageService } from '@/services/message';
@@ -65,7 +72,12 @@ import {
   displayMessageSelectors,
   topicSelectors,
 } from '@/store/chat/selectors';
-import { selectRuntimeType } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
+import {
+  AGENT_BINDING_REQUIRED_ERROR,
+  type AgentRuntimeType,
+  GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR,
+  selectRuntimeType,
+} from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
 import { executeDirectMention } from '@/store/chat/slices/agentRun/actions/dispatch/directMentionExecutor';
 import { resolveNewThreadIntent } from '@/store/chat/slices/agentRun/actions/dispatch/newThreadIntent';
 import { buildRunLifecycle } from '@/store/chat/slices/agentRun/actions/lifecycle/buildRunLifecycle';
@@ -84,10 +96,6 @@ import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import { chatPortalSelectors } from '@/store/chat/slices/portal/selectors';
 import { resolveTopicHeteroPin } from '@/store/chat/slices/topic/selectors';
 import { type ChatStore } from '@/store/chat/store';
-import {
-  mergeAgentRuntimeInitialContexts,
-  resolveActiveTopicDocumentInitialContext,
-} from '@/store/chat/utils/activeTopicDocumentContext';
 import {
   createPendingCompressedGroup,
   getCompressionCandidateMessageIds,
@@ -365,7 +373,7 @@ export class ConversationLifecycleActionImpl {
     };
 
     let editorData = inputEditorData;
-    const { executeClientAgent, mainInputEditor } = this.#get();
+    const { mainInputEditor } = this.#get();
     const targetInputEditor = inputEditor ?? mainInputEditor;
     const ownerAgentId = context.agentId;
     const selectedSkills = parseSelectedSkillsFromEditorData(editorData);
@@ -467,18 +475,6 @@ export class ConversationLifecycleActionImpl {
       (isDesktop && !isGatewayMode && isHeterogeneousAgentModelId(agentConfig?.model)
         ? { type: agentConfig.model }
         : undefined);
-    const runtimeType = selectRuntimeType({
-      boundDeviceId: agencyConfig?.boundDeviceId,
-      executionTarget: agencyConfig?.executionTarget,
-      heterogeneousProvider,
-      isGatewayMode,
-      isWorkspaceAgent: !!agent?.workspaceId,
-      // Callers that need to pin the runtime (e.g. task topics that were
-      // started server-side via runTask) pass `forceRuntime` to override
-      // the agent's local/cloud preference.
-      parentRuntime: forceRuntime,
-      workspaceScoped,
-    });
 
     // ── Command Bus: extract and process built-in commands from editorData ──
     const commandOverrides: CommandSendOverrides = processCommands({
@@ -850,6 +846,40 @@ export class ConversationLifecycleActionImpl {
     let parentId: string | undefined = forceNewTopicFromExisting ? undefined : inputParentId;
     if (!parentId && lastMessage) {
       parentId = displayMessageSelectors.findLastMessageId(lastMessage.id)(this.#get());
+    }
+
+    // Runtime selection happens here — AFTER every non-executing early return
+    // (bare `/newTopic` navigation, `onlyAddUserMessage` persistence) — so an
+    // agent without an execution binding can still run command-only sends that
+    // never dispatch an agent.
+    let runtimeType: AgentRuntimeType;
+    try {
+      runtimeType = selectRuntimeType({
+        boundDeviceId: agencyConfig?.boundDeviceId,
+        executionTarget: agencyConfig?.executionTarget,
+        heterogeneousProvider,
+        isGatewayMode,
+        // Supervisor turns need server-side orchestration callbacks — coerce
+        // the runtime before any hetero preference picks a local spawn.
+        isGroupSupervisor,
+        isWorkspaceAgent: !!agent?.workspaceId,
+        // Callers that need to pin the runtime (e.g. task topics that were
+        // started server-side via runTask) pass `forceRuntime` to override
+        // the agent's local/cloud preference.
+        parentRuntime: forceRuntime,
+        workspaceScoped,
+      });
+    } catch (error) {
+      // No execution binding (no ACP/hetero binding and no gateway mode) is an
+      // explicit configuration error — the browser runtime is retired, so the
+      // send must fail loudly instead of falling back to local inference.
+      onPreflightFailure?.();
+      toast.error(
+        error instanceof Error && error.message === GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR
+          ? t('groupSupervisorRequiresGateway', { ns: 'chat' })
+          : t('agentBindingRequired', { ns: 'chat' }),
+      );
+      throw error;
     }
 
     // Mint the ids this turn will live under, up front. These are the FINAL
@@ -1613,15 +1643,11 @@ export class ConversationLifecycleActionImpl {
           (heteroContext.topicId
             ? topicSelectors.getTopicById(heteroContext.topicId)(this.#get())
             : undefined) ?? existingTopic;
-        const providerBinding = heterogeneousProvider.authMode === 'api';
-        const { cwdChanged, reason, resumeBindingKey, resumeSessionId } = resolveHeteroResume(
+        const { cwdChanged, reason, resumeSessionId } = resolveHeteroResume(
           topic?.metadata,
           workingDirectory,
           {
-            currentBindingKey: providerBinding
-              ? undefined
-              : getHeteroProviderSessionBindingKey(heterogeneousProvider),
-            providerBinding,
+            currentBindingKey: getHeteroProviderSessionBindingKey(heterogeneousProvider),
           },
         );
         if (cwdChanged) {
@@ -1644,7 +1670,6 @@ export class ConversationLifecycleActionImpl {
           message,
           operationId: heteroOpId,
           pageSelections: effectivePageSelections,
-          resumeBindingKey,
           resumeSessionId,
           workingDirectory,
           workingDirectoryConfig,
@@ -2151,7 +2176,10 @@ export class ConversationLifecycleActionImpl {
       }
     }
 
-    // ── AI execution (client mode) ──
+    // ── AI execution ──
+    // Only a gateway-bound direct @Agent mention reaches this tail: hetero runs
+    // return in their own branch above, gateway non-mention sends return inside
+    // the gateway branch, and unbound agents threw at `selectRuntimeType`.
     {
       let sendOperationHandedOff = false;
       const handoffSendOperation = () => {
@@ -2171,7 +2199,6 @@ export class ConversationLifecycleActionImpl {
               context: execContext,
               instruction: message,
               parentOperationId: operationId,
-              runtimeType: runtimeType === 'gateway' ? 'gateway' : 'client',
               sourceMessageId: data.assistantMessageId,
               targetAgentId: agentId,
             },
@@ -2180,51 +2207,7 @@ export class ConversationLifecycleActionImpl {
           handoffSendOperation();
           await directMentionRun;
         } else {
-          const displayMessages = displayMessageSelectors
-            .getDisplayMessagesByKey(messageMapKey(execContext))(this.#get())
-            .filter((item) => !isLocalOnlyMessage(item));
-
-          // When agents are @mentioned, inject a slim callAgent-only manifest
-          // so the AI can delegate directly without activating the full agent-management tool
-          const injectedManifests = hasMentionedAgents ? [createCallAgentManifest()] : undefined;
-          const activeTopicDocumentInitialContext =
-            await resolveActiveTopicDocumentInitialContext(execContext);
-
-          const hasInitialContext = hasMentionedAgents || !!injectedManifests;
-
-          // Note: selectedSkills and selectedTools are NOT passed here — they are
-          // persisted into the user message content above so they survive across
-          // turns without re-injection.
-          const agentRuntimeInitialContext = hasInitialContext
-            ? {
-                initialContext: {
-                  // Only inject mentionedAgents in non-group context to avoid
-                  // group @member mentions (including ALL_MEMBERS) leaking into agent-management
-                  ...(hasMentionedAgents ? { mentionedAgents } : undefined),
-                  ...(injectedManifests ? { injectedManifests } : undefined),
-                },
-                phase: 'init' as const,
-              }
-            : undefined;
-          const mergedAgentRuntimeInitialContext = mergeAgentRuntimeInitialContexts(
-            activeTopicDocumentInitialContext,
-            agentRuntimeInitialContext,
-          );
-
-          const clientRun = executeClientAgent({
-            context: execContext,
-            initialContext: mergedAgentRuntimeInitialContext,
-            metadata: requestMetadata,
-            messages: displayMessages,
-            parentMessageId: data.assistantMessageId,
-            parentMessageType: 'assistant',
-            parentOperationId: operationId,
-            inPortalThread: !!data.createdThreadId,
-            skipCreateFirstMessage: true,
-            userMessageId: data.userMessageId,
-          });
-          handoffSendOperation();
-          await clientRun;
+          throw new Error(AGENT_BINDING_REQUIRED_ERROR);
         }
 
         const userFiles = dbMessageSelectors
@@ -2304,26 +2287,33 @@ export class ConversationLifecycleActionImpl {
       this.#get().replaceMessages(serverMessages, { context: context as any });
       this.#get().associateMessageWithOperation(messageGroupId, operationId);
 
-      // 2. Generate summary via LLM
-      const { model, provider } = agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
+      // 2. Generate summary via a bound judgment call — ACP-resolved runtime,
+      // no client-owned model/provider execution path.
+      const agentState = getAgentStoreState();
+      const model = agentByIdSelectors.getAgentModelById(agentId)(agentState);
+      const provider = agentByIdSelectors.getAgentModelProviderById(agentId)(agentState);
       const compressionPayload = chainCompressContext(messagesToSummarize);
-      let summaryContent = '';
 
-      await chatService.fetchPresetTaskResult({
-        abortController,
-        onMessageHandle: (chunk) => {
-          if (chunk.type === 'text') {
-            summaryContent += chunk.text || '';
-            this.#get().internal_dispatchMessage(
-              { id: messageGroupId, type: 'updateMessage', value: { content: summaryContent } },
-              { operationId },
-            );
-          }
+      const envelope = await aiChatService.generateJSON(
+        {
+          ...compressionPayload,
+          model,
+          provider,
+          schema: COMPRESS_CONTEXT_JSON_SCHEMA,
+          tracing: {
+            agentId,
+            promptVersion: COMPRESS_CONTEXT_PROMPT_VERSION,
+            scenario: TRACING_SCENARIOS.ContextCompress,
+            schemaName: COMPRESS_CONTEXT_JSON_SCHEMA.name,
+            topicId,
+          },
         },
-        params: { ...compressionPayload, model, provider },
-      });
+        abortController,
+      );
 
       if (abortController.signal.aborted) throw createAbortError();
+
+      const summaryContent = (envelope?.data as { summary?: string } | undefined)?.summary ?? '';
 
       // 3. Finalize compression
       const finalResult = await messageService.finalizeCompression({

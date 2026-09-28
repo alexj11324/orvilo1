@@ -1,4 +1,4 @@
-import type { AgentState } from '@orvilo/agent-runtime';
+import type { AgentState } from '@orvilo/agent-execution';
 import { describe, expect, it } from 'vitest';
 
 import { extractArtifacts, extractFromFinalState, extractMutations } from '../finalStateExtractor';

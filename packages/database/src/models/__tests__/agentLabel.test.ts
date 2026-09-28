@@ -57,7 +57,7 @@ describe('AgentLabelModel', () => {
       expect(labels[0].name).toBe('Team Label');
     });
 
-    it('should isolate personal labels from workspace labels', async () => {
+    it("should adopt the owner's unfiled labels into workspace scope", async () => {
       await personalModel.create({ name: 'Personal' });
       await workspaceModel.create({ name: 'Workspace' });
 
@@ -65,7 +65,8 @@ describe('AgentLabelModel', () => {
       const workspace = await workspaceModel.query();
 
       expect(personal.map((l) => l.name)).toEqual(['Personal']);
-      expect(workspace.map((l) => l.name)).toEqual(['Workspace']);
+      // The owner's unfiled label follows them into workspace scope.
+      expect(workspace.map((l) => l.name).sort()).toEqual(['Personal', 'Workspace']);
     });
 
     it('should not leak personal labels between users', async () => {
@@ -103,11 +104,13 @@ describe('AgentLabelModel', () => {
       expect((await workspaceModel.findById(label.id))?.archived).toBe(false);
     });
 
-    it('should not update labels outside the scope', async () => {
+    it("should update the owner's unfiled labels from workspace scope", async () => {
       const label = await personalModel.create({ name: 'Personal' });
-      await workspaceModel.update(label.id, { name: 'Hacked' });
+      // Unfiled labels remain manageable by their owner inside workspace
+      // scope — the row is still theirs.
+      await workspaceModel.update(label.id, { name: 'Renamed' });
 
-      expect((await personalModel.findById(label.id))?.name).toBe('Personal');
+      expect((await personalModel.findById(label.id))?.name).toBe('Renamed');
     });
   });
 
@@ -149,11 +152,14 @@ describe('AgentLabelModel', () => {
       expect(await personalModel.getAgentLabelIds('agt-set')).toEqual([]);
     });
 
-    it('should reject agents outside the scope', async () => {
+    it("should accept the owner's unfiled agents from workspace scope", async () => {
       await createAgent('agt-scope');
       const label = await workspaceModel.create({ name: 'WS' });
 
-      await expect(workspaceModel.setAgentLabels('agt-scope', [label.id])).rejects.toThrow();
+      // The unfiled agent is still the owner's — labeling it from workspace
+      // scope is allowed.
+      await workspaceModel.setAgentLabels('agt-scope', [label.id]);
+      expect(await workspaceModel.getAgentLabelIds('agt-scope')).toEqual([label.id]);
     });
 
     it('should reject labels outside the scope instead of dropping them', async () => {

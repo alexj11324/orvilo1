@@ -1,12 +1,11 @@
 import type * as ModelBankModule from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as modelHints from '@/server/modules/AgentRuntime/adapters/serverCallLlmContextHints';
-
 import { AiAgentService } from '../index';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
-const { mockMessageCreate, mockTopicCreate } = vi.hoisted(() => ({
+const { mockDispatchHeteroAgent, mockMessageCreate, mockTopicCreate } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockTopicCreate: vi.fn(),
 }));
@@ -32,15 +31,6 @@ vi.mock('@/database/models/message', () => ({
       getLatestSpineMessageId: vi.fn().mockResolvedValue(undefined),
       query: vi.fn().mockResolvedValue([]),
       update: vi.fn().mockResolvedValue({}),
-    };
-  }),
-}));
-
-vi.mock('@/database/models/aiModel', () => ({
-  AiModelModel: vi.fn().mockImplementation(function () {
-    return {
-      findByIdAndProvider: vi.fn().mockResolvedValue(undefined),
-      getModelReasoningConfig: vi.fn().mockResolvedValue({ reasoningEffort: 'high' }),
     };
   }),
 }));
@@ -95,6 +85,7 @@ vi.mock('@/database/models/plugin', () => ({
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
     return {
+      findShareVisitorTopicIds: vi.fn().mockResolvedValue([]),
       armScheduledRun: vi.fn().mockResolvedValue(undefined),
       create: mockTopicCreate,
       findById: vi.fn().mockResolvedValue(undefined),
@@ -129,7 +120,7 @@ vi.mock('@/database/models/chatGroup', () => ({
 }));
 
 // Mock AgentRuntimeService
-vi.mock('@/server/services/agentRuntime', () => ({
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -140,6 +131,12 @@ vi.mock('@/server/services/agentRuntime', () => ({
       }),
     };
   }),
+}));
+
+// Every execAgent run dispatches through ACP — stub the dispatch boundary so
+// these tests exercise id minting without touching the gateway/sandbox.
+vi.mock('../pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 // Mock MarketService (for getOrviloSkillManifests)
@@ -187,7 +184,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
 }));
 
 vi.mock('@/server/modules/ModelRuntime', () => ({
-  initModelRuntimeFromDB: vi.fn(),
+  initModelRuntimeFromDeploymentConfig: vi.fn(),
 }));
 
 // Mock model-bank
@@ -224,6 +221,12 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     mockTopicCreate.mockImplementation(async (_params: unknown, id?: string) => ({
       id: id ?? 'topic-server-minted',
     }));
+    mockDispatchHeteroAgent.mockResolvedValue({
+      autoStarted: true,
+      operationId: 'op-123',
+      success: true,
+      topicId: 'topic-1',
+    });
 
     service = new AiAgentService(mockDb, userId);
   });
@@ -233,14 +236,14 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     mockTopicCreate.mockClear();
   });
 
+  // Precreated topics pin the run's ACP execution binding (CLI family +
+  // selector model), not the member's chat model — the Lobe model loop that
+  // consumed chat-model pins is retired. `reasoningConfig`/`heteroEffort` are
+  // stamped only when the binding carries an effort; the default 'orvilo'
+  // binding has none.
   it.each(['scheduled', 'group'] as const)(
-    'snapshots the model and reasoning for a precreated %s topic',
+    'pins the ACP execution binding for a precreated %s topic',
     async (kind) => {
-      const hintsSpy = vi.spyOn(modelHints, 'resolveModelExtendParamsForUser').mockResolvedValue({
-        modelHasReasoningExtendParams: true,
-        modelExtendParams: ['reasoningEffort'],
-      });
-
       const runSpy = vi
         .spyOn(service, 'execAgent')
         .mockResolvedValue({} as Awaited<ReturnType<AiAgentService['execAgent']>>);
@@ -254,20 +257,16 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
         await service.execGroupAgent({ agentId: 'agent-1', groupId: 'group-1', message: 'Group' });
       }
       expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-        model: 'gpt-4',
-        provider: 'openai',
-        metadata: { reasoningConfig: { reasoningEffort: 'high' } },
+        model: 'default',
+        provider: 'claude-code',
       });
-      hintsSpy.mockRestore();
       runSpy.mockRestore();
     },
   );
 
-  it('snapshots an explicit model override when scheduling', async () => {
-    const hintsSpy = vi.spyOn(modelHints, 'resolveModelExtendParamsForUser').mockResolvedValue({
-      modelHasReasoningExtendParams: true,
-      modelExtendParams: ['reasoningEffort'],
-    });
+  it('keeps the execution-binding pin when a chat-model override is scheduled', async () => {
+    // 'override-model' is not a heterogeneous model id, so the run falls back
+    // to the deployment's default 'orvilo' binding.
     await service.scheduleAgentRun({
       agentId: 'agent-1',
       model: 'override-model',
@@ -276,18 +275,15 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       runAt: new Date(Date.now() + 60000).toISOString(),
     });
     expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-      model: 'override-model',
-      provider: 'override-provider',
-      metadata: { reasoningConfig: { reasoningEffort: 'high' } },
+      model: 'default',
+      provider: 'claude-code',
     });
-    hintsSpy.mockRestore();
   });
 
   it('does not recreate or snapshot an existing group topic', async () => {
     const runSpy = vi
       .spyOn(service, 'execAgent')
       .mockResolvedValue({} as Awaited<ReturnType<AiAgentService['execAgent']>>);
-    const hintsSpy = vi.spyOn(modelHints, 'resolveModelExtendParamsForUser');
     await service.execGroupAgent({
       agentId: 'agent-1',
       groupId: 'group-1',
@@ -295,8 +291,6 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       message: 'Continue',
     });
     expect(mockTopicCreate).not.toHaveBeenCalled();
-    expect(hintsSpy).not.toHaveBeenCalled();
-    hintsSpy.mockRestore();
     runSpy.mockRestore();
   });
 

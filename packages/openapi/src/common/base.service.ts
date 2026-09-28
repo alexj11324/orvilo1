@@ -1,20 +1,11 @@
 import { buildWorkspacePayload, buildWorkspaceWhere } from '@orvilo/database';
-import { and, eq, inArray, type SQL } from 'drizzle-orm';
+import { eq, inArray, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import type { PERMISSION_ACTIONS } from '@/const/rbac';
 import { ALL_SCOPE } from '@/const/rbac';
 import { RbacModel } from '@/database/models/rbac';
-import {
-  agents,
-  aiModels,
-  aiProviders,
-  files,
-  knowledgeBases,
-  messages,
-  sessions,
-  topics,
-} from '@/database/schemas';
+import { agents, files, knowledgeBases, messages, sessions, topics } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { getScopePermissions } from '@/utils/rbac';
 
@@ -285,39 +276,6 @@ export abstract class BaseService implements IBaseService {
           return targetTopic?.userId;
         }
 
-        // Query providers table
-        case !!target?.targetProviderId: {
-          if (this.workspaceId) {
-            const workspaceProvider = await this.db.query.aiProviders.findFirst({
-              columns: { userId: true },
-              where: and(
-                eq(aiProviders.id, target.targetProviderId),
-                this.buildWorkspaceWhere(aiProviders),
-              ),
-            });
-
-            return workspaceProvider?.userId;
-          }
-
-          const currentUserProvider = await this.db.query.aiProviders.findFirst({
-            columns: { userId: true },
-            where: and(
-              eq(aiProviders.id, target.targetProviderId),
-              eq(aiProviders.userId, this.userId),
-            ),
-          });
-
-          if (currentUserProvider) {
-            return currentUserProvider.userId;
-          }
-
-          const targetProvider = await this.db.query.aiProviders.findFirst({
-            columns: { userId: true },
-            where: eq(aiProviders.id, target.targetProviderId),
-          });
-          return targetProvider?.userId;
-        }
-
         // Case where targetUserId is passed directly
         case !!target?.targetUserId: {
           return target.targetUserId;
@@ -348,24 +306,6 @@ export abstract class BaseService implements IBaseService {
             where: eq(messages.id, target.targetMessageId),
           });
           return targetMessage?.userId;
-        }
-
-        // Query aiModels table
-        case !!target?.targetModelId: {
-          if (this.workspaceId) {
-            const workspaceModel = await this.db.query.aiModels.findFirst({
-              columns: { userId: true },
-              where: and(eq(aiModels.id, target.targetModelId), this.buildWorkspaceWhere(aiModels)),
-            });
-
-            return workspaceModel?.userId;
-          }
-
-          const targetModel = await this.db.query.aiModels.findFirst({
-            columns: { userId: true },
-            where: eq(aiModels.id, target.targetModelId),
-          });
-          return targetModel?.userId;
         }
 
         default: {
@@ -546,24 +486,6 @@ export abstract class BaseService implements IBaseService {
           userIds = topicList.map((t) => t.userId);
           break;
         }
-        case !!targetInfoIds.targetProviderIds?.length: {
-          const providerIds = targetInfoIds.targetProviderIds;
-          const ownedProviders = await this.db.query.aiProviders.findMany({
-            where: and(inArray(aiProviders.id, providerIds), eq(aiProviders.userId, this.userId)),
-          });
-
-          // First try to match the current user by composite key (id, userId) to avoid false positives when multiple users share the same provider id
-          if (ownedProviders.length === providerIds.length) {
-            userIds = ownedProviders.map(() => this.userId);
-            break;
-          }
-
-          const providerList = await this.db.query.aiProviders.findMany({
-            where: inArray(aiProviders.id, providerIds),
-          });
-          userIds = providerList.map((p) => p.userId);
-          break;
-        }
         case !!targetInfoIds.targetUserIds?.length: {
           userIds = targetInfoIds.targetUserIds;
           break;
@@ -587,13 +509,6 @@ export abstract class BaseService implements IBaseService {
             where: inArray(messages.id, targetInfoIds.targetMessageIds),
           });
           userIds = messageList.map((m) => m.userId);
-          break;
-        }
-        case !!targetInfoIds.targetModelIds?.length: {
-          const modelList = await this.db.query.aiModels.findMany({
-            where: inArray(aiModels.id, targetInfoIds.targetModelIds),
-          });
-          userIds = modelList.map((m) => m.userId);
           break;
         }
         default: {

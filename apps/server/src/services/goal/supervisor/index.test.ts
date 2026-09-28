@@ -35,6 +35,13 @@ import * as scheduler from '../scheduler';
 import { GoalSupervisorService } from './index';
 import { GoalSupervisorTools } from './tools';
 
+// CAID admission (R10) is default-off; orchestrated `trigger:'goal'` dispatches
+// need it admitted or the tick parks on `waiting_external` before `runTask`.
+const caidAdmission = vi.hoisted(() => ({ allowed: vi.fn(async () => true) }));
+vi.mock('@/server/featureFlags/caidAdmission', () => ({
+  isCaidDispatchAllowed: caidAdmission.allowed,
+}));
+
 const db = await getTestDB();
 const userId = 'supervisor-test-user';
 let sequence = 0;

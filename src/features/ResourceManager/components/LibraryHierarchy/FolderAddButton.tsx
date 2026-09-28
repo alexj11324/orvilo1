@@ -2,13 +2,12 @@
 
 import { Notion } from '@lobehub/icons';
 import { type DropdownItem, DropdownMenu, Icon, stopPropagation } from '@lobehub/ui';
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
+import { ActionIcon, toast, Upload } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
   DERIVED_DOCUMENT_SOURCE_TYPE,
 } from '@orvilo/const';
-import { Upload } from 'antd';
 import { FilePenLine, FileUp, FolderIcon, FolderUp, Link, Plus } from 'lucide-react';
 import { type ChangeEvent } from 'react';
 import { memo, useCallback, useId, useMemo, useState } from 'react';
@@ -168,7 +167,7 @@ const FolderAddButton = memo<FolderAddButtonProps>(({ folderId }) => {
         label: (
           <Upload
             multiple
-            showUploadList={false}
+
             beforeUpload={async (file) => {
               setMenuOpen(false);
               await pushDockFileList([file], libraryId, folderId);

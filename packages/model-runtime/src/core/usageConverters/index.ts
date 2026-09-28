@@ -6,8 +6,6 @@ export {
   type ComputeChatCostOptions,
   type PricingComputationResult,
 } from './utils/computeChatCost';
-export { computeImageCost } from './utils/computeImageCost';
-export { computeVideoCost } from './utils/computeVideoCost';
 export {
   type ChatCostEstimate,
   type ChatInputTokenEstimate,
@@ -19,5 +17,3 @@ export {
   estimateOpenAIChatInputTokens,
   type EstimateOpenAIChatInputTokensOptions,
 } from './utils/estimateChatCost';
-export { resolveImageSinglePrice } from './utils/resolveImageSinglePrice';
-export { resolveVideoSinglePrice } from './utils/resolveVideoSinglePrice';

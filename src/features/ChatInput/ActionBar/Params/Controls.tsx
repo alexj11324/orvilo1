@@ -1,11 +1,6 @@
 import { Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { Select, SliderWithInput, Switch } from '@lobehub/ui/base-ui';
-import {
-  DEFAULT_AGENT_CONFIG,
-  resolveSubAgentChatConfig,
-  resolveSubAgentModel,
-} from '@orvilo/const';
-import { resolveEffectiveReasoningChatConfig } from '@orvilo/model-runtime/utils/modelExtendParams';
+import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
 import { Form as AntdForm } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { debounce } from 'es-toolkit/compat';
@@ -19,15 +14,13 @@ import type { PartialDeep } from 'type-fest';
 
 import InfoTooltip from '@/components/InfoTooltip';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import ModelSelect from '@/features/ModelSelect';
-import ControlsForm from '@/features/ModelSwitchPanel/components/ControlsForm';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useUserStore } from '@/store/user';
 import { systemAgentSelectors } from '@/store/user/selectors';
-import type { OrviloAgentChatConfig, OrviloAgentConfig } from '@/types/agent';
+import type { OrviloAgentConfig } from '@/types/agent';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
@@ -189,52 +182,6 @@ const styles = createStaticStyles(({ css }) => ({
   muted: css`
     .control-label {
       color: ${cssVar.colorTextTertiary};
-    }
-  `,
-  modelConfigSection: css`
-    padding-block: 12px;
-
-    .ant-form {
-      margin: 0;
-    }
-
-    .ant-form-item {
-      padding-block: 12px;
-    }
-
-    .ant-form-item-row {
-      gap: 10px;
-    }
-
-    .ant-form-item-label > label {
-      font-size: 13px;
-      font-weight: 500;
-      line-height: 20px;
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    .ant-form-item-label > label div {
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    .ant-form-item-label > label small,
-    .ant-form-item-label > label small *:not(a) {
-      font-size: 12px;
-      font-weight: 400;
-      line-height: 18px;
-      color: ${cssVar.colorTextTertiary};
-    }
-
-    .ant-form-item:first-child {
-      padding-block-start: 0;
-    }
-
-    .ant-form-item:last-child {
-      padding-block-end: 0;
-    }
-
-    .ant-divider {
-      display: none;
     }
   `,
   panel: css`
@@ -421,7 +368,6 @@ const PARAM_ORDER: ParamKey[] = ['temperature', 'top_p', 'frequency_penalty', 'p
 const REASONING_PARAMS_SET = new Set<string>(MODEL_REASONING_EXTEND_PARAMS);
 
 const ADVANCED_OPEN_STORAGE_KEY = 'orvilo-input-params-advanced-open';
-const MODEL_CONFIG_OPEN_STORAGE_KEY = 'orvilo-input-params-model-config-open';
 
 const getStoredOpen = (storageKey: string) => {
   if (typeof window === 'undefined') return false;
@@ -550,22 +496,14 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
     aiModelSelectors.modelExtendParams(model, provider),
     isEqual,
   );
-  // Reasoning fields are user-level model-instance settings now (edited via
-  // the ChatInput Effort control); only non-reasoning params warrant this section
-  const hasModelConfig = (modelExtendParamsList ?? []).some(
-    (param) => !REASONING_PARAMS_SET.has(param),
-  );
-  // Same reason: hide the legacy Advanced raw `params.reasoning_effort` for
-  // those models — the send path strips it in favor of the instance config
+  // Hide the legacy Advanced raw `params.reasoning_effort` for models whose
+  // reasoning is driven by an extend-params contract — the send path strips it.
   const hasReasoningExtendParams = (modelExtendParamsList ?? []).some((param) =>
     REASONING_PARAMS_SET.has(param),
   );
   const enableAgentMode = useAgentStore(agentByIdSelectors.getAgentEnableModeById(agentId));
   const [form] = AntdForm.useForm();
   const [advancedOpen, setAdvancedOpen] = useState(() => getStoredOpen(ADVANCED_OPEN_STORAGE_KEY));
-  const [modelConfigOpen, setModelConfigOpen] = useState(() =>
-    getStoredOpen(MODEL_CONFIG_OPEN_STORAGE_KEY),
-  );
   const [, refreshFormValues] = useState(0);
 
   const enableContextCompression = form.getFieldValue(['chatConfig', 'enableContextCompression']);
@@ -646,56 +584,6 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
   const panelTitle = enableAgentMode
     ? t('settingModel.params.panel.agentTitle')
     : t('settingModel.params.panel.title');
-
-  // Explicit sub-agent model override, if any. When unset, sub-agents follow
-  // the parent run's effective model — rendered as the select's empty state
-  // (placeholder) rather than a concrete model, so the panel never shows a
-  // model the run won't actually use.
-  const subAgentModelValue = config.agencyConfig?.subagent?.model
-    ? resolveSubAgentModel(config.agencyConfig.subagent)
-    : undefined;
-  const rawSubAgentChatConfig = config.agencyConfig?.subagent?.chatConfig;
-  const subAgentHasReasoningParams = useAiInfraStore(
-    aiModelSelectors.isModelHasReasoningExtendParams(
-      subAgentModelValue?.model || '',
-      subAgentModelValue?.provider || '',
-    ),
-  );
-  const subAgentModelReasoningConfig = useAiInfraStore(
-    aiModelSelectors.modelReasoningConfig(
-      subAgentModelValue?.model || '',
-      subAgentModelValue?.provider || '',
-    ),
-    isEqual,
-  );
-  // Warm the overridden sub-agent model's saved reasoning defaults —
-  // ReasoningConfigLoader only fetches the main effective model
-  const useFetchAiModelReasoningConfig = useAiInfraStore((s) => s.useFetchAiModelReasoningConfig);
-  useFetchAiModelReasoningConfig(
-    subAgentHasReasoningParams ? subAgentModelValue?.model : undefined,
-    subAgentHasReasoningParams ? subAgentModelValue?.provider : undefined,
-  );
-  // Effective sub-agent chatConfig, built the same way the run does
-  // (resolveModelExtendParams / serverCallLlmContextHints): merged parent
-  // config with the migrated reasoning fields stripped ← model-instance
-  // defaults ← explicit sub-agent overrides. Without the same sanitizing, a
-  // legacy parent `chatConfig.reasoningEffort` would show a value the run
-  // ignores, so the controls below stay WYSIWYG.
-  const subAgentChatConfig = useMemo(
-    () =>
-      resolveEffectiveReasoningChatConfig({
-        agentChatConfig: resolveSubAgentChatConfig(config.chatConfig, rawSubAgentChatConfig) ?? {},
-        modelReasoningConfig: subAgentModelReasoningConfig,
-        subAgentReasoningOverrides: rawSubAgentChatConfig,
-      }),
-    [config.chatConfig, rawSubAgentChatConfig, subAgentModelReasoningConfig],
-  );
-  const subAgentHasModelConfig = useAiInfraStore(
-    aiModelSelectors.isModelHasExtendParams(
-      subAgentModelValue?.model || '',
-      subAgentModelValue?.provider || '',
-    ),
-  );
 
   const handleToggle = useCallback(
     async (key: ParamKey, enabled: boolean) => {
@@ -785,54 +673,10 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
     [canCreate, form, handleValuesChange, refreshFormValues],
   );
 
-  const handleSubAgentModelChange = useCallback(
-    async ({ model, provider }: { model: string; provider: string }) => {
-      if (!canCreate) return;
-      setUpdating(true);
-      try {
-        await updateAgentConfig({ agencyConfig: { subagent: { model, provider } } });
-      } finally {
-        setUpdating(false);
-      }
-    },
-    [canCreate, setUpdating, updateAgentConfig],
-  );
-
-  // Back to "follow the main agent model". `null` rather than `undefined`: the
-  // config deep-merge skips `undefined` keys, which would keep the old override.
-  // The thinking overrides are cleared along with the model they were set for.
-  const handleSubAgentModelClear = useCallback(async () => {
-    if (!canCreate) return;
-    setUpdating(true);
-    try {
-      await updateAgentConfig({
-        agencyConfig: { subagent: { chatConfig: null, model: null, provider: null } },
-      });
-    } finally {
-      setUpdating(false);
-    }
-  }, [canCreate, setUpdating, updateAgentConfig]);
-
-  const handleSubAgentChatConfigChange = useCallback(
-    async (patch: Partial<OrviloAgentChatConfig>) => {
-      if (!canCreate) return;
-      await updateAgentConfig({ agencyConfig: { subagent: { chatConfig: patch } } });
-    },
-    [canCreate, updateAgentConfig],
-  );
-
   const handleAdvancedOpenChange = useCallback(() => {
     setAdvancedOpen((open) => {
       const nextOpen = !open;
       setStoredOpen(ADVANCED_OPEN_STORAGE_KEY, nextOpen);
-      return nextOpen;
-    });
-  }, []);
-
-  const handleModelConfigOpenChange = useCallback(() => {
-    setModelConfigOpen((open) => {
-      const nextOpen = !open;
-      setStoredOpen(MODEL_CONFIG_OPEN_STORAGE_KEY, nextOpen);
       return nextOpen;
     });
   }, []);
@@ -956,59 +800,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                 }}
               />
             </ControlRow>
-            {enableAgentMode && (
-              <ControlRow
-                tag="subAgentModel"
-                title={t('settingModel.params.panel.subAgentModel')}
-                tooltip={t('settingModel.subAgentModel.desc')}
-              >
-                <ModelSelect
-                  allowClear
-                  disabled={!canCreate}
-                  placeholder={t('settingModel.subAgentModel.followParent')}
-                  style={{ width: '100%' }}
-                  value={subAgentModelValue}
-                  onChange={handleSubAgentModelChange}
-                  onClear={handleSubAgentModelClear}
-                />
-                {/* Thinking / reasoning-effort controls for the overridden
-                 * sub-agent model. Hidden while following the parent model —
-                 * the sub-agent then inherits the parent's chatConfig wholesale,
-                 * so the main panel's controls already describe it. */}
-                {subAgentModelValue && subAgentHasModelConfig && (
-                  <ControlsForm
-                    chatConfig={subAgentChatConfig}
-                    disabled={!canCreate}
-                    model={subAgentModelValue.model}
-                    provider={subAgentModelValue.provider}
-                    onChatConfigChange={handleSubAgentChatConfigChange}
-                    onUpdatingChange={setUpdating}
-                  />
-                )}
-              </ControlRow>
-            )}
           </div>
-          {hasModelConfig && (
-            <>
-              <div className={styles.divider} />
-              <SectionHeader
-                open={modelConfigOpen}
-                title={t('ModelSwitchPanel.detail.config', { ns: 'components' })}
-                onToggle={handleModelConfigOpenChange}
-              />
-              {modelConfigOpen && (
-                <div className={styles.modelConfigSection}>
-                  <ControlsForm
-                    hideReasoningParams
-                    disabled={!canCreate}
-                    model={model}
-                    provider={provider}
-                    onUpdatingChange={setUpdating}
-                  />
-                </div>
-              )}
-            </>
-          )}
           {!enableAgentMode && (
             <>
               <div className={styles.divider} />

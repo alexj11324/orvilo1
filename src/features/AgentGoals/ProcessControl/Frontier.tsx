@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import { openAddGoalTaskModal } from '@/features/AgentGoals/AddTaskModal';
+import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useChatStore } from '@/store/chat';
@@ -408,6 +409,16 @@ const FrontierRow = memo<{
         <Flexbox flex={1} />
         <Flexbox horizontal align={'center'} gap={8} style={{ flex: 'none' }}>
           <AcceptanceChip view={view} />
+          {/* Delivery is not done when the child is: the run's branch still has
+              to land. Same chip as the task detail — state, evidence tooltip,
+              and the retry/PR entry points ride along. */}
+          {view.integration && (
+            <RunIntegrationTag
+              integration={view.integration}
+              taskId={node.taskId ?? undefined}
+              topicId={view.integration.topicId}
+            />
+          )}
           {item.kind === 'running' && <RunningClock startedAt={view.startedAt} />}
           {item.kind === 'done' && <DoneTime view={view} />}
         </Flexbox>

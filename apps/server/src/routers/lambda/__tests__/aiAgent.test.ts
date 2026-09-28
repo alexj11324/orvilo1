@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
 import {
+  agentOperations,
   agents,
   agentsToSessions,
   messages,
@@ -15,7 +16,9 @@ import { eq } from 'drizzle-orm';
 import type * as ModelBankModule from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as WorkspaceModule from '@/database/models/workspace';
 import type * as InternalJwtModule from '@/libs/trpc/utils/internalJwt';
+import { AgentStartError } from '@/server/services/agentExecution/types';
 import {
   assertCanPerformResourceAction,
   getResourceMeta,
@@ -32,8 +35,16 @@ vi.mock('@/database/core/db-adaptor', () => ({
   }),
 }));
 
+// Workspace membership is verified for real — callers carrying workspaceId
+// resolve through this model seam, so tests stub an active member row.
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof WorkspaceModule>()),
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
+}));
+
 // Mock AgentRuntimeService since we only want to test the router's business logic
-vi.mock('@/server/services/agentRuntime', () => ({
+const { mockStartExecution } = vi.hoisted(() => ({ mockStartExecution: vi.fn() }));
+vi.mock('@/server/services/agentExecution', () => ({
   AgentRuntimeService: vi.fn().mockImplementation(function () {
     return {
       createOperation: vi.fn().mockResolvedValue({
@@ -42,8 +53,19 @@ vi.mock('@/server/services/agentRuntime', () => ({
         autoStarted: true,
         messageId: 'mock-message-id',
       }),
+      startExecution: mockStartExecution,
     };
   }),
+}));
+
+// Every execAgent run hands off to ACP via dispatchHeteroAgent — stub that
+// boundary so these tests cover the router → service path (topic/message
+// persistence, context wiring) without spawning a host or needing JWKS_KEY.
+const { mockDispatchHeteroAgent } = vi.hoisted(() => ({
+  mockDispatchHeteroAgent: vi.fn(),
+}));
+vi.mock('../../../services/aiAgent/pipeline/heteroDispatch', () => ({
+  dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
 
 // Mock serverMessagesEngine
@@ -157,6 +179,21 @@ describe('AI Agent Router Integration Tests', () => {
       sessionId: testSessionId,
       userId,
     });
+
+    let opCounter = 0;
+    mockDispatchHeteroAgent.mockImplementation(async (_deps, ctx) => ({
+      agentId: ctx.resolvedAgentId,
+      assistantMessageId: ctx.assistantMessageId,
+      autoStarted: true,
+      createdAt: new Date().toISOString(),
+      message: 'Hetero agent dispatched successfully',
+      operationId: `op_${Date.now()}_${ctx.resolvedAgentId}_${ctx.topicId}_${opCounter++}`,
+      status: 'created',
+      success: true,
+      timestamp: new Date().toISOString(),
+      topicId: ctx.topicId,
+      userMessageId: ctx.userMessageId ?? ctx.parentMessageId ?? '',
+    }));
   });
 
   afterEach(async () => {
@@ -327,46 +364,26 @@ describe('AI Agent Router Integration Tests', () => {
       ).rejects.toThrow();
     });
 
-    it('should pass correct parameters to createOperation', async () => {
-      const { AgentRuntimeService } = await import('@/server/services/agentRuntime');
-      const mockCreateOperation = vi.fn().mockResolvedValue({
-        success: true,
-        operationId: 'test-op-id',
-        autoStarted: true,
-        messageId: 'test-msg-id',
-      });
-
-      vi.mocked(AgentRuntimeService).mockImplementation(function () {
-        return {
-          createOperation: mockCreateOperation,
-        } as any;
-      });
-
+    it('should pass correct parameters to dispatchHeteroAgent', async () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       await caller.execAgent({
         agentId: testAgentId,
         prompt: 'Test prompt',
-        autoStart: false,
       });
 
-      expect(mockCreateOperation).toHaveBeenCalledWith(
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledWith(
+        expect.objectContaining({ userId }),
         expect.objectContaining({
           agentConfig: expect.objectContaining({
             model: 'gpt-4o-mini',
             provider: 'openai',
           }),
-          appContext: expect.objectContaining({
-            agentId: testAgentId,
-          }),
-          autoStart: false,
-          modelRuntimeConfig: {
-            mediaCapabilities: expect.objectContaining({ vision: true }),
-            model: 'gpt-4o-mini',
-            provider: 'openai',
-          },
-          userId,
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          resolvedAgentId: testAgentId,
         }),
+        expect.anything(),
       );
     });
 
@@ -382,20 +399,6 @@ describe('AI Agent Router Integration Tests', () => {
     });
 
     it('should include threadId in appContext when provided', async () => {
-      const { AgentRuntimeService } = await import('@/server/services/agentRuntime');
-      const mockCreateOperation = vi.fn().mockResolvedValue({
-        success: true,
-        operationId: 'test-op-id',
-        autoStarted: true,
-        messageId: 'test-msg-id',
-      });
-
-      vi.mocked(AgentRuntimeService).mockImplementation(function () {
-        return {
-          createOperation: mockCreateOperation,
-        } as any;
-      });
-
       // Create a topic first (required for thread)
       const [topic] = await serverDB
         .insert(topics)
@@ -429,12 +432,14 @@ describe('AI Agent Router Integration Tests', () => {
         },
       });
 
-      expect(mockCreateOperation).toHaveBeenCalledWith(
+      expect(mockDispatchHeteroAgent).toHaveBeenCalledWith(
+        expect.anything(),
         expect.objectContaining({
           appContext: expect.objectContaining({
             threadId: thread.id,
           }),
         }),
+        expect.anything(),
       );
     });
 
@@ -488,6 +493,95 @@ describe('AI Agent Router Integration Tests', () => {
       // Should have 1 assistant message with parentId pointing to the user message
       expect(assistantMessages).toHaveLength(1);
       expect(assistantMessages[0].parentId).toBe(userMsg.id);
+    });
+
+    it('rejects autoStart:false as BAD_REQUEST before persisting anything (F09)', async () => {
+      // The old contract silently ignored the flag and dispatched anyway —
+      // the "deferred" run was already started. Now the flag must fail
+      // closed BEFORE any thread/message/operation/dispatch side effect.
+      const caller = aiAgentRouter.createCaller(createTestContext());
+
+      await expect(
+        caller.execAgent({
+          agentId: testAgentId,
+          autoStart: false,
+          prompt: 'Hello',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
+      expect(await serverDB.select().from(topics).where(eq(topics.userId, userId))).toEqual([]);
+      expect(await serverDB.select().from(messages).where(eq(messages.userId, userId))).toEqual([]);
+      expect(
+        await serverDB.select().from(agentOperations).where(eq(agentOperations.userId, userId)),
+      ).toEqual([]);
+    });
+
+    it('reports execAgents tasks carrying autoStart:false as failed without dispatching', async () => {
+      // Batch semantics: per-task rejections land in `results` instead of
+      // throwing — assert the refusal and that nothing was dispatched.
+      const caller = aiAgentRouter.createCaller(createTestContext());
+
+      const result = await caller.execAgents({
+        tasks: [{ agentId: testAgentId, autoStart: false, prompt: 'Hello' }],
+      });
+
+      expect(result).toMatchObject({
+        results: [
+          { error: expect.stringContaining('autoStart:false is not supported'), success: false },
+        ],
+        success: false,
+        summary: { failed: 1, succeeded: 0, total: 1 },
+      });
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
+      expect(
+        await serverDB.select().from(agentOperations).where(eq(agentOperations.userId, userId)),
+      ).toEqual([]);
+    });
+  });
+
+  describe('startExecution', () => {
+    const operationId = 'op_contract_test';
+
+    beforeEach(() => {
+      mockStartExecution.mockReset();
+    });
+
+    it('acknowledges an already-running run idempotently instead of a second start', async () => {
+      // Repeat start intents must not mint a new generation — they resolve to
+      // the same `alreadyStarted` ack every time.
+      mockStartExecution.mockResolvedValue({
+        alreadyStarted: true,
+        operationId,
+        scheduled: false,
+        success: true,
+      });
+      const caller = aiAgentRouter.createCaller(createTestContext());
+
+      const first = await caller.startExecution({ operationId });
+      const second = await caller.startExecution({ operationId });
+
+      const ack = {
+        alreadyStarted: true,
+        message: 'Agent execution is already running',
+        operationId,
+        scheduled: false,
+        success: true,
+      };
+      expect(first).toMatchObject(ack);
+      expect(second).toMatchObject(ack);
+      expect(mockStartExecution).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([
+      ['never_dispatched', 'PRECONDITION_FAILED'],
+      ['terminal', 'CONFLICT'],
+      ['not_found', 'NOT_FOUND'],
+    ] as const)('maps a %s rejection to %s instead of an internal error', async (denial, code) => {
+      mockStartExecution.mockRejectedValue(new AgentStartError(denial, `denial: ${denial}`));
+      const caller = aiAgentRouter.createCaller(createTestContext());
+
+      await expect(caller.startExecution({ operationId })).rejects.toMatchObject({ code });
     });
   });
 

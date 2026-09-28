@@ -4,14 +4,11 @@ import { messages, messageTranslates } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 
 import { BaseService } from '../common/base.service';
-import { removeSystemContext } from '../helpers/translate';
 import type { ServiceResult } from '../types';
 import type {
   MessageTranslateInfoUpdate,
   MessageTranslateResponse,
-  MessageTranslateTriggerRequest,
 } from '../types/message-translations.type';
-import { ChatService } from './chat.service';
 
 type MessageTranslateItem = typeof messageTranslates.$inferSelect;
 
@@ -56,53 +53,6 @@ export class MessageTranslateService extends BaseService {
       return response;
     } catch (error) {
       this.handleServiceError(error, '根据消息ID获取翻译信息');
-    }
-  }
-
-  /**
-   * Create or update message translation
-   * @param translateData Translation data
-   * @returns Translation result
-   */
-  async translateMessage(
-    translateData: MessageTranslateTriggerRequest,
-  ): ServiceResult<Partial<MessageTranslateItem>> {
-    // Permission check is already done in the route layer (MESSAGE_READ + TRANSLATION_CREATE)
-
-    this.log('info', '开始翻译消息', {
-      ...translateData,
-      userId: this.userId,
-    });
-
-    try {
-      // First fetch the original message content and sessionId
-      const messageInfo = await this.db.query.messages.findFirst({
-        where: and(eq(messages.id, translateData.messageId), this.buildWorkspaceWhere(messages)),
-      });
-
-      if (!messageInfo) {
-        throw this.createCommonError('未找到要翻译的消息');
-      }
-
-      this.log('info', '原始消息内容', { originalMessage: messageInfo.content });
-
-      // Use ChatService for translation, passing sessionId to use the correct model configuration
-      const chatService = new ChatService(this.db, this.userId, this.workspaceId);
-      const translatedContent = await chatService.translate({
-        ...translateData,
-        sessionId: messageInfo.sessionId,
-        text: removeSystemContext(messageInfo.content),
-      });
-
-      // Use updateTranslateInfo to update translation content
-      return this.updateTranslateInfo({
-        from: translateData.from,
-        messageId: translateData.messageId,
-        to: translateData.to,
-        content: translatedContent,
-      });
-    } catch (error) {
-      this.handleServiceError(error, '翻译消息');
     }
   }
 

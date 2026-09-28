@@ -4,11 +4,16 @@ on: [push, pull_request]
 
 permissions:
   actions: write
+  checks: read
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  # `secrets` is not an allowed context in step `if` conditions; map it once here.
+  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 jobs:
   # Check for duplicate runs
@@ -17,19 +22,147 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      # The action's output is `reason` — `skip_reason` would always read
+      # empty and fail closed even for legitimate completed duplicates.
+      skip_reason: ${{ steps.skip_check.outputs.reason }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v5
         with:
           concurrent_skipping: 'same_content_newer'
           skip_after_successful_duplicate: 'true'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          # Push runs are the canonical owner: when a PR run and a push run
+          # for the same head SHA start within seconds of each other,
+          # `same_content_newer` on the push run sees the PR run as the newer
+          # sibling and cancels itself — while the PR run also skips its
+          # leafs and only mirrors a verdict. Both runs then die untested and
+          # the PR gate mirrors the cancelled owner's failure. Pinning push to
+          # do_not_skip gives the pair a deterministic owner: the push run
+          # always executes, the PR run always mirrors it.
+          do_not_skip: '["push", "workflow_dispatch", "schedule"]'
+
+  # Path triage — one cheap job diffs the PR and reports which test areas
+  # actually need to run. Leaf jobs skip when their area is untouched, and the
+  # quality gate accepts a *filter* skip while still failing on any other.
+  changes:
+    name: Detect changed areas
+    needs: check-duplicate-run
+    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      code: ${{ steps.filter.outputs.code }}
+      database: ${{ steps.filter.outputs.database }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+      packages: ${{ steps.filter.outputs.packages }}
+      server: ${{ steps.filter.outputs.server }}
+      windows_shell: ${{ steps.filter.outputs.windows_shell }}
+    steps:
+      # paths-filter runs `git` to resolve the current ref and, on push runs,
+      # diffs the before..after SHAs locally — a checkout with full history is
+      # required. A tag/first push with no resolvable base reports every area
+      # changed (full coverage).
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - '**/*.ts'
+              - '**/*.tsx'
+              - '**/*.mts'
+              - '**/*.cts'
+              - '**/*.sql'
+            packages:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+            app:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'src/**'
+              - 'apps/server/**'
+              - 'public/**'
+              - 'locales/**'
+            server:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'apps/server/**'
+            desktop:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/**'
+              - 'apps/desktop/**'
+            windows_shell:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/local-file-shell/**'
+            database:
+              - '.github/workflows/test.yml'
+              - '.github/actions/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'scripts/**'
+              - 'packages/database/**'
 
   # Full-repo type-check - CI-only; scripts/type-check.mjs fails fast locally
   # because root `tsgo --noEmit` OOMs developer machines.
   typecheck:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
     name: Typecheck
     runs-on: ubuntu-latest
     steps:
@@ -52,14 +185,53 @@ jobs:
       - name: Typecheck
         run: pnpm type-check
 
+  # Slimming boundary guard — regenerates the capability census from the
+  # working tree and fails when a DELETE capability gains an unexplained
+  # inbound dependency (i.e. live code importing a retired surface).
+  # Pure Node script: no dependency install needed.
+  slimming-boundary:
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    name: Slimming Boundary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Check slimming boundary
+        run: node scripts/slimming/census.mjs --check
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   # Package tests - all packages in single job to save runner resources
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-packages:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.packages == 'true'
     runs-on: ubuntu-latest
     name: Test Packages
     env:
-      PACKAGES: '@orvilo/file-loaders @orvilo/prompts @orvilo/model-runtime @orvilo/web-crawler @orvilo/electron-server-ipc @orvilo/utils @orvilo/context-engine @orvilo/agent-runtime @orvilo/conversation-flow @orvilo/ssrf-safe-fetch @orvilo/memory-user-memory @orvilo/types @orvilo/trpc @orvilo/app-config @orvilo/locales @orvilo/env @orvilo/builtin-tool-orvilo-agent model-bank @orvilo/agent-gateway-client @orvilo/agent-manager-runtime @orvilo/device-gateway-client @orvilo/device-identity @orvilo/eval-dataset-parser @orvilo/eval-rubric @orvilo/fetch-sse @orvilo/heterogeneous-agents'
+      PACKAGES: '@orvilo/file-loaders @orvilo/prompts @orvilo/model-runtime @orvilo/web-crawler @orvilo/electron-server-ipc @orvilo/utils @orvilo/context-engine @orvilo/agent-execution @orvilo/conversation-flow @orvilo/ssrf-safe-fetch @orvilo/memory-user-memory @orvilo/types @orvilo/trpc @orvilo/app-config @orvilo/locales @orvilo/env @orvilo/builtin-tool-orvilo-agent model-bank @orvilo/agent-gateway-client @orvilo/agent-manager-runtime @orvilo/device-gateway-client @orvilo/device-identity @orvilo/eval-dataset-parser @orvilo/eval-rubric @orvilo/fetch-sse @orvilo/heterogeneous-agents'
 
     steps:
       - name: Checkout
@@ -95,9 +267,7 @@ jobs:
           done
 
       - name: Upload coverage to Codecov
-        if: always()
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        if: ${{ always() && env.CODECOV_TOKEN != '' }}
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
@@ -147,9 +317,19 @@ jobs:
           done
 
   # App tests - run sharded tests
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-app:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.app == 'true'
     strategy:
       matrix:
         shard: [1, 2]
@@ -172,6 +352,12 @@ jobs:
       - name: Install deps
         run: pnpm install
 
+      - name: Enforce original Chinese UI font
+        if: matrix.shard == 1
+        run: |
+          node --import tsx scripts/ci/checkChineseUiFont.mjs
+          node --test scripts/ci/checkChineseUiFont.test.mjs
+
       - name: Run tests
         run: bunx vitest --coverage --silent='passed-only' --reporter=default --reporter=blob --project app --shard=${{ matrix.shard }}/2
 
@@ -185,6 +371,16 @@ jobs:
           retention-days: 1
 
   # Merge sharded test reports and upload coverage
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-app-coverage:
     needs: test-app
     if: ${{ !cancelled() && needs.test-app.result == 'success' }}
@@ -218,6 +414,7 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage
 
       - name: Upload App Coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -231,8 +428,8 @@ jobs:
   # detection cascade against real install paths. The driver script only needs
   # node builtins, so this job skips the monorepo install entirely.
   test-windows-shell:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.windows_shell == 'true'
     name: Test Windows Shell
 
     runs-on: windows-latest
@@ -249,9 +446,19 @@ jobs:
       - name: Verify Windows shell strategy
         run: bun run packages/local-file-shell/scripts/verify-windows-shell.ts
 
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   test-desktop:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.desktop == 'true'
     name: Test Desktop App
 
     runs-on: ubuntu-latest
@@ -293,15 +500,26 @@ jobs:
         working-directory: apps/desktop
 
       - name: Upload Desktop App Coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./apps/desktop/coverage/lcov.info
           flags: desktop
 
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   test-server:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.server == 'true'
     strategy:
       matrix:
         shard: [1, 2]
@@ -339,6 +557,16 @@ jobs:
           retention-days: 1
 
   # Merge sharded test reports and upload coverage
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-server-coverage:
     needs: test-server
     if: ${{ !cancelled() && needs.test-server.result == 'success' }}
@@ -372,15 +600,16 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage --coverage.reportsDirectory=./apps/server/coverage
 
       - name: Upload Server coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./apps/server/coverage/lcov.info
           flags: server
 
-  test-databsae:
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+  test-database:
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.database == 'true'
     name: Test Database
 
     runs-on: ubuntu-latest
@@ -413,6 +642,27 @@ jobs:
       - name: Install deps
         run: pnpm i
 
+      # The service container runs a stock ParadeDB config; on CI runners its
+      # checkpoints degrade into multi-minute write storms that starve queries.
+      # This is a disposable test database, so trade durability for a fast write
+      # path — fsync off and checkpoints spread out. Every setting is
+      # SIGHUP-reloadable; `options` can't pass postgres args (they'd be docker
+      # args). Same tuning as e2e.yml's "Tune test Postgres for CI" step.
+      - name: Tune test Postgres for CI
+        run: |
+          CONTAINER=$(docker ps --filter "ancestor=paradedb/paradedb:latest" --format '{{.ID}}')
+          # One -c per statement: a multi-statement -c wraps everything in an
+          # implicit transaction and ALTER SYSTEM rejects transaction blocks.
+          docker exec "$CONTAINER" psql -U postgres -d postgres \
+            -c "ALTER SYSTEM SET fsync = 'off'" \
+            -c "ALTER SYSTEM SET synchronous_commit = 'off'" \
+            -c "ALTER SYSTEM SET full_page_writes = 'off'" \
+            -c "ALTER SYSTEM SET checkpoint_timeout = '1800s'" \
+            -c "ALTER SYSTEM SET checkpoint_completion_target = '0.9'" \
+            -c "ALTER SYSTEM SET max_wal_size = '4GB'" \
+            -c "ALTER SYSTEM SET autovacuum = 'off'" \
+            -c "SELECT pg_reload_conf()"
+
       - name: Lint
         run: bun run lint
 
@@ -426,8 +676,165 @@ jobs:
           APP_URL: https://home.com
 
       - name: Upload Database coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/database/coverage/lcov.info
           flags: database
+
+  # Single required check for branch protection and deploy promotion. Branch
+  # rules require this one name, so "the tests passed" can never mean "one
+  # shard was green while another failed" — a job that failed, was skipped, or
+  # never ran keeps the gate red.
+  # MAINTENANCE: adding a CI job above requires updating both `needs` here
+  # and the `required` list in the step below — a job absent from both is
+  # silently excluded from the gate.
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A failing leaf means the run's verdict is already known: cancel
+        # the rest instead of burning runner minutes to the same red gate.
+        # The gate job lands cancelled, which still reports red to branch
+        # protection. Vercel deploys run outside Actions and are untouched.
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+  required-quality-gate:
+    name: Required Quality Gate
+    needs:
+      - check-duplicate-run
+      - changes
+      - typecheck
+      - slimming-boundary
+      - test-packages
+      - test-app
+      - test-windows-shell
+      - test-desktop
+      - test-server
+      - test-database
+      - merge-app-coverage
+      - merge-server-coverage
+    # always(): a failed upstream must not skip this job — its result IS the
+    # failure signal branch protection and the deploy pipeline read.
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify every required job succeeded for this commit
+        env:
+          NEEDS: ${{ toJson(needs) }}
+          GH_TOKEN: ${{ github.token }}
+          # How long a duplicate-skipped gate waits for the owning run's
+          # verdict before failing closed. Must exceed the full test suite.
+          GATE_MIRROR_TIMEOUT: '2700'
+          # pull_request runs evaluate the merge ref — gate check runs for the
+          # owning push run live on the head SHA.
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Only `skip_after_successful_duplicate` may turn the gate green: it
+          # means an identical tree already produced a genuinely-executed green
+          # run, whose check run covers this SHA. Concurrent skips
+          # (`same_content*`/`outdated_*`) mean a newer in-flight run owns the
+          # gate — failing here would leave a permanent red check run on this
+          # SHA that outlives the owner's green (required checks take the
+          # latest completed run per name), and a synthetic success would let a
+          # later `skip_after_successful_duplicate` reuse it even if the real
+          # run then fails. So wait for the owner's verdict and mirror it:
+          # green mirrors green, red mirrors red, no verdict in time fails.
+          if [ "$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.should_skip')" = "true" ]; then
+            reason="$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.skip_reason')"
+            echo "Duplicate skip reason: ${reason:-unknown}"
+            if [ "$reason" = "skip_after_successful_duplicate" ]; then
+              echo "An identical run already executed green for this SHA's tree — reusing its gate."
+              exit 0
+            fi
+            echo "Concurrent duplicate skip — waiting for the owning run's Required Quality Gate verdict."
+            deadline=$(( $(date +%s) + GATE_MIRROR_TIMEOUT ))
+            while :; do
+              # This job's own check run is still in_progress (conclusion null)
+              # and never matches the filter. A 'cancelled'/'neutral' verdict
+              # is not a verdict — it usually means an even newer run started,
+              # so keep waiting rather than mirroring a non-answer.
+              if ! verdict=$(gh api \
+                "repos/${{ github.repository }}/commits/${HEAD_SHA}/check-runs?per_page=100" \
+                --jq '[.check_runs[] | select(.name == "Required Quality Gate" and .conclusion != null)]
+                      | map(select(.conclusion == "success" or .conclusion == "failure"
+                          or .conclusion == "timed_out" or .conclusion == "action_required"))
+                      | sort_by(.completed_at) | last | .conclusion // ""' 2>&1); then
+                echo "Check-runs API call failed; retrying in 30s: $verdict"
+                verdict=''
+              fi
+              case "$verdict" in
+                success)
+                  echo "Owning run's gate succeeded — mirroring green."
+                  exit 0
+                  ;;
+                failure|timed_out|action_required)
+                  echo "::error::Owning run's gate concluded '${verdict}' — mirroring the failure."
+                  exit 1
+                  ;;
+              esac
+              # The owner's gate check run stays 'cancelled' forever when the
+              # push run itself was cancelled — fail-fast sibling cancel, a
+              # racing push on the same branch, or a manual cancel. No verdict
+              # can ever land for this SHA, so fail fast and point at the
+              # owner instead of hanging for the whole mirror timeout. A rerun
+              # resets the newest run's conclusion to null, which keeps waiting.
+              if owner=$(gh api \
+                "repos/${{ github.repository }}/actions/workflows/test.yml/runs?event=push&head_sha=${HEAD_SHA}&per_page=5" \
+                --jq '.workflow_runs[0] | {conclusion, html_url} | @json' 2>&1); then
+                owner_conclusion=$(echo "$owner" | jq -r '.conclusion // ""')
+                if [ "$owner_conclusion" = "cancelled" ]; then
+                  owner_url=$(echo "$owner" | jq -r '.html_url // ""')
+                  echo "::error::Owning push run was cancelled — no gate verdict can land for this SHA. The real failure (or cancel) lives in the owning run: ${owner_url}"
+                  exit 1
+                fi
+              else
+                echo "Owning-run lookup failed; continuing to wait: $owner"
+              fi
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "::error::Timed out waiting for the owning run's Required Quality Gate verdict — failing closed."
+                exit 1
+              fi
+              echo "Owning run's gate not concluded yet; waiting 30s…"
+              sleep 30
+            done
+          fi
+
+          required=(
+            typecheck
+            slimming-boundary
+            test-packages
+            test-app
+            test-windows-shell
+            test-desktop
+            test-server
+            test-database
+            merge-app-coverage
+            merge-server-coverage
+          )
+          # A job skipped because its area filter did not match is a pass —
+          # any other non-success keeps the gate red.
+          declare -A area_of=(
+            [typecheck]=code [slimming-boundary]=code [test-packages]=packages [test-app]=app
+            [merge-app-coverage]=app [test-windows-shell]=windows_shell
+            [test-desktop]=desktop [test-server]=server
+            [merge-server-coverage]=server [test-database]=database
+          )
+          failed=0
+          for job in "${required[@]}"; do
+            result=$(echo "$NEEDS" | jq -r ".[\"$job\"].result")
+            area=${area_of[$job]}
+            filter=$(echo "$NEEDS" | jq -r ".changes.outputs.${area} // \"\"")
+            if [ "$result" != "success" ] && ! { [ "$result" = "skipped" ] && [ "$filter" = "false" ]; }; then
+              echo "::error::$job: $result (filter ${area}=${filter})"
+              failed=1
+            else
+              echo "$job: $result (filter ${area}=${filter})"
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Required jobs failed or were skipped — quality gate stays red."
+            exit 1
+          fi

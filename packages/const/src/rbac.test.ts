@@ -71,6 +71,16 @@ describe('workspace built-in roles', () => {
       expect(admin).not.toContain(code);
     }
   });
+
+  it('lets viewers organize their own notifications without granting task edits', () => {
+    const viewer = WORKSPACE_ROLE_PERMISSIONS[WORKSPACE_SYSTEM_ROLES.VIEWER];
+
+    expect(viewer).toEqual(
+      expect.arrayContaining(['notification:read:all', 'notification:organize:all']),
+    );
+    expect(viewer).not.toContain('agent:update:all');
+    expect(viewer).not.toContain('message:create:all');
+  });
 });
 
 describe('personal default permissions', () => {
@@ -79,7 +89,7 @@ describe('personal default permissions', () => {
       const [resource, , scope] = [code.split(':')[0], code.split(':')[1], code.split(':')[2]];
       if (scope === 'all') {
         // the only :all grants are user_id-bound shared registries
-        expect(['agent_label', 'session_group']).toContain(resource);
+        expect(['agent_label', 'notification', 'session_group']).toContain(resource);
       } else {
         expect(scope).toBe('owner');
       }

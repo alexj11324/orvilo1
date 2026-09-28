@@ -20,9 +20,7 @@ import generate from './references/generate';
 import kb from './references/kb';
 import memory from './references/memory';
 import message from './references/message';
-import model from './references/model';
 import plugin from './references/plugin';
-import provider from './references/provider';
 import search from './references/search';
 import skill from './references/skill';
 import topic from './references/topic';
@@ -50,9 +48,7 @@ export const OrviloSkill: BuiltinSkill = {
     'references/kb': kb,
     'references/memory': memory,
     'references/message': message,
-    'references/model': model,
     'references/plugin': plugin,
-    'references/provider': provider,
     'references/search': search,
     'references/skill': skill,
     'references/topic': topic,

@@ -8,6 +8,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
+import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import { shinyTextStyles } from '@/styles';
 
@@ -362,6 +363,16 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
                   {view.artifacts.length}
                 </span>
               </Tooltip>
+            )}
+            {/* The same chip the task detail carries — the run's branch on its
+                way back onto base, so a resolved node still shows whether the
+                work landed and why it did not. */}
+            {view.integration && (
+              <RunIntegrationTag
+                integration={view.integration}
+                taskId={node.taskId ?? undefined}
+                topicId={view.integration.topicId}
+              />
             )}
           </div>
         )}

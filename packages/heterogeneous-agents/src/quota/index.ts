@@ -1,7 +1,6 @@
 export * from './calibration';
 export * from './cost';
 export * from './identity';
-export * from './loadBalancer';
 export * from './readings';
 export * from './snapshot';
 export * from './types';

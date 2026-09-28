@@ -17,9 +17,9 @@ const EMPTY_SUBSCRIBE = () => () => {};
 /**
  * Reads the bound `agentId` from the ChatInput store, reactively when a store
  * Provider exists and falling back to `undefined` otherwise. This hook is
- * reached from the shared <Action> component, which the image/video generation
- * prompt reuses outside any ChatInput store — reading the store directly there
- * would throw ("...used zustand provider as an ancestor.").
+ * reached from the shared <Action> component, which may render outside any
+ * ChatInput store — reading the store directly there would throw
+ * ("...used zustand provider as an ancestor.").
  */
 const useChatInputAgentId = (): string | undefined => {
   const storeApi = useChatInputStoreApiOptional() as StoreApi<State> | undefined;

@@ -68,19 +68,28 @@ async function focusChatInput(this: CustomWorld): Promise<void> {
     },
   ];
 
-  for (const { label, locator } of candidates) {
-    const count = await locator.count();
-    console.log(`   📍 Candidate "${label}" count: ${count}`);
+  // The waitForFunction above can resolve on a skeleton-phase node that gets
+  // unmounted during hydration, so the candidate scan must retry until the
+  // editable input is actually visible.
+  const deadline = Date.now() + WAIT_TIMEOUT;
+  while (true) {
+    for (const { label, locator } of candidates) {
+      const count = await locator.count();
+      if (count > 0) console.log(`   📍 Candidate "${label}" count: ${count}`);
 
-    for (let i = 0; i < count; i++) {
-      const item = locator.nth(i);
-      const visible = await item.isVisible().catch(() => false);
-      if (!visible) continue;
+      for (let i = 0; i < count; i++) {
+        const item = locator.nth(i);
+        const visible = await item.isVisible().catch(() => false);
+        if (!visible) continue;
 
-      await item.click({ force: true });
-      console.log(`   ✓ Focused ${label} at index ${i}`);
-      return;
+        await item.click({ force: true });
+        console.log(`   ✓ Focused ${label} at index ${i}`);
+        return;
+      }
     }
+
+    if (Date.now() >= deadline) break;
+    await this.page.waitForTimeout(250);
   }
 
   throw new Error('Could not find a visible chat input to focus');

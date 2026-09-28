@@ -48,6 +48,10 @@ describe('mobileRouter task routes', () => {
     expect(source).toContain("import('@/routes/(main)/agent/task/[taskId]')");
     expect(source).toContain("path: 'tasks'");
     expect(source).toContain("path: 'task'");
+    expect(source).toContain("path: 'inbox'");
+    expect(source).toContain("path: 'my-work'");
+    expect(source).toContain("path: 'views'");
+    expect(source).toContain("path: 'teams'");
     // The `:slug?` tail is the readable title segment; it never resolves the
     // task, so pre-slug links keep matching the same route.
     expect(source).toContain("path: ':taskId/:slug?'");
@@ -56,25 +60,29 @@ describe('mobileRouter task routes', () => {
   });
 });
 
-describe('mobileRouter workspace provider routes', () => {
-  it('registers workspace provider list and path-shaped deep-link redirect', async () => {
-    const source = await readFile(
-      path.join(process.cwd(), 'src/spa/router/mobileRouter.config.tsx'),
-      'utf8',
-    );
+describe('mobileRouter retired provider routes', () => {
+  it.each([
+    '/settings/provider',
+    '/settings/provider/openai',
+    '/acme/settings/provider',
+    '/acme/settings/provider/openai',
+    '/acme/settings/service-model',
+  ])('redirects retired provider route %s to the settings root', (pathname) => {
+    const matches = matchRoutes(mobileRoutes, pathname);
+    const redirect = matches?.find(
+      ({ route }) =>
+        (route.element as { props?: { to?: string } } | undefined)?.props?.to !== undefined,
+    )?.route;
 
-    // Without these, workspace-aware provider links (`/:slug/settings/provider/:id`)
-    // fall through to the mobile `*` route and kick the user out of the workspace.
-    expect(source).toContain("import('@/routes/(main)/[workspaceSlug]/settings/provider')");
-    // The mobile route must use the mobile variant, otherwise the page renders
-    // the desktop 280px provider menu layout on phones.
-    expect(source).toContain('m.WorkspaceProviderSettingMobile');
-    // The redirect is statically imported: lazy-loading it would flash the
-    // generic brand loader before redirecting.
-    expect(source).toContain("from '@/features/WorkspaceSetting/ProviderRedirect'");
-    expect(source).toContain("path: 'provider'");
-    expect(source).toContain("path: 'provider/:providerId'");
+    expect(redirect).toBeDefined();
   });
+});
+
+it('redirects the legacy mobile Linear page to workspace settings', () => {
+  const leaf = matchRoutes(mobileRoutes, '/acme/settings/linear')?.at(-1)?.route;
+
+  expect(leaf?.path).toBe('linear');
+  expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe('..');
 });
 
 describe('mobile retired product routes', () => {
@@ -103,4 +111,23 @@ describe('mobile retired product routes', () => {
       expect((redirect?.element as { props: { to: string } }).props.to).toBe('..');
     },
   );
+});
+
+// The standalone Acceptance / Verify platform is retired. Its two roots must
+// stay reserved words on mobile too: without a route of their own, `/acceptance`
+// and `/verify` would be parsed as workspace slugs and `/acceptance/<id>` would
+// answer "no such workspace" instead of landing on the task board.
+describe('mobileRouter retired acceptance/verify roots', () => {
+  it.each([
+    '/acceptance',
+    '/acceptance/acceptance-1',
+    '/acceptance/acceptance-1/check/check-1',
+    '/verify',
+    '/verify/run-1',
+  ])('claims retired root %s with its own route, not the slug segment', (pathname) => {
+    const leaf = matchRoutes(mobileRoutes, pathname)?.at(-1)?.route;
+
+    expect(leaf?.path).toMatch(/^(acceptance|verify)\/\*$/);
+    expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('/tasks');
+  });
 });

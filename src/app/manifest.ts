@@ -28,16 +28,22 @@ const manifest = async (): Promise<MetadataRoute.Manifest> => {
     };
   }
 
-  const [{ BRANDING_LOGO_URL, BRANDING_NAME }, { kebabCase }, { manifestModule }] =
-    await Promise.all([
-      import('@orvilo/business-const'),
-      import('es-toolkit/compat'),
-      import('@/libs/metadata/manifest'),
-    ]);
+  const [
+    { BRANDING_LOGO_URL, BRANDING_NAME },
+    { kebabCase },
+    { manifestModule },
+    { default: metadataCopy },
+  ] = await Promise.all([
+    import('@orvilo/business-const'),
+    import('es-toolkit/compat'),
+    import('@/libs/metadata/manifest'),
+    // Same source as the page metadata, so the manifest cannot drift from it.
+    import('@/locales/default/metadata'),
+  ]);
 
   // @ts-expect-error - manifestModule.generate returns extended manifest with custom properties
   return manifestModule.generate({
-    description: `${BRANDING_NAME} is a work-and-lifestyle space to find, build, and collaborate with agent teams that grow with you.`,
+    description: metadataCopy['chat.description'].replace('{{appName}}', BRANDING_NAME),
     icons: [
       {
         purpose: 'any',

@@ -59,6 +59,7 @@ export default {
     'Automations run recurring agent work on a trigger. Start blank or pick a template below.',
   'page.empty.title': 'No automations yet',
   'page.load_failed': 'Failed to load automations',
+  'page.loading': 'Loading automations…',
   'page.new_automation': 'New automation',
   'page.no_matches': 'No matching automations',
   'page.retry': 'Retry',
@@ -88,6 +89,7 @@ export default {
   'run_source.goal': 'Goal',
   'run_source.heartbeat': 'Interval',
   'run_source.manual': 'Manual',
+  'run_source.orchestrator': 'Orchestrator',
   'run_source.schedule': 'Schedule',
   'run_source.webhook': 'Webhook',
 

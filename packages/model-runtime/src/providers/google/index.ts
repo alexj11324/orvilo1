@@ -18,13 +18,10 @@ import type {
   ChatCompletionTool,
   ChatMethodOptions,
   ChatStreamPayload,
-  CreateImageMethodOptions,
   GenerateObjectOptions,
   GenerateObjectPayload,
 } from '../../types';
 import { AgentRuntimeErrorType } from '../../types/error';
-import type { CreateImagePayload, CreateImageResponse } from '../../types/image';
-import type { CreateVideoPayload, CreateVideoResponse } from '../../types/video';
 import { AgentRuntimeError } from '../../utils/createError';
 import { debugStream } from '../../utils/debugStream';
 import { getModelPricing } from '../../utils/getModelPricing';
@@ -37,8 +34,6 @@ import {
   createSignatureScope,
   getRuntimeSignatureScopeSource,
 } from '../../utils/signatureScope';
-import { createGoogleImage } from './createImage';
-import { createGoogleVideo, pollGoogleVideoOperation } from './createVideo';
 import { createGoogleGenerateObject, createGoogleGenerateObjectWithTools } from './generateObject';
 import {
   isGemini3OrAbove,
@@ -302,26 +297,6 @@ export class OrviloGoogleAI implements OrviloRuntimeAI {
    * Generate images using Google AI Imagen API or Gemini Chat Models
    * @see https://ai.google.dev/gemini-api/docs/image-generation#imagen
    */
-  async createImage(
-    payload: CreateImagePayload,
-    options?: CreateImageMethodOptions,
-  ): Promise<CreateImageResponse> {
-    const requestPayload = withMappedModelId(payload, this.modelIdMappingOptions);
-
-    return createGoogleImage(this.client, this.provider, requestPayload, {
-      pricingContext: options?.pricingContext,
-      pricingModel: payload.model,
-      routingModel: payload.model,
-    });
-  }
-
-  async createVideo(payload: CreateVideoPayload): Promise<CreateVideoResponse> {
-    return createGoogleVideo(
-      this.client,
-      this.provider,
-      withMappedModelId(payload, this.modelIdMappingOptions),
-    );
-  }
 
   /**
    * Transcribe audio (ASR) with Gemini's native multimodal API.
@@ -351,10 +326,6 @@ export class OrviloGoogleAI implements OrviloRuntimeAI {
 
       throw AgentRuntimeError.chat({ error, errorType, provider: this.provider });
     }
-  }
-
-  async handlePollVideoStatus(inferenceId: string) {
-    return pollGoogleVideoOperation(this.client, inferenceId, this.provider, this.apiKey!);
   }
 
   /**

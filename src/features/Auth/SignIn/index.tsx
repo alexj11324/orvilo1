@@ -1,88 +1,42 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router';
+
 import BrandTextLoading from '@/components/Loading/BrandTextLoading';
+import { useAuthServerConfigStore } from '@/features/AuthShell/AuthServerConfigProvider';
+import { sanitizeRedirectPath } from '@/utils/onboardingRedirect';
 
-import DevSeedSignIn from './DevSeedSignIn';
-import { SignInEmailSentStep } from './SignInEmailSentStep';
-import { SignInEmailStep } from './SignInEmailStep';
-import { SignInPasswordStep } from './SignInPasswordStep';
-import { useSignIn } from './useSignIn';
-
+/**
+ * Sign-in is owned by the accounts portal (Clerk). This page is a bounce:
+ * it forwards `callbackUrl` to the portal's `return_url`, forwards
+ * `signed_out` as the portal's `sign_out` flag (ends the Clerk session too),
+ * and preserves `reason` (e.g. `sessionExpired`) for the portal.
+ */
 const SignIn = () => {
-  const {
-    autoSsoActive,
-    disableEmailPassword,
-    email,
-    form,
-    handleBackFromSent,
-    handleBackToEmail,
-    handleCheckUser,
-    handleForgotPassword,
-    handleGoToSignup,
-    handleResendEmail,
-    handleSignIn,
-    handleSocialSignIn,
-    isSocialOnly,
-    lastAuthProvider,
-    loading,
-    oAuthSSOProviders,
-    sending,
-    sessionExpired,
-    sentInfo,
-    serverConfigInit,
-    socialLoading,
-    step,
-  } = useSignIn();
-
-  // Single-SSO deployments hand the whole login surface to the hosted accounts
-  // site — show a loading state while the redirect is being prepared.
-  if (autoSsoActive) return <BrandTextLoading debugId="SignInAutoSso" />;
-
-  if (step === 'emailSent' && sentInfo)
-    return (
-      <SignInEmailSentStep
-        email={sentInfo.email}
-        sending={sending}
-        type={sentInfo.type}
-        onBack={handleBackFromSent}
-        onResend={handleResendEmail}
-      />
-    );
-
-  if (step === 'password')
-    return (
-      <SignInPasswordStep
-        email={email}
-        forgotLoading={sending}
-        form={form as any}
-        loading={loading}
-        onBackToEmail={handleBackToEmail}
-        onForgotPassword={handleForgotPassword}
-        onSubmit={handleSignIn}
-      />
-    );
-
-  return (
-    <>
-      <SignInEmailStep
-        disableEmailPassword={disableEmailPassword}
-        form={form as any}
-        isSocialOnly={isSocialOnly}
-        lastAuthProvider={lastAuthProvider}
-        loading={loading}
-        oAuthSSOProviders={oAuthSSOProviders}
-        serverConfigInit={serverConfigInit}
-        sessionExpired={sessionExpired}
-        socialLoading={socialLoading}
-        onCheckUser={handleCheckUser}
-        onGoToSignup={handleGoToSignup}
-        onResetEmail={handleBackToEmail}
-        onSetPassword={handleForgotPassword}
-        onSocialSignIn={handleSocialSignIn}
-      />
-      <DevSeedSignIn />
-    </>
+  const [searchParams] = useSearchParams();
+  const accountsUrl = useAuthServerConfigStore(
+    (s) => s.serverConfig.authAccountsUrl || 'https://accounts.aspectlylabs.com',
   );
+
+  useEffect(() => {
+    const callbackUrl = sanitizeRedirectPath(searchParams.get('callbackUrl'));
+    const returnUrl = new URL(callbackUrl, window.location.origin).href;
+
+    const loginUrl = new URL('/login', accountsUrl);
+    loginUrl.searchParams.set('return_url', returnUrl);
+    if (searchParams.get('signed_out')) loginUrl.searchParams.set('sign_out', '1');
+    const reason = searchParams.get('reason');
+    if (reason) loginUrl.searchParams.set('reason', reason);
+    const hl = searchParams.get('hl');
+    if (hl) loginUrl.searchParams.set('hl', hl);
+
+    // `replace` keeps the intermediate /signin hop out of history so Back
+    // doesn't loop the user straight back to the portal.
+    window.location.replace(loginUrl.href);
+  }, [accountsUrl, searchParams]);
+
+  return <BrandTextLoading debugId="SignInPortalRedirect" />;
 };
 
 export default SignIn;

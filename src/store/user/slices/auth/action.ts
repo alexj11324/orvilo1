@@ -12,26 +12,8 @@ interface AuthProvidersData {
 }
 
 const fetchAuthProvidersData = async (): Promise<AuthProvidersData> => {
-  const { accountInfo, listAccounts } = await import('@/libs/better-auth/auth-client');
-  const result = await listAccounts();
-  const accounts = result.data || [];
-  const hasPasswordAccount = accounts.some((account) => account.providerId === 'credential');
-  const providers = await Promise.all(
-    accounts
-      .filter((account) => account.providerId !== 'credential')
-      .map(async (account) => {
-        // In theory, the id_token could be decrypted from the accounts table, but I found that better-auth on GitHub does not save the id_token
-        const info = await accountInfo({
-          query: { accountId: account.accountId },
-        });
-        return {
-          email: info.data?.user?.email ?? undefined,
-          provider: account.providerId,
-          providerAccountId: account.accountId,
-        };
-      }),
-  );
-  return { hasPasswordAccount, providers };
+  const { fetchAuthAccounts } = await import('@/libs/auth/session');
+  return fetchAuthAccounts();
 };
 
 type Setter = StoreSetter<UserStore>;
@@ -67,7 +49,7 @@ export class UserAuthActionImpl {
     const signingOutUserId = this.#get().user?.id;
 
     // Clear the OIDC Provider session for the current browser *before*
-    // destroying the better-auth session. This prevents a stale OIDC session
+    // destroying the web session. This prevents a stale OIDC session
     // from silently issuing tokens for the old account after the user signs
     // in as someone else.
     try {
@@ -76,23 +58,19 @@ export class UserAuthActionImpl {
       // Best-effort: don't block sign-out if the cleanup request fails
     }
 
-    const { signOut } = await import('@/libs/better-auth/auth-client');
-    await signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          // Drop the persisted active scope so the next boot doesn't hydrate the
-          // signed-out user's cache (localStorage survives the reload below).
-          clearActiveScopeKey();
-          clearUserDisplaySnapshot(signingOutUserId);
-          // Use window.location.href to trigger a full page reload
-          // This ensures all client-side state (React, Zustand, cache) is cleared
-          // signed_out marks an explicit sign-out: the signin page must not
-          // auto-resume SSO (the IdP session may still be alive) or the user
-          // could never reach a signed-out state.
-          window.location.href = options?.redirectTo || '/signin?signed_out=1';
-        },
-      },
-    });
+    const { signOutWebSession } = await import('@/libs/auth/session');
+    await signOutWebSession();
+
+    // Drop the persisted active scope so the next boot doesn't hydrate the
+    // signed-out user's cache (localStorage survives the reload below).
+    clearActiveScopeKey();
+    clearUserDisplaySnapshot(signingOutUserId);
+    // Use window.location.href to trigger a full page reload
+    // This ensures all client-side state (React, Zustand, cache) is cleared
+    // signed_out marks an explicit sign-out: the /signin bounce forwards it
+    // to the accounts portal as sign_out=1, which ends the upstream Clerk
+    // session too.
+    window.location.href = options?.redirectTo || '/signin?signed_out=1';
   };
 
   openLogin = async (reason?: 'sessionExpired'): Promise<void> => {

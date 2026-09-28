@@ -6,16 +6,14 @@ vi.mock('next/headers', () => ({
   headers: vi.fn(() => new Headers()),
 }));
 
-vi.mock('@/auth', () => ({
-  auth: {
-    api: {
-      getSession: vi.fn().mockResolvedValue({
-        user: {
-          id: 'better-auth-user-id',
-        },
-      }),
-    },
-  },
+vi.mock('@/database/core/db-adaptor', () => ({
+  getServerDB: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@/server/services/auth', () => ({
+  resolveAuthSessionFromHeaders: vi.fn().mockResolvedValue({
+    userId: 'session-user-id',
+  }),
 }));
 
 describe('getUserAuth', () => {
@@ -23,17 +21,22 @@ describe('getUserAuth', () => {
     vi.clearAllMocks();
   });
 
-  it('should return better auth session', async () => {
+  it('should return the resolved cookie session', async () => {
     const auth = await getUserAuth();
 
     expect(auth).toEqual({
-      betterAuth: {
-        user: {
-          id: 'better-auth-user-id',
-        },
+      session: {
+        userId: 'session-user-id',
       },
-      userId: 'better-auth-user-id',
+      userId: 'session-user-id',
     });
+  });
+
+  it('should return no userId when there is no session', async () => {
+    const { resolveAuthSessionFromHeaders } = await import('@/server/services/auth');
+    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
+
+    await expect(getUserAuth()).resolves.toEqual({ session: null, userId: undefined });
   });
 });
 

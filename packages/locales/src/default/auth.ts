@@ -328,6 +328,7 @@ export default {
   'profile.sso.link.button': 'Connect Account',
   'profile.sso.link.success': 'Account linked successfully',
   'profile.sso.loading': 'Loading linked third-party accounts',
+  'profile.sso.manageOnPortal': 'Manage on accounts portal',
   'profile.sso.providers': 'Connected Accounts',
   'profile.sso.unlink.description':
     'Re-authorization or re-linking is required to sign in with {{provider}} again after unlinking.',

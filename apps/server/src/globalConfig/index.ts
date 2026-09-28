@@ -10,7 +10,6 @@ import { fileEnv } from '@/envs/file';
 import { knowledgeEnv } from '@/envs/knowledge';
 import { langfuseEnv } from '@/envs/langfuse';
 import { toolsEnv } from '@/envs/tools';
-import { parseSSOProviders } from '@/libs/better-auth/utils/server';
 import { parseSystemAgent } from '@/server/globalConfig/parseSystemAgent';
 import { type GlobalServerConfig } from '@/types/serverConfig';
 import { cleanObject } from '@/utils/object';
@@ -22,14 +21,6 @@ import {
 import { parseAgentConfig } from './parseDefaultAgent';
 import { parseFilesConfig } from './parseFilesConfig';
 import { getPublicMemoryExtractionConfig } from './parseMemoryExtractionConfig';
-
-/**
- * Get Better-Auth SSO providers list
- * Parses AUTH_SSO_PROVIDERS and returns enabled providers
- */
-const getBetterAuthSSOProviders = () => {
-  return parseSSOProviders(authEnv.AUTH_SSO_PROVIDERS);
-};
 
 export const getServerGlobalConfig = async () => {
   const { DEFAULT_AGENT_CONFIG } = getAppConfig();
@@ -101,6 +92,7 @@ export const getServerGlobalConfig = async () => {
 
   const config: GlobalServerConfig = {
     aiProvider: await genServerAiProvidersConfig(aiProviderSpecificConfig),
+    authAccountsUrl: authEnv.AUTH_ACCOUNTS_URL || 'https://accounts.aspectlylabs.com',
     defaultAgent: {
       config: parseAgentConfig(DEFAULT_AGENT_CONFIG),
     },
@@ -134,7 +126,6 @@ export const getServerGlobalConfig = async () => {
     memory: {
       userMemory: cleanObject(getPublicMemoryExtractionConfig()),
     },
-    oAuthSSOProviders: getBetterAuthSSOProviders(),
     systemAgent: parseSystemAgent(appEnv.SYSTEM_AGENT),
     telemetry: {
       langfuse: langfuseEnv.ENABLE_LANGFUSE,

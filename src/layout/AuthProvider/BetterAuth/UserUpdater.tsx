@@ -7,7 +7,7 @@ import { memo, type PropsWithChildren, useEffect, useLayoutEffect, useState } fr
 import { useTranslation } from 'react-i18next';
 
 import { DEFAULT_PREFERENCE } from '@/const/user';
-import { useSession } from '@/libs/better-auth/auth-client';
+import { useAuthSession } from '@/libs/auth/session';
 import { useAppPainted } from '@/spa/atoms/app';
 import { removeStaticLoadingScreen } from '@/spa/loadingScreen';
 import { useUserStore } from '@/store/user';
@@ -15,10 +15,10 @@ import { readUserDisplaySnapshot } from '@/store/user/displaySnapshot';
 import { type OrviloUser } from '@/types/user';
 
 /**
- * Sync Better-Auth session state to Zustand store
+ * Sync the web session (`orvilo_auth` cookie) state to the Zustand store.
  */
 const UserUpdater = memo(({ children }: PropsWithChildren) => {
-  const { data: session, isPending, isRefetching, error, refetch } = useSession();
+  const { data: session, isPending, isRefetching, error, refetch } = useAuthSession();
   const { t } = useTranslation(['auth', 'common']);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [recoveryVisible, setRecoveryVisible] = useState(false);
@@ -44,7 +44,7 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
     }
   }, [showRecovery]);
 
-  const betterAuthUser = session?.user;
+  const sessionUser = session?.user;
 
   /** A failed session check is not evidence of sign-out. Retry transient failures. */
   useEffect(() => {
@@ -63,9 +63,9 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
     return () => clearTimeout(timer);
   }, [error, isPending, isRefetching, refetch, retryable, retryAttempt]);
 
-  // Sync user data from Better-Auth session to Zustand store.
-  // Better-Auth refetches the session on tab focus (visibilitychange), which
-  // gives us a new `betterAuthUser` reference each time even when the
+  // Sync user data from the session endpoint to the Zustand store.
+  // The session hook refetches on tab focus (visibilitychange), which
+  // gives us a new `sessionUser` reference each time even when the
   // underlying user is unchanged. We must merge into the existing user rather
   // than replace it — fields like `interests`, `firstName`, `latestName` are
   // populated by `useInitUserState` (one-shot SWR) and would otherwise be
@@ -81,11 +81,11 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
   useLayoutEffect(() => {
     if (isPending || isRefetching || (error && error.status !== 401)) return;
 
-    if (betterAuthUser && !error) {
+    if (sessionUser && !error) {
       useUserStore.setState((state) => {
-        const baseUser = state.user?.id === betterAuthUser.id ? state.user : undefined;
+        const baseUser = state.user?.id === sessionUser.id ? state.user : undefined;
         /** Restore display-only data after the session has identified its owner. */
-        const snapshot = baseUser ? undefined : readUserDisplaySnapshot(betterAuthUser.id);
+        const snapshot = baseUser ? undefined : readUserDisplaySnapshot(sessionUser.id);
         return {
           isLoaded: true,
           isSignedIn: true,
@@ -94,10 +94,10 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
             ...baseUser,
             // Preserve avatar from settings, don't override with auth provider value
             avatar: baseUser?.avatar ?? snapshot?.avatar ?? '',
-            email: betterAuthUser.email,
-            fullName: betterAuthUser.name,
-            id: betterAuthUser.id,
-            username: betterAuthUser.username,
+            email: sessionUser.email,
+            fullName: sessionUser.name,
+            id: sessionUser.id,
+            username: sessionUser.username,
           } as OrviloUser,
         };
       });
@@ -111,7 +111,7 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
       preference: DEFAULT_PREFERENCE,
       user: undefined,
     });
-  }, [betterAuthUser, error, isPending, isRefetching]);
+  }, [sessionUser, error, isPending, isRefetching]);
 
   /** Keep auth unresolved on transport failures; show recovery instead of a guest page. */
   return (

@@ -4,11 +4,12 @@ import { NextResponse } from 'next/server';
 import { UAParser } from 'ua-parser-js';
 import urlJoin from 'url-join';
 
-import { auth } from '@/auth';
 import { ORVILO_LOCALE_COOKIE } from '@/const/locale';
+import { getServerDB } from '@/database/core/db-adaptor';
 import { appEnv } from '@/envs/app';
 import { authEnv } from '@/envs/auth';
 import { type Locales } from '@/locales/resources';
+import { resolveAuthSessionFromHeaders } from '@/server/services/auth';
 import { parseBrowserLanguage } from '@/utils/locale';
 import { DEFAULT_LANG, locales, RouteVariants } from '@/utils/server/routeVariants';
 
@@ -285,16 +286,16 @@ export function defineConfig() {
     // Skip session lookup for public routes to reduce latency
     if (!isProtected) return response;
 
-    // Get full session with user data (Next.js 15.2.0+ feature)
-    const session = await auth.api.getSession({
-      headers: req.headers,
-    });
+    // Web sessions live in `auth_sessions` behind the `orvilo_auth` cookie
+    // (minted by POST /api/auth/clerk); the legacy better-auth cookie is still
+    // honored until those sessions expire.
+    const session = await resolveAuthSessionFromHeaders(await getServerDB(), req.headers);
 
-    const isLoggedIn = !!session?.user;
+    const isLoggedIn = !!session;
 
-    logBetterAuth('BetterAuth session status: %O', {
+    logBetterAuth('Session status: %O', {
       isLoggedIn,
-      userId: session?.user?.id,
+      userId: session?.userId,
     });
 
     if (!isLoggedIn) {

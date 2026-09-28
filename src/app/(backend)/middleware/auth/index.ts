@@ -4,13 +4,13 @@ import { context as otContext } from '@orvilo/observability-otel/api';
 import type { ClientSecretPayload } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 
-import { auth } from '@/auth';
 import { getServerDB } from '@/database/core/db-adaptor';
 import type { OrviloDatabase } from '@/database/type';
 import { ORVILO_OIDC_AUTH_HEADER } from '@/envs/auth';
 import { extractTraceContext, injectActiveTraceHeaders } from '@/libs/observability/traceparent';
 import { assertOIDCUserActive } from '@/libs/oidc-provider/access-control';
 import { validateOIDCJWT } from '@/libs/oidc-provider/jwt';
+import { resolveAuthSessionFromHeaders } from '@/server/services/auth';
 import { createErrorResponse } from '@/utils/errorResponse';
 
 type RequestOptions = { params: Promise<{ provider?: string }> };
@@ -90,22 +90,21 @@ export const checkAuth =
         userId = oidc.userId;
         await assertOIDCUserActive(serverDB, userId);
       } else {
-        // Better Auth session authentication (web)
-        const session = await auth.api.getSession({
-          headers: req.headers,
-        });
+        // Web session authentication (`orvilo_auth` cookie minted by the
+        // /api/auth/clerk exchange; the legacy better-auth cookie is also read).
+        const session = await resolveAuthSessionFromHeaders(serverDB, req.headers);
 
-        if (!session?.user?.id) {
+        if (!session?.userId) {
           throw AgentRuntimeError.createError(ChatErrorType.Unauthorized);
         }
 
-        userId = session.user.id;
+        userId = session.userId;
       }
     } catch (e) {
       const params = await options.params;
       const oidcAuthorization = req.headers.get(ORVILO_OIDC_AUTH_HEADER);
 
-      // Only log OIDC auth failures — better-auth session failures are a common
+      // Only log OIDC auth failures — cookie session failures are a common
       // baseline (unauthenticated browser hits) and would otherwise flood logs.
       if (oidcAuthorization) {
         const oidcDebugInfo = getOIDCClientDebugInfo(oidcAuthorization);

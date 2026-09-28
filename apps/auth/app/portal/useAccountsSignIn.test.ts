@@ -92,7 +92,7 @@ describe('buildGoogleLoginUrl', () => {
       buildGoogleLoginUrl('https://evil.example/login', 'https://accounts.aspectlylabs.com'),
     );
     expect(url.origin).toBe('https://accounts.aspectlylabs.com');
-    expect(url.searchParams.get('return_url')).toBe('https://orvilo.aspectlylabs.com/login');
+    expect(url.searchParams.get('return_url')).toBe('https://orvilo.aspectlylabs.com/');
   });
 });
 

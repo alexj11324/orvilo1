@@ -3,6 +3,8 @@ import { type ServerConfigStore } from './store';
 export const featureFlagsSelectors = (s: ServerConfigStore) => s.featureFlags;
 
 export const serverConfigSelectors = {
+  authAccountsUrl: (s: ServerConfigStore) =>
+    s.serverConfig.authAccountsUrl || 'https://accounts.aspectlylabs.com',
   disableEmailPassword: (s: ServerConfigStore) => s.serverConfig.disableEmailPassword || false,
   enableBusinessFeatures: (s: ServerConfigStore) => s.serverConfig.enableBusinessFeatures || false,
   enableEmailVerification: (s: ServerConfigStore) =>
@@ -18,6 +20,5 @@ export const serverConfigSelectors = {
     s.serverConfig.enableMultimodalUnderstanding || false,
   enabledTelemetryChat: (s: ServerConfigStore) => s.serverConfig.telemetry.langfuse || false,
   isMobile: (s: ServerConfigStore) => s.isMobile || false,
-  oAuthSSOProviders: (s: ServerConfigStore) => s.serverConfig.oAuthSSOProviders,
   multimodalUnderstanding: (s: ServerConfigStore) => s.serverConfig.multimodalUnderstanding,
 };

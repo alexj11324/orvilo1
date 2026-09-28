@@ -3,19 +3,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GET } from './route';
 
-const { getSession, start } = vi.hoisted(() => ({
-  getSession: vi.fn(),
+const { resolveSession, start } = vi.hoisted(() => ({
+  resolveSession: vi.fn(),
   start: vi.fn(),
 }));
 
-vi.mock('@/auth', () => ({ auth: { api: { getSession } } }));
+vi.mock('@/database/core/db-adaptor', () => ({ getServerDB: vi.fn(async () => ({})) }));
+vi.mock('@/server/services/auth/session', () => ({
+  resolveAuthSessionFromHeaders: resolveSession,
+}));
 vi.mock('@/server/services/githubOAuth', () => ({ startGitHubOAuth: start }));
 
 describe('GitHub OAuth hosted start route', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('redirects a signed-in browser directly into the existing OAuth flow', async () => {
-    getSession.mockResolvedValue({ user: { id: 'user-1' } });
+    resolveSession.mockResolvedValue({ userId: 'user-1' });
     start.mockResolvedValue('https://github.com/login/oauth/authorize?state=once');
 
     const response = await GET(new NextRequest('https://orvilo.test/oauth/github/start'));
@@ -28,7 +31,7 @@ describe('GitHub OAuth hosted start route', () => {
   });
 
   it('returns through sign-in when the system browser has no Web session', async () => {
-    getSession.mockResolvedValue(null);
+    resolveSession.mockResolvedValue(null);
 
     const response = await GET(new NextRequest('https://orvilo.test/oauth/github/start'));
 

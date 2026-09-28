@@ -1,7 +1,7 @@
 const BROKER_ORIGIN = 'https://accounts.aspectlylabs.com';
 const PRODUCT_ORIGIN = 'https://orvilo.aspectlylabs.com';
 
-export const DEFAULT_ACCOUNTS_RETURN_URL = new URL('/login', PRODUCT_ORIGIN).href;
+export const DEFAULT_ACCOUNTS_RETURN_URL = new URL('/', PRODUCT_ORIGIN).href;
 
 function relativeReturnUrl(raw: string): string | null {
   if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) {
@@ -24,7 +24,7 @@ export const resolveAccountsReturnUrl = (
   raw: string | null | undefined,
   productOrigin: string = PRODUCT_ORIGIN,
 ): string => {
-  const defaultReturnUrl = new URL('/login', productOrigin).href;
+  const defaultReturnUrl = new URL('/', productOrigin).href;
   const value = raw?.trim() ?? '';
   if (!value) return defaultReturnUrl;
 
@@ -54,5 +54,5 @@ export const resolveStandaloneReturnUrl = (
   productOrigin: string = PRODUCT_ORIGIN,
 ): string => {
   const resolved = resolveAccountsReturnUrl(raw, productOrigin);
-  return resolved.startsWith('/') ? new URL('/login', productOrigin).href : resolved;
+  return resolved.startsWith('/') ? new URL('/', productOrigin).href : resolved;
 };

@@ -101,6 +101,12 @@ export interface GlobalServerConfig {
    */
   agentGatewayUrl?: string;
   aiProvider: ServerLanguageModel;
+  /**
+   * Accounts portal origin (`https://accounts.aspectlylabs.com`). The app's
+   * sign-in surface redirects there; the portal owns the Clerk session and
+   * calls back `/api/auth/clerk` to mint the `orvilo_auth` cookie.
+   */
+  authAccountsUrl?: string;
   defaultAgent?: PartialDeep<UserDefaultAgent>;
   disableEmailPassword?: boolean;
   enableBusinessFeatures?: boolean;

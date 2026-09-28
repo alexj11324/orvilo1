@@ -10,20 +10,22 @@ import { type TrustedClientUserInfo } from './index';
 export const getSessionUser = async (): Promise<TrustedClientUserInfo | undefined> => {
   try {
     // Dynamic import to avoid validator ESM/CJS issue during sitemap generation
-    const { auth } = await import('@/auth');
-    const headersList = await headers();
-    const session = await auth.api.getSession({
-      headers: headersList,
-    });
+    const { getServerDB } = await import('@/database/core/db-adaptor');
+    const { UserModel } = await import('@/database/models/user');
+    const { resolveAuthSessionFromHeaders } = await import('@/server/services/auth');
 
-    if (!session?.user?.id || !session?.user?.email) {
-      return undefined;
-    }
+    const headersList = await headers();
+    const db = await getServerDB();
+    const session = await resolveAuthSessionFromHeaders(db, headersList);
+    if (!session?.userId) return undefined;
+
+    const user = await UserModel.findById(db, session.userId);
+    if (!user?.email) return undefined;
 
     return {
-      email: session.user.email,
-      name: session.user.name || undefined,
-      userId: session.user.id,
+      email: user.email,
+      name: user.fullName || undefined,
+      userId: user.id,
     };
   } catch {
     return undefined;

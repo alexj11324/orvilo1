@@ -1,9 +1,9 @@
 'use client';
 
 import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, toast, useModalContext } from '@lobehub/ui/base-ui';
+import { Button, toast, Upload, useModalContext } from '@lobehub/ui/base-ui';
 import { BRANDING_EMAIL } from '@orvilo/business-const';
-import { Form, Input, Upload } from 'antd';
+import { Form, Input } from 'antd';
 import { ImagePlus, Send } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -167,7 +167,7 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
             ) : (
               <Upload
                 accept="image/*"
-                showUploadList={false}
+
                 beforeUpload={(file) => {
                   handleScreenshotUpload(file);
                   return false;

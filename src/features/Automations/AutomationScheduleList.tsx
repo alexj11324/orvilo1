@@ -1,7 +1,14 @@
 import { Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, Checkbox, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  DropdownMenu,
+  Pagination,
+  Text,
+  toast,
+} from '@lobehub/ui/base-ui';
 import type { TaskListItem } from '@orvilo/types';
-import { Pagination } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';

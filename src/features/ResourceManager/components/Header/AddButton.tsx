@@ -3,13 +3,12 @@
 import { Notion } from '@lobehub/icons';
 import { type DropdownItem } from '@lobehub/ui';
 import { DropdownMenu, Icon, Tooltip } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
+import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
   DERIVED_DOCUMENT_SOURCE_TYPE,
 } from '@orvilo/const';
-import { Upload } from 'antd';
 import { FilePenLine, FileUp, FolderIcon, FolderUp, Link, Plus } from 'lucide-react';
 import { type ChangeEvent } from 'react';
 import { useCallback, useId, useMemo, useState } from 'react';
@@ -262,7 +261,7 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
           <Upload
             accept={getAcceptedFileTypes(category)}
             multiple={true}
-            showUploadList={false}
+
             beforeUpload={async (file) => {
               setMenuOpen(false);
               await uploadTopLevel([file]);

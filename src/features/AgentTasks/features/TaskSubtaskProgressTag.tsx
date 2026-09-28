@@ -1,8 +1,7 @@
 import { Flexbox, Icon } from '@lobehub/ui';
 import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
-import { DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import { DropdownMenu, Progress, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
-import { Progress } from 'antd';
 import { cssVar } from 'antd-style';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';

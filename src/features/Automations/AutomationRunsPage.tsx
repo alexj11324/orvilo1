@@ -1,6 +1,5 @@
 import { Block, Center, Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, DropdownMenu, Text } from '@lobehub/ui/base-ui';
-import { Pagination } from 'antd';
+import { ActionIcon, Button, DropdownMenu, Pagination, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';

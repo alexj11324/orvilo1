@@ -3,6 +3,7 @@ import {
   ActionIcon,
   Button,
   DropdownMenu,
+  Pagination,
   TabsIndicator,
   TabsList,
   TabsRoot,
@@ -10,7 +11,6 @@ import {
   Text,
 } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
-import { Pagination } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, Plus, XIcon } from 'lucide-react';
 import { memo, use, useCallback, useEffect, useMemo, useState } from 'react';

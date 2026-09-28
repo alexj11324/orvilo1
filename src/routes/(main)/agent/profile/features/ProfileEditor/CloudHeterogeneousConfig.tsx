@@ -2,9 +2,9 @@
 
 import { Github } from '@lobehub/icons';
 import { Flexbox } from '@lobehub/ui';
-import { Avatar, Button, Select, Tag } from '@lobehub/ui/base-ui';
+import { Avatar, Button, Select, Spin, Tag } from '@lobehub/ui/base-ui';
 import { type HeterogeneousProviderConfig, type UserCredSummary } from '@orvilo/types';
-import { Input, Spin, Typography } from 'antd';
+import { Input, Typography } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckCircle2, KeyRound, X } from 'lucide-react';
 import { memo, useState } from 'react';

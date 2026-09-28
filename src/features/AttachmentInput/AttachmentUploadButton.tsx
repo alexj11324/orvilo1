@@ -1,5 +1,4 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
-import { Upload } from 'antd';
+import { ActionIcon, Upload } from '@lobehub/ui/base-ui';
 import { Paperclip } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +25,7 @@ const AttachmentUploadButton = memo<AttachmentUploadButtonProps>(
         multiple
         accept={accept}
         disabled={disabled}
-        showUploadList={false}
+
         beforeUpload={(file, fileList) => {
           // beforeUpload fires once per file but receives the whole batch.
           // Forward all files on the LAST call to give onFiles one shot.

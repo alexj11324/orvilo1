@@ -217,6 +217,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   composio: 'blocked',
   config: 'open',
   connector: 'blocked',
+  // personal credential store: list/decrypt/create/delete/share/inject —
+  // same class as connector/composio
+  creds: 'blocked',
   device: 'blocked',
   document: rw('knowledge:read', 'knowledge:write'),
   documentComment: rw('knowledge:read', 'knowledge:write'),

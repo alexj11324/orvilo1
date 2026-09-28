@@ -1,0 +1,18 @@
+---
+title: '账号门户修复'
+description: >-
+  账号门户改为同源加载静态资源，所有旧版登录地址统一跳转至新的登录页。
+tags:
+  - Accounts
+  - Authentication
+---
+
+# 账号门户修复
+
+账号门户迁移的后续修复。
+
+## 改进与修复
+
+- **同源静态资源。** 门户脚本改由 auth worker 自身服务，不再依赖缺少 CORS 头的 CDN—— 跨域 ES module 被浏览器拦截导致的白屏已修复。
+- **统一登录入口。** 旧版登录页（`/signin`、`/signup`、`/verify-email`、`/reset-password`、`/auth-error`、`/market-auth-callback`）全部 302 到 `/login`，所有登录路径都落到新门户。
+- **补回 favicon。** 门户恢复 `favicon.ico`。

@@ -1,0 +1,19 @@
+---
+title: 'Accounts Portal Fixes'
+description: >-
+  The accounts portal now serves its assets same-origin and all legacy
+  sign-in URLs fold into the new login page.
+tags:
+  - Accounts
+  - Authentication
+---
+
+# Accounts Portal Fixes
+
+Follow-up fixes for the accounts portal migration.
+
+## Improvements and fixes
+
+- **Same-origin assets.** Portal scripts are now served by the auth worker itself instead of the asset CDN, which does not send the CORS headers cross-origin module loading requires — the page no longer renders blank.
+- **One sign-in surface.** The legacy sign-in pages (`/signin`, `/signup`, `/verify-email`, `/reset-password`, `/auth-error`, `/market-auth-callback`) redirect to `/login`, so every sign-in path lands on the new portal.
+- **Favicon restored.** The portal ships `favicon.ico` again.

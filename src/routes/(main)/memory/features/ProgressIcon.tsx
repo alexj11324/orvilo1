@@ -25,7 +25,7 @@ const ProgressIcon = memo<ProgressIconProps>(({ showInfo, format, percent, ...re
   if (showInfo)
     return (
       <Flexbox horizontal align={'center'} gap={8}>
-        {content}
+        <div style={{ width: 24 }}>{content}</div>
         <Text color={cssVar.colorTextSecondary} fontSize={12}>
           {format?.(percent)}
         </Text>

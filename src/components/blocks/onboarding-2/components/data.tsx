@@ -179,4 +179,4 @@ export const createOnboardingData = (t: OnboardingTranslate) => ({
 
 export type OnboardingData = ReturnType<typeof createOnboardingData>;
 
-export const DEFAULT_INVITES: InviteRow[] = [];
+export const DEFAULT_INVITES: InviteRow[] = [{ id: 'invite-1', email: '', role: 'member' }];

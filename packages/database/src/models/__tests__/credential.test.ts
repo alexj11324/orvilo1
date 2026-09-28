@@ -5,7 +5,7 @@ import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { credentials, type NewCredentialItem, users, workspaces } from '../../schemas';
+import { credentials, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { CredentialModel, toOwnCredSummary } from '../credential';
 
@@ -28,7 +28,7 @@ let originalKeyVaultsSecret: string | undefined;
 const createPersonal = (
   model: CredentialModel,
   key: string,
-  overrides: Partial<NewCredentialItem> = {},
+  overrides: Partial<Parameters<CredentialModel['create']>[0]> = {},
 ) =>
   model.create({
     key,

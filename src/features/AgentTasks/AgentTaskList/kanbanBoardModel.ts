@@ -488,7 +488,7 @@ export const getKanbanAssigneeUpdate = (
 export const getKanbanTaskPatch = (
   groupBy: TaskKanbanGroupBy,
   column: KanbanColumnDefinition,
-  task?: TaskListItem,
+  task?: { workflowStateId?: string | null },
 ): Partial<TaskListItem> | undefined => {
   if (groupBy === 'assignee' && column.groupMeta?.groupBy === 'assignee') {
     return { assigneeAgentId: column.groupMeta.assigneeId ?? null };
@@ -612,6 +612,46 @@ export const taskMatchesKanbanColumn = (
   groupBy: TaskKanbanGroupBy,
   columnKey: string,
 ): boolean => taskKanbanColumnKey(task, groupBy) === columnKey;
+
+/**
+ * One pickable status row a board-driven menu renders — the board's column
+ * plus the patch a pick on it commits, identical to the one
+ * {@link getKanbanTaskPatch} produces for a status-board drop. A column with
+ * neither field is one the board could not take this task either (an
+ * unlinked task can't reach the workflow-only columns such as triage); menus
+ * render it disabled, never hidden, so the list stays 1:1 with the board.
+ */
+export interface TaskStatusChoice {
+  column: KanbanColumnDefinition;
+  status?: TaskStatus;
+  workflowCategory?: TaskWorkflowCategory;
+}
+
+/** The board's status columns as menu choices, in board order. */
+export const taskStatusChoices = (task: { workflowStateId?: string | null }): TaskStatusChoice[] =>
+  STATUS_KANBAN_COLUMNS.map((column) => {
+    const patch = getKanbanTaskPatch('status', column, task);
+    return {
+      column,
+      status: patch?.status as TaskStatus | undefined,
+      workflowCategory: patch?.workflowCategory ?? undefined,
+    };
+  });
+
+/**
+ * The board column a task sits in on a status board — the row a board-driven
+ * menu check-marks. Workflow-linked tasks bucket by category, everything else
+ * by execution status (the same rule {@link taskKanbanColumnKey} applies for
+ * `status` grouping).
+ */
+export const taskStatusBoardColumnKey = (task: {
+  status: string;
+  workflowCategory?: TaskWorkflowCategory | null;
+  workflowStateId?: string | null;
+}): string =>
+  task.workflowStateId
+    ? (KANBAN_WORKFLOW_COLUMN_KEY[task.workflowCategory ?? 'backlog'] ?? 'backlog')
+    : (KANBAN_STATUS_COLUMN_KEY[task.status as TaskStatus] ?? 'backlog');
 
 /**
  * Column map for the board's local drag mirror: column key → ordered task

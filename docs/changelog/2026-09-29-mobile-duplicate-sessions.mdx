@@ -1,0 +1,31 @@
+---
+title: Stop duplicate assistants appearing in the mobile session list
+description: >-
+  Action-triggered requests no longer retry silently forever after a failed
+  call, so a dropped response can no longer insert repeated assistant
+  sessions on mobile.
+tags:
+  - Mobile
+  - Fixes
+---
+
+# Stop duplicate assistants appearing in the mobile session list
+
+The mobile home session list could accumulate several identical "Custom
+Assistant" entries. Action-style requests — the hooks behind the "new
+assistant" buttons — inherited SWR's default behaviour of retrying a failed
+request forever on an exponential backoff (\~5s at first, growing from
+there). Creating a session is not idempotent, so every retry inserted
+another assistant–session pair: one dropped response on mobile data turned
+a single tap into a stream of duplicates.
+
+Action requests no longer retry on error — a failure surfaces once and the
+user can deliberately tap again. A regression test asserts a failed action
+fetcher is never re-invoked.
+
+## Improvements and fixes
+
+- Failed "new assistant" actions no longer insert duplicate sessions in the
+  background — retries require an explicit new tap.
+- The same fix covers other action mutations sharing the helper, such as
+  new-topic creation.

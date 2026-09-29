@@ -24,10 +24,8 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import AsyncError from '@/components/AsyncError';
 import IssueRowChip from '@/components/IssueRowChip';
 import { PriorityIcon } from '@/components/PriorityIcon';
-import {
-  COLUMN_I18N_KEYS,
-  COLUMN_STATUS_VISUAL,
-} from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
+import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';

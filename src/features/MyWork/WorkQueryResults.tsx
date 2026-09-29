@@ -3,7 +3,6 @@
 import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Checkbox, Text } from '@lobehub/ui/base-ui';
 import type {
-  TaskStatus,
   TaskWorkflowCategory,
   WorkQueryExternalReview,
   WorkQueryGroupBy,
@@ -26,11 +25,12 @@ import { useTranslation } from 'react-i18next';
 import AsyncError from '@/components/AsyncError';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
-import { workQueryKeyForKanbanColumn } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import {
   COLUMN_I18N_KEYS,
-  COLUMN_STATUS_VISUAL,
-} from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
+  type TaskStatusChoice,
+  workQueryKeyForKanbanColumn,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
@@ -52,7 +52,7 @@ import {
   workQueryListSections,
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
-import { applyWorkQueryStatusChange } from './workQueryBoardMove';
+import { applyWorkQueryStatusChoice } from './workQueryBoardMove';
 import { workQueryHierarchyRows } from './workQueryHierarchy';
 import {
   type WorkQueryGroupPage,
@@ -469,11 +469,11 @@ const WorkQueryTaskRow = memo(
     const { t } = useTranslation('common');
     const changeTaskStatus = useTaskStatusChange();
     const handleStatusChange = useCallback(
-      async (status: TaskStatus) => {
-        const applied = await applyWorkQueryStatusChange({
+      async (choice: TaskStatusChoice) => {
+        const applied = await applyWorkQueryStatusChoice({
           changeLocal: changeTaskStatus,
+          choice,
           groupBy,
-          status,
           task,
         });
         if (applied) onMoved?.();

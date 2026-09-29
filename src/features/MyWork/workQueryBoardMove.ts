@@ -8,6 +8,7 @@ import { t } from 'i18next';
 import {
   type KanbanColumnDefinition,
   kanbanColumnForSelectableStatus,
+  type TaskStatusChoice,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { createTaskStatusCascadeModal } from '@/features/AgentTasks/features/TaskStatusCascadeModal';
 import { getOpenSubtasks } from '@/features/AgentTasks/features/useTaskStatusChange';
@@ -221,4 +222,31 @@ export const applyWorkQueryStatusChange = async (input: {
   if (result === 'cancelled') return false;
   if (result === 'local') return input.changeLocal(input.task.identifier, input.status);
   return true;
+};
+
+/**
+ * A pick from the board-driven status menu (list glyph, card context menu):
+ * a workflow column routes through the board's own drop path — `moveBoard`
+ * CAS + exact-state picker; a status column keeps the status write.
+ */
+export const applyWorkQueryStatusChoice = async (input: {
+  changeLocal: (identifier: string, status: TaskStatus) => Promise<boolean>;
+  choice: TaskStatusChoice;
+  groupBy: 'status' | 'workflowCategory';
+  task: WorkQueryBoardTask;
+}): Promise<boolean> => {
+  if (input.choice.workflowCategory) {
+    return commitWorkQueryBoardMove({
+      column: input.choice.column,
+      groupBy: 'workflowCategory',
+      task: input.task,
+    });
+  }
+  if (!input.choice.status) return false;
+  return applyWorkQueryStatusChange({
+    changeLocal: input.changeLocal,
+    groupBy: input.groupBy,
+    status: input.choice.status,
+    task: input.task,
+  });
 };

@@ -2,7 +2,11 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import { getMcpPresetConnectorIdentifier, type McpPresetConnector } from '@orvilo/const';
+import {
+  getMcpPresetConnectorIdentifier,
+  MCP_PRESET_CONNECTORS,
+  type McpPresetConnector,
+} from '@orvilo/const';
 import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Grid2x2Plus } from 'lucide-react';
@@ -74,12 +78,21 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
     (identifier: string) => onSelect(identifier, 'mcp-connector'),
     [onSelect],
   );
+  const openPresetForm = useCallback((preset: McpPresetConnector) => {
+    setPresetPlugin(presetToPluginValue(preset));
+    setShowAddConnector(true);
+  }, []);
+  const githubPreset = MCP_PRESET_CONNECTORS.find((preset) => preset.id === 'github');
   const {
+    capability: githubCapability,
     connect: connectGitHub,
     connecting: githubConnecting,
     grantConnected: githubGrantConnected,
     timedOut: githubTimedOut,
-  } = useGitHubMcpConnect(selectGitHub);
+  } = useGitHubMcpConnect(
+    selectGitHub,
+    githubPreset ? () => openPresetForm(githubPreset) : undefined,
+  );
 
   const closeModal = () => {
     setShowAddConnector(false);
@@ -110,6 +123,9 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
 
         <div className={styles.body}>
           <ConnectorList
+            githubCapability={
+              githubCapability === 'app_oauth_configured' ? undefined : githubCapability
+            }
             githubConnecting={githubConnecting}
             githubGrantConnected={githubGrantConnected}
             githubTimedOut={githubTimedOut}
@@ -117,8 +133,7 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
             onConnectGitHub={() => void connectGitHub()}
             onSelect={onSelect}
             onAddPreset={(preset) => {
-              setPresetPlugin(presetToPluginValue(preset));
-              setShowAddConnector(true);
+              openPresetForm(preset);
             }}
           />
         </div>

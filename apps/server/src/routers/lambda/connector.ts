@@ -44,6 +44,7 @@ import {
   saveConnectorOAuthState,
 } from '@/server/services/connector/stateStore';
 import { syncConnectorToolsById } from '@/server/services/connector/sync';
+import { isGitHubOAuthConfigured } from '@/server/services/githubOAuth/provider';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 import {
   resolveConnectorAuthorizerId,
@@ -310,6 +311,26 @@ export const connectorRouter = router({
    * URI the user registers matches the one used at authorize time.
    */
   getRedirectUri: wsCompatProcedure.query(() => ({ redirectUri: getConnectorRedirectUri() })),
+
+  /**
+   * How the GitHub hosted MCP can be connected on this deployment, for the
+   * current caller: the managed App OAuth path, the PAT fallback (self-hosted
+   * without the OAuth env vars), or nothing the caller can do themselves.
+   */
+  githubMcpCapability: connectorProcedure.query(async ({ ctx }) => {
+    if (isGitHubOAuthConfigured()) return { capability: 'app_oauth_configured' as const };
+    const canWrite = !ctx.workspaceId
+      ? true
+      : ctx.workspaceRole
+        ? ctx.workspaceRole !== 'viewer'
+        : await hasWorkspaceScopedPermission({
+            action: 'AGENT_UPDATE',
+            db: ctx.serverDB,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          });
+    return { capability: canWrite ? ('pat_available' as const) : ('not_configurable' as const) };
+  }),
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 

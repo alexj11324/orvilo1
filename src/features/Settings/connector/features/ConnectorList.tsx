@@ -75,6 +75,7 @@ const visibleMcpPresets = MCP_PRESET_CONNECTORS.filter((preset) =>
 );
 
 interface ConnectorListProps {
+  githubCapability?: 'pat_available' | 'not_configurable';
   githubConnecting?: boolean;
   githubGrantConnected?: boolean;
   githubTimedOut?: boolean;
@@ -98,6 +99,7 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
     onSelect,
     onAddPreset,
     onConnectGitHub,
+    githubCapability,
     githubConnecting,
     githubGrantConnected,
     githubTimedOut,
@@ -359,12 +361,19 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
               key={preset.id}
               preset={preset}
               timedOut={preset.managedAuth === 'github-app' && githubTimedOut}
+              tokenSetup={
+                preset.managedAuth === 'github-app' && githubCapability === 'pat_available'
+              }
               providerConnected={
                 preset.managedAuth === 'github-app' ? githubGrantConnected : undefined
               }
               onSelect={() => connector && onSelect(connector.identifier, 'mcp-connector')}
               onAdd={() =>
-                preset.managedAuth === 'github-app' ? onConnectGitHub() : onAddPreset(preset)
+                preset.managedAuth === 'github-app'
+                  ? githubCapability === 'pat_available'
+                    ? onAddPreset(preset)
+                    : onConnectGitHub()
+                  : onAddPreset(preset)
               }
             />
           );

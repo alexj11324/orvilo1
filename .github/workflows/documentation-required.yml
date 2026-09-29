@@ -12,6 +12,12 @@ jobs:
   documentation-required:
     name: Documentation Required
     runs-on: ubuntu-latest
+    # Release-automation PRs are mechanical: release/* cuts carry the canary
+    # snapshot to main, sync/* back-syncs carry the post-merge version bump to
+    # canary — neither should trip the docs gate on package.json alone.
+    if: >-
+      !startsWith(github.event.pull_request.head.ref, 'release/') &&
+      !startsWith(github.event.pull_request.head.ref, 'sync/')
     steps:
       # pull_request_target runs this workflow from the protected base branch.
       # Do not check out or execute code from the PR: otherwise a PR could

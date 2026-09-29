@@ -1,6 +1,7 @@
 name: Auto Tag Release
 
 permissions:
+  actions: write
   contents: write
 
 on:
@@ -220,11 +221,13 @@ jobs:
 
       - name: Sync main to canary
         if: env.SHOULD_TAG == 'true' && steps.check-tag.outputs.exists == 'false'
+        # Dispatch uses the job's GITHUB_TOKEN (actions: write above): the
+        # release PAT has no Actions scope, so it 403s on workflow dispatch.
         run: |
           gh workflow run sync-main-to-canary.yaml --ref main
           echo "✅ Dispatched sync-main-to-canary workflow"
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Output result
         run: |

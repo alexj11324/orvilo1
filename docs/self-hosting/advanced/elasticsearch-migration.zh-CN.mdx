@@ -8,7 +8,7 @@ tags:
   - 私有部署
 ---
 
-# 从 pg\_search 迁移到 Elasticsearch
+# 从 pg_search 迁移到 Elasticsearch
 
 如果你通过 Docker 部署 Orvilo，数据库使用 Neon，并且当前搜索依赖 `pg_search`，可以按本文将搜索迁移到 Elasticsearch。请在 Neon 停用你所用实例的 `pg_search` 前完成迁移。
 
@@ -37,7 +37,7 @@ tags:
 以下命令直接使用官方镜像，数据库连接来自这份配置，不依赖 Compose 内置的 PostgreSQL 服务。在同一个终端执行，并把镜像标签替换为本次部署的版本：
 
 ```bash
-export ORVILO_MIGRATION_IMAGE='alexj11324/orvilo1:<本次部署的版本标签>'
+export ORVILO_MIGRATION_IMAGE='ghcr.io/alexj11324/orvilo1:<本次部署的版本标签>'
 docker pull "$ORVILO_MIGRATION_IMAGE"
 docker volume create orvilo-search-state
 ```

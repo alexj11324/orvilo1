@@ -59,7 +59,7 @@ Upgrading the Docker deployment version is very simple, you just need to redeplo
   Use the following command to pull the latest Docker image for Orvilo:
 
   ```fish
-  docker pull alexj11324/orvilo1
+  docker pull ghcr.io/alexj11324/orvilo1
   ```
 
   ### Restart the Docker Container
@@ -71,7 +71,7 @@ Upgrading the Docker deployment version is very simple, you just need to redeplo
     -e OPENAI_API_KEY=sk-xxxx \
     -e OPENAI_PROXY_URL=https://api-proxy.com/v1 \
     --name orvilo \
-    alexj11324/orvilo1
+    ghcr.io/alexj11324/orvilo1
   ```
 </Steps>
 
@@ -106,7 +106,7 @@ If you wish to automate the above steps, you can follow the method below and use
   export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890
 
   # Pull the latest image and store the output in a variable
-  output=$(docker pull alexj11324/orvilo1:latest 2>&1)
+  output=$(docker pull ghcr.io/alexj11324/orvilo1:latest 2>&1)
 
   # Check if the pull command was executed successfully
   if [ $? -ne 0 ]; then
@@ -114,7 +114,7 @@ If you wish to automate the above steps, you can follow the method below and use
   fi
 
   # Check if the output contains a specific string
-  echo "$output" | grep -q "Image is up to date for alexj11324/orvilo1:latest"
+  echo "$output" | grep -q "Image is up to date for ghcr.io/alexj11324/orvilo1:latest"
 
   # If the image is already up to date, do nothing
   if [ $? -eq 0 ]; then
@@ -127,14 +127,14 @@ If you wish to automate the above steps, you can follow the method below and use
   echo "Removed: $(docker rm -f orvilo)"
 
   # Run the new container(Please change the path to the env file)
-  echo "Started: $(docker run -d --network=host --env-file /path/to/orvilo.env --name=orvilo --restart=always alexj11324/orvilo1)"
+  echo "Started: $(docker run -d --network=host --env-file /path/to/orvilo.env --name=orvilo --restart=always ghcr.io/alexj11324/orvilo1)"
 
   # Print the update time and version
   echo "Update time: $(date)"
-  echo "Version: $(docker inspect alexj11324/orvilo1:latest | grep 'org.opencontainers.image.version' | awk -F'"' '{print $4}')"
+  echo "Version: $(docker inspect ghcr.io/alexj11324/orvilo1:latest | grep 'org.opencontainers.image.version' | awk -F'"' '{print $4}')"
 
   # Clean up unused images
-  docker images | grep 'alexj11324/orvilo1' | grep -v 'latest' | awk '{print $3}' | xargs -r docker rmi > /dev/null 2>&1
+  docker images | grep 'ghcr.io/alexj11324/orvilo1' | grep -v 'latest' | awk '{print $3}' | xargs -r docker rmi > /dev/null 2>&1
   echo "Removed old images."
   ```
 

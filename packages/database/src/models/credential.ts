@@ -242,10 +242,7 @@ export class CredentialModel {
 
     return rows.map(({ credential, ownerEmail, ownerFullName, ownerUsername }) => ({
       ...credential,
-      ownerDisplayName:
-        credential.workspaceId || credential.ownerUserId !== this.userId
-          ? ownerFullName || ownerUsername || ownerEmail || undefined
-          : undefined,
+      ownerDisplayName: ownerFullName || ownerUsername || ownerEmail || undefined,
     }));
   };
 

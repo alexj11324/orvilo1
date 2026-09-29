@@ -177,7 +177,7 @@ describe('CredentialModel', () => {
       expect(byKey['org-cred']!.ownerType).toBe('organization');
       expect(byKey['member-shared']!.ownerType).toBe('user');
       expect(byKey['org-cred']!.ownerDisplayName).toBe('Cred Owner');
-      expect(byKey['member-shared']!.ownerDisplayName).toBeUndefined();
+      expect(byKey['member-shared']!.ownerDisplayName).toBe('Cred Member');
 
       const outsiderRows = await outsiderModel.listWorkspace(workspaceId);
       expect(outsiderRows.map((row) => row.key).sort()).toEqual(['member-shared', 'org-cred']);

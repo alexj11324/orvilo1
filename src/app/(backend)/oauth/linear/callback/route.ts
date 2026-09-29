@@ -73,7 +73,7 @@ export const GET = async (request: NextRequest) => {
 
   // Echo the attempt nonce on every result from here on so the opener's
   // authorization session can match it (errors included).
-  const identity = { attempt: statePayload.attempt };
+  const attemptEcho = { attempt: statePayload.attempt };
 
   // OAuth state is short-lived, but the installer’s authorization can change
   // while Linear’s consent screen is open. Re-check the live workspace grant
@@ -89,7 +89,7 @@ export const GET = async (request: NextRequest) => {
   const canManageInstallation = await hasCurrentWorkspaceSettingsPermission();
   if (!canManageInstallation) {
     return renderResultPage(request, {
-      ...identity,
+      ...attemptEcho,
       error: 'workspace_access_denied',
       success: false,
     });
@@ -97,18 +97,18 @@ export const GET = async (request: NextRequest) => {
 
   if (providerError)
     return renderResultPage(request, {
-      ...identity,
+      ...attemptEcho,
       error: 'authorization_denied',
       success: false,
     });
   if (!code)
-    return renderResultPage(request, { ...identity, error: 'missing_code', success: false });
+    return renderResultPage(request, { ...attemptEcho, error: 'missing_code', success: false });
 
   try {
     const config = getLinearOAuthConfig();
     if (statePayload.clientId !== config.clientId || statePayload.actor !== 'app') {
       return renderResultPage(request, {
-        ...identity,
+        ...attemptEcho,
         error: 'invalid_oauth_configuration',
         success: false,
       });
@@ -123,7 +123,7 @@ export const GET = async (request: NextRequest) => {
     });
     if (!tokens.refresh_token) {
       return renderResultPage(request, {
-        ...identity,
+        ...attemptEcho,
         error: 'missing_refresh_token',
         success: false,
       });
@@ -137,14 +137,14 @@ export const GET = async (request: NextRequest) => {
     const scopes = normalizeLinearScopes(tokens.scope, statePayload.scopes);
     if (!scopes.includes('read') || !scopes.includes('write')) {
       return renderResultPage(request, {
-        ...identity,
+        ...attemptEcho,
         error: 'insufficient_scope',
         success: false,
       });
     }
     if (!(await hasCurrentWorkspaceSettingsPermission())) {
       return renderResultPage(request, {
-        ...identity,
+        ...attemptEcho,
         error: 'workspace_access_denied',
         success: false,
       });
@@ -172,12 +172,16 @@ export const GET = async (request: NextRequest) => {
     await model.upsertScope({ installationId: installation.id });
 
     return renderResultPage(request, {
-      ...identity,
+      ...attemptEcho,
       installationId: installation.id,
       success: true,
     });
   } catch (error) {
     log('Linear OAuth callback failed: %O', error);
-    return renderResultPage(request, { ...identity, error: 'installation_failed', success: false });
+    return renderResultPage(request, {
+      ...attemptEcho,
+      error: 'installation_failed',
+      success: false,
+    });
   }
 };

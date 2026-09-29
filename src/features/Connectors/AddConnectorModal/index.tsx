@@ -1,8 +1,9 @@
 import { toast } from '@lobehub/ui/base-ui';
 import { Input } from 'antd';
+import { type TFunction } from 'i18next';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
-import { type TFunction, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
 import { ConnectorSourceType } from '@/database/schemas';

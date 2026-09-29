@@ -137,7 +137,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
             <Tag color={typeColors[cred.type]}>{t(`creds.types.${cred.type}`)}</Tag>
             {/* Only populated by workspace-scoped list responses (workspaceCreds.list) —
                 distinguishes a member's shared personal credential from one the workspace owns directly. */}
-            {cred.ownerType === 'user' && (
+            {!!cred.ownerDisplayName && (
               <Tag>{t('creds.owner.sharedBy', { name: cred.ownerDisplayName })}</Tag>
             )}
           </Flexbox>

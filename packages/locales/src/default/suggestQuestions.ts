@@ -512,7 +512,7 @@ export default {
     "Review this agent's current configuration and point out anything that's missing or worth improving.",
   'agentBuilder.10.title': 'Review my current setup',
   'agentBuilder.11.prompt':
-    'This agent feels too generic. Help me narrow it down into a focused, specialized assistant.',
+    'This agent feels too generic. Help me narrow it down into a focused, specialized agent.',
   'agentBuilder.11.title': 'Make it more specialized',
   'agentBuilder.12.prompt':
     "Help me localize this agent's name, description, and prompts for another language.",

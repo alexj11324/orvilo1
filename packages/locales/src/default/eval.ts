@@ -508,7 +508,7 @@ export default {
   'testCaseDetail.open': 'Open case',
   'testCaseDetail.notFound': 'This test case no longer exists.',
   'testCaseDetail.saveFailed': 'Could not save this case.',
-  'testCaseDetail.role.assistant': 'Assistant',
+  'testCaseDetail.role.assistant': 'Agent',
   'testCaseDetail.role.system': 'System',
   'testCaseDetail.role.tool': 'Tool',
   'testCaseDetail.role.user': 'User',

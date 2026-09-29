@@ -80,7 +80,7 @@ export function registerTopicCommands(task: Command) {
       for (const msg of items) {
         const role =
           msg.role === 'assistant'
-            ? pc.green('Assistant')
+            ? pc.green('Agent')
             : msg.role === 'user'
               ? pc.blue('User')
               : pc.dim(msg.role);

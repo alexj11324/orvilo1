@@ -965,7 +965,7 @@ export default {
   'settingAgent.identity.saveFailed': 'Could not save the identity, please try again',
   'settingAgent.identity.untitled': 'Unnamed agent',
   'settingAgent.role.label': 'Role',
-  'settingAgent.role.placeholder': 'What it is responsible for, e.g. Health Assistant',
+  'settingAgent.role.placeholder': 'What it is responsible for, e.g. Health Agent',
   'settingAgent.role.unset': 'No role set yet',
   'settingAgent.slug.label': 'Identifier',
   'settingAgent.slug.error.builtin': 'A builtin agent’s identifier can’t be changed',
@@ -1096,7 +1096,7 @@ export default {
   'settingChat.compressThreshold.desc':
     'When the uncompressed history messages exceed this value, compression will be applied',
   'settingChat.compressThreshold.title': 'History Message Length Compression Threshold',
-  'settingChat.enableAutoScrollOnStreaming.desc': 'Override global setting for this assistant',
+  'settingChat.enableAutoScrollOnStreaming.desc': 'Override global setting for this agent',
   'settingChat.enableAutoScrollOnStreaming.title': 'Auto-scroll During AI Response',
   'settingChat.enableCompressHistory.title': 'Enable Automatic Summary of Chat History',
   'settingChat.enableFollowUpChips.desc':
@@ -1298,7 +1298,7 @@ export default {
     'A graph snapshot is required before enabling graph runtime.',
   'settingGraphRuntime.validation.unknown': 'Unknown graph validation error',
   'settingSelfIteration.enabled.desc':
-    'Allow this assistant to review recent signals and improve its own skills when the self-iteration workflow runs.',
+    'Allow this agent to review recent signals and improve its own skills when the self-iteration workflow runs.',
   'settingSelfIteration.enabled.managedDesc':
     'Always on for Orvilo AI while Self-Iteration is available.',
   'settingSelfIteration.enabled.title': 'Enable Self-Iteration',
@@ -1570,7 +1570,7 @@ export default {
   'systemAgent.customPrompt.title': 'Custom Prompt',
   'systemAgent.followUpAction.label': 'Follow-up Suggestions Model',
   'systemAgent.followUpAction.modelDesc':
-    'Model used to suggest one-click follow-up replies under each assistant message',
+    'Model used to suggest one-click follow-up replies under each agent message',
   'systemAgent.followUpAction.title': 'Follow-up Suggestions',
   'systemAgent.helpInfo':
     'When creating a new agent, the default agent settings will be used as preset values.',
@@ -3201,7 +3201,7 @@ export default {
     "Couldn't add the selected agents. You can install them later from the marketplace.",
   'workspace.onboarding.step1.heading': 'Personalize Orvilo AI',
   'workspace.onboarding.step1.subtitle':
-    'Give your workspace assistant an identity your team will recognize.',
+    'Give your workspace agent an identity your team will recognize.',
   'workspace.onboarding.step1.avatarLabel': 'Avatar',
   'workspace.onboarding.step1.avatarHint': 'Pick an emoji or upload an image.',
   'workspace.onboarding.step1.avatarTooLarge': 'Avatar file must be smaller than 5MB.',
@@ -3220,7 +3220,7 @@ export default {
   'workspace.onboarding.step1.guide.growTogether.desc':
     "Every conversation teaches me your team's vibe — the longer we work together, the better.",
   'workspace.onboarding.step1.footer':
-    "Set up your workspace's Orvilo AI assistant — it learns from every conversation and grows into your team's go-to teammate.",
+    "Set up your workspace's Orvilo AI agent — it learns from every conversation and grows into your team's go-to teammate.",
   'workspace.onboarding.step1.sentence.1': "Ready? Let me be your team's go-to teammate.",
   'workspace.onboarding.step1.sentence.2': 'What role do you want me to play in this workspace?',
   'workspace.onboarding.step1.sentence.3': 'First, give me a name your team will love :)',
@@ -3922,7 +3922,7 @@ export default {
   'tools.composio.servers.gmail.description': 'Gmail is a free email service provided by Google',
 
   'tools.composio.servers.gmail.readme':
-    'Bring the power of Gmail directly into your AI assistant. Read, compose, and send emails, search your inbox, manage labels, and organize your communications—all through natural conversation.',
+    'Bring the power of Gmail directly into your AI agent. Read, compose, and send emails, search your inbox, manage labels, and organize your communications—all through natural conversation.',
 
   'tools.composio.servers.google-calendar.description':
     'Google Calendar is a time-management and scheduling calendar service',
@@ -3963,7 +3963,7 @@ export default {
     'Notion is a collaborative productivity and note-taking application',
 
   'tools.composio.servers.notion.readme':
-    'Connect to Notion to access and manage your workspace. Create pages, search content, update databases, and organize your knowledge base—all through natural conversation with your AI assistant.',
+    'Connect to Notion to access and manage your workspace. Create pages, search content, update databases, and organize your knowledge base—all through natural conversation with your AI agent.',
 
   'tools.composio.servers.onedrive.description':
     'OneDrive is a file hosting service and synchronization service operated by Microsoft',
@@ -4024,7 +4024,7 @@ export default {
   'tools.orviloSkill.disconnect': 'Disconnect',
 
   'tools.orviloSkill.disconnectConfirm.desc':
-    "You can still continue previous chats that reference {{name}} content. However, the assistant won't be able to access new content or perform new tasks.",
+    "You can still continue previous chats that reference {{name}} content. However, the agent won't be able to access new content or perform new tasks.",
 
   'tools.orviloSkill.disconnectConfirm.title': 'Disconnect {{name}}?',
 
@@ -4035,11 +4035,11 @@ export default {
   'tools.orviloSkill.providers.github.description':
     'GitHub is a platform for version control and collaboration, enabling developers to host, review, and manage code repositories.',
   'tools.orviloSkill.providers.github.readme':
-    'Connect to GitHub to access your repositories, create and manage issues, review pull requests, and collaborate on code—all through natural conversation with your AI assistant.',
+    'Connect to GitHub to access your repositories, create and manage issues, review pull requests, and collaborate on code—all through natural conversation with your AI agent.',
   'tools.orviloSkill.providers.linear.description':
     'Linear is a modern issue tracking and project management tool designed for high-performance teams to build better software faster',
   'tools.orviloSkill.providers.linear.readme':
-    'Bring the power of Linear directly into your AI assistant. Create and update issues, manage sprints, track project progress, and streamline your development workflow—all through natural conversation.',
+    'Bring the power of Linear directly into your AI agent. Create and update issues, manage sprints, track project progress, and streamline your development workflow—all through natural conversation.',
   'tools.orviloSkill.providers.microsoft.description':
     'Outlook Calendar is an integrated scheduling tool within Microsoft Outlook that enables users to create appointments, organize meetings with others, and manage their time and events effectively.',
   'tools.orviloSkill.providers.microsoft.readme':
@@ -4047,11 +4047,11 @@ export default {
   'tools.orviloSkill.providers.notion.description':
     'Notion is a collaborative productivity and note-taking application.',
   'tools.orviloSkill.providers.notion.readme':
-    'Connect to Notion to access and manage your workspace. Create pages, search content, update databases, and organize your knowledge base—all through natural conversation with your AI assistant.',
+    'Connect to Notion to access and manage your workspace. Create pages, search content, update databases, and organize your knowledge base—all through natural conversation with your AI agent.',
   'tools.orviloSkill.providers.posthog.description':
     'PostHog is an open-source product analytics platform for analyzing events, funnels, cohorts, feature flags, experiments, and user behavior.',
   'tools.orviloSkill.providers.posthog.readme':
-    'Connect to PostHog to query product analytics, inspect dashboards, review feature flags and experiments, and understand user behavior through natural conversation with your AI assistant.',
+    'Connect to PostHog to query product analytics, inspect dashboards, review feature flags and experiments, and understand user behavior through natural conversation with your AI agent.',
   'tools.orviloSkill.providers.twitter.description':
     'X (Twitter) is a social media platform for sharing real-time updates, news, and engaging with your audience through posts, replies, and direct messages.',
   'tools.orviloSkill.providers.twitter.readme':

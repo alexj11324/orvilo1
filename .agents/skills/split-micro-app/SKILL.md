@@ -76,6 +76,14 @@ tsconfig `include` must cover `app/`). Stack: `@react-router/dev@8` + `@cloudfla
 
 - repo Vite 8 (rolldown) — officially compatible.
 
+**Cloudflare CLI boundary:** use the new `cf` CLI for direct Cloudflare API operations and staging
+resource edits. Discover commands with `cf cli search "<generic task description>"`; never include
+account or resource identifiers in the query. The Worker build/deploy instructions below still use
+Wrangler for now: the Vite plugin v2 build emitted `.cloudflare/output/.../assets/.vite/manifest.json`,
+but React Router still looked for `build/client/.vite/manifest.json`. Auth also needs manual asset
+and custom-domain migration. Keep the existing Worker pipeline until its build and isolated preview
+flow both pass with the new CLI.
+
 **SSR bundle weight is the whole battle.** Main-src imports drag the app universe
 (store web → chat/agent/electron). Tools and cuts, in order:
 
@@ -355,7 +363,8 @@ To add a micro app:
    authenticated. `.data` suffix is normalized before matching.
 4. Validate: `bun run test` in the gateway repo (invariant suite reads the mirror).
 5. Staging: `bun scripts/torii.ts push --env staging --expect <fp>` (needs TORII_ACCESS\_\*),
-   or poke staging KV directly (`wrangler kv key put --namespace-id <staging CONFIG ns>`) —
+   or poke staging KV directly with
+   `cf kv keys put <encoded-key> --namespace-id <staging CONFIG ns> --body <value>` —
    README-sanctioned. Prod writes only via the Toriiban (鳥居番) admin **Promote** button:
    `torii.ts promote` prints the exact delta and refuses to write, and
    `push --env prod --confirm-prod` exists but bypasses a deliberate human gate — don't.

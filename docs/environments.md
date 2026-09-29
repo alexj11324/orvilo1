@@ -14,6 +14,16 @@
 
 ## Cloudflare Worker deploys
 
+Use the new `cf` CLI for direct Cloudflare account and API operations. Find commands with
+`cf cli search "<generic task description>"`; keep the query free of project or account details.
+
+The app-specific build and release workflows below still use their existing Wrangler configs. In
+a migration attempt on 2026-09-29, Vite plugin v2 emitted
+`.cloudflare/output/v0/workers/default/assets/.vite/manifest.json`, then React Router failed to find
+`build/client/.vite/manifest.json`. The auth dry run also reported manual mappings for static assets
+and the custom domain. Keep these pipelines and dependencies until the build and isolated PR preview
+paths pass with `cf`.
+
 Auth and Workbench deploy through `.github/workflows/deploy-auth.yml` and
 `.github/workflows/deploy-workbench.yml`. Each workflow uses GitHub's
 `production` environment and runs on a push to `canary` or a manual dispatch.

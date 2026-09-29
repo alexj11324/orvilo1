@@ -19,15 +19,15 @@ Electron desktop client, and a CLI.
 
 ## What's in here
 
-| Path | What it is |
-| --- | --- |
-| `src/` | The React SPA — the main product surface |
-| `apps/server/` | Backend runtime, routers and services |
-| `apps/desktop/` | Electron desktop client |
-| `apps/cli/` | Command-line client |
-| `apps/share/`, `apps/workbench/`, `apps/auth/` | Auxiliary web apps |
-| `packages/` | Shared workspace packages |
-| `e2e/` | End-to-end tests (Cucumber + Playwright) |
+| Path                                           | What it is                               |
+| ---------------------------------------------- | ---------------------------------------- |
+| `src/`                                         | The React SPA — the main product surface |
+| `apps/server/`                                 | Backend runtime, routers and services    |
+| `apps/desktop/`                                | Electron desktop client                  |
+| `apps/cli/`                                    | Command-line client                      |
+| `apps/share/`, `apps/workbench/`, `apps/auth/` | Auxiliary web apps                       |
+| `packages/`                                    | Shared workspace packages                |
+| `e2e/`                                         | End-to-end tests (Cucumber + Playwright) |
 
 Agents can be connected to chat platforms (Slack, Discord, Telegram, WeChat and
 others), to Git hosts, and to model providers you configure yourself.
@@ -54,12 +54,16 @@ After `dev:spa` starts, the terminal prints a **Debug Proxy** URL. Opening it lo
 local dev server inside the hosted environment, so you get HMR against real server
 config.
 
+Cloudflare account work is optional. The new `cf` CLI requires Node.js 22 or newer; install it
+with `npm install --global cf` and authenticate with `cf auth login`. See
+[Cloudflare Worker deploys](docs/environments.md) for this repository's current release flow.
+
 ### Quality checks
 
 ```bash
-pnpm run type-check     # tsgo --noEmit
-pnpm run test-app       # vitest run
-pnpm run lint           # eslint + stylelint + type-check + circular deps
+pnpm run type-check # tsgo --noEmit
+pnpm run test-app   # vitest run
+pnpm run lint       # eslint + stylelint + type-check + circular deps
 
 # Scope a check to the files you changed
 bun run check [changed-files...]
@@ -75,7 +79,7 @@ configuration variables, and [`docker-compose/`](./docker-compose) for deploymen
 recipes.
 
 ```bash
-cp .env.example .env    # then fill in your database and provider credentials
+cp .env.example .env # then fill in your database and provider credentials
 pnpm run build
 ```
 

@@ -63,6 +63,18 @@ Debug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-ho
 
 Open this URL to develop locally against the production backend (orvilo.aspectlylabs.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
 
+### Cloudflare CLI
+
+Use Cloudflare's new `cf` CLI for direct account and API operations. It is an optional open beta;
+install it with `npm install --global cf` (Node.js >= 22), then authenticate with `cf auth login`.
+Discover commands with `cf cli search "<generic task description>"` before reading command help.
+Keep search text free of project names, domains, account or resource IDs, and tokens. Do not
+assume a global install exists in CI; add a local dependency only when a workflow needs it.
+
+The current Worker release pipelines still use their existing Wrangler configs and build commands.
+See [docs/environments.md](./docs/environments.md) before changing those workflows or removing
+their Wrangler dependencies.
+
 ### Browser CDP for Linear parity
 
 Use Brave with a copy of the currently used Brave profile when comparing Orvilo with Linear. Keep the original Brave process and profile untouched; a fresh Chrome profile does not carry the reference session.

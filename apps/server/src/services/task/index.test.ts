@@ -34,14 +34,23 @@ vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(),
 }));
 
-const { requestDispatchStopMock, settleDispatchMock } = vi.hoisted(() => ({
+const { findActiveDispatchMock, requestDispatchStopMock, settleDispatchMock } = vi.hoisted(() => ({
+  findActiveDispatchMock: vi.fn(),
   requestDispatchStopMock: vi.fn(),
   settleDispatchMock: vi.fn(),
 }));
 vi.mock('@/database/models/taskDispatch', () => ({
   TaskDispatchModel: vi.fn().mockImplementation(function () {
-    return { requestStop: requestDispatchStopMock, settle: settleDispatchMock };
+    return {
+      findActiveByTaskId: findActiveDispatchMock,
+      requestStop: requestDispatchStopMock,
+      settle: settleDispatchMock,
+    };
   }),
+}));
+
+vi.mock('@/database/models/project', () => ({
+  ProjectModel: vi.fn(),
 }));
 
 vi.mock('@/database/models/brief', () => ({
@@ -2728,6 +2737,225 @@ describe('TaskService', () => {
         kind: 'agent',
         to: null,
       });
+    });
+  });
+
+  describe('handoffTask', () => {
+    const runningTask = {
+      assigneeAgentId: 'agent-a',
+      assigneeUserId: null,
+      config: {},
+      domainRevision: 7,
+      id: 'task-1',
+      status: 'running',
+      visibility: 'public' as const,
+      workspaceId: 'ws-1',
+    };
+    const runningTopic = {
+      dispatchFence: 2,
+      dispatchId: 'dispatch-1',
+      executionGeneration: 5,
+      operationId: 'op-1',
+      status: 'running',
+      taskId: 'task-1',
+      topicId: 'topic-1',
+    };
+
+    it('fences the incumbent, transfers ownership under CAS, then restarts on the successor', async () => {
+      const service = new TaskService(db, userId, 'ws-1');
+      mockAgentModel.getAgentSnapshotForTaskCreate.mockResolvedValue({
+        snapshot: null,
+        visibility: 'public',
+      });
+      mockTaskModel.resolve
+        .mockResolvedValueOnce(runningTask)
+        .mockResolvedValue({ ...runningTask, assigneeAgentId: 'agent-b' });
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([runningTopic]);
+      requestDispatchStopMock.mockResolvedValue({
+        fence: 3,
+        generation: 5,
+        id: 'dispatch-1',
+        operationId: 'op-1',
+        phase: 'cancel_requested',
+      });
+      findActiveDispatchMock.mockResolvedValue({
+        fence: 3,
+        generation: 5,
+        id: 'dispatch-1',
+        operationId: 'op-1',
+        phase: 'cancel_requested',
+      });
+      mockTaskModel.updateWithLog.mockResolvedValue({
+        ...runningTask,
+        assigneeAgentId: 'agent-b',
+      });
+      settleDispatchMock.mockResolvedValue({
+        dispatch: { phase: 'canceled' },
+        state: 'settled',
+      });
+      interruptTaskMock.mockResolvedValue({ success: true });
+      runTaskMock.mockResolvedValue(undefined);
+
+      const result = await service.handoffTask({
+        expectedDomainRevision: 7,
+        taskId: 'task-1',
+        toAgentId: 'agent-b',
+      });
+
+      expect(result.state).toBe('restarted');
+      // The incumbent's dispatch is fenced and its remote operation interrupted
+      // BEFORE the assignee flips — A stays the accountable owner if the
+      // interrupt fails and the saga aborts.
+      expect(requestDispatchStopMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dispatchId: 'dispatch-1',
+          fence: 2,
+          generation: 5,
+          operationId: 'op-1',
+          reason: 'handoff',
+        }),
+      );
+      expect(interruptTaskMock).toHaveBeenCalledWith({ operationId: 'op-1' });
+      expect(interruptTaskMock.mock.invocationCallOrder[0]).toBeLessThan(
+        mockTaskModel.updateWithLog.mock.invocationCallOrder[0],
+      );
+      expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({ assigneeAgentId: 'agent-b' }),
+        { userId },
+        expect.objectContaining({ executionTransfer: true, expectedDomainRevision: 7 }),
+      );
+      expect(settleDispatchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dispatchId: 'dispatch-1',
+          expected: ['cancel_requested'],
+          fence: 3,
+          phase: 'canceled',
+        }),
+      );
+      expect(runTaskMock).toHaveBeenCalledWith({ taskId: 'task-1', trigger: 'manual' });
+    });
+
+    it('parks the task when the handoff has no successor', async () => {
+      const service = new TaskService(db, userId, 'ws-1');
+      mockTaskModel.resolve.mockResolvedValue(runningTask);
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([runningTopic]);
+      requestDispatchStopMock.mockResolvedValue({
+        fence: 3,
+        generation: 5,
+        id: 'dispatch-1',
+        operationId: 'op-1',
+        phase: 'cancel_requested',
+      });
+      findActiveDispatchMock.mockResolvedValue({
+        fence: 3,
+        generation: 5,
+        id: 'dispatch-1',
+        operationId: 'op-1',
+        phase: 'cancel_requested',
+      });
+      mockTaskModel.updateWithLog.mockResolvedValue({
+        ...runningTask,
+        assigneeAgentId: null,
+      });
+      settleDispatchMock.mockResolvedValue({
+        dispatch: { phase: 'canceled' },
+        state: 'settled',
+      });
+      interruptTaskMock.mockResolvedValue({ success: true });
+      mockTaskModel.updateStatus.mockResolvedValue({
+        ...runningTask,
+        assigneeAgentId: null,
+        status: 'paused',
+      });
+
+      const result = await service.handoffTask({
+        expectedDomainRevision: 7,
+        taskId: 'task-1',
+        toAgentId: null,
+      });
+
+      expect(result.state).toBe('parked');
+      expect(mockTaskModel.updateStatus).toHaveBeenCalledWith(
+        'task-1',
+        'paused',
+        expect.objectContaining({ error: expect.any(String) }),
+      );
+      expect(runTaskMock).not.toHaveBeenCalled();
+    });
+
+    it('treats a non-running task as a CAS assignment with no fencing', async () => {
+      const service = new TaskService(db, userId, 'ws-1');
+      mockTaskModel.resolve.mockResolvedValue({ ...runningTask, status: 'backlog' });
+      mockTaskModel.updateWithLog.mockResolvedValue({
+        ...runningTask,
+        assigneeAgentId: 'agent-b',
+        status: 'backlog',
+      });
+
+      const result = await service.handoffTask({
+        expectedDomainRevision: 7,
+        taskId: 'task-1',
+        toAgentId: 'agent-b',
+      });
+
+      expect(result.state).toBe('assigned');
+      // The transfer flag stays OFF the ordinary path — a task that flipped to
+      // running mid-flight must trip the guard, not bypass it.
+      expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
+        'task-1',
+        { assigneeAgentId: 'agent-b' },
+        { userId },
+        expect.objectContaining({ expectedDomainRevision: 7 }),
+      );
+      expect(mockTaskModel.updateWithLog.mock.calls[0][3]).not.toHaveProperty('executionTransfer');
+      expect(requestDispatchStopMock).not.toHaveBeenCalled();
+      expect(runTaskMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the asserted incumbent no longer owns the task', async () => {
+      const service = new TaskService(db, userId, 'ws-1');
+      mockTaskModel.resolve.mockResolvedValue(runningTask);
+
+      await expect(
+        service.handoffTask({
+          expectedDomainRevision: 7,
+          fromAgentId: 'agent-z',
+          taskId: 'task-1',
+          toAgentId: 'agent-b',
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(requestDispatchStopMock).not.toHaveBeenCalled();
+    });
+
+    it('aborts with the incumbent still owning when interruption is unconfirmed', async () => {
+      const service = new TaskService(db, userId, 'ws-1');
+      mockAgentModel.getAgentSnapshotForTaskCreate.mockResolvedValue({
+        snapshot: null,
+        visibility: 'public',
+      });
+      mockTaskModel.resolve.mockResolvedValue(runningTask);
+      mockTaskTopicModel.findByTaskId.mockResolvedValue([runningTopic]);
+      requestDispatchStopMock.mockResolvedValue({
+        fence: 3,
+        generation: 5,
+        id: 'dispatch-1',
+        operationId: 'op-1',
+        phase: 'cancel_requested',
+      });
+      interruptTaskMock.mockResolvedValue({ cancelState: 'unknown', success: true });
+
+      await expect(
+        service.handoffTask({
+          expectedDomainRevision: 7,
+          taskId: 'task-1',
+          toAgentId: 'agent-b',
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      // The ownership flip never ran — A remains the assignee and the durable
+      // cancel_requested row keeps the watchdog converging on the stop.
+      expect(mockTaskModel.updateWithLog).not.toHaveBeenCalled();
+      expect(runTaskMock).not.toHaveBeenCalled();
     });
   });
 });

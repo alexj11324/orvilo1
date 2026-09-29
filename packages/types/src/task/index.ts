@@ -62,7 +62,17 @@ export type TaskDispatchPhase =
   | 'canceled'
   | 'failed'
   | 'succeeded'
-  | 'outcome_unknown';
+  | 'outcome_unknown'
+  // Terminal: cancel retries exhausted — the remote writer's fate is unknown
+  // but the execution slot is released and the fence blocks late callbacks.
+  | 'abandoned';
+
+/**
+ * Execution-ownership transfer between agents. `cancel_and_restart` fences
+ * and confirms termination of the incumbent's run before the successor
+ * claims the next execution generation — two agents never share a worktree.
+ */
+export type TaskHandoffStrategy = 'cancel_and_restart';
 
 /**
  * Authoritative execution origin persisted on a dispatch row (SA05-B):

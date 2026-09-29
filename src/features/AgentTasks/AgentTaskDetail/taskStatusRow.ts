@@ -1,5 +1,7 @@
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 
+import { STATUS_KANBAN_COLUMNS } from '../AgentTaskList/kanbanBoardModel';
+
 /**
  * The single Status row of the issue rail.
  *
@@ -22,12 +24,22 @@ export const resolveTaskStatusRow = (
     ? { category: workflowCategory, kind: 'workflow' }
     : { kind: 'execution', status: status ?? 'backlog' };
 
-/** The board's workflow columns, in order. Triage is an intake queue, not a Status choice. */
-export const WORKFLOW_STATUS_CHOICES: readonly TaskWorkflowCategory[] = [
-  'backlog',
-  'todo',
-  'in_progress',
-  'in_review',
-  'done',
-  'canceled',
-];
+export interface WorkflowStatusChoice {
+  /** The workflow category a pick writes — the column's drop target. */
+  category: TaskWorkflowCategory;
+  /** The board column this choice stands for, the icon and label source. */
+  columnKey: string;
+}
+
+/**
+ * The Status picker's options — the kanban board's own status columns, in
+ * column order and led by the triage intake column (Linear: the Status menu
+ * is the board). Every column carries `targetWorkflowCategory`; the picker
+ * writes exactly what a drop on that column would write.
+ */
+export const WORKFLOW_STATUS_CHOICES: readonly WorkflowStatusChoice[] =
+  STATUS_KANBAN_COLUMNS.flatMap((column) =>
+    column.targetWorkflowCategory
+      ? [{ category: column.targetWorkflowCategory, columnKey: column.key }]
+      : [],
+  );

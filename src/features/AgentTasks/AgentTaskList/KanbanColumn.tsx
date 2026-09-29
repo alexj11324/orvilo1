@@ -4,20 +4,20 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { ChevronLeft, CircleAlert, OctagonAlert, Plus } from 'lucide-react';
+import { createStaticStyles, cx } from 'antd-style';
+import { ChevronLeft, Plus } from 'lucide-react';
 import { memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  type StatusVisual,
-  TASK_STATUS_VISUALS,
-  WORKFLOW_CATEGORY_VISUALS,
-} from '@/components/ExecutionStatus';
+import type { StatusVisual } from '@/components/ExecutionStatus';
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
-import { getKanbanColumnHeaderVariant } from './kanbanBoardModel';
+import {
+  COLUMN_I18N_KEYS,
+  COLUMN_STATUS_VISUAL,
+  getKanbanColumnHeaderVariant,
+} from './kanbanBoardModel';
 import type { TaskGroupMeta } from './listViewOptions';
 import TaskBoardCard from './TaskBoardCard';
 import TaskGroupLabel from './TaskGroupLabel';
@@ -234,80 +234,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-export const COLUMN_I18N_KEYS: Record<string, string> = {
-  'backlog': 'taskList.kanban.backlog',
-  'blocking': 'taskList.attention.blocking',
-  'canceled': 'taskList.kanban.canceled',
-  'completed': 'taskList.kanban.done',
-  'done': 'taskList.kanban.done',
-  'failed': 'taskList.kanban.failed',
-  'in_progress': 'taskList.kanban.inProgress',
-  'in_review': 'taskList.kanban.inReview',
-  'needsInput': 'taskList.kanban.needsInput',
-  'paused': 'taskList.kanban.paused',
-  'running': 'taskList.kanban.running',
-  'scheduled': 'taskList.kanban.scheduled',
-  'st:backlog': 'taskList.kanban.backlog',
-  'st:canceled': 'taskList.kanban.canceled',
-  'st:completed': 'taskList.kanban.done',
-  'st:failed': 'taskList.kanban.failed',
-  'st:paused': 'taskList.kanban.paused',
-  'st:running': 'taskList.kanban.running',
-  'st:scheduled': 'taskList.kanban.scheduled',
-  'todo': 'taskList.kanban.todo',
-  'triage': 'taskList.kanban.triage',
-  'urgent': 'taskList.attention.urgent',
-  'wf:backlog': 'taskList.kanban.backlog',
-  'wf:canceled': 'taskList.kanban.canceled',
-  'wf:done': 'taskList.kanban.done',
-  'wf:in_progress': 'taskList.kanban.inProgress',
-  'wf:in_review': 'taskList.kanban.inReview',
-  'wf:todo': 'taskList.kanban.todo',
-  'wf:triage': 'taskList.kanban.triage',
-};
-
-/**
- * Per-column header glyphs. Workflow-category columns — the merged status
- * board's buckets and the `wf:` work-query columns — read
- * `WORKFLOW_CATEGORY_VISUALS` so a header never disagrees with the category
- * badge on its cards. `st:` keys keep the raw execution-status family for
- * status-grouped surfaces; attention buckets (`urgent`/`blocking`) are not
- * statuses and keep their own marks.
- */
-export const COLUMN_STATUS_VISUAL: Record<string, StatusVisual> = {
-  // Attention buckets (Linear My issues) are not execution statuses — urgent
-  // keeps the app's urgent glyph, blocking the stop-marked one.
-  'blocking': { color: cssVar.colorError, icon: OctagonAlert },
-  'urgent': { color: cssVar.orange, icon: CircleAlert },
-  // The merged status board's columns are Linear's workflow categories —
-  // every STATUS_KANBAN_COLUMNS entry carries `targetWorkflowCategory`, with
-  // `status` only the write fallback for tasks that lack workflow state — so
-  // the header reads the same canonical map the card's category badge uses.
-  'backlog': WORKFLOW_CATEGORY_VISUALS.backlog,
-  'canceled': WORKFLOW_CATEGORY_VISUALS.canceled,
-  'done': WORKFLOW_CATEGORY_VISUALS.done,
-  'needsInput': WORKFLOW_CATEGORY_VISUALS.in_review,
-  'running': WORKFLOW_CATEGORY_VISUALS.in_progress,
-  'todo': WORKFLOW_CATEGORY_VISUALS.todo,
-  'triage': WORKFLOW_CATEGORY_VISUALS.triage,
-  // Raw execution-status columns (`st:`) — each run state keeps its own
-  // glyph instead of merging into a shared column.
-  'st:backlog': TASK_STATUS_VISUALS.backlog,
-  'st:canceled': TASK_STATUS_VISUALS.canceled,
-  'st:completed': TASK_STATUS_VISUALS.completed,
-  'st:failed': TASK_STATUS_VISUALS.failed,
-  'st:paused': TASK_STATUS_VISUALS.paused,
-  'st:running': TASK_STATUS_VISUALS.running,
-  'st:scheduled': TASK_STATUS_VISUALS.scheduled,
-  // Work-query workflow columns (`wf:`) — same canonical map.
-  'wf:backlog': WORKFLOW_CATEGORY_VISUALS.backlog,
-  'wf:canceled': WORKFLOW_CATEGORY_VISUALS.canceled,
-  'wf:done': WORKFLOW_CATEGORY_VISUALS.done,
-  'wf:in_progress': WORKFLOW_CATEGORY_VISUALS.in_progress,
-  'wf:in_review': WORKFLOW_CATEGORY_VISUALS.in_review,
-  'wf:todo': WORKFLOW_CATEGORY_VISUALS.todo,
-  'wf:triage': WORKFLOW_CATEGORY_VISUALS.triage,
-};
+// The column presentation maps moved to the board model — every surface
+// that mirrors a column (headers, collapsed rails, status pickers, view
+// chips) reads the same source.
+export { COLUMN_I18N_KEYS, COLUMN_STATUS_VISUAL };
 
 interface CollapsedKanbanColumnProps {
   columnKey: string;

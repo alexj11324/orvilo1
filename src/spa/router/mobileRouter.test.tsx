@@ -136,3 +136,29 @@ describe('mobileRouter retired acceptance/verify roots', () => {
     expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('/tasks');
   });
 });
+
+// The Chat bottom tab navigates `/agent` -> `..` -> `/{slug}` on mobile. The
+// `/:workspaceSlug` index used to declare `{ index: true }` with no element,
+// so `WorkspaceSlugBoundary` rendered an empty `<Outlet/>` and the tab came
+// up all-white.
+describe('mobileRouter workspace home', () => {
+  it('mounts a home element at /:workspaceSlug', () => {
+    const leaf = matchRoutes(mobileRoutes, '/my-workspace')?.at(-1)?.route;
+
+    expect(leaf?.index).toBe(true);
+    expect(leaf?.element).toBeTruthy();
+  });
+
+  it('mounts the same home element shape as the root / index', () => {
+    const rootLeaf = matchRoutes(mobileRoutes, '/')?.at(-1)?.route;
+    const slugLeaf = matchRoutes(mobileRoutes, '/my-workspace')?.at(-1)?.route;
+
+    expect(rootLeaf?.index).toBe(true);
+    expect(rootLeaf?.element).toBeTruthy();
+    // Both index leaves resolve through the same lazy element factory —
+    // `/{slug}` must render the same MobileHome surface as `/`.
+    expect((slugLeaf?.element as { type?: unknown }).type).toBe(
+      (rootLeaf?.element as { type?: unknown }).type,
+    );
+  });
+});

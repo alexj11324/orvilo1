@@ -9,6 +9,11 @@
   ],
   "community": [
     {
+      "id": "2026-09-29-issue-attachment-edit-lock",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
       "id": "2026-09-29-issue-menu-shortcut-guard",
       "date": "2026-09-29",
       "versionRange": ["2.3.1"]

@@ -179,8 +179,31 @@ export const insertExistingAttachmentsIntoEditor = (
   editor.focus?.();
 };
 
-export const pickAndInsertAttachments = (editor: IEditor | undefined, accept?: string): void => {
+export interface AttachmentInsertGuard {
+  /**
+   * Re-checked both before the native picker opens and when it resolves — the
+   * entity or edit rights captured at click time may have changed while the
+   * dialog was open (another task selected, an edit lock lost). Return false
+   * to drop the picked files without dispatching an insert.
+   */
+  canInsert: () => boolean;
+  /**
+   * Called when the guard rejects the pick, at click time or on dialog
+   * resolution, so the caller can explain why (e.g. a toast).
+   */
+  onBlocked?: () => void;
+}
+
+export const pickAndInsertAttachments = (
+  editor: IEditor | undefined,
+  accept?: string,
+  guard?: AttachmentInsertGuard,
+): void => {
   if (!editor?.getLexicalEditor?.()) return;
+  if (guard && !guard.canInsert()) {
+    guard.onBlocked?.();
+    return;
+  }
 
   const input = document.createElement('input');
   input.type = 'file';
@@ -188,6 +211,10 @@ export const pickAndInsertAttachments = (editor: IEditor | undefined, accept?: s
   if (accept) input.accept = accept;
 
   input.addEventListener('change', () => {
+    if (guard && !guard.canInsert()) {
+      guard.onBlocked?.();
+      return;
+    }
     insertFilesIntoEditor(editor, Array.from(input.files ?? []));
   });
 

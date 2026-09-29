@@ -1,11 +1,12 @@
 import type { IEditor } from '@lobehub/editor';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getFileIdForUrl } from './attachmentRegistry';
 import {
   getEditorAttachmentStateFromJson,
   getExistingEditorAttachment,
   insertExistingAttachmentsIntoEditor,
+  pickAndInsertAttachments,
   preservePendingFileNodeSize,
 } from './editorAttachments';
 
@@ -86,5 +87,93 @@ describe('insertExistingAttachmentsIntoEditor', () => {
 
     expect(preservePendingFileNodeSize(root as never, file)).toBe(true);
     expect(writable.__size).toBe(file.size);
+  });
+});
+
+describe('pickAndInsertAttachments', () => {
+  interface FakeInput {
+    accept: string;
+    addEventListener: ReturnType<typeof vi.fn>;
+    click: ReturnType<typeof vi.fn>;
+    files: File[];
+    multiple: boolean;
+    triggerChange: () => void;
+    type: string;
+  }
+
+  const fakeInput = (): FakeInput => {
+    const handlers: Array<() => void> = [];
+    const input: FakeInput = {
+      accept: '',
+      addEventListener: vi.fn((_type: string, cb: () => void) => {
+        handlers.push(cb);
+      }),
+      click: vi.fn(),
+      files: [new File(['data'], 'note.txt', { type: 'text/plain' })],
+      multiple: false,
+      triggerChange: () => handlers.forEach((handler) => handler()),
+      type: '',
+    };
+    vi.spyOn(document, 'createElement').mockReturnValue(input as unknown as HTMLElement);
+    return input;
+  };
+
+  const editor = () => {
+    const dispatchCommand = vi.fn();
+    return {
+      dispatchCommand,
+      focus: vi.fn(),
+      getLexicalEditor: () => ({ dispatchCommand }),
+    } as unknown as IEditor & { dispatchCommand: ReturnType<typeof vi.fn> };
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('inserts the picked files once the dialog resolves', () => {
+    const input = fakeInput();
+    const target = editor();
+
+    pickAndInsertAttachments(target);
+    input.triggerChange();
+
+    expect(input.click).toHaveBeenCalledTimes(1);
+    expect(target.dispatchCommand).toHaveBeenCalledTimes(1);
+    expect(target.dispatchCommand.mock.calls[0][1].file).toBeInstanceOf(File);
+  });
+
+  it('never opens the picker when the guard already rejects', () => {
+    const input = fakeInput();
+    const onBlocked = vi.fn();
+
+    pickAndInsertAttachments(editor(), undefined, { canInsert: () => false, onBlocked });
+
+    expect(input.click).not.toHaveBeenCalled();
+    expect(input.addEventListener).not.toHaveBeenCalled();
+    expect(onBlocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-checks the guard when the dialog resolves and drops the files', () => {
+    const input = fakeInput();
+    const target = editor();
+    const onBlocked = vi.fn();
+    let allowed = true;
+
+    pickAndInsertAttachments(target, undefined, { canInsert: () => allowed, onBlocked });
+    allowed = false;
+    input.triggerChange();
+
+    expect(target.dispatchCommand).not.toHaveBeenCalled();
+    expect(onBlocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards the accept filter to the file input', () => {
+    const input = fakeInput();
+
+    pickAndInsertAttachments(editor(), 'image/*');
+
+    expect(input.accept).toBe('image/*');
+    expect(input.click).toHaveBeenCalledTimes(1);
   });
 });

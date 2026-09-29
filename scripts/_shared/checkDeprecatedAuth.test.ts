@@ -51,7 +51,7 @@ describe('checkDeprecatedAuth', () => {
   });
 
   it('should exit with code 1 when Clerk env vars are detected', async () => {
-    process.env.CLERK_WEBHOOK_SECRET = 'test-secret';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_key';
 
     const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
     checkDeprecatedAuth();
@@ -59,8 +59,10 @@ describe('checkDeprecatedAuth', () => {
     expect(mockExit).toHaveBeenCalledWith(1);
   });
 
-  it('should not exit when only CLERK_SECRET_KEY is set', async () => {
+  it('should not exit when only the Clerk session-exchange vars are set', async () => {
     process.env.CLERK_SECRET_KEY = 'test-key';
+    process.env.CLERK_ISSUER = 'https://clerk.example.com';
+    process.env.CLERK_AUTHORIZED_PARTIES = 'https://app.example.com';
 
     const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
     checkDeprecatedAuth();

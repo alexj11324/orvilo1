@@ -27,6 +27,12 @@ keep Cloudflare Vite plugin v1 because a v2 trial emitted its manifest under
 Their PR workflows set `CF_WORKER_NAME` to the sibling preview Worker, run `cf build`, and upload
 with `cf workers versions create --prebuilt`. Auth's local preview uses `cf dev`.
 
+Share and Workbench PR previews require the repository secret `CLOUDFLARE_PREVIEW_API_TOKEN`
+(or `CLOUDFLARE_API_TOKEN`) and variable `CLOUDFLARE_WORKERS_SUBDOMAIN` for the configured
+Cloudflare account. This account uses `orvilo-preview.workers.dev`; set the variable to
+`orvilo-preview`. The variable supplies the preview asset origin, and the workflow publishes only
+an alias URL returned by the successful version upload.
+
 These code changes do not deploy or alter Cloudflare resources.
 
 Auth and Workbench deploy through `.github/workflows/deploy-auth.yml` and

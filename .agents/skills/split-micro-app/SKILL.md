@@ -147,7 +147,7 @@ read `CF_WORKER_NAME` to select `orvilo-<name>-preview`; their workflows run `cf
 variable set, then upload with `cf workers versions create --prebuilt --preview-alias <alias>`.
 The production script's version list holds only deployments. The preview API token must be allowed
 to edit the `-preview` name. Preview URLs are then
-`https://<alias>-orvilo-<name>-preview.orvilo-objects-tg.workers.dev`, and `VITE_CDN_BASE` must
+`https://<alias>-orvilo-<name>-preview.<workers-subdomain>.workers.dev`, and `VITE_CDN_BASE` must
 point at that same origin. Alias namespaces must not collide on the shared preview worker: OSS
 uses `pr<N>`, cloud uses `cloudpr<N>`. Manifest source
 differs by what the repo can read: cloud verify borrows the deploy's `share-deploy-state`

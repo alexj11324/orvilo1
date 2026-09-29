@@ -24,15 +24,17 @@ for (const prefix of ['antd-', 'theme-vars-']) {
     `Missing static CSS: ${prefix}`,
   );
 }
+const bundleRoot = path.join(workerRoot, 'bundle');
+const workerSource = readdirSync(bundleRoot, { recursive: true })
+  .filter((file) => file.endsWith('.js'))
+  .map((file) => readFileSync(path.join(bundleRoot, file), 'utf8'))
+  .join('\n');
+const browserManifests = workerSource.match(/\bmanifest-[a-f0-9]{8}\.js\b/g) ?? [];
+assert(browserManifests.length > 0, 'Worker has no React Router browser manifest');
+for (const file of new Set(browserManifests)) {
+  assert(existsSync(path.join(assetsRoot, 'assets', file)), `Missing browser manifest: ${file}`);
+}
 if (process.env.VITE_CDN_BASE) {
-  const bundleRoot = path.join(workerRoot, 'bundle');
-  assert(
-    readdirSync(bundleRoot, { recursive: true }).some(
-      (file) =>
-        file.endsWith('.js') &&
-        readFileSync(path.join(bundleRoot, file), 'utf8').includes(process.env.VITE_CDN_BASE),
-    ),
-    'Worker lost the configured CDN base',
-  );
+  assert(workerSource.includes(process.env.VITE_CDN_BASE), 'Worker lost the configured CDN base');
 }
 console.log('Cloudflare assets match the Worker manifest and CDN base.');

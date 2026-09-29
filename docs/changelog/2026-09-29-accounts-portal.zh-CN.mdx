@@ -1,0 +1,17 @@
+---
+title: accounts.aspectlylabs.com 改由 Orvilo worker 提供服务
+description: >-
+  托管的账号门户——登录页、release 契约与健康探针——由开源仓库中的 auth
+  worker 提供，取代已废弃的 Cordy auth-broker 部署。
+tags:
+  - Authentication
+---
+
+# accounts.aspectlylabs.com 改由 Orvilo worker 提供服务
+
+账号门户（邮箱 + 密码登录、一次性验证码回退以及通过 Clerk 的 Google 登录）迁移到了本仓库的 auth worker。部署 worker 会接管 accounts.aspectlylabs.com 自定义域名，取代已废弃的 Cordy auth-broker 成为登录入口，并在边缘直接提供 `/v1/contract` 发布契约与 `/healthz`/`/readyz` 探针。
+
+## 改进与修复
+
+- **登录体验保持一致。** 邮箱 + 密码、一次性验证码与 Google OAuth 仍渲染在用户熟悉的全屏双栏布局中。
+- **发布元数据在边缘直接返回。** `/v1/contract` 由 worker 直接应答 JSON，不再依赖 SPA 文档，桌面端与工具探针在切换期间持续可用。

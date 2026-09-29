@@ -1,7 +1,7 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "orvilo-share",
-  "account_id": "d35842305b91be4b48e06ff9a9ad83f5",
+  "account_id": "d8f6630c7869111a5139bc5ed4d24ace",
   "main": "./workers/app.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],

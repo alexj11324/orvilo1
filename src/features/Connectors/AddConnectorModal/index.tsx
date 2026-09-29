@@ -27,7 +27,7 @@ const isConnectorConnected = (id: string) =>
 /** Map a settled session outcome to a toast. */
 const reportOAuthResult = (
   result: { error?: string; status: string; synced?: boolean },
-  t: TFunction,
+  t: TFunction<'tool'>,
   successMessage: string,
 ) => {
   if (result.status === 'success') {

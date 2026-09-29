@@ -5,7 +5,10 @@ import { resolve } from 'node:path';
 import dotenv from 'dotenv';
 
 import { uploadAssets } from '../../../scripts/mobileSpaWorkflow/upload';
-import { localOperator, workerDeployAnnotationArgs } from '../../../scripts/workerDeployAnnotations';
+import {
+  localOperator,
+  workerDeployAnnotationArgs,
+} from '../../../scripts/workerDeployAnnotations';
 
 const workbenchRoot = resolve(__dirname, '..');
 const repoRoot = resolve(workbenchRoot, '../..');
@@ -51,7 +54,14 @@ async function main() {
 
   if (!existsSync(assetsDir)) throw new Error(`Build output not found at ${assetsDir}`);
 
-  console.log('\n=== Step 2: Upload assets to S3 ===');
+  console.log('\n=== Step 2: Build Cloudflare output ===');
+  execFileSync('node_modules/.bin/cf', ['build'], {
+    cwd: workbenchRoot,
+    env: { ...process.env, NODE_ENV: 'production' },
+    stdio: 'inherit',
+  });
+
+  console.log('\n=== Step 3: Upload assets to S3 ===');
   await uploadAssets(assetsDir, {
     accessKeyId: requireEnv('ASSET_S3_ACCESS_KEY_ID', 'MOBILE_S3_ACCESS_KEY_ID'),
     bucket: requireEnv('ASSET_S3_BUCKET', 'MOBILE_S3_BUCKET'),
@@ -62,13 +72,12 @@ async function main() {
     secretAccessKey: requireEnv('ASSET_S3_SECRET_ACCESS_KEY', 'MOBILE_S3_SECRET_ACCESS_KEY'),
   });
 
-  console.log('\n=== Step 3: Deploy worker ===');
+  console.log('\n=== Step 4: Deploy worker ===');
   execFileSync(
-    'node_modules/.bin/wrangler',
+    'node_modules/.bin/cf',
     [
       'deploy',
-      '--config',
-      'build/server/wrangler.json',
+      '--prebuilt',
       ...workerDeployAnnotationArgs(process.env, localOperator(workbenchRoot)),
     ],
     { cwd: workbenchRoot, stdio: 'inherit' },

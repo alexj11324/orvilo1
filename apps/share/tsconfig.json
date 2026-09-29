@@ -12,6 +12,7 @@
     "app/**/*.tsx",
     "workers/**/*.ts",
     "vite.config.ts",
+    "vite.config.spa.mts",
     "vite.config.rr.mts",
     "react-router.config.ts",
     "../../src/types/global.d.ts",

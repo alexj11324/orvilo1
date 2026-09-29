@@ -1,0 +1,103 @@
+name: Verify Auth
+
+on:
+  pull_request: {}
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: verify-auth-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve last successful deploy
+        id: base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list --repo "${{ github.repository }}" \
+            --workflow deploy-auth.yml --branch canary --status success --limit 1 \
+            --json databaseId --jq '.[0].databaseId' || true)
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download deployed build inputs
+        id: manifest
+        if: steps.base.outputs.run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh run download "${{ steps.base.outputs.run_id }}" --repo "${{ github.repository }}" \
+            -n auth-build-inputs -D /tmp/auth-manifest; then
+            echo "path=/tmp/auth-manifest/build-inputs.txt" >> "$GITHUB_OUTPUT"
+          else
+            echo "no manifest artifact on last successful run"
+          fi
+
+      - name: Detect auth input changes
+        id: detect
+        env:
+          AUTH_MANIFEST: ${{ steps.manifest.outputs.path }}
+        run: |
+          if [ -z "$AUTH_MANIFEST" ]; then
+            echo "no deployed build manifest — building"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            node apps/auth/scripts/should-build.mjs "origin/${{ github.base_ref }}" HEAD
+          fi
+
+      - name: Setup environment
+        if: steps.detect.outputs.should_build == 'true'
+        uses: ./.github/actions/setup-env
+
+      - name: Install deps
+        if: steps.detect.outputs.should_build == 'true'
+        run: pnpm install
+
+      - name: Build Auth
+        if: steps.detect.outputs.should_build == 'true'
+        env:
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=8192
+          VITE_CDN_BASE: /
+        run: bun run build
+        working-directory: apps/auth
+
+      - name: Build Cloudflare output
+        if: steps.detect.outputs.should_build == 'true'
+        env:
+          NODE_ENV: production
+        run: node_modules/.bin/cf build
+        working-directory: apps/auth/cf
+
+      - name: Validate deployment without uploading
+        if: steps.detect.outputs.should_build == 'true'
+        run: node_modules/.bin/cf deploy --prebuilt --dry-run
+        working-directory: apps/auth/cf
+
+      - name: Verify local Worker preview
+        if: steps.detect.outputs.should_build == 'true'
+        shell: bash
+        working-directory: apps/auth/cf
+        run: |
+          set -euo pipefail
+          timeout 60s node_modules/.bin/cf dev --local --port 8787 >/tmp/auth-cf-dev.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --show-error --fail http://127.0.0.1:8787/login >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/auth-cf-dev.log
+          exit 1

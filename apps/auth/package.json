@@ -7,7 +7,7 @@
     "build": "node scripts/build.mjs",
     "deploy": "bun scripts/deploy.ts",
     "dev": "react-router dev -c vite.config.rr.mts",
-    "preview": "wrangler dev",
+    "preview": "pnpm --dir cf exec cf dev",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -18,7 +18,6 @@
     "@react-router/dev": "^8.3.0",
     "isbot": "^5.1.32",
     "vite": "8.0.16",
-    "vite-tsconfig-paths": "^6.1.1",
-    "wrangler": "^4.123.0"
+    "vite-tsconfig-paths": "^6.1.1"
   }
 }

@@ -87,13 +87,16 @@ jobs:
       - name: Upload preview version and validate worker bundle
         if: steps.detect.outputs.should_build == 'true'
         # Explicit `bash` rather than the default shell, whose lack of pipefail would let a
-        # wrangler failure pass as a green step through the `tee`.
+        # cf failure pass as a green step through the `tee`.
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=8192
+          CF_WORKER_NAME: orvilo-workbench-preview
         run: |
           if [ "$SAME_REPO" = 'true' ]; then
             set -- --preview-alias "pr${PR}" --tag "${HEAD_SHA::7}" \
@@ -105,9 +108,9 @@ jobs:
           # Cloudflare only rolls back to the 100 most recently uploaded versions, and PR
           # uploads onto the real script would push its deployed versions out of that
           # window within a day.
-          node_modules/.bin/wrangler versions upload \
-            --name orvilo-workbench-preview \
-            --config build/server/wrangler.json "$@" | tee /tmp/upload.log
+          node_modules/.bin/cf build
+          node_modules/.bin/cf workers versions create \
+            --prebuilt "$@" | tee /tmp/upload.log
           gzip_kib=$(grep -Eo 'gzip: [0-9.]+ KiB' /tmp/upload.log | grep -Eo '[0-9.]+' | head -1)
           echo "worker gzip size: ${gzip_kib} KiB"
           if [ -n "$gzip_kib" ] && [ "$(printf '%.0f' "$gzip_kib")" -gt 8192 ]; then

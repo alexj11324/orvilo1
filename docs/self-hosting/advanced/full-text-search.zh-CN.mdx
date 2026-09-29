@@ -49,8 +49,8 @@ FTS_SEARCH_PROVIDER=pg_search
 
 Neon 已于 2026 年 3 月 19 日停止为新项目提供 `pg_search`，并已通知受影响的现有客户：该扩展将在
 2026 年 9 月 21 日从 Neon 移除，此后依赖它的查询、索引和应用都会停止工作。已经在 Neon 上运行 Orvilo 的用户应在截止日期前完成
-[从 pg\_search 迁移到 Elasticsearch](/zh/docs/self-hosting/advanced/elasticsearch-migration)。执行前请同时核对 Neon 的
-[最新 pg\_search 公告](https://neon.com/docs/extensions/pg_search)和
+[从 pg_search 迁移到 Elasticsearch](/zh/docs/self-hosting/advanced/elasticsearch-migration)。执行前请同时核对 Neon 的
+[最新 pg_search 公告](https://neon.com/docs/extensions/pg_search)和
 [扩展列表](https://neon.com/docs/extensions/pg-extensions)。
 
 Elasticsearch 有两种受支持的运行方式。两者使用同一套回填和增量同步命令、同一个
@@ -82,7 +82,7 @@ Compose 安装）仍必须运行在能够安装 `pg_search` 的 PostgreSQL 镜�
 相关对象可以之后通过项目提供的清理命令移除。
 
 完整的演练、回填、切换和回滚流程，请参阅
-[从 pg\_search 迁移到 Elasticsearch](/zh/docs/self-hosting/advanced/elasticsearch-migration)。
+[从 pg_search 迁移到 Elasticsearch](/zh/docs/self-hosting/advanced/elasticsearch-migration)。
 
 ## Elasticsearch 如何同步数据
 
@@ -108,11 +108,11 @@ PostgreSQL 写入
 `docker-compose/deploy/docker-compose.yml` 中的可选服务都由 Compose profile 控制，默认的
 `docker compose up` 既不会下载也不会启动它们：
 
-| 服务                   | Profile                 | 作用                                                                                   |
-| -------------------- | ----------------------- | ------------------------------------------------------------------------------------ |
-| `elasticsearch`      | `elasticsearch`         | 基于固定版本官方镜像在本机构建并内置 `analysis-icu` 的单节点，使用命名数据卷和健康检查，不向宿主机公开端口                        |
-| `fts-search-reindex` | `elasticsearch-reindex` | 基于 `alexj11324/orvilo1` 镜像的一次性回填 / 状态命令；checkpoint 保存在 `fts-search-reindex-state` 卷中 |
-| `fts-search-sync`    | `elasticsearch-sync`    | 基于 `alexj11324/orvilo1` 镜像的长期增量消费任务；遇到失败或死信任务时退出并由 Compose 重启，同时输出日志                 |
+| 服务                   | Profile                 | 作用                                                                                           |
+| -------------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
+| `elasticsearch`      | `elasticsearch`         | 基于固定版本官方镜像在本机构建并内置 `analysis-icu` 的单节点，使用命名数据卷和健康检查，不向宿主机公开端口                                |
+| `fts-search-reindex` | `elasticsearch-reindex` | 基于 `ghcr.io/alexj11324/orvilo1` 镜像的一次性回填 / 状态命令；checkpoint 保存在 `fts-search-reindex-state` 卷中 |
+| `fts-search-sync`    | `elasticsearch-sync`    | 基于 `ghcr.io/alexj11324/orvilo1` 镜像的长期增量消费任务；遇到失败或死信任务时退出并由 Compose 重启，同时输出日志                 |
 
 资源说明：节点默认使用 1 GB JVM 堆内存（`ES_JAVA_OPTS`）；堆内存不要超过分配给容器内存的一半，并为
 Elasticsearch 单独预留至少 2 GB 内存。Linux 宿主机必须设置 `vm.max_map_count=262144`。启用该 profile 后首次执行

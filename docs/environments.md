@@ -17,9 +17,9 @@
 Use the new `cf` CLI for Cloudflare API operations and production Worker releases. Find commands
 with `cf cli search "<generic task description>"`; keep the query free of project or account details.
 
-Auth, Share, and Workbench release scripts build the app, then use `cf build` and
-`cf deploy --prebuilt`. Share and Workbench keep `cloudflare.config.ts` at the app root, where
-their Vite config adds a manifest bridge for the existing React Router build. Auth uses the
+Share and Workbench release scripts run `cf build` once with the CDN base, emit static CSS into
+its output, upload `.cloudflare/output/v0/workers/default/assets/assets` to R2, and then run
+`cf deploy --prebuilt`. Their app-root Vite config bridges the manifest for React Router. Auth uses the
 separate `apps/auth/cf/` Vite project to package the already-prerendered client assets; its config
 carries the `ASSETS` binding and `accounts.aspectlylabs.com` custom domain. Share and Workbench
 keep Cloudflare Vite plugin v1 because a v2 trial emitted its manifest under

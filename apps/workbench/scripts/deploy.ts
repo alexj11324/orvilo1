@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -12,7 +12,7 @@ import {
 
 const workbenchRoot = resolve(__dirname, '..');
 const repoRoot = resolve(workbenchRoot, '../..');
-const assetsDir = resolve(workbenchRoot, 'build/client/assets');
+const assetsDir = resolve(workbenchRoot, '.cloudflare/output/v0/workers/default/assets/assets');
 
 dotenv.config({ path: resolve(repoRoot, '.env') });
 
@@ -40,24 +40,26 @@ async function main() {
   ).replaceAll(/^\/+|\/+$/g, '');
   const cdnBase = `${publicDomain}/${keyPrefix}/`;
 
-  console.log(`=== Step 1: Build workbench (VITE_CDN_BASE=${cdnBase}) ===`);
-  execSync('bun run build:rr', {
+  const buildEnv = {
+    ...process.env,
+    NODE_ENV: 'production',
+    NODE_OPTIONS: '--max-old-space-size=8192',
+    VITE_CDN_BASE: cdnBase,
+  };
+
+  console.log('=== Step 1: Build Cloudflare workbench ===');
+  execFileSync('node_modules/.bin/cf', ['build'], {
     cwd: workbenchRoot,
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      NODE_OPTIONS: '--max-old-space-size=8192',
-      VITE_CDN_BASE: cdnBase,
-    },
+    env: buildEnv,
     stdio: 'inherit',
   });
 
   if (!existsSync(assetsDir)) throw new Error(`Build output not found at ${assetsDir}`);
 
-  console.log('\n=== Step 2: Build Cloudflare output ===');
-  execFileSync('node_modules/.bin/cf', ['build'], {
+  console.log('\n=== Step 2: Emit static CSS ===');
+  execFileSync('node', ['scripts/emit-static-css.mjs', assetsDir], {
     cwd: workbenchRoot,
-    env: { ...process.env, NODE_ENV: 'production' },
+    env: buildEnv,
     stdio: 'inherit',
   });
 

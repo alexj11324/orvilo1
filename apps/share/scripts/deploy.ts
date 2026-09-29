@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -12,7 +12,7 @@ import {
 
 const shareRoot = resolve(__dirname, '..');
 const repoRoot = resolve(shareRoot, '../..');
-const assetsDir = resolve(shareRoot, 'build/client/assets');
+const assetsDir = resolve(shareRoot, '.cloudflare/output/v0/workers/default/assets/assets');
 
 // A host repo that builds this app from a submodule keeps its own .env; it
 // points SHARE_ENV_FILE at it so local deploys pick up the same credentials.
@@ -42,24 +42,26 @@ async function main() {
   const keyPrefix = (firstEnv('SHARE_S3_KEY_PREFIX') || 'share').replaceAll(/^\/+|\/+$/g, '');
   const cdnBase = `${publicDomain}/${keyPrefix}/`;
 
-  console.log(`=== Step 1: Build share (VITE_CDN_BASE=${cdnBase}) ===`);
-  execSync('bun run build:rr', {
+  const buildEnv = {
+    ...process.env,
+    NODE_ENV: 'production',
+    NODE_OPTIONS: '--max-old-space-size=8192',
+    VITE_CDN_BASE: cdnBase,
+  };
+
+  console.log('=== Step 1: Build Cloudflare share ===');
+  execFileSync('node_modules/.bin/cf', ['build'], {
     cwd: shareRoot,
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      NODE_OPTIONS: '--max-old-space-size=8192',
-      VITE_CDN_BASE: cdnBase,
-    },
+    env: buildEnv,
     stdio: 'inherit',
   });
 
   if (!existsSync(assetsDir)) throw new Error(`Build output not found at ${assetsDir}`);
 
-  console.log('\n=== Step 2: Build Cloudflare output ===');
-  execFileSync('node_modules/.bin/cf', ['build'], {
+  console.log('\n=== Step 2: Emit static CSS ===');
+  execFileSync('node', ['scripts/emit-static-css.mjs', assetsDir], {
     cwd: shareRoot,
-    env: { ...process.env, NODE_ENV: 'production' },
+    env: buildEnv,
     stdio: 'inherit',
   });
 

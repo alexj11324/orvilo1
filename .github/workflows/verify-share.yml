@@ -78,8 +78,17 @@ jobs:
         if: steps.detect.outputs.should_build == 'true'
         env:
           NODE_ENV: production
+          CF_WORKER_NAME: orvilo-share-preview
           NODE_OPTIONS: --max-old-space-size=8192
-        run: bun run build:rr
+          VITE_CDN_BASE: >-
+            ${{ github.event.pull_request.head.repo.full_name == github.repository
+            && format('https://pr{0}-orvilo-share-preview.orvilo-objects-tg.workers.dev/', github.event.pull_request.number)
+            || '' }}
+        run: |
+          node_modules/.bin/cf build
+          node scripts/emit-static-css.mjs .cloudflare/output/v0/workers/default/assets/assets
+          node ../../scripts/checkCloudflareAssets.mjs .cloudflare/output/v0/workers/default
+          printf '/*\n  Access-Control-Allow-Origin: *\n' > .cloudflare/output/v0/workers/default/assets/_headers
         working-directory: apps/share
 
       - name: Upload build-inputs manifest
@@ -113,7 +122,6 @@ jobs:
           # Cloudflare only rolls back to the 100 most recently uploaded versions, and PR
           # uploads onto the real script would push its deployed versions out of that
           # window within a day.
-          node_modules/.bin/cf build
           node_modules/.bin/cf workers versions create \
             --prebuilt "$@" | tee /tmp/upload.log
           gzip_kib=$(grep -Eo 'gzip: [0-9.]+ KiB' /tmp/upload.log | grep -Eo '[0-9.]+' | head -1)

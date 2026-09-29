@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { antdStaticCssOptions, themeVarsCssOptions } from '../staticCssOptions.mjs';
 
@@ -7,7 +8,9 @@ process.env.NODE_ENV = 'production';
 
 const { buildAntdStaticCss, buildThemeVarsCss } = await import('@lobehub/ui/static-css');
 
-const clientAssetsDir = new URL('../build/client/assets/', import.meta.url);
+const clientAssetsDir = process.argv[2]
+  ? pathToFileURL(path.resolve(process.argv[2]) + '/')
+  : new URL('../build/client/assets/', import.meta.url);
 await mkdir(clientAssetsDir, { recursive: true });
 
 const antd = buildAntdStaticCss(antdStaticCssOptions);

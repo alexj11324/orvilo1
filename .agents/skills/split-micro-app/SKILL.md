@@ -117,8 +117,9 @@ and resolve to an older copy whose base-ui lacks components the app renders → 
 Alert`), and a `*.client` module needs its own SSR-env stub so the hydration gate does not drag
 the gated tree into the worker anyway.
 
-Products: `build/client` (assets → CDN), `build/server` (Worker). Share and Workbench publish from
-the app root with `cf build` and `cf deploy --prebuilt`; Auth builds its Worker from `apps/auth/cf/`.
+The `build:rr` command produces `build/client` and `build/server`. Share and Workbench releases use
+one app-root `cf build` and publish its `.cloudflare/output/v0/workers/default` output; Auth builds
+its Worker from `apps/auth/cf/`. Emit static CSS into the same output before upload.
 Budget: worker gzip ≤ 10MB paid.
 
 **CI affected-detection**: build emits `build-inputs.txt` (module-graph file list, gitignored);
@@ -217,7 +218,8 @@ incremental and immutable. The prefix axis is the **app**, nothing else: do not 
 `<name>-oss` / `<name>-cloud` variants to separate build origins — hashed filenames already make
 one prefix safe for all of them. `ASSET_S3_PUBLIC_DOMAIN` is an origin; any path segment belongs
 on `ASSET_BASE_URL` instead. `bun run deploy` (see `apps/workbench/scripts/deploy.ts`) =
-build with CDN base → create Cloudflare output → upload `build/client/assets` to R2 (`web-assets`
+one `cf build` with CDN base → emit static CSS into its output → upload that output's `assets/assets`
+to R2 (`web-assets`
 bucket, Orvilo account) → `cf deploy --prebuilt`. R2 creds: 1Password Shared vault item
 "CI R2 - web-assets".
 CI injects repo secrets `ASSET_S3_*` (`ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `BUCKET`,

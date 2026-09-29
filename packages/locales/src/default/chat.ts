@@ -1652,6 +1652,8 @@ export default {
   'taskDetail.properties': 'Properties',
   'taskDetail.executionStatus': 'Execution',
   'taskDetail.project': 'Project',
+  'taskDetail.noProject': 'No project',
+  'taskDetail.openProject': 'Open project',
   'taskDetail.copyBranch': 'Copy branch name',
   'taskDetail.copyBranchSuccess': 'Branch name copied',
   'taskDetail.milestone.hint': 'Set milestone',

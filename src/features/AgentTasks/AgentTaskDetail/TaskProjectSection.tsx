@@ -1,8 +1,8 @@
 'use client';
 
 import { Block, type DropdownItem, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import { Text, toast } from '@lobehub/ui/base-ui';
-import { CheckIcon } from 'lucide-react';
+import { ActionIcon, Text, toast } from '@lobehub/ui/base-ui';
+import { ArrowUpRight, CheckIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,30 +11,44 @@ import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilt
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { useProjectStore } from '@/store/project';
+import { useCurrentProjectList, useProjectStore } from '@/store/project';
+import { useTaskStore } from '@/store/task';
+import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import { formatTaskItemDate } from '../features/formatTaskItemDate';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
+import { useTaskProjectChange } from '../shared/useTaskProjectChange';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 
 /**
  * The rail's "Project" group — Linear files every issue under a project or a
  * team, so the rail shows the owning project as a chip plus the milestone row
- * underneath it. A task with no `projectId` renders nothing: the group only
- * exists when the data does (the breadcrumb covers the team-owned case).
+ * underneath it. The project value is a picker when the task is editable —
+ * including the discoverable "No project" empty state — while navigation to
+ * the project stays a separate trailing affordance; read-only keeps the row
+ * as the link it always was.
  */
 const TaskProjectSection = memo(() => {
   const { t } = useTranslation(['chat', 'project']);
   const { i18n, t: tCommon } = useTranslation('common');
   const navigate = useWorkspaceAwareNavigate();
   const { milestone, milestones, project, projectRef, taskDatabaseId } = useActiveTaskProject();
+  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const taskProjectId = useTaskStore((s) => taskDetailSelectors.activeTaskDetail(s)?.projectId);
   const setTaskMilestone = useProjectStore((s) => s.setTaskMilestone);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const { allowed: canEditTask } = usePermission('create_content');
   const [pending, setPending] = useState(false);
+  const { apply: applyProject, pending: projectPending } = useTaskProjectChange({ taskId });
+
+  // The picker reads the same scope-filtered project list the sidebar uses —
+  // an invisible project can never be offered, let alone selected.
+  const canPickProject = canEditTask && Boolean(taskId);
+  useProjectStore((s) => s.useFetchProjectList)(canPickProject);
+  const projects = useCurrentProjectList();
 
   // `manageable()` on the server is `projects.userId = me` — the same gate the
   // project overview's milestone assign menu uses, so a member sees the
@@ -86,7 +100,49 @@ const TaskProjectSection = memo(() => {
     ];
   }, [project, milestones, milestone, taskDatabaseId, pending, setTaskMilestone, t, i18n, tCommon]);
 
-  if (!project || !projectRef) return null;
+  // A project write re-files the task; the project's task catalog on both
+  // sides of the move is reconciled inside useTaskProjectChange.
+  const projectItems = useMemo<DropdownItem[]>(() => {
+    const change = (next: string | null) => {
+      if (projectPending || next === taskProjectId) return;
+      void applyProject(next, taskProjectId);
+    };
+    return [
+      ...projects.map((row) => ({
+        icon: row.id === taskProjectId ? <Icon icon={CheckIcon} /> : undefined,
+        key: row.id,
+        label: (
+          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+            <Avatar
+              avatar={row.avatar || undefined}
+              name={row.name}
+              shape={'square'}
+              size={16}
+              style={{ flex: 'none' }}
+            />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</span>
+          </Flexbox>
+        ),
+        onClick: () => change(row.id),
+      })),
+      { type: 'divider' },
+      {
+        icon: !taskProjectId ? <Icon icon={CheckIcon} /> : undefined,
+        key: 'none',
+        label: t('taskDetail.noProject'),
+        onClick: () => change(null),
+      },
+    ];
+  }, [projects, taskProjectId, projectPending, applyProject, t]);
+
+  if (!taskProjectId && !canPickProject) return null;
+
+  const listedProject = taskProjectId
+    ? projects.find((row) => row.id === taskProjectId)
+    : undefined;
+  // The detail row is authoritative once loaded; the list row covers the
+  // detail-fetch window, and neither leaks a name the scope can't see.
+  const projectName = project?.name ?? listedProject?.name;
 
   const milestoneDate = milestone?.date
     ? formatTaskItemDate(milestone.date, {
@@ -149,35 +205,82 @@ const TaskProjectSection = memo(() => {
     </Block>
   );
 
-  return (
-    <div className={styles.railSection}>
-      <span className={styles.railSectionLabel}>{t('taskDetail.project')}</span>
-      <Block
-        clickable
-        horizontal
-        align={'center'}
-        className={styles.railRow}
-        gap={8}
-        title={project.name}
-        variant={'borderless'}
-        onClick={() => navigate(`/project/${projectRef}`)}
-      >
+  const projectValue = (
+    <>
+      {projectName ? (
         <Avatar
-          avatar={project.avatar || undefined}
-          name={project.name}
+          avatar={(project ?? listedProject)?.avatar || undefined}
+          name={projectName}
           shape={'square'}
           size={16}
           style={{ flex: 'none' }}
         />
-        <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
-          {project.name}
-        </Text>
-      </Block>
+      ) : null}
+      <Text
+        ellipsis
+        fontSize={RAIL_VALUE_FONT_SIZE}
+        style={{ minWidth: 0 }}
+        type={projectName ? undefined : 'secondary'}
+        weight={500}
+      >
+        {projectName ?? t('taskDetail.noProject')}
+      </Text>
+    </>
+  );
+
+  // The row is the picker's trigger when the task is editable; navigation
+  // stays a distinct affordance beside it, so one click never both picks
+  // and leaves the page. Read-only keeps the whole row as the link.
+  const projectRow = canPickProject ? (
+    <Flexbox horizontal align={'center'} gap={4} style={{ minWidth: 0 }}>
+      <DropdownMenu items={projectItems} placement={'bottomRight'}>
+        <Block
+          clickable
+          horizontal
+          align={'center'}
+          className={styles.railRow}
+          flex={1}
+          gap={8}
+          style={{ minWidth: 0 }}
+          title={projectPending ? undefined : (projectName ?? t('taskDetail.noProject'))}
+          variant={'borderless'}
+        >
+          {projectValue}
+        </Block>
+      </DropdownMenu>
+      {project && projectRef ? (
+        <ActionIcon
+          icon={ArrowUpRight}
+          size={'small'}
+          title={t('taskDetail.openProject')}
+          onClick={() => navigate(`/project/${projectRef}`)}
+        />
+      ) : null}
+    </Flexbox>
+  ) : project && projectRef ? (
+    <Block
+      clickable
+      horizontal
+      align={'center'}
+      className={styles.railRow}
+      gap={8}
+      title={project.name}
+      variant={'borderless'}
+      onClick={() => navigate(`/project/${projectRef}`)}
+    >
+      {projectValue}
+    </Block>
+  ) : null;
+
+  return (
+    <div className={styles.railSection}>
+      <span className={styles.railSectionLabel}>{t('taskDetail.project')}</span>
+      {projectRow}
       {/* The milestone row only exists where a milestone could: set, or a
           catalog the picker can file under. A project with zero milestones
           shows no row at all — there is nothing to choose and no state to
           claim. */}
-      {(milestone || (canEdit && milestones.length > 0)) && milestoneRow}
+      {(milestone || (canEdit && milestones.length > 0)) && project && milestoneRow}
     </div>
   );
 });

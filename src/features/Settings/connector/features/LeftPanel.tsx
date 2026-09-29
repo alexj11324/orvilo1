@@ -78,6 +78,7 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
     connect: connectGitHub,
     connecting: githubConnecting,
     grantConnected: githubGrantConnected,
+    timedOut: githubTimedOut,
   } = useGitHubMcpConnect(selectGitHub);
 
   const closeModal = () => {
@@ -111,6 +112,7 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
           <ConnectorList
             githubConnecting={githubConnecting}
             githubGrantConnected={githubGrantConnected}
+            githubTimedOut={githubTimedOut}
             selectedIdentifier={selectedIdentifier}
             onConnectGitHub={() => void connectGitHub()}
             onSelect={onSelect}

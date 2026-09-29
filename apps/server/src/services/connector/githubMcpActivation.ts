@@ -25,6 +25,7 @@ interface GitHubMcpActivationContext extends ConnectorToolSyncContext {
  * grant is present. No token material is written to `user_connectors`.
  */
 export const activateGitHubMcpConnector = async (input: {
+  attempt?: string;
   ctx: GitHubMcpActivationContext;
   existing: DecryptedConnector | null;
   userId: string;
@@ -38,7 +39,7 @@ export const activateGitHubMcpConnector = async (input: {
   });
   if (!identity) {
     return {
-      authorizationUrl: await startGitHubOAuth(input.userId),
+      authorizationUrl: await startGitHubOAuth(input.userId, input.attempt),
       status: 'authorization_required',
     };
   }

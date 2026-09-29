@@ -3,6 +3,8 @@ import { getAgentRuntimeRedisClient } from '@/server/modules/AgentExecution/redi
 const key = (state: string) => `github:oauth-state:${state}`;
 
 export interface GitHubOAuthState {
+  /** Client-minted attempt nonce echoed in the callback postMessage for correlation. */
+  attempt?: string;
   clientId: string;
   redirectUri: string;
   userId: string;
@@ -15,16 +17,7 @@ export const saveState = async (state: string, payload: GitHubOAuthState): Promi
   await redis.set(key(state), JSON.stringify(payload), 'EX', 600);
 };
 
-export const consumeState = async (state: string): Promise<GitHubOAuthState | null> => {
-  const redis = getAgentRuntimeRedisClient();
-  if (!redis) return null;
-  const raw = await redis.eval(
-    `local value = redis.call('get', KEYS[1]);
-     if value then redis.call('del', KEYS[1]); end;
-     return value;`,
-    1,
-    key(state),
-  );
+const parseState = (raw: unknown): GitHubOAuthState | null => {
   if (typeof raw !== 'string') return null;
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -41,4 +34,27 @@ export const consumeState = async (state: string): Promise<GitHubOAuthState | nu
   } catch {
     return null;
   }
+};
+
+/**
+ * Read without consuming. The callback needs the attempt nonce even on
+ * failure paths where `completeGitHubOAuth` never reaches the consume.
+ */
+export const peekState = async (state: string): Promise<GitHubOAuthState | null> => {
+  const redis = getAgentRuntimeRedisClient();
+  if (!redis) return null;
+  return parseState(await redis.get(key(state)));
+};
+
+export const consumeState = async (state: string): Promise<GitHubOAuthState | null> => {
+  const redis = getAgentRuntimeRedisClient();
+  if (!redis) return null;
+  const raw = await redis.eval(
+    `local value = redis.call('get', KEYS[1]);
+     if value then redis.call('del', KEYS[1]); end;
+     return value;`,
+    1,
+    key(state),
+  );
+  return parseState(raw);
 };

@@ -23,7 +23,7 @@ describe('GitHub OAuth hosted start route', () => {
 
     const response = await GET(new NextRequest('https://orvilo.test/oauth/github/start'));
 
-    expect(start).toHaveBeenCalledWith('user-1');
+    expect(start).toHaveBeenCalledWith('user-1', undefined);
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(
       'https://github.com/login/oauth/authorize?state=once',

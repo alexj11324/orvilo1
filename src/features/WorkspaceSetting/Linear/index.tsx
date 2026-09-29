@@ -40,10 +40,9 @@ import {
   type LinearWizardStepId,
   summarizeIssueLinks,
 } from '@/features/AgentTasks/shared/linearSyncViewModel';
+import { newOAuthAttempt, waitForOAuthSession } from '@/features/Connectors/oauthSession';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
-
-import { waitForLinearOAuthPopup } from './oauthPopup';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -850,27 +849,27 @@ const LinearWorkspaceSettings = memo(() => {
     }
     setAction('connect');
     try {
+      const attempt = newOAuthAttempt();
       const response = await lambdaClient.linearSync.startOAuth.mutate({
+        attempt,
         returnTo: window.location.pathname,
       });
       if (!response?.authorizationUrl) throw new Error('Linear OAuth URL was not returned');
       popup.location.href = response.authorizationUrl;
-      const callback = await waitForLinearOAuthPopup(
+      const result = await waitForOAuthSession({
+        attempt,
+        expectedOrigin: response.callbackOrigin ?? window.location.origin,
+        messageType: 'orvilo-linear-oauth',
         popup,
-        response.callbackOrigin ?? window.location.origin,
-      );
-      if (callback.kind !== 'success') {
-        throw new Error(
-          callback.kind === 'cancelled'
-            ? t('workspaceSetting.linear.connectFailed')
-            : callback.error || t('workspaceSetting.linear.connectFailed'),
-        );
+      });
+      if (result.status !== 'success' || !result.installationId) {
+        throw new Error(result.error || t('workspaceSetting.linear.connectFailed'));
       }
       const refreshedInstallations = await refresh();
       if (
         !refreshedInstallations.some(
           (installation) =>
-            installation.id === callback.installationId && installation.status === 'active',
+            installation.id === result.installationId && installation.status === 'active',
         )
       ) {
         throw new Error(t('workspaceSetting.linear.connectFailed'));

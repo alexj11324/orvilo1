@@ -9,6 +9,11 @@
   ],
   "community": [
     {
+      "id": "2026-09-29-issue-status-board-parity",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
       "id": "2026-09-29-accounts-portal",
       "date": "2026-09-29",
       "versionRange": ["2.3.1"]

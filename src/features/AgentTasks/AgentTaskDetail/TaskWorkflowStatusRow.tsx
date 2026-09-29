@@ -7,7 +7,11 @@ import { CheckIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import {
+  COLUMN_I18N_KEYS,
+  COLUMN_STATUS_VISUAL,
+  KANBAN_WORKFLOW_COLUMN_KEY,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { useTaskStore } from '@/store/task';
 
 import { RAIL_VALUE_FONT_SIZE } from './railText';
@@ -31,19 +35,23 @@ const TaskWorkflowStatusRow = memo<TaskWorkflowStatusRowProps>(
   ({ category, disabled, executionStatus, taskId }) => {
     const { t } = useTranslation('chat');
     const updateTask = useTaskStore((s) => s.updateTask);
-    const visual = WORKFLOW_CATEGORY_VISUALS[category];
+    // The row reads the column the task buckets into on the board, so the
+    // closed row, the open menu and the column headers never disagree.
+    const columnKey = KANBAN_WORKFLOW_COLUMN_KEY[category];
+    const visual = COLUMN_STATUS_VISUAL[columnKey];
 
     const items = useMemo<DropdownItem[]>(
       () =>
         WORKFLOW_STATUS_CHOICES.map((choice) => {
-          const choiceVisual = WORKFLOW_CATEGORY_VISUALS[choice];
+          const choiceVisual = COLUMN_STATUS_VISUAL[choice.columnKey];
           return {
-            extra: choice === category ? <Icon icon={CheckIcon} size={14} /> : undefined,
+            extra: choice.category === category ? <Icon icon={CheckIcon} size={14} /> : undefined,
             icon: <Icon color={choiceVisual.color} icon={choiceVisual.icon} size={16} />,
-            key: choice,
-            label: t(`taskDetail.workflow.category.${choice}` as never),
+            key: choice.category,
+            label: t(COLUMN_I18N_KEYS[choice.columnKey] as never),
             onClick: () => {
-              if (choice !== category) void updateTask(taskId, { workflowCategory: choice });
+              if (choice.category !== category)
+                void updateTask(taskId, { workflowCategory: choice.category });
             },
           };
         }),
@@ -69,7 +77,7 @@ const TaskWorkflowStatusRow = memo<TaskWorkflowStatusRowProps>(
         >
           <Icon color={visual.color} icon={visual.icon} size={16} />
           <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
-            {t(`taskDetail.workflow.category.${category}` as never)}
+            {t(COLUMN_I18N_KEYS[columnKey] as never)}
           </Text>
         </Block>
       </Tooltip>

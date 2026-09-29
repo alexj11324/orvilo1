@@ -2,6 +2,31 @@
 
 # Changelog
 
+### [Version 2.3.1](https://github.com/alexj11324/orvilo1/compare/v2.3.0...v2.3.1)
+
+<sup>Released on **2026-09-28**</sup>
+
+#### 🐛 Bug Fixes
+
+- **auth**: link pre-Clerk users by email in session exchange.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **auth**: link pre-Clerk users by email in session exchange, closes [#314](https://github.com/alexj11324/orvilo1/issues/314) ([79c009a](https://github.com/alexj11324/orvilo1/commit/79c009a))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
 ## [Version 2.3.0](https://github.com/alexj11324/orvilo1/compare/v0.0.0-nightly.pr196.1086...v2.3.0)
 
 <sup>Released on **2026-09-28**</sup>

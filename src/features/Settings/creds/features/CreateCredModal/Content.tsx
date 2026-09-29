@@ -25,7 +25,7 @@ export interface CreateCredModalContentProps {
    * instead of read via useCredsApi() here — this content tree is portaled by
    * createModal() to a global ModalHost that sits outside CredsApiProvider,
    * so a local useCredsApi() call would silently fall back to the personal
-   * (market.creds) API even on the workspace creds page.
+   * (creds) API even on the workspace creds page.
    */
   credsApi: CredsApi;
   onSuccess?: () => void;

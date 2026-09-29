@@ -217,6 +217,9 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   composio: 'blocked',
   config: 'open',
   connector: 'blocked',
+  // personal credential store: list/decrypt/create/delete/share/inject —
+  // same class as connector/composio
+  creds: 'blocked',
   device: 'blocked',
   document: rw('knowledge:read', 'knowledge:write'),
   documentComment: rw('knowledge:read', 'knowledge:write'),
@@ -436,9 +439,9 @@ export const TRPC_BLOCKED_PATH_PREFIXES: string[] = [
   // (`preprocessLhCommand`), which would bypass the key's scopes entirely
   'market.callCodeInterpreterTool',
   'market.execInSandbox',
-  // marketplace credential management: list/decrypt/create/delete/share/inject
-  // of external credentials — same class as the blocked connector/composio surfaces
-  'market.creds.',
+  // credential management: list/decrypt/create/delete/share/inject of
+  // external credentials — same class as the blocked connector/composio surfaces
+  'creds.',
   // marketplace OIDC auth flows carry tokens
   'market.oidc.',
   // Inbox decide consumes live ACP permits, review requests, and ownership

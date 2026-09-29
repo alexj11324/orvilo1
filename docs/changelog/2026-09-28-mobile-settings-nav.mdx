@@ -1,0 +1,18 @@
+---
+title: Fix settings navigation on mobile
+description: >-
+  Tapping a workspace settings entry on the mobile web no longer bounces back
+  to the home page — every settings page is now reachable.
+tags:
+  - Settings
+  - Mobile
+---
+
+# Fix settings navigation on mobile
+
+On the mobile web, several workspace settings pages — Statistics, Devices, Storage, Credentials, API Key, Connectors, and Imports — had no matching route. Tapping their nav entries fell through to a catch-all that redirected to the home page, so each affected entry behaved like a "back to home" link. Every workspace settings page now resolves on mobile.
+
+## Improvements and fixes
+
+- **All settings entries open their page.** Statistics, Devices, Storage, Credentials, API Key, Connectors, and Imports (including the Linear importer) now render on the mobile web instead of redirecting home.
+- **Legacy deep links land correctly.** The old `stats`, `creds`, and `linear` URLs forward to their live workspace settings pages on mobile, matching the desktop behavior.

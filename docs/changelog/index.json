@@ -9,6 +9,31 @@
   ],
   "community": [
     {
+      "id": "2026-09-28-mobile-router-shared-leaves",
+      "date": "2026-09-28",
+      "versionRange": ["2.3.0"]
+    },
+    {
+      "id": "2026-09-28-own-creds-client",
+      "date": "2026-09-28",
+      "versionRange": ["2.3.0"]
+    },
+    {
+      "id": "2026-09-28-own-creds-server",
+      "date": "2026-09-28",
+      "versionRange": ["2.3.0"]
+    },
+    {
+      "id": "2026-09-28-mobile-settings-nav",
+      "date": "2026-09-28",
+      "versionRange": ["2.3.0"]
+    },
+    {
+      "id": "2026-09-28-onboarding-chrome",
+      "date": "2026-09-28",
+      "versionRange": ["2.3.0"]
+    },
+    {
       "id": "2026-09-28-clerk-legacy-user-link",
       "date": "2026-09-28",
       "versionRange": ["2.3.0"]

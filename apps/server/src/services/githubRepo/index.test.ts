@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserModel } from '@/database/models/user';
-import { MarketService } from '@/server/services/market';
+import { OwnCredsService } from '@/server/services/creds';
 
 import type { FixtureOptions } from './__tests__/reviewSnapshot.fixtures';
 import { BASE, check, comment, fixture, HEAD, review } from './__tests__/reviewSnapshot.fixtures';
@@ -18,8 +17,7 @@ import {
   resolveGithubAccessToken,
 } from './index';
 
-vi.mock('@/database/models/user', () => ({ UserModel: vi.fn() }));
-vi.mock('@/server/services/market', () => ({ MarketService: vi.fn() }));
+vi.mock('@/server/services/creds', () => ({ OwnCredsService: vi.fn() }));
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
@@ -270,48 +268,46 @@ describe('github api helpers', () => {
 });
 
 describe('resolveGithubAccessToken', () => {
-  const list = vi.fn();
-  const get = vi.fn();
-  const orgCreds = vi.fn();
+  const resolveValuesByKey = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (UserModel as any).mockImplementation(function () {
-      return { getUserSettings: vi.fn().mockResolvedValue({ market: {} }) };
+    (OwnCredsService as any).mockImplementation(function () {
+      return { resolveValuesByKey };
     });
-    (MarketService as any).mockImplementation(function () {
-      return {
-        market: { creds: { get, list }, organizations: { creds: orgCreds } },
-      };
-    });
-    orgCreds.mockReturnValue({ get, list });
   });
 
   it('returns the access_token of the matching cred', async () => {
-    list.mockResolvedValue({ data: [{ id: 'cred_1', key: 'github' }] });
-    get.mockResolvedValue({ plaintext: { access_token: 'gho_123' } });
+    resolveValuesByKey.mockResolvedValue({ access_token: 'gho_123' });
     await expect(resolveGithubAccessToken({ db: {} as any, userId: 'user-1' })).resolves.toBe(
       'gho_123',
     );
+    expect(resolveValuesByKey).toHaveBeenCalledWith('github');
   });
 
-  it('reads shared organization credentials in a workspace', async () => {
-    list.mockResolvedValue({ data: [{ id: 'cred_1', key: 'github' }] });
-    get.mockResolvedValue({ plaintext: { access_token: 'gho_ws' } });
+  it('passes the workspace through to the creds service', async () => {
+    resolveValuesByKey.mockResolvedValue({ access_token: 'gho_ws' });
     await resolveGithubAccessToken({ db: {} as any, userId: 'u', workspaceId: 'ws-1' });
-    expect(orgCreds).toHaveBeenCalledWith({ workspaceId: 'ws-1' });
+    expect(OwnCredsService).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u', workspaceId: 'ws-1' }),
+    );
   });
 
   it('honours a custom cred key and token fallback', async () => {
-    list.mockResolvedValue({ data: [{ id: 'cred_9', key: 'gh-custom' }] });
-    get.mockResolvedValue({ values: { token: 'fallback-tok' } });
+    resolveValuesByKey.mockResolvedValue({ token: 'fallback-tok' });
     await expect(
       resolveGithubAccessToken({ credKey: 'gh-custom', db: {} as any, userId: 'u' }),
     ).resolves.toBe('fallback-tok');
+    expect(resolveValuesByKey).toHaveBeenCalledWith('gh-custom');
   });
 
   it('returns undefined when credential lookup fails', async () => {
-    list.mockRejectedValue(new Error('market down'));
+    resolveValuesByKey.mockRejectedValue(new Error('db down'));
+    await expect(resolveGithubAccessToken({ db: {} as any, userId: 'u' })).resolves.toBeUndefined();
+  });
+
+  it('returns undefined when no matching cred exists', async () => {
+    resolveValuesByKey.mockResolvedValue(undefined);
     await expect(resolveGithubAccessToken({ db: {} as any, userId: 'u' })).resolves.toBeUndefined();
   });
 });

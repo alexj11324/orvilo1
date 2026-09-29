@@ -1,19 +1,17 @@
 'use client';
 
 import { Empty, Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
-import { type UserCredSummary } from '@orvilo/types';
+import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
-import { TRPCClientError } from '@trpc/client';
 import { createStaticStyles } from 'antd-style';
-import { LogIn } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import ListSkeleton from '@/components/ListSkeleton';
 import { usePermission } from '@/hooks/usePermission';
-import { useMarketAuth } from '@/layout/AuthProvider/MarketAuth';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { credsApiForRow, isActionableCredRow } from './credAccess';
 import CredItem from './CredItem';
@@ -31,37 +29,25 @@ const styles = createStaticStyles(({ css }) => ({
     padding-block: 48px;
     padding-inline: 0;
   `,
-  signInPrompt: css`
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    align-items: center;
-    justify-content: center;
-
-    padding: 48px;
-  `,
 }));
 
 const CredsList: FC = () => {
   const { t } = useTranslation('setting');
-  const { isAuthenticated, isLoading: isAuthLoading, session, signIn } = useMarketAuth();
   const { allowed: canManageCredentials } = usePermission('manage_provider_key');
   const credsApi = useCredsApi();
-  const myAccountId = session?.userInfo?.accountId;
+  const myUserId = useUserStore(userProfileSelectors.userId);
 
-  const { data, error, isLoading, refetch } = credsApi.query.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const { data, error, isLoading, refetch } = credsApi.query.list.useQuery(undefined);
 
   const credentials = data?.data ?? [];
 
   // See credAccess.ts for the ownership/routing rules this applies.
-  const isActionable = (cred: UserCredSummary) => isActionableCredRow(cred, myAccountId);
-  const apiFor = (cred: UserCredSummary) =>
-    credsApiForRow(cred, myAccountId, credsApi, defaultCredsApi);
+  const isActionable = (cred: OwnCredSummary) => isActionableCredRow(cred, myUserId);
+  const apiFor = (cred: OwnCredSummary) =>
+    credsApiForRow(cred, myUserId, credsApi, defaultCredsApi);
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       if (!canManageCredentials) return;
       const cred = credentials.find((c) => c.id === id);
       if (!cred || !isActionable(cred)) return;
@@ -72,7 +58,7 @@ const CredsList: FC = () => {
     },
   });
 
-  const handleEdit = (cred: UserCredSummary) => {
+  const handleEdit = (cred: OwnCredSummary) => {
     if (!isActionable(cred)) return;
     createEditCredModal({
       cred,
@@ -81,34 +67,10 @@ const CredsList: FC = () => {
     });
   };
 
-  const handleView = (cred: UserCredSummary) => {
+  const handleView = (cred: OwnCredSummary) => {
     if (!isActionable(cred)) return;
     createViewCredModal({ cred, credsApi: apiFor(cred) });
   };
-
-  if (isAuthLoading) {
-    return <ListSkeleton paddingInline={0} />;
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className={styles.signInPrompt}>
-        <Empty description={t('creds.signInRequired')} />
-        <Button icon={LogIn} type={'primary'} onClick={() => signIn()}>
-          {t('creds.signIn')}
-        </Button>
-      </div>
-    );
-  }
-
-  // Org not created: guide users to complete Community Profile setup first.
-  if (!isLoading && error instanceof TRPCClientError && error.data?.code === 'NOT_FOUND') {
-    return (
-      <div className={styles.signInPrompt}>
-        <Empty description={t('creds.orgSetupRequired')} />
-      </div>
-    );
-  }
 
   return (
     <div className={styles.container}>

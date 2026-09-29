@@ -10,7 +10,6 @@ import { MarketService } from '@/server/services/market';
 import { AssistantSorts, McpConnectionType, McpSorts } from '@/types/discover';
 
 import { agentRouter } from './agent';
-import { credsRouter } from './creds';
 import { oidcRouter } from './oidc';
 import { userRouter } from './user';
 
@@ -40,9 +39,6 @@ const marketProcedure = publicProcedure
 export const marketRouter = router({
   // ============================== Agent Management (authenticated) ==============================
   agent: agentRouter,
-
-  // ============================== Credential Management ==============================
-  creds: credsRouter,
 
   // ============================== Catalog reads feeding live builtin-tool + install flows ==============================
   getAgentsByPlugin: marketProcedure

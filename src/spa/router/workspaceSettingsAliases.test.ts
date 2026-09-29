@@ -28,11 +28,10 @@ const surfaces: Array<[string, Routes]> = [
 ];
 
 /**
- * The desktop tree carries every workspace settings tab. Mobile mirrors a
- * subset — `credential` and `statistics` have no mobile route — so the alias
- * targets cannot be asserted there; that gap predates this registry.
+ * Every surface carries the workspace settings tabs these aliases land on —
+ * mobile included, whose `/:slug/settings` subtree mirrors the desktop leaf
+ * set (see `mobileRouter.workspaceSettings.test.ts`).
  */
-const desktopSurfaces = surfaces.filter(([name]) => name !== 'Mobile');
 
 const leafOf = (routes: Routes, pathname: string) => matchRoutes(routes, pathname)?.at(-1)?.route;
 
@@ -73,7 +72,7 @@ describe('workspace settings legacy aliases', () => {
     }
   });
 
-  it.each(desktopSurfaces)('%s keeps the live tab addressable beside its alias', (_, routes) => {
+  it.each(surfaces)('%s keeps the live tab addressable beside its alias', (_, routes) => {
     // `/acme/settings/credential` is the page; `/acme/settings/creds` is the
     // legacy spelling. Only the first may render — an alias that outranked its
     // own target would make the page unreachable.

@@ -37,26 +37,29 @@ describe('mobileRouter agent share route', () => {
 
 describe('mobileRouter task routes', () => {
   it('registers task list and detail routes under the shared workspace layout', async () => {
-    const source = await readFile(
-      path.join(process.cwd(), 'src/spa/router/mobileRouter.config.tsx'),
-      'utf8',
+    const [source, leavesSource] = await Promise.all(
+      ['mobileRouter.config.tsx', 'sharedMainAreaLeaves.tsx'].map((filename) =>
+        readFile(path.join(process.cwd(), 'src/spa/router', filename), 'utf8'),
+      ),
     );
 
     expect(source).toContain("import('@/routes/(main)/(task-workspace)/_layout')");
-    expect(source).toContain("import('@/routes/(main)/tasks')");
-    expect(source).toContain("import('@/routes/(main)/task/[taskId]')");
-    expect(source).toContain("import('@/routes/(main)/agent/task/[taskId]')");
-    expect(source).toContain("path: 'tasks'");
-    expect(source).toContain("path: 'task'");
-    expect(source).toContain("path: 'inbox'");
-    expect(source).toContain("path: 'my-work'");
-    expect(source).toContain("path: 'views'");
-    expect(source).toContain("path: 'teams'");
+    // Task-workspace leaves are declared once in the shared leaf registry —
+    // both routers map them to their own elements.
+    expect(leavesSource).toContain("import('@/routes/(main)/tasks')");
+    expect(leavesSource).toContain("import('@/routes/(main)/task/[taskId]')");
+    expect(leavesSource).toContain("import('@/routes/(main)/agent/task/[taskId]')");
+    expect(leavesSource).toContain("path: 'tasks'");
+    expect(leavesSource).toContain("path: 'task'");
+    expect(leavesSource).toContain("path: 'inbox'");
+    expect(leavesSource).toContain("path: 'my-work'");
+    expect(leavesSource).toContain("path: 'views'");
+    expect(leavesSource).toContain("path: 'teams'");
     // The `:slug?` tail is the readable title segment; it never resolves the
     // task, so pre-slug links keep matching the same route.
-    expect(source).toContain("path: ':taskId/:slug?'");
+    expect(leavesSource).toContain("path: ':taskId/:slug?'");
     expect(source).toContain("path: ':aid/task/:taskId/:slug?'");
-    expect(source).not.toContain("import('@/routes/(main)/tasks/_layout')");
+    expect(leavesSource).not.toContain("import('@/routes/(main)/tasks/_layout')");
   });
 });
 
@@ -78,11 +81,13 @@ describe('mobileRouter retired provider routes', () => {
   });
 });
 
-it('redirects the legacy mobile Linear page to workspace settings', () => {
+it('redirects the legacy mobile Linear page to the Linear import tab', () => {
   const leaf = matchRoutes(mobileRoutes, '/acme/settings/linear')?.at(-1)?.route;
 
   expect(leaf?.path).toBe('linear');
-  expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe('..');
+  expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe(
+    '../imports/linear',
+  );
 });
 
 describe('mobile retired product routes', () => {

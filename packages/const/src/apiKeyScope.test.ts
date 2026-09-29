@@ -157,8 +157,11 @@ describe('requiredApiKeyScopeForTrpc', () => {
   });
 
   it('blocks sensitive nested sub-surfaces regardless of the parent namespace', () => {
-    expect(requiredApiKeyScopeForTrpc('market.creds.list', 'query')).toEqual({ blocked: true });
-    expect(requiredApiKeyScopeForTrpc('market.creds.createKV', 'mutation')).toEqual({
+    expect(requiredApiKeyScopeForTrpc('creds.list', 'query')).toEqual({ blocked: true });
+    expect(requiredApiKeyScopeForTrpc('creds.createKV', 'mutation')).toEqual({
+      blocked: true,
+    });
+    expect(requiredApiKeyScopeForTrpc('workspaceCreds.list', 'query')).toEqual({
       blocked: true,
     });
     expect(requiredApiKeyScopeForTrpc('market.oidc.getToken', 'query')).toEqual({ blocked: true });

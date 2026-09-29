@@ -59,9 +59,9 @@ Neon stopped offering `pg_search` to new projects on March 19, 2026. Neon has no
 existing customers that the extension will be removed on September 21, 2026; queries, indexes, and
 applications that still depend on it will stop working after removal. Existing Orvilo deployments
 on Neon should complete the
-[pg\_search to Elasticsearch migration guide](/docs/self-hosting/advanced/elasticsearch-migration)
+[pg_search to Elasticsearch migration guide](/docs/self-hosting/advanced/elasticsearch-migration)
 before that deadline. Check Neon's
-[current pg\_search notice](https://neon.com/docs/extensions/pg_search) and
+[current pg_search notice](https://neon.com/docs/extensions/pg_search) and
 [extension catalog](https://neon.com/docs/extensions/pg-extensions) before acting.
 
 There are two supported ways to run Elasticsearch. Both use the same backfill and incremental
@@ -97,7 +97,7 @@ a PostgreSQL image that can install `pg_search`, such as the bundled `paradedb/p
 Elasticsearch then takes over search traffic after the backfill; the `pg_search` objects can be
 removed later with the supported cleanup command.
 
-See [Migrate from pg\_search to Elasticsearch](/docs/self-hosting/advanced/elasticsearch-migration)
+See [Migrate from pg_search to Elasticsearch](/docs/self-hosting/advanced/elasticsearch-migration)
 for the complete rehearsal, backfill, cutover, and rollback procedure.
 
 ## How Elasticsearch synchronization works
@@ -130,8 +130,8 @@ so a default `docker compose up` neither downloads nor starts them:
 | Service              | Profile                 | Role                                                                                                                                          |
 | -------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `elasticsearch`      | `elasticsearch`         | Single node built locally from the pinned official image plus `analysis-icu`, with a named data volume, a health check, and no published port |
-| `fts-search-reindex` | `elasticsearch-reindex` | One-off backfill / status command from the `alexj11324/orvilo1` image; its checkpoint lives in the `fts-search-reindex-state` volume          |
-| `fts-search-sync`    | `elasticsearch-sync`    | Long-running incremental consumer from the `alexj11324/orvilo1` image; restarts and logs when it hits failed or dead-letter work              |
+| `fts-search-reindex` | `elasticsearch-reindex` | One-off backfill / status command from the `ghcr.io/alexj11324/orvilo1` image; its checkpoint lives in the `fts-search-reindex-state` volume  |
+| `fts-search-sync`    | `elasticsearch-sync`    | Long-running incremental consumer from the `ghcr.io/alexj11324/orvilo1` image; restarts and logs when it hits failed or dead-letter work      |
 
 Resource notes: the node uses a 1 GB JVM heap by default (`ES_JAVA_OPTS`); keep the heap at or
 below half of the memory available to the container and plan for at least 2 GB of RAM for

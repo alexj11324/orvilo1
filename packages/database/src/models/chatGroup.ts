@@ -39,6 +39,7 @@ import { normalizeInboxAgentAvatar } from '../utils/inboxAgent';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AGENT_COPY_IN_PROGRESS, AgentCopyJobModel } from './agentCopyJob';
 import { AGENT_TRANSFER_IN_PROGRESS, AgentTransferJobModel } from './agentTransferJob';
+import { TaskDispatchModel } from './taskDispatch';
 import { recordBulkTaskMutation } from './taskDomainMutation';
 
 /** Slugs owned by builtin provisioning; a group delete must never reach one. */
@@ -1039,6 +1040,21 @@ export class ChatGroupModel {
           eventType: 'task.assigned',
           idempotencyKeyPrefix: `group-owner-transfer:${privateOwnedIds.toSorted().join(',')}:${fromUserId}:${toUserId}`,
         });
+
+        // Same execution-ownership rule as the single-agent transfer above:
+        // a detached RUNNING task's dispatch still executes under a now-gone
+        // assignee — fence it so cancellation parks the task instead of
+        // leaving running-but-ownerless rows.
+        const runningDetachedIds = detachedTasks
+          .filter((t) => t.status === 'running')
+          .map((t) => t.id);
+        if (runningDetachedIds.length > 0) {
+          await TaskDispatchModel.requestStopForTasks(
+            trx,
+            runningDetachedIds,
+            'group_owner_transfer',
+          );
+        }
 
         // Private owned agents also leave other members' PROJECTS explicitly —
         // project agent listings apply member-agent visibility, so those

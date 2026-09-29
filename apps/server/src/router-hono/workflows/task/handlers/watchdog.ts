@@ -4,6 +4,7 @@ import { getServerDB } from '@/database/server';
 import { sweepTaskCancellations } from '@/server/services/taskCancellation';
 import { sweepTaskDispatchRecovery } from '@/server/services/taskDispatchRecovery';
 import { sweepPlanningTaskDispatchStarts } from '@/server/services/taskDispatchStart';
+import { sweepTaskOwnershipInvariants } from '@/server/services/taskOwnership';
 import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 
 /**
@@ -37,8 +38,20 @@ export async function watchdog(c: Context) {
     const dispatchRecoveryRetries = dispatchRecoveryOutcomes.filter(
       (outcome) => outcome.outcome === 'retry',
     ).length;
+    // Ownership invariants run between recovery and cancellation: a drifted
+    // dispatch fenced here is consumed by the same cancellation sweep pass.
+    const ownershipOutcomes = await sweepTaskOwnershipInvariants({ db });
     const cancellationOutcomes = await sweepTaskCancellations({ db });
     const result = await runTaskWatchdog(db);
+    const abandonedDispatches = cancellationOutcomes.filter(
+      (outcome) => outcome.outcome === 'abandoned',
+    ).length;
+    const driftFencedDispatches = ownershipOutcomes.filter(
+      (outcome) => outcome.outcome === 'drift_fenced',
+    ).length;
+    const orphanedTasksParked = ownershipOutcomes.filter(
+      (outcome) => outcome.outcome === 'orphan_parked',
+    ).length;
     const canceledDispatches = cancellationOutcomes.filter(
       (outcome) => outcome.outcome === 'canceled',
     ).length;
@@ -47,8 +60,11 @@ export async function watchdog(c: Context) {
     ).length;
 
     return c.json({
+      abandonedDispatches,
       activeDispatches,
       canceledDispatches,
+      driftFencedDispatches,
+      orphanedTasksParked,
       cancellationRetries,
       dispatchRecoveryRetries,
       ...result,

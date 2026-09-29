@@ -344,8 +344,15 @@ export class TaskRunnerService {
           // Goes through the logging path like every other assignee write: the
           // chip visibly flips from unassigned to the inbox agent, so the feed
           // has to be able to say who did it. No actor — nobody asked for this
-          // one, the runner needed an agent to execute with.
-          await this.taskModel.updateWithLog(task.id, { assigneeAgentId: inboxAgent.id }, {});
+          // one, the runner needed an agent to execute with. `executionTransfer`
+          // because a task already 'running' here has no live executor (its
+          // dispatch died orphaned) — this write IS the transfer step.
+          await this.taskModel.updateWithLog(
+            task.id,
+            { assigneeAgentId: inboxAgent.id },
+            {},
+            { executionTransfer: true },
+          );
         }
         task.assigneeAgentId = inboxAgent.id;
         executingAgentId = inboxAgent.id;

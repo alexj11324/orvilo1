@@ -1,6 +1,6 @@
 import { type ContextMenuItem, copyToClipboard, Icon, type MenuInfo } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import {
   BarChart3Icon,
   CopyIcon,
@@ -17,7 +17,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
 import type { WorkspaceMemberWithProfile } from '@/business/client/hooks/useWorkspaceMembers';
-import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
+import { STATUS_PROPERTY_ICON, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
@@ -28,12 +28,17 @@ import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
 
+import {
+  COLUMN_I18N_KEYS,
+  taskStatusBoardColumnKey,
+  type TaskStatusChoice,
+  taskStatusChoices,
+} from '../AgentTaskList/kanbanBoardModel';
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useAssigneeMenuItems } from './assigneeMenuItems';
 import { renderMenuExtra } from './menuExtra';
 import { PRIORITY_META } from './TaskPriorityTag';
-import { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
 import { useTaskStatusChange } from './useTaskStatusChange';
 
 type ActiveSubmenu = 'status' | 'priority' | null;
@@ -58,6 +63,9 @@ export interface TaskContextMenuTarget {
   status: string;
   /** `private` narrows the Assignee submenu to the task creator. */
   visibility?: 'private' | 'public' | null;
+  /** Workflow linkage — every board column is pickable once a state exists. */
+  workflowCategory?: TaskWorkflowCategory | null;
+  workflowStateId?: string | null;
 }
 
 const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
@@ -75,7 +83,7 @@ export interface TaskContextMenuActions {
 
 export const useTaskContextMenuActions = (
   routeScope: TaskItemRouteScope = 'agent',
-  onStatusChange?: (status: TaskStatus) => void | Promise<void>,
+  onStatusChange?: (choice: TaskStatusChoice) => void | Promise<void>,
 ): TaskContextMenuActions => {
   const { t } = useTranslation(['chat', 'common']);
 
@@ -113,25 +121,44 @@ export const useTaskContextMenuActions = (
     const buildItems = (task: TaskContextMenuTarget): NativeContextMenuItem[] => {
       const currentStatus = task.status as TaskStatus;
       const currentPriority = task.priority ?? 0;
+      const currentColumnKey = taskStatusBoardColumnKey({
+        status: currentStatus,
+        workflowCategory: task.workflowCategory,
+        workflowStateId: task.workflowStateId,
+      });
 
-      const statusChildren = USER_SELECTABLE_STATUSES.map((status, index) => {
-        const meta = STATUS_META[status];
-        const isCurrent = status === currentStatus;
+      const applyStatusChoice = (choice: TaskStatusChoice) => {
+        if (onStatusChange) {
+          void onStatusChange(choice);
+          return;
+        }
+        if (choice.workflowCategory) {
+          void updateTask(task.identifier, { workflowCategory: choice.workflowCategory });
+        } else if (choice.status) {
+          void changeTaskStatus(task.identifier, choice.status);
+        }
+      };
+
+      let pickIndex = 0;
+      const statusChildren = taskStatusChoices(task).map((choice) => {
+        // The Kanban board's columns are the options, order and glyphs, triage
+        // included; a column the board could not take (workflow-only columns
+        // for an unlinked task) renders disabled, like a blocked drop.
+        const pickable = Boolean(choice.status || choice.workflowCategory);
+        const isCurrent = choice.column.key === currentColumnKey;
+        const visual = WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+        if (pickable) pickIndex += 1;
         return {
-          extra: renderMenuExtra(String(index + 1), isCurrent),
-          icon: <Icon color={meta.color} icon={meta.icon} />,
-          key: `status-${status}`,
-          label: t(`taskDetail.status.${status}`, { defaultValue: meta.label }),
-          disabled: !canEditTask,
+          extra: pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined,
+          icon: <Icon color={visual.color} icon={visual.icon} />,
+          key: `status-${choice.column.key}`,
+          label: t(COLUMN_I18N_KEYS[choice.column.key] as never),
+          disabled: !canEditTask || !pickable,
           onClick: ({ domEvent }: MenuInfo) => {
             domEvent.stopPropagation();
-            if (!canEditTask) return;
-            if (status === currentStatus) return;
-            if (onStatusChange) {
-              void onStatusChange(status);
-              return;
-            }
-            void changeTaskStatus(task.identifier, status);
+            if (!canEditTask || !pickable) return;
+            if (isCurrent) return;
+            applyStatusChoice(choice);
           },
         } as ContextMenuItem;
       });
@@ -284,7 +311,6 @@ export const useTaskContextMenuActions = (
       cleanupRef.current?.();
       activeSubmenuRef.current = null;
 
-      const currentStatus = task.status as TaskStatus;
       const currentPriority = task.priority ?? 0;
 
       const cleanup = () => {
@@ -325,13 +351,25 @@ export const useTaskContextMenuActions = (
         }
 
         if (openSubmenu === 'status') {
-          if (idx < 0 || idx >= USER_SELECTABLE_STATUSES.length) return;
+          const currentColumnKey = taskStatusBoardColumnKey({
+            status: task.status as TaskStatus,
+            workflowCategory: task.workflowCategory,
+            workflowStateId: task.workflowStateId,
+          });
+          const pickable = taskStatusChoices(task).filter(
+            (choice) => choice.status || choice.workflowCategory,
+          );
+          if (idx < 0 || idx >= pickable.length) return;
           event.preventDefault();
           event.stopPropagation();
-          const nextStatus = USER_SELECTABLE_STATUSES[idx];
-          if (nextStatus !== currentStatus) {
-            if (onStatusChange) void onStatusChange(nextStatus);
-            else void changeTaskStatus(task.identifier, nextStatus);
+          const choice = pickable[idx];
+          if (choice.column.key !== currentColumnKey) {
+            if (onStatusChange) void onStatusChange(choice);
+            else if (choice.workflowCategory) {
+              void updateTask(task.identifier, { workflowCategory: choice.workflowCategory });
+            } else if (choice.status) {
+              void changeTaskStatus(task.identifier, choice.status);
+            }
           }
           closeContextMenu();
           cleanup();
@@ -378,7 +416,7 @@ export const useTaskContextMenuActions = (
 export const useTaskItemContextMenu = (
   task: TaskContextMenuTarget,
   routeScope?: TaskItemRouteScope,
-  onStatusChange?: (status: TaskStatus) => void | Promise<void>,
+  onStatusChange?: (choice: TaskStatusChoice) => void | Promise<void>,
 ): TaskItemContextMenu => {
   const { buildItems, installKeyboardHandlers, resetActiveSubmenu } = useTaskContextMenuActions(
     routeScope,

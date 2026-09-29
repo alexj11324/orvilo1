@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import {
@@ -7,6 +8,7 @@ import {
   buildKanbanColumns,
   buildKanbanGroupQuery,
   canDropTaskIntoKanbanColumn,
+  COLUMN_I18N_KEYS,
   computeKanbanPosition,
   effectiveTaskPosition,
   externalVisibleKanbanColumns,
@@ -32,7 +34,10 @@ import {
   STATUS_KANBAN_COLUMNS,
   taskKanbanColumnKey,
   taskMatchesKanbanColumn,
+  taskStatusBoardColumnKey,
+  taskStatusChoices,
 } from './kanbanBoardModel';
+import { COLUMN_STATUS_VISUAL } from './KanbanColumn';
 
 const task = (
   id: string,
@@ -696,5 +701,76 @@ describe('externalVisibleKanbanColumns', () => {
     ]);
     expect(visible.map((column) => column.key)).toEqual(columns.map((column) => column.key));
     expect(externalVisibleKanbanColumns(columns, [])).toEqual(columns);
+  });
+});
+
+/**
+ * The status pickers (task detail rail, row glyphs, card context menus) read
+ * the board's own columns through `taskStatusChoices` — the hardcoded
+ * four-status list they used to carry lost triage and disagreed with the
+ * board's glyphs. These pins keep the menus 1:1 with the board: same
+ * options, order, labels and icons, and the same reachability rule a drop
+ * obeys.
+ */
+describe('board-driven status choices', () => {
+  it('mirrors the board columns 1:1 — same options, order, labels and glyphs', () => {
+    const choices = taskStatusChoices({ workflowStateId: undefined });
+    expect(choices.map((choice) => choice.column.key)).toEqual(
+      STATUS_KANBAN_COLUMNS.map((column) => column.key),
+    );
+    // triage leads — the column the old hardcoded list missed entirely.
+    expect(choices[0].column.key).toBe('triage');
+    for (const choice of choices) {
+      expect(COLUMN_I18N_KEYS[choice.column.key]).toBeTruthy();
+      // The glyph a menu paints is the one the board header paints.
+      expect(WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog']).toBe(
+        COLUMN_STATUS_VISUAL[choice.column.key],
+      );
+    }
+  });
+
+  it('keeps workflow-only columns unreachable for an unlinked task — like a drop', () => {
+    const choices = taskStatusChoices({ workflowStateId: undefined });
+    const pickable = choices.filter((choice) => choice.status || choice.workflowCategory);
+    expect(pickable.map((choice) => choice.column.key)).toEqual([
+      'backlog',
+      'needsInput',
+      'done',
+      'canceled',
+    ]);
+    expect(pickable.every((choice) => choice.status && !choice.workflowCategory)).toBe(true);
+    // triage, todo and running are workflow categories the board could not
+    // take either — they render disabled, never hidden.
+    const blocked = choices.filter((choice) => !choice.status && !choice.workflowCategory);
+    expect(blocked.map((choice) => choice.column.key)).toEqual(['triage', 'todo', 'running']);
+  });
+
+  it('makes every board column pickable once the task has a workflow state', () => {
+    const choices = taskStatusChoices({ workflowStateId: 'ls-1' });
+    expect(choices.every((choice) => Boolean(choice.workflowCategory))).toBe(true);
+    expect(choices[0]).toMatchObject({
+      column: { key: 'triage' },
+      workflowCategory: 'triage',
+    });
+  });
+
+  it('check-marks the board column the task sits in', () => {
+    expect(taskStatusBoardColumnKey({ status: 'paused' })).toBe('needsInput');
+    expect(taskStatusBoardColumnKey({ status: 'failed' })).toBe('needsInput');
+    expect(taskStatusBoardColumnKey({ status: 'running' })).toBe('running');
+    expect(
+      taskStatusBoardColumnKey({
+        status: 'running',
+        workflowCategory: 'triage',
+        workflowStateId: 'ls-1',
+      }),
+    ).toBe('triage');
+    expect(
+      taskStatusBoardColumnKey({
+        status: 'paused',
+        workflowCategory: 'in_review',
+        workflowStateId: 'ls-1',
+      }),
+    ).toBe('needsInput');
   });
 });

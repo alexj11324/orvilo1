@@ -84,7 +84,13 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <TaskStatusTag size={14} status={status} taskIdentifier={task.identifier}>
+        <TaskStatusTag
+          size={14}
+          status={status}
+          taskIdentifier={task.identifier}
+          workflowCategory={task.workflowCategory}
+          workflowStateId={task.workflowStateId}
+        >
           {hasRunningTopic ? <TopicStatusIcon size={14} status="running" /> : undefined}
         </TaskStatusTag>
       </span>
@@ -222,6 +228,8 @@ const TaskSubtasks = memo(() => {
           identifier: subtask.identifier,
           priority: subtask.priority,
           status: subtask.status,
+          workflowCategory: subtask.workflowCategory,
+          workflowStateId: subtask.workflowStateId,
         }),
       );
       installKeyboardHandlers({
@@ -230,6 +238,8 @@ const TaskSubtasks = memo(() => {
         identifier: subtask.identifier,
         priority: subtask.priority,
         status: subtask.status,
+        workflowCategory: subtask.workflowCategory,
+        workflowStateId: subtask.workflowStateId,
       });
     },
     [canEditTask, subtaskMap, buildItems, installKeyboardHandlers],

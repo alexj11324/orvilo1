@@ -7,7 +7,7 @@ import {
   COLUMN_STATUS_VISUAL,
   STATUS_KANBAN_COLUMNS,
 } from '../AgentTaskList/kanbanBoardModel';
-import { resolveTaskStatusRow, WORKFLOW_STATUS_CHOICES } from './taskStatusRow';
+import { resolveTaskStatusRow } from './taskStatusRow';
 
 describe('resolveTaskStatusRow', () => {
   it('shows the workflow state — Linear’s one Status — when the issue has one', () => {
@@ -35,36 +35,27 @@ describe('resolveTaskStatusRow', () => {
     });
   });
 
-  it('offers the kanban board’s status columns, in board order and with triage', () => {
-    // The Status menu is the board: every column's drop target becomes an
-    // option in the same order, the triage intake column first. A hardcoded
-    // list dropped triage and let the labels drift from the headers.
-    expect(WORKFLOW_STATUS_CHOICES.map((choice) => choice.category)).toEqual(
-      STATUS_KANBAN_COLUMNS.map((column) => column.targetWorkflowCategory),
-    );
-    expect(WORKFLOW_STATUS_CHOICES.map((choice) => choice.columnKey)).toEqual(
-      STATUS_KANBAN_COLUMNS.map((column) => column.key),
-    );
-    expect(WORKFLOW_STATUS_CHOICES[0]?.category).toBe('triage');
-  });
-
-  it('reads every option’s icon and label from the board’s own column maps', () => {
-    for (const choice of WORKFLOW_STATUS_CHOICES) {
-      const i18nKey = COLUMN_I18N_KEYS[choice.columnKey];
-      // The maps the column headers read must resolve for the picker's
-      // column too, in both shipped locales — never a raw key or iconless row.
-      expect(i18nKey, choice.columnKey).toBeTruthy();
-      expect(COLUMN_STATUS_VISUAL[choice.columnKey], choice.columnKey).toBeTruthy();
+  it('reads every board column’s icon and label from its own maps, triage first', () => {
+    // The Status menu is the board: the same column maps the headers read
+    // must resolve for every picker row, in both shipped locales — never a
+    // raw key or iconless row, and never the old hardcoded list.
+    expect(STATUS_KANBAN_COLUMNS[0]?.key).toBe('triage');
+    for (const column of STATUS_KANBAN_COLUMNS) {
+      const i18nKey = COLUMN_I18N_KEYS[column.key];
+      expect(i18nKey, column.key).toBeTruthy();
+      expect(COLUMN_STATUS_VISUAL[column.key], column.key).toBeTruthy();
       expect((enChat as Record<string, string>)[i18nKey], i18nKey).toBeTruthy();
       expect((zhChat as Record<string, string>)[i18nKey], i18nKey).toBeTruthy();
     }
   });
 
-  it('names every Status choice distinctly in zh-CN', () => {
-    // Backlog and Todo both read "待办" once — options must stay unique.
-    const labels = WORKFLOW_STATUS_CHOICES.map(
-      (choice) => (zhChat as Record<string, string>)[COLUMN_I18N_KEYS[choice.columnKey]],
+  it('names every board column distinctly in zh-CN', () => {
+    // The picker rows read the board's own column labels (triage included) —
+    // a dup would render two identical rows.
+    const labels = STATUS_KANBAN_COLUMNS.map(
+      (column) => (zhChat as Record<string, string>)[COLUMN_I18N_KEYS[column.key]],
     );
+    expect(labels.every((label) => typeof label === 'string' && label.length > 0)).toBe(true);
     expect(new Set(labels).size).toBe(labels.length);
   });
 });

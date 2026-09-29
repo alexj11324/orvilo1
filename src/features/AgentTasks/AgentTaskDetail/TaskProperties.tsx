@@ -7,6 +7,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import LabelChips from '@/features/Labels/LabelChips';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -25,7 +26,6 @@ import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import TaskScheduleConfig from './TaskScheduleConfig';
 import { resolveTaskStatusRow } from './taskStatusRow';
-import TaskWorkflowStatusRow from './TaskWorkflowStatusRow';
 
 interface StatusMeta {
   labelKey: string;
@@ -88,14 +88,22 @@ const TaskProperties = memo(() => {
     <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
-        {statusRow.kind === 'workflow' ? (
-          <TaskWorkflowStatusRow
-            category={statusRow.category}
-            executionStatus={status}
-            taskId={taskId}
-          />
-        ) : (
-          <TaskStatusTag status={status} taskIdentifier={taskId}>
+        {/* One Status row — the workflow state when the task has one, else
+            its execution status — over one picker: the Kanban board's own
+            columns, order and glyphs, triage included. */}
+        <TaskStatusTag
+          status={status}
+          taskIdentifier={taskId}
+          workflowCategory={workflowCategory}
+          workflowStateId={workflowStateId}
+        >
+          <Tooltip
+            title={
+              statusRow.kind === 'workflow' && status
+                ? `${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`
+                : undefined
+            }
+          >
             <Block
               clickable
               horizontal
@@ -103,14 +111,27 @@ const TaskProperties = memo(() => {
               className={styles.propertyItem}
               gap={8}
               variant={'borderless'}
+              data-task-workflow-state={
+                statusRow.kind === 'workflow' ? statusRow.category : undefined
+              }
             >
-              <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
+              {statusRow.kind === 'workflow' ? (
+                <Icon
+                  color={WORKFLOW_CATEGORY_VISUALS[statusRow.category].color}
+                  icon={WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon}
+                  size={16}
+                />
+              ) : (
+                <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
+              )}
               <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
-                {t(`taskDetail.${statusMeta.labelKey}` as never)}
+                {statusRow.kind === 'workflow'
+                  ? t(`taskDetail.workflow.category.${statusRow.category}` as never)
+                  : t(`taskDetail.${statusMeta.labelKey}` as never)}
               </Text>
             </Block>
-          </TaskStatusTag>
-        )}
+          </Tooltip>
+        </TaskStatusTag>
 
         <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
           <Block

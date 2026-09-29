@@ -3,7 +3,6 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
-import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { memo, type ReactNode, useCallback } from 'react';
@@ -17,6 +16,7 @@ import {
   COLUMN_I18N_KEYS,
   COLUMN_STATUS_VISUAL,
   getKanbanColumnHeaderVariant,
+  type TaskStatusChoice,
 } from './kanbanBoardModel';
 import type { TaskGroupMeta } from './listViewOptions';
 import TaskBoardCard from './TaskBoardCard';
@@ -32,7 +32,7 @@ const cardStyles = createStaticStyles(({ css }) => ({
 }));
 
 const SortableTaskCard = memo<{
-  onStatusChange?: (task: TaskListItem, status: TaskStatus) => void | Promise<void>;
+  onStatusChange?: (task: TaskListItem, choice: TaskStatusChoice) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
 }>(({ onStatusChange, routeScope, task }) => {
@@ -41,7 +41,7 @@ const SortableTaskCard = memo<{
     id: task.identifier,
   });
   const handleStatusChange = useCallback(
-    (status: TaskStatus) => onStatusChange?.(task, status),
+    (choice: TaskStatusChoice) => onStatusChange?.(task, choice),
     [onStatusChange, task],
   );
 
@@ -239,6 +239,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 // chips) reads the same source.
 export { COLUMN_I18N_KEYS, COLUMN_STATUS_VISUAL };
 
+
 interface CollapsedKanbanColumnProps {
   columnKey: string;
   /** Rails stay live drop targets unless the view filtered the column out. */
@@ -302,7 +303,7 @@ interface KanbanColumnProps {
   loading?: boolean;
   onCreate?: () => void;
   onHide?: () => void;
-  onStatusChange?: (task: TaskListItem, status: TaskStatus) => void | Promise<void>;
+  onStatusChange?: (task: TaskListItem, choice: TaskStatusChoice) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   tasks: TaskListItem[];
   total: number;

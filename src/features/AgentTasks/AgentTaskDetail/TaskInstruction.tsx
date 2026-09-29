@@ -108,7 +108,7 @@ const TaskInstruction = memo(() => {
     updateTask,
   });
 
-  const handleAttach = useAttachInstructionFiles({ editable, editor, taskId });
+  const handleAttach = useAttachInstructionFiles({ editable, editor, taskId: taskId ?? null });
 
   // Clicking into the clamped text focuses the editor, so expanding on focus
   // makes one click both open the instruction and land the caret where it was

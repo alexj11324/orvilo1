@@ -167,6 +167,13 @@ export interface TaskMutationContext {
   /** External event/delivery id carried into planner diagnostics. */
   eventId?: string;
   /**
+   * Marks the assignee write as one step of an execution-ownership transfer
+   * (handoff, inbox-agent bootstrap) rather than a plain attribute edit.
+   * Only protocol implementations may set it: without it, reassigning a
+   * `running` task through `updateWithLog` throws `TaskHandoffRequiredError`.
+   */
+  executionTransfer?: boolean;
+  /**
    * When set, `moveToTeam` only writes if `domainRevision` still matches.
    * Inbound Linear sync omits this; the Team UI must send it.
    */
@@ -186,6 +193,23 @@ export class TaskRevisionConflictError extends Error {
   constructor() {
     super('TASK_REVISION_CONFLICT');
     this.name = 'TaskRevisionConflictError';
+  }
+}
+
+/**
+ * Thrown when a caller tries to change or clear `assigneeAgentId` on a
+ * `running` task through an ordinary update. Reassignment of a live
+ * execution is an execution-control operation and must go through
+ * `task.handoff` (fence/cancel the incumbent, then transfer) — a bare field
+ * write would split execution ownership between the stored assignee and the
+ * still-running dispatch.
+ */
+export class TaskHandoffRequiredError extends Error {
+  readonly code = 'HANDOFF_REQUIRED' as const;
+
+  constructor() {
+    super('HANDOFF_REQUIRED');
+    this.name = 'TaskHandoffRequiredError';
   }
 }
 
@@ -3844,6 +3868,20 @@ export class TaskModel {
         .for('update')
         .limit(1);
       if (!before) return null;
+
+      // Server-side invariant (execution ownership): a `running` task's
+      // agent assignee IS its incumbent executor, so it may only be changed
+      // by an ownership-transfer protocol that first fences the active
+      // dispatch. The check lives inside the row lock so a task cannot slip
+      // into `running` between a caller's own pre-read and this write.
+      if (
+        before.status === 'running' &&
+        data.assigneeAgentId !== undefined &&
+        data.assigneeAgentId !== before.assigneeAgentId &&
+        mutation.executionTransfer !== true
+      ) {
+        throw new TaskHandoffRequiredError();
+      }
 
       const source = actor.agentId ? 'agent' : actor.userId ? 'user' : 'system';
       const updated = await scoped.update(id, data, {

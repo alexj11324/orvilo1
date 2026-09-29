@@ -8,6 +8,7 @@ import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { processTaskCancellation } from './index';
 
 const dispatchModel = {
+  abandonCancellation: vi.fn(),
   claimCancellation: vi.fn(),
   retryCancellation: vi.fn(),
   settleCancellation: vi.fn(),
@@ -132,5 +133,54 @@ describe('processTaskCancellation', () => {
       operationId: 'operation-1',
       topicId: 'topic-1',
     });
+  });
+
+  it('abandons the claim once the cancel-attempts ceiling is reached', async () => {
+    dispatchModel.claimCancellation.mockResolvedValue({
+      ...claim(),
+      dispatch: { ...claim().dispatch, cancelAttempts: 5, cancelRequestedAt: new Date() },
+    });
+    dispatchModel.abandonCancellation.mockResolvedValue({
+      dispatch: { phase: 'abandoned' },
+      topicId: 'topic-1',
+    });
+
+    await expect(
+      processTaskCancellation({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({ outcome: 'abandoned', taskId: 'task-1' });
+
+    expect(dispatchModel.abandonCancellation).toHaveBeenCalledWith(
+      expect.objectContaining({ dispatchId: 'dispatch-1', fence: 3, owner: expect.any(String) }),
+    );
+    expect(interruptTask).not.toHaveBeenCalled();
+    expect(dispatchModel.retryCancellation).not.toHaveBeenCalled();
+  });
+
+  it('abandons a cancel intent older than the age ceiling even on early attempts', async () => {
+    dispatchModel.claimCancellation.mockResolvedValue({
+      ...claim(),
+      dispatch: {
+        ...claim().dispatch,
+        cancelAttempts: 1,
+        cancelRequestedAt: new Date(Date.now() - 11 * 60 * 1000),
+      },
+    });
+    dispatchModel.abandonCancellation.mockResolvedValue({
+      dispatch: { phase: 'abandoned' },
+      topicId: 'topic-1',
+    });
+
+    await expect(
+      processTaskCancellation({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({ outcome: 'abandoned' });
+    expect(interruptTask).not.toHaveBeenCalled();
   });
 });

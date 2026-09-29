@@ -72,6 +72,7 @@ async function readRouterSources() {
       'desktopRouter.shared.tsx',
       'desktopRouter.config.tsx',
       'desktopRouter.config.desktop.tsx',
+      'sharedMainAreaLeaves.tsx',
     ].map((filename) => readFile(path.join(process.cwd(), 'src/spa/router', filename), 'utf8')),
   );
 }
@@ -347,11 +348,9 @@ describe('desktop router shared definition', () => {
     const eagerDefaultRouteImports = [
       ...combinedSource.matchAll(/^import\s+[A-Z]\w*\s+from\s+'@\/routes\//gm),
     ];
-    const lazyRouteImports = [
-      ...combinedSource.matchAll(
-        /(?:dynamicElement|dynamicLayout)\(\s*\(\) => (?:loadRouteWithBuiltinToolSurfaces\(\(\) => )?import\(['"]@\/routes\//g,
-      ),
-    ];
+    // Any dynamic `import('@/routes/…')` is a lazy boundary — leaf registry
+    // `load:` properties count the same as inline `dynamicElement(() => …)`.
+    const lazyRouteImports = [...combinedSource.matchAll(/import\(['"]@\/routes\//g)];
 
     expect(eagerDefaultRouteImports).toHaveLength(0);
     expect(combinedSource).not.toContain(
@@ -790,13 +789,13 @@ describe('desktop router shared definition', () => {
   });
 
   it('keeps business resource and task routes in the shared definition', async () => {
-    const [sharedSource] = await readRouterSources();
+    const [sharedSource, , , leavesSource] = await readRouterSources();
 
     expect(sharedSource).toContain('...BusinessResourceRoutes');
     expect(sharedSource).toContain("import('@/routes/(main)/(task-workspace)/_layout')");
-    expect(sharedSource).toContain("import('@/routes/(main)/agent/task/[taskId]')");
-    expect(sharedSource).not.toContain("import('@/routes/(main)/task-workspace/_layout')");
-    expect(sharedSource).not.toContain("import('@/routes/(main)/tasks/_layout')");
-    expect(sharedSource).not.toContain("import('@/routes/(main)/task/_layout')");
+    expect(leavesSource).toContain("import('@/routes/(main)/agent/task/[taskId]')");
+    expect(leavesSource).not.toContain("import('@/routes/(main)/task-workspace/_layout')");
+    expect(leavesSource).not.toContain("import('@/routes/(main)/tasks/_layout')");
+    expect(leavesSource).not.toContain("import('@/routes/(main)/task/_layout')");
   });
 });

@@ -1,0 +1,19 @@
+---
+title: Keep mobile routes in sync with desktop
+description: >-
+  Mobile navigation now consumes the same shared route registry as desktop,
+  so new settings tabs and work pages can no longer drift out of reach on the
+  mobile web.
+tags:
+  - Mobile
+  - Settings
+---
+
+# Keep mobile routes in sync with desktop
+
+Mobile routing used to re-declare its own copy of the shared route table, which is how workspace settings tabs added on desktop never reached the mobile web and bounced back home. Mobile now consumes the same shared leaf registry as desktop — every page mobile serves is declared once — and a coverage test asserts that any shared route mobile does not ship is opted out explicitly.
+
+## Improvements and fixes
+
+- **New pages reach mobile automatically.** Work pages and settings tabs registered once in the shared definition now resolve on the mobile web without a second, drift-prone copy.
+- **Regressions are caught by tests.** Any shared route mobile cannot serve must be listed in an explicit exclusion allow-list, so a missing mobile route fails the test suite instead of silently bouncing users home.

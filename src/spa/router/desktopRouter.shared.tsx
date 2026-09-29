@@ -35,19 +35,15 @@ import ResourceHomeSkeleton from '@/components/Skeleton/ResourceHome';
 import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import { RESERVED_RETIRED_ROOTS } from '@/config/routes';
-import { WORKSPACE_SETTINGS_ALIASES } from '@/config/routes/settings';
 import { agentDocumentRouteMeta } from '@/features/AgentDocumentPage/routeMeta';
 import { goalDetailRouteMeta, goalsRouteMeta } from '@/features/AgentGoals/routeMeta';
-import { taskRouteMeta, tasksRouteMeta } from '@/features/AgentTasks/routeMeta';
-import { agentsRouteMeta } from '@/features/AgentViewAll/routeMeta';
+import { tasksRouteMeta } from '@/features/AgentTasks/routeMeta';
 import {
   automationDetailRouteMeta,
   automationNewRouteMeta,
   automationRunsRouteMeta,
   automationsRouteMeta,
 } from '@/features/Automations/routeMeta';
-import { membersRouteMeta } from '@/features/Members/routeMeta';
-import { myWorkRouteMeta } from '@/features/MyWork/routeMeta';
 import {
   projectActivityRouteMeta,
   projectLibraryRouteMeta,
@@ -55,13 +51,8 @@ import {
   projectResourcesRouteMeta,
   projectsRouteMeta,
 } from '@/features/Projects/routeMeta';
-import { reviewsRouteMeta } from '@/features/Reviews/routeMeta';
-import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { settingsRouteMeta } from '@/features/Settings/features/routeMeta';
-import { taskDraftsRouteMeta } from '@/features/TaskDrafts/routeMeta';
-import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
 import { workspaceHomeRouteMeta } from '@/features/Workspace/routeMeta';
-import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
 import {
   agentPermissionRouteMeta,
   agentProfileRouteMeta,
@@ -78,6 +69,20 @@ import {
 import AppShellSkeleton, { APP_SHELL_FALLBACK_ID } from '@/spa/BootShell/AppShellSkeleton';
 import { loadRouteWithBuiltinToolSurfaces } from '@/spa/initialize/toolSurfaces';
 import { NoRouteSkeleton, routeMeta, type RouteSkeletonProps } from '@/spa/router/routeMeta';
+import {
+  leafChildRoute,
+  leafElement,
+  leafGroupRoute,
+  sharedAgentsLeafGroup,
+  sharedAgentTaskLeaf,
+  sharedRetiredDeepGuards,
+  type SharedRouteLeaf,
+  sharedTaskWorkspaceLeafGroups,
+  sharedWorkspaceSettingsAliasRoutes,
+  type SharedWorkspaceSettingsLeaf,
+  sharedWorkspaceSettingsLeaves,
+  sharedWorkspaceSettingsRedirects,
+} from '@/spa/router/sharedMainAreaLeaves';
 import { SettingsTabs } from '@/store/global/initialState';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
 
@@ -133,6 +138,15 @@ export interface MainAreaRouteOptions {
 const deferPlatformElement = (factory?: () => ReactElement) =>
   factory ? createElement(factory) : undefined;
 
+const desktopLeaf = (leaf: SharedRouteLeaf) =>
+  leafElement(leaf, `Desktop > ${leaf.name}`, leaf.preloadId);
+
+const desktopWorkspaceSettingsLeaf = (leaf: SharedWorkspaceSettingsLeaf): RouteObject => ({
+  element: leafElement(leaf, `Desktop > Workspace > Settings > ${leaf.name}`, 'settings'),
+  handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton(leaf.skeleton) }) },
+  path: leaf.path,
+});
+
 /**
  * Children shared between the root tree (`/`) and the workspace tree
  * (`/:workspaceSlug`). Personal-only segments (settings, index, catch-all,
@@ -151,30 +165,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
     path,
   })),
   // Deeper URLs of the retired Community and standalone Pages surfaces.
-  ...[
-    ...[
-      'agent',
-      'group_agent',
-      'mcp',
-      'model',
-      'provider',
-      'skill',
-      'user',
-      'org',
-      'workspace',
-    ].flatMap((type) => [`community/${type}`, `community/${type}/:slug`]),
-    'community/workspace/settings',
-    'page/:id',
-    'page/:id/permission',
-  ].map((path): RouteObject => ({ element: redirectElement('..'), path })),
-  {
-    element: redirectElement('..'),
-    path: 'community/*',
-  },
-  {
-    element: redirectElement('..'),
-    path: 'page/*',
-  },
+  ...sharedRetiredDeepGuards,
   // Chat routes (agent)
   {
     children: [
@@ -366,17 +357,14 @@ export const sharedMainAreaChildren: RouteObject[] = [
             handle: { meta: tasksRouteMeta },
             path: 'tasks',
           },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/task/[taskId]'),
-              'Desktop > Chat > Task Detail',
-            ),
-            handle: { meta: taskRouteMeta },
+          leafChildRoute(
+            sharedAgentTaskLeaf,
+            leafElement(sharedAgentTaskLeaf, 'Desktop > Chat > Task Detail'),
             // `:slug?` is the readable title tail (Linear-style). It is never
             // resolved against — `:taskId` alone identifies the task — so the
             // optional segment keeps every pre-slug link working.
-            path: 'task/:taskId/:slug?',
-          },
+            { path: 'task/:taskId/:slug?' },
+          ),
         ],
         element: dynamicLayout(
           () => import('@/routes/(main)/agent/_layout'),
@@ -575,19 +563,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
   ...BusinessDesktopRoutesWithMainLayout,
 
   // Agents view-all route (flat list of workspace/private agents)
-  {
-    children: [
-      {
-        element: dynamicElement(() => import('@/routes/(main)/agents'), 'Desktop > Agents', {
-          preloadId: 'agents',
-        }),
-        handle: { meta: agentsRouteMeta },
-        index: true,
-      },
-    ],
-    errorElement: <ErrorBoundary resetPath=".." />,
-    path: 'agents',
-  },
+  leafGroupRoute(sharedAgentsLeafGroup, desktopLeaf),
 
   // Projects view-all route
   {
@@ -697,177 +673,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
   },
 
   {
-    children: [
-      {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/tasks'), 'Desktop > Tasks', {
-              preloadId: 'tasks',
-            }),
-            handle: { meta: tasksRouteMeta },
-            index: true,
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'tasks',
-      },
-      // Work inbox: first-class attention surface. The Home-hosted chat inbox
-      // page is gone; `/inbox` is needs-you / activity, not the built-in agent.
-      {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/inbox'), 'Desktop > Inbox', {
-              preloadId: 'inbox',
-            }),
-            handle: { meta: inboxRouteMeta },
-            index: true,
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'inbox',
-      },
-      {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/drafts'), 'Desktop > Drafts', {
-              preloadId: 'tasks',
-            }),
-            handle: { meta: taskDraftsRouteMeta },
-            index: true,
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'drafts',
-      },
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/my-issues'),
-              'Desktop > My Issues',
-              {
-                preloadId: 'my-work',
-              },
-            ),
-            handle: { meta: myWorkRouteMeta },
-            index: true,
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'my-issues',
-      },
-      {
-        children: [
-          {
-            // Legacy `/my-work` deep links land on this redirect — it maps the
-            // old tab params onto /my-issues and /reviews.
-            element: dynamicElement(() => import('@/routes/(main)/my-work'), 'Desktop > My Work', {
-              preloadId: 'my-work',
-            }),
-            handle: { meta: myWorkRouteMeta },
-            index: true,
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'my-work',
-      },
-      {
-        element: dynamicElement(() => import('@/routes/(main)/reviews'), 'Desktop > Reviews', {
-          preloadId: 'reviews',
-        }),
-        errorElement: <ErrorBoundary resetPath=".." />,
-        handle: { meta: reviewsRouteMeta },
-        // One route identity owns list and detail. Changing `reviewId` must not
-        // remount ReviewsPage and discard queue tails or scroll position.
-        path: 'reviews/:reviewId?',
-      },
-      {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/members'), 'Desktop > Members', {
-              preloadId: 'members',
-            }),
-            handle: { meta: membersRouteMeta },
-            index: true,
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'members',
-      },
-      {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/views'), 'Desktop > Views', {
-              preloadId: 'views',
-            }),
-            handle: { meta: savedViewsRouteMeta },
-            index: true,
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/views/[viewId]'),
-              'Desktop > Saved View',
-              { preloadId: 'views' },
-            ),
-            handle: { meta: savedViewsRouteMeta },
-            path: ':viewId',
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'views',
-      },
-      {
-        children: [
-          {
-            element: dynamicElement(() => import('@/routes/(main)/teams'), 'Desktop > Teams', {
-              preloadId: 'teams',
-            }),
-            handle: { meta: teamsRouteMeta },
-            index: true,
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/teams/[teamId]'),
-              'Desktop > Team',
-              { preloadId: 'teams' },
-            ),
-            handle: { meta: teamsRouteMeta },
-            path: ':teamId',
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath=".." />,
-        path: 'teams',
-      },
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/task/[taskId]'),
-              'Desktop > Task Detail',
-            ),
-            handle: { meta: taskRouteMeta },
-            // Optional readable title tail — see the agent-scoped route above.
-            path: ':taskId/:slug?',
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath="../tasks" />,
-        path: 'task',
-      },
-      {
-        children: [
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/goal/[goalId]'),
-              'Desktop > Goal Detail',
-            ),
-            handle: { meta: goalDetailRouteMeta },
-            path: ':goalId',
-          },
-        ],
-        errorElement: <ErrorBoundary resetPath="../tasks" />,
-        path: 'goal',
-      },
-    ],
+    children: sharedTaskWorkspaceLeafGroups.map((group) => leafGroupRoute(group, desktopLeaf)),
     element: dynamicLayout(
       () => import('@/routes/(main)/(task-workspace)/_layout'),
       'Desktop > Task Workspace > Layout',
@@ -1039,228 +845,17 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
               redirectElement('general'),
             index: true,
           },
-          // Legacy `/<slug>/settings/<alias>` deep links. They are relative and
-          // resolve against the current URL, so they can sit together here
-          // regardless of which group their live destination lives in.
-          ...WORKSPACE_SETTINGS_ALIASES.flatMap(({ alias, subPaths, target }): RouteObject[] => {
-            const element = redirectElement(target === 'root' ? '..' : `../${target}`);
-            return [
-              { element, path: alias },
-              ...(subPaths ? [{ element, path: `${alias}/:sub` }] : []),
-            ];
-          }),
+          ...sharedWorkspaceSettingsAliasRoutes,
+          ...sharedWorkspaceSettingsRedirects,
           // Full-bleed tabs render directly inside the workspace settings
           // shell (sidebar + outlet) — they own their internal layout.
+          ...sharedWorkspaceSettingsLeaves
+            .filter((l) => l.fullBleed)
+            .map(desktopWorkspaceSettingsLeaf),
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/[workspaceSlug]/settings/connector'),
-              'Desktop > Workspace > Settings > Connector',
-              { preloadId: 'settings' },
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-            path: 'connector',
-          },
-          {
-            element: redirectElement('../imports/linear'),
-            path: 'linear',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/[workspaceSlug]/settings/imports'),
-              'Desktop > Workspace > Settings > Imports',
-              { preloadId: 'settings' },
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-            path: 'imports',
-          },
-          {
-            element: dynamicElement(
-              () => import('@/routes/(main)/[workspaceSlug]/settings/imports/linear'),
-              'Desktop > Workspace > Settings > Linear Import',
-              { preloadId: 'settings' },
-            ),
-            handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-            path: 'imports/linear',
-          },
-          // Padded tabs share a centered, max-width container layout.
-          {
-            children: [
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/general'),
-                  'Desktop > Workspace > Settings > General',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'general',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/members'),
-                  'Desktop > Workspace > Settings > Members',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'members',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
-                  'Desktop > Workspace > Settings > Notification',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'notification',
-              },
-              // Channel detail level of the two-level notification settings —
-              // the page reads the channel id from the `sub` route param.
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/notification'),
-                  'Desktop > Workspace > Settings > Notification > Channel',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'notification/:sub',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/statistics'),
-                  'Desktop > Workspace > Settings > Statistics',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('grid') }) },
-                path: 'statistics',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/plans'),
-                  'Desktop > Workspace > Settings > Plans',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('detail') }) },
-                path: 'plans',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/billing'),
-                  'Desktop > Workspace > Settings > Billing',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('detail') }) },
-                path: 'billing',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/budget'),
-                  'Desktop > Workspace > Settings > Budget',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('detail') }) },
-                path: 'budget',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/credits'),
-                  'Desktop > Workspace > Settings > Credits',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('detail') }) },
-                path: 'credits',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/usage'),
-                  'Desktop > Workspace > Settings > Usage',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('grid') }) },
-                path: 'usage',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/credential'),
-                  'Desktop > Workspace > Settings > Credential',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'credential',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/apikey'),
-                  'Desktop > Workspace > Settings > API Key',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'apikey',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/labels'),
-                  'Desktop > Workspace > Settings > Labels',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'labels',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/storage'),
-                  'Desktop > Workspace > Settings > Storage',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'storage',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/devices'),
-                  'Desktop > Workspace > Settings > Devices',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('list') }) },
-                path: 'devices',
-              },
-              // Account-level tabs mirrored inside the workspace so members can
-              // adjust user settings without leaving the workspace. Same pages
-              // as personal `/settings/*`; only the chrome is workspace-owned.
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/profile'),
-                  'Desktop > Workspace > Settings > Profile',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'profile',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/appearance'),
-                  'Desktop > Workspace > Settings > Appearance',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'appearance',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/hotkey'),
-                  'Desktop > Workspace > Settings > Hotkey',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'hotkey',
-              },
-
-              // Developer tools mirrored inside the workspace (user preferences).
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/advanced'),
-                  'Desktop > Workspace > Settings > Advanced',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'advanced',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/labs'),
-                  'Desktop > Workspace > Settings > Labs',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'labs',
-              },
-              {
-                element: dynamicElement(
-                  () => import('@/routes/(main)/[workspaceSlug]/settings/about'),
-                  'Desktop > Workspace > Settings > About',
-                ),
-                handle: { meta: routeMeta({ Skeleton: createSurfaceSkeleton('form') }) },
-                path: 'about',
-              },
-            ],
+            children: sharedWorkspaceSettingsLeaves
+              .filter((l) => !l.fullBleed)
+              .map(desktopWorkspaceSettingsLeaf),
             element: dynamicLayout(
               () => import('@/routes/(main)/[workspaceSlug]/settings/_content-layout'),
               'Desktop > Workspace > Settings > Content Layout',

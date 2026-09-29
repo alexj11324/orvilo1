@@ -1,0 +1,20 @@
+---
+title: Issue Status Menus Pick Exact Team States
+description: >-
+  The status picker on issue detail pages, list rows, board cards, and
+  context menus now lists a team's real workflow states, so two custom
+  states inside one category stay individually pickable everywhere.
+tags:
+  - Tasks
+---
+
+# Issue Status Menus Pick Exact Team States
+
+Every issue status picker now shares the team's real workflow states. When a category maps to more than one team state — say `In progress` and `Paused` under the same column — each state appears as its own menu row on the detail rail, on list rows, on board cards, and in right-click menus, and picking one writes that exact state.
+
+## Improvements
+
+- **Precise states are pickable everywhere.** The detail page, list rows, board card menus, and context menus all list the team's workflow states grouped under the board's category order, with the board's icons and a check mark on the current state.
+- **One shared write command.** Every picker commits through the same domain-revision-checked board move the kanban drop uses — so a pick from any surface carries the exact state reference, survives a refresh, and returns a clear conflict message when the issue changed underneath.
+- **Ambiguous category moves still ask.** Dragging or picking a bare category that maps to several team states keeps opening the existing state picker; cancelling it writes nothing.
+- **Run state stays separate.** Agent execution states (running, failed, needs input) remain on their own axis — a workflow pick never overwrites them.

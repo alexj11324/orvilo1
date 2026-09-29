@@ -39,6 +39,13 @@ export const moveBoardMaybePickingState = async (input: {
   expectedDomainRevision: number;
   groupBy: 'status' | 'workflowCategory';
   targetKey: string;
+  /**
+   * Precise `team_workflow_states` ref from the shared Issue status model —
+   * an exact pick commits straight through the CAS write and never opens
+   * the picker. Omit it for category-level targets, where a
+   * WORKFLOW_STATE_REQUIRED reply still picks.
+   */
+  targetWorkflowStateRefId?: string;
   taskId: string;
   teamId?: string | null;
 }): Promise<boolean> => {
@@ -47,6 +54,7 @@ export const moveBoardMaybePickingState = async (input: {
       expectedDomainRevision: input.expectedDomainRevision,
       groupBy: input.groupBy,
       targetKey: input.targetKey,
+      targetWorkflowStateRefId: input.targetWorkflowStateRefId,
       taskId: input.taskId,
     });
     return true;
@@ -130,6 +138,8 @@ const toastWorkQueryBoardMoveError = (error: unknown) => {
 export const commitWorkQueryBoardMove = async (input: {
   column: Pick<KanbanColumnDefinition, 'key' | 'targetStatus' | 'targetWorkflowCategory'>;
   groupBy: 'status' | 'workflowCategory';
+  /** Exact workflow-state ref a precise pick carries into the CAS write. */
+  targetWorkflowStateRefId?: string;
   task: WorkQueryBoardTask;
 }): Promise<boolean> => {
   const groupBy = workQueryMoveGroupBy(input.groupBy, input.task);
@@ -138,6 +148,7 @@ export const commitWorkQueryBoardMove = async (input: {
   const plan = workQueryMovePlan({
     groupBy,
     targetKey,
+    targetWorkflowStateRefId: input.targetWorkflowStateRefId,
     task: input.task,
   });
   try {
@@ -157,6 +168,7 @@ export const commitWorkQueryBoardMove = async (input: {
         expectedDomainRevision: revision,
         groupBy: 'workflowCategory',
         targetKey,
+        targetWorkflowStateRefId: input.targetWorkflowStateRefId,
         taskId: plan.task.id,
         teamId: plan.task.teamId,
       });
@@ -165,6 +177,7 @@ export const commitWorkQueryBoardMove = async (input: {
       expectedDomainRevision: plan.expectedDomainRevision,
       groupBy: plan.groupBy,
       targetKey: plan.targetKey,
+      targetWorkflowStateRefId: input.targetWorkflowStateRefId,
       taskId: input.task.id,
       teamId: input.task.teamId,
     });
@@ -235,6 +248,16 @@ export const applyWorkQueryStatusChoice = async (input: {
   groupBy: 'status' | 'workflowCategory';
   task: WorkQueryBoardTask;
 }): Promise<boolean> => {
+  // An exact-state row commits the precise ref through the same CAS write —
+  // the picker's multi-candidate ambiguity never applies to a named state.
+  if (input.choice.state) {
+    return commitWorkQueryBoardMove({
+      column: input.choice.column,
+      groupBy: 'workflowCategory',
+      targetWorkflowStateRefId: input.choice.state.id,
+      task: input.task,
+    });
+  }
   if (input.choice.workflowCategory) {
     return commitWorkQueryBoardMove({
       column: input.choice.column,

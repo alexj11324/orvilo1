@@ -9,17 +9,20 @@ import { useTranslation } from 'react-i18next';
 import type { StatusVisual } from '@/components/ExecutionStatus';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { usePermission } from '@/hooks/usePermission';
-import { useTaskStore } from '@/store/task';
 
 import {
   COLUMN_I18N_KEYS,
+  issueWorkflowStateChoices,
   taskStatusBoardColumnKey,
   type TaskStatusChoice,
+  taskStatusChoiceIsCurrent,
   taskStatusChoices,
 } from '../AgentTaskList/kanbanBoardModel';
 import { renderMenuExtra } from './menuExtra';
 import { STATUS_META } from './taskStatusMeta';
+import { useIssueStatusMove } from './useIssueStatusMove';
 import { useTaskStatusChange } from './useTaskStatusChange';
+import { useTeamWorkflowStates } from './useTeamWorkflowStates';
 
 export { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
 
@@ -85,10 +88,14 @@ interface TaskStatusTagProps {
   size?: number;
   status?: TaskStatus;
   taskIdentifier?: string;
+  /** Owning team — enables the precise-state menu when the task is linked. */
+  teamId?: string | null;
   /** Workflow category — buckets a workflow-linked task's current column. */
   workflowCategory?: TaskWorkflowCategory | null;
   /** Linked workflow state — every board column becomes pickable when set. */
   workflowStateId?: string | null;
+  /** Internal `team_workflow_states` row — resolves the current precise state. */
+  workflowStateRefId?: string | null;
 }
 
 const TaskStatusTag = memo<TaskStatusTagProps>(
@@ -100,8 +107,10 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
     size = 16,
     status,
     taskIdentifier,
+    teamId,
     workflowCategory,
     workflowStateId,
+    workflowStateRefId,
   }) => {
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -109,7 +118,12 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const changeTaskStatus = useTaskStatusChange();
-    const updateTask = useTaskStore((s) => s.updateTask);
+    const moveWorkflow = useIssueStatusMove();
+    // The Issue status menu: the team's own workflow states once the task is
+    // linked, so two custom states in one category stay individually
+    // pickable. Until the catalog lands (or for unlinked tasks) the board's
+    // category columns carry the same write command.
+    const teamStates = useTeamWorkflowStates(workflowStateId != null ? teamId : null);
 
     const displayStatus = status ?? 'backlog';
     const meta = STATUS_META[displayStatus];
@@ -118,7 +132,13 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
     // could not take this task (an unlinked task can't reach the
     // workflow-only columns) renders disabled — the same reachability rule
     // `canDropTaskIntoKanbanColumn` enforces on drops.
-    const choices = useMemo(() => taskStatusChoices({ workflowStateId }), [workflowStateId]);
+    const choices = useMemo(
+      () =>
+        teamStates != null && teamStates.length > 0
+          ? issueWorkflowStateChoices(teamStates)
+          : taskStatusChoices({ workflowStateId }),
+      [teamStates, workflowStateId],
+    );
     const currentColumnKey = useMemo(
       () =>
         taskStatusBoardColumnKey({
@@ -134,7 +154,8 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
     // captures them before they reach the input). Digits number the pickable
     // rows only — disabled entries have no accelerator.
     const choiceLabel = useCallback(
-      (choice: TaskStatusChoice): string => t(COLUMN_I18N_KEYS[choice.column.key] as never),
+      (choice: TaskStatusChoice): string =>
+        choice.state?.name ?? t(COLUMN_I18N_KEYS[choice.column.key] as never),
       [t],
     );
     const filteredChoices = useMemo(() => {
@@ -155,7 +176,14 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       async (choice: TaskStatusChoice) => {
         if (!canEditTask) return;
         if (!choice.status && !choice.workflowCategory) return;
-        if (choice.column.key === currentColumnKey) return;
+        if (
+          taskStatusChoiceIsCurrent(
+            { workflowStateId, workflowStateRefId },
+            choice,
+            currentColumnKey,
+          )
+        )
+          return;
         if (onChange) {
           setLoading(true);
           try {
@@ -169,16 +197,34 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
         setLoading(true);
 
         try {
-          if (choice.workflowCategory) {
-            await updateTask(taskIdentifier, { workflowCategory: choice.workflowCategory });
-          } else if (choice.status) {
-            await changeTaskStatus(taskIdentifier, choice.status);
+          if (choice.state != null || choice.workflowCategory != null) {
+            // Shared Issue status command — the same CAS move the boards
+            // drop on, precise ref when the row names one, the category
+            // picker path otherwise.
+            await moveWorkflow({
+              taskIdentifier,
+              target: {
+                category: choice.state?.category ?? choice.workflowCategory!,
+                workflowStateRefId: choice.state?.id,
+              },
+            });
+          } else if (choice.status != null) {
+            await changeTaskStatus(taskIdentifier, choice.status!);
           }
         } finally {
           setLoading(false);
         }
       },
-      [canEditTask, changeTaskStatus, currentColumnKey, onChange, taskIdentifier, updateTask],
+      [
+        canEditTask,
+        changeTaskStatus,
+        currentColumnKey,
+        moveWorkflow,
+        onChange,
+        taskIdentifier,
+        workflowStateId,
+        workflowStateRefId,
+      ],
     );
 
     const handlePickRef = useRef(handlePick);
@@ -207,14 +253,18 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       let pickIndex = 0;
       return filteredChoices.map((choice) => {
         const pickable = Boolean(choice.status || choice.workflowCategory);
-        const isCurrent = choice.column.key === currentColumnKey;
+        const isCurrent = taskStatusChoiceIsCurrent(
+          { workflowStateId, workflowStateRefId },
+          choice,
+          currentColumnKey,
+        );
         const visual = WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
         if (pickable) pickIndex += 1;
         return {
           disabled: !pickable,
           extra: pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined,
           icon: <Icon color={visual.color} icon={visual.icon} size={16} />,
-          key: choice.column.key,
+          key: choice.state ? `ws:${choice.state.id}` : choice.column.key,
           label: choiceLabel(choice),
           onClick: ({ domEvent }: MenuInfo) => {
             domEvent.stopPropagation();
@@ -222,7 +272,14 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
           },
         };
       });
-    }, [choiceLabel, currentColumnKey, filteredChoices, handlePick]);
+    }, [
+      choiceLabel,
+      currentColumnKey,
+      filteredChoices,
+      handlePick,
+      workflowStateId,
+      workflowStateRefId,
+    ]);
 
     const triggerNode =
       children ||

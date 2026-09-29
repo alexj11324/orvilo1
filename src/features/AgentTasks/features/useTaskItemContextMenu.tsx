@@ -39,6 +39,7 @@ import { taskDetailPath } from '../shared/taskDetailPath';
 import { useAssigneeMenuItems } from './assigneeMenuItems';
 import { renderMenuExtra } from './menuExtra';
 import { PRIORITY_META } from './TaskPriorityTag';
+import { useIssueStatusMove } from './useIssueStatusMove';
 import { useTaskStatusChange } from './useTaskStatusChange';
 
 type ActiveSubmenu = 'status' | 'priority' | null;
@@ -92,6 +93,7 @@ export const useTaskContextMenuActions = (
   const { allowed: canEditTask } = usePermission('create_content');
 
   const changeTaskStatus = useTaskStatusChange();
+  const moveWorkflow = useIssueStatusMove();
   const updateTask = useTaskStore((s) => s.updateTask);
   const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
   const deleteTask = useTaskStore((s) => s.deleteTask);
@@ -132,8 +134,16 @@ export const useTaskContextMenuActions = (
           void onStatusChange(choice);
           return;
         }
-        if (choice.workflowCategory) {
-          void updateTask(task.identifier, { workflowCategory: choice.workflowCategory });
+        // The shared Issue status command — same CAS move the boards and the
+        // detail/list tags commit, with the picker fallback inside it.
+        if (choice.state || choice.workflowCategory) {
+          void moveWorkflow({
+            taskIdentifier: task.identifier,
+            target: {
+              category: choice.state?.category ?? choice.workflowCategory!,
+              workflowStateRefId: choice.state?.id,
+            },
+          });
         } else if (choice.status) {
           void changeTaskStatus(task.identifier, choice.status);
         }
@@ -365,8 +375,14 @@ export const useTaskContextMenuActions = (
           const choice = pickable[idx];
           if (choice.column.key !== currentColumnKey) {
             if (onStatusChange) void onStatusChange(choice);
-            else if (choice.workflowCategory) {
-              void updateTask(task.identifier, { workflowCategory: choice.workflowCategory });
+            else if (choice.state || choice.workflowCategory) {
+              void moveWorkflow({
+                taskIdentifier: task.identifier,
+                target: {
+                  category: choice.state?.category ?? choice.workflowCategory!,
+                  workflowStateRefId: choice.state?.id,
+                },
+              });
             } else if (choice.status) {
               void changeTaskStatus(task.identifier, choice.status);
             }
@@ -402,6 +418,7 @@ export const useTaskContextMenuActions = (
     appOrigin,
     activeWorkspaceSlug,
     changeTaskStatus,
+    moveWorkflow,
     updateTask,
     refreshTaskList,
     deleteTask,

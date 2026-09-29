@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   deleteTask: vi.fn(),
   messageSuccess: vi.fn(),
   modalConfirm: vi.fn(),
+  moveWorkflow: vi.fn(),
   refreshTaskList: vi.fn(),
   runTask: vi.fn(),
   transferItems: [
@@ -43,6 +44,10 @@ vi.mock('antd', async (importOriginal) => ({
 
 vi.mock('@/business/client/hooks/useTaskTransferMenuItem', () => ({
   useTaskTransferMenuItem: () => mocks.transferItems,
+}));
+
+vi.mock('./useIssueStatusMove', () => ({
+  useIssueStatusMove: () => mocks.moveWorkflow,
 }));
 
 vi.mock('@/hooks/useAppOrigin', () => ({
@@ -245,7 +250,14 @@ describe('useTaskItemContextMenu', () => {
     const triage = statusItem.children.find((child) => child.key === 'status-triage');
     await triage?.onClick({ domEvent: { stopPropagation: vi.fn() } });
 
-    expect(mocks.updateTask).toHaveBeenCalledWith('T-1', { workflowCategory: 'triage' });
+    // A workflow pick commits through the shared Issue status command — the
+    // same CAS move the detail/list tags and the boards write — never a raw
+    // category patch.
+    expect(mocks.moveWorkflow).toHaveBeenCalledWith({
+      taskIdentifier: 'T-1',
+      target: { category: 'triage', workflowStateRefId: undefined },
+    });
+    expect(mocks.updateTask).not.toHaveBeenCalled();
   });
 });
 

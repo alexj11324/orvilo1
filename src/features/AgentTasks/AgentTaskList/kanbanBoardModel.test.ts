@@ -1,3 +1,4 @@
+import type { TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
@@ -18,6 +19,7 @@ import {
   getKanbanColumnHeaderVariant,
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
+  issueWorkflowStateChoices,
   KANBAN_STATUS_COLUMN_KEY,
   KANBAN_WORKFLOW_COLUMN_KEY,
   kanbanBoardCapabilities,
@@ -36,6 +38,7 @@ import {
   taskKanbanColumnKey,
   taskMatchesKanbanColumn,
   taskStatusBoardColumnKey,
+  taskStatusChoiceIsCurrent,
   taskStatusChoices,
 } from './kanbanBoardModel';
 
@@ -772,5 +775,102 @@ describe('board-driven status choices', () => {
         workflowStateId: 'ls-1',
       }),
     ).toBe('needsInput');
+  });
+});
+
+describe('issueWorkflowStateChoices', () => {
+  const state = (
+    id: string,
+    category: TaskWorkflowCategory,
+    overrides: Partial<TeamWorkflowStateItem> = {},
+  ): TeamWorkflowStateItem => ({
+    category,
+    id,
+    name: `State ${id}`,
+    position: 0,
+    remoteStateId: null,
+    teamId: 'team-1',
+    workspaceId: 'ws-1',
+    ...overrides,
+  });
+
+  it('orders rows by the board category order then catalog position', () => {
+    const choices = issueWorkflowStateChoices([
+      state('todo-b', 'todo', { position: 5 }),
+      state('canceled-a', 'canceled'),
+      state('todo-a', 'todo', { position: 1 }),
+      state('triage-a', 'triage'),
+    ]);
+    expect(choices.map((choice) => choice.state?.id)).toEqual([
+      'triage-a',
+      'todo-a',
+      'todo-b',
+      'canceled-a',
+    ]);
+  });
+
+  it('carries the shared model — ref id and category — on every row', () => {
+    const choices = issueWorkflowStateChoices([state('tw-1', 'in_progress')]);
+    expect(choices).toHaveLength(1);
+    expect(choices[0].state?.id).toBe('tw-1');
+    expect(choices[0].workflowCategory).toBe('in_progress');
+    // The wf: column resolves the same moveBoard targetKey a category drop would.
+    expect(choices[0].column.targetWorkflowCategory).toBe('in_progress');
+    expect(choices[0].status).toBeUndefined();
+  });
+
+  it('keeps two custom states in one category individually pickable', () => {
+    const choices = issueWorkflowStateChoices([
+      state('doing', 'in_progress'),
+      state('paused-waiting', 'in_progress'),
+    ]);
+    expect(choices).toHaveLength(2);
+    expect(new Set(choices.map((choice) => choice.state?.id)).size).toBe(2);
+    expect(choices.every((choice) => choice.workflowCategory === 'in_progress')).toBe(true);
+  });
+});
+
+describe('taskStatusChoiceIsCurrent', () => {
+  const state = (
+    id: string,
+    overrides: Partial<TeamWorkflowStateItem> = {},
+  ): TeamWorkflowStateItem => ({
+    category: 'todo',
+    id,
+    name: `State ${id}`,
+    position: 0,
+    remoteStateId: null,
+    teamId: 'team-1',
+    workspaceId: 'ws-1',
+    ...overrides,
+  });
+  const columnChoice = issueWorkflowStateChoices([state('a')])[0];
+
+  it('matches a state row by internal ref or provider id', () => {
+    const choice = { ...columnChoice, state: state('tws_1', { remoteStateId: 'ls-1' }) };
+    expect(taskStatusChoiceIsCurrent({ workflowStateRefId: 'tws_1' }, choice, 'other')).toBe(true);
+    expect(taskStatusChoiceIsCurrent({ workflowStateId: 'ls-1' }, choice, 'other')).toBe(true);
+    expect(
+      taskStatusChoiceIsCurrent(
+        { workflowStateId: 'ls-2', workflowStateRefId: 'tws_2' },
+        choice,
+        'other',
+      ),
+    ).toBe(false);
+  });
+
+  it('never treats a sibling state in the same category as current', () => {
+    const current = { ...columnChoice, state: state('tws_1') };
+    const sibling = { ...columnChoice, state: state('tws_2') };
+    const task = { workflowStateRefId: 'tws_1' };
+    expect(taskStatusChoiceIsCurrent(task, current, 'todo')).toBe(true);
+    expect(taskStatusChoiceIsCurrent(task, sibling, 'todo')).toBe(false);
+  });
+
+  it('falls back to the column bucket for category rows', () => {
+    const choice = taskStatusChoices({})[0];
+    expect(choice.state).toBeUndefined();
+    expect(taskStatusChoiceIsCurrent({}, choice, choice.column.key)).toBe(true);
+    expect(taskStatusChoiceIsCurrent({}, choice, 'elsewhere')).toBe(false);
   });
 });

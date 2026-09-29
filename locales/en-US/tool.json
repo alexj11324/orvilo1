@@ -80,6 +80,8 @@
   "connector.deleteAccountConfirmContent": "This removes the connector and its authorization from your account. Any agent that uses it will need to be re-authorized afterwards.",
   "connector.deleteAgentConfirmContent": "This connector belongs to the agent “{{agent}}”. Deleting it will also remove this tool from that agent.",
   "connector.deleteGitHubMcpConfirmContent": "This removes the GitHub MCP connector. GitHub stays connected for Reviews.",
+  "connector.githubNotConfigurable": "GitHub App OAuth is not configured here and you cannot add a token yourself. Ask a workspace admin to configure GitHub.",
+  "connector.githubPatFallback": "GitHub App OAuth is not configured on this deployment. Connect with a personal access token instead.",
   "connector.manageOnlyCreator": "Only the creator or a workspace owner can manage this connector",
   "connector.thisAgent": "this agent",
   "dalle.autoGenerate": "Auto Generate",

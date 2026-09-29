@@ -39,6 +39,11 @@ interface McpPresetItemProps {
   providerConnected?: boolean;
   /** A pending authorization attempt hit its deadline — Connect acts as re-check. */
   timedOut?: boolean;
+  /**
+   * The deployment lacks the managed OAuth path — Connect becomes a PAT
+   * "Set up token" entry that opens the preset's credential form.
+   */
+  tokenSetup?: boolean;
 }
 
 /**
@@ -47,7 +52,17 @@ interface McpPresetItemProps {
  * existing GitHub App grant. Other presets retain the custom connector form.
  */
 const McpPresetItem = memo<McpPresetItemProps>(
-  ({ preset, connector, connecting, isSelected, onAdd, onSelect, providerConnected, timedOut }) => {
+  ({
+    preset,
+    connector,
+    connecting,
+    isSelected,
+    onAdd,
+    onSelect,
+    providerConnected,
+    timedOut,
+    tokenSetup,
+  }) => {
     const { t } = useTranslation('setting');
     const { t: tt } = useTranslation('tool');
     const { allowed: canCreate, reason: createReason } = usePermission('create_content');
@@ -163,7 +178,9 @@ const McpPresetItem = memo<McpPresetItemProps>(
           >
             {timedOut
               ? t('tools.mcpPreset.checkStatus', 'Check status')
-              : t('tools.orviloSkill.connect')}
+              : tokenSetup
+                ? t('tools.mcpPreset.tokenSetup', 'Set up token')
+                : t('tools.orviloSkill.connect')}
           </Button>
         </Tooltip>
       );

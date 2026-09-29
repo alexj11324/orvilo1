@@ -7,13 +7,14 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { styles } from '../shared/style';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import { useTaskTitleAutosave } from './useTaskTitleAutosave';
 
 const TaskDetailTitleInput = memo(() => {
   const { t } = useTranslation('chat');
   const { allowed: canEditTask } = usePermission('create_content');
-  const name = useTaskStore(taskDetailSelectors.activeTaskName);
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const name = useTaskDetailSelector(taskDetailSelectors.taskName);
+  const taskId = useTaskDetailTaskId();
   const updateTask = useTaskStore((s) => s.updateTask);
 
   const [localName, setLocalName] = useState(name ?? '');

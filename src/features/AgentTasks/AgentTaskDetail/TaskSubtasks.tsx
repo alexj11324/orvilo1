@@ -32,6 +32,7 @@ import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import RunSubtasksPreview from './RunSubtasksPreview';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TopicStatusIcon from './TopicStatusIcon';
 
 type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
@@ -175,13 +176,13 @@ const TaskSubtasks = memo(() => {
 
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canEditTask, reason } = usePermission('create_content');
-  const agentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
+  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
   // Subtask composers inherit the parent's visibility as their default — a
   // child under a private parent must not default to workspace-visible (the
   // server rejects a subtask more public than its parent).
-  const parentVisibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
-  const subtasks = useTaskStore(taskDetailSelectors.activeTaskSubtasks);
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const parentVisibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
+  const subtasks = useTaskDetailSelector(taskDetailSelectors.taskSubtasks);
+  const taskId = useTaskDetailTaskId();
   const runReadySubtasks = useTaskStore((s) => s.runReadySubtasks);
 
   const { buildItems, installKeyboardHandlers } = useTaskContextMenuActions();

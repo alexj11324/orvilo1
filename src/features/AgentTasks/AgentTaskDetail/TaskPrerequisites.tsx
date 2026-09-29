@@ -16,6 +16,7 @@ import TaskStatusIcon from '../features/TaskStatusIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TASK_STATUS_SET = new Set<string>([
   'backlog',
@@ -35,7 +36,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const { allowed, reason } = usePermission('create_content');
-  const detail = useTaskStore(taskDetailSelectors.activeTaskDetail);
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const removeDependency = useTaskStore((s) => s.removeDependency);
   const removeIssueRelation = useTaskStore((s) => s.removeIssueRelation);
   const [pending, setPending] = useState(false);
@@ -166,7 +167,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
 };
 
 const TaskPrerequisites = () => {
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const taskId = useTaskDetailTaskId();
   // Remount local error/pending state when navigating between issues.
   return taskId ? <TaskPrerequisiteEditor key={taskId} taskId={taskId} /> : null;
 };

@@ -22,6 +22,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { useTaskDetailSelector } from './TaskDetailScope';
 import { useTaskCopyActions } from './useTaskCopyActions';
 
 const TaskDetailHeaderActions = memo(() => {
@@ -31,8 +32,8 @@ const TaskDetailHeaderActions = memo(() => {
   const activeWorkspaceId = useActiveWorkspaceId();
   const { allowed: canEditTask } = usePermission('create_content');
   const { copyBranch, copyId, copyLink, hasBranch, taskId } = useTaskCopyActions();
-  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
-  const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
+  const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
+  const createdByUserId = useTaskDetailSelector(taskDetailSelectors.taskCreatedByUserId);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const updateTaskVisibility = useTaskStore((s) => s.updateTaskVisibility);

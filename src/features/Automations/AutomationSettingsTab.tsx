@@ -7,9 +7,9 @@ import { ChevronRightIcon, TimerIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { useTaskDetailSelector } from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import TaskInstruction from '../AgentTasks/AgentTaskDetail/TaskInstruction';
 import TaskScheduleConfig from '../AgentTasks/AgentTaskDetail/TaskScheduleConfig';
 import { automationDetailNextRun, automationDetailTriggerSummary } from './shared';
@@ -41,7 +41,7 @@ const Section = ({ children, title }: { children: React.ReactNode; title: string
 
 const TriggerCard = memo(() => {
   const { t } = useTranslation('automation');
-  const detail = useTaskStore(taskDetailSelectors.activeTaskDetail);
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   if (!detail) return null;
 
   const summary = automationDetailTriggerSummary(detail, t);

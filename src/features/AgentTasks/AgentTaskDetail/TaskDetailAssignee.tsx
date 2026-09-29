@@ -8,20 +8,20 @@ import { useTranslation } from 'react-i18next';
 import HeterogeneousTag from '@/features/HeterogeneousTag';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TaskDetailAssignee = memo(() => {
   const { t } = useTranslation('chat');
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const status = useTaskStore(taskDetailSelectors.activeTaskStatus) as TaskStatus | undefined;
-  const assigneeAgentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
-  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
+  const taskId = useTaskDetailTaskId();
+  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
+  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const assigneeMeta = useAgentDisplayMeta(assigneeAgentId);
   // Same source as the home list so the runtime tag stays consistent.
   const assigneeHeterogeneousType = useHomeStore(

@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { taskService } from '@/services/task';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskStatusIcon from '../features/TaskStatusIcon';
@@ -14,6 +13,7 @@ import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
+import { useTaskDetailSelector } from './TaskDetailScope';
 
 const TASK_STATUS_SET = new Set([
   'backlog',
@@ -32,8 +32,8 @@ const toTaskStatus = (status?: string): TaskStatus =>
 const TaskParentBar = memo(() => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
-  const parent = useTaskStore(taskDetailSelectors.activeTaskParent);
-  const currentIdentifier = useTaskStore(taskDetailSelectors.activeTaskDetail)?.identifier;
+  const parent = useTaskDetailSelector(taskDetailSelectors.taskParent);
+  const currentIdentifier = useTaskDetailSelector(taskDetailSelectors.taskDetail)?.identifier;
 
   const [fetchedParentAgent, setFetchedParentAgent] = useState<
     { agentId?: string | null; identifier: string } | undefined

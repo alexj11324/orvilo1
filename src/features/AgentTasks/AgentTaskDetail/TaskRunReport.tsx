@@ -9,9 +9,9 @@ import { useTranslation } from 'react-i18next';
 
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useTaskStore } from '@/store/task';
-import { taskDetailSelectors } from '@/store/task/selectors';
 
 import RunReplyEditor from './RunReplyEditor';
+import { useTaskDetailTaskId } from './TaskDetailScope';
 
 /**
  * What the agent reported for this task, presented as a report.
@@ -38,7 +38,7 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
   const { t } = useTranslation('chat');
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const addComment = useTaskStore((s) => s.addComment);
-  const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const activeTaskId = useTaskDetailTaskId();
   const [commenting, setCommenting] = useState(false);
 
   // A descendant run belongs to `sourceTaskId`, not the open parent.

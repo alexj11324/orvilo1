@@ -3,8 +3,8 @@ import type { TaskDetailActivity } from '@orvilo/types';
 import type { TaskStoreState } from '../initialState';
 import { taskDetailSelectors } from './detailSelectors';
 
-const activeTaskActivities = (s: TaskStoreState): TaskDetailActivity[] => {
-  const detail = taskDetailSelectors.activeTaskDetail(s);
+const taskActivities = (s: TaskStoreState, taskId?: string): TaskDetailActivity[] => {
+  const detail = taskDetailSelectors.taskDetail(s, taskId);
   if (!detail?.activities) return [];
 
   return [...detail.activities].sort((a, b) => {
@@ -14,23 +14,42 @@ const activeTaskActivities = (s: TaskStoreState): TaskDetailActivity[] => {
   });
 };
 
-const activeTaskBriefs = (s: TaskStoreState): TaskDetailActivity[] =>
-  activeTaskActivities(s).filter((a) => a.type === 'brief');
+const activeTaskActivities = (s: TaskStoreState): TaskDetailActivity[] =>
+  taskActivities(s, s.activeTaskId);
 
-const activeTaskTopics = (s: TaskStoreState): TaskDetailActivity[] =>
-  activeTaskActivities(s).filter((a) => a.type === 'topic');
+const taskBriefs = (s: TaskStoreState, taskId?: string): TaskDetailActivity[] =>
+  taskActivities(s, taskId).filter((a) => a.type === 'brief');
 
-/** The newest run of the active task — the one a result panel is about. */
+const activeTaskBriefs = (s: TaskStoreState): TaskDetailActivity[] => taskBriefs(s, s.activeTaskId);
+
+const taskTopics = (s: TaskStoreState, taskId?: string): TaskDetailActivity[] =>
+  taskActivities(s, taskId).filter((a) => a.type === 'topic');
+
+const activeTaskTopics = (s: TaskStoreState): TaskDetailActivity[] => taskTopics(s, s.activeTaskId);
+
+/** The newest run of the given task — the one a result panel is about. */
+const taskLatestTopic = (s: TaskStoreState, taskId?: string): TaskDetailActivity | undefined =>
+  taskTopics(s, taskId).at(-1);
+
 const activeTaskLatestTopic = (s: TaskStoreState): TaskDetailActivity | undefined =>
-  activeTaskTopics(s).at(-1);
+  taskLatestTopic(s, s.activeTaskId);
+
+const taskComments = (s: TaskStoreState, taskId?: string): TaskDetailActivity[] =>
+  taskActivities(s, taskId).filter((a) => a.type === 'comment');
 
 const activeTaskComments = (s: TaskStoreState): TaskDetailActivity[] =>
-  activeTaskActivities(s).filter((a) => a.type === 'comment');
+  taskComments(s, s.activeTaskId);
+
+const unresolvedBriefCountFor = (s: TaskStoreState, taskId?: string): number =>
+  taskBriefs(s, taskId).filter((b) => !b.resolvedAction).length;
 
 const unresolvedBriefCount = (s: TaskStoreState): number =>
-  activeTaskBriefs(s).filter((b) => !b.resolvedAction).length;
+  unresolvedBriefCountFor(s, s.activeTaskId);
 
 const hasUnresolvedBriefs = (s: TaskStoreState): boolean => unresolvedBriefCount(s) > 0;
+
+const hasUnresolvedBriefsFor = (s: TaskStoreState, taskId?: string): boolean =>
+  unresolvedBriefCountFor(s, taskId) > 0;
 
 const activeDrawerTopicActivity = (s: TaskStoreState): TaskDetailActivity | undefined => {
   const topicId = s.activeTopicDrawerTopicId;
@@ -53,5 +72,12 @@ export const taskActivitySelectors = {
   activeTaskLatestTopic,
   activeTaskTopics,
   hasUnresolvedBriefs,
+  hasUnresolvedBriefsFor,
+  taskActivities,
+  taskBriefs,
+  taskComments,
+  taskLatestTopic,
+  taskTopics,
   unresolvedBriefCount,
+  unresolvedBriefCountFor,
 };

@@ -8,6 +8,7 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 
+import { TaskDetailScope } from './TaskDetailScope';
 import TaskDetailSections from './TaskDetailSections';
 import TaskDetailSkeleton from './TaskDetailSkeleton';
 import { type ActiveTaskDetailState, useActiveTaskDetail } from './useActiveTaskDetail';
@@ -65,9 +66,11 @@ IssueContentBody.displayName = 'IssueContentBody';
  * pane must NOT wrap it in another scroll host level of its own — mount it
  * directly in the pane's scroll owner.
  */
-const IssueContent = memo<IssueContentProps>(({ detail, taskId }) =>
-  detail ? <IssueContentBody detail={detail} /> : <IssueContentOwned taskId={taskId} />,
-);
+const IssueContent = memo<IssueContentProps>(({ detail, taskId }) => (
+  <TaskDetailScope taskId={taskId}>
+    {detail ? <IssueContentBody detail={detail} /> : <IssueContentOwned taskId={taskId} />}
+  </TaskDetailScope>
+));
 
 IssueContent.displayName = 'IssueContent';
 

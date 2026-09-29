@@ -19,6 +19,7 @@ import { formatTaskItemDate } from '../features/formatTaskItemDate';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
+import { useTaskDetailTaskId } from './TaskDetailScope';
 
 /**
  * The rail's "Project" group — Linear files every issue under a project or a
@@ -30,7 +31,8 @@ const TaskProjectSection = memo(() => {
   const { t } = useTranslation(['chat', 'project']);
   const { i18n, t: tCommon } = useTranslation('common');
   const navigate = useWorkspaceAwareNavigate();
-  const { milestone, milestones, project, projectRef, taskDatabaseId } = useActiveTaskProject();
+  const { milestone, milestones, project, projectRef, taskDatabaseId } =
+    useActiveTaskProject(useTaskDetailTaskId());
   const setTaskMilestone = useProjectStore((s) => s.setTaskMilestone);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const { allowed: canEditTask } = usePermission('create_content');

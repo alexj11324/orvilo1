@@ -25,6 +25,7 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskScheduleConfig from './TaskScheduleConfig';
 import { resolveTaskStatusRow } from './taskStatusRow';
 
@@ -57,22 +58,22 @@ const PRIORITY_META: Record<TaskPriority, PriorityMeta> = {
 const TaskProperties = memo(() => {
   const { t } = useTranslation(['chat', 'common']);
 
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const status = useTaskStore(taskDetailSelectors.activeTaskStatus) as TaskStatus | undefined;
-  const workflowCategory = useTaskStore(taskDetailSelectors.activeTaskWorkflowCategory);
-  const workflowStateId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateId);
-  const workflowStateRefId = useTaskStore(taskDetailSelectors.activeTaskWorkflowStateRefId);
-  const taskTeamId = useTaskStore(taskDetailSelectors.activeTaskTeamId);
-  const priority = useTaskStore(taskDetailSelectors.activeTaskPriority);
-  const labels = useTaskStore(taskDetailSelectors.activeTaskLabels);
-  const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
-  const reviewerUserId = useTaskStore(taskDetailSelectors.activeTaskReviewerUserId);
-  const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
-  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
-  const heartbeatInterval = useTaskStore(taskDetailSelectors.activeTaskPeriodicInterval);
-  const automationMode = useTaskStore(taskDetailSelectors.activeTaskAutomationMode);
-  const schedulePattern = useTaskStore(taskDetailSelectors.activeTaskSchedulePattern);
-  const scheduleTimezone = useTaskStore(taskDetailSelectors.activeTaskScheduleTimezone);
+  const taskId = useTaskDetailTaskId();
+  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
+  const workflowCategory = useTaskDetailSelector(taskDetailSelectors.taskWorkflowCategory);
+  const workflowStateId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateId);
+  const workflowStateRefId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateRefId);
+  const taskTeamId = useTaskDetailSelector(taskDetailSelectors.taskTeamId);
+  const priority = useTaskDetailSelector(taskDetailSelectors.taskPriority);
+  const labels = useTaskDetailSelector(taskDetailSelectors.taskLabels);
+  const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
+  const reviewerUserId = useTaskDetailSelector(taskDetailSelectors.taskReviewerUserId);
+  const createdByUserId = useTaskDetailSelector(taskDetailSelectors.taskCreatedByUserId);
+  const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
+  const heartbeatInterval = useTaskDetailSelector(taskDetailSelectors.taskPeriodicInterval);
+  const automationMode = useTaskDetailSelector(taskDetailSelectors.taskAutomationMode);
+  const schedulePattern = useTaskDetailSelector(taskDetailSelectors.taskSchedulePattern);
+  const scheduleTimezone = useTaskDetailSelector(taskDetailSelectors.taskScheduleTimezone);
   const memberMeta = useUserDisplayMeta(assigneeUserId);
   const reviewerMeta = useUserDisplayMeta(reviewerUserId);
   const updateTask = useTaskStore((s) => s.updateTask);

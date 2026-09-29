@@ -32,7 +32,6 @@ import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
-import { taskDetailSelectors } from '@/store/task/selectors';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
 import { styles } from '../shared/style';
@@ -41,6 +40,7 @@ import RunReplyEditor from './RunReplyEditor';
 import RunVerifyDetail from './RunVerifyDetail';
 import RunVerifyTag from './RunVerifyTag';
 import { shouldShowRunFollowUp } from './shouldShowRunFollowUp';
+import { useTaskDetailTaskId } from './TaskDetailScope';
 import TopicStatusIcon from './TopicStatusIcon';
 
 const formatDuration = (ms: number): string => {
@@ -102,7 +102,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
   const cancelTopic = useTaskStore((s) => s.cancelTopic);
   const deleteTopic = useTaskStore((s) => s.deleteTopic);
   const addComment = useTaskStore((s) => s.addComment);
-  const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const activeTaskId = useTaskDetailTaskId();
   const { allowed: canEditTask } = usePermission('create_content');
   const [commenting, setCommenting] = useState(false);
   const isRunning = activity.status === 'running';

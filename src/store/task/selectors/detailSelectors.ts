@@ -4,140 +4,167 @@ import type { SaveStatus } from '@/types/saveState';
 
 import type { TaskStoreState } from '../initialState';
 
+/**
+ * Detail selectors come in pairs: `taskX(state, taskId)` is entity-scoped —
+ * the taskId is supplied by the caller — while `activeTaskX(state)` reads
+ * whichever task the global `activeTaskId` slot points at. Detail subtrees
+ * (page, Portal, automation host) bind through `useTaskDetailSelector` with
+ * their own mounted taskId so a second host can never redirect their reads;
+ * `activeTaskX` remains for genuinely global consumers (kanban highlight,
+ * control bar, overlays).
+ */
+
+const taskDetail = (s: TaskStoreState, taskId?: string): TaskDetailData | undefined =>
+  taskId ? s.taskDetailMap[taskId] : undefined;
+
 const activeTaskId = (s: TaskStoreState) => s.activeTaskId;
 
 const activeTaskDetail = (s: TaskStoreState): TaskDetailData | undefined =>
-  s.activeTaskId ? s.taskDetailMap[s.activeTaskId] : undefined;
+  taskDetail(s, s.activeTaskId);
 
-const activeTaskDatabaseId = (s: TaskStoreState) => activeTaskDetail(s)?.id;
+const taskDatabaseId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.id;
 
 const taskDetailById = (id: string) => (s: TaskStoreState) => s.taskDetailMap[id];
 
+const isTaskDetailLoadingFor = (s: TaskStoreState, taskId?: string): boolean =>
+  !taskId || !s.taskDetailMap[taskId];
+
 const isTaskDetailLoading = (s: TaskStoreState): boolean =>
-  !s.activeTaskId || !s.taskDetailMap[s.activeTaskId];
+  isTaskDetailLoadingFor(s, s.activeTaskId);
 
-const activeTaskName = (s: TaskStoreState) => activeTaskDetail(s)?.name;
+const taskName = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.name;
 
-const activeTaskStatus = (s: TaskStoreState) => activeTaskDetail(s)?.status;
+const taskStatus = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.status;
 
-const activeTaskWorkflowCategory = (s: TaskStoreState) => activeTaskDetail(s)?.workflowCategory;
+const taskWorkflowCategory = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.workflowCategory;
 
-const activeTaskWorkflowStateId = (s: TaskStoreState) => activeTaskDetail(s)?.workflowStateId;
+const taskWorkflowStateId = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.workflowStateId;
 
-const activeTaskWorkflowStateRefId = (s: TaskStoreState) => activeTaskDetail(s)?.workflowStateRefId;
+const taskWorkflowStateRefId = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.workflowStateRefId;
 
-const activeTaskTeamId = (s: TaskStoreState) => activeTaskDetail(s)?.teamId;
+const taskTeamId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.teamId;
 
-const activeTaskPriority = (s: TaskStoreState) => activeTaskDetail(s)?.priority ?? 0;
+const taskPriority = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.priority ?? 0;
 
-const activeTaskVisibility = (s: TaskStoreState): 'private' | 'public' =>
-  activeTaskDetail(s)?.visibility ?? 'public';
+const taskVisibility = (s: TaskStoreState, taskId?: string): 'private' | 'public' =>
+  taskDetail(s, taskId)?.visibility ?? 'public';
 
-const activeTaskCreatedByUserId = (s: TaskStoreState) => activeTaskDetail(s)?.createdByUserId;
+const taskCreatedByUserId = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.createdByUserId;
 
-const activeTaskInstruction = (s: TaskStoreState) => activeTaskDetail(s)?.instruction;
+const taskInstruction = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.instruction;
 
 // Labels assigned to the task (Linear-style issue labels) — chips on the
 // properties rail. A shared empty constant keeps the selector referentially
 // stable for tasks with no labels.
 const EMPTY_LABELS: TaskLabelSummary[] = [];
-const activeTaskLabels = (s: TaskStoreState) => activeTaskDetail(s)?.labels ?? EMPTY_LABELS;
+const taskLabels = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.labels ?? EMPTY_LABELS;
 
-const activeTaskInstructionRevision = (s: TaskStoreState) =>
-  (s.activeTaskId ? s.taskInstructionRevisionMap[s.activeTaskId] : undefined) ?? 0;
+const taskInstructionRevision = (s: TaskStoreState, taskId?: string) =>
+  (taskId ? s.taskInstructionRevisionMap[taskId] : undefined) ?? 0;
 
-const activeTaskEditorData = (s: TaskStoreState) => activeTaskDetail(s)?.editorData;
+const taskEditorData = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.editorData;
 
-const activeTaskFiles = (s: TaskStoreState) => activeTaskDetail(s)?.files;
+const taskFiles = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.files;
 
-const activeTaskDescription = (s: TaskStoreState) => activeTaskDetail(s)?.description;
+const taskDescription = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.description;
 
-const activeTaskAgentId = (s: TaskStoreState) => activeTaskDetail(s)?.agentId;
+const taskAgentId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.agentId;
 
 // Human assignee (workspace member). `detail.userId` is populated from the
 // server-side `tasks.assignee_user_id` column.
-const activeTaskAssigneeUserId = (s: TaskStoreState) => activeTaskDetail(s)?.userId;
+const taskAssigneeUserId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.userId;
 
 // Review-phase owner: the member accountable while the task sits paused for
 // review. Falls back to assignee→creator server-side on the paused transition.
-const activeTaskReviewerUserId = (s: TaskStoreState) => activeTaskDetail(s)?.reviewerUserId;
+const taskReviewerUserId = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.reviewerUserId;
 
 // TODO: Once the frontend store switches to reading from detail.model / detail.provider returned by the backend getTaskDetail procedure
-const activeTaskModel = (s: TaskStoreState) =>
-  activeTaskDetail(s)?.config?.model as string | undefined;
+const taskModel = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.config?.model as string | undefined;
 
-const activeTaskProvider = (s: TaskStoreState) =>
-  activeTaskDetail(s)?.config?.provider as string | undefined;
+const taskProvider = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.config?.provider as string | undefined;
 
-const activeTaskSubtasks = (s: TaskStoreState) => activeTaskDetail(s)?.subtasks ?? [];
+const taskSubtasks = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.subtasks ?? [];
 
-const activeTaskDependencies = (s: TaskStoreState) => activeTaskDetail(s)?.dependencies ?? [];
+const taskDependencies = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.dependencies ?? [];
 
-const activeTaskParent = (s: TaskStoreState) => activeTaskDetail(s)?.parent;
+const taskParent = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.parent;
 
 // Periodic execution interval (seconds); 0 or undefined means not configured
-const activeTaskPeriodicInterval = (s: TaskStoreState) =>
-  activeTaskDetail(s)?.heartbeat?.interval ?? 0;
+const taskPeriodicInterval = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.heartbeat?.interval ?? 0;
 
 // Automation mode: 'heartbeat' | 'schedule' | null (null = no automation)
-const activeTaskAutomationMode = (s: TaskStoreState) => activeTaskDetail(s)?.automationMode ?? null;
+const taskAutomationMode = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.automationMode ?? null;
 
 // Schedule (cron) mode fields. pattern/timezone are columns; maxExecutions lives in config.schedule.
-const activeTaskSchedulePattern = (s: TaskStoreState) =>
-  activeTaskDetail(s)?.schedule?.pattern ?? null;
+const taskSchedulePattern = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.schedule?.pattern ?? null;
 
-const activeTaskScheduleTimezone = (s: TaskStoreState) =>
-  activeTaskDetail(s)?.schedule?.timezone ?? null;
+const taskScheduleTimezone = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.schedule?.timezone ?? null;
 
-const activeTaskScheduleMaxExecutions = (s: TaskStoreState) =>
-  activeTaskDetail(s)?.schedule?.maxExecutions ?? null;
+const taskScheduleMaxExecutions = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.schedule?.maxExecutions ?? null;
 
-const activeTaskCheckpoint = (s: TaskStoreState) => activeTaskDetail(s)?.checkpoint;
+const taskCheckpoint = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.checkpoint;
 
 // Read the RESOLVED verify config that getTaskDetail populates via
 // TaskModel.getVerifyConfig (which includes the legacy `config.review` fallback
 // during migration) — not the raw `config.verify`. Reading raw config.verify
 // would return undefined for a legacy review-only task, so the panel would open
 // as unconfigured and the first autosave could clobber the old settings.
-const activeTaskVerifyConfig = (s: TaskStoreState): TaskVerifyConfig | undefined =>
-  activeTaskDetail(s)?.verify ?? undefined;
+const taskVerifyConfig = (s: TaskStoreState, taskId?: string): TaskVerifyConfig | undefined =>
+  taskDetail(s, taskId)?.verify ?? undefined;
 
-const activeTaskWorkspace = (s: TaskStoreState) => activeTaskDetail(s)?.workspace ?? [];
+const taskWorkspace = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.workspace ?? [];
 
-const activeTaskWorkspaceId = (s: TaskStoreState) => activeTaskDetail(s)?.workspaceId;
+const taskWorkspaceId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.workspaceId;
 
-const activeTaskError = (s: TaskStoreState) => activeTaskDetail(s)?.error;
+const taskError = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.error;
 
-const activeTaskTopicCount = (s: TaskStoreState) => activeTaskDetail(s)?.topicCount ?? 0;
+const taskTopicCount = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.topicCount ?? 0;
 
-const isActiveTaskBlocked = (s: TaskStoreState): boolean =>
-  activeTaskDetail(s)?.dependencies?.some(
+const isTaskBlocked = (s: TaskStoreState, taskId?: string): boolean =>
+  taskDetail(s, taskId)?.dependencies?.some(
     (dep) => dep.type === 'blocks' && dep.status !== 'completed',
   ) ?? false;
 
-const canRunActiveTask = (s: TaskStoreState): boolean => {
-  const detail = activeTaskDetail(s);
+const canRunTask = (s: TaskStoreState, taskId?: string): boolean => {
+  const detail = taskDetail(s, taskId);
   if (!detail) return false;
   // 'scheduled' is intentionally excluded — automation owns the next run; the
   // user can only cancel, not force an immediate run.
   return (
-    !isActiveTaskBlocked(s) && ['backlog', 'failed', 'paused', 'completed'].includes(detail.status)
+    !isTaskBlocked(s, taskId) &&
+    ['backlog', 'failed', 'paused', 'completed'].includes(detail.status)
   );
 };
 
-const canPauseActiveTask = (s: TaskStoreState): boolean =>
-  activeTaskDetail(s)?.status === 'running';
+const canPauseTask = (s: TaskStoreState, taskId?: string): boolean =>
+  taskDetail(s, taskId)?.status === 'running';
 
-const canCancelActiveTask = (s: TaskStoreState): boolean => {
-  const detail = activeTaskDetail(s);
+const canCancelTask = (s: TaskStoreState, taskId?: string): boolean => {
+  const detail = taskDetail(s, taskId);
   if (!detail) return false;
   return ['backlog', 'paused', 'running', 'scheduled'].includes(detail.status);
 };
 
 // Save status is keyed per task, so switching tasks reads the target task's own
 // status (defaulting to 'idle') instead of a stale 'failed' from a prior task.
-const taskSaveStatus = (s: TaskStoreState): SaveStatus =>
-  (s.activeTaskId ? s.taskSaveStatusMap[s.activeTaskId] : undefined) ?? 'idle';
+const taskSaveStatusFor = (s: TaskStoreState, taskId?: string): SaveStatus =>
+  (taskId ? s.taskSaveStatusMap[taskId] : undefined) ?? 'idle';
 
 const activeTopicDrawerTopicId = (s: TaskStoreState) => s.activeTopicDrawerTopicId;
 
@@ -146,57 +173,100 @@ const activeTopicDrawerTopicId = (s: TaskStoreState) => s.activeTopicDrawerTopic
  * inherits the task's agent; one opened from the home inbox carries its own,
  * since the topic may have no parent task.
  */
-const topicDrawerAgentId = (s: TaskStoreState) =>
-  s.activeTopicDrawerAgentId ?? activeTaskAgentId(s);
+const topicDrawerAgentId = (s: TaskStoreState, taskId?: string) =>
+  s.activeTopicDrawerAgentId ?? taskAgentId(s, taskId ?? s.activeTaskId);
 
 const topicDrawerTitle = (s: TaskStoreState) => s.activeTopicDrawerTitle;
 
 export const taskDetailSelectors = {
-  activeTaskAgentId,
-  activeTaskAssigneeUserId,
-  activeTaskAutomationMode,
-  activeTaskCheckpoint,
-  activeTaskCreatedByUserId,
-  activeTaskDatabaseId,
-  activeTaskModel,
-  activeTaskDependencies,
-  activeTaskDescription,
+  activeTaskAgentId: (s: TaskStoreState) => taskAgentId(s, s.activeTaskId),
+  activeTaskAssigneeUserId: (s: TaskStoreState) => taskAssigneeUserId(s, s.activeTaskId),
+  activeTaskAutomationMode: (s: TaskStoreState) => taskAutomationMode(s, s.activeTaskId),
+  activeTaskCheckpoint: (s: TaskStoreState) => taskCheckpoint(s, s.activeTaskId),
+  activeTaskCreatedByUserId: (s: TaskStoreState) => taskCreatedByUserId(s, s.activeTaskId),
+  activeTaskDatabaseId: (s: TaskStoreState) => taskDatabaseId(s, s.activeTaskId),
+  activeTaskDependencies: (s: TaskStoreState) => taskDependencies(s, s.activeTaskId),
+  activeTaskDescription: (s: TaskStoreState) => taskDescription(s, s.activeTaskId),
   activeTaskDetail,
-  activeTaskEditorData,
-  activeTaskError,
-  activeTaskFiles,
+  activeTaskEditorData: (s: TaskStoreState) => taskEditorData(s, s.activeTaskId),
+  activeTaskError: (s: TaskStoreState) => taskError(s, s.activeTaskId),
+  activeTaskFiles: (s: TaskStoreState) => taskFiles(s, s.activeTaskId),
   activeTaskId,
-  activeTaskInstruction,
-  activeTaskInstructionRevision,
-  activeTaskLabels,
-  activeTaskName,
-  activeTaskParent,
-  activeTaskPeriodicInterval,
-  activeTaskPriority,
-  activeTaskProvider,
-  activeTaskReviewerUserId,
-  activeTaskScheduleMaxExecutions,
-  activeTaskSchedulePattern,
-  activeTaskScheduleTimezone,
-  activeTaskStatus,
-  activeTaskSubtasks,
-  activeTaskTopicCount,
-  activeTaskVerifyConfig,
-  activeTaskVisibility,
-  activeTaskWorkspace,
-  activeTaskWorkspaceId,
-  activeTaskWorkflowCategory,
-  activeTaskWorkflowStateId,
-  activeTaskWorkflowStateRefId,
-  activeTaskTeamId,
+  activeTaskInstruction: (s: TaskStoreState) => taskInstruction(s, s.activeTaskId),
+  activeTaskInstructionRevision: (s: TaskStoreState) => taskInstructionRevision(s, s.activeTaskId),
+  activeTaskLabels: (s: TaskStoreState) => taskLabels(s, s.activeTaskId),
+  activeTaskName: (s: TaskStoreState) => taskName(s, s.activeTaskId),
+  activeTaskParent: (s: TaskStoreState) => taskParent(s, s.activeTaskId),
+  activeTaskModel: (s: TaskStoreState) => taskModel(s, s.activeTaskId),
+  activeTaskPeriodicInterval: (s: TaskStoreState) => taskPeriodicInterval(s, s.activeTaskId),
+  activeTaskPriority: (s: TaskStoreState) => taskPriority(s, s.activeTaskId),
+  activeTaskProvider: (s: TaskStoreState) => taskProvider(s, s.activeTaskId),
+  activeTaskReviewerUserId: (s: TaskStoreState) => taskReviewerUserId(s, s.activeTaskId),
+  activeTaskScheduleMaxExecutions: (s: TaskStoreState) =>
+    taskScheduleMaxExecutions(s, s.activeTaskId),
+  activeTaskSchedulePattern: (s: TaskStoreState) => taskSchedulePattern(s, s.activeTaskId),
+  activeTaskScheduleTimezone: (s: TaskStoreState) => taskScheduleTimezone(s, s.activeTaskId),
+  activeTaskStatus: (s: TaskStoreState) => taskStatus(s, s.activeTaskId),
+  activeTaskSubtasks: (s: TaskStoreState) => taskSubtasks(s, s.activeTaskId),
+  activeTaskTopicCount: (s: TaskStoreState) => taskTopicCount(s, s.activeTaskId),
+  activeTaskVerifyConfig: (s: TaskStoreState) => taskVerifyConfig(s, s.activeTaskId),
+  activeTaskVisibility: (s: TaskStoreState) => taskVisibility(s, s.activeTaskId),
+  activeTaskWorkspace: (s: TaskStoreState) => taskWorkspace(s, s.activeTaskId),
+  activeTaskWorkspaceId: (s: TaskStoreState) => taskWorkspaceId(s, s.activeTaskId),
+  activeTaskWorkflowCategory: (s: TaskStoreState) => taskWorkflowCategory(s, s.activeTaskId),
+  activeTaskWorkflowStateId: (s: TaskStoreState) => taskWorkflowStateId(s, s.activeTaskId),
+  activeTaskWorkflowStateRefId: (s: TaskStoreState) => taskWorkflowStateRefId(s, s.activeTaskId),
+  activeTaskTeamId: (s: TaskStoreState) => taskTeamId(s, s.activeTaskId),
   activeTopicDrawerTopicId,
-  canCancelActiveTask,
-  canPauseActiveTask,
-  canRunActiveTask,
-  isActiveTaskBlocked,
+  canCancelActiveTask: (s: TaskStoreState) => canCancelTask(s, s.activeTaskId),
+  canCancelTask,
+  canPauseActiveTask: (s: TaskStoreState) => canPauseTask(s, s.activeTaskId),
+  canPauseTask,
+  canRunActiveTask: (s: TaskStoreState) => canRunTask(s, s.activeTaskId),
+  canRunTask,
+  isActiveTaskBlocked: (s: TaskStoreState) => isTaskBlocked(s, s.activeTaskId),
+  isTaskBlocked,
   isTaskDetailLoading,
+  isTaskDetailLoadingFor,
+  taskAgentId,
+  taskAssigneeUserId,
+  taskAutomationMode,
+  taskCheckpoint,
+  taskCreatedByUserId,
+  taskDatabaseId,
+  taskDependencies,
+  taskDescription,
+  taskDetail,
   taskDetailById,
-  taskSaveStatus,
+  taskEditorData,
+  taskError,
+  taskFiles,
+  taskInstruction,
+  taskInstructionRevision,
+  taskLabels,
+  taskModel,
+  taskName,
+  taskParent,
+  taskPeriodicInterval,
+  taskPriority,
+  taskProvider,
+  taskReviewerUserId,
+  taskSaveStatus: (s: TaskStoreState) => taskSaveStatusFor(s, s.activeTaskId),
+  taskSaveStatusFor,
+  taskScheduleMaxExecutions,
+  taskSchedulePattern,
+  taskScheduleTimezone,
+  taskStatus,
+  taskSubtasks,
+  taskTeamId,
+  taskTopicCount,
+  taskVerifyConfig,
+  taskVisibility,
+  taskWorkflowCategory,
+  taskWorkflowStateId,
+  taskWorkflowStateRefId,
+  taskWorkspace,
+  taskWorkspaceId,
   topicDrawerAgentId,
   topicDrawerTitle,
 };

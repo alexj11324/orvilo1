@@ -25,7 +25,14 @@ for (const prefix of ['antd-', 'theme-vars-']) {
   );
 }
 if (process.env.VITE_CDN_BASE) {
-  const worker = readFileSync(path.join(workerRoot, 'bundle/index.js'), 'utf8');
-  assert(worker.includes(process.env.VITE_CDN_BASE), 'Worker lost the configured CDN base');
+  const bundleRoot = path.join(workerRoot, 'bundle');
+  assert(
+    readdirSync(bundleRoot, { recursive: true }).some(
+      (file) =>
+        file.endsWith('.js') &&
+        readFileSync(path.join(bundleRoot, file), 'utf8').includes(process.env.VITE_CDN_BASE),
+    ),
+    'Worker lost the configured CDN base',
+  );
 }
 console.log('Cloudflare assets match the Worker manifest and CDN base.');

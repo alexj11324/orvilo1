@@ -7,8 +7,12 @@ import DevModal from '@/features/PluginDevModal';
 import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
+import { newOAuthAttempt, waitForOAuthSession } from '../oauthSession';
 import { executeLegacyMigrationSave } from './legacyPluginMigration';
-import { waitForOAuthPopup } from './oauthPopup';
+
+/** Server-side truth for a connector row once the OAuth message may be lost. */
+const isConnectorConnected = (id: string) =>
+  connectorSelectors.connectorById(id)(useToolStore.getState())?.status === 'connected';
 
 interface CustomConnectorModalProps {
   connectorId?: string;
@@ -278,12 +282,26 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
           const popup = ctx?.oauthPopup ?? null;
           if (!popup) throw new Error('OAuth popup was blocked');
           try {
-            const authorizationUrl = await startConnectorOAuth(connectorId);
+            const attempt = newOAuthAttempt();
+            const authorizationUrl = await startConnectorOAuth(connectorId, attempt);
             popup.location.href = authorizationUrl;
-            const result = await waitForOAuthPopup(popup, connectorId);
+            const result = await waitForOAuthSession({
+              attempt,
+              checkStatus: async () => {
+                await fetchConnectors();
+                return isConnectorConnected(connectorId);
+              },
+              connectorId,
+              messageType: 'orvilo-connector-oauth',
+              popup,
+            });
             await fetchConnectors();
             if (result.status !== 'success') {
-              throw new Error(result.error || 'Authorization was not completed');
+              throw new Error(
+                result.status === 'timed-out'
+                  ? 'Authorization timed out. Check the connector status or retry.'
+                  : result.error || 'Authorization was not completed',
+              );
             }
           } catch (e) {
             if (!popup.closed) popup.close();
@@ -329,12 +347,26 @@ const CustomConnectorModal = memo<CustomConnectorModalProps>(
             },
           });
 
-          const authorizationUrl = await startConnectorOAuth(newConnectorId);
+          const attempt = newOAuthAttempt();
+          const authorizationUrl = await startConnectorOAuth(newConnectorId, attempt);
           popup.location.href = authorizationUrl;
-          const result = await waitForOAuthPopup(popup, newConnectorId);
+          const result = await waitForOAuthSession({
+            attempt,
+            checkStatus: async () => {
+              await fetchConnectors();
+              return isConnectorConnected(newConnectorId);
+            },
+            connectorId: newConnectorId,
+            messageType: 'orvilo-connector-oauth',
+            popup,
+          });
           await fetchConnectors();
           if (result.status !== 'success') {
-            throw new Error(result.error || 'Authorization was not completed');
+            throw new Error(
+              result.status === 'timed-out'
+                ? 'Authorization timed out. Check the connector status or retry.'
+                : result.error || 'Authorization was not completed',
+            );
           }
         } catch (e) {
           // Close the blank/in-flight popup we opened so it isn't left dangling.

@@ -35,6 +35,8 @@ const targetOrigin = (request: NextRequest): string => {
 const renderResultPage = (
   request: NextRequest,
   result: {
+    /** Attempt nonce echoed back so the opener correlates this result to one authorization attempt. */
+    attempt?: string;
     error?: string;
     installationId?: string;
     success: boolean;
@@ -69,6 +71,10 @@ export const GET = async (request: NextRequest) => {
   if (!statePayload)
     return renderResultPage(request, { error: 'invalid_or_expired_state', success: false });
 
+  // Echo the attempt nonce on every result from here on so the opener's
+  // authorization session can match it (errors included).
+  const attemptEcho = { attempt: statePayload.attempt };
+
   // OAuth state is short-lived, but the installer’s authorization can change
   // while Linear’s consent screen is open. Re-check the live workspace grant
   // before exchanging or persisting any provider credential.
@@ -82,17 +88,30 @@ export const GET = async (request: NextRequest) => {
     });
   const canManageInstallation = await hasCurrentWorkspaceSettingsPermission();
   if (!canManageInstallation) {
-    return renderResultPage(request, { error: 'workspace_access_denied', success: false });
+    return renderResultPage(request, {
+      ...attemptEcho,
+      error: 'workspace_access_denied',
+      success: false,
+    });
   }
 
   if (providerError)
-    return renderResultPage(request, { error: 'authorization_denied', success: false });
-  if (!code) return renderResultPage(request, { error: 'missing_code', success: false });
+    return renderResultPage(request, {
+      ...attemptEcho,
+      error: 'authorization_denied',
+      success: false,
+    });
+  if (!code)
+    return renderResultPage(request, { ...attemptEcho, error: 'missing_code', success: false });
 
   try {
     const config = getLinearOAuthConfig();
     if (statePayload.clientId !== config.clientId || statePayload.actor !== 'app') {
-      return renderResultPage(request, { error: 'invalid_oauth_configuration', success: false });
+      return renderResultPage(request, {
+        ...attemptEcho,
+        error: 'invalid_oauth_configuration',
+        success: false,
+      });
     }
 
     const tokens = await exchangeLinearAuthorizationCode({
@@ -103,7 +122,11 @@ export const GET = async (request: NextRequest) => {
       redirectUri: statePayload.redirectUri,
     });
     if (!tokens.refresh_token) {
-      return renderResultPage(request, { error: 'missing_refresh_token', success: false });
+      return renderResultPage(request, {
+        ...attemptEcho,
+        error: 'missing_refresh_token',
+        success: false,
+      });
     }
 
     // Both the organization and the app actor come from Linear's API. Nothing
@@ -113,10 +136,18 @@ export const GET = async (request: NextRequest) => {
     });
     const scopes = normalizeLinearScopes(tokens.scope, statePayload.scopes);
     if (!scopes.includes('read') || !scopes.includes('write')) {
-      return renderResultPage(request, { error: 'insufficient_scope', success: false });
+      return renderResultPage(request, {
+        ...attemptEcho,
+        error: 'insufficient_scope',
+        success: false,
+      });
     }
     if (!(await hasCurrentWorkspaceSettingsPermission())) {
-      return renderResultPage(request, { error: 'workspace_access_denied', success: false });
+      return renderResultPage(request, {
+        ...attemptEcho,
+        error: 'workspace_access_denied',
+        success: false,
+      });
     }
 
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
@@ -140,9 +171,17 @@ export const GET = async (request: NextRequest) => {
     // through `upsertSyncScope`.
     await model.upsertScope({ installationId: installation.id });
 
-    return renderResultPage(request, { installationId: installation.id, success: true });
+    return renderResultPage(request, {
+      ...attemptEcho,
+      installationId: installation.id,
+      success: true,
+    });
   } catch (error) {
     log('Linear OAuth callback failed: %O', error);
-    return renderResultPage(request, { error: 'installation_failed', success: false });
+    return renderResultPage(request, {
+      ...attemptEcho,
+      error: 'installation_failed',
+      success: false,
+    });
   }
 };

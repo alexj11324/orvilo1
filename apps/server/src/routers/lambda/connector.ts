@@ -314,53 +314,56 @@ export const connectorRouter = router({
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   /** Connect GitHub's hosted MCP through the existing per-user GitHub App grant. */
-  connectGitHubMcp: connectorWriteProcedure.mutation(async ({ ctx }) => {
-    const existingReference = findExistingGitHubMcpConnector(
-      await ctx.connectorModel.queryPublic(),
-    );
-    const existing = existingReference
-      ? await ctx.connectorModel.findById(existingReference.id)
-      : null;
-    if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'connector');
-
-    try {
-      const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
-      return await activateGitHubMcpConnector({
-        ctx: {
-          ...ctx,
-          runInTransaction: (callback) =>
-            ctx.serverDB.transaction(async (tx) => {
-              const serverDB = tx as unknown as OrviloDatabase;
-              return callback({
-                connectorModel: new ConnectorModel(
-                  serverDB,
-                  ctx.userId,
-                  ctx.workspaceId ?? undefined,
-                  gateKeeper,
-                ),
-                connectorToolModel: new ConnectorToolModel(
-                  serverDB,
-                  ctx.userId,
-                  ctx.workspaceId ?? undefined,
-                ),
-                serverDB,
-              });
-            }),
-        },
-        existing,
-        userId: ctx.userId,
-      });
-    } catch (error) {
-      console.error(
-        '[connector:connectGitHubMcp] failed:',
-        error instanceof Error ? error.name : 'UnknownError',
+  connectGitHubMcp: connectorWriteProcedure
+    .input(z.object({ attempt: z.string().max(64).optional() }).optional())
+    .mutation(async ({ input, ctx }) => {
+      const existingReference = findExistingGitHubMcpConnector(
+        await ctx.connectorModel.queryPublic(),
       );
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Could not connect GitHub MCP',
-      });
-    }
-  }),
+      const existing = existingReference
+        ? await ctx.connectorModel.findById(existingReference.id)
+        : null;
+      if (existing) assertWorkspaceRowManageable(ctx, existing.userId, 'connector');
+
+      try {
+        const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+        return await activateGitHubMcpConnector({
+          ctx: {
+            ...ctx,
+            runInTransaction: (callback) =>
+              ctx.serverDB.transaction(async (tx) => {
+                const serverDB = tx as unknown as OrviloDatabase;
+                return callback({
+                  connectorModel: new ConnectorModel(
+                    serverDB,
+                    ctx.userId,
+                    ctx.workspaceId ?? undefined,
+                    gateKeeper,
+                  ),
+                  connectorToolModel: new ConnectorToolModel(
+                    serverDB,
+                    ctx.userId,
+                    ctx.workspaceId ?? undefined,
+                  ),
+                  serverDB,
+                });
+              }),
+          },
+          attempt: input?.attempt,
+          existing,
+          userId: ctx.userId,
+        });
+      } catch (error) {
+        console.error(
+          '[connector:connectGitHubMcp] failed:',
+          error instanceof Error ? error.name : 'UnknownError',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Could not connect GitHub MCP',
+        });
+      }
+    }),
 
   create: connectorWriteProcedure.input(createConnectorSchema).mutation(async ({ input, ctx }) => {
     const { agentId } = input;
@@ -617,7 +620,13 @@ export const connectorRouter = router({
    * by `state`; the callback promotes the config only after token exchange.
    */
   startOAuth: connectorWriteProcedure
-    .input(z.object({ id: z.string().uuid(), returnTo: z.string().optional() }))
+    .input(
+      z.object({
+        attempt: z.string().max(64).optional(),
+        id: z.string().uuid(),
+        returnTo: z.string().optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const connector = await ctx.connectorModel.findById(input.id);
       if (!connector) throw new TRPCError({ code: 'NOT_FOUND', message: 'Connector not found' });
@@ -705,6 +714,7 @@ export const connectorRouter = router({
       });
 
       await saveConnectorOAuthState(state, {
+        attempt: input.attempt,
         authorizationServerUrl,
         codeVerifier,
         connectorId: input.id,

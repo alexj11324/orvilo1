@@ -55,7 +55,10 @@ describe('useGitHubMcpConnect desktop', () => {
     });
 
     expect(connectGitHubMcp).toHaveBeenCalledOnce();
-    expect(open).toHaveBeenCalledWith('https://orvilo.test/oauth/github/start', '_blank');
+    expect(open).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/orvilo\.test\/oauth\/github\/start\?attempt=[0-9a-f-]+$/),
+      '_blank',
+    );
     expect(result.current.connecting).toBe(true);
   });
 });

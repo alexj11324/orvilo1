@@ -77,6 +77,7 @@ const visibleMcpPresets = MCP_PRESET_CONNECTORS.filter((preset) =>
 interface ConnectorListProps {
   githubConnecting?: boolean;
   githubGrantConnected?: boolean;
+  githubTimedOut?: boolean;
   /** Opens the custom-connector form pre-filled with a preset's URL and auth. */
   onAddPreset: (preset: McpPresetConnector) => void;
   onConnectGitHub: () => void;
@@ -99,6 +100,7 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
     onConnectGitHub,
     githubConnecting,
     githubGrantConnected,
+    githubTimedOut,
     selectedIdentifier,
   } = props;
   const { t } = useTranslation('setting');
@@ -356,6 +358,7 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
               isSelected={Boolean(connector) && selectedIdentifier === connector?.identifier}
               key={preset.id}
               preset={preset}
+              timedOut={preset.managedAuth === 'github-app' && githubTimedOut}
               providerConnected={
                 preset.managedAuth === 'github-app' ? githubGrantConnected : undefined
               }

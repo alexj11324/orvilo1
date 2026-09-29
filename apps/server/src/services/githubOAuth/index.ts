@@ -16,6 +16,8 @@ import {
 } from './provider';
 import { consumeState, saveState } from './state';
 
+export { peekState } from './state';
+
 const REFRESH_SKEW_MS = 60_000;
 const REFRESH_LEASE_MS = 120_000;
 
@@ -69,11 +71,12 @@ const assertExpectedGrant = (
   }
 };
 
-export const startGitHubOAuth = async (userId: string): Promise<string> => {
+export const startGitHubOAuth = async (userId: string, attempt?: string): Promise<string> => {
   const config = getConfig();
   const state = randomBytes(32).toString('base64url');
   const { verifier, challenge } = createPkce();
   await saveState(state, {
+    attempt,
     clientId: config.clientId,
     redirectUri: config.redirectUri,
     userId,

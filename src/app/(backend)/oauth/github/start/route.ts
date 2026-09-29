@@ -13,8 +13,13 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
     return NextResponse.redirect(signIn);
   }
 
+  // Optional attempt nonce: the opener mints one per authorization attempt so
+  // the callback's postMessage can be correlated back to that attempt.
+  const attempt = request.nextUrl.searchParams.get('attempt') ?? undefined;
+  const safeAttempt = attempt && /^[\w-]{1,64}$/.test(attempt) ? attempt : undefined;
+
   try {
-    return NextResponse.redirect(await startGitHubOAuth(session.userId));
+    return NextResponse.redirect(await startGitHubOAuth(session.userId, safeAttempt));
   } catch (error) {
     console.error(
       '[githubOAuth:startRoute]',

@@ -77,6 +77,9 @@ export default {
   'codeInterpreter.output': 'Output:',
   'codeInterpreter.returnValue': 'Return Value:',
   'connector.actionFailed': 'Operation failed, please try again',
+  'connector.add.timedOut': 'Authorization timed out. Check the connector status or retry.',
+  'connector.authTimedOut':
+    'Authorization timed out. Click Connect to retry or re-check the status.',
   'connector.add.title': 'Add Custom Connector',
   'connector.deleteAccountConfirmContent':
     'This removes the connector and its authorization from your account. Any agent that uses it will need to be re-authorized afterwards.',

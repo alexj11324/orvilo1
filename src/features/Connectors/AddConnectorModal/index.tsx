@@ -1,5 +1,6 @@
 import { toast } from '@lobehub/ui/base-ui';
 import { Input } from 'antd';
+import { type TFunction } from 'i18next';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,8 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
+import { newOAuthAttempt, waitForOAuthSession } from '../oauthSession';
+
 interface AddConnectorModalProps {
   /** If provided, opens in edit mode pre-filling the form from the existing connector. */
   connectorId?: string;
@@ -17,55 +20,41 @@ interface AddConnectorModalProps {
   open: boolean;
 }
 
-interface OAuthPopupResult {
-  /** Provider/exchange error reason when status === 'error'. */
-  error?: string;
-  // 'success' — authorized; 'error' — provider/exchange failure (reason in
-  // `error`); 'dismissed' — popup closed without a result (user cancelled).
-  status: 'success' | 'error' | 'dismissed';
-  /** On success, whether the tool list synced (false = authorized but unusable). */
-  synced?: boolean;
-}
+/** Server-side truth for a connector row once the OAuth message may be lost. */
+const isConnectorConnected = (id: string) =>
+  connectorSelectors.connectorById(id)(useToolStore.getState())?.status === 'connected';
 
-/**
- * Wait for an already-opened popup to report the OAuth result.
- *
- * The popup MUST be opened synchronously from the user's click (browsers block
- * `window.open` once an async boundary is crossed), then navigated to the
- * authorize URL. The callback page posts a message before attempting
- * `window.close()`, so the message signal is reliable even when the browser
- * refuses to close a popup that navigated cross-origin. The popup-closed path is
- * a fallback for when the user dismisses the window without finishing.
- */
-const waitForOAuthPopup = (popup: Window, connectorId: string): Promise<OAuthPopupResult> =>
-  new Promise((resolve) => {
-    const cleanup = () => {
-      window.removeEventListener('message', onMessage);
-      clearInterval(timer);
-    };
-
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data;
-      if (!data || data.type !== 'orvilo-connector-oauth') return;
-      if (data.connectorId && data.connectorId !== connectorId) return;
-      cleanup();
-      resolve(
-        data.success
-          ? { status: 'success', synced: data.synced }
-          : { error: data.error, status: 'error' },
+/** Map a settled session outcome to a toast. */
+const reportOAuthResult = (
+  result: { error?: string; status: string; synced?: boolean },
+  t: TFunction<'tool'>,
+  successMessage: string,
+) => {
+  if (result.status === 'success') {
+    if (result.synced === false) {
+      toast.warning(
+        t(
+          'connector.add.syncFailed',
+          'Authorized, but tools could not be synced. Click Sync to retry.',
+        ),
       );
-    };
-
-    window.addEventListener('message', onMessage);
-
-    const timer = setInterval(() => {
-      if (popup.closed) {
-        cleanup();
-        resolve({ status: 'dismissed' });
-      }
-    }, 800);
-  });
+    } else {
+      toast.success(successMessage);
+    }
+  } else if (result.status === 'error') {
+    toast.error(
+      t('connector.add.authError', 'Authorization failed: {{reason}}', {
+        reason: result.error || t('connector.add.unknownError', 'unknown error'),
+      }),
+    );
+  } else if (result.status === 'timed-out') {
+    toast.warning(
+      t('connector.add.timedOut', 'Authorization timed out. Check the connector status or retry.'),
+    );
+  } else if (result.status !== 'cancelled') {
+    toast.warning(t('connector.add.cancelled', 'Authorization was not completed'));
+  }
+};
 
 const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connectorId }) => {
   const { t } = useTranslation('tool');
@@ -166,33 +155,26 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
       // tool list server-side, so we only need to refresh once it reports back.
       // If the server turns out not to require OAuth (no authorization server
       // discovered), fall back to a plain tool sync for public MCP servers.
+      let oauthTimedOut = false;
       try {
-        const authorizationUrl = await startConnectorOAuth(newConnectorId);
+        const attempt = newOAuthAttempt();
+        const authorizationUrl = await startConnectorOAuth(newConnectorId, attempt);
         popup.location.href = authorizationUrl;
-        const result = await waitForOAuthPopup(popup, newConnectorId);
+        const result = await waitForOAuthSession({
+          attempt,
+          checkStatus: async () => {
+            await fetchConnectors();
+            return isConnectorConnected(newConnectorId);
+          },
+          connectorId: newConnectorId,
+          messageType: 'orvilo-connector-oauth',
+          popup,
+        });
         // Reflect the server-side state regardless of how the popup ended
         // (window.close is often blocked for cross-origin-navigated popups).
         await fetchConnectors();
-        if (result.status === 'success') {
-          if (result.synced === false) {
-            toast.warning(
-              t(
-                'connector.add.syncFailed',
-                'Authorized, but tools could not be synced. Click Sync to retry.',
-              ),
-            );
-          } else {
-            toast.success(t('connector.add.success', 'Connector connected'));
-          }
-        } else if (result.status === 'error') {
-          toast.error(
-            t('connector.add.authError', 'Authorization failed: {{reason}}', {
-              reason: result.error || t('connector.add.unknownError', 'unknown error'),
-            }),
-          );
-        } else {
-          toast.warning(t('connector.add.cancelled', 'Authorization was not completed'));
-        }
+        oauthTimedOut = result.status === 'timed-out';
+        reportOAuthResult(result, t, t('connector.add.success', 'Connector connected'));
       } catch {
         popup.close();
         try {
@@ -208,8 +190,12 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
         }
       }
 
-      reset();
-      onClose();
+      // A timed-out attempt keeps the form open so the user can retry or
+      // re-check the server state without re-entering the connector details.
+      if (!oauthTimedOut) {
+        reset();
+        onClose();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -254,32 +240,25 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
           : {}),
       });
 
+      let oauthTimedOut = false;
       if (needsReAuth && popup) {
         try {
-          const authorizationUrl = await startConnectorOAuth(connectorId);
+          const attempt = newOAuthAttempt();
+          const authorizationUrl = await startConnectorOAuth(connectorId, attempt);
           popup.location.href = authorizationUrl;
-          const result = await waitForOAuthPopup(popup, connectorId);
+          const result = await waitForOAuthSession({
+            attempt,
+            checkStatus: async () => {
+              await fetchConnectors();
+              return isConnectorConnected(connectorId);
+            },
+            connectorId,
+            messageType: 'orvilo-connector-oauth',
+            popup,
+          });
           await fetchConnectors();
-          if (result.status === 'success') {
-            if (result.synced === false) {
-              toast.warning(
-                t(
-                  'connector.add.syncFailed',
-                  'Authorized, but tools could not be synced. Click Sync to retry.',
-                ),
-              );
-            } else {
-              toast.success(t('connector.edit.success', 'Connector updated'));
-            }
-          } else if (result.status === 'error') {
-            toast.error(
-              t('connector.add.authError', 'Authorization failed: {{reason}}', {
-                reason: result.error || t('connector.add.unknownError', 'unknown error'),
-              }),
-            );
-          } else {
-            toast.warning(t('connector.add.cancelled', 'Authorization was not completed'));
-          }
+          oauthTimedOut = result.status === 'timed-out';
+          reportOAuthResult(result, t, t('connector.edit.success', 'Connector updated'));
         } catch {
           popup.close();
           try {
@@ -298,8 +277,10 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
         toast.success(t('connector.edit.success', 'Connector updated'));
       }
 
-      reset();
-      onClose();
+      if (!oauthTimedOut) {
+        reset();
+        onClose();
+      }
     } finally {
       setSubmitting(false);
     }

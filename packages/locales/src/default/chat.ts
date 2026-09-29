@@ -1605,6 +1605,8 @@ export default {
   'taskDetail.modelConfig': 'Model Override',
   'taskDetail.saveModelConfig': 'Save',
   'taskDetail.instructionPlaceholder': 'Add task instruction...',
+  'taskDetail.attachmentsReadOnly': "View only — you can't add attachments.",
+  'taskDetail.attachmentsUnavailable': "Attachments can't be added right now.",
   'taskDetail.labels.create': 'Create label "{{name}}"',
   'taskDetail.labels.createFailed': 'Could not create the label. Try again.',
   'taskDetail.labels.disabled': 'Labels cannot be changed while the task is running',

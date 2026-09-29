@@ -17,7 +17,7 @@ import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { topicMapKey } from '@/store/chat/utils/topicMapKey';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
-import { type ChatTopic } from '@/types/topic';
+import { type ChatTopic, type CreateTopicParams } from '@/types/topic';
 
 import { useChatStore } from '../../store';
 
@@ -647,6 +647,178 @@ describe('topic action', () => {
       expect(
         useChatStore.getState().topicDataMap[topicMapKey({ agentId: sessionId })]?.items,
       ).toEqual(topics);
+    });
+
+    it('does not let a list request started before topic confirmation remove the confirmed row', async () => {
+      const agentId = 'stale-topic-list-agent';
+      const key = topicMapKey({ agentId });
+      const existingTopic = { id: 'topic-existing', title: 'Existing' } as ChatTopic;
+      const confirmedTopic = {
+        id: 'topic-confirmed',
+        title: 'Confirmed',
+      } satisfies CreateTopicParams & { id: string };
+      let resolveFetch!: (value: { items: ChatTopic[]; total: number }) => void;
+      const staleFetch = new Promise<{ items: ChatTopic[]; total: number }>((resolve) => {
+        resolveFetch = resolve;
+      });
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          creatingTopicIds: [],
+          topicDataMap: {
+            [key]: {
+              currentPage: 0,
+              hasMore: false,
+              items: [existingTopic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+      vi.mocked(topicService.getTopics).mockReturnValue(staleFetch);
+
+      const response = renderHook(() =>
+        useChatStore().useFetchTopics(true, { agentId, pageSize: 20 }),
+      );
+      await waitFor(() => expect(topicService.getTopics).toHaveBeenCalledOnce());
+
+      act(() => {
+        const store = useChatStore.getState();
+        store.internal_dispatchTopic({
+          agentId,
+          optimistic: true,
+          type: 'addTopic',
+          value: confirmedTopic,
+        });
+        // Gateway creation honours the client id, so confirmation can replace
+        // an id with itself. It still marks the row as server-confirmed.
+        store.internal_replaceTopicId({
+          agentId,
+          nextId: confirmedTopic.id,
+          previousId: confirmedTopic.id,
+        });
+      });
+      expect(useChatStore.getState().creatingTopicIds).not.toContain(confirmedTopic.id);
+
+      await act(async () => {
+        resolveFetch({ items: [existingTopic], total: 1 });
+        await staleFetch;
+      });
+      await waitFor(() => expect(response.result.current.data).toBeDefined());
+
+      expect(useChatStore.getState().topicDataMap[key].items.map((topic) => topic.id)).toEqual([
+        confirmedTopic.id,
+        existingTopic.id,
+      ]);
+    });
+
+    it('does not let a list request started before a delete resurrect the row', async () => {
+      const agentId = 'stale-topic-list-delete-agent';
+      const key = topicMapKey({ agentId });
+      const doomedTopic = { id: 'topic-doomed', title: 'Doomed' } as ChatTopic;
+      const keptTopic = { id: 'topic-kept', title: 'Kept' } as ChatTopic;
+      let resolveFetch!: (value: { items: ChatTopic[]; total: number }) => void;
+      const staleFetch = new Promise<{ items: ChatTopic[]; total: number }>((resolve) => {
+        resolveFetch = resolve;
+      });
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [key]: {
+              currentPage: 0,
+              hasMore: false,
+              items: [doomedTopic, keptTopic],
+              pageSize: 20,
+              total: 2,
+            },
+          },
+        });
+      });
+      vi.mocked(topicService.getTopics).mockReturnValue(staleFetch);
+
+      const response = renderHook(() =>
+        useChatStore().useFetchTopics(true, { agentId, pageSize: 20 }),
+      );
+      await waitFor(() => expect(topicService.getTopics).toHaveBeenCalledOnce());
+
+      act(() => {
+        useChatStore
+          .getState()
+          .internal_dispatchTopic({ agentId, id: doomedTopic.id, type: 'deleteTopic' });
+      });
+      expect(useChatStore.getState().topicDataMap[key].items.map((topic) => topic.id)).toEqual([
+        keptTopic.id,
+      ]);
+
+      // The in-flight page still reports the pre-delete membership — applying
+      // it would resurrect the removed row.
+      await act(async () => {
+        resolveFetch({ items: [doomedTopic, keptTopic], total: 2 });
+        await staleFetch;
+      });
+      await waitFor(() => expect(response.result.current.data).toBeDefined());
+
+      expect(useChatStore.getState().topicDataMap[key].items.map((topic) => topic.id)).toEqual([
+        keptTopic.id,
+      ]);
+    });
+
+    it('does not let a stale load-more page resurrect a deleted topic', async () => {
+      const agentId = 'stale-topic-page-delete-agent';
+      const key = topicMapKey({ agentId });
+      const doomedTopic = { id: 'topic-doomed-page', title: 'Doomed' } as ChatTopic;
+      const keptTopic = { id: 'topic-kept-page', title: 'Kept' } as ChatTopic;
+      const pageTwoTopic = { id: 'topic-page-two', title: 'Page two' } as ChatTopic;
+      let resolveFetch!: (value: { items: ChatTopic[]; total: number }) => void;
+      const staleFetch = new Promise<{ items: ChatTopic[]; total: number }>((resolve) => {
+        resolveFetch = resolve;
+      });
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [key]: {
+              currentPage: 0,
+              hasMore: true,
+              items: [doomedTopic, keptTopic],
+              pageSize: 20,
+              total: 3,
+            },
+          },
+        });
+      });
+      vi.mocked(topicService.getTopics).mockReturnValue(staleFetch);
+
+      let loadMorePromise!: Promise<void>;
+      act(() => {
+        loadMorePromise = useChatStore.getState().loadMoreTopics();
+      });
+      await waitFor(() => expect(topicService.getTopics).toHaveBeenCalledOnce());
+      expect(useChatStore.getState().topicDataMap[key].isLoadingMore).toBe(true);
+
+      act(() => {
+        useChatStore
+          .getState()
+          .internal_dispatchTopic({ agentId, id: doomedTopic.id, type: 'deleteTopic' });
+      });
+
+      // The page still reports the pre-delete membership — applying it would
+      // resurrect the removed row next to the live one.
+      await act(async () => {
+        resolveFetch({ items: [doomedTopic, pageTwoTopic], total: 3 });
+        await staleFetch;
+      });
+      await loadMorePromise;
+
+      expect(useChatStore.getState().topicDataMap[key].items.map((topic) => topic.id)).toEqual([
+        keptTopic.id,
+      ]);
+      expect(useChatStore.getState().topicDataMap[key].isLoadingMore).toBe(false);
     });
 
     describe('unread message prefetch', () => {

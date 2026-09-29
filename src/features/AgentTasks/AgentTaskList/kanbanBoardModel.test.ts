@@ -9,6 +9,7 @@ import {
   buildKanbanGroupQuery,
   canDropTaskIntoKanbanColumn,
   COLUMN_I18N_KEYS,
+  COLUMN_STATUS_VISUAL,
   computeKanbanPosition,
   effectiveTaskPosition,
   externalVisibleKanbanColumns,
@@ -37,7 +38,6 @@ import {
   taskStatusBoardColumnKey,
   taskStatusChoices,
 } from './kanbanBoardModel';
-import { COLUMN_STATUS_VISUAL } from './KanbanColumn';
 
 const task = (
   id: string,

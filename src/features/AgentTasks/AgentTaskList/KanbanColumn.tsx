@@ -239,7 +239,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 // chips) reads the same source.
 export { COLUMN_I18N_KEYS, COLUMN_STATUS_VISUAL };
 
-
 interface CollapsedKanbanColumnProps {
   columnKey: string;
   /** Rails stay live drop targets unless the view filtered the column out. */

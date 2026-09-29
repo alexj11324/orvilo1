@@ -118,6 +118,20 @@ describe('mobile retired product routes', () => {
   );
 });
 
+describe('mobileRouter workspace home', () => {
+  it('redirects /:workspaceSlug to the personal home instead of rendering a blank page', () => {
+    // The bare `{ index: true }` used to render a null <Outlet/>: the Chat tab
+    // (/agent → .. → /:slug) and the chat back affordance landed on a white
+    // screen under the tab bar. Mobile home is personal-only, so the slot
+    // bounces to `/` like the desktop `createHomeElement` slot bounces to its
+    // home surface.
+    const leaf = matchRoutes(mobileRoutes, '/acme')?.at(-1)?.route;
+
+    expect(leaf?.index).toBe(true);
+    expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe('/');
+  });
+});
+
 // The standalone Acceptance / Verify platform is retired. Its two roots must
 // stay reserved words on mobile too: without a route of their own, `/acceptance`
 // and `/verify` would be parsed as workspace slugs and `/acceptance/<id>` would

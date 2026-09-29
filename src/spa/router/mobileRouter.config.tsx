@@ -297,9 +297,12 @@ export const mobileRoutes: RouteObject[] = [
       // Must come AFTER all reserved root paths so they don't shadow e.g. /agent.
       {
         children: [
-          // Workspace home — handled by the persistent home layout (mirrors
-          // how `/` index is empty); rendering here would duplicate Home.
+          // Workspace home is the same landing slot as the root index —
+          // mirroring the desktop `createHomeElement` slot. Mobile home is
+          // personal-only, so bounce back to it; a bare index renders nothing
+          // (white content under the tab bar).
           {
+            element: redirectElement('/'),
             index: true,
           },
           ...sharedMainAreaChildren,

@@ -67,7 +67,7 @@ export default {
   'flow.steps.connectApps.description': 'Add a few apps to help shape a more personal experience.',
   'flow.steps.connectApps.gmailPermissionModal.continueAuthorization': 'Continue authorization',
   'flow.steps.connectApps.gmailPermissionModal.description':
-    'Without Gmail read permission, your assistant cannot learn about you from your inbox.',
+    'Without Gmail read permission, your agent cannot learn about you from your inbox.',
   'flow.steps.connectApps.gmailPermissionModal.hint':
     'This does not affect the rest of onboarding. You can skip for now and continue.',
   'flow.steps.connectApps.gmailPermissionModal.skipAndContinue': 'Skip and continue',
@@ -232,7 +232,7 @@ export default {
   'reui.role.selectOne': 'Select one',
   'reui.role.selectAria': 'Select your role',
   'reui.source.ai.description': 'Suggested during research.',
-  'reui.source.ai.label': 'AI assistant',
+  'reui.source.ai.label': 'AI agent',
   'reui.source.facebook.description': 'A Facebook post or group mention.',
   'reui.source.facebook.label': 'Facebook',
   'reui.source.friend.description': 'A teammate or peer recommended it.',

@@ -407,7 +407,7 @@ export function registerMessageCommand(program: Command) {
 
   message
     .command('delete-by-assistant')
-    .description('Delete messages by assistant context')
+    .description('Delete messages by agent context')
     .option('--agent-id <id>', 'Agent ID')
     .option('--session-id <id>', 'Session ID')
     .option('--topic-id <id>', 'Topic ID')
@@ -425,7 +425,7 @@ export function registerMessageCommand(program: Command) {
         }
 
         if (!options.yes) {
-          const confirmed = await confirm('Are you sure you want to delete messages by assistant?');
+          const confirmed = await confirm('Are you sure you want to delete messages by agent?');
           if (!confirmed) {
             console.log('Cancelled.');
             return;
@@ -439,7 +439,7 @@ export function registerMessageCommand(program: Command) {
         if (options.topicId) input.topicId = options.topicId;
 
         await client.message.removeMessagesByAssistant.mutate(input as any);
-        console.log(`${pc.green('✓')} Deleted messages by assistant`);
+        console.log(`${pc.green('✓')} Deleted messages by agent`);
       },
     );
 

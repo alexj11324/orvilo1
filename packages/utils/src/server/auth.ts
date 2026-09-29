@@ -5,8 +5,7 @@ import { headers } from 'next/headers';
  *
  * Web sessions live in `auth_sessions` behind the `orvilo_auth` cookie
  * (minted by POST /api/auth/clerk after the accounts portal verifies a Clerk
- * session); the legacy better-auth `*.session_token` cookie is also read while
- * pre-migration sessions remain valid.
+ * session).
  */
 export const getUserAuth = async () => {
   const { getServerDB } = await import('@/database/core/db-adaptor');

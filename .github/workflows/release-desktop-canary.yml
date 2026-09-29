@@ -31,7 +31,6 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}
-  # ponytail: this also protects short OTA-only runs; split the full release only if they queue.
   cancel-in-progress: false
 
 permissions: read-all
@@ -83,22 +82,13 @@ jobs:
             echo "⏭️ Commit type is not style/feat/fix/perf/refactor/release, skipping: $commit_msg"
           fi
 
-  renderer-ota:
-    name: Publish Renderer OTA
-    needs: [check-trigger]
-    if: needs.check-trigger.outputs.should_build == 'true'
-    uses: ./.github/workflows/release-desktop-renderer-ota.yml
-    with:
-      channel: canary
-    secrets: inherit
-
   # ============================================
-  # OTA 无法覆盖当前 main 时，计算完整发布版本
+  # 计算本次完整发版的版本号
   # ============================================
   calculate-version:
     name: Calculate Canary Version
-    needs: [check-trigger, renderer-ota]
-    if: needs.check-trigger.outputs.should_build == 'true' && (github.event_name == 'workflow_dispatch' || needs.renderer-ota.outputs.requires_full_release == 'true')
+    needs: [check-trigger]
+    if: needs.check-trigger.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     outputs:
       cloud_ref: ${{ steps.cloud-ref.outputs.cloud_ref }}
@@ -297,8 +287,6 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: canary
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.calculate-version.outputs.release_notes }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
@@ -319,8 +307,6 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: canary
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.calculate-version.outputs.release_notes }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
@@ -337,8 +323,6 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: canary
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.calculate-version.outputs.release_notes }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
@@ -368,10 +352,7 @@ jobs:
         uses: ./.github/actions/desktop-upload-artifacts
         with:
           artifact-name: release-${{ matrix.os }}
-          renderer-ota-private-key: ${{ secrets.RENDERER_OTA_PRIVATE_KEY }}
-          renderer-ota-public-key: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           retention-days: 3
-          update-channel: canary
 
       - name: Preserve desktop build diagnostics
         if: always()
@@ -471,30 +452,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
   # ============================================
-  # 发布到 S3 更新服务器
-  # ============================================
-  publish-s3:
-    needs: [merge-mac-files, calculate-version]
-    name: Publish to S3
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/desktop-publish-s3
-        with:
-          channel: canary
-          cloud-ref: ${{ needs.calculate-version.outputs.cloud_ref }}
-          version: ${{ needs.calculate-version.outputs.version }}
-          aws-access-key-id: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
-          s3-bucket: ${{ secrets.UPDATE_S3_BUCKET }}
-          s3-region: ${{ secrets.UPDATE_S3_REGION }}
-          s3-endpoint: ${{ secrets.UPDATE_S3_ENDPOINT }}
-
-  # ============================================
   # 清理旧的 Canary Releases (保留最近 7 个)
   # ============================================
   cleanup-old-canaries:
-    needs: [publish-release, publish-s3]
+    needs: [publish-release]
     name: Cleanup Old Canary Releases
     runs-on: ubuntu-latest
     permissions:
@@ -541,14 +502,3 @@ jobs:
             }
 
             console.log(`✅ Cleanup complete. Kept ${Math.min(canaryReleases.length, 7)} canary releases, deleted ${toDelete.length}.`);
-
-      - name: Cleanup old S3 versions
-        uses: ./.github/actions/desktop-cleanup-s3
-        with:
-          channel: canary
-          keep-count: '15'
-          aws-access-key-id: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
-          s3-bucket: ${{ secrets.UPDATE_S3_BUCKET }}
-          s3-region: ${{ secrets.UPDATE_S3_REGION }}
-          s3-endpoint: ${{ secrets.UPDATE_S3_ENDPOINT }}

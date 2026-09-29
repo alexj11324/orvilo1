@@ -274,7 +274,7 @@ export function defineConfig() {
   ]);
 
   const sessionAuthMiddleware = async (req: NextRequest) => {
-    logSession('BetterAuth middleware processing request: %s %s', req.method, req.url);
+    logSession('Session middleware processing request: %s %s', req.method, req.url);
 
     const response = defaultMiddleware(req);
 
@@ -287,8 +287,7 @@ export function defineConfig() {
     if (!isProtected) return response;
 
     // Web sessions live in `auth_sessions` behind the `orvilo_auth` cookie
-    // (minted by POST /api/auth/clerk); the legacy better-auth cookie is still
-    // honored until those sessions expire.
+    // (minted by POST /api/auth/clerk).
     const session = await resolveAuthSessionFromHeaders(await getServerDB(), req.headers);
 
     const isLoggedIn = !!session;

@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { getServerDB } from '@/database/core/db-adaptor';
-import { legacySessionCookieName } from '@/database/models/authSession';
 import { authEnv } from '@/envs/auth';
 import { ClerkAuthError, exchangeClerkSession } from '@/server/services/auth';
 
@@ -73,11 +72,6 @@ export const POST = async (request: NextRequest) => {
       { headers: corsHeaders(request), status: 200 },
     );
     response.cookies.set(cookie.name, cookie.value, cookie.options);
-    // Drop the legacy Better Auth cookie if a migrated browser still carries it.
-    response.cookies.set(legacySessionCookieName(authEnv.AUTH_COOKIE_PREFIX), '', {
-      ...cookie.options,
-      expires: new Date(0),
-    });
 
     return response;
   } catch (error) {

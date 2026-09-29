@@ -8,16 +8,8 @@ name: Release Desktop Stable
 # 与 Beta 的区别:
 #   1. 仅响应 stable 版本 tag (不含任何 '-' 后缀)
 #   2. 使用 STABLE 专用的 Umami 配置
-#   3. 额外上传到 S3 更新服务器
-#   4. 构建时注入 UPDATE_SERVER_URL 让客户端从 S3 检查更新
 #
-# 需要配置的 Secrets (S3 相关, 统一 UPDATE_ 前缀):
-#   - UPDATE_AWS_ACCESS_KEY_ID
-#   - UPDATE_AWS_SECRET_ACCESS_KEY
-#   - UPDATE_S3_BUCKET (S3 存储桶名称)
-#   - UPDATE_S3_REGION (可选, 默认 us-east-1)
-#   - UPDATE_S3_ENDPOINT (可选, 用于 R2/MinIO 等 S3 兼容服务)
-#   - UPDATE_SERVER_URL (客户端检查更新的 URL)
+# 产物与更新检查都走 GitHub Release。
 # ============================================
 
 on:
@@ -46,11 +38,6 @@ on:
         default: true
       build_linux:
         description: 'Build Linux'
-        required: false
-        type: boolean
-        default: true
-      skip_s3_upload:
-        description: 'Skip S3 upload (for testing)'
         required: false
         type: boolean
         default: true
@@ -136,15 +123,6 @@ jobs:
             exit 1
           fi
           echo "cloud_ref=$cloud_ref" >> "$GITHUB_OUTPUT"
-
-  renderer-ota:
-    name: Publish Renderer OTA
-    needs: [check-stable]
-    if: ${{ needs.check-stable.outputs.is_stable == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.skip_s3_upload) }}
-    uses: ./.github/workflows/release-desktop-renderer-ota.yml
-    with:
-      channel: stable
-    secrets: inherit
 
   # ============================================
   # 配置构建矩阵 (检查自托管 Runner)
@@ -242,8 +220,6 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: stable
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
@@ -266,8 +242,6 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: stable
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
@@ -284,8 +258,6 @@ jobs:
         run: npm run desktop:package:app
         env:
           UPDATE_CHANNEL: stable
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
-          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
           APP_URL: http://localhost:3015
           DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
@@ -298,9 +270,6 @@ jobs:
         uses: ./.github/actions/desktop-upload-artifacts
         with:
           artifact-name: release-${{ matrix.name }}
-          renderer-ota-private-key: ${{ secrets.RENDERER_OTA_PRIVATE_KEY }}
-          renderer-ota-public-key: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
-          update-channel: stable
 
       - name: Preserve desktop build diagnostics
         if: always()
@@ -410,24 +379,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ============================================
-  # 发布到 S3 更新服务器
-  # ============================================
-  publish-s3:
-    needs: [merge-mac-files, check-stable]
-    name: Publish to S3
-    runs-on: ubuntu-latest
-    # 手动触发时可选择跳过
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_s3_upload) }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/desktop-publish-s3
-        with:
-          channel: stable
-          cloud-ref: ${{ needs.check-stable.outputs.cloud_ref }}
-          version: ${{ needs.check-stable.outputs.version }}
-          aws-access-key-id: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
-          s3-bucket: ${{ secrets.UPDATE_S3_BUCKET }}
-          s3-region: ${{ secrets.UPDATE_S3_REGION }}
-          s3-endpoint: ${{ secrets.UPDATE_S3_ENDPOINT }}

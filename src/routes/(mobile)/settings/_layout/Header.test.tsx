@@ -36,6 +36,9 @@ describe('mobile settings Header', () => {
     ['billing', 'subscription:tab.billing'],
     ['credits', 'subscription:tab.credits'],
     ['devices', 'setting:tab.devices'],
+    ['statistics', 'auth:tab.stats'],
+    ['credential', 'setting:tab.creds'],
+    ['imports', 'setting:workspaceSetting.tab.imports'],
     ['service-model', 'setting:tab.serviceModel'],
   ])('resolves the workspace %s title', (tab, title) => {
     renderHeader(tab);

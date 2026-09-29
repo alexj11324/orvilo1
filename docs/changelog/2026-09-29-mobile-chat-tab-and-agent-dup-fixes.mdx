@@ -1,0 +1,19 @@
+---
+title: Mobile Chat tab renders again, no more duplicate assistants
+description: >-
+  Fixes the mobile web Chat tab opening to a blank page inside a workspace,
+  and stops a cache-scope reload from creating extra "Custom Agent" entries
+  on refresh.
+tags:
+  - Mobile
+  - Agents
+---
+
+# Mobile Chat tab renders again, no more duplicate assistants
+
+Two mobile web fixes around the assistant list:
+
+## Improvements and fixes
+
+- **Chat tab renders inside a workspace.** The `/{workspace}` index route declared an index child with no element, so the Chat tab's `/agent` -> `/{slug}` redirect landed on an empty outlet and the page stayed all-white. It now mounts the same home layout and session list as the root `/` index.
+- **Refresh no longer creates duplicate assistants.** The workspace cache-scope reload broadcast revalidated every mounted SWR hook, including "action" hooks whose fetchers are mutations — the "+" button on an empty session group would replay `createSession` and insert a new Custom Agent row on every scope flip or reload. Action hooks now register under a namespaced key that the broadcast skips, while their own button-bound trigger keeps working.

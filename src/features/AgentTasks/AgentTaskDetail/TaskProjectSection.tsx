@@ -191,7 +191,9 @@ const TaskProjectSection = memo(() => {
       gap={8}
       title={milestone ? t('overview.milestoneSeeIssues', { ns: 'project' }) : undefined}
       variant={'borderless'}
-      onClick={() => milestone && navigate(getProjectMilestoneIssuesPath(projectRef, milestone.id))}
+      onClick={() =>
+        milestone && projectRef && navigate(getProjectMilestoneIssuesPath(projectRef, milestone.id))
+      }
     >
       <MilestoneIcon size={14} style={{ flex: 'none' }} />
       <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>

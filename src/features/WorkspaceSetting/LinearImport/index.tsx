@@ -26,8 +26,8 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@/components/ui/combobox';
+import { newOAuthAttempt, waitForOAuthSession } from '@/features/Connectors/oauthSession';
 import LinearIcon from '@/features/Work/icons/LinearIcon';
-import { waitForLinearOAuthPopup } from '@/features/WorkspaceSetting/Linear/oauthPopup';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
 import { electronSystemService } from '@/services/electron/system';
@@ -571,7 +571,9 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
     setBusy(true);
     setError('');
     try {
+      const attempt = newOAuthAttempt();
       const response = await lambdaClient.linearSync.startOAuth.mutate({
+        attempt,
         returnTo: window.location.pathname,
       });
       if (!response?.authorizationUrl) throw new Error(t('workspaceSetting.linear.connectFailed'));
@@ -580,16 +582,14 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
         return;
       }
       popup.location.href = response.authorizationUrl;
-      const result = await waitForLinearOAuthPopup(
+      const result = await waitForOAuthSession({
+        attempt,
+        expectedOrigin: response.callbackOrigin ?? window.location.origin,
+        messageType: 'orvilo-linear-oauth',
         popup,
-        response.callbackOrigin ?? window.location.origin,
-      );
-      if (result.kind !== 'success')
-        throw new Error(
-          result.kind === 'error'
-            ? result.error || t('workspaceSetting.linear.connectFailed')
-            : t('workspaceSetting.linear.connectFailed'),
-        );
+      });
+      if (result.status !== 'success' || !result.installationId)
+        throw new Error(result.error || t('workspaceSetting.linear.connectFailed'));
       setTeamId('');
       setMappings({});
       await refresh(result.installationId);

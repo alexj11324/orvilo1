@@ -647,7 +647,12 @@ describe('TaskDetailSliceAction', () => {
     it('forwards the row id and domainRevision to taskService.handoff, then refreshes', async () => {
       useTaskStore.setState({
         taskDetailMap: {
-          'T-1': { agentId: 'agt_A', identifier: 'T-1', status: 'running' },
+          'T-1': {
+            agentId: 'agt_A',
+            identifier: 'T-1',
+            instruction: 'x',
+            status: 'running',
+          },
         },
       });
       vi.mocked(taskService.find).mockResolvedValue({
@@ -665,6 +670,22 @@ describe('TaskDetailSliceAction', () => {
       });
       const { mutate } = await import('@/libs/swr');
       expect(mutate).toHaveBeenCalled();
+    });
+
+    it('resolves the incumbent agent from the row when the detail record is not loaded', async () => {
+      // Subtask-row selectors hand off while only the parent's detail is in
+      // the map — fromAgentId must come from the fetched row, not null.
+      useTaskStore.setState({ taskDetailMap: {} });
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { agentId: 'agt_incumbent', domainRevision: 4, id: 'task-uuid-2' },
+      } as any);
+      vi.mocked(taskService.handoff).mockResolvedValue({} as any);
+
+      await useTaskStore.getState().handoffTask('T-sub', 'agt_B');
+
+      expect(taskService.handoff).toHaveBeenCalledWith(
+        expect.objectContaining({ fromAgentId: 'agt_incumbent' }),
+      );
     });
 
     it('resolves without refreshing when the handoff CAS is rejected', async () => {

@@ -645,16 +645,21 @@ export class TaskDetailSliceActionImpl {
     const current = this.#get().taskDetailMap[id];
     let taskId = current?.id;
     let domainRevision: number | undefined;
-    if (!taskId || domainRevision === undefined) {
+    // Subtask rows hand off without their detail record loaded — resolve the
+    // incumbent agent from the same fresh row read as the CAS instead of
+    // asserting `null` (which the server would reject against a real owner).
+    let fromAgentId = current?.agentId;
+    if (!taskId || domainRevision === undefined || fromAgentId === undefined) {
       const found = await Promise.resolve(taskService.find(id)).catch(() => undefined);
       taskId ??= found?.data?.id;
       domainRevision ??= found?.data?.domainRevision;
+      fromAgentId ??= found?.data?.agentId;
     }
     if (!taskId || domainRevision === undefined) return;
     try {
       await taskService.handoff({
         expectedDomainRevision: domainRevision,
-        fromAgentId: current?.agentId ?? null,
+        fromAgentId,
         taskId,
         toAgentId,
       });

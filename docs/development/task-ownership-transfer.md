@@ -16,6 +16,10 @@
   → 抛 `TaskHandoffRequiredError`（HTTP 409 `HANDOFF_REQUIRED`）。
 - 同值写、非 running 任务、以及原子「park + 换 assignee」
   （同一 `data` 里把 `status` 写成非 running）放行。
+- 原子 park+reassign 只存在于 `TaskModel.update()` 层，供已经先完成
+  fencing 的内部协议使用；公开 API（`task.update` → `updateWithLog`）
+  对 running 任务的任何 assignee 变更一律要求 `task.handoff`，不开放
+  该逃生口。
 - 协议写必须显式携带 `mutation.executionTransfer: true` 才能越过该检查；
   这是内部协议的唯一合法旁路，等价于签名声明「我已在更新前 fence 了
   incumbent dispatch」。

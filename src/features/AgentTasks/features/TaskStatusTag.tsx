@@ -1,5 +1,5 @@
 import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@lobehub/ui';
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -7,10 +7,18 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { StatusVisual } from '@/components/ExecutionStatus';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { usePermission } from '@/hooks/usePermission';
+import { useTaskStore } from '@/store/task';
 
+import {
+  COLUMN_I18N_KEYS,
+  taskStatusBoardColumnKey,
+  type TaskStatusChoice,
+  taskStatusChoices,
+} from '../AgentTaskList/kanbanBoardModel';
 import { renderMenuExtra } from './menuExtra';
-import { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
+import { STATUS_META } from './taskStatusMeta';
 import { useTaskStatusChange } from './useTaskStatusChange';
 
 export { STATUS_META, USER_SELECTABLE_STATUSES } from './taskStatusMeta';
@@ -65,56 +73,93 @@ interface TaskStatusTagProps {
   disableDropdown?: boolean;
   /**
    * The mark the trigger draws in place of the execution-status glyph — a
-   * task with a workflow state shows that state, Linear-style, while the
-   * menu keeps editing the execution status.
+   * task with a workflow state shows that state, Linear-style.
    */
   glyph?: StatusVisual & { label: ReactNode };
-  onChange?: (status: TaskStatus) => void | Promise<void>;
+  /**
+   * Picked a board column — receives the column plus the write a status-board
+   * drop would commit. Callers on board surfaces route it through the board
+   * move path; without it the tag applies the write itself.
+   */
+  onChange?: (choice: TaskStatusChoice) => void | Promise<void>;
   size?: number;
   status?: TaskStatus;
   taskIdentifier?: string;
+  /** Workflow category — buckets a workflow-linked task's current column. */
+  workflowCategory?: TaskWorkflowCategory | null;
+  /** Linked workflow state — every board column becomes pickable when set. */
+  workflowStateId?: string | null;
 }
 
 const TaskStatusTag = memo<TaskStatusTagProps>(
-  ({ children, disableDropdown, glyph, onChange, size = 16, status, taskIdentifier }) => {
+  ({
+    children,
+    disableDropdown,
+    glyph,
+    onChange,
+    size = 16,
+    status,
+    taskIdentifier,
+    workflowCategory,
+    workflowStateId,
+  }) => {
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const changeTaskStatus = useTaskStatusChange();
+    const updateTask = useTaskStore((s) => s.updateTask);
 
     const displayStatus = status ?? 'backlog';
     const meta = STATUS_META[displayStatus];
+    // The Kanban board is the status source of truth: its columns are the
+    // menu's options, order and glyphs, triage included. A column the board
+    // could not take this task (an unlinked task can't reach the
+    // workflow-only columns) renders disabled — the same reachability rule
+    // `canDropTaskIntoKanbanColumn` enforces on drops.
+    const choices = useMemo(() => taskStatusChoices({ workflowStateId }), [workflowStateId]);
+    const currentColumnKey = useMemo(
+      () =>
+        taskStatusBoardColumnKey({
+          status: displayStatus,
+          workflowCategory,
+          workflowStateId,
+        }),
+      [displayStatus, workflowCategory, workflowStateId],
+    );
 
     // Linear's status menu carries a search field on top; letters filter the
     // list while digits keep working as accelerators (the document handler
-    // captures them before they reach the input).
-    const statusLabel = useCallback(
-      (key: TaskStatus) =>
-        t(`taskDetail.${STATUS_META[key].labelKey}`, { defaultValue: STATUS_META[key].label }),
+    // captures them before they reach the input). Digits number the pickable
+    // rows only — disabled entries have no accelerator.
+    const choiceLabel = useCallback(
+      (choice: TaskStatusChoice): string => t(COLUMN_I18N_KEYS[choice.column.key] as never),
       [t],
     );
-    const filteredStatuses = useMemo(() => {
+    const filteredChoices = useMemo(() => {
       const needle = query.trim().toLowerCase();
-      if (!needle) return USER_SELECTABLE_STATUSES;
-      return USER_SELECTABLE_STATUSES.filter((key) =>
-        statusLabel(key).toLowerCase().includes(needle),
-      );
-    }, [query, statusLabel]);
+      if (!needle) return choices;
+      return choices.filter((choice) => choiceLabel(choice).toLowerCase().includes(needle));
+    }, [choices, choiceLabel, query]);
+    const pickableChoices = useMemo(
+      () => filteredChoices.filter((choice) => choice.status || choice.workflowCategory),
+      [filteredChoices],
+    );
 
     useEffect(() => {
       if (!open) setQuery('');
     }, [open]);
 
-    const handleStatusChange = useCallback(
-      async (nextStatus: TaskStatus) => {
+    const handlePick = useCallback(
+      async (choice: TaskStatusChoice) => {
         if (!canEditTask) return;
-        if (nextStatus === displayStatus) return;
+        if (!choice.status && !choice.workflowCategory) return;
+        if (choice.column.key === currentColumnKey) return;
         if (onChange) {
           setLoading(true);
           try {
-            await onChange(nextStatus);
+            await onChange(choice);
           } finally {
             setLoading(false);
           }
@@ -124,54 +169,60 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
         setLoading(true);
 
         try {
-          await changeTaskStatus(taskIdentifier, nextStatus);
+          if (choice.workflowCategory) {
+            await updateTask(taskIdentifier, { workflowCategory: choice.workflowCategory });
+          } else if (choice.status) {
+            await changeTaskStatus(taskIdentifier, choice.status);
+          }
         } finally {
           setLoading(false);
         }
       },
-      [canEditTask, changeTaskStatus, displayStatus, onChange, taskIdentifier],
+      [canEditTask, changeTaskStatus, currentColumnKey, onChange, taskIdentifier, updateTask],
     );
 
-    const handleStatusChangeRef = useRef(handleStatusChange);
-    handleStatusChangeRef.current = handleStatusChange;
-    const filteredStatusesRef = useRef(filteredStatuses);
-    filteredStatusesRef.current = filteredStatuses;
+    const handlePickRef = useRef(handlePick);
+    handlePickRef.current = handlePick;
+    const pickableChoicesRef = useRef(pickableChoices);
+    pickableChoicesRef.current = pickableChoices;
 
     useEffect(() => {
       if (!open) return;
       const onKeyDown = (event: KeyboardEvent) => {
         const num = Number.parseInt(event.key, 10);
         if (Number.isNaN(num)) return;
-        const statuses = filteredStatusesRef.current;
+        const pickable = pickableChoicesRef.current;
         const idx = num - 1;
-        if (idx < 0 || idx >= statuses.length) return;
+        if (idx < 0 || idx >= pickable.length) return;
         event.preventDefault();
         event.stopPropagation();
-        void handleStatusChangeRef.current(statuses[idx]);
+        void handlePickRef.current(pickable[idx]);
         setOpen(false);
       };
       document.addEventListener('keydown', onKeyDown, true);
       return () => document.removeEventListener('keydown', onKeyDown, true);
     }, [open]);
 
-    const menuItems = useMemo<DropdownItem[]>(
-      () =>
-        filteredStatuses.map((key, index) => {
-          const statusMeta = STATUS_META[key];
-          const isCurrent = key === displayStatus;
-          return {
-            extra: renderMenuExtra(String(index + 1), isCurrent),
-            icon: <Icon color={statusMeta.color} icon={statusMeta.icon} size={16} />,
-            key,
-            label: statusLabel(key),
-            onClick: ({ domEvent }: MenuInfo) => {
-              domEvent.stopPropagation();
-              void handleStatusChange(key);
-            },
-          };
-        }),
-      [displayStatus, filteredStatuses, handleStatusChange, statusLabel],
-    );
+    const menuItems = useMemo<DropdownItem[]>(() => {
+      let pickIndex = 0;
+      return filteredChoices.map((choice) => {
+        const pickable = Boolean(choice.status || choice.workflowCategory);
+        const isCurrent = choice.column.key === currentColumnKey;
+        const visual = WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+        if (pickable) pickIndex += 1;
+        return {
+          disabled: !pickable,
+          extra: pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined,
+          icon: <Icon color={visual.color} icon={visual.icon} size={16} />,
+          key: choice.column.key,
+          label: choiceLabel(choice),
+          onClick: ({ domEvent }: MenuInfo) => {
+            domEvent.stopPropagation();
+            void handlePick(choice);
+          },
+        };
+      });
+    }, [choiceLabel, currentColumnKey, filteredChoices, handlePick]);
 
     const triggerNode =
       children ||
@@ -220,7 +271,7 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
             <div className={styles.showingCaption}>
               {query.trim()
                 ? t('taskDetail.showingItems', {
-                    count: filteredStatuses.length,
+                    count: filteredChoices.length,
                     defaultValue: 'Showing {{count}} items',
                   })
                 : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}

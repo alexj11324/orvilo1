@@ -12,7 +12,7 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
-import type { TaskStatus, WorkQuerySortMode } from '@orvilo/types';
+import type { WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
 import {
-  applyWorkQueryStatusChange,
+  applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
   kanbanStatusMoveGroupBy,
   storeKanbanUsesWorkflowMove,
@@ -47,6 +47,7 @@ import {
   buildKanbanGroupQuery,
   canDropTaskIntoExternalColumn,
   canDropTaskIntoKanbanColumn,
+  COLUMN_I18N_KEYS,
   computeKanbanPosition,
   effectiveTaskPosition,
   externalKanbanColumnMoveScope,
@@ -72,11 +73,11 @@ import {
   resolveKanbanDropColumn,
   taskMatchesExternalColumn,
   taskMatchesKanbanColumn,
+  type TaskStatusChoice,
   type WorkQueryBoardGroupBy,
 } from './kanbanBoardModel';
 import KanbanColumn, {
   CollapsedKanbanColumn,
-  COLUMN_I18N_KEYS,
   COLUMN_STATUS_VISUAL,
   COLUMN_WIDTH,
 } from './KanbanColumn';
@@ -733,11 +734,11 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   }, [isDraggingRef, resetColumns]);
 
   const handleCardStatusChange = useCallback(
-    async (task: TaskListItem, status: TaskStatus) => {
-      const applied = await applyWorkQueryStatusChange({
+    async (task: TaskListItem, choice: TaskStatusChoice) => {
+      const applied = await applyWorkQueryStatusChoice({
         changeLocal: changeTaskStatus,
+        choice,
         groupBy: kanbanStatusMoveGroupBy(external?.queryGroupBy),
-        status,
         task,
       });
       if (!applied) return;

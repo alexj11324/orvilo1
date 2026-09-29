@@ -20,6 +20,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
+import type { TaskStatusChoice } from '../AgentTaskList/kanbanBoardModel';
 import { ISSUE_ID_WIDTH_VAR } from '../shared/issueIdColumn';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
@@ -86,7 +87,7 @@ interface TaskItemProps {
    * link. `undefined` renders no badge — rows never invent one from a raw id.
    */
   milestone?: TaskMilestoneRef;
-  onStatusChange?: (status: TaskStatus) => void | Promise<void>;
+  onStatusChange?: (choice: TaskStatusChoice) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   /**
    * Draw Linear's `› Parent title` breadcrumb after the title. Lists set it
@@ -239,6 +240,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           size={14}
           status={status}
           taskIdentifier={task.identifier}
+          workflowCategory={task.workflowCategory}
+          workflowStateId={task.workflowStateId}
           onChange={onStatusChange}
         />
       </span>

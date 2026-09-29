@@ -9,6 +9,11 @@
   ],
   "community": [
     {
+      "id": "2026-09-29-task-status-picker-parity",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
       "id": "2026-09-27-drop-legacy-better-auth-cookie",
       "date": "2026-09-27",
       "versionRange": ["2.4.1"]

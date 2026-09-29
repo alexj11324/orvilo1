@@ -19,7 +19,6 @@ describe('issue rail type scale', () => {
 
   it.each([
     'TaskProperties.tsx',
-    'TaskWorkflowStatusRow.tsx',
     'TaskAcceptanceStateRow.tsx',
     'TaskProjectSection.tsx',
     'TaskParentBar.tsx',

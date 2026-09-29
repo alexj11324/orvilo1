@@ -13,7 +13,7 @@ import useSWR from 'swr';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
-import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
+import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import type { WorkQueryGroupPage } from '@/features/MyWork/workQueryPaging';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { workAttentionService } from '@/services/workAttention';

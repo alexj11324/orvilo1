@@ -9,8 +9,6 @@ declare global {
       AUTH_ACCOUNTS_URL?: string;
       /** Cookie parent domain (e.g. `.aspectlylabs.com`); host-only when unset. */
       AUTH_COOKIE_DOMAIN?: string;
-      /** Namespace of the legacy Better Auth cookie (`<prefix>.session_token`), dual-read during migration. Defaults to `better-auth`. */
-      AUTH_COOKIE_PREFIX?: string;
       AUTH_DISABLE_EMAIL_PASSWORD?: string;
       AUTH_EMAIL_VERIFICATION?: string;
       AUTH_ENABLE_MAGIC_LINK?: string;
@@ -59,7 +57,6 @@ export const getAuthConfig = () => {
     server: {
       AUTH_ACCOUNTS_URL: z.string().optional(),
       AUTH_COOKIE_DOMAIN: z.string().optional(),
-      AUTH_COOKIE_PREFIX: z.string().optional(),
       AUTH_DISABLE_EMAIL_PASSWORD: z.boolean().optional().default(false),
       AUTH_EMAIL_VERIFICATION: z.boolean().optional().default(false),
       AUTH_ENABLE_MAGIC_LINK: z.boolean().optional().default(false),
@@ -87,7 +84,6 @@ export const getAuthConfig = () => {
     runtimeEnv: {
       AUTH_ACCOUNTS_URL: process.env.AUTH_ACCOUNTS_URL,
       AUTH_COOKIE_DOMAIN: process.env.AUTH_COOKIE_DOMAIN,
-      AUTH_COOKIE_PREFIX: process.env.AUTH_COOKIE_PREFIX,
       AUTH_DISABLE_EMAIL_PASSWORD: process.env.AUTH_DISABLE_EMAIL_PASSWORD === '1',
       AUTH_EMAIL_VERIFICATION: process.env.AUTH_EMAIL_VERIFICATION === '1',
       AUTH_ENABLE_MAGIC_LINK: process.env.AUTH_ENABLE_MAGIC_LINK === '1',

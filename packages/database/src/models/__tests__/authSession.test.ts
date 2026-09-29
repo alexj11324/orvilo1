@@ -8,7 +8,6 @@ import type { OrviloDatabase } from '../../type';
 import {
   AUTH_SESSION_COOKIE,
   AuthSessionModel,
-  legacySessionCookieName,
   readAuthSessionToken,
   readAuthSessionTokenFromHeaders,
 } from '../authSession';
@@ -83,56 +82,19 @@ describe('AuthSessionModel', () => {
 });
 
 describe('session cookie readers', () => {
-  it('prefers the orvilo_auth cookie and falls back to the legacy name', () => {
+  it('reads only the orvilo_auth cookie', () => {
     const getter = (name: string) =>
-      ({ [AUTH_SESSION_COOKIE]: 'new-token', 'better-auth.session_token': 'old-token' })[name];
+      ({ [AUTH_SESSION_COOKIE]: 'new-token', 'other.cookie': 'other' })[name];
 
     expect(readAuthSessionToken(getter)).toBe('new-token');
-    expect(
-      readAuthSessionToken((name) =>
-        name === 'better-auth.session_token' ? 'old-token' : undefined,
-      ),
-    ).toBe('old-token');
-  });
-
-  it('honours a custom legacy cookie prefix', () => {
-    expect(legacySessionCookieName('orvilo')).toBe('orvilo.session_token');
-    expect(
-      readAuthSessionToken(
-        (name) => (name === 'orvilo.session_token' ? 'prefixed' : undefined),
-        'orvilo',
-      ),
-    ).toBe('prefixed');
+    expect(readAuthSessionToken(() => undefined)).toBeNull();
   });
 
   it('parses the token out of a raw Cookie header', () => {
     expect(
       readAuthSessionTokenFromHeaders(headersFor(`a=1; ${AUTH_SESSION_COOKIE}=tok123; b=2`)),
     ).toBe('tok123');
-    expect(
-      readAuthSessionTokenFromHeaders(headersFor('a=1; better-auth.session_token=legacy')),
-    ).toBe('legacy');
     expect(readAuthSessionTokenFromHeaders(headersFor(undefined))).toBeNull();
     expect(readAuthSessionTokenFromHeaders(headersFor('a=1'))).toBeNull();
-  });
-
-  // Better Auth signed the session cookie as `token.hmacSignature`; the table
-  // stores the bare token.
-  it('strips the HMAC signature from legacy cookie values', () => {
-    const getter = (name: string) =>
-      name === 'better-auth.session_token' ? 'legacy-token.c2lnbmF0dXJl' : undefined;
-
-    expect(readAuthSessionToken(getter)).toBe('legacy-token');
-    expect(
-      readAuthSessionTokenFromHeaders(
-        headersFor('better-auth.session_token=legacy-token.c2lnbmF0dXJl'),
-      ),
-    ).toBe('legacy-token');
-    // unsigned values (older cookies) still resolve unchanged
-    expect(
-      readAuthSessionToken((name) =>
-        name === 'better-auth.session_token' ? 'unsigned' : undefined,
-      ),
-    ).toBe('unsigned');
   });
 });

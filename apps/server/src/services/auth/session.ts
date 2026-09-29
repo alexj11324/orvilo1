@@ -9,8 +9,6 @@ import { authEnv } from '@/envs/auth';
 
 export { AUTH_SESSION_COOKIE };
 
-const legacyCookiePrefix = () => authEnv.AUTH_COOKIE_PREFIX || 'better-auth';
-
 const authSessionModel = (db: OrviloDatabase) =>
   new AuthSessionModel(db, authEnv.AUTH_SESSION_TTL_SECONDS);
 
@@ -29,7 +27,7 @@ export const resolveAuthSessionFromHeaders = async (
   db: OrviloDatabase,
   headers: { get: (name: string) => string | null },
 ) => {
-  const token = readAuthSessionTokenFromHeaders(headers, legacyCookiePrefix());
+  const token = readAuthSessionTokenFromHeaders(headers);
   if (!token) return null;
 
   return authSessionModel(db).findValidByToken(token);
@@ -40,7 +38,7 @@ export const resolveAuthSessionFromCookies = async (
   db: OrviloDatabase,
   getCookie: (name: string) => string | null | undefined,
 ) => {
-  const token = readAuthSessionToken(getCookie, legacyCookiePrefix());
+  const token = readAuthSessionToken(getCookie);
   if (!token) return null;
 
   return authSessionModel(db).findValidByToken(token);

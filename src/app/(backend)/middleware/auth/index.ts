@@ -91,7 +91,7 @@ export const checkAuth =
         await assertOIDCUserActive(serverDB, userId);
       } else {
         // Web session authentication (`orvilo_auth` cookie minted by the
-        // /api/auth/clerk exchange; the legacy better-auth cookie is also read).
+        // /api/auth/clerk exchange).
         const session = await resolveAuthSessionFromHeaders(serverDB, req.headers);
 
         if (!session?.userId) {

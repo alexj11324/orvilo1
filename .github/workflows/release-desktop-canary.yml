@@ -149,6 +149,7 @@ jobs:
 
       - name: Resolve Cloud revision
         id: cloud-ref
+        if: vars.OVERLAY_REPOSITORY != ''
         env:
           CLOUD_REPOSITORY: ${{ vars.OVERLAY_REPOSITORY }}
           CLOUD_TOKEN: ${{ secrets.ORVILO_CLOUD_TOKEN }}

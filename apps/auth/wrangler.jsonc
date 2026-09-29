@@ -24,6 +24,8 @@
     "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuYXNwZWN0bHlsYWJzLmNvbSQ",
     "PORTAL_PRODUCT_ORIGIN": "https://orvilo.aspectlylabs.com"
   },
+  // Custom domain claim moves accounts.aspectlylabs.com off the legacy nginx
+  // origin onto this worker on deploy — first prod deploy is the cutover.
   "routes": [
     { "pattern": "accounts.aspectlylabs.com", "zone_name": "aspectlylabs.com", "custom_domain": true }
   ]

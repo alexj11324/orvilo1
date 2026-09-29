@@ -84,11 +84,12 @@ vi.mock('./AllFavoritesDrawer', () => ({
   default: () => null,
 }));
 
-vi.mock('./FavoriteRow', () => ({
-  default: ({ item }: { item: { targetId: string } }) => (
+vi.mock('./FavoriteRow', () => {
+  const Row = ({ item }: { item: { targetId: string } }) => (
     <div data-testid={`favorite-${item.targetId}`} />
-  ),
-}));
+  );
+  return { default: Row, SortableFavoriteRow: Row };
+});
 
 const renderSection = () =>
   render(

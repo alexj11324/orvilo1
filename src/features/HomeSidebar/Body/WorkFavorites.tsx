@@ -45,7 +45,7 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 import AllFavoritesDrawer from './AllFavoritesDrawer';
 import { hasMoreFavorites, visibleFavoriteRows } from './favoriteOverflow';
 import { favoriteKey, favoriteReorderMove } from './favoriteReorder';
-import FavoriteRow from './FavoriteRow';
+import { SortableFavoriteRow } from './FavoriteRow';
 
 interface WorkFavoritesProps {
   itemKey: string;
@@ -216,14 +216,14 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
                 <SortableContext items={visibleKeys} strategy={verticalListSortingStrategy}>
                   <Flexbox gap={1} role="list">
                     {visibleItems.map((item, index) => (
-                      <FavoriteRow
+                      <SortableFavoriteRow
                         index={index}
                         item={item}
                         itemCount={items.length}
                         key={favoriteKey(item)}
+                        suppressClickRef={suppressClickRef}
                         onMove={moveByDirection}
                         onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
-                        suppressClickRef={suppressClickRef}
                       />
                     ))}
                   </Flexbox>

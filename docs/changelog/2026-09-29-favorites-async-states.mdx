@@ -1,0 +1,32 @@
+---
+title: 'Favorites Sidebar Now Shows Real Loading and Error States'
+description: >-
+  The Favorites section in the home sidebar now tells the difference
+  between a failed request and an empty list, keeps your saved rows on a
+  refresh failure, and offers an inline retry.
+tags:
+  - Interface
+  - Fixes
+---
+
+# Favorites Sidebar Now Shows Real Loading and Error States
+
+The Favorites section used to look identical whether its request was still
+loading, had failed, or had succeeded with nothing pinned — all three
+showed an empty panel. Now each state is visible on its own: a row
+skeleton while the first load is in flight, a compact "Failed to load"
+row with a Retry action when the first request fails, and a "No favorites
+yet" hint only after the list really comes back empty.
+
+If a background refresh fails after favorites have already loaded, the
+existing rows stay in place and a non-blocking "Refresh failed" hint with
+a Retry appears instead of pretending the list was deleted.
+
+## Improvements and fixes
+
+- First-load in flight renders a two-row skeleton instead of a blank panel.
+- First-load failure renders an inline error with a working Retry entry
+  instead of looking like an empty list.
+- A settled empty list shows a quiet "No favorites yet" hint.
+- A failed revalidation keeps the current rows and adds a non-blocking
+  retry hint rather than clearing your favorites.

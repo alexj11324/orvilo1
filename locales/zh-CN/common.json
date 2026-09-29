@@ -307,6 +307,7 @@
   "exportType.globalSetting": "导出全局设置",
   "favorites.empty": "暂无收藏",
   "favorites.project": "项目",
+  "favorites.refreshFailed": "刷新失败，已保留已保存的列表。",
   "favorites.reorderFailed": "无法重排收藏。请刷新后再试。",
   "favorites.savedView": "已保存视图",
   "favorites.task": "任务",

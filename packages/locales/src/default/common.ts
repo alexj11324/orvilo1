@@ -666,6 +666,7 @@ export default {
   'favorites.empty': 'No favorites yet',
   'favorites.project': 'Project',
   'favorites.reorderFailed': 'Could not reorder favorites. Refresh and try again.',
+  'favorites.refreshFailed': 'Refresh failed. Showing the saved list.',
   'favorites.savedView': 'Saved view',
   'favorites.task': 'Task',
   'favorites.team': 'Team',

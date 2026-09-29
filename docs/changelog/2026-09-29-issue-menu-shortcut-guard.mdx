@@ -1,0 +1,20 @@
+---
+title: Issue Menus Respect Keyboard Shortcuts Again
+description: >-
+  Status and priority menus no longer swallow ⌘/Ctrl/Alt+digit shortcuts or
+  digits typed into their search field, and a failed priority change now
+  stops its spinner so it can be retried.
+tags:
+  - Tasks
+---
+
+# Issue Menus Respect Keyboard Shortcuts Again
+
+The status and priority menus on issues still offer quick number-key picks — press `1`…`9` with the menu open to choose that row — but they no longer get in the way of the keys around them.
+
+## Fixes
+
+- **Modified digits no longer mutate the issue.** Pressing `⌘+1`, `Ctrl+1`, or `Alt+1` with a menu open now reaches the app or browser shortcut it was meant for instead of silently changing the task's status or priority.
+- **Typing digits inside the menu's search field filters again.** Digits typed into the search box at the top of the menu stay as text, so searching for a numbered status name works; only keys pressed outside editable fields act as accelerators.
+- **IME input and key repeat are safe.** A digit accepted from an input-method composition, or one produced by holding a key down, no longer triggers a pick.
+- **A failed priority change resolves its spinner.** If the write fails — or the task is closed mid-write — the tag returns to its normal state and the same pick can be tried again instead of spinning forever.

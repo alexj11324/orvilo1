@@ -3,7 +3,7 @@ import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -13,9 +13,10 @@ import {
   resolvePriorityLevel,
 } from '@/components/PriorityIcon';
 import { usePermission } from '@/hooks/usePermission';
-import { useTaskStore } from '@/store/task';
 
 import { renderMenuExtra } from './menuExtra';
+import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
+import { useTaskPriorityChange } from './useTaskPriorityChange';
 
 interface PriorityMeta {
   icon: IconType;
@@ -98,16 +99,19 @@ interface TaskPriorityTagProps {
 
 const TaskPriorityTag = memo<TaskPriorityTagProps>(
   ({ children, disableDropdown, onChange, size = 16, priority, taskIdentifier }) => {
-    const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
-    const updateTask = useTaskStore((s) => s.updateTask);
-    const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
 
     const currentLevel = resolvePriorityLevel(priority);
     const meta = PRIORITY_META[currentLevel];
+    const { apply: handlePriorityChange, pending: loading } = useTaskPriorityChange({
+      canEdit: canEditTask,
+      currentPriority: currentLevel,
+      onChange,
+      taskIdentifier,
+    });
 
     // Same search-header contract as the status menu — letters filter,
     // digits remain menu accelerators.
@@ -128,44 +132,14 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       if (!open) setQuery('');
     }, [open]);
 
-    const handlePriorityChange = useCallback(
-      async (nextPriority: number) => {
-        if (!canEditTask) return;
-        if (nextPriority === currentLevel) return;
-        if (onChange) {
-          onChange(nextPriority);
-          return;
-        }
-        if (!taskIdentifier) return;
-        setLoading(true);
-        await updateTask(taskIdentifier, { priority: nextPriority });
-        await refreshTaskList();
-        setLoading(false);
-      },
-      [canEditTask, currentLevel, onChange, refreshTaskList, taskIdentifier, updateTask],
-    );
-
-    const handlePriorityChangeRef = useRef(handlePriorityChange);
-    handlePriorityChangeRef.current = handlePriorityChange;
-    const filteredLevelsRef = useRef(filteredLevels);
-    filteredLevelsRef.current = filteredLevels;
-
-    useEffect(() => {
-      if (!open) return;
-      const onKeyDown = (event: KeyboardEvent) => {
-        const num = Number.parseInt(event.key, 10);
-        if (Number.isNaN(num)) return;
-        const levels = filteredLevelsRef.current;
-        const idx = num - 1;
-        if (idx < 0 || idx >= levels.length) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void handlePriorityChangeRef.current(levels[idx]);
+    useMenuDigitShortcuts({
+      items: filteredLevels,
+      open,
+      onPick: (level) => {
+        void handlePriorityChange(level);
         setOpen(false);
-      };
-      document.addEventListener('keydown', onKeyDown, true);
-      return () => document.removeEventListener('keydown', onKeyDown, true);
-    }, [open]);
+      },
+    });
 
     const menuItems = useMemo<DropdownItem[]>(
       () =>

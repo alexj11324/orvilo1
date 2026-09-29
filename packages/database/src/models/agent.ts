@@ -97,6 +97,7 @@ import {
   rewriteMessageScopeForTopics,
   rewriteResidualMessageScope,
 } from './agentTransferJob';
+import { TaskDispatchModel } from './taskDispatch';
 import { recordBulkTaskMutation } from './taskDomainMutation';
 import {
   hasForeignTopicComments,
@@ -2719,6 +2720,21 @@ export class AgentModel {
         eventType: 'task.assigned',
         idempotencyKeyPrefix: `agent-owner-transfer:${agentId}:${fromUserId}:${toUserId}`,
       });
+      // A detached RUNNING task would otherwise keep executing under an agent
+      // that no longer exists for its creator — the immutable contract then
+      // rejects every settle and the row hangs forever. Fence its active
+      // dispatch: the cancellation sweep interrupts the remote writer and
+      // parks the task at 'paused' instead.
+      const runningDetachedIds = detachedTasks
+        .filter((t) => t.status === 'running')
+        .map((t) => t.id);
+      if (runningDetachedIds.length > 0) {
+        await TaskDispatchModel.requestStopForTasks(
+          trx,
+          runningDetachedIds,
+          'agent_owner_transfer',
+        );
+      }
     }
 
     // Knowledge mounts whose KB / file the recipient cannot access (private to

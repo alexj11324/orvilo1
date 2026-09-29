@@ -50,7 +50,7 @@ describe('marketRouter', () => {
   });
 
   it('keeps the remaining market sub-routers mounted', () => {
-    for (const key of ['agent', 'creds', 'oidc', 'user']) {
+    for (const key of ['agent', 'oidc', 'user']) {
       expect(marketRouter._def.record).toHaveProperty(key);
     }
 

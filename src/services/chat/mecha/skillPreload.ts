@@ -5,7 +5,7 @@ import {
   type UserCredsContext,
 } from '@orvilo/builtin-tool-creds';
 import { resourcesTreePrompt } from '@orvilo/prompts';
-import type { RuntimeSelectedSkill, UserCredSummary } from '@orvilo/types';
+import type { OwnCredSummary, RuntimeSelectedSkill } from '@orvilo/types';
 
 import { agentSkillService } from '@/services/skill';
 import { getToolStoreState } from '@/store/tool';
@@ -23,7 +23,7 @@ interface PrepareSelectedSkillPreloadParams {
   /**
    * User credentials for creds skill injection
    */
-  userCreds?: UserCredSummary[];
+  userCreds?: OwnCredSummary[];
 }
 
 // Match <skill name="..." label="..." /> and legacy <action type="..." category="skill" ... />
@@ -75,9 +75,9 @@ const resolveSelectedSkills = (
 };
 
 /**
- * Convert UserCredSummary to CredSummary for injection
+ * Convert OwnCredSummary to CredSummary for injection
  */
-const mapToCredSummary = (cred: UserCredSummary): CredSummary => ({
+const mapToCredSummary = (cred: OwnCredSummary): CredSummary => ({
   description: cred.description,
   key: cred.key,
   name: cred.name,
@@ -87,14 +87,14 @@ const mapToCredSummary = (cred: UserCredSummary): CredSummary => ({
 /**
  * Build creds context for injection
  */
-const buildCredsContext = (userCreds?: UserCredSummary[]): UserCredsContext => ({
+const buildCredsContext = (userCreds?: OwnCredSummary[]): UserCredsContext => ({
   creds: (userCreds || []).map(mapToCredSummary),
   settingsUrl: '/settings/credential',
 });
 
 const loadSkillContent = async (
   selectedSkill: RuntimeSelectedSkill,
-  userCreds?: UserCredSummary[],
+  userCreds?: OwnCredSummary[],
 ): Promise<PreloadedSkill | undefined> => {
   const toolState = getToolStoreState();
 

@@ -70,8 +70,8 @@ const testRouter = router({
   adminContext: wsAdminProcedure.query(({ ctx }) => ({ workspaceRole: ctx.workspaceRole })),
   ownerContext: wsOwnerProcedure.query(({ ctx }) => ({ workspaceRole: ctx.workspaceRole })),
   wsContext: wsProcedure.query(({ ctx }) => ({ workspaceRole: ctx.workspaceRole })),
-  // A public chain carrying the middleware, like `message.getMessages` /
-  // `market.creds` — the membership check must hold without `authedProcedure`.
+  // A public chain carrying the middleware, like `message.getMessages` —
+  // the membership check must hold without `authedProcedure`.
   publicCompatContext: publicProcedure
     .use(cloudWorkspaceAuth)
     .query(({ ctx }) => ({ workspaceId: ctx.workspaceId, workspaceRole: ctx.workspaceRole })),

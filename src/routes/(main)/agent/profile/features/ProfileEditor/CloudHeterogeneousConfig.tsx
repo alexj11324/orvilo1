@@ -3,7 +3,7 @@
 import { Github } from '@lobehub/icons';
 import { Flexbox } from '@lobehub/ui';
 import { Avatar, Button, Select, Spin, Tag } from '@lobehub/ui/base-ui';
-import { type HeterogeneousProviderConfig, type UserCredSummary } from '@orvilo/types';
+import { type HeterogeneousProviderConfig, type OwnCredSummary } from '@orvilo/types';
 import { Input, Typography } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckCircle2, KeyRound, X } from 'lucide-react';
@@ -116,7 +116,7 @@ interface CloudHeterogeneousConfigProps {
 
 // ── Claude Code Token section ──────────────────────────────────────────────
 interface TokenSectionProps {
-  existingCred: UserCredSummary | undefined;
+  existingCred: OwnCredSummary | undefined;
   onEnvChange: (patch: Record<string, string>) => void;
   onSaved: () => void;
 }
@@ -135,7 +135,7 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
     if (!token) return;
     setSaving(true);
     try {
-      await lambdaClient.market.creds.createKV.mutate({
+      await lambdaClient.creds.createKV.mutate({
         key: CLAUDE_TOKEN_CRED_KEY,
         name: 'Claude Code OAuth Token',
         type: 'kv-env',
@@ -303,12 +303,8 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
       }
     })();
 
-    const {
-      data: credsData,
-      isLoading,
-      refetch,
-    } = lambdaQuery.market.creds.list.useQuery(undefined);
-    const allCreds: UserCredSummary[] = credsData?.data ?? [];
+    const { data: credsData, isLoading, refetch } = lambdaQuery.creds.list.useQuery(undefined);
+    const allCreds: OwnCredSummary[] = credsData?.data ?? [];
 
     const claudeTokenCred = allCreds.find((c) => c.key === CLAUDE_TOKEN_CRED_KEY);
     const githubCreds = allCreds.filter(

@@ -2,7 +2,7 @@
 
 import { Flexbox } from '@lobehub/ui';
 import { Button, Spin } from '@lobehub/ui/base-ui';
-import { type UserCredSummary } from '@orvilo/types';
+import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
 import { Form, Input } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -29,7 +29,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 interface EditKVFormProps {
-  cred: UserCredSummary;
+  cred: OwnCredSummary;
   credsApi: CredsApi;
   onCancel: () => void;
   onSuccess: () => void;
@@ -62,7 +62,7 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
         });
 
         // Convert values object to array of key-value pairs
-        const values = (result as any).plaintext || {};
+        const values = result?.data?.plaintext || {};
         const kvPairs = Object.entries(values).map(([key, value]) => ({
           key,
           value: value as string,

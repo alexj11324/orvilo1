@@ -35,7 +35,7 @@ interface PersonalCredsSectionProps {
 /**
  * Personal tab of the workspace credential page: the caller's own *personal*
  * credentials, each with a {@link ShareToggle} to share/unshare it into the
- * current workspace's Market organization. The page provides the outlined
+ * current workspace. The page provides the outlined
  * list container; this component renders only the list body.
  *
  * Rows are share-only — no "..." action menu. Editing/deleting here is gated
@@ -43,14 +43,14 @@ interface PersonalCredsSectionProps {
  * caller's own credentials shouldn't answer to, so for most members the menu
  * could only ever render disabled; CRUD lives on the personal settings page.
  *
- * Always queries the personal `market.creds` namespace directly — never
+ * Always queries the personal `creds` namespace directly — never
  * `useCredsApi()` — since that hook resolves to `workspaceCreds` on this page
  * and this section is deliberately personal-scoped regardless of page context.
  */
 const PersonalCredsSection: FC<PersonalCredsSectionProps> = ({ onWorkspaceCredsChange }) => {
   const { t } = useTranslation('setting');
 
-  const { data, error, isLoading, refetch } = lambdaQuery.market.creds.list.useQuery(undefined);
+  const { data, error, isLoading, refetch } = lambdaQuery.creds.list.useQuery(undefined);
 
   // Refreshes both this personal list and the workspace tab's list: a
   // share/unshare/visibility change alters what the org-scoped merged list

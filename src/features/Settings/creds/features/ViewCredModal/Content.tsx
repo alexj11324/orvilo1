@@ -2,7 +2,7 @@
 
 import { CopyButton, Flexbox } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
-import { type UserCredSummary } from '@orvilo/types';
+import { type OwnCredSummary } from '@orvilo/types';
 import { useQuery } from '@tanstack/react-query';
 import { Descriptions, Typography } from 'antd';
 import { createStaticStyles, cx } from 'antd-style';
@@ -127,13 +127,13 @@ const KVRow: FC<KVRowProps> = ({ keyName, value }) => {
 };
 
 export interface ViewCredModalContentProps {
-  cred: UserCredSummary;
+  cred: OwnCredSummary;
   /**
    * Bound explicitly by the caller (rendered inline, inside CredsApiProvider)
    * instead of read via useCredsApi() here — this content tree is portaled by
    * createModal() to a global ModalHost that sits outside CredsApiProvider,
    * so a local useCredsApi() call would silently fall back to the personal
-   * (market.creds) API even on the workspace creds page.
+   * (creds) API even on the workspace creds page.
    */
   credsApi: CredsApi;
 }
@@ -150,7 +150,7 @@ const ViewCredModalContent: FC<ViewCredModalContentProps> = ({ cred, credsApi })
     queryKey: ['cred-plaintext', cred.id],
   });
 
-  const values = (data as any)?.plaintext || {};
+  const values = data?.data?.plaintext || {};
   const valueEntries = Object.entries(values);
 
   if (isLoading) {

@@ -84,6 +84,9 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
         fileType: file.type || 'application/octet-stream',
       });
 
+      if (!result) {
+        throw new Error('Credential upload returned no result');
+      }
       setFileName(result.fileName);
       setFileHashId(result.fileHashId);
       toast.success(t('creds.file.uploadSuccess'));

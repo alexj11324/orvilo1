@@ -9,7 +9,7 @@ export interface ResourceGeneralAccess {
   creatorId: string;
   /** @deprecated Compatibility value returned for released clients. */
   generalAccess: 'editor' | 'viewer';
-  visibility: 'private' | 'public';
+  visibility: 'private' | 'public' | 'team';
 }
 
 export interface ResourceCollaborator {

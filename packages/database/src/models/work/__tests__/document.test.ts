@@ -2,7 +2,15 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { documents, works, workspaces, workVersions } from '../../../schemas';
+import {
+  documents,
+  teamMembers,
+  teams,
+  works,
+  workspaceMembers,
+  workspaces,
+  workVersions,
+} from '../../../schemas';
 import { AgentDocumentModel } from '../../agentDocuments';
 import { DocumentModel } from '../../document';
 import { WorkModel } from '..';
@@ -359,6 +367,54 @@ describe('WorkModel · workspace document visibility', () => {
       .where(eq(works.resourceId, doc.documentId));
     expect(mirrored.visibility).toBe('private');
     expect(await memberWorks.listByConversation({ topicId })).toHaveLength(0);
+  });
+
+  it('revokes a team-document Work when its reader leaves the team', async () => {
+    await seedWorkspace();
+    await serverDB.insert(workspaceMembers).values([
+      { role: 'owner', userId, workspaceId },
+      { role: 'member', userId: userId2, workspaceId },
+    ]);
+    const [team] = await serverDB
+      .insert(teams)
+      .values({ key: 'WTD', name: 'Work team', visibility: 'private', workspaceId })
+      .returning();
+    await serverDB.insert(teamMembers).values([
+      { teamId: team.id, userId, workspaceId },
+      { teamId: team.id, userId: userId2, workspaceId },
+    ]);
+    const doc = await new DocumentModel(serverDB, userId, workspaceId).create({
+      content: 'team content',
+      editorData: {},
+      fileType: 'custom/document',
+      source: 'document',
+      sourceType: 'api',
+      teamId: team.id,
+      title: 'Team Work',
+      totalCharCount: 12,
+      totalLineCount: 1,
+      visibility: 'team',
+    });
+    const ownerWorks = new WorkModel(serverDB, userId, workspaceId);
+    const memberWorks = new WorkModel(serverDB, userId2, workspaceId);
+    const work = await ownerWorks.registerDocument({
+      changeType: 'created',
+      documentId: doc.id,
+      rootOperationId: 'op-team-doc',
+      toolCallId: 'tool-call-team-doc',
+      toolIdentifier: 'orvilo-agent-documents',
+      toolName: 'createDocument',
+      topicId,
+    });
+    expect(work).not.toBeNull();
+    expect((await memberWorks.listByWorkspace({})).items.map((item) => item.id)).toContain(
+      work!.id,
+    );
+
+    await serverDB.delete(teamMembers).where(eq(teamMembers.userId, userId2));
+    expect((await memberWorks.listByWorkspace({})).items.map((item) => item.id)).not.toContain(
+      work!.id,
+    );
   });
 
   it('keeps an orphaned document Work (backing row deleted) visible to the registrant only', async () => {

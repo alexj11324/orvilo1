@@ -111,7 +111,10 @@ export class ListActionImpl {
         ? { current: nextPage, pageSize, ...queryFilter }
         : { current: nextPage, pageSize };
 
-      const result = await documentService.queryDocuments(queryParams);
+      const result = await documentService.queryDocuments({
+        ...queryParams,
+        excludeTeamDocuments: true,
+      });
 
       const newDocuments = result.items.filter(isAllowedPage).map((doc) => ({
         ...doc,

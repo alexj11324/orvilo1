@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { useGlobalStore } from '@/store/global';
-import { INITIAL_STATUS } from '@/store/global/initialState';
+import { INITIAL_STATUS, type SystemStatus } from '@/store/global/initialState';
 
 import { readBootShellGeometry } from './geometry';
 
-const setStatus = (status: Partial<typeof INITIAL_STATUS>) =>
+const setStatus = (status: Partial<SystemStatus>) =>
   useGlobalStore.setState({ status: { ...INITIAL_STATUS, ...status } });
 
 beforeEach(() => {
@@ -25,6 +25,11 @@ describe('readBootShellGeometry', () => {
 
     expect(geometry.navPanelWidth).toBe(320);
     expect(geometry.showLeftPanel).toBe(true);
+  });
+
+  it('keeps the sidebar open in a shell with legacy collapsed status', () => {
+    setStatus({ showLeftPanel: false });
+    expect(readBootShellGeometry().showLeftPanel).toBe(true);
   });
 
   it('clamps the panel width to the draggable range', () => {

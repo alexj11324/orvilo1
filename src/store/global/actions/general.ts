@@ -234,7 +234,7 @@ export class GlobalGeneralActionImpl {
     // `status.workspace.*` so personal-mode preferences stay untouched. The
     // init path bypasses routing — it rehydrates whatever shape was persisted.
     const workspaceId = options?.skipWorkspaceOverlay ? null : getActiveWorkspaceId();
-    const routedPatch = routeOverlayWrites(status, workspaceId);
+    const routedPatch = routeOverlayWrites({ ...status, showLeftPanel: true }, workspaceId);
 
     const nextStatus = merge(this.#get().status, routedPatch);
 

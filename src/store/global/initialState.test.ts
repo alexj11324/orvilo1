@@ -18,7 +18,7 @@ describe('createInitialSystemStatus', () => {
 
     expect(status.leftPanelWidth).toBe(360);
     expect(status.showHomeRail).toBe(false);
-    expect(status.showLeftPanel).toBe(false);
+    expect(status.showLeftPanel).toBe(true);
   });
 
   it('restores the Home customizations that decide layout on first paint', () => {

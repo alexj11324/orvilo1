@@ -109,8 +109,8 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
         type="button"
         onClick={() => setOpen((value) => !value)}
       >
-        <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} size={14} />
         <Text {...SECTION_LABEL_PROPS}>{t('overview.descriptionLabel')}</Text>
+        <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} size={14} />
       </button>
       <div hidden={!open} id={bodyId}>
         <Editor

@@ -34,14 +34,21 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const DocumentModalHeader = memo(() => {
+interface DocumentModalHeaderProps {
+  onDeleted?: () => void;
+}
+
+const DocumentModalHeader = memo<DocumentModalHeaderProps>(({ onDeleted }) => {
   const { t } = useTranslation(['file', 'common']);
   const { close } = useModalContext();
   const [documentId, emoji, title] = usePageEditorStore((s) => [s.documentId, s.emoji, s.title]);
   const isDocumentLoading = useDocumentStore(editorSelectors.isDocumentLoading(documentId));
   const { expand: showPageAgentPanel, toggle: togglePageAgentPanel } = usePageAgentPanelControl();
   const { menuItems } = useMenu({
-    onDeleted: close,
+    onDeleted: () => {
+      close();
+      onDeleted?.();
+    },
     onOpenHistory: () => togglePageAgentPanel(true),
   });
 

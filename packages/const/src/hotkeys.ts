@@ -182,12 +182,6 @@ export const HOTKEYS_REGISTRATION: HotkeyRegistration = [
   },
   {
     group: HotkeyGroupEnum.Essential,
-    id: HotkeyEnum.ToggleLeftPanel,
-    keys: combineKeys([KeyEnum.Mod, KeyEnum.BracketLeft]),
-    scopes: [HotkeyScopeEnum.Global],
-  },
-  {
-    group: HotkeyGroupEnum.Essential,
     id: HotkeyEnum.ToggleRightPanel,
     keys: combineKeys([KeyEnum.Mod, KeyEnum.BracketRight]),
     scopes: [HotkeyScopeEnum.Global],

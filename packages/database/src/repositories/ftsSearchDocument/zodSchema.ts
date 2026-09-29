@@ -21,6 +21,7 @@ const nullableDateTime = dateTime.nullable();
 const nullableString = z.string().nullable();
 const stringArray = z.array(z.string());
 const visibility = z.enum(['private', 'public']);
+const documentVisibility = z.enum(['private', 'public', 'team']);
 
 const timestampShape = {
   created_at: dateTime,
@@ -81,6 +82,7 @@ export const FTS_SEARCH_DOCUMENT_SCHEMAS = {
       source_type: z.string(),
       title: nullableString,
       total_char_count: z.number().int(),
+      visibility: documentVisibility,
     })
     .strict(),
   files: z

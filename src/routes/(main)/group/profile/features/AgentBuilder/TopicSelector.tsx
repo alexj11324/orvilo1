@@ -79,7 +79,6 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
 
   return (
     <NavHeader
-      showTogglePanelButton={false}
       styles={{ right: { flex: 'none' } }}
       left={
         activeTopic?.title ? (

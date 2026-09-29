@@ -6,6 +6,7 @@ import { topics, works } from '../../../schemas';
 import { AgentDocumentModel } from '../../agentDocuments';
 import { TaskModel } from '../../task';
 import { WorkModel } from '..';
+import { workTypeAdapters } from '../registry';
 import {
   agentId,
   cleanupWorkTestData,
@@ -84,7 +85,10 @@ describe('WorkModel · queries', () => {
       topicId,
     });
 
-    const selectSpy = vi.spyOn(serverDB, 'select');
+    // Spy on the adapter fan-out, not `db.select`: ownership guards build
+    // EXISTS subqueries through `db.select` too, which inflates a raw
+    // query-builder count without adding round-trips.
+    const fanOutSpies = workTypeAdapters.map((adapter) => vi.spyOn(adapter, 'listVersionEvents'));
     try {
       // Opt in so the fan-out covers every registered type (default excludes the
       // gated `file` type — see the includeFileWorks gating test below).
@@ -95,12 +99,16 @@ describe('WorkModel · queries', () => {
 
       // One query per work type across all ids, not per (id x type). Four
       // registered types now: document / external / file / task.
-      expect(selectSpy).toHaveBeenCalledTimes(4);
+      for (const spy of fanOutSpies) {
+        expect(spy).toHaveBeenCalledTimes(1);
+      }
       expect(byOperations['op-batch-1']?.map((item) => item.resourceId)).toEqual([firstTask.id]);
       expect(byOperations['op-batch-2']?.map((item) => item.resourceId)).toEqual([secondTask.id]);
       expect(byOperations['op-batch-missing']).toEqual([]);
     } finally {
-      selectSpy.mockRestore();
+      for (const spy of fanOutSpies) {
+        spy.mockRestore();
+      }
     }
   });
 

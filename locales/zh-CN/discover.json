@@ -35,7 +35,7 @@
   "mcp.categories.weather.name": "气象天气",
   "mcp.categories.web-search.description": "网页搜索与信息检索",
   "mcp.categories.web-search.name": "信息检索",
-  "mcp.details.agents.empty": "暂无助理使用此技能",
+  "mcp.details.agents.empty": "暂无智能体使用此技能",
   "mcp.details.agents.networkError": "数据加载失败，请检查网络后重试",
   "mcp.details.deployment.checkCommand": "检查命令",
   "mcp.details.deployment.commandLine": "系统依赖",

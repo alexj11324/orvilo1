@@ -138,6 +138,9 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   // live, so its topic would never be created inside the poll window — wait
   // for this turn to finish before opening the new topic.
   await waitForTurnSettled(this, '测试对话内容', firstSentAt);
+  await this.page.waitForURL((url) => /\/tpc_[^/]+$/.test(url.pathname), { timeout: 30_000 });
+  const firstTopicPath = new URL(this.page.url()).pathname;
+  const agentPath = firstTopicPath.slice(0, firstTopicPath.lastIndexOf('/'));
 
   // Store first conversation reference
   this.testContext.firstConversation = 'first';
@@ -173,6 +176,8 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   };
 
   await addTopicButton.click();
+  await this.page.waitForURL((url) => url.pathname === agentPath, { timeout: 30_000 });
+  await expect(this.page.locator('.message-wrapper')).toHaveCount(0, { timeout: 30_000 });
   await sendSecondMessage();
 
   // The new-topic click remounts the conversation view; an Enter fired while
@@ -193,6 +198,11 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
       timeout: 20_000,
     });
   }
+
+  await this.page.waitForURL(
+    (url) => url.pathname.startsWith(`${agentPath}/tpc_`) && url.pathname !== firstTopicPath,
+    { timeout: 30_000 },
+  );
 
   // Confirm the second topic actually registered in the sidebar before the
   // scenario proceeds to click it. The sidebar is SWR-driven and only refetches

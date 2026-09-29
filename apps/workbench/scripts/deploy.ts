@@ -1,15 +1,18 @@
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import dotenv from 'dotenv';
 
 import { uploadAssets } from '../../../scripts/mobileSpaWorkflow/upload';
-import { localOperator, workerDeployAnnotationArgs } from '../../../scripts/workerDeployAnnotations';
+import {
+  localOperator,
+  workerDeployAnnotationArgs,
+} from '../../../scripts/workerDeployAnnotations';
 
 const workbenchRoot = resolve(__dirname, '..');
 const repoRoot = resolve(workbenchRoot, '../..');
-const assetsDir = resolve(workbenchRoot, 'build/client/assets');
+const assetsDir = resolve(workbenchRoot, '.cloudflare/output/v0/workers/default/assets/assets');
 
 dotenv.config({ path: resolve(repoRoot, '.env') });
 
@@ -37,21 +40,30 @@ async function main() {
   ).replaceAll(/^\/+|\/+$/g, '');
   const cdnBase = `${publicDomain}/${keyPrefix}/`;
 
-  console.log(`=== Step 1: Build workbench (VITE_CDN_BASE=${cdnBase}) ===`);
-  execSync('bun run build:rr', {
+  const buildEnv = {
+    ...process.env,
+    NODE_ENV: 'production',
+    NODE_OPTIONS: '--max-old-space-size=8192',
+    VITE_CDN_BASE: cdnBase,
+  };
+
+  console.log('=== Step 1: Build Cloudflare workbench ===');
+  execFileSync('node_modules/.bin/cf', ['build'], {
     cwd: workbenchRoot,
-    env: {
-      ...process.env,
-      NODE_ENV: 'production',
-      NODE_OPTIONS: '--max-old-space-size=8192',
-      VITE_CDN_BASE: cdnBase,
-    },
+    env: buildEnv,
     stdio: 'inherit',
   });
 
   if (!existsSync(assetsDir)) throw new Error(`Build output not found at ${assetsDir}`);
 
-  console.log('\n=== Step 2: Upload assets to S3 ===');
+  console.log('\n=== Step 2: Emit static CSS ===');
+  execFileSync('node', ['scripts/emit-static-css.mjs', assetsDir], {
+    cwd: workbenchRoot,
+    env: buildEnv,
+    stdio: 'inherit',
+  });
+
+  console.log('\n=== Step 3: Upload assets to S3 ===');
   await uploadAssets(assetsDir, {
     accessKeyId: requireEnv('ASSET_S3_ACCESS_KEY_ID', 'MOBILE_S3_ACCESS_KEY_ID'),
     bucket: requireEnv('ASSET_S3_BUCKET', 'MOBILE_S3_BUCKET'),
@@ -62,13 +74,12 @@ async function main() {
     secretAccessKey: requireEnv('ASSET_S3_SECRET_ACCESS_KEY', 'MOBILE_S3_SECRET_ACCESS_KEY'),
   });
 
-  console.log('\n=== Step 3: Deploy worker ===');
+  console.log('\n=== Step 4: Deploy worker ===');
   execFileSync(
-    'node_modules/.bin/wrangler',
+    'node_modules/.bin/cf',
     [
       'deploy',
-      '--config',
-      'build/server/wrangler.json',
+      '--prebuilt',
       ...workerDeployAnnotationArgs(process.env, localOperator(workbenchRoot)),
     ],
     { cwd: workbenchRoot, stdio: 'inherit' },

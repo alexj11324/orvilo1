@@ -63,6 +63,21 @@ Debug Proxy: https://orvilo.aspectlylabs.com/_dangerous_local_dev_proxy?debug-ho
 
 Open this URL to develop locally against the production backend (orvilo.aspectlylabs.com). The proxy page loads your local Vite dev server's SPA into the online environment, enabling HMR with real server config.
 
+### Cloudflare CLI
+
+Use Cloudflare's new `cf` CLI for Cloudflare API operations and production Worker releases. It is
+an optional open beta; local use requires Node.js >= 22. Discover commands with
+`cf cli search "<generic task description>"` before reading command help. Keep search text free of
+project names, domains, account or resource IDs, and tokens.
+
+Share and Workbench release scripts run `cf build` with the CDN base, emit static CSS into its
+output, upload those assets, then run `cf deploy --prebuilt`. They keep `cloudflare.config.ts` at
+the app root, where their Vite config adds a manifest bridge for the React Router build. Auth uses the
+separate `apps/auth/cf/` Vite project to package its prerendered assets. Share and Workbench keep
+Wrangler as a required peer of Cloudflare Vite plugin v1; production releases and isolated PR
+preview uploads use `cf`. Auth's local preview also uses `cf dev`. See
+[docs/environments.md](./docs/environments.md) before changing these flows.
+
 ### Browser CDP for Linear parity
 
 Use Brave with a copy of the currently used Brave profile when comparing Orvilo with Linear. Keep the original Brave process and profile untouched; a fresh Chrome profile does not carry the reference session.

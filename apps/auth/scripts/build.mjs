@@ -173,9 +173,6 @@ const main = async () => {
     );
   });
 
-  console.log('\n=== Worker ===');
-  run('node_modules/.bin/vite', ['build', '-c', 'vite.config.worker.mts']);
-
   console.log(`\nBuilt ${(await readdir(defaultClient)).length} top-level client entries.`);
 };
 

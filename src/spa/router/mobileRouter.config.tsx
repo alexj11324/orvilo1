@@ -297,13 +297,26 @@ export const mobileRoutes: RouteObject[] = [
       // Must come AFTER all reserved root paths so they don't shadow e.g. /agent.
       {
         children: [
-          // Workspace home is the same landing slot as the root index —
-          // mirroring the desktop `createHomeElement` slot. Mobile home is
-          // personal-only, so bounce back to it; a bare index renders nothing
-          // (white content under the tab bar).
+          // Workspace home — mirrors the `/` index above: `/{slug}` renders
+          // the same MobileHome layout + session list (scope comes from the
+          // workspace header, not the path). The Chat tab redirects
+          // `/agent` -> `/{slug}`, so without this the tab renders nothing.
           {
-            element: redirectElement('/'),
-            index: true,
+            children: [
+              {
+                element: dynamicElement(
+                  () => import('@/routes/(mobile)/(home)/'),
+                  'Mobile > Workspace > Home',
+                  { preloadId: 'mobile-home' },
+                ),
+                index: true,
+              },
+            ],
+            element: dynamicLayout(
+              () => import('@/routes/(mobile)/(home)/_layout'),
+              'Mobile > Workspace > Home > Layout',
+              { preloadId: 'mobile-home' },
+            ),
           },
           ...sharedMainAreaChildren,
           // Workspace settings — `/:slug/settings/*`. Mobile reuses the mobile

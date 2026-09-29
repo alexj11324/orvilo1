@@ -7,7 +7,14 @@ import type {
   WorkQuerySortMode,
 } from '@orvilo/types';
 import { WORK_QUERY_STATUS_COLUMNS, WORK_QUERY_WORKFLOW_COLUMNS } from '@orvilo/types';
+import { cssVar } from 'antd-style';
+import { CircleAlert, OctagonAlert } from 'lucide-react';
 
+import {
+  type StatusVisual,
+  TASK_STATUS_VISUALS,
+  WORKFLOW_CATEGORY_VISUALS,
+} from '@/components/ExecutionStatus';
 import type {
   TaskGroupItem,
   TaskKanbanGroupBy,
@@ -279,6 +286,81 @@ export const kanbanBoardCapabilities = (input: {
 
 export const externalKanbanColumns = (groupBy: WorkQueryBoardGroupBy): KanbanColumnDefinition[] =>
   groupBy === 'workflowCategory' ? WORKFLOW_KANBAN_COLUMNS : RAW_STATUS_KANBAN_COLUMNS;
+
+export const COLUMN_I18N_KEYS: Record<string, string> = {
+  'backlog': 'taskList.kanban.backlog',
+  'blocking': 'taskList.attention.blocking',
+  'canceled': 'taskList.kanban.canceled',
+  'completed': 'taskList.kanban.done',
+  'done': 'taskList.kanban.done',
+  'failed': 'taskList.kanban.failed',
+  'in_progress': 'taskList.kanban.inProgress',
+  'in_review': 'taskList.kanban.inReview',
+  'needsInput': 'taskList.kanban.needsInput',
+  'paused': 'taskList.kanban.paused',
+  'running': 'taskList.kanban.running',
+  'scheduled': 'taskList.kanban.scheduled',
+  'st:backlog': 'taskList.kanban.backlog',
+  'st:canceled': 'taskList.kanban.canceled',
+  'st:completed': 'taskList.kanban.done',
+  'st:failed': 'taskList.kanban.failed',
+  'st:paused': 'taskList.kanban.paused',
+  'st:running': 'taskList.kanban.running',
+  'st:scheduled': 'taskList.kanban.scheduled',
+  'todo': 'taskList.kanban.todo',
+  'triage': 'taskList.kanban.triage',
+  'urgent': 'taskList.attention.urgent',
+  'wf:backlog': 'taskList.kanban.backlog',
+  'wf:canceled': 'taskList.kanban.canceled',
+  'wf:done': 'taskList.kanban.done',
+  'wf:in_progress': 'taskList.kanban.inProgress',
+  'wf:in_review': 'taskList.kanban.inReview',
+  'wf:todo': 'taskList.kanban.todo',
+  'wf:triage': 'taskList.kanban.triage',
+};
+
+/**
+ * Per-column header glyphs. Workflow-category columns — the merged status
+ * board's buckets and the `wf:` work-query columns — read
+ * `WORKFLOW_CATEGORY_VISUALS` so a header never disagrees with the category
+ * badge on its cards. `st:` keys keep the raw execution-status family for
+ * status-grouped surfaces; attention buckets (`urgent`/`blocking`) are not
+ * statuses and keep their own marks.
+ */
+export const COLUMN_STATUS_VISUAL: Record<string, StatusVisual> = {
+  // Attention buckets (Linear My issues) are not execution statuses — urgent
+  // keeps the app's urgent glyph, blocking the stop-marked one.
+  'blocking': { color: cssVar.colorError, icon: OctagonAlert },
+  'urgent': { color: cssVar.orange, icon: CircleAlert },
+  // The merged status board's columns are Linear's workflow categories —
+  // every STATUS_KANBAN_COLUMNS entry carries `targetWorkflowCategory`, with
+  // `status` only the write fallback for tasks that lack workflow state — so
+  // the header reads the same canonical map the card's category badge uses.
+  'backlog': WORKFLOW_CATEGORY_VISUALS.backlog,
+  'canceled': WORKFLOW_CATEGORY_VISUALS.canceled,
+  'done': WORKFLOW_CATEGORY_VISUALS.done,
+  'needsInput': WORKFLOW_CATEGORY_VISUALS.in_review,
+  'running': WORKFLOW_CATEGORY_VISUALS.in_progress,
+  'todo': WORKFLOW_CATEGORY_VISUALS.todo,
+  'triage': WORKFLOW_CATEGORY_VISUALS.triage,
+  // Raw execution-status columns (`st:`) — each run state keeps its own
+  // glyph instead of merging into a shared column.
+  'st:backlog': TASK_STATUS_VISUALS.backlog,
+  'st:canceled': TASK_STATUS_VISUALS.canceled,
+  'st:completed': TASK_STATUS_VISUALS.completed,
+  'st:failed': TASK_STATUS_VISUALS.failed,
+  'st:paused': TASK_STATUS_VISUALS.paused,
+  'st:running': TASK_STATUS_VISUALS.running,
+  'st:scheduled': TASK_STATUS_VISUALS.scheduled,
+  // Work-query workflow columns (`wf:`) — same canonical map.
+  'wf:backlog': WORKFLOW_CATEGORY_VISUALS.backlog,
+  'wf:canceled': WORKFLOW_CATEGORY_VISUALS.canceled,
+  'wf:done': WORKFLOW_CATEGORY_VISUALS.done,
+  'wf:in_progress': WORKFLOW_CATEGORY_VISUALS.in_progress,
+  'wf:in_review': WORKFLOW_CATEGORY_VISUALS.in_review,
+  'wf:todo': WORKFLOW_CATEGORY_VISUALS.todo,
+  'wf:triage': WORKFLOW_CATEGORY_VISUALS.triage,
+};
 
 /**
  * Linear parity: a work-query board hides a column whose group is empty —

@@ -118,20 +118,6 @@ describe('mobile retired product routes', () => {
   );
 });
 
-describe('mobileRouter workspace home', () => {
-  it('redirects /:workspaceSlug to the personal home instead of rendering a blank page', () => {
-    // The bare `{ index: true }` used to render a null <Outlet/>: the Chat tab
-    // (/agent → .. → /:slug) and the chat back affordance landed on a white
-    // screen under the tab bar. Mobile home is personal-only, so the slot
-    // bounces to `/` like the desktop `createHomeElement` slot bounces to its
-    // home surface.
-    const leaf = matchRoutes(mobileRoutes, '/acme')?.at(-1)?.route;
-
-    expect(leaf?.index).toBe(true);
-    expect((leaf?.element as ReactElement<{ to: string }> | undefined)?.props.to).toBe('/');
-  });
-});
-
 // The standalone Acceptance / Verify platform is retired. Its two roots must
 // stay reserved words on mobile too: without a route of their own, `/acceptance`
 // and `/verify` would be parsed as workspace slugs and `/acceptance/<id>` would
@@ -148,5 +134,31 @@ describe('mobileRouter retired acceptance/verify roots', () => {
 
     expect(leaf?.path).toMatch(/^(acceptance|verify)\/\*$/);
     expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('/tasks');
+  });
+});
+
+// The Chat bottom tab navigates `/agent` -> `..` -> `/{slug}` on mobile. The
+// `/:workspaceSlug` index used to declare `{ index: true }` with no element,
+// so `WorkspaceSlugBoundary` rendered an empty `<Outlet/>` and the tab came
+// up all-white.
+describe('mobileRouter workspace home', () => {
+  it('mounts a home element at /:workspaceSlug', () => {
+    const leaf = matchRoutes(mobileRoutes, '/my-workspace')?.at(-1)?.route;
+
+    expect(leaf?.index).toBe(true);
+    expect(leaf?.element).toBeTruthy();
+  });
+
+  it('mounts the same home element shape as the root / index', () => {
+    const rootLeaf = matchRoutes(mobileRoutes, '/')?.at(-1)?.route;
+    const slugLeaf = matchRoutes(mobileRoutes, '/my-workspace')?.at(-1)?.route;
+
+    expect(rootLeaf?.index).toBe(true);
+    expect(rootLeaf?.element).toBeTruthy();
+    // Both index leaves resolve through the same lazy element factory —
+    // `/{slug}` must render the same MobileHome surface as `/`.
+    expect((slugLeaf?.element as { type?: unknown }).type).toBe(
+      (rootLeaf?.element as { type?: unknown }).type,
+    );
   });
 });

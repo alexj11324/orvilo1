@@ -8,12 +8,18 @@ import {
   OAUTH_SESSION_TIMEOUT_MS,
   waitForOAuthSession,
 } from '@/features/Connectors/oauthSession';
+import { lambdaClient } from '@/libs/trpc/client';
 import { githubOAuthService } from '@/services/githubOAuth';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { useToolStore } from '@/store/tool';
 
-export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) => {
+export type GitHubMcpCapability = 'app_oauth_configured' | 'pat_available' | 'not_configurable';
+
+export const useGitHubMcpConnect = (
+  onConnected: (connectorId: string) => void,
+  onTokenSetup?: () => void,
+) => {
   const { t } = useTranslation('tool');
   const connectGitHubMcp = useToolStore((s) => s.connectGitHubMcp);
   const popup = useRef<Window | null>(null);
@@ -24,6 +30,7 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
   const [grantConnected, setGrantConnected] = useState<boolean>();
   const [timedOut, setTimedOut] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  const [capability, setCapability] = useState<GitHubMcpCapability>();
 
   const finish = useCallback(async () => {
     if (completing.current) return;
@@ -111,6 +118,12 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
       } catch {
         // The connect action still reports a concrete error when invoked.
       }
+      try {
+        const result = await lambdaClient.connector.githubMcpCapability.query();
+        setCapability(result.capability);
+      } catch {
+        // Capability unknown — connect() falls back to the mutation result.
+      }
     })();
   }, []);
 
@@ -141,6 +154,17 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
 
   const connect = async () => {
     setTimedOut(false);
+    // Self-hosted deployments without GitHub App OAuth go straight to the
+    // supported personal-access-token setup instead of opening a dead popup.
+    if (capability === 'pat_available') {
+      toast.info(t('connector.githubPatFallback'));
+      onTokenSetup?.();
+      return;
+    }
+    if (capability === 'not_configurable') {
+      toast.error(t('connector.githubNotConfigurable'));
+      return;
+    }
     attempt.current = newOAuthAttempt();
     setConnecting(true);
     try {
@@ -149,6 +173,12 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
         if (result.status === 'connected') {
           setGrantConnected(true);
           onConnected(result.connectorId);
+          return;
+        }
+        if (result.status === 'pat_available') {
+          setCapability('pat_available');
+          toast.info(t('connector.githubPatFallback'));
+          onTokenSetup?.();
           return;
         }
         const serverUrl = electronSyncSelectors.remoteServerUrl(useElectronStore.getState());
@@ -171,6 +201,14 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
         onConnected(result.connectorId);
         return;
       }
+      if (result.status === 'pat_available') {
+        popup.current.close();
+        popup.current = null;
+        setCapability('pat_available');
+        toast.info(t('connector.githubPatFallback'));
+        onTokenSetup?.();
+        return;
+      }
 
       setGrantConnected(false);
       popup.current.location.href = result.authorizationUrl;
@@ -187,5 +225,12 @@ export const useGitHubMcpConnect = (onConnected: (connectorId: string) => void) 
     }
   };
 
-  return { cancel, connect, connecting: connecting || waiting, grantConnected, timedOut };
+  return {
+    cancel,
+    capability,
+    connect,
+    connecting: connecting || waiting,
+    grantConnected,
+    timedOut,
+  };
 };

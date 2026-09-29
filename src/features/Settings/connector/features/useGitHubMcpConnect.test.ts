@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGitHubMcpConnect } from './useGitHubMcpConnect';
 
 const mocks = vi.hoisted(() => ({
+  capability: vi.fn(),
   connectGitHubMcp: vi.fn(),
   status: vi.fn(),
-  toastWarning: vi.fn(),
   toastError: vi.fn(),
+  toastInfo: vi.fn(),
+  toastWarning: vi.fn(),
 }));
 
 vi.mock('@orvilo/const', async (importOriginal) => ({
@@ -16,7 +18,7 @@ vi.mock('@orvilo/const', async (importOriginal) => ({
 }));
 
 vi.mock('@lobehub/ui/base-ui', () => ({
-  toast: { error: mocks.toastError, warning: mocks.toastWarning },
+  toast: { error: mocks.toastError, info: mocks.toastInfo, warning: mocks.toastWarning },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -30,6 +32,12 @@ vi.mock('@/services/githubOAuth', () => ({
 vi.mock('@/store/tool', () => ({
   useToolStore: (selector: (s: unknown) => unknown) =>
     selector({ connectGitHubMcp: mocks.connectGitHubMcp }),
+}));
+
+vi.mock('@/libs/trpc/client', () => ({
+  lambdaClient: {
+    connector: { githubMcpCapability: { query: mocks.capability } },
+  },
 }));
 
 vi.mock('@/store/electron', () => ({ useElectronStore: { getState: () => ({}) } }));
@@ -53,6 +61,7 @@ describe('useGitHubMcpConnect', () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     mocks.status.mockResolvedValue({ data: { connected: false } });
+    mocks.capability.mockResolvedValue({ capability: 'app_oauth_configured' });
   });
   afterEach(() => vi.useRealTimers());
 
@@ -124,5 +133,62 @@ describe('useGitHubMcpConnect', () => {
     });
 
     expect(result.current.connecting).toBe(false);
+  });
+
+  it('routes to the PAT setup instead of opening a dead popup when OAuth is unconfigured', async () => {
+    mocks.capability.mockResolvedValue({ capability: 'pat_available' });
+    const onTokenSetup = vi.fn();
+    const open = vi.spyOn(window, 'open');
+    const { result } = renderHook(() => useGitHubMcpConnect(vi.fn(), onTokenSetup));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(onTokenSetup).toHaveBeenCalledTimes(1);
+    expect(mocks.toastInfo).toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+    expect(mocks.connectGitHubMcp).not.toHaveBeenCalled();
+  });
+
+  it('falls back to PAT setup when the mutation reports pat_available', async () => {
+    mocks.capability.mockResolvedValue({ capability: 'app_oauth_configured' });
+    mocks.connectGitHubMcp.mockResolvedValue({ status: 'pat_available' });
+    const popup = popupWindow();
+    vi.spyOn(window, 'open').mockReturnValue(popup);
+    const onTokenSetup = vi.fn();
+    const { result } = renderHook(() => useGitHubMcpConnect(vi.fn(), onTokenSetup));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(onTokenSetup).toHaveBeenCalledTimes(1);
+    expect(popup.close).toHaveBeenCalled();
+    expect(result.current.capability).toBe('pat_available');
+    expect(result.current.connecting).toBe(false);
+  });
+
+  it('reports not_configurable without opening any flow', async () => {
+    mocks.capability.mockResolvedValue({ capability: 'not_configurable' });
+    const open = vi.spyOn(window, 'open');
+    const { result } = renderHook(() => useGitHubMcpConnect(vi.fn()));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(mocks.toastError).toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+    expect(mocks.connectGitHubMcp).not.toHaveBeenCalled();
   });
 });

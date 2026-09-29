@@ -13,6 +13,7 @@ const {
   fetchSyncInputs,
   getGrantIdentity,
   getValidGrant,
+  isOAuthConfigured,
   persistSyncInputs,
   startOAuth,
   syncTools,
@@ -20,6 +21,7 @@ const {
   fetchSyncInputs: vi.fn(),
   getGrantIdentity: vi.fn(),
   getValidGrant: vi.fn(),
+  isOAuthConfigured: vi.fn(),
   persistSyncInputs: vi.fn(),
   startOAuth: vi.fn(),
   syncTools: vi.fn(),
@@ -29,6 +31,9 @@ vi.mock('@/server/services/githubOAuth', () => ({
   getGitHubOAuthGrantIdentity: getGrantIdentity,
   getValidGitHubAccessGrant: getValidGrant,
   startGitHubOAuth: startOAuth,
+}));
+vi.mock('@/server/services/githubOAuth/provider', () => ({
+  isGitHubOAuthConfigured: isOAuthConfigured,
 }));
 vi.mock('./sync', () => ({
   fetchConnectorToolSyncInputs: fetchSyncInputs,
@@ -88,6 +93,7 @@ describe('GitHub MCP provider connector', () => {
     vi.clearAllMocks();
     getGrantIdentity.mockResolvedValue(identity);
     getValidGrant.mockResolvedValue({ ...identity, accessToken: 'server-only-access-token' });
+    isOAuthConfigured.mockReturnValue(true);
     startOAuth.mockResolvedValue('https://github.com/login/oauth/authorize?state=once');
     fetchSyncInputs.mockResolvedValue([{ crudType: 'read', toolName: 'pull_request_read' }]);
     persistSyncInputs.mockResolvedValue(undefined);
@@ -177,6 +183,23 @@ describe('GitHub MCP provider connector', () => {
       authorizationUrl: 'https://github.com/login/oauth/authorize?state=once',
       status: 'authorization_required',
     });
+    expect(ctx.connectorModel.create).not.toHaveBeenCalled();
+    expect(syncTools).not.toHaveBeenCalled();
+  });
+
+  it('reports pat_available instead of failing when the deployment lacks GitHub App OAuth', async () => {
+    getGrantIdentity.mockResolvedValueOnce(null);
+    isOAuthConfigured.mockReturnValueOnce(false);
+    const ctx = context();
+
+    const result = await activateGitHubMcpConnector({
+      ctx: ctx as any,
+      existing: null,
+      userId: 'user-1',
+    });
+
+    expect(result).toEqual({ status: 'pat_available' });
+    expect(startOAuth).not.toHaveBeenCalled();
     expect(ctx.connectorModel.create).not.toHaveBeenCalled();
     expect(syncTools).not.toHaveBeenCalled();
   });

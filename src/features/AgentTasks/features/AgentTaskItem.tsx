@@ -240,8 +240,10 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           size={14}
           status={status}
           taskIdentifier={task.identifier}
+          teamId={task.teamId}
           workflowCategory={task.workflowCategory}
           workflowStateId={task.workflowStateId}
+          workflowStateRefId={task.workflowStateRefId}
           onChange={onStatusChange}
         />
       </span>

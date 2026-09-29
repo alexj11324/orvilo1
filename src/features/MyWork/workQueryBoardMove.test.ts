@@ -5,6 +5,7 @@ import { STATUS_KANBAN_COLUMNS } from '@/features/AgentTasks/AgentTaskList/kanba
 
 import {
   applyWorkQueryStatusChange,
+  applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
   commitWorkQueryListStatus,
   kanbanStatusMoveGroupBy,
@@ -390,6 +391,74 @@ describe('kanbanStatusMoveGroupBy', () => {
     expect(kanbanStatusMoveGroupBy('workflowCategory')).toBe('workflowCategory');
     expect(kanbanStatusMoveGroupBy('status')).toBe('status');
     expect(kanbanStatusMoveGroupBy()).toBe('status');
+  });
+});
+
+describe('precise-state picks', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.moveBoard.mockResolvedValue({ success: true });
+  });
+
+  it('carries the picks exact ref into the first CAS write — no picker', async () => {
+    await expect(
+      moveBoardMaybePickingState({
+        expectedDomainRevision: 3,
+        groupBy: 'workflowCategory',
+        targetKey: 'todo',
+        targetWorkflowStateRefId: 'tws_todo_b',
+        taskId: 'tsk_1',
+        teamId: 'team_1',
+      }),
+    ).resolves.toBe(true);
+
+    expect(mocks.moveBoard).toHaveBeenCalledWith({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'todo',
+      targetWorkflowStateRefId: 'tws_todo_b',
+      taskId: 'tsk_1',
+    });
+    expect(mocks.createPicker).not.toHaveBeenCalled();
+  });
+
+  it('routes a precise-state menu row through the shared board command', async () => {
+    const choice = {
+      column: STATUS_KANBAN_COLUMNS.find((item) => item.key === 'todo')!,
+      state: {
+        category: 'todo' as const,
+        id: 'tws_todo_b',
+        name: 'Design',
+        position: 1,
+        remoteStateId: 'ls-todo-b',
+        teamId: 'team_1',
+        workspaceId: 'ws-1',
+      },
+      workflowCategory: 'todo' as const,
+    };
+
+    await expect(
+      applyWorkQueryStatusChoice({
+        changeLocal: async () => true,
+        choice,
+        groupBy: 'status',
+        task,
+      }),
+    ).resolves.toBe(true);
+
+    expect(mocks.moveBoard).toHaveBeenCalledWith({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'todo',
+      targetWorkflowStateRefId: 'tws_todo_b',
+      taskId: 'tsk_1',
+    });
+    expect(mocks.createPicker).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });
 

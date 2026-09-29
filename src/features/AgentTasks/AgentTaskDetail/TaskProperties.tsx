@@ -19,6 +19,7 @@ import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskStatusTag from '../features/TaskStatusTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
+import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
@@ -61,6 +62,8 @@ const TaskProperties = memo(() => {
   const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
   const workflowCategory = useTaskDetailSelector(taskDetailSelectors.taskWorkflowCategory);
   const workflowStateId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateId);
+  const workflowStateRefId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateRefId);
+  const taskTeamId = useTaskDetailSelector(taskDetailSelectors.taskTeamId);
   const priority = useTaskDetailSelector(taskDetailSelectors.taskPriority);
   const labels = useTaskDetailSelector(taskDetailSelectors.taskLabels);
   const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
@@ -75,11 +78,17 @@ const TaskProperties = memo(() => {
   const reviewerMeta = useUserDisplayMeta(reviewerUserId);
   const updateTask = useTaskStore((s) => s.updateTask);
   const activeWorkspaceId = useActiveWorkspaceId();
+  // The rail names the team's own workflow state (the shared Issue status
+  // model), falling back to the category label until the catalog resolves.
+  const teamStates = useTeamWorkflowStates(workflowStateId != null ? taskTeamId : null);
 
   if (!taskId) return null;
 
   const statusMeta = status ? STATUS_META[status] : STATUS_META.backlog;
   const statusRow = resolveTaskStatusRow(status, workflowCategory, workflowStateId);
+  const workflowStateName = teamStates?.find(
+    (state) => state.id === workflowStateRefId || state.remoteStateId === workflowStateId,
+  )?.name;
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
   const statusChip = (
@@ -103,7 +112,7 @@ const TaskProperties = memo(() => {
       )}
       <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
         {statusRow.kind === 'workflow'
-          ? t(`taskDetail.workflow.category.${statusRow.category}` as never)
+          ? (workflowStateName ?? t(`taskDetail.workflow.category.${statusRow.category}` as never))
           : t(`taskDetail.${statusMeta.labelKey}` as never)}
       </Text>
     </Block>
@@ -124,8 +133,10 @@ const TaskProperties = memo(() => {
         <TaskStatusTag
           status={status}
           taskIdentifier={taskId}
+          teamId={taskTeamId}
           workflowCategory={workflowCategory}
           workflowStateId={workflowStateId}
+          workflowStateRefId={workflowStateRefId}
         >
           {statusRow.kind === 'workflow' && status ? (
             <Tooltip

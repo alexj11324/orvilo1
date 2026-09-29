@@ -30,6 +30,7 @@ export interface WorkQueryBoardTask {
   teamId?: string | null;
   workflowCategory?: string | null;
   workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
 }
 
 export type WorkQueryMovePlan =
@@ -201,9 +202,18 @@ export const workQuerySourceKeysForKanbanColumn = (
 export const workQueryMovePlan = (input: {
   groupBy: WorkQueryBoardGroupBy;
   targetKey: string;
+  /**
+   * An exact `team_workflow_states` ref a precise pick carries. A move
+   * into the same column is only a noop when the current ref already
+   * matches — two states sharing one category still write the pick.
+   */
+  targetWorkflowStateRefId?: string;
   task: WorkQueryBoardTask;
 }): WorkQueryMovePlan => {
-  if (taskBoardGroupKey(input.task, input.groupBy) === input.targetKey) {
+  const refStillDiffers =
+    input.targetWorkflowStateRefId !== undefined &&
+    input.targetWorkflowStateRefId !== input.task.workflowStateRefId;
+  if (!refStillDiffers && taskBoardGroupKey(input.task, input.groupBy) === input.targetKey) {
     return { type: 'noop' };
   }
   if (!isAllowedTargetKey(input.groupBy, input.targetKey)) {

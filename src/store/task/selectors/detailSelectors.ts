@@ -42,6 +42,11 @@ const taskWorkflowCategory = (s: TaskStoreState, taskId?: string) =>
 const taskWorkflowStateId = (s: TaskStoreState, taskId?: string) =>
   taskDetail(s, taskId)?.workflowStateId;
 
+const taskWorkflowStateRefId = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.workflowStateRefId;
+
+const taskTeamId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.teamId;
+
 const taskPriority = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.priority ?? 0;
 
 const taskVisibility = (s: TaskStoreState, taskId?: string): 'private' | 'public' =>
@@ -210,6 +215,8 @@ export const taskDetailSelectors = {
   activeTaskWorkspaceId: (s: TaskStoreState) => taskWorkspaceId(s, s.activeTaskId),
   activeTaskWorkflowCategory: (s: TaskStoreState) => taskWorkflowCategory(s, s.activeTaskId),
   activeTaskWorkflowStateId: (s: TaskStoreState) => taskWorkflowStateId(s, s.activeTaskId),
+  activeTaskWorkflowStateRefId: (s: TaskStoreState) => taskWorkflowStateRefId(s, s.activeTaskId),
+  activeTaskTeamId: (s: TaskStoreState) => taskTeamId(s, s.activeTaskId),
   activeTopicDrawerTopicId,
   canCancelActiveTask: (s: TaskStoreState) => canCancelTask(s, s.activeTaskId),
   canCancelTask,
@@ -251,11 +258,13 @@ export const taskDetailSelectors = {
   taskScheduleTimezone,
   taskStatus,
   taskSubtasks,
+  taskTeamId,
   taskTopicCount,
   taskVerifyConfig,
   taskVisibility,
   taskWorkflowCategory,
   taskWorkflowStateId,
+  taskWorkflowStateRefId,
   taskWorkspace,
   taskWorkspaceId,
   topicDrawerAgentId,

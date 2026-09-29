@@ -4,6 +4,7 @@ import type {
   TaskMoveScope,
   TaskStatus,
   TaskWorkflowCategory,
+  TeamWorkflowStateItem,
   WorkQuerySortMode,
 } from '@orvilo/types';
 import { WORK_QUERY_STATUS_COLUMNS, WORK_QUERY_WORKFLOW_COLUMNS } from '@orvilo/types';
@@ -628,12 +629,59 @@ export const taskMatchesKanbanColumn = (
  * neither field is one the board could not take this task either (an
  * unlinked task can't reach the workflow-only columns such as triage); menus
  * render it disabled, never hidden, so the list stays 1:1 with the board.
+ *
+ * `state` upgrades the row to the shared Issue status model — an exact
+ * `team_workflow_states` entry. A pick then commits `{category,
+ * workflowStateRefId}` through the same CAS command a board drop uses
+ * instead of the category-only write, so two custom states inside one
+ * category stay individually selectable.
  */
 export interface TaskStatusChoice {
   column: KanbanColumnDefinition;
+  state?: TeamWorkflowStateItem;
   status?: TaskStatus;
   workflowCategory?: TaskWorkflowCategory;
 }
+
+/**
+ * A team's own workflow states as menu choices — the Issue status model
+ * (`{teamId, workflowStateRefId, category, name, color}`; color/glyph read
+ * from the state's category). Rows keep the board's category order then the
+ * catalog's position, and carry the category's `wf:` column so a pick
+ * resolves the same `targetKey` a category drop would — the precise ref
+ * travels on the choice itself.
+ */
+export const issueWorkflowStateChoices = (
+  states: readonly TeamWorkflowStateItem[],
+): TaskStatusChoice[] =>
+  WORK_QUERY_WORKFLOW_COLUMNS.flatMap((category) => {
+    const column = WORKFLOW_KANBAN_COLUMNS.find((item) => item.targetWorkflowCategory === category);
+    return states
+      .filter((state) => state.category === category)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .map((state) => ({ column: column!, state, workflowCategory: category }));
+  });
+
+/**
+ * Does a pick on `choice` land the task exactly where it already sits?
+ * Precise-state rows compare the live ref (or the provider id it mirrors);
+ * column rows compare against the task's board bucket. A second state inside
+ * the task's own category is never a noop — it writes the ref swap.
+ */
+export const taskStatusChoiceIsCurrent = (
+  task: {
+    workflowStateId?: string | null;
+    workflowStateRefId?: string | null;
+  },
+  choice: TaskStatusChoice,
+  currentColumnKey: string,
+): boolean => {
+  if (!choice.state) return choice.column.key === currentColumnKey;
+  return (
+    choice.state.id === task.workflowStateRefId ||
+    choice.state.remoteStateId === (task.workflowStateId ?? undefined)
+  );
+};
 
 /** The board's status columns as menu choices, in board order. */
 export const taskStatusChoices = (task: { workflowStateId?: string | null }): TaskStatusChoice[] =>

@@ -8,7 +8,15 @@ import { useWorkspaceAwareNavigate } from './useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from './workspaceAwarePath';
 import type { WorkspaceLinkProps } from './WorkspaceLink';
 
-const WorkspaceLink = ({ ref, to, escape, onClick, target, ...rest }: WorkspaceLinkProps) => {
+const WorkspaceLink = ({
+  ref,
+  to,
+  escape,
+  onClick,
+  state,
+  target,
+  ...rest
+}: WorkspaceLinkProps) => {
   const activeSlug = useActiveWorkspaceSlug();
   const navigate = useWorkspaceAwareNavigate();
   const resolved = buildWorkspaceAwarePath(to, activeSlug, { escape });
@@ -20,7 +28,7 @@ const WorkspaceLink = ({ ref, to, escape, onClick, target, ...rest }: WorkspaceL
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
       return;
     event.preventDefault();
-    navigate(resolved, { escape: true });
+    navigate(resolved, { escape: true, state });
   };
 
   return (

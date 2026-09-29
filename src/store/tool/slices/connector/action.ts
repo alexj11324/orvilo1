@@ -177,14 +177,14 @@ export class ConnectorActionImpl {
    * the authorize URL for the caller to open in a popup. Resolves the client
    * via pre-registration or DCR on the server.
    */
-  startConnectorOAuth = async (id: string): Promise<string> => {
-    const { authorizationUrl } = await lambdaClient.connector.startOAuth.mutate({ id });
+  startConnectorOAuth = async (id: string, attempt?: string): Promise<string> => {
+    const { authorizationUrl } = await lambdaClient.connector.startOAuth.mutate({ attempt, id });
     return authorizationUrl;
   };
 
   /** Connect the official GitHub MCP through the server-held GitHub App grant. */
-  connectGitHubMcp = async () => {
-    const result = await lambdaClient.connector.connectGitHubMcp.mutate();
+  connectGitHubMcp = async (attempt?: string) => {
+    const result = await lambdaClient.connector.connectGitHubMcp.mutate({ attempt });
     if (result.status === 'connected') await this.#refreshConnectorLists();
     return result;
   };

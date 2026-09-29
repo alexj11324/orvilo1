@@ -37,6 +37,8 @@ interface McpPresetItemProps {
   onSelect: () => void;
   preset: McpPresetConnector;
   providerConnected?: boolean;
+  /** A pending authorization attempt hit its deadline — Connect acts as re-check. */
+  timedOut?: boolean;
 }
 
 /**
@@ -45,7 +47,7 @@ interface McpPresetItemProps {
  * existing GitHub App grant. Other presets retain the custom connector form.
  */
 const McpPresetItem = memo<McpPresetItemProps>(
-  ({ preset, connector, connecting, isSelected, onAdd, onSelect, providerConnected }) => {
+  ({ preset, connector, connecting, isSelected, onAdd, onSelect, providerConnected, timedOut }) => {
     const { t } = useTranslation('setting');
     const { t: tt } = useTranslation('tool');
     const { allowed: canCreate, reason: createReason } = usePermission('create_content');
@@ -85,6 +87,13 @@ const McpPresetItem = memo<McpPresetItemProps>(
       setIsConnecting(true);
       try {
         const result = await connectLinearMcpPreset(preset, currentConnector?.id, {
+          checkStatus: async (connectorId) => {
+            await fetchConnectors();
+            return (
+              connectorSelectors.connectorById(connectorId)(useToolStore.getState())?.status ===
+              'connected'
+            );
+          },
           createConnector,
           fetchConnectors,
           ...(isDesktop && {
@@ -106,7 +115,9 @@ const McpPresetItem = memo<McpPresetItemProps>(
               reason: result.error || t('tools.mcpPreset.unknownError'),
             }),
           );
-        } else if (result.status === 'dismissed') {
+        } else if (result.status === 'timed-out') {
+          toast.warning(t('tools.mcpPreset.timedOut'));
+        } else if (result.status === 'dismissed' || result.status === 'cancelled') {
           toast.warning(t('tools.mcpPreset.cancelled'));
         }
       } catch (error) {
@@ -150,7 +161,9 @@ const McpPresetItem = memo<McpPresetItemProps>(
             }
             onClick={handleConnect}
           >
-            {t('tools.orviloSkill.connect')}
+            {timedOut
+              ? t('tools.mcpPreset.checkStatus', 'Check status')
+              : t('tools.orviloSkill.connect')}
           </Button>
         </Tooltip>
       );

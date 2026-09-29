@@ -14,6 +14,8 @@ const KEY_PREFIX = 'connector:oauth-state:';
 const stateKey = (state: string): string => `${KEY_PREFIX}${state}`;
 
 export interface ConnectorOAuthStatePayload {
+  /** Client-minted attempt nonce echoed back in the callback postMessage so the opener can correlate the result to one authorization attempt. */
+  attempt?: string;
   /** Authorization server resolved at start; reused at exchange to avoid drift. */
   authorizationServerUrl: string;
   /** PKCE verifier — must round-trip to the token exchange. */

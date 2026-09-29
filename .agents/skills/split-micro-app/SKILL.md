@@ -170,23 +170,13 @@ Cloud-only file.
 orvilo-cloud (`.github/workflows/deploy-share.yml`), not OSS. Never add a deploy workflow to a
 repo that can only produce the fallback.
 
-**OSS PRs can still verify with the real overlay.** Same-repo OSS PRs clone the overlay repo @
-HEAD via `.github/actions/business-overlay` (the clone+overlay step extracted from
-`desktop-build-setup`: overlay files land in `$GITHUB_WORKSPACE/..`, which works because the
-repo is named `orvilo` so the checkout already sits at the submodule path), then
-`cd .. && pnpm install` and run the overlay repo's own `bun run build:share` — the tsconfig /
-stub knowledge stays over there. **The OSS workflow never hardcodes the private repo
-name**: it comes from the Actions repository variable `OVERLAY_REPOSITORY`; the token reuses
-the pre-existing `ORVILO_CLOUD_TOKEN` secret (deliberately not renamed — the desktop release
-workflows already reference it, and a rename would mean reconfiguring the org secret). When
-either is unset (fork PRs always), the workflow falls back to the
-OSS-stub build + wrangler dry-run as a pure compile/size guard. Keep new public-facing CI
-wording on the neutral "business overlay" vocabulary — the older desktop release workflows
-still leak the internal naming and are the known remaining exception. One trap: an overlay
-build's `build-inputs.txt` is overlay-root-relative (`repoRoot =
-dirname(SHARE_TSCONFIG_PROJECT)`), so OSS files appear as `aspectlylabs/src/...` — strip that
-prefix before exact-matching against the OSS repo's own diff (`sed 's#^aspectlylabs/##'` in the
-verify workflow); the meta triggers already match both spellings.
+**The private overlay mechanism has been removed from OSS CI.** The repository is a single
+OSS codebase — no `OVERLAY_REPOSITORY` variable, no `ORVILO_CLOUD_TOKEN`, and no
+`.github/actions/business-overlay` action. `verify-share.yml` and the `release-desktop-*` /
+`*-build-desktop` workflows always build with the open-source business stubs; same-repo PRs
+upload a share preview version, fork PRs dry-run the upload as a compile/size guard. If an
+overlay repo ever comes back, the build call sites must be re-added explicitly — do not
+hardcode a private repo name in OSS workflows.
 
 **Cloud affected-detection needs submodule history**: a bump is a single `orvilo` entry in the
 host diff, so the workflow runs `git -C orvilo fetch --unshallow` and compares the previous
@@ -345,10 +335,10 @@ RR v8 gotchas (docs/templates still say v7):
 ## 4. SEO
 
 One shared builder (`app/lib/seo.ts` → `buildPageMeta`): title, description, robots,
-og:title/description/type/site\_name/locale (underscore form)/image(+alt), twitter card set.
+og:title/description/type/site_name/locale (underscore form)/image(+alt), twitter card set.
 Rules: leaf `meta` **fully replaces** root meta — every leaf returns the whole set;
 `og:image` must be an **absolute URL** (reuse landing's `https://orvilo.aspectlylabs.com/assets/cao-og.webp`);
-dynamic title/description come from the route loader (subject title · BRANDING\_NAME,
+dynamic title/description come from the route loader (subject title · BRANDING_NAME,
 requirement text truncated \~200 chars).
 
 ## 5. Gateway Routing (torii, `../orvilo-gateway`)
@@ -364,7 +354,7 @@ To add a micro app:
    Leave `/trpc` unruled: it falls to `default` (app) so browser API calls stay same-origin
    authenticated. `.data` suffix is normalized before matching.
 4. Validate: `bun run test` in the gateway repo (invariant suite reads the mirror).
-5. Staging: `bun scripts/torii.ts push --env staging --expect <fp>` (needs TORII\_ACCESS\_\*),
+5. Staging: `bun scripts/torii.ts push --env staging --expect <fp>` (needs TORII_ACCESS\_\*),
    or poke staging KV directly (`wrangler kv key put --namespace-id <staging CONFIG ns>`) —
    README-sanctioned. Prod writes only via the Toriiban (鳥居番) admin **Promote** button:
    `torii.ts promote` prints the exact delta and refuses to write, and

@@ -1,0 +1,20 @@
+---
+title: Task Status Pickers Follow the Board
+description: >-
+  The status pickers on task detail pages, board cards, and context menus now
+  offer the exact columns of the workspace Kanban board — same options, same
+  order, same icons — including triage.
+tags:
+  - Tasks
+  - Mobile
+---
+
+# Task Status Pickers Follow the Board
+
+The Kanban board is now the single source of truth for every task status picker. Whether you open a task's detail page on mobile or desktop, right-click a card, or use a status submenu, the choices match the board column-for-column: triage, backlog, todo, running, needs input, done, and canceled — in the board's order and with the board's icons.
+
+## Fixes
+
+- **The task detail status picker was stuck on an old four-option list.** It now shows every column the board knows about, including the triage column and the correct per-status icons, so a status you can see on the board is a status you can pick.
+- **Unreachable columns are shown but blocked, never silently dropped.** A task that cannot enter a workflow-only column (for example, triage before it is linked to a workflow) still sees the full board list, with unreachable options disabled — matching what a drag on the board would allow.
+- **Moving a linked task writes its workflow state.** Picking a column for a workflow-linked task now updates its workflow category, the same write a drag on the board performs, instead of touching the wrong status axis.

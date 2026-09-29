@@ -8,7 +8,7 @@ tags:
   - Self-hosting
 ---
 
-# Migrate from pg\_search to Elasticsearch
+# Migrate from pg_search to Elasticsearch
 
 If you deploy Orvilo with Docker, use Neon for your database, and currently rely on `pg_search`, follow this guide to move search to Elasticsearch. Complete the migration before Neon disables `pg_search` for your instance.
 
@@ -37,7 +37,7 @@ Use HTTPS and an API key for an external Elasticsearch service. The bundled Elas
 These commands use the official image and connect to the database specified in this configuration, independently of Compose's bundled PostgreSQL service. Run them in the same terminal, replacing the image tag with the version you are deploying:
 
 ```bash
-export ORVILO_MIGRATION_IMAGE='alexj11324/orvilo1:<deployment-version-tag>'
+export ORVILO_MIGRATION_IMAGE='ghcr.io/alexj11324/orvilo1:<deployment-version-tag>'
 docker pull "$ORVILO_MIGRATION_IMAGE"
 docker volume create orvilo-search-state
 ```

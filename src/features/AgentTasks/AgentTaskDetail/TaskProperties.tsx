@@ -7,6 +7,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import LabelChips from '@/features/Labels/LabelChips';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -25,7 +26,6 @@ import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import TaskScheduleConfig from './TaskScheduleConfig';
 import { resolveTaskStatusRow } from './taskStatusRow';
-import TaskWorkflowStatusRow from './TaskWorkflowStatusRow';
 
 interface StatusMeta {
   labelKey: string;
@@ -81,6 +81,33 @@ const TaskProperties = memo(() => {
   const statusRow = resolveTaskStatusRow(status, workflowCategory, workflowStateId);
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
+  const statusChip = (
+    <Block
+      clickable
+      horizontal
+      align="center"
+      className={styles.propertyItem}
+      data-task-workflow-state={statusRow.kind === 'workflow' ? statusRow.category : undefined}
+      gap={8}
+      variant={'borderless'}
+    >
+      {statusRow.kind === 'workflow' ? (
+        <Icon
+          color={WORKFLOW_CATEGORY_VISUALS[statusRow.category].color}
+          icon={WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon}
+          size={16}
+        />
+      ) : (
+        <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
+      )}
+      <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+        {statusRow.kind === 'workflow'
+          ? t(`taskDetail.workflow.category.${statusRow.category}` as never)
+          : t(`taskDetail.${statusMeta.labelKey}` as never)}
+      </Text>
+    </Block>
+  );
+
   return (
     // Linear's rail order: Status → Priority → Assignee, then the Orvilo-only
     // cells (reviewer, acceptance, schedule). Status is one row: the workflow
@@ -88,29 +115,27 @@ const TaskProperties = memo(() => {
     <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
       <div className={styles.properties}>
-        {statusRow.kind === 'workflow' ? (
-          <TaskWorkflowStatusRow
-            category={statusRow.category}
-            executionStatus={status}
-            taskId={taskId}
-          />
-        ) : (
-          <TaskStatusTag status={status} taskIdentifier={taskId}>
-            <Block
-              clickable
-              horizontal
-              align="center"
-              className={styles.propertyItem}
-              gap={8}
-              variant={'borderless'}
+        {/* One Status row — the workflow state when the task has one, else
+            its execution status — over one picker: the Kanban board's own
+            columns, order and glyphs, triage included. The Tooltip mounts
+            only when it has a title — lobehub returns the bare child when it
+            doesn't, which would swallow the props Menu.Trigger clones on. */}
+        <TaskStatusTag
+          status={status}
+          taskIdentifier={taskId}
+          workflowCategory={workflowCategory}
+          workflowStateId={workflowStateId}
+        >
+          {statusRow.kind === 'workflow' && status ? (
+            <Tooltip
+              title={`${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`}
             >
-              <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
-              <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
-                {t(`taskDetail.${statusMeta.labelKey}` as never)}
-              </Text>
-            </Block>
-          </TaskStatusTag>
-        )}
+              {statusChip}
+            </Tooltip>
+          ) : (
+            statusChip
+          )}
+        </TaskStatusTag>
 
         <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
           <Block

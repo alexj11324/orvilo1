@@ -31,6 +31,7 @@ import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
+import type { TaskStatusChoice } from './kanbanBoardModel';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   /* Cordy keeps the empty-assign affordance hidden until the card is hovered —
@@ -119,10 +120,10 @@ const toTaskStatus = (status: string): TaskStatus =>
 
 interface TaskBoardCardProps {
   /**
-   * Board-card glyph/context-menu status. Linear-linked cards go through
-   * `moveBoard`; omit to keep the store `changeTaskStatus` default.
+   * Board-card glyph/context-menu status. Receives the picked board column —
+   * Linear-linked cards go through `moveBoard`; omit to keep the store write.
    */
-  onStatusChange?: (status: TaskStatus) => void | Promise<void>;
+  onStatusChange?: (choice: TaskStatusChoice) => void | Promise<void>;
   /**
    * Rendered inside the DragOverlay: skip the sortable listeners and hover
    * affordance — the lifted card is a preview, not an interactive copy.

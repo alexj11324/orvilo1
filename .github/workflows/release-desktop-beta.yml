@@ -31,7 +31,6 @@ jobs:
     name: Check if Beta Release
     runs-on: ubuntu-latest
     outputs:
-      cloud_ref: ${{ steps.cloud-ref.outputs.cloud_ref }}
       is_beta: ${{ steps.check.outputs.is_beta }}
       version: ${{ steps.check.outputs.version }}
     steps:
@@ -53,23 +52,6 @@ jobs:
             echo "is_beta=false" >> $GITHUB_OUTPUT
             echo "⏭️ Skipping: $version is a stable release (handled by release-desktop-stable.yml)"
           fi
-
-      - name: Resolve Cloud revision
-        id: cloud-ref
-        if: steps.check.outputs.is_beta == 'true' && vars.OVERLAY_REPOSITORY != ''
-        env:
-          CLOUD_REPOSITORY: ${{ vars.OVERLAY_REPOSITORY }}
-          CLOUD_TOKEN: ${{ secrets.ORVILO_CLOUD_TOKEN }}
-        run: |
-          set -euo pipefail
-          : "${CLOUD_REPOSITORY:?OVERLAY_REPOSITORY repository variable is not set}"
-          # checkout persist-credentials extraheader would send GITHUB_TOKEN and 404 the private cloud repo
-          cloud_ref=$(git -c http.https://github.com/.extraheader= ls-remote "https://x-access-token:${CLOUD_TOKEN}@github.com/${CLOUD_REPOSITORY}.git" HEAD | cut -f1)
-          if [[ ! "$cloud_ref" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Unable to resolve Cloud revision"
-            exit 1
-          fi
-          echo "cloud_ref=$cloud_ref" >> "$GITHUB_OUTPUT"
 
   test:
     name: Code quality check
@@ -106,9 +88,6 @@ jobs:
         id: setup
         uses: ./.github/actions/desktop-build-setup
         with:
-          cloud-ref: ${{ needs.check-beta.outputs.cloud_ref }}
-          cloud-repository: ${{ vars.OVERLAY_REPOSITORY }}
-          cloud-token: ${{ secrets.ORVILO_CLOUD_TOKEN }}
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Set package version

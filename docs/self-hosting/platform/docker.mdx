@@ -13,11 +13,7 @@ tags:
 # Deploying Server Database Version Using Docker
 
 <div style={{display:"flex", gap: 4}}>
-  [![][docker-release-shield]][docker-release-link]
-
-  [![][docker-size-shield]][docker-size-link]
-
-  [![][docker-pulls-shield]][docker-pulls-link]
+  [![][ghcr-shield]][ghcr-link]
 </div>
 
 <Callout type="info">
@@ -46,10 +42,10 @@ Here is the process for deploying the Orvilo server database version on a Linux 
   The above command will create a Postgres instance named `my-postgres` with the network set to `pg`, where `paradedb/paradedb:latest-pg17` is a Postgres 17 image with the `pgvector` and `pg_search` extensions installed and enabled by default.
 
   <Callout type="info">
-    The ParadeDB image includes pgvector (vector search) and pg\_search (full-text search) plugins, which are important
+    The ParadeDB image includes pgvector (vector search) and pg_search (full-text search) plugins, which are important
     components for Orvilo to implement RAG and knowledge base search.
 
-    It should be noted that the new version of ParadeDB requires explicitly enabling the pg\_search extension in order to be used by Orvilo. Here we explicitly enable pg\_search.
+    It should be noted that the new version of ParadeDB requires explicitly enabling the pg_search extension in order to be used by Orvilo. Here we explicitly enable pg_search.
   </Callout>
 
   <Callout type="warning">
@@ -97,7 +93,7 @@ Here is the process for deploying the Orvilo server database version on a Linux 
   ### Start the orvilo Docker image
 
   ```sh
-  docker run -it -d -p 3210:3210 --network pg --env-file orvilo.env --name orvilo alexj11324/orvilo1
+  docker run -it -d -p 3210:3210 --network pg --env-file orvilo.env --name orvilo ghcr.io/alexj11324/orvilo1
   ```
 
   You can use the following command to check the logs:
@@ -147,7 +143,7 @@ $ docker run -it -d --name orvilo -p 3210:3210 \
   -e S3_SECRET_ACCESS_KEY=xxxxxxxxxx \
   -e S3_ENDPOINT=https://xxxxxxxxxx.r2.cloudflarestorage.com \
   -e S3_BUCKET=Orvilo \
-  alexj11324/orvilo1
+  ghcr.io/alexj11324/orvilo1
 ```
 
 <Callout type="tip">
@@ -156,9 +152,5 @@ $ docker run -it -d --name orvilo -p 3210:3210 \
   `host.docker.internal` instead of `localhost`.
 </Callout>
 
-[docker-pulls-link]: https://hub.docker.com/r/alexj11324/orvilo1
-[docker-pulls-shield]: https://img.shields.io/docker/pulls/alexj11324/orvilo1?color=45cc11&labelColor=black&style=flat-square
-[docker-release-link]: https://hub.docker.com/r/alexj11324/orvilo1
-[docker-release-shield]: https://img.shields.io/docker/v/alexj11324/orvilo1?color=369eff&label=docker&labelColor=black&logo=docker&logoColor=white&style=flat-square&sort=semver
-[docker-size-link]: https://hub.docker.com/r/alexj11324/orvilo1
-[docker-size-shield]: https://img.shields.io/docker/image-size/alexj11324/orvilo1?color=369eff&labelColor=black&style=flat-square&sort=semver
+[ghcr-link]: https://github.com/alexj11324/orvilo1/pkgs/container/orvilo1
+[ghcr-shield]: https://img.shields.io/badge/ghcr.io-alexj11324%2Forvilo1-369eff?style=flat-square&logo=docker&logoColor=white

@@ -17,18 +17,42 @@ function checkGitRepo(): void {
   }
 }
 
-// Get the current version from package.json on the canary branch.
-//
-// Read through the git ref rather than the working tree: the release script
-// no longer checks canary out (see fetchCanary), so whatever branch happens
-// to be checked out must not influence the version this release is cut from.
+// Get the version the next release must bump from. The authoritative released
+// version lives on main; canary only receives it back through the post-release
+// sync, which can lag or fail — so the base is the higher of the two refs.
+// Both are read through git refs rather than the working tree: the release
+// script no longer checks canary out (see fetchReleaseRefs), so whatever
+// branch happens to be checked out must not influence the release base.
 function getCurrentVersion(): string {
-  try {
-    const pkg = JSON.parse(execSync('git show origin/canary:package.json', { encoding: 'utf8' }));
-    return pkg.version;
-  } catch {
-    consola.error('❌ Unable to read package.json from origin/canary');
+  const readRefVersion = (ref: string): string | null => {
+    try {
+      const pkg = JSON.parse(execSync(`git show ${ref}:package.json`, { encoding: 'utf8' }));
+      return typeof pkg.version === 'string' ? pkg.version : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const versions = [readRefVersion('origin/main'), readRefVersion('origin/canary')].filter(
+    (v): v is string => v !== null,
+  );
+  if (versions.length === 0) {
+    consola.error('❌ Unable to read package.json from origin/main or origin/canary');
     process.exit(1);
+  }
+  return versions.reduce((a, b) => (semver.gt(a, b) ? a : b));
+}
+
+// Check whether a release tag already exists on the remote. Read via ls-remote
+// so the check does not depend on local tag state.
+function remoteTagExists(version: string): boolean {
+  try {
+    const out = execSync(`git ls-remote --tags origin "refs/tags/v${version}"`, {
+      encoding: 'utf8',
+    }).trim();
+    return out.length > 0;
+  } catch {
+    return false;
   }
 }
 
@@ -105,23 +129,24 @@ Target:     main
   return confirmed;
 }
 
-// Fetch the latest canary branch.
+// Fetch the latest canary and main branches.
 //
 // `canary` is Orvilo's development trunk and the base every release is cut
-// from. This deliberately does NOT check canary out: in a repository that uses
-// git worktrees, canary is frequently already checked out in a sibling
-// worktree, and `git checkout canary` then fails with "already used by worktree
-// at ...". Everything the release needs — the base commit and the current
-// version — is readable from the remote-tracking ref instead.
-function fetchCanary(): void {
+// from; `main` carries the last released version. This deliberately does NOT
+// check either out: in a repository that uses git worktrees, canary is
+// frequently already checked out in a sibling worktree, and `git checkout
+// canary` then fails with "already used by worktree at ...". Everything the
+// release needs — the base commit and the current version — is readable from
+// the remote-tracking refs instead.
+function fetchReleaseRefs(): void {
   try {
-    consola.info('📥 Fetching latest canary branch...');
-    execSync('git fetch origin canary', { stdio: 'inherit' });
+    consola.info('📥 Fetching latest canary and main branches...');
+    execSync('git fetch origin canary main', { stdio: 'inherit' });
 
     const head = execSync('git rev-parse --verify origin/canary', { encoding: 'utf8' }).trim();
     consola.success(`✅ Using origin/canary at ${head.slice(0, 7)}`);
   } catch (error) {
-    consola.error('❌ Failed to fetch origin/canary');
+    consola.error('❌ Failed to fetch origin/canary and origin/main');
     consola.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
@@ -241,8 +266,8 @@ async function main(): Promise<void> {
   // 1. Check Git repository
   checkGitRepo();
 
-  // 2. Fetch latest canary (ensure we have the latest version to bump from)
-  fetchCanary();
+  // 2. Fetch latest canary and main (the version is bumped from their max)
+  fetchReleaseRefs();
 
   // 3. Get version type
   let versionType = getVersionTypeFromArgs();
@@ -252,9 +277,15 @@ async function main(): Promise<void> {
     versionType = await selectVersionTypeInteractive();
   }
 
-  // 4. Calculate new version
+  // 4. Calculate new version — never propose one that already shipped. If the
+  // tag exists (e.g. a hotfix already consumed it), keep bumping the same
+  // component until the version is free.
   const currentVersion = getCurrentVersion();
-  const newVersion = bumpVersion(currentVersion, versionType);
+  let newVersion = bumpVersion(currentVersion, versionType);
+  while (remoteTagExists(newVersion)) {
+    consola.warn(`⚠️ Tag v${newVersion} already exists — bumping next ${versionType}`);
+    newVersion = bumpVersion(newVersion, versionType);
+  }
 
   // 5. Secondary confirmation
   const confirmed = await confirmRelease(newVersion, versionType);

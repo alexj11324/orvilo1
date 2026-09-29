@@ -4,6 +4,7 @@ import debug from 'debug';
 
 import { UserModel } from '@/database/models/user';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
+import { OwnCredsService } from '@/server/services/creds';
 import { MarketService } from '@/server/services/market';
 
 import { type ServerRuntimeRegistration } from './types';
@@ -12,15 +13,20 @@ const log = debug('orvilo-server:creds-runtime');
 
 /**
  * Server-side Creds Service implementation
- * Wraps MarketService.market.creds to provide ICredsService interface
+ * Wraps OwnCredsService (Orvilo's own credentials store) to provide the
+ * ICredsService interface. The MarketService is still held for the pieces that
+ * stay on Market by design: the OAuth connect broker and the sandbox runtime
+ * `inject` writes into.
  */
 export class ServerCredsService implements ICredsService {
+  private credsService: OwnCredsService;
   private marketService: MarketService;
   private workspaceId?: string;
 
   private isShareVisitor: boolean;
 
   constructor(
+    credsService: OwnCredsService,
     marketService: MarketService,
     workspaceId?: string,
     /**
@@ -34,20 +40,10 @@ export class ServerCredsService implements ICredsService {
      */
     isShareVisitor = false,
   ) {
+    this.credsService = credsService;
     this.marketService = marketService;
     this.workspaceId = workspaceId;
     this.isShareVisitor = isShareVisitor;
-  }
-
-  /**
-   * Inside a workspace, reads/writes must hit the workspace's shared organization
-   * credentials, never the operator's personal creds. Falls back to
-   * the personal `market.creds` namespace outside a workspace.
-   */
-  private credsAccessor() {
-    return this.workspaceId
-      ? this.marketService.market.organizations.creds({ workspaceId: this.workspaceId })
-      : this.marketService.market.creds;
   }
 
   async getByKey(
@@ -63,22 +59,20 @@ export class ServerCredsService implements ICredsService {
   }> {
     log('getByKey: key=%s, decrypt=%s', key, options?.decrypt);
 
-    // First find the credential by key from the list
-    const listResult = await this.credsAccessor().list();
-    const cred = listResult.data?.find((c) => c.key === key);
-
-    if (!cred) {
+    const result = await this.credsService.getByKey(key, { decrypt: options?.decrypt });
+    if (!result) {
       throw new Error(`Credential not found: ${key}`);
     }
 
-    // Then get the full credential with optional decryption
-    const result = await this.credsAccessor().get(cred.id, {
-      decrypt: options?.decrypt,
-    });
+    log('getByKey success: key=%s, id=%s', key, result.id);
 
-    log('getByKey success: key=%s, id=%d', key, cred.id);
-
-    return result as any;
+    return {
+      fileName: result.fileName,
+      name: result.name,
+      plaintext: result.plaintext,
+      type: result.type,
+      values: result.plaintext,
+    };
   }
 
   async getOAuthAuthorizeUrl(
@@ -126,31 +120,19 @@ export class ServerCredsService implements ICredsService {
   }> {
     log('injectCreds: keys=%O, topicId=%s', params.keys, params.topicId);
 
-    // Refuse before the Market call, not after: Market's inject endpoint
-    // writes the creator's REAL credentials into the sandbox's ~/.creds/env
-    // server-side as part of handling the request (see the comment below),
-    // so for a share visitor the only safe place to stop is here.
+    // Refuse before any resolution or sandbox write: injection writes the
+    // creator's REAL credentials into the sandbox's ~/.creds/env, so for a
+    // share visitor the only safe place to stop is here.
     if (this.isShareVisitor) {
       throw new Error(
         'Credential injection into the sandbox is unavailable in shared conversations.',
       );
     }
 
-    // Market's generic inject endpoint resolves organization credentials from
-    // the workspaceId signed into this service's trusted-client token, and —
-    // when `sandbox` is true (the default) — already writes the *real*
-    // (unmasked) values into the sandbox's ~/.creds/env server-side before
-    // responding. The `credentials.env` map in that response is masked for
-    // safe display to the model, so it must never be written into the
-    // sandbox again here: an earlier version of this method did exactly
-    // that, appending a masked `export` line after market's real one. Since
-    // re-sourcing ~/.creds/env applies `export`s in file order, the masked
-    // line silently shadowed the real credential for every later command.
-    const result = await this.marketService.market.creds.inject({
+    const result = await this.credsService.inject({
       keys: params.keys,
       sandbox: params.sandbox,
       topicId: params.topicId,
-      userId: params.userId,
     });
 
     log('injectCreds success: notFound=%d', result.notFound?.length || 0);
@@ -159,15 +141,15 @@ export class ServerCredsService implements ICredsService {
   }
 
   async listCreds(): Promise<{
-    data?: Array<{ id: number; key: string }>;
+    data?: Array<{ id: string; key: string }>;
   }> {
     log('listCreds');
 
-    const result = await this.credsAccessor().list();
+    const result = await this.credsService.list();
 
     log('listCreds success: %d credentials', result.data?.length || 0);
 
-    return result as any;
+    return result;
   }
 
   async saveKVCred(params: {
@@ -176,12 +158,15 @@ export class ServerCredsService implements ICredsService {
     name: string;
     type: 'kv-env' | 'kv-header';
     values: Record<string, string>;
-  }): Promise<{ id: number }> {
+  }): Promise<{ id: string }> {
     log('saveKVCred: key=%s, name=%s, type=%s', params.key, params.name, params.type);
 
-    const result = await this.credsAccessor().createKV(params);
+    const result = await this.credsService.createKV({
+      ...params,
+      workspaceScope: Boolean(this.workspaceId),
+    });
 
-    log('saveKVCred success: id=%d', result.id);
+    log('saveKVCred success: id=%s', result.id);
 
     return result;
   }
@@ -197,11 +182,11 @@ export const credsRuntime: ServerRuntimeRegistration = {
       throw new Error('userId is required for Creds execution');
     }
 
-    if (context.workspaceId) {
-      if (!context.serverDB) {
-        throw new Error('serverDB is required for workspace Creds execution');
-      }
+    if (!context.serverDB) {
+      throw new Error('serverDB is required for Creds execution');
+    }
 
+    if (context.workspaceId) {
       const membership = await new WorkspaceMemberModel(context.serverDB, context.userId).getMember(
         context.workspaceId,
         context.userId,
@@ -218,16 +203,16 @@ export const credsRuntime: ServerRuntimeRegistration = {
       context.workspaceId,
     );
 
-    // Read market accessToken from DB so server-side creds runtime can authenticate.
+    // Read market accessToken from DB so the OAuth connect broker + the
+    // sandbox provider inside `inject` can authenticate; credential data
+    // itself comes from the Orvilo DB.
     let accessToken: string | undefined;
-    if (context.serverDB) {
-      try {
-        const userModel = new UserModel(context.serverDB, context.userId);
-        const settings = await userModel.getUserSettings();
-        accessToken = (settings?.market as any)?.accessToken;
-      } catch {
-        // non-fatal — MarketService will fall back to trustedClientToken
-      }
+    try {
+      const userModel = new UserModel(context.serverDB, context.userId);
+      const settings = await userModel.getUserSettings();
+      accessToken = (settings?.market as any)?.accessToken;
+    } catch {
+      // non-fatal — MarketService will fall back to trustedClientToken
     }
 
     const marketService = new MarketService({
@@ -235,7 +220,15 @@ export const credsRuntime: ServerRuntimeRegistration = {
       userInfo: { userId: context.userId, workspaceId: context.workspaceId },
     });
 
+    const ownCredsService = new OwnCredsService({
+      marketService,
+      serverDB: context.serverDB,
+      userId: context.userId,
+      workspaceId: context.workspaceId,
+    });
+
     const credsService = new ServerCredsService(
+      ownCredsService,
       marketService,
       context.workspaceId,
       Boolean(context.agentShareVisitor),

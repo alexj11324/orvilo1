@@ -1188,6 +1188,34 @@ table user_installed_plugins {
   }
 }
 
+table credentials {
+  id text [pk, not null]
+  owner_user_id text [not null]
+  workspace_id text
+  key text [not null]
+  name varchar(255) [not null]
+  description text
+  type text [not null]
+  payload text [not null]
+  metadata jsonb
+  masked_preview varchar(255)
+  last_used_at "timestamp with time zone"
+  shared_workspace_id text
+  visibility text [not null, default: 'private']
+  shared_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    owner_user_id [name: 'credentials_owner_user_id_idx']
+    workspace_id [name: 'credentials_workspace_id_idx']
+    shared_workspace_id [name: 'credentials_shared_workspace_id_idx']
+    (owner_user_id, key) [name: 'credentials_owner_key_unique', unique]
+    (workspace_id, key) [name: 'credentials_workspace_key_unique', unique]
+  }
+}
+
 table devices {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   user_id text [not null]

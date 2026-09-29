@@ -698,9 +698,6 @@ export const dispatchHeteroAgent = async (
   const githubToken = await resolveGithubAccessToken({
     credKey: agentConfig.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY ?? 'github',
     db: deps.db,
-    // A failing getMarketService must not kill the run — the helper tolerates
-    // a missing one and falls back to its own construction.
-    marketService: await deps.getMarketService().catch(() => undefined),
     userId: deps.userId,
     workspaceId: deps.workspaceId,
   });

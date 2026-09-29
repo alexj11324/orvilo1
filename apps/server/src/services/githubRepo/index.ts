@@ -1,8 +1,7 @@
 import debug from 'debug';
 
-import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
-import { MarketService } from '@/server/services/market';
+import { OwnCredsService } from '@/server/services/creds';
 
 import { githubFetch, parseGithubRepo } from './githubFetch';
 import {
@@ -25,33 +24,17 @@ const log = debug('github-repo');
 export const resolveGithubAccessToken = async (params: {
   credKey?: string;
   db: OrviloDatabase;
-  marketService?: MarketService;
   userId: string;
   workspaceId?: string;
 }): Promise<string | undefined> => {
   const { credKey = 'github', db, userId, workspaceId } = params;
   try {
-    let marketService = params.marketService;
-    if (!marketService) {
-      let accessToken: string | undefined;
-      try {
-        const settings = await new UserModel(db, userId).getUserSettings();
-        accessToken = (settings?.market as { accessToken?: string } | undefined)?.accessToken;
-      } catch {
-        // MarketService can still use its trusted client token.
-      }
-      marketService = new MarketService({ accessToken, userInfo: { userId } });
-    }
-
-    const credsAccessor = workspaceId
-      ? marketService.market.organizations.creds({ workspaceId })
-      : marketService.market.creds;
-    const list = await credsAccessor.list();
-    const cred = list.data?.find((c: { key: string }) => c.key === credKey);
-    if (!cred) return undefined;
-    const full = await credsAccessor.get(cred.id, { decrypt: true });
-    const values = (full as any).plaintext ?? (full as any).values ?? {};
-    return values.access_token ?? values.token;
+    const values = await new OwnCredsService({
+      serverDB: db,
+      userId,
+      workspaceId,
+    }).resolveValuesByKey(credKey);
+    return values?.access_token ?? values?.token;
   } catch (error) {
     log('resolveGithubAccessToken: %O', error);
     return undefined;

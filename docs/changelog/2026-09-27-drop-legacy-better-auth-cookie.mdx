@@ -1,0 +1,18 @@
+---
+title: Legacy Better Auth session cookie retired
+description: >-
+  The pre-migration `better-auth.session_token` cookie is no longer read or
+  cleared; `orvilo_auth` (minted by the Clerk exchange) is now the only web
+  session credential.
+tags:
+  - Authentication
+---
+
+# Legacy Better Auth session cookie retired
+
+The Better Auth → Clerk migration is complete: the server no longer dual-reads the legacy `better-auth.session_token` cookie. `orvilo_auth`, minted by `POST /api/auth/clerk`, is now the only web session credential across middleware, tRPC context, the session probe, and sign-out. The transitional `AUTH_COOKIE_PREFIX` environment variable was removed with it.
+
+## Improvements and fixes
+
+- **Single session credential.** Cookie readers in `packages/database` and the routes that mint or clear sessions (`/api/auth/clerk`, `/api/auth/signout`) only handle `orvilo_auth`.
+- **Stragglers re-authenticate cleanly.** Browsers still carrying only a legacy cookie fall through to the accounts portal sign-in, which issues a fresh `orvilo_auth` session.

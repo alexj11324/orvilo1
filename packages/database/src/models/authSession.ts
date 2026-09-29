@@ -23,31 +23,11 @@ const REFRESH_BELOW_FRACTION = 0.5;
 
 export type AuthSessionItem = typeof authSessionTable.$inferSelect;
 
-/**
- * Better Auth stored the session token in `<prefix>.session_token`; those rows
- * share this table, so reading the legacy cookie keeps pre-migration sessions
- * valid until they expire. The cookie value is HMAC-signed
- * (`token.signature`), while the table holds the bare token — strip the
- * signature segment before lookup.
- */
-export const legacySessionCookieName = (cookiePrefix?: string) =>
-  `${cookiePrefix || 'better-auth'}.session_token`;
-
-const stripLegacySignature = (value: string | null | undefined): string | null => {
-  if (!value) return null;
-  const separator = value.lastIndexOf('.');
-  return separator === -1 ? value : value.slice(0, separator);
-};
-
 export type CookieGetter = (name: string) => string | null | undefined;
 
 /** Read the session token from a cookie accessor (NextRequest.cookies or next/headers). */
-export const readAuthSessionToken = (
-  getCookie: CookieGetter,
-  legacyCookiePrefix?: string,
-): string | null =>
-  getCookie(AUTH_SESSION_COOKIE) ??
-  stripLegacySignature(getCookie(legacySessionCookieName(legacyCookiePrefix)));
+export const readAuthSessionToken = (getCookie: CookieGetter): string | null =>
+  getCookie(AUTH_SESSION_COOKIE) ?? null;
 
 const parseCookieHeader = (header: string): Record<string, string> => {
   const cookies: Record<string, string> = {};
@@ -62,17 +42,13 @@ const parseCookieHeader = (header: string): Record<string, string> => {
 };
 
 /** Read the session token directly from request headers (route handlers / middleware). */
-export const readAuthSessionTokenFromHeaders = (
-  headers: { get: (name: string) => string | null },
-  legacyCookiePrefix?: string,
-): string | null => {
+export const readAuthSessionTokenFromHeaders = (headers: {
+  get: (name: string) => string | null;
+}): string | null => {
   const cookieHeader = headers.get('cookie');
   if (!cookieHeader) return null;
   const cookies = parseCookieHeader(cookieHeader);
-  return (
-    cookies[AUTH_SESSION_COOKIE] ??
-    stripLegacySignature(cookies[legacySessionCookieName(legacyCookiePrefix)])
-  );
+  return cookies[AUTH_SESSION_COOKIE] ?? null;
 };
 
 export class AuthSessionModel {

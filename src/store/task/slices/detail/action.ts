@@ -653,7 +653,7 @@ export class TaskDetailSliceActionImpl {
       const found = await Promise.resolve(taskService.find(id)).catch(() => undefined);
       taskId ??= found?.data?.id;
       domainRevision ??= found?.data?.domainRevision;
-      fromAgentId ??= found?.data?.agentId;
+      fromAgentId ??= found?.data?.assigneeAgentId;
     }
     if (!taskId || domainRevision === undefined) return;
     try {

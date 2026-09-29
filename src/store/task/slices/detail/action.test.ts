@@ -677,7 +677,7 @@ describe('TaskDetailSliceAction', () => {
       // the map — fromAgentId must come from the fetched row, not null.
       useTaskStore.setState({ taskDetailMap: {} });
       vi.mocked(taskService.find).mockResolvedValue({
-        data: { agentId: 'agt_incumbent', domainRevision: 4, id: 'task-uuid-2' },
+        data: { assigneeAgentId: 'agt_incumbent', domainRevision: 4, id: 'task-uuid-2' },
       } as any);
       vi.mocked(taskService.handoff).mockResolvedValue({} as any);
 

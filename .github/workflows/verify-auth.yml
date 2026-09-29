@@ -90,7 +90,7 @@ jobs:
         working-directory: apps/auth/cf
         run: |
           set -euo pipefail
-          timeout 60s node_modules/.bin/cf dev --local --port 8787 >/tmp/auth-cf-dev.log 2>&1 &
+          timeout 60s node_modules/.bin/cf dev >/tmp/auth-cf-dev.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do

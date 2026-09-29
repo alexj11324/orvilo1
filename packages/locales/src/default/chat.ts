@@ -146,7 +146,7 @@ export default {
   'confirmClearCurrentMessages':
     'You are about to clear the current conversation messages. Once cleared, they cannot be retrieved. Please confirm your action.',
   'confirmRemoveChatGroupItemAlert':
-    'This Group will be deleted. Group-specific assistants will also be deleted, while external assistants will not be affected.',
+    'This Group will be deleted. Group-specific agents will also be deleted, while external agents will not be affected.',
   'confirmRemoveGroupItemAlert':
     'You are about to delete this category. After deletion, its agents will be moved to the default list. Please confirm your action.',
   'confirmRemoveGroupSuccess': 'Group deleted successfully',
@@ -336,7 +336,7 @@ export default {
     'Let the model reason before answering. Use it for complex tasks.',
   'extendParams.enableReasoning.title': 'Enable Deep Thinking',
   'extendParams.preserveThinking.desc':
-    'When enabled, assistant historical reasoning will be sent back as context for models. This may increase token usage.',
+    'When enabled, the agent’s historical reasoning will be sent back as context for models. This may increase token usage.',
   'extendParams.preserveThinking.title': 'Preserve Historical Thinking',
   'extendParams.imageAspectRatio.title': 'Image Aspect Ratio',
   'extendParams.imageResolution.title': 'Image Resolution',
@@ -356,7 +356,7 @@ export default {
   'group.desc': 'Move a task forward with multiple Agents in one shared space.',
   'group.memberTooltip': 'There are {{count}} members in the group',
   'group.orchestratorThinking': 'Orchestrator is thinking...',
-  'group.profile.addMember.addExisting': 'Add existing assistant',
+  'group.profile.addMember.addExisting': 'Add existing agent',
   'group.profile.addMember.createNew': 'New member',
   'group.profile.addMember.newMemberTitle': 'New member',
   'group.profile.contentPlaceholder':
@@ -639,7 +639,7 @@ export default {
   'inbox.title': 'Orvilo AI',
   'input.addAi': 'Add an AI message',
   'input.addAiPrefillUnsupported':
-    'The current model doesn’t support ending the conversation with an assistant message. Follow it with a user message before sending.',
+    'The current model doesn’t support ending the conversation with an agent message. Follow it with a user message before sending.',
   'input.addUser': 'Add a user message',
   'input.agentModeUnsupportedModel':
     'The current model doesn’t support agentic tool calling. Switch to a model with agent capability for the best experience.',
@@ -725,7 +725,7 @@ export default {
   'messageAction.collapse': 'Collapse Message',
   'messageAction.continueGeneration': 'Continue Generating',
   'messageAction.continueGenerationUnsupported':
-    'The current model doesn’t support continuing an assistant message. Try regenerating instead.',
+    'The current model doesn’t support continuing an agent message. Try regenerating instead.',
   'messageAction.advanced': 'Advanced',
   'messageAction.copyMessageId': 'Copy Message ID',
   'messageAction.copyOperationId': 'Copy Operation ID',
@@ -763,7 +763,7 @@ export default {
   'messageForward.modal.sendCount': 'Forward ({{count}})',
   'messageForward.modal.title': 'Forward to Agent',
   'messageForward.role.agent': 'Agent',
-  'messageForward.role.assistant': 'Assistant',
+  'messageForward.role.assistant': 'Agent',
   'messageForward.role.user': 'User',
   'messageForward.success': 'Forwarded to {{title}}',
   'messageForward.successMulti': 'Forwarded to {{count}} agents',
@@ -771,7 +771,7 @@ export default {
     'The following {{count}} messages were forwarded from another conversation. Please use them as context and continue:',
   'messageForward.topic.context': 'Topic context',
   'messageForward.topic.description':
-    'The user and assistant messages in this topic will be sent as context. Tool messages are excluded.',
+    'The user and agent messages in this topic will be sent as context. Tool messages are excluded.',
   'messageForward.topic.header':
     'The following topic was forwarded from another conversation. Please use it as context and continue:',
   'messageForward.topic.loadFailed': 'Could not load this topic for forwarding',
@@ -1492,23 +1492,11 @@ export default {
   'taskDetail.prerequisites.blocked': 'Blocked until every prerequisite is completed.',
   'taskDetail.prerequisites.blockedBy': 'Blocked by',
   'taskDetail.prerequisites.ready': 'All prerequisites completed.',
-  'taskDetail.prerequisites.empty': 'No related issues.',
-  'taskDetail.prerequisites.input': 'Related issue identifier',
-  'taskDetail.prerequisites.placeholder': 'Task identifier, e.g. T-1',
-  'taskDetail.prerequisites.add': 'Add related',
-  'taskDetail.prerequisites.related': 'Related',
+  'taskDetail.prerequisites.empty': 'No prerequisite tasks.',
   'taskDetail.prerequisites.removeBlocker': 'Remove blocking dependency on {{identifier}}',
-  'taskDetail.prerequisites.removeRelated': 'Remove relationship with {{identifier}}',
   'taskDetail.prerequisites.relationPosition': '{{identifier}}, item {{position}}',
-  'taskDetail.prerequisites.cycle': 'This dependency would create a cycle.',
-  'taskDetail.prerequisites.self': 'A task cannot depend on itself.',
-  'taskDetail.prerequisites.project': 'Related issues must belong to the same project.',
-  'taskDetail.prerequisites.relationConflict':
-    'A blocking relationship already exists. Remove it before adding a regular relation.',
-  'taskDetail.prerequisites.active':
-    'Pause or reopen this task before adding an unfinished prerequisite.',
   'taskDetail.prerequisites.unavailable': 'Task not found or unavailable.',
-  'taskDetail.prerequisites.error': 'Could not update related issues. Try again.',
+  'taskDetail.prerequisites.error': 'Could not update prerequisites. Try again.',
 
   'taskDetail.acceptance.checklist': 'Acceptance checklist',
   'taskDetail.acceptance.closeDetail': 'Close check detail',
@@ -1664,7 +1652,6 @@ export default {
   'taskDetail.properties': 'Properties',
   'taskDetail.executionStatus': 'Execution',
   'taskDetail.project': 'Project',
-  'taskDetail.related': 'Related',
   'taskDetail.copyBranch': 'Copy branch name',
   'taskDetail.copyBranchSuccess': 'Branch name copied',
   'taskDetail.milestone.hint': 'Set milestone',

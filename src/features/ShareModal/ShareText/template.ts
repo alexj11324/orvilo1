@@ -41,7 +41,7 @@ export const generateMarkdown = ({
       if (chat.role === 'user') {
         parts.push('##### User:', '');
       } else if (chat.role === 'assistant') {
-        parts.push('##### Assistant:', '');
+        parts.push('##### Agent:', '');
       } else if (chat.role === 'tool') {
         parts.push('##### Tools Calling:', '');
       }

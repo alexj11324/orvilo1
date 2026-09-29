@@ -51,7 +51,7 @@ Then(
       exact: true,
     });
     const ready = this.page.getByText('All prerequisites completed.', { exact: true });
-    const empty = this.page.getByText('No related issues.', { exact: true });
+    const empty = this.page.getByText('No prerequisite tasks.', { exact: true });
 
     try {
       for (const role of ['first', 'second', 'dependent']) {
@@ -77,8 +77,8 @@ Then(
         }),
       ).toBeVisible({ timeout: 25_000 });
 
-      // The rail's add form links 'relates' edges (non-blocking); a second
-      // blocking prerequisite still arrives through the API.
+      // The rail has no add UI; a second blocking prerequisite arrives through
+      // the API.
       await rpc('addDependency', { dependsOnId: second.id, taskId: target.id });
       await expect(
         this.page.getByRole('button', {

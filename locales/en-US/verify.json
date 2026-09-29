@@ -685,7 +685,7 @@
   "result.errored.title": "Draft result",
   "result.failed.sub": "This result is held back. The delivery checker found verification insufficient and triggered a repair.",
   "result.failed.title": "Draft result",
-  "result.foot": "A snapshot of this run’s result — not an assistant or user message.",
+  "result.foot": "A snapshot of this run’s result — not an agent or user message.",
   "result.kicker": "Verification · Round {{round}}",
   "result.passed.sub": "The delivery checker passed {{passed}}/{{total}}. This result is ready to deliver.",
   "result.passed.title": "Result",

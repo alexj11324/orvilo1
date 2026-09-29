@@ -29,4 +29,19 @@ describe('useFavoritePointerDragGuard', () => {
     expect(preventDefault).not.toHaveBeenCalled();
     expect(stopPropagation).not.toHaveBeenCalled();
   });
+
+  it('cancels the drop click on the shared drag flag even with empty row refs', () => {
+    // Regression: the click after a drop reaches a row whose per-gesture refs
+    // are empty (remounted mid-drag / capture path skipped) — the shared flag
+    // owned by the DndContext host must still cancel it.
+    const dragEndedRef = { current: true };
+    const { result } = renderHook(() => useFavoritePointerDragGuard(dragEndedRef));
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    result.current.onClick({ clientX: 10, clientY: 30, preventDefault, stopPropagation });
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+  });
 });

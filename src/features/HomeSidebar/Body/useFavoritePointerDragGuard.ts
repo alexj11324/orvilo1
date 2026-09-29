@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { type RefObject, useCallback, useRef } from 'react';
 
 interface PointerCoordinates {
   clientX: number;
@@ -10,7 +10,13 @@ interface ClickCancellation extends PointerCoordinates {
   stopPropagation: () => void;
 }
 
-export const useFavoritePointerDragGuard = () => {
+/**
+ * `dragEndedRef` is owned by the enclosing DndContext host: it is set on
+ * drag start and cleared a tick after drag end/cancel, so the click the
+ * browser dispatches on the drop's anchor is always cancelled — even when
+ * this row remounted mid-drag and the per-row refs below are empty.
+ */
+export const useFavoritePointerDragGuard = (dragEndedRef?: RefObject<boolean>) => {
   const pointerStartRef = useRef<PointerCoordinates | null>(null);
   const pointerDraggedRef = useRef(false);
 
@@ -27,15 +33,18 @@ export const useFavoritePointerDragGuard = () => {
     }
   }, []);
 
-  const onClick = useCallback((event: ClickCancellation) => {
-    const start = pointerStartRef.current;
-    const releasedAwayFromStart =
-      !!start && Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) >= 5;
-    if (!pointerDraggedRef.current && !releasedAwayFromStart) return;
-    event.preventDefault();
-    event.stopPropagation();
-    pointerDraggedRef.current = false;
-  }, []);
+  const onClick = useCallback(
+    (event: ClickCancellation) => {
+      const start = pointerStartRef.current;
+      const releasedAwayFromStart =
+        !!start && Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) >= 5;
+      if (!pointerDraggedRef.current && !releasedAwayFromStart && !dragEndedRef?.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      pointerDraggedRef.current = false;
+    },
+    [dragEndedRef],
+  );
 
   return { onClick, onPointerDownCapture, onPointerMoveCapture };
 };

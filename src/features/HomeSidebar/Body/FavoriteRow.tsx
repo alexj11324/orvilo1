@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { NavigationFavorite, NavigationFavoriteTargetType } from '@orvilo/types';
 import { PinOff } from 'lucide-react';
+import { type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NavItem from '@/features/NavPanel/components/NavItem';
@@ -22,11 +23,20 @@ interface FavoriteRowProps {
   itemCount: number;
   onMove: (index: number, direction: 'down' | 'up') => void;
   onUnpin: (targetId: string, targetType: NavigationFavoriteTargetType) => void;
+  /** Set for the whole gesture+drop task by the DndContext host; see the guard. */
+  suppressClickRef: RefObject<boolean>;
 }
 
-const FavoriteRow = ({ index, item, itemCount, onMove, onUnpin }: FavoriteRowProps) => {
+const FavoriteRow = ({
+  index,
+  item,
+  itemCount,
+  onMove,
+  onUnpin,
+  suppressClickRef,
+}: FavoriteRowProps) => {
   const { t } = useTranslation('common');
-  const dragGuard = useFavoritePointerDragGuard();
+  const dragGuard = useFavoritePointerDragGuard(suppressClickRef);
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
     id: favoriteKey(item),
   });

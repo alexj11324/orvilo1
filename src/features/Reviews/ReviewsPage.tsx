@@ -5,7 +5,7 @@ import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import dayjs from 'dayjs';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
@@ -14,15 +14,15 @@ import AsyncError from '@/components/AsyncError';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceSplit } from '@/features/WorkSurface';
-import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
 import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
-import { mergeWorkQueryGroups } from '../MyWork/workQueryPaging';
+import { mergeWorkQueryGroups, mergeWorkQueryPage } from '../MyWork/workQueryPaging';
 import WorkQueryResults from '../MyWork/WorkQueryResults';
 import ConnectGitHubButton from './ConnectGitHubButton';
 import ReviewPullRequestPage from './ReviewPullRequestPage';
@@ -41,6 +41,7 @@ import {
   type ReviewsTab,
   reviewsTabDestination,
 } from './reviewsSurface';
+import { useScopedTailPager } from './scopedTailPager';
 
 const resolveTab = (value: string | null): ReviewsTab =>
   value === 'created' ? 'created' : 'for-me';
@@ -171,20 +172,13 @@ const PullRequestRow = memo<{
   returnTo: string;
 }>(({ active, detailPath, item, returnTo }) => {
   const { t } = useTranslation('common');
-  const navigate = useWorkspaceAwareNavigate();
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
+    <WorkspaceLink
       className={styles.row}
       data-active={active}
-      role={'link'}
-      tabIndex={0}
+      state={{ returnTo }}
       title={`${item.repository}#${item.number}${item.author ? ` · ${item.author}` : ''}`}
-      onClick={() => navigate(detailPath, { state: { returnTo } })}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') navigate(detailPath, { state: { returnTo } });
-      }}
+      to={detailPath}
     >
       <Icon className={styles.prIcon} icon={GitPullRequestIcon} size={14} />
       <Flexbox flex={1} style={{ minWidth: 0 }}>
@@ -212,7 +206,7 @@ const PullRequestRow = memo<{
           {reviewRelativeTime(item.updatedAt)}
         </Text>
       ) : null}
-    </Flexbox>
+    </WorkspaceLink>
   );
 });
 
@@ -300,47 +294,39 @@ const ReviewsPage = memo(() => {
   const notConnected = isTrpcErrorCode(queue.error, 'PRECONDITION_FAILED');
   const pullRequests: ReviewQueueItem[] = useMemo(() => queue.data?.data.items ?? [], [queue.data]);
   const queueTotal = queue.data?.data.total ?? null;
-  const [queueTail, setQueueTail] = useState<ReviewQueueItem[]>([]);
-  const [queueLoadingMore, setQueueLoadingMore] = useState(false);
-  // Cursor for the NEXT page — advanced by every load-more response; falls
-  // back to the first page's cursor before any tail has been fetched.
-  const [queuePaging, setQueuePaging] = useState<{
-    endCursor: string | null;
-    hasMore: boolean;
-  } | null>(null);
-  const queueHasMore = queuePaging?.hasMore ?? queue.data?.data.hasMore ?? false;
-  const queueEndCursor = queuePaging?.endCursor ?? queue.data?.data.endCursor ?? null;
-  const queueMore = usePagedLoadMore();
-  useEffect(() => {
-    setQueueTail([]);
-    setQueuePaging(null);
-    queueMore.resetLoadMoreError();
-  }, [queueMore.resetLoadMoreError, tab, workspaceId]);
-  const allPullRequests = useMemo(() => [...pullRequests, ...queueTail], [pullRequests, queueTail]);
+  // Identity of the queue query: a late tail response from a previous tab or
+  // workspace can never write back — the scope key binds first page, tail,
+  // cursor, errors and pending state to one query.
+  const queueScope = useMemo(
+    () => JSON.stringify([workspaceId ?? 'personal', tab]),
+    [tab, workspaceId],
+  );
+  const queuePager = useScopedTailPager<ReviewQueueItem>(queueScope, mergeWorkQueryPage);
+  const queueTail = queuePager.tailFor(queueScope);
+  const queueHasMore = queueTail?.hasMore ?? queue.data?.data.hasMore ?? false;
+  const allPullRequests = useMemo(
+    () => mergeWorkQueryPage(pullRequests, queueTail?.items ?? []),
+    [pullRequests, queueTail],
+  );
   const queueViewer = queue.data?.data.viewer ?? null;
   const queueGroups = useMemo(
     () => reviewQueueGroups(allPullRequests, { tab, viewer: queueViewer }),
     [allPullRequests, queueViewer, tab],
   );
-  // Errors surface through `queueMore` — an inline retry under the footer —
+  // Errors surface through the pager — an inline retry under the footer —
   // so a failed page never dies as a console-only silent stop.
-  const loadMoreQueue = useCallback(async () => {
-    if (!queueEndCursor) return;
-    setQueueLoadingMore(true);
-    try {
-      const next = await pullRequestService.queue(tab, queueEndCursor);
-      setQueueTail((current) => [
-        ...current,
-        ...((next?.data?.items as ReviewQueueItem[] | undefined) ?? []),
-      ]);
-      setQueuePaging({
-        endCursor: next?.data?.endCursor ?? null,
+  const loadMoreQueue = useCallback(() => {
+    const cursor = queueTail?.nextCursor ?? queue.data?.data.endCursor;
+    if (!cursor) return;
+    void queuePager.loadMore(queueScope, 'queue', async () => {
+      const next = await pullRequestService.queue(tab, cursor);
+      return {
         hasMore: next?.data?.hasMore ?? false,
-      });
-    } finally {
-      setQueueLoadingMore(false);
-    }
-  }, [queueEndCursor, tab]);
+        items: (next?.data?.items as ReviewQueueItem[] | undefined) ?? [],
+        nextCursor: next?.data?.endCursor ?? null,
+      };
+    });
+  }, [queue.data, queuePager, queueScope, queueTail, tab]);
 
   const { data, error, isLoading } = useClientDataSWR(
     workAttentionKeys.reviews(workspaceId, tab),
@@ -348,36 +334,55 @@ const ReviewsPage = memo(() => {
   );
   const firstGroups = data?.data.groups ?? [];
   const queryHash = data?.data.queryHash;
-  const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
-  const workMore = usePagedLoadMore();
-  useEffect(() => {
-    setGroupTail([]);
-    workMore.resetLoadMoreError();
-  }, [queryHash, tab, workMore.resetLoadMoreError, workspaceId]);
-  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
+  // Group tail identity carries the query hash too — a refetched snapshot
+  // rebinds the pager, so a stale tail or per-group cursor can never merge
+  // into a newer snapshot.
+  const groupScope = useMemo(
+    () => JSON.stringify([workspaceId ?? 'personal', tab, queryHash ?? 'pending']),
+    [queryHash, tab, workspaceId],
+  );
+  const groupPager = useScopedTailPager<(typeof firstGroups)[number]>(
+    groupScope,
+    mergeWorkQueryGroups,
+  );
+  const groups = mergeWorkQueryGroups(firstGroups, groupPager.tailFor(groupScope)?.items ?? []);
+  const loadMoreGroupErrors = useMemo(() => {
+    const errors: Record<string, unknown> = {};
+    for (const group of groups) {
+      const error = groupPager.errorFor(group.key);
+      if (error !== undefined) errors[group.key] = error;
+    }
+    return errors;
+  }, [groupPager, groups]);
 
   const refresh = useCallback(async () => {
-    setGroupTail([]);
+    // Bump both generations before the refetch: an in-flight tail request
+    // from the stale snapshot resolves into a dropped write and its cursor
+    // is never reused.
+    queuePager.reset();
+    groupPager.reset();
     await Promise.all([
       mutate(workAttentionKeys.reviews(workspaceId, tab)),
       mutate(pullRequestKeys.queue(workspaceId, tab)),
     ]);
-  }, [tab, workspaceId]);
+  }, [groupPager, queuePager, tab, workspaceId]);
 
   const loadMoreGroup = useCallback(
-    async (groupKey: string) => {
+    (groupKey: string) => {
       const column = groups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
       if (!last || !queryHash) return;
-      const next = await workAttentionService.reviews({
-        afterId: last.id,
-        groupKey,
-        queryHash,
-        tab,
+      void groupPager.loadMore(groupScope, groupKey, async () => {
+        const next = await workAttentionService.reviews({
+          afterId: last.id,
+          groupKey,
+          queryHash,
+          tab,
+        });
+        return { hasMore: false, items: next.data.groups ?? [], nextCursor: null };
       });
-      setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
     },
-    [groups, queryHash, tab],
+    [groupPager, groupScope, groups, queryHash, tab],
   );
 
   const tabs = useMemo(
@@ -504,14 +509,14 @@ const ReviewsPage = memo(() => {
               </Flexbox>
               {/* A partial queue is never presented as complete — the tail
                   counts stay visible and pages load on demand. */}
-              {queueMore.loadMoreError ? (
+              {queuePager.errorFor('queue') ? (
                 <AsyncError
-                  error={queueMore.loadMoreError}
+                  error={queuePager.errorFor('queue')}
                   variant={'inline'}
-                  onRetry={queueMore.retryLoadMore}
+                  onRetry={loadMoreQueue}
                 />
               ) : null}
-              {queueHasMore || queueTail.length > 0 ? (
+              {queueHasMore || (queueTail?.items.length ?? 0) > 0 ? (
                 <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
                   <Text fontSize={12} type={'secondary'}>
                     {t('reviews.loadedCount', {
@@ -521,10 +526,10 @@ const ReviewsPage = memo(() => {
                   </Text>
                   {queueHasMore ? (
                     <Button
-                      loading={queueLoadingMore}
+                      loading={queuePager.isLoading('queue')}
                       size={'small'}
                       type={'text'}
-                      onClick={() => queueMore.runLoadMore(loadMoreQueue)}
+                      onClick={loadMoreQueue}
                     >
                       {t('myWork.loadMore')}
                     </Button>
@@ -553,16 +558,14 @@ const ReviewsPage = memo(() => {
                 groupBy={data?.data.groupBy}
                 groups={groups}
                 layout={'list'}
-                loadMoreError={workMore.loadMoreError}
-                loadMoreGroupErrors={workMore.loadMoreGroupErrors}
+                loadMoreGroupErrors={loadMoreGroupErrors}
                 loadMoreLabel={t('myWork.loadMore')}
                 loading={isLoading}
                 loadingLabel={t('myWork.loading')}
                 tasks={tasks}
                 total={data?.data.total}
-                onLoadMoreGroup={(key) => workMore.runLoadMoreGroup(key, () => loadMoreGroup(key))}
-                onRetryLoadMore={workMore.retryLoadMore}
-                onRetryLoadMoreGroup={workMore.retryLoadMoreGroup}
+                onLoadMoreGroup={loadMoreGroup}
+                onRetryLoadMoreGroup={loadMoreGroup}
               />
             )}
           </QueueGroup>

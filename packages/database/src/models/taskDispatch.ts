@@ -18,7 +18,7 @@ import { topics } from '../schemas/topic';
 import type { OrviloDatabase, Transaction } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
-import { normalizeProjectOrchestrationPolicy } from './project';
+import { normalizeProjectOrchestrationPolicy } from './projectOrchestrationPolicy';
 
 const ACTIVE_PHASES: TaskDispatchPhase[] = [
   'requested',
@@ -52,7 +52,7 @@ const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
  */
 const GOAL_DISPATCH_BLOCKED_STATUSES = ['paused', 'canceled', 'failed', 'achieved'] as const;
 
-const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
+export const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
   task.assigneeAgentId === dispatch.agentId ||
   (dispatch.agentId !== null &&
     dispatch.requestedBy.startsWith('manual:') &&
@@ -365,6 +365,50 @@ export class TaskDispatchModel {
         ? []
         : [{ ...row, planRevision: row.planRevision, userId: row.userId }],
     );
+  }
+
+  /**
+   * Fence every active dispatch behind a set of tasks in one statement —
+   * the bulk counterpart of `requestStop` for ownership-detach paths (agent
+   * ownership transfer, goal reassignment) that clear an assignee out from
+   * under live executions. The watchdog's cancellation sweep then performs
+   * the per-row interrupt + settle so the remote writers are provably dead,
+   * not just fenced in the database.
+   */
+  static async requestStopForTasks(
+    db: OrviloDatabase,
+    taskIds: string[],
+    reason: string,
+  ): Promise<number> {
+    if (taskIds.length === 0) return 0;
+    const updated = await db
+      .update(taskDispatches)
+      .set({
+        cancelAttempts: 0,
+        cancelRequestedAt: new Date(),
+        fence: sql`${taskDispatches.fence} + 1`,
+        lastCancelError: null,
+        leaseExpiresAt: null,
+        leaseOwner: null,
+        phase: 'cancel_requested',
+        waitingReason: reason,
+      })
+      .where(
+        and(
+          inArray(taskDispatches.taskId, taskIds),
+          inArray(taskDispatches.phase, [
+            'requested',
+            'claimed',
+            'provisioning',
+            'dispatched',
+            'running',
+            'waiting',
+            'outcome_unknown',
+          ]),
+        ),
+      )
+      .returning({ id: taskDispatches.id });
+    return updated.length;
   }
 
   async request(input: RequestTaskDispatchInput): Promise<RequestTaskDispatchResult> {
@@ -1004,7 +1048,10 @@ export class TaskDispatchModel {
     const [updated] = await this.db
       .update(taskDispatches)
       .set({
+        cancelAttempts: 0,
+        cancelRequestedAt: new Date(),
         fence: sql`${taskDispatches.fence} + 1`,
+        lastCancelError: null,
         leaseExpiresAt: null,
         leaseOwner: null,
         phase: 'cancel_requested',
@@ -1081,6 +1128,7 @@ export class TaskDispatchModel {
       const [claimed] = await tx
         .update(taskDispatches)
         .set({
+          cancelAttempts: sql`${taskDispatches.cancelAttempts} + 1`,
           leaseExpiresAt: new Date(now.getTime() + leaseMs),
           leaseOwner: owner,
         })
@@ -1115,6 +1163,7 @@ export class TaskDispatchModel {
     const [updated] = await this.db
       .update(taskDispatches)
       .set({
+        lastCancelError: input.reason,
         leaseExpiresAt: new Date(Date.now() + Math.max(1, input.retryAfterMs)),
         leaseOwner: null,
         waitingReason: input.reason,
@@ -1261,6 +1310,133 @@ export class TaskDispatchModel {
       return settled
         ? { currentGeneration, dispatch: settled, topicId: topic?.topicId ?? null }
         : null;
+    });
+  }
+
+  /**
+   * Give up on a `cancel_requested` dispatch whose interrupt retries hit the
+   * bound. Unlike `settleCancellation`, no remote confirmation ever arrived:
+   * the dispatch leaves the active-phase set (freeing the task's single
+   * execution slot) with the fence already bumped, so a late completion from
+   * the abandoned writer is rejected as stale. The task parks at `paused`
+   * for human attention rather than pretending the cancel succeeded.
+   */
+  async abandonCancellation(input: {
+    dispatchId: string;
+    fence: number;
+    generation: number;
+    owner: string;
+    reason: string;
+  }): Promise<{ dispatch: TaskDispatchItem; topicId: string | null } | null> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const [dispatch] = await runner
+        .select()
+        .from(taskDispatches)
+        .where(and(eq(taskDispatches.id, input.dispatchId), this.scopeCondition()))
+        .limit(1)
+        .for('update');
+      if (
+        !dispatch ||
+        dispatch.phase !== 'cancel_requested' ||
+        dispatch.fence !== input.fence ||
+        dispatch.generation !== input.generation ||
+        dispatch.leaseOwner !== input.owner
+      ) {
+        return null;
+      }
+
+      const [task] = await runner
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, dispatch.taskId))
+        .limit(1)
+        .for('update');
+      if (!task || task.workspaceId !== (this.workspaceId ?? null)) return null;
+
+      const [topic] = await runner
+        .select()
+        .from(taskTopics)
+        .where(eq(taskTopics.dispatchId, dispatch.id))
+        .limit(1)
+        .for('update');
+      if (topic) {
+        await runner
+          .update(taskTopics)
+          .set({ runState: 'canceled', status: 'abandoned' })
+          .where(
+            and(
+              eq(taskTopics.id, topic.id),
+              eq(taskTopics.dispatchId, dispatch.id),
+              eq(taskTopics.executionGeneration, dispatch.generation),
+            ),
+          );
+        if (topic.topicId) {
+          await runner
+            .update(topics)
+            .set({ completedAt: new Date() })
+            .where(eq(topics.id, topic.topicId));
+        }
+      }
+
+      if (task.status === 'running' && task.executionGeneration === dispatch.generation) {
+        const [paused] = await runner
+          .update(tasks)
+          .set({
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            error: input.reason,
+            reviewerUserId: sql<string | null>`coalesce(
+              ${tasks.reviewerUserId},
+              ${tasks.assigneeUserId},
+              ${tasks.createdByUserId}
+            )`,
+            status: 'paused',
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(tasks.id, task.id),
+              eq(tasks.executionGeneration, dispatch.generation),
+              eq(tasks.status, 'running'),
+            ),
+          )
+          .returning();
+        if (!paused) return null;
+        if (this.workspaceId) {
+          await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(
+            runner,
+            {
+              changedFields: ['status'],
+              eventType: 'task.status.changed',
+              idempotencyKey: `task:${paused.id}:revision:${paused.domainRevision}:task.status.changed`,
+              source: 'system',
+              suppressLinearOutbox: true,
+              task: paused,
+            },
+          );
+        }
+      }
+
+      const [abandoned] = await runner
+        .update(taskDispatches)
+        .set({
+          lastCancelError: input.reason,
+          leaseExpiresAt: null,
+          leaseOwner: null,
+          phase: 'abandoned',
+          waitingReason: input.reason,
+        })
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.phase, 'cancel_requested'),
+            eq(taskDispatches.fence, input.fence),
+            eq(taskDispatches.generation, input.generation),
+            eq(taskDispatches.leaseOwner, input.owner),
+          ),
+        )
+        .returning();
+      return abandoned ? { dispatch: abandoned, topicId: topic?.topicId ?? null } : null;
     });
   }
 
@@ -1484,6 +1660,22 @@ export class TaskDispatchModel {
       .where(and(eq(taskDispatches.id, dispatchId), this.scopeCondition()))
       .limit(1);
     if (!dispatch) return undefined;
+    return dispatch;
+  }
+
+  /** The task's single occupant of the active-phase set, if any. */
+  async findActiveByTaskId(taskId: string): Promise<TaskDispatchItem | undefined> {
+    const [dispatch] = await this.db
+      .select()
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.taskId, taskId),
+          this.scopeCondition(),
+          inArray(taskDispatches.phase, ACTIVE_PHASES),
+        ),
+      )
+      .limit(1);
     return dispatch;
   }
 }

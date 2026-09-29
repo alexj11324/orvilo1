@@ -27,6 +27,7 @@ const {
   sweepTaskCancellations,
   sweepPlanningTaskDispatchStarts,
   sweepTaskDispatchRecovery,
+  sweepTaskOwnershipInvariants,
 } = vi.hoisted(() => ({
   briefCreate: vi.fn<(input: unknown) => Promise<unknown>>(),
   cancelIfRunning: vi.fn<(taskId: string, topicId: string) => Promise<boolean>>(),
@@ -62,6 +63,7 @@ const {
   sweepTaskCancellations: vi.fn<() => Promise<unknown[]>>(),
   sweepPlanningTaskDispatchStarts: vi.fn<() => Promise<unknown[]>>(),
   sweepTaskDispatchRecovery: vi.fn<() => Promise<unknown[]>>(),
+  sweepTaskOwnershipInvariants: vi.fn<() => Promise<unknown[]>>(),
 }));
 
 vi.mock('@/database/server', () => ({ getServerDB: vi.fn().mockResolvedValue({}) }));
@@ -91,6 +93,7 @@ vi.mock('@/server/services/taskIntegration', () => ({
 vi.mock('@/server/services/taskCancellation', () => ({ sweepTaskCancellations }));
 vi.mock('@/server/services/taskDispatchStart', () => ({ sweepPlanningTaskDispatchStarts }));
 vi.mock('@/server/services/taskDispatchRecovery', () => ({ sweepTaskDispatchRecovery }));
+vi.mock('@/server/services/taskOwnership', () => ({ sweepTaskOwnershipInvariants }));
 vi.mock('@/database/models/brief', () => ({
   BriefModel: vi.fn(function () {
     return { create: briefCreate };
@@ -126,6 +129,7 @@ describe('task watchdog', () => {
     sweepTaskCancellations.mockResolvedValue([]);
     sweepPlanningTaskDispatchStarts.mockResolvedValue([]);
     sweepTaskDispatchRecovery.mockResolvedValue([]);
+    sweepTaskOwnershipInvariants.mockResolvedValue([]);
     updateStatusIfCurrent.mockResolvedValue({ id: 'task-1' });
     updateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
   });

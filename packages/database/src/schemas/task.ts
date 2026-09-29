@@ -309,6 +309,13 @@ export const taskDispatches = pgTable(
     leaseOwner: text('lease_owner'),
     leaseExpiresAt: timestamptz('lease_expires_at'),
     waitingReason: text('waiting_reason'),
+    // Bounded cancellation bookkeeping (requestStop → sweep): attempts is
+    // incremented per claimed interrupt; the sweep abandons the dispatch —
+    // freeing the one-active-dispatch slot — once attempts or age pass the
+    // ceiling so a wedged runtime cannot pin the task forever.
+    cancelAttempts: integer('cancel_attempts').notNull().default(0),
+    cancelRequestedAt: timestamptz('cancel_requested_at'),
+    lastCancelError: text('last_cancel_error'),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
     ...timestamps,
   },

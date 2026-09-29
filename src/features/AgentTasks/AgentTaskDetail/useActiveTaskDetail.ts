@@ -48,7 +48,14 @@ export const useActiveTaskDetail = (taskId?: string): ActiveTaskDetailState => {
   useEffect(() => {
     if (!taskId) return;
     setActiveTaskId(taskId);
-    return () => setActiveTaskId(undefined);
+    // Only release the slot if it still points at this host's task — a second
+    // detail host (route page + portal at narrow widths) may have claimed it
+    // since; clearing unconditionally would blank the surviving host's global
+    // consumers. Detail-subtree reads no longer depend on this slot (they bind
+    // through TaskDetailScope), so the compare is transitional cleanup only.
+    return () => {
+      if (useTaskStore.getState().activeTaskId === taskId) setActiveTaskId(undefined);
+    };
   }, [taskId, setActiveTaskId]);
 
   // `fetchTaskDetail` throws on a missing task, so `error` is the definitive

@@ -2,6 +2,7 @@ export { default as AgentScopedTaskDetailPage } from './AgentScopedTaskDetailPag
 export { default as IssueContent } from './IssueContent';
 export { default as RoutedTaskDetailPage } from './RoutedTaskDetailPage';
 export { default as TaskDetailPage } from './TaskDetailPage';
+export { TaskDetailScope, useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 export { default as TaskDetailSections } from './TaskDetailSections';
 export { default as TaskDetailSkeleton } from './TaskDetailSkeleton';
 export { default as TopicChatDrawer } from './TopicChatDrawer';

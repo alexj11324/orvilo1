@@ -2,7 +2,6 @@ import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskAcceptance from './TaskAcceptance';
@@ -11,6 +10,7 @@ import TaskArtifacts from './TaskArtifacts';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import TaskDetailRunPauseAction from './TaskDetailRunPauseAction';
+import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
 import TaskInstruction from './TaskInstruction';
 import TaskParentBar from './TaskParentBar';
@@ -22,12 +22,12 @@ import TaskSubtasks from './TaskSubtasks';
 
 /**
  * The scrollable body sections of a task detail, shared by the full-page
- * `/task/[tid]` route and the chat-side Portal. All children read the active
- * task from the task store, so the host is responsible for setting
- * `activeTaskId` (e.g. via `setActiveTaskId`) before rendering this.
+ * `/task/[tid]` route and the chat-side Portal. Children resolve their task
+ * through `TaskDetailScope` — the host binds a taskId (or, outside a scope,
+ * reads fall back to the store's `activeTaskId`).
  */
 const TaskDetailSections = memo(() => {
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+  const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
 
   return (
     <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import {
+  TaskDetailScope,
   TaskDetailSections,
   TaskDetailSkeleton,
   TopicChatDrawer,
@@ -16,8 +17,9 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 const Body = memo(() => {
   const { t } = useTranslation('chat');
   const taskId = useChatStore(chatPortalSelectors.taskDetailId);
-  // Same data wiring as the full /task/[tid] page — owns activeTaskId + polling
-  // fetch so the shared section components resolve to this task.
+  // Same data wiring as the full /task/[tid] page — claims the shared
+  // `activeTaskId` slot for global consumers and polls the detail fetch;
+  // section reads bind to `taskId` through TaskDetailScope instead.
   const { isInitialLoading, isNotFound, error, onRetry } = useActiveTaskDetail(taskId);
 
   if (!taskId) return null;
@@ -41,15 +43,17 @@ const Body = memo(() => {
   }
 
   return (
-    <Flexbox
-      flex={1}
-      height={'100%'}
-      paddingInline={16}
-      style={{ minHeight: 0, overflowY: 'auto' }}
-    >
-      {isInitialLoading ? <TaskDetailSkeleton chrome={'body'} /> : <TaskDetailSections />}
-      <TopicChatDrawer />
-    </Flexbox>
+    <TaskDetailScope taskId={taskId}>
+      <Flexbox
+        flex={1}
+        height={'100%'}
+        paddingInline={16}
+        style={{ minHeight: 0, overflowY: 'auto' }}
+      >
+        {isInitialLoading ? <TaskDetailSkeleton chrome={'body'} /> : <TaskDetailSections />}
+        <TopicChatDrawer />
+      </Flexbox>
+    </TaskDetailScope>
   );
 });
 

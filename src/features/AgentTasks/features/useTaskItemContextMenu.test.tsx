@@ -185,6 +185,68 @@ describe('useTaskItemContextMenu', () => {
 
     expect(mocks.closeContextMenu).toHaveBeenCalledTimes(1);
   });
+
+  it('offers the board columns in order — triage shown but unreachable for an unlinked task', () => {
+    const { result } = renderHook(() =>
+      useTaskItemContextMenu({
+        identifier: 'T-1',
+        priority: 0,
+        status: 'backlog',
+      }),
+    );
+
+    const statusItem = result.current.items.find(
+      (item) => item && typeof item === 'object' && 'key' in item && item.key === 'status',
+    ) as { children: Array<{ disabled?: boolean; key: string; label?: string }> };
+    const children = statusItem.children;
+
+    // The Kanban board's columns, 1:1 — triage leads, never dropped.
+    expect(children.map((child) => child.key)).toEqual([
+      'status-triage',
+      'status-backlog',
+      'status-todo',
+      'status-running',
+      'status-needsInput',
+      'status-done',
+      'status-canceled',
+    ]);
+    expect(children[0].label).toBe('taskList.kanban.triage');
+    // The workflow-only columns stay visible but disabled, matching the
+    // reachability a board drop obeys for a task without workflow state.
+    expect(children.map((child) => Boolean(child.disabled))).toEqual([
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('lets a workflow-linked task pick triage — written as workflowCategory', async () => {
+    const { result } = renderHook(() =>
+      useTaskItemContextMenu({
+        identifier: 'T-1',
+        priority: 0,
+        status: 'backlog',
+        workflowCategory: 'backlog',
+        workflowStateId: 'ls-1',
+      }),
+    );
+
+    const statusItem = result.current.items.find(
+      (item) => item && typeof item === 'object' && 'key' in item && item.key === 'status',
+    ) as {
+      children: Array<{ disabled?: boolean; key: string; onClick: (info: unknown) => void }>;
+    };
+    expect(statusItem.children.every((child) => !child.disabled)).toBe(true);
+
+    const triage = statusItem.children.find((child) => child.key === 'status-triage');
+    await triage?.onClick({ domEvent: { stopPropagation: vi.fn() } });
+
+    expect(mocks.updateTask).toHaveBeenCalledWith('T-1', { workflowCategory: 'triage' });
+  });
 });
 
 describe('menu ownership', () => {

@@ -31,5 +31,12 @@ same-ID gateway topic, then resolves the earlier list. It fails on the original
 implementation and passes with the revision guard. The owning suite passed all
 92 tests, scoped lint passed, and independent review approved the fix.
 
+At source revision `a1d19bf16`, the guard was extended to `loadMoreTopics`: a
+continuation page requested before an add/replace/delete can no longer resurrect
+removed rows or drop confirmed ones, and the first-page/tail seam dedupes by
+id. Regression tests cover the delete path on both the list fetch and the
+continuation page (the latter fails on the previous revision); the suite now
+passes 94 tests.
+
 The remote AGENT-CONV-004 product journey remains the final runtime gate for the
 release revision. Its result is recorded in the pull request checks.

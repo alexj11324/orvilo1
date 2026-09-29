@@ -1,0 +1,20 @@
+---
+title: File Issues Under a Project from the Detail Page
+description: >-
+  The Project row in an issue's sidebar is now a real picker — file, re-file,
+  or clear the project without leaving the page — while the link to the
+  project lives on its own affordance.
+tags:
+  - Tasks
+  - Projects
+---
+
+# File Issues Under a Project from the Detail Page
+
+Until now the Project row in an issue's right rail was a link and nothing more — it jumped to the project page or, when the issue had no project, didn't exist at all. The row is now an editor, matching the milestone picker underneath it.
+
+## Fixes
+
+- **The project row is a picker.** Issues that can be edited get a dropdown of every project visible to them — the same scope-filtered list the sidebar uses — with the current filing checked and a "No project" entry at the bottom. Filing to another project, filing a projectless issue, or clearing the project all save through the normal issue update and refresh the detail, the issue lists, and both projects' task catalogs.
+- **Navigation stays its own action.** When an issue already sits under a project, a small arrow beside the row opens the project page — picking from the menu never navigates, and navigating never changes the filing.
+- **Incompatible milestones resolve by the same rules as before.** A task moved to a different project keeps no milestone row unless the new project actually carries one, exactly as the server's project-change semantics dictate.

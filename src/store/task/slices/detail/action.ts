@@ -601,6 +601,10 @@ export class TaskDetailSliceActionImpl {
       assigneeUserId !== undefined ||
       data.parentTaskId !== undefined ||
       data.priority !== undefined ||
+      // A project move re-files the task across scopes (team visibility,
+      // milestone catalog) — the detail, its list row and the project's task
+      // catalog all have to reconcile.
+      data.projectId !== undefined ||
       // Status writes stamp `completedAt` and append a status activity row
       // server-side — the cached detail has to reconcile, not just the list.
       data.status !== undefined ||

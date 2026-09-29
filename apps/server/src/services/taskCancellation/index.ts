@@ -7,8 +7,14 @@ import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
 const DEFAULT_LEASE_MS = 2 * 60 * 1000;
 const DEFAULT_RETRY_MS = 30 * 1000;
+/** Bounded convergence for `cancel_requested`: after this many claimed
+ *  interrupt attempts or this much wall-clock age, the sweep abandons the
+ *  dispatch (terminal phase, slot released) instead of retrying forever. */
+const MAX_CANCEL_ATTEMPTS = 5;
+const MAX_CANCEL_AGE_MS = 10 * 60 * 1000;
 
 export type TaskCancellationOutcome =
+  | { dispatchId: string; outcome: 'abandoned'; reason: string; taskId: string }
   | { dispatchId: string; outcome: 'canceled'; taskId: string }
   | { dispatchId: string; outcome: 'retry'; reason: string }
   | { dispatchId: string; outcome: 'skipped' };
@@ -41,6 +47,34 @@ export const processTaskCancellation = async (input: {
     input.leaseMs ?? DEFAULT_LEASE_MS,
   );
   if (!claim) return { dispatchId: input.dispatchId, outcome: 'skipped' };
+
+  // Bounded convergence: a cancel intent whose runtime never confirms would
+  // otherwise occupy the task's single active-dispatch slot forever and
+  // block every future owner. Past the attempts/age ceiling the claim is
+  // abandoned — the bumped fence still rejects late callbacks from the
+  // unreachable writer, and the task parks at 'paused' for attention.
+  const cancelAgeMs = claim.dispatch.cancelRequestedAt
+    ? Date.now() - new Date(claim.dispatch.cancelRequestedAt).getTime()
+    : 0;
+  if (claim.dispatch.cancelAttempts >= MAX_CANCEL_ATTEMPTS || cancelAgeMs > MAX_CANCEL_AGE_MS) {
+    const reason =
+      `Cancellation never confirmed after ${claim.dispatch.cancelAttempts} attempt(s) ` +
+      `over ${Math.round(cancelAgeMs / 1000)}s; execution needs attention.`;
+    const abandoned = await model.abandonCancellation({
+      dispatchId: claim.dispatch.id,
+      fence: claim.fence,
+      generation: claim.dispatch.generation,
+      owner,
+      reason,
+    });
+    if (!abandoned) return { dispatchId: input.dispatchId, outcome: 'skipped' };
+    return {
+      dispatchId: claim.dispatch.id,
+      outcome: 'abandoned',
+      reason,
+      taskId: claim.dispatch.taskId,
+    };
+  }
 
   try {
     const operationId = claim.dispatch.operationId;

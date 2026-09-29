@@ -3,7 +3,7 @@ import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { StatusVisual } from '@/components/ExecutionStatus';
@@ -21,6 +21,7 @@ import {
 import { renderMenuExtra } from './menuExtra';
 import { STATUS_META } from './taskStatusMeta';
 import { useIssueStatusMove } from './useIssueStatusMove';
+import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
 import { useTaskStatusChange } from './useTaskStatusChange';
 import { useTeamWorkflowStates } from './useTeamWorkflowStates';
 
@@ -227,27 +228,14 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       ],
     );
 
-    const handlePickRef = useRef(handlePick);
-    handlePickRef.current = handlePick;
-    const pickableChoicesRef = useRef(pickableChoices);
-    pickableChoicesRef.current = pickableChoices;
-
-    useEffect(() => {
-      if (!open) return;
-      const onKeyDown = (event: KeyboardEvent) => {
-        const num = Number.parseInt(event.key, 10);
-        if (Number.isNaN(num)) return;
-        const pickable = pickableChoicesRef.current;
-        const idx = num - 1;
-        if (idx < 0 || idx >= pickable.length) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void handlePickRef.current(pickable[idx]);
+    useMenuDigitShortcuts({
+      items: pickableChoices,
+      open,
+      onPick: (choice) => {
+        void handlePick(choice);
         setOpen(false);
-      };
-      document.addEventListener('keydown', onKeyDown, true);
-      return () => document.removeEventListener('keydown', onKeyDown, true);
-    }, [open]);
+      },
+    });
 
     const menuItems = useMemo<DropdownItem[]>(() => {
       let pickIndex = 0;

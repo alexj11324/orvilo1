@@ -122,7 +122,7 @@ jobs:
 
       - name: Resolve Cloud revision
         id: cloud-ref
-        if: steps.check.outputs.is_stable == 'true'
+        if: steps.check.outputs.is_stable == 'true' && vars.OVERLAY_REPOSITORY != ''
         env:
           CLOUD_REPOSITORY: ${{ vars.OVERLAY_REPOSITORY }}
           CLOUD_TOKEN: ${{ secrets.ORVILO_CLOUD_TOKEN }}

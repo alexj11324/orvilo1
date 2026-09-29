@@ -61,7 +61,6 @@ const cancelDropClick = (event: MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
 };
-
 const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();

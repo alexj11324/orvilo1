@@ -66,6 +66,7 @@ const FavoriteRow = ({
       onPointerMoveCapture={dragGuard.onPointerMoveCapture}
     >
       <WorkspaceLink
+        draggable={false}
         to={workTargetPath(item.targetType, item.targetId, item.title)}
         onClick={dragGuard.onClick}
       >

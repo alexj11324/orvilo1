@@ -18,7 +18,9 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import AsyncError from '@/components/AsyncError';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
@@ -43,9 +45,13 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
   const favoritePageSize = useGlobalStore(systemStatusSelectors.favoritePageSize);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { data } = useClientDataSWR(workAttentionKeys.favorites(workspaceId), () =>
-    workAttentionService.favoriteList(),
+  const { data, error, isLoading, isValidating } = useClientDataSWR(
+    workAttentionKeys.favorites(workspaceId),
+    () => workAttentionService.favoriteList(),
   );
+  // A settled response — even an empty list — survives later failed revalidations,
+  // so rows keep rendering while the retry affordance stays visible.
+  const hasSettled = data !== undefined;
   // Keep team pins in personal mode too: favoriteReorder CAS rewrites the
   // full ordered list, so dropping hidden rows would persist an order without them.
   const items = useMemo(() => data?.data ?? [], [data?.data]);
@@ -134,22 +140,50 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
       </AccordionHeader>
       <AccordionPanel>
         <Flexbox gap={1}>
-          {visibleItems.map((item, index) => (
-            <FavoriteRow
-              index={index}
-              item={item}
-              itemCount={items.length}
-              key={`${item.targetType}:${item.targetId}`}
-              onMove={(rowIndex, direction) => void move(rowIndex, direction)}
-              onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
-            />
-          ))}
-          {hasMore && (
-            <NavItem
-              icon={MoreHorizontalIcon}
-              title={t('more')}
-              onClick={() => setDrawerOpen(true)}
-            />
+          {isLoading && !hasSettled ? (
+            <Flexbox aria-busy data-testid={'work-favorites-loading'}>
+              <SkeletonList rows={2} />
+            </Flexbox>
+          ) : error && !hasSettled ? (
+            <AsyncError error={error} retrying={isValidating} variant="inline" onRetry={refresh} />
+          ) : (
+            <>
+              {visibleItems.map((item, index) => (
+                <FavoriteRow
+                  index={index}
+                  item={item}
+                  itemCount={items.length}
+                  key={`${item.targetType}:${item.targetId}`}
+                  onMove={(rowIndex, direction) => void move(rowIndex, direction)}
+                  onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
+                />
+              ))}
+              {items.length === 0 && (
+                <Text
+                  fontSize={12}
+                  style={{ paddingBlock: 4, paddingInline: 8 }}
+                  type={'secondary'}
+                >
+                  {t('favorites.empty')}
+                </Text>
+              )}
+              {error ? (
+                <AsyncError
+                  error={error}
+                  retrying={isValidating}
+                  title={t('favorites.refreshFailed')}
+                  variant="inline"
+                  onRetry={refresh}
+                />
+              ) : null}
+              {hasMore && (
+                <NavItem
+                  icon={MoreHorizontalIcon}
+                  title={t('more')}
+                  onClick={() => setDrawerOpen(true)}
+                />
+              )}
+            </>
           )}
           <AllFavoritesDrawer
             items={items}

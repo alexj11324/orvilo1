@@ -194,8 +194,8 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         teamId,
         title,
       });
-      await refresh();
       createDocumentModal(result.data.document.id, () => void refresh());
+      await refresh().catch(() => undefined);
     } catch (failure) {
       setWriteError(failure);
     } finally {

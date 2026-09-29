@@ -195,7 +195,15 @@ export const buildKanbanGroupQuery = ({
   // A project filter (id or `null` = "No project") composes with the "My
   // tasks" scope — My Work's chip narrows the caller's slice, not the board.
   if (myTaskScope) return { excludeStatuses, groupBy, projectId, scope: myTaskScope };
-  if (projectId) return { automated: false, excludeStatuses, groupBy, projectId };
+  // `projectId` is a three-state filter: `undefined` = unscoped, `null` =
+  // the "No project" chip, a string = that project. The test is `!== undefined`,
+  // not truthiness — `null` must reach the fetch (it keys the no-project list)
+  // instead of silently widening the query to the agent / all-agents scope.
+  // The project filter takes precedence over `agentId` here too, matching how
+  // `useFetchTaskGroupList` derives its list key.
+  if (projectId !== undefined) {
+    return { automated: false, excludeStatuses, groupBy, projectId };
+  }
   if (agentId) return { agentId, automated: false, excludeStatuses, groupBy };
 
   return { allAgents: true, automated: false, excludeStatuses, groupBy };

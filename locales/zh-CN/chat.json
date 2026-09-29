@@ -1648,6 +1648,8 @@
   "taskDetail.artifactSize": "{{value}} 字",
   "taskDetail.artifacts": "产物",
   "taskDetail.assignee": "负责人",
+  "taskDetail.attachmentsReadOnly": "只读——无法添加附件。",
+  "taskDetail.attachmentsUnavailable": "暂时无法添加附件。",
   "taskDetail.blockedBy": "被 {{id}} 阻塞",
   "taskDetail.cancelSchedule": "取消定时",
   "taskDetail.changePriorityPlaceholder": "更改优先级…",

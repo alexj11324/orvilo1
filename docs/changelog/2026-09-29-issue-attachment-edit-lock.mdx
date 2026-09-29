@@ -1,0 +1,18 @@
+---
+title: Issue Attachments Respect the Edit Lock
+description: >-
+  The paperclip button on an issue's instruction now follows the same
+  read-only rules as the text, and files picked just as you lose editing
+  rights are no longer inserted.
+tags:
+  - Tasks
+---
+
+# Issue Attachments Respect the Edit Lock
+
+An issue's instruction is read-only while someone else holds the edit lock — but the attachment button ignored that. The paperclip now shares the same edit capability as the text it feeds.
+
+## Fixes
+
+- **The attach button is disabled when the instruction isn't editable.** While the lock is resolving, while someone else is editing, or when you only have view access, the button shows a tooltip explaining why instead of opening a file picker whose result would land in a read-only editor.
+- **A file picked too late is dropped, not inserted.** File dialogs take time; if you opened the picker, then switched to another issue or lost the edit lock before choosing a file, the pick used to be inserted anyway — into the wrong issue or a locked one. The choice is now re-validated against the issue and your edit rights at the moment the dialog closes, and a toast explains when it can't be added.

@@ -9,6 +9,11 @@
   ],
   "community": [
     {
+      "id": "2026-09-29-accounts-portal",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
       "id": "2026-09-28-mobile-router-shared-leaves",
       "date": "2026-09-28",
       "versionRange": ["2.3.0"]

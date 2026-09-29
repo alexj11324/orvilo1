@@ -91,7 +91,6 @@ jobs:
     if: needs.check-trigger.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     outputs:
-      cloud_ref: ${{ steps.cloud-ref.outputs.cloud_ref }}
       release_notes: ${{ steps.release-notes.outputs.release_notes }}
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -136,23 +135,6 @@ jobs:
           echo "tag=${tag}" >> $GITHUB_OUTPUT
           echo "✅ Canary version: ${version}"
           echo "🏷️ Tag: ${tag}"
-
-      - name: Resolve Cloud revision
-        id: cloud-ref
-        if: vars.OVERLAY_REPOSITORY != ''
-        env:
-          CLOUD_REPOSITORY: ${{ vars.OVERLAY_REPOSITORY }}
-          CLOUD_TOKEN: ${{ secrets.ORVILO_CLOUD_TOKEN }}
-        run: |
-          set -euo pipefail
-          : "${CLOUD_REPOSITORY:?OVERLAY_REPOSITORY repository variable is not set}"
-          # checkout persist-credentials extraheader would send GITHUB_TOKEN and 404 the private cloud repo
-          cloud_ref=$(git -c http.https://github.com/.extraheader= ls-remote "https://x-access-token:${CLOUD_TOKEN}@github.com/${CLOUD_REPOSITORY}.git" HEAD | cut -f1)
-          if [[ ! "$cloud_ref" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Unable to resolve Cloud revision"
-            exit 1
-          fi
-          echo "cloud_ref=$cloud_ref" >> "$GITHUB_OUTPUT"
 
       - name: Generate canary release notes
         id: release-notes
@@ -253,9 +235,6 @@ jobs:
         id: setup
         uses: ./.github/actions/desktop-build-setup
         with:
-          cloud-ref: ${{ needs.calculate-version.outputs.cloud_ref }}
-          cloud-repository: ${{ vars.OVERLAY_REPOSITORY }}
-          cloud-token: ${{ secrets.ORVILO_CLOUD_TOKEN }}
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Set package version

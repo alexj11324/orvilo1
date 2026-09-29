@@ -1097,6 +1097,9 @@ export class ChatTopicActionImpl {
 
     const currentPage = currentData?.currentPage || 0;
     const nextPage = currentPage + 1;
+    // Same ordering contract as the first-page fetch: the response is
+    // authoritative only for the membership revision its request started at.
+    const membershipRevision = this.#topicListMembershipRevisions.get(key) ?? 0;
 
     this.#set(
       {
@@ -1122,8 +1125,34 @@ export class ChatTopicActionImpl {
         pageSize,
       });
 
-      const currentTopics = currentData?.items || [];
-      const nextItems = [...currentTopics, ...result.items];
+      const latestData = this.#get().topicDataMap[key];
+      if ((this.#topicListMembershipRevisions.get(key) ?? 0) !== membershipRevision) {
+        // Membership moved while the page was in flight — the base rows
+        // captured at call time are stale, so committing would resurrect
+        // deleted rows or drop confirmed ones. Only release the loading flag;
+        // the next load-more starts from the live list.
+        if (latestData?.isLoadingMore) {
+          this.#set(
+            {
+              topicDataMap: {
+                ...this.#get().topicDataMap,
+                [key]: { ...latestData, isLoadingMore: false },
+              },
+            },
+            false,
+            n('loadMoreTopics(stale)'),
+          );
+        }
+        return;
+      }
+
+      // Read items fresh rather than trusting the request-time snapshot: a
+      // first-page refresh (which keeps the membership revision) may already
+      // have replaced them, and the fetched page can overlap the visible
+      // window, so dedupe by id at the seam.
+      const currentTopics = latestData?.items || [];
+      const seen = new Set(currentTopics.map((topic) => topic.id));
+      const nextItems = [...currentTopics, ...result.items.filter((topic) => !seen.has(topic.id))];
       const hasMore = result.total > nextItems.length;
 
       this.#set(

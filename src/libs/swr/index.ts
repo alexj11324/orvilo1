@@ -88,6 +88,13 @@ export const useOnlyFetchOnceSWR: SWRHook = (key, fetch, config) =>
  *
  * Uses fallbackData as empty object so SWR thinks initial data exists.
  * Combined with revalidateOnMount: false, this prevents auto-fetch on mount.
+ *
+ * Error retry is disabled: action fetchers are mutations (createSession,
+ * openNewTopicOrSaveTopic, ...), and SWR's default `onErrorRetry` re-runs a
+ * failed fetcher forever (~5s exponential backoff, no cap). For a
+ * non-idempotent mutation each retry is another server-side insert — one
+ * dropped response turns a single tap into a stream of duplicate rows.
+ * Callers that genuinely want retry can still opt in via `config`.
  */
 // @ts-ignore
 export const useActionSWR: SWRHook = (key, fetch, config) =>
@@ -104,6 +111,7 @@ export const useActionSWR: SWRHook = (key, fetch, config) =>
     revalidateOnFocus: false,
     revalidateOnMount: false,
     revalidateOnReconnect: false,
+    shouldRetryOnError: false,
     ...config,
   });
 

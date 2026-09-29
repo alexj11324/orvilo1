@@ -40,6 +40,7 @@ import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
 import TaskBriefCard from './TaskBriefCard';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskRunReport from './TaskRunReport';
 import TopicCard from './TopicCard';
 
@@ -386,10 +387,10 @@ const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
 
 const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const { t } = useTranslation('chat');
-  const activities = useTaskStore(taskActivitySelectors.activeTaskActivities);
-  const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const activities = useTaskDetailSelector(taskActivitySelectors.taskActivities);
+  const activeTaskId = useTaskDetailTaskId();
   const workspaceId = useActiveWorkspaceId();
-  const activeTaskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+  const activeTaskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
 

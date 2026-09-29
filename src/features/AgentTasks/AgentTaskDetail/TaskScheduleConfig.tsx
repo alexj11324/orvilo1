@@ -20,6 +20,7 @@ import {
   nextScheduleFiring,
 } from './scheduler/helpers';
 import SchedulerForm, { type SchedulerFormChange } from './scheduler/SchedulerForm';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 type IntervalUnit = 'hours' | 'minutes';
 
@@ -148,9 +149,9 @@ interface SchedulerTabProps {
 
 const SchedulerTab = memo<SchedulerTabProps>(({ disabled, taskId }) => {
   const updateSchedule = useTaskStore((s) => s.updateSchedule);
-  const pattern = useTaskStore(taskDetailSelectors.activeTaskSchedulePattern);
-  const timezone = useTaskStore(taskDetailSelectors.activeTaskScheduleTimezone);
-  const maxExecutions = useTaskStore(taskDetailSelectors.activeTaskScheduleMaxExecutions);
+  const pattern = useTaskDetailSelector(taskDetailSelectors.taskSchedulePattern);
+  const timezone = useTaskDetailSelector(taskDetailSelectors.taskScheduleTimezone);
+  const maxExecutions = useTaskDetailSelector(taskDetailSelectors.taskScheduleMaxExecutions);
 
   const handleChange = useCallback(
     (change: SchedulerFormChange) => {
@@ -185,15 +186,15 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
 }: TaskScheduleConfigProps) {
   const { t, i18n } = useTranslation('chat');
   const { allowed: canEditTask, reason } = usePermission('create_content');
-  const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const activeTaskInterval = useTaskStore(taskDetailSelectors.activeTaskPeriodicInterval);
-  const automationMode = useTaskStore(taskDetailSelectors.activeTaskAutomationMode);
+  const activeTaskId = useTaskDetailTaskId();
+  const activeTaskInterval = useTaskDetailSelector(taskDetailSelectors.taskPeriodicInterval);
+  const automationMode = useTaskDetailSelector(taskDetailSelectors.taskAutomationMode);
   const setAutomationMode = useTaskStore((s) => s.setAutomationMode);
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus);
-  const status = useTaskStore(taskDetailSelectors.activeTaskStatus);
-  const detail = useTaskStore(taskDetailSelectors.activeTaskDetail);
-  const schedulePattern = useTaskStore(taskDetailSelectors.activeTaskSchedulePattern);
-  const scheduleTimezone = useTaskStore(taskDetailSelectors.activeTaskScheduleTimezone);
+  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus);
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const schedulePattern = useTaskDetailSelector(taskDetailSelectors.taskSchedulePattern);
+  const scheduleTimezone = useTaskDetailSelector(taskDetailSelectors.taskScheduleTimezone);
 
   const finalTaskId = taskId ?? activeTaskId;
   const finalCurrentInterval = currentInterval ?? activeTaskInterval;

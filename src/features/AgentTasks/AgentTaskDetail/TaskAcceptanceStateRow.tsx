@@ -18,11 +18,11 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAcceptanceBySubject } from '@/features/Acceptance';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
+import { useTaskDetailSelector } from './TaskDetailScope';
 import { useOpenAcceptanceInPanel } from './useOpenAcceptanceInPanel';
 
 /**
@@ -99,7 +99,7 @@ const resolveState = (status: string, latestRunStatus?: string | null): StateKey
 const TaskAcceptanceStateRow = memo(() => {
   const { t } = useTranslation('chat');
   const openAcceptanceInPanel = useOpenAcceptanceInPanel();
-  const taskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+  const taskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const { data: acceptance } = useAcceptanceBySubject('task', taskDatabaseId ?? null);
 
   // No aggregate yet (verify not configured / never ran) — the row simply

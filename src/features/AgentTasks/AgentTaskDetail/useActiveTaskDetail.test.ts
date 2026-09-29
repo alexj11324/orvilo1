@@ -20,9 +20,11 @@ vi.mock('@/store/user/selectors', () => ({
   authSelectors: { isLogin: (s: any) => s?.isLogin },
 }));
 
-vi.mock('@/store/task', () => ({
-  useTaskStore: (selector: any) => selector(mocks.taskState),
-}));
+vi.mock('@/store/task', () => {
+  const useTaskStore = (selector: any) => selector(mocks.taskState);
+  useTaskStore.getState = () => mocks.taskState;
+  return { useTaskStore };
+});
 
 vi.mock('@/store/agent', () => ({
   useAgentStore: (selector: any) => selector(mocks.agentState),
@@ -120,6 +122,28 @@ describe('useActiveTaskDetail', () => {
     expect(result.current.isNotFound).toBe(true);
     expect(result.current.error).toBeUndefined();
     expect(result.current.isInitialLoading).toBe(false);
+  });
+
+  it('clears the shared slot on unmount only while it still points at this task', () => {
+    const { unmount } = renderHook(() => useActiveTaskDetail('T-194'));
+
+    // Mount claims the slot; it still points at this task at cleanup time.
+    mocks.taskState.activeTaskId = 'T-194';
+    unmount();
+
+    expect(mocks.taskState.setActiveTaskId).toHaveBeenCalledWith(undefined);
+  });
+
+  it('does NOT clear the shared slot when a second host has already claimed it', () => {
+    const { unmount } = renderHook(() => useActiveTaskDetail('T-194'));
+
+    // A second detail host (route page + portal at narrow widths) mounted after
+    // this one and put its own task in the slot — host A's cleanup must not
+    // blank host B's global consumers.
+    mocks.taskState.activeTaskId = 'T-other';
+    unmount();
+
+    expect(mocks.taskState.setActiveTaskId).not.toHaveBeenCalledWith(undefined);
   });
 
   it('reports a transient fetch error (not a 404) when a network / 500 rejection has no cached detail', () => {

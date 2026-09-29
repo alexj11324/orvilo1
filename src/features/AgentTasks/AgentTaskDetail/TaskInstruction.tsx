@@ -15,6 +15,7 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import { useAttachInstructionFiles } from './useAttachInstructionFiles';
 import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
 
@@ -34,12 +35,12 @@ const INSTRUCTION_MAX_HEIGHT = 320;
 const TaskInstruction = memo(() => {
   const { t } = useTranslation('chat');
   const { allowed: canEditTask, reason: permissionReason } = usePermission('create_content');
-  const instruction = useTaskStore(taskDetailSelectors.activeTaskInstruction);
-  const instructionRevision = useTaskStore(taskDetailSelectors.activeTaskInstructionRevision);
-  const persistedEditorData = useTaskStore(taskDetailSelectors.activeTaskEditorData);
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const taskWorkspaceId = useTaskStore(taskDetailSelectors.activeTaskWorkspaceId);
-  const persistedFiles = useTaskStore(taskDetailSelectors.activeTaskFiles);
+  const instruction = useTaskDetailSelector(taskDetailSelectors.taskInstruction);
+  const instructionRevision = useTaskDetailSelector(taskDetailSelectors.taskInstructionRevision);
+  const persistedEditorData = useTaskDetailSelector(taskDetailSelectors.taskEditorData);
+  const taskId = useTaskDetailTaskId();
+  const taskWorkspaceId = useTaskDetailSelector(taskDetailSelectors.taskWorkspaceId);
+  const persistedFiles = useTaskDetailSelector(taskDetailSelectors.taskFiles);
   const updateTask = useTaskStore((s) => s.updateTask);
   const editor = useEditor();
 

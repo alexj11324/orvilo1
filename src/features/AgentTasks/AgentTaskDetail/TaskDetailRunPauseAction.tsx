@@ -13,6 +13,7 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { nextHeartbeatFiring, nextScheduleFiring } from './scheduler/helpers';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const padTime = (n: number) => String(n).padStart(2, '0');
 
@@ -46,18 +47,18 @@ export const shouldPersistFallbackAssignee = (
 const TaskDetailRunPauseAction = memo(() => {
   const { t } = useTranslation('chat');
   const { allowed: canEditTask, reason } = usePermission('create_content');
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const canRun = useTaskStore(taskDetailSelectors.canRunActiveTask);
-  const isBlocked = useTaskStore(taskDetailSelectors.isActiveTaskBlocked);
-  const canPause = useTaskStore(taskDetailSelectors.canPauseActiveTask);
-  const status = useTaskStore(taskDetailSelectors.activeTaskStatus);
-  const detail = useTaskStore(taskDetailSelectors.activeTaskDetail);
-  const automationMode = useTaskStore(taskDetailSelectors.activeTaskAutomationMode);
-  const interval = useTaskStore(taskDetailSelectors.activeTaskPeriodicInterval);
-  const schedulePattern = useTaskStore(taskDetailSelectors.activeTaskSchedulePattern);
-  const scheduleTimezone = useTaskStore(taskDetailSelectors.activeTaskScheduleTimezone);
-  const assigneeAgentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
-  const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
+  const taskId = useTaskDetailTaskId();
+  const canRun = useTaskDetailSelector(taskDetailSelectors.canRunTask);
+  const isBlocked = useTaskDetailSelector(taskDetailSelectors.isTaskBlocked);
+  const canPause = useTaskDetailSelector(taskDetailSelectors.canPauseTask);
+  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus);
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const automationMode = useTaskDetailSelector(taskDetailSelectors.taskAutomationMode);
+  const interval = useTaskDetailSelector(taskDetailSelectors.taskPeriodicInterval);
+  const schedulePattern = useTaskDetailSelector(taskDetailSelectors.taskSchedulePattern);
+  const scheduleTimezone = useTaskDetailSelector(taskDetailSelectors.taskScheduleTimezone);
+  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const isRerun = status === 'completed';
   const runTask = useTaskStore((s) => s.runTask);

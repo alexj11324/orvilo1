@@ -42,6 +42,7 @@ import { isForbiddenError } from '@/utils/forbiddenError';
 
 import AssigneeAvatar from '../../features/AssigneeAvatar';
 import RunIntegrationTag from '../RunIntegrationTag';
+import { useTaskDetailTaskId } from '../TaskDetailScope';
 import FeedbackInput from './FeedbackInput';
 
 const SHARE_ICON_SIZE = { blockSize: 32, size: 16 } as const;
@@ -145,9 +146,11 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   const navigate = useWorkspaceAwareNavigate();
   const [expanded, setExpanded] = useState(false);
   const topicId = useTaskStore(taskDetailSelectors.activeTopicDrawerTopicId);
-  const activeTaskId = useTaskStore((s) => s.activeTaskId);
+  const activeTaskId = useTaskDetailTaskId();
   const drawerTaskId = useTaskStore((s) => s.activeTopicDrawerTaskId);
-  const agentId = useTaskStore(taskDetailSelectors.topicDrawerAgentId);
+  const agentId = useTaskStore((s) =>
+    taskDetailSelectors.topicDrawerAgentId(s, drawerTaskId ?? activeTaskId),
+  );
   const drawerTitle = useTaskStore(taskDetailSelectors.topicDrawerTitle);
   const activity = useTaskStore(taskActivitySelectors.activeDrawerTopicActivity);
   const closeTopicDrawer = useTaskStore((s) => s.closeTopicDrawer);

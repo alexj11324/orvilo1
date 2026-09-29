@@ -47,6 +47,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { resolveTaskAcceptanceGoal } from './resolveTaskAcceptanceGoal';
 import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -133,14 +134,14 @@ const TaskVerifyConfig = memo(() => {
 
   const { allowed: canEditTask } = usePermission('create_content');
 
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const taskDescription = useTaskStore(taskDetailSelectors.activeTaskDescription);
-  const taskInstruction = useTaskStore(taskDetailSelectors.activeTaskInstruction);
-  const taskName = useTaskStore(taskDetailSelectors.activeTaskName);
-  const verify = useTaskStore(taskDetailSelectors.activeTaskVerifyConfig);
-  const taskModel = useTaskStore(taskDetailSelectors.activeTaskModel);
-  const taskProvider = useTaskStore(taskDetailSelectors.activeTaskProvider);
-  const assigneeAgentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
+  const taskId = useTaskDetailTaskId();
+  const taskDescription = useTaskDetailSelector(taskDetailSelectors.taskDescription);
+  const taskInstruction = useTaskDetailSelector(taskDetailSelectors.taskInstruction);
+  const taskName = useTaskDetailSelector(taskDetailSelectors.taskName);
+  const verify = useTaskDetailSelector(taskDetailSelectors.taskVerifyConfig);
+  const taskModel = useTaskDetailSelector(taskDetailSelectors.taskModel);
+  const taskProvider = useTaskDetailSelector(taskDetailSelectors.taskProvider);
+  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
 
   // Resolve model/provider the same way TaskModelConfig does: task override first,
   // then the assignee agent's model, then the active agent for unassigned tasks.

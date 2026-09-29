@@ -12,27 +12,27 @@ The normal user journey starts from the delivery context: open a task and click 
 2. The hook turns on the task-agent panel and calls the chat store's `openAcceptance`; it deliberately does not navigate to `/acceptance/<id>`.
 3. The task's Acceptance section exposes the same panel destination through “Open report”; individual checks open the corresponding Acceptance check in that panel. Verification-run tags do the same.
 
-Sources: [`TaskAcceptanceStateRow.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/features/AgentTasks/AgentTaskDetail/TaskAcceptanceStateRow.tsx#L27-L38), [`useOpenAcceptanceInPanel.ts`](https://github.com/lobehub/lobehub/blob/canary/src/features/AgentTasks/AgentTaskDetail/useOpenAcceptanceInPanel.ts#L6-L23), [`TaskAcceptance.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/features/AgentTasks/AgentTaskDetail/TaskAcceptance.tsx#L160-L170).
+Sources: [`TaskAcceptanceStateRow.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/AgentTasks/AgentTaskDetail/TaskAcceptanceStateRow.tsx#L27-L38), [`useOpenAcceptanceInPanel.ts`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/AgentTasks/AgentTaskDetail/useOpenAcceptanceInPanel.ts#L6-L23), [`TaskAcceptance.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/AgentTasks/AgentTaskDetail/TaskAcceptance.tsx#L160-L170).
 
 ### 2. Project: the collection/workspace entry
 
 The project overview's review action navigates to the project Acceptance path. That route loads `AcceptanceWorkspace` with the project id, so its list is filtered to that project. This is a project-level workspace and collection; selecting an item then focuses its Acceptance record.
 
-Sources: [`ProjectDashboard.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/features/Projects/Workspace/ProjectDashboard.tsx#L317-L323), [`src/routes/(main)/project/[projectId]/acceptance/index.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/routes/%28main%29/project/%5BprojectId%5D/acceptance/index.tsx#L1), [`Acceptance/Workspace/index.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/features/Acceptance/Workspace/index.tsx#L81-L116).
+Sources: [`ProjectDashboard.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/Projects/Workspace/ProjectDashboard.tsx#L301-L307), [`src/routes/(main)/project/[projectId]/acceptance/index.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/routes/%28main%29/project/%5BprojectId%5D/acceptance/index.tsx#L1), [`Projects/Acceptance/index.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/Projects/Acceptance/index.tsx#L9-L20), [`Acceptance/Workspace/index.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/Acceptance/Workspace/index.tsx#L114-L120).
 
 ### 3. Coding-agent CLI / public skill: the link-producing entry
 
 `/acceptance` is not a coding-agent slash command. In the CLI it is the first-class `lh acceptance` command group. A run attaches to the subject's Acceptance, constructs `/acceptance/<acceptanceId>`, and, when `--open` is requested, prints that link as the user-facing destination. The round snapshot is the same URL with `?r=<roundIndex>`.
 
-The public Acceptance skill says that an operation id is optional: with no named subject, ingest creates a standalone Acceptance; with a subject, use `task:<id>`, `topic:<id>`, or `document:<id>`. It also says the Acceptance URL is the stable cross-round decision surface and that raw `/verify` run pages remain internal.
+The public Acceptance skill says that an operation id is optional: with no named subject, ingest creates a standalone Acceptance; with a subject, use `task:<id>`, `topic:<id>`, or `document:<id>`. It requires a completed handoff to include the published Acceptance URL with its coverage result and keeps internal run URLs separate from that user-facing link.
 
-Sources: [`acceptanceRun.ts`](https://github.com/lobehub/lobehub/blob/canary/apps/cli/src/commands/acceptanceRun.ts#L744-L761), [`acceptanceRun.ts`](https://github.com/lobehub/lobehub/blob/canary/apps/cli/src/commands/acceptanceRun.ts#L938-L950), [`packages/builtin-skills/src/acceptance/SKILL.md`](https://github.com/lobehub/lobehub/blob/canary/packages/builtin-skills/src/acceptance/SKILL.md#L49-L63), [`SKILL.md`](https://github.com/lobehub/lobehub/blob/canary/packages/builtin-skills/src/acceptance/SKILL.md#L136-L140).
+Sources: [`acceptanceRun.ts`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/apps/cli/src/commands/acceptanceRun.ts#L839-L847), [`acceptanceRun.ts`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/apps/cli/src/commands/acceptanceRun.ts#L1064-L1070), [`Acceptance SKILL.md`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/.agents/skills/acceptance/SKILL.md#L128-L143), [`Acceptance SKILL.md`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/.agents/skills/acceptance/SKILL.md#L429-L445).
 
 ### 4. Standalone Web route: the direct/deep-link entry
 
 The Web app registers `/acceptance` as a standalone workspace/list and `/acceptance/:acceptanceId` plus `/acceptance/:acceptanceId/check/:checkId` as detail routes. Therefore a user can open the printed deep link directly in a browser, or open `/acceptance` to browse the standalone collection.
 
-Sources: [`desktopRouter.config.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/spa/router/desktopRouter.config.tsx#L32-L70), [`apps/workbench/app/routes.ts`](https://github.com/lobehub/lobehub/blob/canary/apps/workbench/app/routes.ts#L5-L10), [`SKILL.md`](https://github.com/lobehub/lobehub/blob/canary/packages/builtin-skills/src/acceptance/SKILL.md#L136-L140).
+Sources: [`desktopRouter.config.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/spa/router/desktopRouter.config.tsx#L21-L68), [`apps/workbench/app/routes.ts`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/apps/workbench/app/routes.ts#L6-L10).
 
 ## Why it may not appear in the desktop app
 
@@ -44,7 +44,7 @@ The official router split is the decisive detail:
 
 So a desktop user should not expect a global standalone Acceptance item or a direct `/acceptance` tab in the desktop navigation. Desktop still has the contextual paths that are in the shared tree: project Acceptance, and task/run Acceptance opened in the side panel. If a user only looks for a global Acceptance page in the desktop sidebar, it can appear to be missing even though the Acceptance record exists and its Web deep link is valid.
 
-Sources: [`desktopRouter.config.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/spa/router/desktopRouter.config.tsx#L32-L80), [`desktopRouter.config.desktop.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/spa/router/desktopRouter.config.desktop.tsx#L30-L49), [`desktopRouter.sync.test.tsx`](https://github.com/lobehub/lobehub/blob/canary/src/spa/router/desktopRouter.sync.test.tsx#L361-L371).
+Sources: [`desktopRouter.config.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/spa/router/desktopRouter.config.tsx#L21-L68), [`desktopRouter.config.desktop.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/spa/router/desktopRouter.config.desktop.tsx#L28-L49), [`desktopRouter.sync.test.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/spa/router/desktopRouter.sync.test.tsx#L292-L300).
 
 ## Practical answer
 

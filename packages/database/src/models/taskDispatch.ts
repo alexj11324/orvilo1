@@ -18,7 +18,7 @@ import { topics } from '../schemas/topic';
 import type { OrviloDatabase, Transaction } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
-import { normalizeProjectOrchestrationPolicy } from './project';
+import { normalizeProjectOrchestrationPolicy } from './projectOrchestrationPolicy';
 
 const ACTIVE_PHASES: TaskDispatchPhase[] = [
   'requested',

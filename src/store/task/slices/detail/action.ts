@@ -49,6 +49,11 @@ export interface TaskUpdatePayload {
   beforeId?: string | null;
   description?: string;
   editorData?: unknown;
+  /**
+   * Optimistic-concurrency CAS — the server requires it whenever assignee
+   * fields change. The action resolves it from the task row when omitted.
+   */
+  expectedDomainRevision?: number;
   instruction?: string;
   /** The dropped column's membership fields — server-side scope geometry. */
   moveScope?: TaskMoveScope;
@@ -552,7 +557,9 @@ export class TaskDetailSliceActionImpl {
       ...(reviewerUserId !== undefined ? { reviewerUserId } : {}),
       ...(optimisticActivities.length > 0 || priorityRow ? { activities } : {}),
     };
-    const payload = options?.actorAgentId ? { ...data, actorAgentId: options.actorAgentId } : data;
+    const payload = options?.actorAgentId
+      ? { ...data, actorAgentId: options.actorAgentId }
+      : { ...data };
 
     // Snapshot every map entry the optimistic patch will touch BEFORE dispatch.
     // activeTaskId can change mid-flight, and the patch can mutate a parent's
@@ -573,6 +580,19 @@ export class TaskDetailSliceActionImpl {
       { id, type: 'updateTaskDetail', value: optimistic },
       options?.source === 'editor' ? undefined : { instructionSource: 'external' },
     );
+
+    // Assignee writes must carry the revision CAS — the detail record does not
+    // keep `domainRevision`, so re-read the row the write is based on. Runs
+    // after the optimistic dispatch so the assignee chip stays synchronous.
+    if (
+      (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
+      payload.expectedDomainRevision === undefined
+    ) {
+      const revision = await Promise.resolve(taskService.find(id))
+        .then((res) => res?.data?.domainRevision)
+        .catch(() => undefined);
+      if (revision !== undefined) payload.expectedDomainRevision = revision;
+    }
 
     await runMutation(this.#set, this.#get, {
       mutate: () => taskService.update(id, payload),
@@ -612,6 +632,39 @@ export class TaskDetailSliceActionImpl {
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
     }
+  };
+
+  /**
+   * First-class execution-ownership transfer for a running task — the only
+   * sanctioned way to change its agent. Resolves `taskId`/`domainRevision`
+   * from the row itself so the CAS lands on what the UI showed, then
+   * refetches: the fence/settle/successor-dispatch side effects live
+   * server-side, nothing here is optimistic.
+   */
+  handoffTask = async (id: string, toAgentId: string | null): Promise<void> => {
+    const current = this.#get().taskDetailMap[id];
+    let taskId = current?.id;
+    let domainRevision: number | undefined;
+    if (!taskId || domainRevision === undefined) {
+      const found = await Promise.resolve(taskService.find(id)).catch(() => undefined);
+      taskId ??= found?.data?.id;
+      domainRevision ??= found?.data?.domainRevision;
+    }
+    if (!taskId || domainRevision === undefined) return;
+    try {
+      await taskService.handoff({
+        expectedDomainRevision: domainRevision,
+        fromAgentId: current?.agentId ?? null,
+        taskId,
+        toAgentId,
+      });
+    } catch (error) {
+      saveToast(error);
+      return;
+    }
+    await Promise.all([this.#get().refreshTaskList(), this.internal_refreshTaskDetail(id)]).catch(
+      () => {},
+    );
   };
 
   /**

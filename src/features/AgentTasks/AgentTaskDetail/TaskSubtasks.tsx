@@ -63,6 +63,7 @@ const buildTree = (subtasks: TaskDetailSubtask[]): TaskTreeNode[] =>
 const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
   const status = toTaskStatus(task.status);
   const isRunning = status === 'running';
+  const handoffTask = useTaskStore((s) => s.handoffTask);
   const hasRunningTopic = Boolean(task.runningTopic);
   const hasName = !!task.name;
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -143,14 +144,16 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         )}
         <AssigneeAgentSelector
           currentAgentId={task.assignee?.id ?? null}
-          disabled={isRunning}
           taskIdentifier={task.identifier}
           taskVisibility={task.visibility}
+          onHandoff={
+            isRunning ? (agentId) => void handoffTask(task.identifier, agentId) : undefined
+          }
         >
           <span
             style={{
               alignItems: 'center',
-              cursor: isRunning ? 'not-allowed' : 'pointer',
+              cursor: 'pointer',
               display: 'inline-flex',
               flex: 'none',
             }}

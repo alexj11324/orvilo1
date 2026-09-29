@@ -4,7 +4,7 @@ import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { type PropsWithChildren, useEffect } from 'react';
 import { useSWRConfig } from 'swr';
 
-import { setScopedMutate } from '@/libs/swr';
+import { isDataSWRKey, setScopedMutate } from '@/libs/swr';
 import { applyDesktopBootstrapIdentity } from '@/spa/initialize/desktopIdentity';
 
 /**
@@ -23,7 +23,7 @@ const SWRMutateInitializer = ({ children }: PropsWithChildren) => {
       // Token changes can switch the local cache partition. Apply the new
       // safe-storage identity before revalidating any SWR key.
       applyDesktopBootstrapIdentity();
-      const result = mutate(() => true, undefined, { revalidate: true });
+      const result = mutate(isDataSWRKey, undefined, { revalidate: true });
       void result?.catch?.(() => {});
     } catch {
       // Ignore: SWR cache may not be ready yet in early boot.

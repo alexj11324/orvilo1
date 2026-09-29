@@ -81,6 +81,22 @@ export const useOnlyFetchOnceSWR: SWRHook = (key, fetch, config) =>
   });
 
 /**
+ * Leading segment stamped onto every `useActionSWR` key so cache-wide
+ * broadcast revalidations (`mutate(() => true, { revalidate: true })`, e.g.
+ * the scope-reload in `GlobalProvider/Query.tsx`) can skip them. Action
+ * fetchers are mutations — replaying them would re-run creates server-side.
+ */
+const ACTION_SWR_KEY_PREFIX = 'action:';
+
+/** Whether a raw SWR key belongs to a `useActionSWR` hook. */
+export const isActionSWRKey = (key: unknown): boolean =>
+  Array.isArray(key) && key[0] === ACTION_SWR_KEY_PREFIX;
+
+/** Predicate matching every registered SWR key *except* action hooks — the
+ * matcher cache-wide revalidation broadcasts should use. */
+export const isDataSWRKey = (key: unknown): boolean => !isActionSWRKey(key);
+
+/**
  * This type of request method is for action triggers. Must use mutate to trigger the request.
  * Benefits: built-in loading/error states, easy to handle loading/error UI interactions.
  * Components with the same SWR key will automatically share loading state (e.g., create agent button and the + button in header).
@@ -91,7 +107,7 @@ export const useOnlyFetchOnceSWR: SWRHook = (key, fetch, config) =>
  */
 // @ts-ignore
 export const useActionSWR: SWRHook = (key, fetch, config) =>
-  useSWR(key, fetch, {
+  useSWR(key ? [ACTION_SWR_KEY_PREFIX, ...(Array.isArray(key) ? key : [key])] : key, fetch, {
     // Use empty object as fallback to prevent auto-fetch when cache is empty
     // Combined with revalidateOnMount: false, SWR won't call fetcher on mount
     fallbackData: {},

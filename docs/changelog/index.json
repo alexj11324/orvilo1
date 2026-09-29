@@ -14,6 +14,11 @@
       "versionRange": ["2.3.1"]
     },
     {
+      "id": "2026-09-29-mobile-chat-tab-and-agent-dup-fixes",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.0"]
+    },
+    {
       "id": "2026-09-28-mobile-router-shared-leaves",
       "date": "2026-09-28",
       "versionRange": ["2.3.0"]

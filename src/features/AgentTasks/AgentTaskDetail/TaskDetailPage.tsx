@@ -20,6 +20,7 @@ import Breadcrumb from '../shared/Breadcrumb';
 import IssueContent from './IssueContent';
 import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
+import { TaskDetailScope } from './TaskDetailScope';
 import TopicChatDrawer from './TopicChatDrawer';
 import { useActiveTaskDetail } from './useActiveTaskDetail';
 
@@ -30,7 +31,7 @@ interface TaskDetailPageProps {
 
 const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelToggle = true }) => {
   const { t } = useTranslation('chat');
-  const saveStatus = useTaskStore(taskDetailSelectors.taskSaveStatus);
+  const saveStatus = useTaskStore((s) => taskDetailSelectors.taskSaveStatusFor(s, taskId));
   const [showTaskAgentPanel, toggleTaskAgentPanel] = useGlobalStore((s) => [
     systemStatusSelectors.showTaskAgentPanel(s),
     s.toggleTaskAgentPanel,
@@ -78,47 +79,54 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
   }
 
   return (
-    <WorkSurface style={{ position: 'relative' }}>
-      <NavHeader
-        left={
-          <>
-            <Breadcrumb taskId={taskId} />
-            {/* Reference: the star and overflow sit inline right after the
+    <TaskDetailScope taskId={taskId}>
+      <WorkSurface style={{ position: 'relative' }}>
+        <NavHeader
+          left={
+            <>
+              <Breadcrumb taskId={taskId} />
+              {/* Reference: the star and overflow sit inline right after the
                 issue crumb; the copy buttons moved into the rail's round
                 action row (TaskRailActions), so the header's right side only
                 keeps the agent-panel toggle. */}
-            <WorkFavoriteButton icon={'star'} targetId={taskId} targetType="task" variant="icon" />
-            <TaskDetailHeaderActions />
-            {saveStatus === 'saving' || saveStatus === 'failed' ? (
-              <AutoSaveHint saveStatus={saveStatus} />
-            ) : undefined}
-          </>
-        }
-        right={
-          <>
-            {showTaskAgentPanelToggle ? (
-              <ToggleRightPanelButton
-                hideWhenExpanded
-                expand={showTaskAgentPanel}
-                onToggle={() => toggleTaskAgentPanel()}
+              <WorkFavoriteButton
+                icon={'star'}
+                targetId={taskId}
+                targetType="task"
+                variant="icon"
               />
-            ) : undefined}
-          </>
-        }
-        styles={{
-          left: {
-            paddingLeft: 4,
-            gap: 8,
-          },
-        }}
-      />
-      {/* The routed issue uses the page geometry; the split pane and Portal
+              <TaskDetailHeaderActions />
+              {saveStatus === 'saving' || saveStatus === 'failed' ? (
+                <AutoSaveHint saveStatus={saveStatus} />
+              ) : undefined}
+            </>
+          }
+          right={
+            <>
+              {showTaskAgentPanelToggle ? (
+                <ToggleRightPanelButton
+                  hideWhenExpanded
+                  expand={showTaskAgentPanel}
+                  onToggle={() => toggleTaskAgentPanel()}
+                />
+              ) : undefined}
+            </>
+          }
+          styles={{
+            left: {
+              paddingLeft: 4,
+              gap: 8,
+            },
+          }}
+        />
+        {/* The routed issue uses the page geometry; the split pane and Portal
           still mount IssueContent with their own container widths. */}
-      <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
-        <IssueContent detail={detail} taskId={taskId} />
-      </WorkSurfaceDocument>
-      <TopicChatDrawer />
-    </WorkSurface>
+        <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
+          <IssueContent detail={detail} taskId={taskId} />
+        </WorkSurfaceDocument>
+        <TopicChatDrawer />
+      </WorkSurface>
+    </TaskDetailScope>
   );
 });
 

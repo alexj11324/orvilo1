@@ -22,16 +22,21 @@ export interface ActiveTaskProject {
 }
 
 /**
- * Resolve the project the active task is filed under, plus the milestone the
+ * Resolve the project the given task (or the active task when `taskId` is
+ * omitted) is filed under, plus the milestone the
  * project's own task list says it carries. `TaskDetailData` only exposes
  * `projectId`; everything else (name/avatar for the chip, milestone link,
  * milestone catalog for the picker) comes from the shared
  * `useFetchProjectDetail` cache the project pages already populate — so the
  * rail and the breadcrumb read one fetch, never two.
  */
-export const useActiveTaskProject = (): ActiveTaskProject => {
-  const projectId = useTaskStore((s) => taskDetailSelectors.activeTaskDetail(s)?.projectId);
-  const taskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+export const useActiveTaskProject = (taskId?: string): ActiveTaskProject => {
+  const projectId = useTaskStore(
+    (s) => taskDetailSelectors.taskDetail(s, taskId ?? s.activeTaskId)?.projectId,
+  );
+  const taskDatabaseId = useTaskStore((s) =>
+    taskDetailSelectors.taskDatabaseId(s, taskId ?? s.activeTaskId),
+  );
 
   // Drive the fetch through the store hook; read the resolved payload from
   // the hydrated `projectDetails` cache — the same object

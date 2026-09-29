@@ -31,6 +31,11 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskDetailRunPauseAction from '../AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction';
+import {
+  TaskDetailScope,
+  useTaskDetailSelector,
+  useTaskDetailTaskId,
+} from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import TaskDetailSkeleton from '../AgentTasks/AgentTaskDetail/TaskDetailSkeleton';
 import TaskDetailTitleInput from '../AgentTasks/AgentTaskDetail/TaskDetailTitleInput';
 import TopicChatDrawer from '../AgentTasks/AgentTaskDetail/TopicChatDrawer';
@@ -51,9 +56,9 @@ dayjs.extend(relativeTime);
 const ProjectSelect = memo(() => {
   const { t } = useTranslation('automation');
   const { allowed: canEdit, reason } = usePermission('create_content');
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const projectId = useTaskStore(
-    (s) => (s.activeTaskId ? s.taskDetailMap[s.activeTaskId]?.projectId : undefined) ?? null,
+  const taskId = useTaskDetailTaskId();
+  const projectId = useTaskDetailSelector(
+    (s, scopedTaskId) => taskDetailSelectors.taskDetail(s, scopedTaskId)?.projectId ?? null,
   );
   const updateTask = useTaskStore((s) => s.updateTask);
   const projects = useCurrentProjectList();
@@ -86,8 +91,8 @@ const ProjectSelect = memo(() => {
 
 const AutomationStatusSwitch = memo(() => {
   const { allowed: canEdit, reason } = usePermission('create_content');
-  const status = useTaskStore(taskDetailSelectors.activeTaskStatus);
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus);
+  const taskId = useTaskDetailTaskId();
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus);
   const active = status ? automationStatusOf(status) === 'active' : true;
 
@@ -109,9 +114,9 @@ const AutomationStatusSwitch = memo(() => {
 
 const AgentChip = memo(() => {
   const { t } = useTranslation('automation');
-  const agentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
-  const taskIdentifier = useTaskStore(taskDetailSelectors.activeTaskId);
-  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
+  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const taskIdentifier = useTaskDetailTaskId();
+  const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const meta = useAgentDisplayMeta(agentId ?? undefined);
 
   return (
@@ -145,8 +150,8 @@ const AgentChip = memo(() => {
 
 const CreatedByLabel = memo(() => {
   const { t } = useTranslation('automation');
-  const createdByUserId = useTaskStore(
-    (s) => (s.activeTaskId ? s.taskDetailMap[s.activeTaskId]?.createdByUserId : undefined) ?? null,
+  const createdByUserId = useTaskDetailSelector(
+    (s, scopedTaskId) => taskDetailSelectors.taskCreatedByUserId(s, scopedTaskId) ?? null,
   );
   const meta = useUserDisplayMeta(createdByUserId);
   if (!createdByUserId) return null;
@@ -162,8 +167,8 @@ const DetailHeaderActions = memo(() => {
   const { allowed: canEdit } = usePermission('create_content');
   const navigate = useWorkspaceAwareNavigate();
   const { remove } = useAutomationActions();
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const name = useTaskStore(taskDetailSelectors.activeTaskName);
+  const taskId = useTaskDetailTaskId();
+  const name = useTaskDetailSelector(taskDetailSelectors.taskName);
 
   const confirmDelete = useCallback(() => {
     if (!taskId) return;
@@ -266,40 +271,42 @@ const AutomationDetailPage = memo(() => {
   }
 
   return (
-    <Flexbox flex={1} height={'100%'}>
-      <NavHeader
-        left={<AutomationBreadcrumb taskId={taskId} />}
-        right={<DetailHeaderActions />}
-        styles={{ left: { paddingLeft: 4 } }}
-      />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer>
-          {isInitialLoading ? (
-            <TaskDetailSkeleton chrome={'body'} />
-          ) : (
-            <Flexbox gap={8} paddingBlock={16}>
-              <TaskDetailTitleInput />
-              <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
-                <AutomationStatusSwitch />
-                <AgentChip />
-                <ProjectSelect />
-                <CreatedByLabel />
+    <TaskDetailScope taskId={taskId}>
+      <Flexbox flex={1} height={'100%'}>
+        <NavHeader
+          left={<AutomationBreadcrumb taskId={taskId} />}
+          right={<DetailHeaderActions />}
+          styles={{ left: { paddingLeft: 4 } }}
+        />
+        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+          <WideScreenContainer>
+            {isInitialLoading ? (
+              <TaskDetailSkeleton chrome={'body'} />
+            ) : (
+              <Flexbox gap={8} paddingBlock={16}>
+                <TaskDetailTitleInput />
+                <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
+                  <AutomationStatusSwitch />
+                  <AgentChip />
+                  <ProjectSelect />
+                  <CreatedByLabel />
+                </Flexbox>
+                <Tabs
+                  activeKey={tab}
+                  items={[
+                    { key: 'settings', label: t('settings.tab_settings') },
+                    { key: 'runs', label: t('settings.tab_runs') },
+                  ]}
+                  onChange={setTab}
+                />
+                {tab === 'settings' ? <AutomationSettingsTab /> : <AutomationRunList />}
               </Flexbox>
-              <Tabs
-                activeKey={tab}
-                items={[
-                  { key: 'settings', label: t('settings.tab_settings') },
-                  { key: 'runs', label: t('settings.tab_runs') },
-                ]}
-                onChange={setTab}
-              />
-              {tab === 'settings' ? <AutomationSettingsTab /> : <AutomationRunList />}
-            </Flexbox>
-          )}
-        </WideScreenContainer>
+            )}
+          </WideScreenContainer>
+        </Flexbox>
+        <TopicChatDrawer />
       </Flexbox>
-      <TopicChatDrawer />
-    </Flexbox>
+    </TaskDetailScope>
   );
 });
 

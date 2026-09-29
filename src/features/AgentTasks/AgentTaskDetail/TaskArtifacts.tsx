@@ -12,6 +12,7 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const flattenWorkspace = (nodes: TaskDetailWorkspaceNode[]): TaskDetailWorkspaceNode[] =>
   nodes.flatMap((node) => [
@@ -22,7 +23,7 @@ const flattenWorkspace = (nodes: TaskDetailWorkspaceNode[]): TaskDetailWorkspace
 const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
   const { t } = useTranslation('chat');
   const unpinDocument = useTaskStore((s) => s.unpinDocument);
-  const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const activeTaskId = useTaskDetailTaskId();
   // Tombstone: the viewer lost access to the pinned document (switched back
   // to private by its owner). The server strips title/metadata; clicking
   // through still works — the document preview renders its own 404 terminal.
@@ -112,7 +113,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
 
 const TaskArtifacts = memo(() => {
   const { t } = useTranslation('chat');
-  const workspace = useTaskStore(taskDetailSelectors.activeTaskWorkspace);
+  const workspace = useTaskDetailSelector(taskDetailSelectors.taskWorkspace);
   const [isExpanded, setIsExpanded] = useState(true);
 
   const items = useMemo(

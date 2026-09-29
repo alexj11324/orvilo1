@@ -43,6 +43,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import GoalRoundTimeline from './GoalRoundTimeline';
 import { resolveTaskAcceptanceRequirement } from './resolveTaskAcceptanceProjection';
 import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskVerifyConfig from './TaskVerifyConfig';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -127,11 +128,11 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   const openAcceptanceCheck = useChatStore((state) => state.openAcceptanceCheck);
   const showTaskAgentPanel = useGlobalStore((state) => state.toggleTaskAgentPanel);
   const { allowed: canEditTask } = usePermission('create_content');
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const taskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
-  const taskName = useTaskStore(taskDetailSelectors.activeTaskName);
-  const automationMode = useTaskStore(taskDetailSelectors.activeTaskAutomationMode);
-  const verify = useTaskStore(taskDetailSelectors.activeTaskVerifyConfig);
+  const taskId = useTaskDetailTaskId();
+  const taskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
+  const taskName = useTaskDetailSelector(taskDetailSelectors.taskName);
+  const automationMode = useTaskDetailSelector(taskDetailSelectors.taskAutomationMode);
+  const verify = useTaskDetailSelector(taskDetailSelectors.taskVerifyConfig);
   const [sectionExpanded, setSectionExpanded] = useState(true);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const [requirementExpanded, setRequirementExpanded] = useState(false);

@@ -12,7 +12,6 @@ import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -22,6 +21,7 @@ import { useActiveTaskProject } from '../shared/useActiveTaskProject';
 import { useTaskProjectChange } from '../shared/useTaskProjectChange';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 /**
  * The rail's "Project" group — Linear files every issue under a project or a
@@ -35,9 +35,12 @@ const TaskProjectSection = memo(() => {
   const { t } = useTranslation(['chat', 'project']);
   const { i18n, t: tCommon } = useTranslation('common');
   const navigate = useWorkspaceAwareNavigate();
-  const { milestone, milestones, project, projectRef, taskDatabaseId } = useActiveTaskProject();
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const taskProjectId = useTaskStore((s) => taskDetailSelectors.activeTaskDetail(s)?.projectId);
+  const taskId = useTaskDetailTaskId();
+  const taskProjectId = useTaskDetailSelector(
+    (s, id) => taskDetailSelectors.taskDetail(s, id)?.projectId,
+  );
+  const { milestone, milestones, project, projectRef, taskDatabaseId } =
+    useActiveTaskProject(taskId);
   const setTaskMilestone = useProjectStore((s) => s.setTaskMilestone);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const { allowed: canEditTask } = usePermission('create_content');

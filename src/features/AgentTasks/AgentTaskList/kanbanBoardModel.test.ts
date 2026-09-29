@@ -467,6 +467,69 @@ describe('kanbanBoardModel', () => {
         excludeStatuses,
       });
     });
+
+    // Three-state projectId contract — `undefined` = unscoped, `null` = the
+    // "No project" chip, a string = that project — across every board scope.
+    // `null` must reach the query (the fetch keys a `:no-project` list for
+    // it); a truthiness test would silently widen it to the unscoped query.
+    it.each<{
+      expected: ReturnType<typeof buildKanbanGroupQuery>;
+      input: Parameters<typeof buildKanbanGroupQuery>[0];
+      name: string;
+    }>([
+      {
+        expected: { allAgents: true, automated: false, groupBy: 'status' },
+        input: { groupBy: 'status' },
+        name: 'global board, no project filter',
+      },
+      {
+        expected: { automated: false, groupBy: 'status', projectId: null },
+        input: { groupBy: 'status', projectId: null },
+        name: 'global board keeps the No-project chip',
+      },
+      {
+        expected: { automated: false, groupBy: 'status', projectId: 'proj_1' },
+        input: { groupBy: 'status', projectId: 'proj_1' },
+        name: 'project board',
+      },
+      {
+        expected: { agentId: 'agt_1', automated: false, groupBy: 'status' },
+        input: { agentId: 'agt_1', groupBy: 'status' },
+        name: 'agent board, no project filter',
+      },
+      {
+        // The project filter wins over agentId — the same precedence
+        // `useFetchTaskGroupList` applies when deriving its list key.
+        expected: { automated: false, groupBy: 'status', projectId: null },
+        input: { agentId: 'agt_1', groupBy: 'status', projectId: null },
+        name: 'agent board keeps the No-project chip',
+      },
+      {
+        expected: { automated: false, groupBy: 'status', projectId: 'proj_1' },
+        input: { agentId: 'agt_1', groupBy: 'status', projectId: 'proj_1' },
+        name: 'project filter wins over agent board',
+      },
+      {
+        expected: { groupBy: 'status', scope: 'assigned' },
+        input: { groupBy: 'status', myTaskScope: 'assigned' },
+        name: 'My tasks board, no project filter',
+      },
+      {
+        expected: { groupBy: 'status', projectId: null, scope: 'delegated' },
+        input: { groupBy: 'status', myTaskScope: 'delegated', projectId: null },
+        name: 'My tasks board keeps the No-project chip',
+      },
+      {
+        expected: { groupBy: 'status', projectId: 'proj_1', scope: 'created' },
+        input: { groupBy: 'status', myTaskScope: 'created', projectId: 'proj_1' },
+        name: 'My tasks board composes scope and project',
+      },
+    ])('builds the scoped query for $name', ({ expected, input }) => {
+      expect(buildKanbanGroupQuery(input)).toEqual({
+        excludeStatuses: undefined,
+        ...expected,
+      });
+    });
   });
 
   describe('resolveKanbanDragTask', () => {

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors } from '@/store/task/selectors';
 
+import { useTaskDetailSelector } from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import RunStatusBadge from './RunStatusBadge';
 import { runDuration, runTriggerLabel } from './shared';
 
@@ -98,7 +99,7 @@ const RunRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
 /** Run-history table for one automation — the detail page's "Runs" tab. */
 const AutomationRunList = memo(() => {
   const { t } = useTranslation('automation');
-  const activities = useTaskStore(taskActivitySelectors.activeTaskActivities);
+  const activities = useTaskDetailSelector(taskActivitySelectors.taskActivities);
 
   const runs = useMemo(
     () =>

@@ -1,0 +1,9 @@
+---
+title: GitHub MCP PAT fallback on self-hosted
+date: 2026-09-29
+versionRange: ['2.4.1']
+---
+
+# Fixed
+
+- Restored a supported GitHub MCP connection path on self-hosted deployments that lack GitHub App OAuth credentials (`GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `APP_URL`). The server now reports a connector capability (`app_oauth_configured` / `pat_available` / `not_configurable`), `connectGitHubMcp` returns `pat_available` instead of a generic internal error, and the Connect button becomes a "Set up token" entry that opens the preset's bearer-token form. Members who also lack connector write permission get an explicit not-configurable state instead of a dead popup.

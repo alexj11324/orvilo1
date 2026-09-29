@@ -80,6 +80,8 @@
   "connector.deleteAccountConfirmContent": "此操作会移除该连接器及其在你账号下的授权。之后任何使用它的智能体都需要重新授权。",
   "connector.deleteAgentConfirmContent": "该连接器归属于智能体「{{agent}}」。删除它会同时把这个工具从该智能体中移除。",
   "connector.deleteGitHubMcpConfirmContent": "这会移除 GitHub MCP 连接器。GitHub 仍会保持连接，供 Reviews 使用。",
+  "connector.githubNotConfigurable": "此部署未配置 GitHub App OAuth，且你没有添加令牌的权限。请联系工作区管理员配置 GitHub。",
+  "connector.githubPatFallback": "此部署未配置 GitHub App OAuth。可改用个人访问令牌连接。",
   "connector.manageOnlyCreator": "仅创建者或工作区 Owner 可以管理此连接器",
   "connector.thisAgent": "该智能体",
   "dalle.autoGenerate": "自动生成",

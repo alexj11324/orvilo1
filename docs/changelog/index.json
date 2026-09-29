@@ -29,6 +29,11 @@
       "versionRange": ["2.4.1"]
     },
     {
+      "id": "2026-09-29-github-mcp-pat-fallback",
+      "date": "2026-09-29",
+      "versionRange": ["2.4.1"]
+    },
+    {
       "id": "2026-09-29-oauth-session-terminal-states",
       "date": "2026-09-29",
       "versionRange": ["2.4.1"]

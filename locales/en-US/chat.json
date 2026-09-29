@@ -1648,6 +1648,8 @@
   "taskDetail.artifactSize": "{{value}} chars",
   "taskDetail.artifacts": "Artifacts",
   "taskDetail.assignee": "Assignee",
+  "taskDetail.attachmentsReadOnly": "View only — you can't add attachments.",
+  "taskDetail.attachmentsUnavailable": "Attachments can't be added right now.",
   "taskDetail.blockedBy": "Blocked by {{id}}",
   "taskDetail.cancelSchedule": "Cancel schedule",
   "taskDetail.changePriorityPlaceholder": "Change priority…",

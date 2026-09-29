@@ -1,20 +1,21 @@
 import { useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
+import { Flexbox, Tooltip } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Paperclip } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import CollapsibleContent from '@/components/CollapsibleContent';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { seedAttachments } from '@/features/EditorCanvas/attachmentRegistry';
-import { pickAndInsertAttachments } from '@/features/EditorCanvas/editorAttachments';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { useAttachInstructionFiles } from './useAttachInstructionFiles';
 import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
 
 // Stable lock RPC binding for the task resource.
@@ -32,7 +33,7 @@ const INSTRUCTION_MAX_HEIGHT = 320;
 
 const TaskInstruction = memo(() => {
   const { t } = useTranslation('chat');
-  const { allowed: canEditTask } = usePermission('create_content');
+  const { allowed: canEditTask, reason: permissionReason } = usePermission('create_content');
   const instruction = useTaskStore(taskDetailSelectors.activeTaskInstruction);
   const instructionRevision = useTaskStore(taskDetailSelectors.activeTaskInstructionRevision);
   const persistedEditorData = useTaskStore(taskDetailSelectors.activeTaskEditorData);
@@ -67,6 +68,19 @@ const TaskInstruction = memo(() => {
   // Read-only until the lock resolves, so the user can't start typing on a task
   // that turns out to be locked and get bounced mid-edit.
   const editable = canEditTask && !lock.lockedByOther && !lock.pending;
+  const lockHolder = useAuthorInfo(lock.lockedByOther ? (lock.holderId ?? undefined) : undefined);
+
+  // The attach affordance shares the same edit capability as the editor body:
+  // read-only, locked, or unresolved states never open the picker.
+  const attachBlockedReason = !canEditTask
+    ? (permissionReason ?? t('taskDetail.attachmentsReadOnly'))
+    : lock.pending
+      ? t('pageEditor.editMode.checking', { ns: 'file' })
+      : lock.lockedByOther
+        ? lockHolder?.fullName
+          ? t('pageEditor.editMode.lockedByOther', { name: lockHolder.fullName, ns: 'file' })
+          : t('pageEditor.editMode.lockedBySomeone', { ns: 'file' })
+        : undefined;
 
   const editorData = useMemo(
     () => ({
@@ -94,9 +108,7 @@ const TaskInstruction = memo(() => {
     updateTask,
   });
 
-  const handleAttach = useCallback(() => {
-    pickAndInsertAttachments(editor);
-  }, [editor]);
+  const handleAttach = useAttachInstructionFiles({ editable, editor, taskId: taskId ?? null });
 
   // Clicking into the clamped text focuses the editor, so expanding on focus
   // makes one click both open the instruction and land the caret where it was
@@ -151,12 +163,18 @@ const TaskInstruction = memo(() => {
         </div>
       </CollapsibleContent>
       {showAttach && (
-        <ActionIcon
-          icon={Paperclip}
-          size={'small'}
-          title={t('upload.action.tooltip')}
-          onClick={handleAttach}
-        />
+        <Tooltip title={editable ? t('upload.action.tooltip') : attachBlockedReason}>
+          {/* The wrapper span keeps the tooltip reachable — a disabled button
+              swallows pointer events, so the reason would never surface. */}
+          <span style={{ display: 'inline-flex' }}>
+            <ActionIcon
+              disabled={!editable}
+              icon={Paperclip}
+              size={'small'}
+              onClick={handleAttach}
+            />
+          </span>
+        </Tooltip>
       )}
     </Flexbox>
   );

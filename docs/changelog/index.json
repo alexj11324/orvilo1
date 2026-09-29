@@ -14,6 +14,11 @@
       "versionRange": ["2.4.1"]
     },
     {
+      "id": "2026-09-29-issue-project-picker",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
       "id": "2026-09-29-issue-attachment-edit-lock",
       "date": "2026-09-29",
       "versionRange": ["2.3.1"]

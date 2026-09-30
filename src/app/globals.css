@@ -176,3 +176,83 @@
     --invert: var(--color-zinc-700);
     --invert-foreground: var(--color-zinc-50);
 }
+
+/* Shimmer sweep for "generating"-style labels (ported from lobehub Text `shiny`). */
+@keyframes text-shiny-sweep {
+    0% {
+        background-position: 100%;
+    }
+
+    100% {
+        background-position: -100%;
+    }
+}
+
+@keyframes text-shiny-sweep-transform {
+    0% {
+        translate: -100% 0;
+    }
+
+    100% {
+        translate: 100% 0;
+    }
+}
+
+.text-shiny {
+    --shiny-duration: 1.5s;
+
+    /* The sweep peaks at this color. Override it to match the static text the
+       shimmering label sits next to. currentColor cannot serve here: the dimmed
+       color declared below would feed back into the sweep overlay. */
+    --shiny-color: var(--foreground);
+
+    user-select: none;
+
+    color: color-mix(in srgb, var(--shiny-color) 28%, transparent);
+
+    background: linear-gradient(120deg, transparent 25%, var(--shiny-color) 50%, transparent 75%);
+    background-clip: text;
+    background-size: 200% 100%;
+
+    animation: text-shiny-sweep var(--shiny-duration) linear infinite;
+}
+
+/* Animating background-position repaints every glyph each frame. Where
+   mask-clip: text is supported, clip a transform-animated overlay to the glyphs
+   instead so the sweep stays on the compositor. The mask clips every descendant
+   too, so rows that also render icons or chips keep the background-clip path. */
+@supports (-webkit-mask-clip: text) {
+    .text-shiny:not(:has(*)) {
+        position: var(--shiny-origin, relative);
+
+        background: none;
+
+        animation: none;
+
+        mask-clip: text;
+        mask-image: linear-gradient(#fff, #fff);
+    }
+
+    .text-shiny:not(:has(*))::after {
+        pointer-events: none;
+        will-change: transform;
+        content: '';
+
+        position: absolute;
+        inset: 0;
+
+        background: linear-gradient(90deg, transparent 25%, var(--shiny-color) 50%, transparent 75%);
+
+        animation: text-shiny-sweep-transform var(--shiny-duration) linear infinite;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .text-shiny {
+        animation: none;
+    }
+
+    .text-shiny::after {
+        display: none;
+    }
+}

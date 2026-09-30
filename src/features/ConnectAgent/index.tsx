@@ -1,5 +1,6 @@
 'use client';
 
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import { isDesktop } from '@orvilo/const';
 import type {
   HeterogeneousAgentScanStatus,
@@ -9,7 +10,7 @@ import type {
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type { DeviceListItem } from '@orvilo/types';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import {
   ArrowLeft,
@@ -31,7 +32,6 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DOWNLOAD_URL } from '@/const/url';
@@ -289,16 +289,20 @@ const SkeletonRow = memo<{ squareIcon?: boolean; width: number }>(({ squareIcon,
 ));
 
 const ScrollableAgentList = memo<{ children: ReactNode }>(({ children }) => (
-  <ScrollArea
-    disableContentFit
-    scrollFade
-    className={styles.groupList}
-    scrollbarProps={{ className: styles.agentListScrollbar }}
-    thumbProps={{ className: styles.agentListThumb }}
-    viewportProps={{ className: styles.agentListViewport }}
-  >
-    {children}
-  </ScrollArea>
+  <ScrollAreaPrimitive.Root className={styles.groupList}>
+    <ScrollAreaPrimitive.Viewport className={styles.agentListViewport}>
+      {children}
+    </ScrollAreaPrimitive.Viewport>
+    <ScrollAreaPrimitive.Scrollbar
+      className={cx('flex touch-none p-px select-none', styles.agentListScrollbar)}
+      orientation={'vertical'}
+    >
+      <ScrollAreaPrimitive.Thumb
+        className={cx('relative flex-1 rounded-full', styles.agentListThumb)}
+      />
+    </ScrollAreaPrimitive.Scrollbar>
+    <ScrollAreaPrimitive.Corner />
+  </ScrollAreaPrimitive.Root>
 ));
 
 ScrollableAgentList.displayName = 'ScrollableAgentList';

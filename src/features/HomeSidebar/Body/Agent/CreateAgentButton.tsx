@@ -82,7 +82,7 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
 
   return (
     <div
-      className={cx('flex items-center gap-1', className)}
+      className={cx('group/create-agent flex items-center gap-1', className)}
       title={!canCreate ? reason : undefined}
     >
       <Button
@@ -96,7 +96,12 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
       </Button>
       {canCreate && (
         <SidebarDropdownMenu items={dropdownItems}>
-          <Button aria-label={t('addAgent')} size="icon" variant="ghost">
+          <Button
+            aria-label={t('addAgent')}
+            className="opacity-0 transition-opacity group-hover/create-agent:opacity-100 data-[popup-open]:opacity-100"
+            size="icon"
+            variant="ghost"
+          >
             <ChevronDownIcon />
           </Button>
         </SidebarDropdownMenu>

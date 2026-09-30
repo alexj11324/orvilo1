@@ -8,7 +8,11 @@ interface UpdateLoadingProps {
 }
 
 const UpdateLoading = memo<UpdateLoadingProps>(({ size, style }) => {
-  return <div style={style}>{createElement(Loader2, { size: size ?? 16 })}</div>;
+  return (
+    <div style={style}>
+      {createElement(Loader2, { className: 'animate-spin', size: size ?? 16 })}
+    </div>
+  );
 });
 
 export default UpdateLoading;

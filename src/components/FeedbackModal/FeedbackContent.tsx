@@ -130,26 +130,53 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
       <div className="flex flex-col gap-4">
         <Field data-invalid={!!errors.title || undefined}>
           <FieldLabel>{t('feedback.fields.title.label')}</FieldLabel>
-          <Input
-            aria-invalid={!!errors.title || undefined}
-            maxLength={200}
-            placeholder={t('feedback.fields.title.placeholder')}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+          <div className="relative">
+            <Input
+              aria-invalid={!!errors.title || undefined}
+              maxLength={200}
+              placeholder={t('feedback.fields.title.placeholder')}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <span
+              style={{
+                color: 'var(--colorTextSecondary)',
+                fontSize: 12,
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+              }}
+            >
+              {title.length}/200
+            </span>
+          </div>
           {errors.title ? <FieldError>{errors.title}</FieldError> : null}
         </Field>
 
         <Field data-invalid={!!errors.message || undefined}>
           <FieldLabel>{t('feedback.fields.message.label')}</FieldLabel>
-          <TextArea
-            aria-invalid={!!errors.message || undefined}
-            maxLength={5000}
-            placeholder={t('feedback.fields.message.placeholder')}
-            rows={6}
-            value={message}
-            onChange={(v) => setMessage(v)}
-          />
+          <div className="relative">
+            <TextArea
+              aria-invalid={!!errors.message || undefined}
+              maxLength={5000}
+              placeholder={t('feedback.fields.message.placeholder')}
+              rows={6}
+              value={message}
+              onChange={(v) => setMessage(v)}
+            />
+            <span
+              style={{
+                bottom: 8,
+                color: 'var(--colorTextSecondary)',
+                fontSize: 12,
+                position: 'absolute',
+                right: 8,
+              }}
+            >
+              {message.length}/5000
+            </span>
+          </div>
           {errors.message ? <FieldError>{errors.message}</FieldError> : null}
         </Field>
 

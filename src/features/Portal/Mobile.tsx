@@ -44,17 +44,55 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+const MobilePortalContent = ({
+  isPortalThread,
+  open,
+  renderBody,
+}: {
+  isPortalThread: boolean;
+  open: boolean;
+  renderBody: (body: ReactNode) => ReactNode;
+}) => {
+  const { t } = useTranslation('portal');
+  const [fullscreen, setFullscreen] = useState(false);
+  // `onOpenChange` does not fire when the store flips `open` externally, so
+  // resync during render — the flag must never survive a close.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    if (!open) setFullscreen(false);
+  }
+
+  return (
+    <SheetContent
+      showCloseButton={false}
+      side={'bottom'}
+      className={cx(
+        'gap-0 rounded-t-2xl p-0',
+        fullscreen ? 'h-dvh' : 'h-[95%]',
+        isPortalThread && styles.container,
+      )}
+    >
+      <SheetTitle className={'sr-only'}>{t('title')}</SheetTitle>
+      <button
+        aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        className={styles.fullscreenToggle}
+        type="button"
+        onClick={() => setFullscreen((prev) => !prev)}
+      >
+        {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+      </button>
+      <PortalContent renderBody={renderBody} />
+    </SheetContent>
+  );
+};
+
 const MobilePortal = () => {
   const [showMobilePortal, isPortalThread, clearPortalStack] = useChatStore((state) => [
     state.showPortal,
     portalThreadSelectors.showThread(state),
     state.clearPortalStack,
   ]);
-  const { t } = useTranslation('portal');
-  // Mirrors the legacy Modal's `allowFullscreen`: a header toggle switches the
-  // panel between its `height` (95%) and the full viewport, and the flag
-  // resets whenever the sheet closes.
-  const [fullscreen, setFullscreen] = useState(false);
 
   const renderBody = (body: ReactNode) => (
     <div
@@ -74,34 +112,12 @@ const MobilePortal = () => {
     // Declarative rather than `createModal`: the portal body reaches for route
     // params (`useParams` in its header), and an imperative modal renders in the
     // global ModalHost — above every route match, where those params are empty.
-    <Sheet
-      open={showMobilePortal}
-      onOpenChange={(next) => {
-        if (next) return;
-        setFullscreen(false);
-        clearPortalStack();
-      }}
-    >
-      <SheetContent
-        showCloseButton={false}
-        side={'bottom'}
-        className={cx(
-          'gap-0 rounded-t-2xl p-0',
-          fullscreen ? 'h-dvh' : 'h-[95%]',
-          isPortalThread && styles.container,
-        )}
-      >
-        <SheetTitle className={'sr-only'}>{t('title')}</SheetTitle>
-        <button
-          aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-          className={styles.fullscreenToggle}
-          type="button"
-          onClick={() => setFullscreen((prev) => !prev)}
-        >
-          {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        </button>
-        <PortalContent renderBody={renderBody} />
-      </SheetContent>
+    <Sheet open={showMobilePortal} onOpenChange={(next) => !next && clearPortalStack()}>
+      <MobilePortalContent
+        isPortalThread={isPortalThread}
+        open={showMobilePortal}
+        renderBody={renderBody}
+      />
     </Sheet>
   );
 };

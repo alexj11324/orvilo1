@@ -83,7 +83,7 @@ describe('runTaskReminderSweep', () => {
 
     const result = await runTaskReminderSweep();
 
-    expect(result).toEqual({ claimed: 1, delivered: 1, failed: 0, retrying: 0, skipped: 0 });
+    expect(result).toEqual({ claimed: 1, delivered: 1, failed: 0, skipped: 0 });
     expect(markTaskReminderDelivered).toHaveBeenCalledWith(rowTx, 'r1');
   });
 
@@ -93,7 +93,7 @@ describe('runTaskReminderSweep', () => {
 
     const result = await runTaskReminderSweep();
 
-    expect(result).toEqual({ claimed: 1, delivered: 0, failed: 0, retrying: 0, skipped: 1 });
+    expect(result).toEqual({ claimed: 1, delivered: 0, failed: 0, skipped: 1 });
     expect(markTaskReminderDelivered).toHaveBeenCalledWith(rowTx, 'r1');
   });
 
@@ -107,7 +107,7 @@ describe('runTaskReminderSweep', () => {
     const now = new Date('2026-02-01T12:00:00Z');
     const result = await runTaskReminderSweep({ now });
 
-    expect(result).toEqual({ claimed: 2, delivered: 1, failed: 0, retrying: 1, skipped: 0 });
+    expect(result).toEqual({ claimed: 2, delivered: 1, failed: 1, skipped: 0 });
     expect(recordTaskReminderAttempt).toHaveBeenCalledWith(
       tx,
       'r1',
@@ -127,23 +127,32 @@ describe('runTaskReminderSweep', () => {
 
     const result = await runTaskReminderSweep({ now: new Date('2026-02-01T12:05:00Z') });
 
-    expect(result).toEqual({ claimed: 1, delivered: 1, failed: 0, retrying: 0, skipped: 0 });
+    expect(result).toEqual({ claimed: 1, delivered: 1, failed: 0, skipped: 0 });
     expect(markTaskReminderDelivered).toHaveBeenCalledWith(rowTx, 'r1');
   });
 
-  it('stamps a permanently poisoned row after the attempt cap while later rows still deliver', async () => {
-    const rows = [reminder('r1', { attemptCount: 7 }), reminder('r2')];
+  it('keeps a high-attempt poison row parked on capped backoff, never stamped, while later rows deliver', async () => {
+    const rows = [reminder('r1', { attemptCount: 40 }), reminder('r2')];
     vi.mocked(claimDueTaskReminders).mockResolvedValue(rows as never);
     mockCreate(((payload: { dedupeKey: string }) => {
       if (payload.dedupeKey.includes('r1')) throw new Error('constraint violation');
       return { id: 'notification-1' };
     }) as never);
 
-    const result = await runTaskReminderSweep();
+    const now = new Date('2026-02-01T12:00:00Z');
+    const result = await runTaskReminderSweep({ now });
 
-    expect(result).toEqual({ claimed: 2, delivered: 1, failed: 1, retrying: 0, skipped: 0 });
-    expect(recordTaskReminderAttempt).not.toHaveBeenCalled();
-    expect(markTaskReminderDelivered).toHaveBeenCalledWith(tx, 'r1');
+    expect(result).toEqual({ claimed: 2, delivered: 1, failed: 1, skipped: 0 });
+    // Retry at the capped 30-minute delay; the row stays undelivered so it
+    // can still deliver once the failure cause clears.
+    expect(recordTaskReminderAttempt).toHaveBeenCalledWith(
+      tx,
+      'r1',
+      41,
+      new Date(now.getTime() + 30 * 60_000),
+    );
+    expect(markTaskReminderDelivered).not.toHaveBeenCalledWith(tx, 'r1');
+    expect(markTaskReminderDelivered).not.toHaveBeenCalledWith(rowTx, 'r1');
     expect(markTaskReminderDelivered).toHaveBeenCalledWith(rowTx, 'r2');
   });
 });

@@ -1,6 +1,6 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
 import { memo, useEffect, useMemo } from 'react';
 
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, messageStateSelectors } from '@/store/chat/selectors';
 import { ArtifactDisplayMode } from '@/store/chat/slices/portal/initialState';
@@ -71,28 +71,24 @@ const ArtifactsUI = memo(() => {
   if (!messageId) return;
 
   return (
-    <Flexbox
-      className={'portal-artifact'}
-      flex={1}
-      gap={8}
-      height={'100%'}
-      paddingInline={12}
+    <div
+      className="flex flex-col flex-1 gap-2 h-[100%] px-3 portal-artifact"
       style={{ overflow: 'hidden' }}
     >
       {showCode ? (
-        <Flexbox flex={1} style={{ minHeight: 0, overflow: 'auto' }}>
-          <Highlighter
-            animated={isStreamingCode}
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'auto' }}>
+          <CodeBlock
+            className="h-full"
+            code={artifactContent}
             language={language || 'txt'}
+            streaming={isStreamingCode}
             style={{ fontSize: 12, minHeight: '100%', overflow: 'visible' }}
-          >
-            {artifactContent}
-          </Highlighter>
-        </Flexbox>
+          />
+        </div>
       ) : (
         <Renderer animated={isStreamingArtifact} content={artifactContent} type={artifactType} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

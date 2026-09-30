@@ -1,5 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -45,11 +44,11 @@ const FCSearchModel = memo<FCSearchModelProps>(({ disabled }) => {
     chatConfigByIdSelectors.getSearchFCModelById(agentId)(s),
   );
   return (
-    <Flexbox horizontal distribution={'space-between'} gap={16} padding={8}>
-      <Flexbox horizontal align={'center'} gap={4}>
-        <Flexbox className={styles.title}>{t('search.searchModel.title')}</Flexbox>
+    <div className="flex flex-row justify-between gap-4 p-2">
+      <div className="flex flex-row items-center gap-1">
+        <div className={cx('flex flex-col', styles.title)}>{t('search.searchModel.title')}</div>
         <InfoTooltip title={t('search.searchModel.desc')} />
-      </Flexbox>
+      </div>
       <FunctionCallingModelSelect
         disabled={disabled}
         value={searchFCModel}
@@ -62,7 +61,7 @@ const FCSearchModel = memo<FCSearchModelProps>(({ disabled }) => {
           await updateAgentChatConfig({ searchFCModel: value });
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

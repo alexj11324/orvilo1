@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,12 +8,12 @@ export const Files = memo(() => {
   const { t } = useTranslation('portal');
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <Text as={'h5'} style={{ marginInline: 12 }}>
         {t('files')}
       </Text>
       <FileList />
-    </Flexbox>
+    </div>
   );
 });
 

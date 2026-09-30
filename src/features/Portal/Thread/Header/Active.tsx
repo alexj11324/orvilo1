@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { resolveCCSubagentType } from '@orvilo/builtin-tool-claude-code/client';
 import { cssVar } from 'antd-style';
@@ -25,7 +24,7 @@ const Active = memo(() => {
   const subagentTypeInfo = resolveCCSubagentType(currentThread.metadata?.subagentType);
 
   return (
-    <Flexbox horizontal align={'center'} gap={8} style={{ marginInlineStart: 4 }}>
+    <div className="flex flex-row items-center gap-2" style={{ marginInlineStart: 4 }}>
       <Avatar {...agentMeta} size={24} />
       <Text
         className={oneLineEllipsis}
@@ -33,17 +32,26 @@ const Active = memo(() => {
         style={{ color: cssVar.colorTextSecondary, fontSize: 14 }}
       >
         {currentThread.title === LOADING_FLAT ? (
-          <Flexbox flex={1} height={30} justify={'center'}>
+          <div className="flex flex-col flex-1 h-[30px] justify-center">
             <BubblesLoading />
-          </Flexbox>
+          </div>
         ) : (
           currentThread.title
         )}
       </Text>
       {subagentTypeInfo && (
         <Tag
-          icon={<Icon icon={subagentTypeInfo.icon} />}
           size={'small'}
+          icon={
+            <span className="anticon" role="img">
+              <subagentTypeInfo.icon
+                fill={'transparent'}
+                height={'1em'}
+                size={'1em'}
+                width={'1em'}
+              />
+            </span>
+          }
           style={{
             color: cssVar.colorTextDescription,
             flexShrink: 0,
@@ -53,7 +61,7 @@ const Active = memo(() => {
           {subagentTypeInfo.label}
         </Tag>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

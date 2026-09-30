@@ -1,4 +1,3 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Checkbox } from '@lobehub/ui/base-ui';
 import { Loader2 } from 'lucide-react';
 import { type CSSProperties, type ReactNode } from 'react';
@@ -62,11 +61,8 @@ const CheckboxItem = memo<CheckboxItemProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={24}
-        justify={'space-between'}
+      <div
+        className="flex flex-row items-center gap-6 justify-between"
         style={
           hasPadding
             ? {
@@ -94,9 +90,11 @@ const CheckboxItem = memo<CheckboxItemProps>(
           {typeof labelContent === 'string' ? <MiddleEllipsis text={labelContent} /> : labelContent}
         </span>
         {loading ? (
-          <Center width={18}>
-            <Icon spin icon={Loader2} />
-          </Center>
+          <div className="flex flex-col items-center justify-center w-[18px]">
+            <span className="anticon animate-spin" role="img">
+              <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          </div>
         ) : (
           <Checkbox
             checked={checked}
@@ -109,7 +107,7 @@ const CheckboxItem = memo<CheckboxItemProps>(
             }}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

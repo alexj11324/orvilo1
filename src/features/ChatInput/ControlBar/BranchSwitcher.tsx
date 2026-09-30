@@ -1,4 +1,3 @@
-import { copyToClipboard, Icon, Input, Tooltip } from '@lobehub/ui';
 import {
   confirmModal,
   DropdownMenuFooter,
@@ -27,6 +26,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {
+  createElement,
   memo,
   type MouseEvent,
   type ReactElement,
@@ -39,14 +39,30 @@ import {
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { Input } from '@/components/ui/input';
 import { deviceKeys } from '@/libs/swr/keys';
 import { gitService } from '@/services/git';
 import { useFetchGitWorkingTreeStatus } from '@/store/device';
 
+import { SimpleTooltip } from '../SimpleTooltip';
 import { openCreateBranchModal } from './CreateBranchModal';
 import { openRenameBranchModal } from './RenameBranchModal';
 import { useSwitchWorktree } from './useSwitchWorktree';
 import { findWorktreeForBranch, getPathName } from './worktreeHelpers';
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.append(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    textArea.remove();
+  }
+};
 
 const styles = createStaticStyles(({ css }) => ({
   branchLabel: css`
@@ -489,25 +505,30 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
             <DropdownMenuPopup className={styles.popup}>
               <DropdownMenuHeader className={styles.header}>
                 <div className={styles.searchBar}>
-                  <Input
-                    autoFocus
-                    placeholder={t('workingDirectory.branchSearchPlaceholder')}
-                    prefix={<Icon icon={SearchIcon} size={14} />}
-                    size="small"
-                    value={search}
-                    variant="borderless"
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
+                  <div className="flex flex-row items-center gap-1.5 px-1.5">
+                    <span className="flex items-center">
+                      <span className="anticon" role="img">
+                        <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    </span>
+                    <Input
+                      autoFocus
+                      placeholder={t('workingDirectory.branchSearchPlaceholder')}
+                      value={search}
+                      className={
+                        'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+                      }
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
                 </div>
                 <div className={styles.sectionRow}>
                   <div className={styles.section}>{t('workingDirectory.branchesHeading')}</div>
                   <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
-                    <Icon
-                      className={cx(isRefreshing && styles.spinning)}
-                      icon={RefreshCwIcon}
-                      size={12}
-                    />
+                    <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
+                      <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
+                    </span>
                   </div>
                 </div>
               </DropdownMenuHeader>
@@ -543,11 +564,15 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                         ref={isCurrent ? currentRowRef : undefined}
                         onClick={() => handleCheckout(branch.name)}
                       >
-                        <Icon
-                          className={cx(styles.itemIcon, isBusy && styles.spinning)}
-                          icon={isBusy ? LoaderIcon : owner ? GitForkIcon : GitBranchIcon}
-                          size={14}
-                        />
+                        <span
+                          className={cx('anticon', cx(styles.itemIcon, isBusy && styles.spinning))}
+                          role="img"
+                        >
+                          {createElement(
+                            isBusy ? LoaderIcon : owner ? GitForkIcon : GitBranchIcon,
+                            { size: 14, width: 14, height: 14, fill: 'transparent' },
+                          )}
+                        </span>
                         <div className={styles.itemMain}>
                           <div className={styles.branchLabel}>{branch.name}</div>
                           {isCurrent && workingStatus && !workingStatus.clean && (
@@ -566,42 +591,54 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                           )}
                         </div>
                         {isCurrent && (
-                          <Icon
-                            className={cx('branch-row-check', styles.itemCheck)}
-                            icon={CheckIcon}
-                            size={14}
-                          />
+                          <span
+                            className={cx('anticon', cx('branch-row-check', styles.itemCheck))}
+                            role="img"
+                          >
+                            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+                          </span>
                         )}
                         <div className={cx('branch-row-actions', styles.rowActions)}>
-                          <Tooltip title={tCommon('copy')}>
+                          <SimpleTooltip title={tCommon('copy')}>
                             <div
                               aria-label={tCommon('copy')}
                               className={styles.rowAction}
                               role="button"
                               onClick={(e) => void handleCopy(e, branch.name)}
                             >
-                              <Icon icon={CopyIcon} size={13} />
+                              <span className="anticon" role="img">
+                                <CopyIcon fill={'transparent'} height={13} size={13} width={13} />
+                              </span>
                             </div>
-                          </Tooltip>
-                          <Tooltip title={t('workingDirectory.renameBranchAction')}>
+                          </SimpleTooltip>
+                          <SimpleTooltip title={t('workingDirectory.renameBranchAction')}>
                             <div
                               className={styles.rowAction}
                               role="button"
                               onClick={(e) => handleRename(e, branch.name)}
                             >
-                              <Icon icon={PencilIcon} size={13} />
+                              <span className="anticon" role="img">
+                                <PencilIcon fill={'transparent'} height={13} size={13} width={13} />
+                              </span>
                             </div>
-                          </Tooltip>
+                          </SimpleTooltip>
                           {!isCurrent && !owner && (
-                            <Tooltip title={t('workingDirectory.deleteBranchAction')}>
+                            <SimpleTooltip title={t('workingDirectory.deleteBranchAction')}>
                               <div
                                 className={cx(styles.rowAction, styles.rowActionDanger)}
                                 role="button"
                                 onClick={(e) => handleDelete(e, branch.name)}
                               >
-                                <Icon icon={Trash2Icon} size={13} />
+                                <span className="anticon" role="img">
+                                  <Trash2Icon
+                                    fill={'transparent'}
+                                    height={13}
+                                    size={13}
+                                    width={13}
+                                  />
+                                </span>
                               </div>
-                            </Tooltip>
+                            </SimpleTooltip>
                           )}
                         </div>
                       </DropdownMenuItem>
@@ -612,7 +649,9 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
 
               <DropdownMenuFooter className={styles.footer}>
                 <DropdownMenuItem className={styles.item} onClick={openCreateBranch}>
-                  <Icon className={styles.itemIcon} icon={GitBranchPlusIcon} size={14} />
+                  <span className={cx('anticon', styles.itemIcon)} role="img">
+                    <GitBranchPlusIcon fill={'transparent'} height={14} size={14} width={14} />
+                  </span>
                   <div className={styles.itemMain}>{t('workingDirectory.createBranchAction')}</div>
                 </DropdownMenuItem>
               </DropdownMenuFooter>

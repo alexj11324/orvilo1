@@ -1,4 +1,3 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -17,29 +16,32 @@ const ArtifactList = () => {
   const isCurrentChatLoaded = useChatStore(displayMessageSelectors.isCurrentDisplayChatLoaded);
 
   return !isCurrentChatLoaded ? (
-    <Flexbox gap={12} paddingInline={12}>
+    <div className="flex flex-col gap-3 px-3">
       {[1, 1, 1, 1, 1, 1].map((key, index) => (
         <Skeleton height={68} key={`${key}-${index}`} radius={8} />
       ))}
-    </Flexbox>
+    </div>
   ) : messages.length === 0 ? (
-    <Center
-      gap={8}
-      paddingBlock={24}
+    <div
+      className="flex flex-col items-center justify-center gap-2 py-6"
       style={{ border: `1px dashed ${cssVar.colorSplit}`, borderRadius: 8, marginInline: 12 }}
     >
       <Avatar
-        avatar={<Icon icon={Origami} size={'large'} />}
         background={cssVar.colorFillTertiary}
         shape={'square'}
         size={48}
+        avatar={
+          <span className="anticon" role="img">
+            <Origami fill={'transparent'} height={'24'} size={'24'} width={'24'} />
+          </span>
+        }
       />
       <Balancer>
         <Text type={'secondary'}>{t('emptyArtifactList')}</Text>
       </Balancer>
-    </Center>
+    </div>
   ) : (
-    <Flexbox gap={12} paddingInline={12}>
+    <div className="flex flex-col gap-3 px-3">
       {messages.map((m) => (
         <ArtifactItem
           identifier={m.plugin?.identifier}
@@ -48,7 +50,7 @@ const ArtifactList = () => {
           payload={m.plugin}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 };
 

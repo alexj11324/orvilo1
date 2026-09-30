@@ -1,11 +1,11 @@
 'use client';
 
-import type { IconProps } from '@lobehub/ui';
-import { Icon, Popover } from '@lobehub/ui';
+import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 import { Tag, toast, Upload } from '@lobehub/ui/base-ui';
 import { GlobeOffIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { validateVideoFileSize } from '@orvilo/utils/client';
 import { css, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   Brain,
   CheckIcon,
@@ -21,10 +21,11 @@ import {
   TargetIcon,
   TypeIcon,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { memo, Suspense, useCallback, useMemo, useRef } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+import { createElement, memo, Suspense, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { openAttachKnowledgeModal } from '@/features/LibraryModal';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useMediaUploadAbility } from '@/hooks/useMediaUploadAbility';
@@ -191,8 +192,35 @@ const gatewayModeInfoCard = css`
   }
 `;
 
-const activeIcon = (icon: IconProps['icon'], active?: boolean): IconProps['icon'] =>
-  active ? <Icon color={cssVar.colorInfo} icon={icon} size={16} /> : icon;
+const activeIcon = (
+  icon: ComponentType<{
+    color?: string;
+    fill?: string;
+    height?: number;
+    size?: number;
+    width?: number;
+  }>,
+  active?: boolean,
+): ComponentType<{
+  color?: string;
+  fill?: string;
+  height?: number;
+  size?: number;
+  width?: number;
+}> =>
+  active ? (
+    <span className="anticon" role="img">
+      {createElement(icon, {
+        size: 16,
+        width: 16,
+        height: 16,
+        color: cssVar.colorInfo,
+        fill: 'transparent',
+      })}
+    </span>
+  ) : (
+    icon
+  );
 
 type DropdownItemWithPopover = NonNullable<ActionDropdownMenuItems>[number] & {
   label?: ReactNode;
@@ -228,26 +256,42 @@ const PopoverLabel = memo<PopoverLabelProps>(({ disabled, label, popoverContent 
   );
 
   return (
-    <Popover
-      arrow={false}
-      content={popoverContent}
-      disabled={disabled}
-      mouseEnterDelay={0.25}
-      open={open}
-      placement={'rightTop'}
-      positionerProps={{ anchor: rowAnchorRef, sideOffset: 8 }}
-      styles={{ content: { padding: 0 }, root: { pointerEvents: 'none' } }}
-      onOpenChange={onOpenChange}
-    >
-      <span
-        ref={wrapperRef}
-        style={{ display: 'block', width: '100%' }}
-        onClickCapture={close}
-        onContextMenuCapture={close}
-      >
-        {label}
-      </span>
-    </Popover>
+    <PopoverPrimitive.Root open={!disabled && open} onOpenChange={onOpenChange}>
+      <PopoverPrimitive.Trigger
+        openOnHover
+        delay={250}
+        disabled={disabled}
+        render={
+          <span
+            ref={wrapperRef}
+            style={{ display: 'block', width: '100%' }}
+            onClickCapture={close}
+            onContextMenuCapture={close}
+          >
+            {label}
+          </span>
+        }
+      />
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Positioner
+          align={'start'}
+          anchor={rowAnchorRef}
+          className={cn('isolate', POPUP_Z_CLASS)}
+          side={'right'}
+          sideOffset={8}
+          style={{ pointerEvents: 'none' }}
+        >
+          <PopoverPrimitive.Popup
+            className={cn(
+              POPUP_Z_CLASS,
+              'flex origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-0 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden',
+            )}
+          >
+            {popoverContent}
+          </PopoverPrimitive.Popup>
+        </PopoverPrimitive.Positioner>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   );
 });
 
@@ -412,7 +456,9 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       active ? (
         <div className={cx(activeLabel)}>
           <span>{label}</span>
-          <Icon icon={CheckIcon} size={14} />
+          <span className="anticon" role="img">
+            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+          </span>
         </div>
       ) : (
         label
@@ -430,7 +476,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
           <div className="title">{title}</div>
           {description && <div className="desc">{description}</div>}
         </div>
-        {active && <Icon icon={CheckIcon} size={14} />}
+        {active && (
+          <span className="anticon" role="img">
+            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+          </span>
+        )}
       </div>
     );
 
@@ -482,7 +532,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       {
         closeOnClick: false,
         // Match the 20px file/library icons below so the label lines up with those rows.
-        icon: <Icon icon={FileUp} size={20} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FileUp fill={'transparent'} height={20} size={20} width={20} />
+          </span>
+        ),
         key: 'upload-file-or-image',
         label: (
           <Upload
@@ -526,7 +580,14 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
               children: skillMenuItems,
               // Trailing chevron (replaces base-ui's default triangle submenu arrow,
               // which is hidden via the .orvilo-submenu-chevron rule in ActionDropdown).
-              extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
+              extra: (
+                <span
+                  className={cx('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
+                  role="img"
+                >
+                  <ChevronRight fill={'transparent'} height={16} size={16} width={16} />
+                </span>
+              ),
               footer: skillMarketFooter,
               header: skillMarketHeader,
               icon: SkillsIcon,
@@ -583,7 +644,9 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                     {
                       key: 'search-off',
                       label: renderSearchOption(
-                        <Icon icon={GlobeOffIcon} size={18} />,
+                        <span className="anticon" role="img">
+                          <GlobeOffIcon fill={'transparent'} height={18} size={18} width={18} />
+                        </span>,
                         t('plus.search.off'),
                         t('plus.search.offDesc'),
                         activeSearchOption === 'off',
@@ -593,11 +656,15 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                     {
                       key: 'search-app',
                       label: renderSearchOption(
-                        <Icon
-                          color={activeSearchOption === 'app' ? cssVar.colorInfo : undefined}
-                          icon={SearchCheck}
-                          size={18}
-                        />,
+                        <span className="anticon" role="img">
+                          <SearchCheck
+                            color={activeSearchOption === 'app' ? cssVar.colorInfo : undefined}
+                            fill={'transparent'}
+                            height={18}
+                            size={18}
+                            width={18}
+                          />
+                        </span>,
                         t('plus.search.appSearch'),
                         t('plus.search.appSearchDesc'),
                         activeSearchOption === 'app',
@@ -607,11 +674,15 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                     {
                       key: 'search-provider',
                       label: renderSearchOption(
-                        <Icon
-                          color={activeSearchOption === 'provider' ? cssVar.colorInfo : undefined}
-                          icon={CloudCog}
-                          size={18}
-                        />,
+                        <span className="anticon" role="img">
+                          <CloudCog
+                            color={activeSearchOption === 'provider' ? cssVar.colorInfo : undefined}
+                            fill={'transparent'}
+                            height={18}
+                            size={18}
+                            width={18}
+                          />
+                        </span>,
                         t('plus.search.modelSearch'),
                         t('plus.search.modelSearchDesc'),
                         activeSearchOption === 'provider',
@@ -619,7 +690,14 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                       onClick: () => handleSelectSearch('provider'),
                     },
                   ],
-                  extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
+                  extra: (
+                    <span
+                      className={cx('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
+                      role="img"
+                    >
+                      <ChevronRight fill={'transparent'} height={16} size={16} width={16} />
+                    </span>
+                  ),
                   icon: activeIcon(
                     activeSearchOption === 'off' ? GlobeOffIcon : Globe,
                     activeSearchOption !== 'off',
@@ -693,7 +771,14 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
             ],
             // Trailing chevron (replaces base-ui's default triangle submenu arrow,
             // which is hidden via the .orvilo-submenu-chevron rule in ActionDropdown).
-            extra: <Icon className="orvilo-submenu-chevron" icon={ChevronRight} size={16} />,
+            extra: (
+              <span
+                className={cx('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
+                role="img"
+              >
+                <ChevronRight fill={'transparent'} height={16} size={16} width={16} />
+              </span>
+            ),
             footer: canConfigureResource ? knowledgeFooter : undefined,
             icon: LibraryBig,
             key: 'attachments',

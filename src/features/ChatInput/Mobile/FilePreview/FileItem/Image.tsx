@@ -1,4 +1,4 @@
-import { Flexbox, Image } from '@lobehub/ui';
+import { Image } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { RotateCw, Trash } from 'lucide-react';
@@ -54,7 +54,7 @@ const FileItem = memo<FileItemProps>(
         src={src}
         width={64}
         actions={
-          <Flexbox horizontal>
+          <div className="flex flex-row">
             {error && errorCode ? (
               <FileUploadErrorActions compact code={errorCode} />
             ) : error ? (
@@ -79,7 +79,7 @@ const FileItem = memo<FileItemProps>(
                 onRemove?.();
               }}
             />
-          </Flexbox>
+          </div>
         }
       />
     );

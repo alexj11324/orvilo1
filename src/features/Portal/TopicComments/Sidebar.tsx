@@ -1,6 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ArrowLeft } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -45,8 +44,8 @@ const TopicCommentsSidebar = memo(() => {
   const isThread = view.type === PortalViewType.TopicCommentThread;
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox horizontal align={'center'} className={styles.subheader} gap={4}>
+    <div className={cx('flex flex-col', styles.container)}>
+      <div className={cx('flex flex-row items-center gap-1', styles.subheader)}>
         <ActionIcon
           icon={ArrowLeft}
           size={DESKTOP_HEADER_ICON_SMALL_SIZE}
@@ -55,9 +54,9 @@ const TopicCommentsSidebar = memo(() => {
         <Text fontSize={13} weight={500}>
           {t(isThread ? 'topicComment.thread' : 'topicComment.messageComments')}
         </Text>
-      </Flexbox>
+      </div>
       {isThread ? <ThreadBody /> : <Body />}
-    </Flexbox>
+    </div>
   );
 });
 

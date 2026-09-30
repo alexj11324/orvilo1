@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Spin } from '@lobehub/ui/base-ui';
 import { BookOpenIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useFetchNotebookDocuments } from '@/hooks/useFetchNotebookDocuments';
 import { useChatStore } from '@/store/chat';
 
+import SimpleEmpty from '../SimpleEmpty';
 import DocumentItem from './DocumentItem';
 
 const NotebookBody = memo(() => {
@@ -19,37 +19,37 @@ const NotebookBody = memo(() => {
   // Show message when no topic is selected
   if (!topicId) {
     return (
-      <Center flex={1} gap={8} paddingBlock={24}>
-        <Empty description={t('notebook.empty')} icon={BookOpenIcon} />
-      </Center>
+      <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
+        <SimpleEmpty description={t('notebook.empty')} icon={BookOpenIcon} />
+      </div>
     );
   }
 
   // Show loading state
   if (isLoading) {
     return (
-      <Center flex={1}>
+      <div className="flex flex-col items-center justify-center flex-1">
         <Spin />
-      </Center>
+      </div>
     );
   }
 
   // Show empty state
   if (documents.length === 0) {
     return (
-      <Center flex={1} gap={8} paddingBlock={24}>
-        <Empty description={t('notebook.empty')} icon={BookOpenIcon} />
-      </Center>
+      <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
+        <SimpleEmpty description={t('notebook.empty')} icon={BookOpenIcon} />
+      </div>
     );
   }
 
   // Render document list
   return (
-    <Flexbox gap={8} height={'100%'} paddingInline={12} style={{ overflow: 'auto' }}>
+    <div className="flex flex-col gap-2 h-[100%] px-3" style={{ overflow: 'auto' }}>
       {documents.map((doc) => (
         <DocumentItem document={doc} key={doc.id} topicId={topicId} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

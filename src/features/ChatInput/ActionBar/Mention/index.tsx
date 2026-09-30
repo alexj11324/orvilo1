@@ -1,4 +1,3 @@
-import { type ItemType } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { AtSign } from 'lucide-react';
@@ -10,6 +9,7 @@ import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 import { type OrviloGroupSession } from '@/types/session';
 
+import type { ActionMenuItem } from '../../menuItems';
 import { ChatInputAction } from '../components/ChatInputAction';
 
 const Mention = memo(() => {
@@ -23,8 +23,8 @@ const Mention = memo(() => {
   const useMentionItems = () => {
     const currentSession = useSessionStore(sessionSelectors.currentSession) as OrviloGroupSession;
 
-    const items: ItemType[] = useMemo(() => {
-      const memberItems: ItemType[] = [];
+    const items: ActionMenuItem[] = useMemo(() => {
+      const memberItems: ActionMenuItem[] = [];
 
       currentSession.members?.forEach((agent) => {
         memberItems.push({

@@ -1,4 +1,3 @@
-import { Icon, Input, Tooltip } from '@lobehub/ui';
 import {
   confirmModal,
   DropdownMenuItem,
@@ -22,6 +21,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {
+  createElement,
   memo,
   type MouseEvent,
   type ReactElement,
@@ -33,8 +33,10 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { gitService } from '@/services/git';
 
+import { SimpleTooltip } from '../SimpleTooltip';
 import { openCreateWorktreeModal } from './CreateWorktreeModal';
 import { useSwitchWorktree } from './useSwitchWorktree';
 import { getPathName, isDisabled, normalizeDisplayPath } from './worktreeHelpers';
@@ -639,7 +641,9 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
         className={styles.trigger}
         role="button"
       >
-        <Icon icon={triggerIcon} size={13} />
+        <span className="anticon" role="img">
+          {createElement(triggerIcon, { size: 13, width: 13, height: 13, fill: 'transparent' })}
+        </span>
       </div>
     );
 
@@ -647,7 +651,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
       <DropdownMenuRoot open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger className={styles.triggerAnchor}>
           <div className={children ? styles.triggerFill : undefined}>
-            {open ? trigger : <Tooltip title={triggerTitle}>{trigger}</Tooltip>}
+            {open ? trigger : <SimpleTooltip title={triggerTitle}>{trigger}</SimpleTooltip>}
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuPortal>
@@ -655,27 +659,35 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
             <DropdownMenuPopup>
               <div className={styles.container}>
                 <div className={styles.searchBar}>
-                  <Input
-                    autoFocus
-                    placeholder={t('workingDirectory.worktreeSearchPlaceholder')}
-                    prefix={<Icon icon={SearchIcon} size={14} />}
-                    size="small"
-                    value={search}
-                    variant="borderless"
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
+                  <div className="flex flex-row items-center gap-1.5 px-1.5">
+                    <span className="flex items-center">
+                      <span className="anticon" role="img">
+                        <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    </span>
+                    <Input
+                      autoFocus
+                      placeholder={t('workingDirectory.worktreeSearchPlaceholder')}
+                      value={search}
+                      className={
+                        'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+                      }
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.list}>
                   <div className={styles.sectionRow}>
                     <div className={styles.section}>{t('workingDirectory.worktreesHeading')}</div>
                     <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
-                      <Icon
-                        className={cx(isRefreshing && styles.spinning)}
-                        icon={RefreshCwIcon}
-                        size={12}
-                      />
+                      <span
+                        className={cx('anticon', cx(isRefreshing && styles.spinning))}
+                        role="img"
+                      >
+                        <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
+                      </span>
                     </div>
                   </div>
 
@@ -745,21 +757,37 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
                           </div>
                           <div className={styles.actionCell}>
                             {removing ? (
-                              <Icon spin icon={LoaderCircleIcon} size={13} />
+                              <span className="anticon animate-spin" role="img">
+                                <LoaderCircleIcon
+                                  fill={'transparent'}
+                                  height={13}
+                                  size={13}
+                                  width={13}
+                                />
+                              </span>
                             ) : worktree.current ? (
-                              <Icon className={styles.check} icon={CheckIcon} size={14} />
+                              <span className={cx('anticon', styles.check)} role="img">
+                                <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+                              </span>
                             ) : (
                               removable && (
-                                <Tooltip title={t('workingDirectory.removeWorktreeAction')}>
+                                <SimpleTooltip title={t('workingDirectory.removeWorktreeAction')}>
                                   <div
                                     aria-label={t('workingDirectory.removeWorktreeAction')}
                                     className={`${styles.rowAction} worktree-row-action`}
                                     role="button"
                                     onClick={(event) => handleRemoveWorktree(event, worktree)}
                                   >
-                                    <Icon icon={Trash2Icon} size={13} />
+                                    <span className="anticon" role="img">
+                                      <Trash2Icon
+                                        fill={'transparent'}
+                                        height={13}
+                                        size={13}
+                                        width={13}
+                                      />
+                                    </span>
                                   </div>
-                                </Tooltip>
+                                </SimpleTooltip>
                               )
                             )}
                           </div>
@@ -775,7 +803,9 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
                     closeOnClick={false}
                     onClick={openCreateWorktree}
                   >
-                    <Icon className={styles.createItemIcon} icon={FolderPlusIcon} size={14} />
+                    <span className={cx('anticon', styles.createItemIcon)} role="img">
+                      <FolderPlusIcon fill={'transparent'} height={14} size={14} width={14} />
+                    </span>
                     <div>{t('workingDirectory.createWorktreeAction')}</div>
                   </DropdownMenuItem>
                 </div>

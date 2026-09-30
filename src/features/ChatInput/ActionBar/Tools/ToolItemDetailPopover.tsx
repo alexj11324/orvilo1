@@ -1,6 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -52,11 +51,11 @@ interface ToolItemDetailPopoverProps {
 const ToolItemDetailPopover = memo<ToolItemDetailPopoverProps>(
   ({ icon, title, description, sourceLabel, identifier, meta }) => {
     return (
-      <Flexbox className={styles.container} gap={10}>
-        <Flexbox horizontal align={'center'} gap={10}>
+      <div className={cx('flex flex-col gap-2.5', styles.container)}>
+        <div className="flex flex-row items-center gap-2.5">
           {icon}
-          <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-            <Flexbox horizontal align={'center'} gap={6}>
+          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+            <div className="flex flex-row items-center gap-1.5">
               <Text ellipsis className={styles.title}>
                 {title}
               </Text>
@@ -65,13 +64,13 @@ const ToolItemDetailPopover = memo<ToolItemDetailPopoverProps>(
                   {sourceLabel}
                 </Tag>
               )}
-            </Flexbox>
+            </div>
             {identifier && <span className={styles.identifier}>{identifier}</span>}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {description && <div className={styles.description}>{description}</div>}
         {meta}
-      </Flexbox>
+      </div>
     );
   },
 );

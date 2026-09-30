@@ -1,4 +1,3 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -18,31 +17,34 @@ const FileList = () => {
   const isCurrentChatLoaded = useChatStore(chatSelectors.isCurrentChatLoaded);
 
   return !isCurrentChatLoaded ? (
-    <Flexbox gap={12} paddingInline={12}>
+    <div className="flex flex-col gap-3 px-3">
       <SkeletonLoading />
-    </Flexbox>
+    </div>
   ) : files.length === 0 ? (
-    <Center
-      gap={8}
-      paddingBlock={24}
+    <div
+      className="flex flex-col items-center justify-center gap-2 py-6"
       style={{ border: `1px dashed ${cssVar.colorSplit}`, borderRadius: 8, marginInline: 12 }}
     >
       <Avatar
-        avatar={<Icon icon={InboxIcon} size={'large'} />}
         background={cssVar.colorFillTertiary}
         shape={'square'}
         size={48}
+        avatar={
+          <span className="anticon" role="img">
+            <InboxIcon fill={'transparent'} height={'24'} size={'24'} width={'24'} />
+          </span>
+        }
       />
       <Balancer>
         <Text type={'secondary'}>{t('emptyKnowledgeList')}</Text>
       </Balancer>
-    </Center>
+    </div>
   ) : (
-    <Flexbox gap={12} paddingInline={12}>
+    <div className="flex flex-col gap-3 px-3">
       {files.map((m) => (
         <FileItem {...m} key={m.id} />
       ))}
-    </Flexbox>
+    </div>
   );
 };
 

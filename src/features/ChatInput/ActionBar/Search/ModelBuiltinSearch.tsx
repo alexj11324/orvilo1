@@ -1,5 +1,4 @@
 import { Exa, Google } from '@lobehub/icons';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Switch } from '@lobehub/ui/base-ui';
 import { Search } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -28,7 +27,11 @@ const SearchEngineIcon = ({ icon }: SearchEngineIconProps) => {
     }
 
     default: {
-      return <Icon icon={Search} size={14} />;
+      return (
+        <span className="anticon" role="img">
+          <Search fill={'transparent'} height={14} size={14} width={14} />
+        </span>
+      );
     }
   }
 };
@@ -50,15 +53,13 @@ const ModelBuiltinSearch = memo<ModelBuiltinSearchProps>(({ disabled }) => {
   const modelCard = useAiInfraStore(aiModelSelectors.getEnabledModelById(model, provider));
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      justify={'space-between'}
-      padding={'8px 12px'}
+    <div
+      className="flex flex-row items-center justify-between"
       style={{
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : undefined,
         userSelect: 'none',
+        padding: '8px 12px',
       }}
       onClick={async () => {
         if (disabled) return;
@@ -67,12 +68,12 @@ const ModelBuiltinSearch = memo<ModelBuiltinSearchProps>(({ disabled }) => {
         setLoading(false);
       }}
     >
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-row items-center gap-2">
         <SearchEngineIcon icon={modelCard?.settings?.searchProvider} />
         {t('search.mode.useModelBuiltin')}
-      </Flexbox>
+      </div>
       <Switch checked={checked} disabled={disabled} loading={isLoading} size={'small'} />
-    </Flexbox>
+    </div>
   );
 });
 export default ModelBuiltinSearch;

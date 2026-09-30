@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName } from '@orvilo/types';
@@ -72,7 +71,10 @@ export const useMentionCategories = (): MentionCategory[] => {
         ),
         key: `agent-${agent.id}`,
         label: secondary ? (
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0, overflow: 'hidden' }}>
+          <div
+            className="flex flex-row items-center gap-2"
+            style={{ minWidth: 0, overflow: 'hidden' }}
+          >
             <span style={{ flex: 'none' }}>{displayName}</span>
             <span
               style={{
@@ -85,7 +87,7 @@ export const useMentionCategories = (): MentionCategory[] => {
             >
               {secondary}
             </span>
-          </Flexbox>
+          </div>
         ) : (
           displayName
         ),
@@ -160,7 +162,11 @@ export const useMentionCategories = (): MentionCategory[] => {
       if (privateItems.length > 0) {
         categories.push({
           id: 'agent-private',
-          icon: <Icon icon={Lock} size={16} />,
+          icon: (
+            <span className="anticon" role="img">
+              <Lock fill={'transparent'} height={16} size={16} width={16} />
+            </span>
+          ),
           items: privateItems,
           label: t('mention.category.privateAgents'),
         });
@@ -177,7 +183,11 @@ export const useMentionCategories = (): MentionCategory[] => {
             : t('mention.category.agents');
         categories.push({
           id,
-          icon: <Icon icon={Bot} size={16} />,
+          icon: (
+            <span className="anticon" role="img">
+              <Bot fill={'transparent'} height={16} size={16} width={16} />
+            </span>
+          ),
           items: workspaceItems,
           label,
         });
@@ -196,7 +206,11 @@ export const useMentionCategories = (): MentionCategory[] => {
       if (items.length > 0) {
         categories.push({
           id: 'member',
-          icon: <Icon icon={Users} size={16} />,
+          icon: (
+            <span className="anticon" role="img">
+              <Users fill={'transparent'} height={16} size={16} width={16} />
+            </span>
+          ),
           items,
           label: t('mention.category.members'),
         });
@@ -212,7 +226,11 @@ export const useMentionCategories = (): MentionCategory[] => {
           const label =
             title.length > MAX_TOPIC_LABEL ? `${title.slice(0, MAX_TOPIC_LABEL)}...` : title;
           return {
-            icon: <Icon icon={MessageSquareText} size={16} />,
+            icon: (
+              <span className="anticon" role="img">
+                <MessageSquareText fill={'transparent'} height={16} size={16} width={16} />
+              </span>
+            ),
             key: `topic-${topic.id}`,
             label,
             metadata: {
@@ -227,7 +245,11 @@ export const useMentionCategories = (): MentionCategory[] => {
       if (items.length > 0) {
         categories.push({
           id: 'topic',
-          icon: <Icon icon={MessageSquareText} size={16} />,
+          icon: (
+            <span className="anticon" role="img">
+              <MessageSquareText fill={'transparent'} height={16} size={16} width={16} />
+            </span>
+          ),
           items,
           label: t('mention.category.topics'),
         });
@@ -239,7 +261,11 @@ export const useMentionCategories = (): MentionCategory[] => {
     if (skillItems.length > 0) {
       categories.push({
         id: 'skill',
-        icon: <Icon icon={SkillsIcon} size={16} />,
+        icon: (
+          <span className="anticon" role="img">
+            <SkillsIcon fill={'transparent'} height={16} size={16} width={16} />
+          </span>
+        ),
         items: skillItems.map((item) => ({
           icon: <MentionItemIcon avatar={item.icon} category={'skill'} label={item.label} />,
           key: `skill-${item.type}`,
@@ -261,7 +287,11 @@ export const useMentionCategories = (): MentionCategory[] => {
     if (toolItems.length > 0) {
       categories.push({
         id: 'tool',
-        icon: <Icon icon={Wrench} size={16} />,
+        icon: (
+          <span className="anticon" role="img">
+            <Wrench fill={'transparent'} height={16} size={16} width={16} />
+          </span>
+        ),
         items: toolItems.map((item) => ({
           icon: <MentionItemIcon avatar={item.icon} category={'tool'} label={item.label} />,
           key: `tool-${item.type}`,

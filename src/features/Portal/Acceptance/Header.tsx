@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, type DropdownItem, DropdownMenu } from '@lobehub/ui/base-ui';
 import { MoreHorizontal, RefreshCw } from 'lucide-react';
 import { memo } from 'react';
@@ -23,7 +22,11 @@ const AcceptanceHeader = memo(() => {
   const menuItems: DropdownItem[] = [
     {
       disabled: !acceptanceId,
-      icon: <Icon icon={RefreshCw} />,
+      icon: (
+        <span className="anticon" role="img">
+          <RefreshCw fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
+      ),
       key: 'refresh',
       label: t('acceptance.actions.refresh'),
       onClick: () => {
@@ -37,7 +40,7 @@ const AcceptanceHeader = memo(() => {
     <Header
       paddingInline={24}
       title={
-        <Flexbox horizontal align={'center'} gap={2} style={{ minWidth: 0 }}>
+        <div className="flex flex-row items-center gap-0.5" style={{ minWidth: 0 }}>
           <Title />
           <DropdownMenu
             iconSpaceMode={'group'}
@@ -52,7 +55,7 @@ const AcceptanceHeader = memo(() => {
               title={t('acceptance.actions.more')}
             />
           </DropdownMenu>
-        </Flexbox>
+        </div>
       }
     />
   );

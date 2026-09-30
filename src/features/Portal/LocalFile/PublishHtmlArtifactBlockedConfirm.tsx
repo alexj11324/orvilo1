@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import {
   Accordion,
   Button,
@@ -45,7 +44,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
         style={{ maxHeight: BODY_MAX_HEIGHT, overflow: 'hidden' }}
         viewportProps={{ style: { height: 'auto', maxHeight: BODY_MAX_HEIGHT } }}
       >
-        <Flexbox gap={12} style={{ paddingBlock: 12, paddingInline: 16 }}>
+        <div className="flex flex-col gap-3" style={{ paddingBlock: 12, paddingInline: 16 }}>
           <Text>
             {t('workingPanel.localFile.publish.outsideWorkspace.description', {
               count: plan.escaped.length,
@@ -71,9 +70,9 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
             items={[
               {
                 children: (
-                  <Flexbox gap={8} paddingBlock={'4px 0'}>
+                  <div className="flex flex-col gap-2" style={{ paddingBlock: '4px 0' }}>
                     {resources.map((item) => (
-                      <Flexbox gap={2} key={item.absolutePath}>
+                      <div className="flex flex-col gap-0.5" key={item.absolutePath}>
                         <Text>{item.hrefs.join(', ')}</Text>
                         {item.source && (
                           <Text fontSize={12} type={'secondary'}>
@@ -95,9 +94,9 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
                         >
                           {item.absolutePath}
                         </Text>
-                      </Flexbox>
+                      </div>
                     ))}
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'paths',
                 title: (
@@ -123,19 +122,17 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
               })}
             </Text>
           )}
-        </Flexbox>
+        </div>
       </ScrollArea>
-      <Flexbox style={{ paddingBlock: '8px 4px', paddingInline: 16 }}>
+      <div className="flex flex-col" style={{ paddingBlock: '8px 4px', paddingInline: 16 }}>
         <Checkbox checked={force} onChange={handleForceChange}>
           <Text fontSize={12}>
             {t('workingPanel.localFile.publish.outsideWorkspace.forceLabel', { ns: 'chat' })}
           </Text>
         </Checkbox>
-      </Flexbox>
-      <Flexbox
-        horizontal
-        gap={8}
-        justify={'flex-end'}
+      </div>
+      <div
+        className="flex flex-row gap-2 justify-end"
         style={{ paddingBlock: 12, paddingInline: 16 }}
       >
         <Button onClick={cancel}>{t('cancel', { ns: 'common' })}</Button>
@@ -149,7 +146,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
                 { ns: 'chat' },
               )}
         </Button>
-      </Flexbox>
+      </div>
     </>
   );
 };

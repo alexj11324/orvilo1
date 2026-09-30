@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import {
   DropdownMenuItem,
   DropdownMenuPopup,
@@ -10,7 +9,7 @@ import {
 import type { WorkingDirGitState } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { GitBranchIcon, GitForkIcon, GitPullRequest, RotateCcwIcon } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { electronSystemService } from '@/services/electron/system';
@@ -107,7 +106,14 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
 
     const trigger = (
       <div className={gitChipStyles.staleTrigger}>
-        <Icon icon={isWorktree ? GitForkIcon : GitBranchIcon} size={12} />
+        <span className="anticon" role="img">
+          {createElement(isWorktree ? GitForkIcon : GitBranchIcon, {
+            size: 12,
+            width: 12,
+            height: 12,
+            fill: 'transparent',
+          })}
+        </span>
         <span className={styles.triggerLabel}>{branch}</span>
       </div>
     );
@@ -133,7 +139,9 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
                     onClick={handleReset}
                   >
                     <div className={styles.action}>
-                      <Icon icon={RotateCcwIcon} size={14} />
+                      <span className="anticon" role="img">
+                        <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
                       <span>{t('workingDirectory.staleResetToSource', { name: reset.name })}</span>
                     </div>
                   </DropdownMenuItem>
@@ -146,7 +154,9 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
           <>
             <div className={gitChipStyles.separator} />
             <div className={gitChipStyles.prTrigger} role="button" onClick={handleOpenPr}>
-              <Icon icon={GitPullRequest} size={12} />
+              <span className="anticon" role="img">
+                <GitPullRequest fill={'transparent'} height={12} size={12} width={12} />
+              </span>
               <span>#{pullRequest.number}</span>
             </div>
           </>

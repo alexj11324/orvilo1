@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Tabs, Text } from '@lobehub/ui/base-ui';
 import { ArtifactType } from '@orvilo/types';
 import { ConfigProvider } from 'antd';
@@ -44,13 +43,13 @@ const Title = () => {
   const showSwitch = isArtifactTagClosed && artifactType !== ArtifactType.Code;
 
   return (
-    <Flexbox horizontal align={'center'} flex={1} gap={12} justify={'space-between'} width={'100%'}>
-      <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
+      <div className="flex flex-row items-center gap-1">
         <ActionIcon icon={ArrowLeft} size={'small'} onClick={() => closeArtifact()} />
         <Text className={cx(oneLineEllipsis)} type={'secondary'}>
           {artifactTitle}
         </Text>
-      </Flexbox>
+      </div>
       <ConfigProvider
         theme={{
           token: {
@@ -60,7 +59,7 @@ const Title = () => {
           },
         }}
       >
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex flex-row items-center gap-1">
           <ArtifactDeploymentActions
             artifactIdentifier={artifactIdentifier}
             artifactTitle={artifactTitle}
@@ -76,12 +75,20 @@ const Title = () => {
               size={'small'}
               items={[
                 {
-                  icon: <Icon icon={EyeIcon} />,
+                  icon: (
+                    <span className="anticon" role="img">
+                      <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                    </span>
+                  ),
                   key: ArtifactDisplayMode.Preview,
                   label: t('artifacts.display.preview'),
                 },
                 {
-                  icon: <Icon icon={CodeIcon} />,
+                  icon: (
+                    <span className="anticon" role="img">
+                      <CodeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                    </span>
+                  ),
                   key: ArtifactDisplayMode.Code,
                   label: t('artifacts.display.code'),
                 },
@@ -91,9 +98,9 @@ const Title = () => {
               }}
             />
           )}
-        </Flexbox>
+        </div>
       </ConfigProvider>
-    </Flexbox>
+    </div>
   );
 };
 

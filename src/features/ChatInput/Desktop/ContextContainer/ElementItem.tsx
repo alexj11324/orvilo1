@@ -1,4 +1,3 @@
-import { Tooltip } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import type { ChatContextContent } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -7,6 +6,8 @@ import { memo } from 'react';
 
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
+
+import { SimpleTooltip } from '../../SimpleTooltip';
 
 const styles = createStaticStyles(({ css }) => ({
   name: css`
@@ -96,12 +97,12 @@ const ElementItem = memo<ChatContextContent>(({ element, id, preview }) => {
         if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
       }}
     >
-      <Tooltip title={tooltip}>
+      <SimpleTooltip title={tooltip}>
         <span>
           <span className={styles.tagBadge}>{`<${element.tag}>`}</span>{' '}
           <span className={styles.name}>{preview}</span>
         </span>
-      </Tooltip>
+      </SimpleTooltip>
     </Tag>
   );
 });

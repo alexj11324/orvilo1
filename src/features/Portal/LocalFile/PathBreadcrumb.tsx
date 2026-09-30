@@ -1,12 +1,21 @@
 'use client';
 
-import { type DropdownItem, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import type { ProjectFileIndexEntry } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 
 import FileIcon from '@/components/FileIcon';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useProjectFiles } from '@/features/Conversation/WorkingSidebar/Files/useProjectFiles';
 import { useChatStore } from '@/store/chat';
 
@@ -71,6 +80,38 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
+interface CrumbMenuItem {
+  children?: CrumbMenuItem[];
+  icon?: ReactNode;
+  key: string;
+  label: ReactNode;
+  onClick?: () => void;
+  type?: 'submenu';
+}
+
+const renderMenuItem = (item: CrumbMenuItem) => {
+  const label = (
+    <span className="flex flex-1 flex-row items-center gap-1.5">
+      {item.icon}
+      {item.label}
+    </span>
+  );
+
+  if (item.type === 'submenu')
+    return (
+      <DropdownMenuSub key={item.key}>
+        <DropdownMenuSubTrigger>{label}</DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>{item.children?.map(renderMenuItem)}</DropdownMenuSubContent>
+      </DropdownMenuSub>
+    );
+
+  return (
+    <DropdownMenuItem key={item.key} onClick={item.onClick}>
+      {label}
+    </DropdownMenuItem>
+  );
+};
+
 interface BuildMenuParams {
   byParent: Map<string, ProjectFileIndexEntry[]>;
   deviceId?: string;
@@ -94,7 +135,7 @@ const buildFolderItems = ({
 }: BuildMenuParams): DropdownItem[] => {
   const children = byParent.get(parentRelativePath) ?? [];
 
-  return children.flatMap((child): DropdownItem[] => {
+  return children.flatMap((child): CrumbMenuItem[] => {
     const relativePath = child.relativePath.replace(/\/$/, '');
     const icon = (
       <FileIcon fileName={child.name} isDirectory={child.isDirectory} size={14} variant={'raw'} />
@@ -167,7 +208,14 @@ const Crumb = memo<{
 
   if (!canBrowse) return crumb;
 
-  return <DropdownMenu items={items}>{crumb}</DropdownMenu>;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={crumb} />
+      <DropdownMenuContent align={'start'} className={'w-auto'} side={'bottom'}>
+        {items.map(renderMenuItem)}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 });
 
 Crumb.displayName = 'Crumb';
@@ -192,15 +240,18 @@ const PathBreadcrumb = memo<PathBreadcrumbProps>(({ deviceId, path, rootPath }) 
         const isLast = index === segments.length - 1;
 
         return (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(styles.group, isLast && styles.groupLast)}
+          <div
             key={segment.path}
+            className={cx(
+              'flex flex-row items-center',
+              cx(styles.group, isLast && styles.groupLast),
+            )}
           >
             {index > 0 && (
               <span aria-hidden className={styles.separator}>
-                <Icon icon={ChevronRightIcon} size={12} />
+                <span className="anticon" role="img">
+                  <ChevronRightIcon fill={'transparent'} height={12} size={12} width={12} />
+                </span>
               </span>
             )}
             <Crumb
@@ -210,7 +261,7 @@ const PathBreadcrumb = memo<PathBreadcrumbProps>(({ deviceId, path, rootPath }) 
               rootPath={rootPath}
               segment={segment}
             />
-          </Flexbox>
+          </div>
         );
       })}
     </>

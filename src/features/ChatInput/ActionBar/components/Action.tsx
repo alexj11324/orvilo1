@@ -1,6 +1,5 @@
 'use client';
 
-import type { PopoverTrigger } from '@lobehub/ui';
 import { ActionIcon, type ActionIconProps } from '@lobehub/ui/base-ui';
 import { isUndefined } from 'es-toolkit/compat';
 import { memo } from 'react';
@@ -12,7 +11,7 @@ import { useServerConfigStore } from '@/store/serverConfig';
 import { useActionBarContext } from '../context';
 import type { ActionDropdownProps } from './ActionDropdown';
 import ActionDropdown from './ActionDropdown';
-import type { ActionPopoverProps } from './ActionPopover';
+import type { ActionPopoverProps, ActionPopoverTrigger } from './ActionPopover';
 import ActionPopover from './ActionPopover';
 
 export interface ActionProps extends Omit<ActionIconProps, 'popover'> {
@@ -21,7 +20,7 @@ export interface ActionProps extends Omit<ActionIconProps, 'popover'> {
   open?: boolean;
   popover?: ActionPopoverProps;
   showTooltip?: boolean;
-  trigger?: PopoverTrigger;
+  trigger?: ActionPopoverTrigger;
 }
 
 const Action = memo<ActionProps>(

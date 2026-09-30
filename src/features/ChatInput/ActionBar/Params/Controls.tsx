@@ -1,4 +1,3 @@
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { Select, SliderWithInput, Switch } from '@lobehub/ui/base-ui';
 import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
 import { Form as AntdForm } from 'antd';
@@ -8,12 +7,13 @@ import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { MODEL_REASONING_EXTEND_PARAMS } from 'model-bank/aiModel';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
 import InfoTooltip from '@/components/InfoTooltip';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
@@ -388,8 +388,8 @@ interface ControlLabelProps {
 }
 
 const ControlLabel = memo<ControlLabelProps>(({ title, tooltip, tag }) => (
-  <Flexbox align={'flex-start'} className={cx(styles.label, 'control-label')} gap={6}>
-    <Flexbox horizontal align={'center'} className={styles.labelMain} gap={6}>
+  <div className={cx('flex flex-col items-start gap-1.5', cx(styles.label, 'control-label'))}>
+    <div className={cx('flex flex-row items-center gap-1.5', styles.labelMain)}>
       {title}
       {tooltip && (
         <InfoTooltip
@@ -401,8 +401,8 @@ const ControlLabel = memo<ControlLabelProps>(({ title, tooltip, tag }) => (
           }
         />
       )}
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 interface ControlRowProps {
@@ -415,13 +415,18 @@ interface ControlRowProps {
 }
 
 const ControlRow = ({ action, children, muted, tag, title, tooltip }: ControlRowProps) => (
-  <Flexbox className={cx('control-row', styles.rowRoot, muted && styles.muted)} gap={10}>
-    <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+  <div
+    className={cx(
+      'flex flex-col gap-2.5',
+      cx('control-row', styles.rowRoot, muted && styles.muted),
+    )}
+  >
+    <div className="flex flex-row items-center gap-3 justify-between">
       <ControlLabel tag={tag} title={title} tooltip={tooltip} />
       {action}
-    </Flexbox>
+    </div>
     {children && <div className={styles.rowControl}>{children}</div>}
-  </Flexbox>
+  </div>
 );
 
 interface SectionHeaderProps {
@@ -432,10 +437,17 @@ interface SectionHeaderProps {
 
 const SectionHeader = memo<SectionHeaderProps>(({ onToggle, open, title }) => (
   <button aria-expanded={open} className={styles.sectionHeader} type="button" onClick={onToggle}>
-    <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+    <div className="flex flex-row items-center gap-3 justify-between">
       <span className={cx(styles.label, 'section-header-label')}>{title}</span>
-      <Icon icon={open ? ChevronUp : ChevronDown} size={18} />
-    </Flexbox>
+      <span className="anticon" role="img">
+        {createElement(open ? ChevronUp : ChevronDown, {
+          size: 18,
+          width: 18,
+          height: 18,
+          fill: 'transparent',
+        })}
+      </span>
+    </div>
   </button>
 ));
 
@@ -792,7 +804,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
               title={t('settingChat.inputTemplate.title')}
               tooltip={t('settingChat.inputTemplate.desc')}
             >
-              <TextArea
+              <Textarea
                 placeholder={t('settingChat.inputTemplate.placeholder')}
                 value={typeof inputTemplateValue === 'string' ? inputTemplateValue : ''}
                 onChange={(e) => {

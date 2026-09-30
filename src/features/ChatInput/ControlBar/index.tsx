@@ -1,6 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
 import ChatInputCredits from '@/business/client/features/ChatInputCredits';
@@ -60,27 +59,27 @@ const ControlBar = memo(() => {
   // Skeleton placeholder to prevent layout jump during loading
   if (!agentId || isLoading) {
     return (
-      <Flexbox horizontal align={'center'} className={styles.bar} gap={4}>
+      <div className={cx('flex flex-row items-center gap-1', styles.bar)}>
         <Skeleton style={{ height: 22, minWidth: 64, width: 64 }} />
         <Skeleton style={{ height: 22, minWidth: 100, width: 100 }} />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
+    <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
       {/* Left: chat-mode switcher + (agent-only) execution device + working directory */}
-      <Flexbox horizontal align={'center'} className={styles.leftGroup} gap={4}>
+      <div className={cx('flex flex-row items-center gap-1', styles.leftGroup)}>
         <ModeSelector />
         {isAgentRuntimeMode && <WorkspaceControls agentId={agentId} />}
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
+      <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
         <ChatInputCredits />
         {isAgentRuntimeMode && <ApprovalMode />}
         {showContextWindow && <ContextWindow />}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -1,6 +1,6 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { TopicCommentItem } from '@orvilo/types';
+import { cx } from 'antd-style';
 import { MessageSquareText } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,10 +42,9 @@ const AnchorPreview = memo<{ comment: TopicCommentItem }>(({ comment }) => {
   if (!comment.anchorPreview) return null;
 
   return (
-    <Flexbox
+    <div
       aria-disabled={canLocateMessage ? undefined : true}
-      className={styles.anchor}
-      gap={4}
+      className={cx('flex flex-col gap-1', styles.anchor)}
       role={canLocateMessage ? 'button' : undefined}
       tabIndex={canLocateMessage ? 0 : undefined}
       onClick={locateMessage}
@@ -55,17 +54,19 @@ const AnchorPreview = memo<{ comment: TopicCommentItem }>(({ comment }) => {
         locateMessage();
       }}
     >
-      <Flexbox horizontal align={'center'} gap={6}>
-        <Icon icon={MessageSquareText} size={14} />
+      <div className="flex flex-row items-center gap-1.5">
+        <span className="anticon" role="img">
+          <MessageSquareText fill={'transparent'} height={14} size={14} width={14} />
+        </span>
         <Text fontSize={12} weight={500}>
           {t('topicComment.anchor')}
         </Text>
         {isDeleted && <Tag size={'small'}>{t('topicComment.anchorDeletedTag')}</Tag>}
-      </Flexbox>
+      </div>
       <Text ellipsis={{ rows: 2 }} fontSize={12} type={'secondary'}>
         {comment.anchorPreview.excerpt || t('topicComment.anchorEmpty')}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 

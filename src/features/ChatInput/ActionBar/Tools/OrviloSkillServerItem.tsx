@@ -1,4 +1,3 @@
-import { Flexbox, Icon, stopPropagation } from '@lobehub/ui';
 import { Checkbox } from '@lobehub/ui/base-ui';
 import { Loader2, SquareArrowOutUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -242,18 +241,21 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
     const renderRightControl = () => {
       if (isConnecting) {
         return (
-          <Flexbox horizontal align="center" gap={4} onClick={stopPropagation}>
-            <Icon spin icon={Loader2} />
-          </Flexbox>
+          <div
+            className="flex flex-row items-center gap-1"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span className="anticon animate-spin" role="img">
+              <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          </div>
         );
       }
 
       if (!server) {
         return (
-          <Flexbox
-            horizontal
-            align="center"
-            gap={4}
+          <div
+            className="flex flex-row items-center gap-1"
             style={{ cursor: canCreate && canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
             onClick={(e) => {
               e.stopPropagation();
@@ -262,15 +264,21 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
             }}
           >
             {t('tools.orviloSkill.connect', { defaultValue: 'Connect' })}
-            <Icon icon={SquareArrowOutUpRight} size="small" />
-          </Flexbox>
+            <span className="anticon" role="img">
+              <SquareArrowOutUpRight fill={'transparent'} height={'14'} size={'14'} width={'14'} />
+            </span>
+          </div>
         );
       }
 
       switch (server.status) {
         case OrviloSkillStatus.CONNECTED: {
           if (isToggling) {
-            return <Icon spin icon={Loader2} />;
+            return (
+              <span className="anticon animate-spin" role="img">
+                <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+            );
           }
           return (
             <Checkbox
@@ -287,16 +295,19 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
         case OrviloSkillStatus.CONNECTING: {
           if (isWaitingAuth) {
             return (
-              <Flexbox horizontal align="center" gap={4} onClick={stopPropagation}>
-                <Icon spin icon={Loader2} />
-              </Flexbox>
+              <div
+                className="flex flex-row items-center gap-1"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <span className="anticon animate-spin" role="img">
+                  <Loader2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              </div>
             );
           }
           return (
-            <Flexbox
-              horizontal
-              align="center"
-              gap={4}
+            <div
+              className="flex flex-row items-center gap-1"
               style={{ cursor: canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
               onClick={async (e) => {
                 e.stopPropagation();
@@ -313,16 +324,21 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
               }}
             >
               {t('tools.orviloSkill.authorize', { defaultValue: 'Authorize' })}
-              <Icon icon={SquareArrowOutUpRight} size="small" />
-            </Flexbox>
+              <span className="anticon" role="img">
+                <SquareArrowOutUpRight
+                  fill={'transparent'}
+                  height={'14'}
+                  size={'14'}
+                  width={'14'}
+                />
+              </span>
+            </div>
           );
         }
         case OrviloSkillStatus.NOT_CONNECTED: {
           return (
-            <Flexbox
-              horizontal
-              align="center"
-              gap={4}
+            <div
+              className="flex flex-row items-center gap-1"
               style={{ cursor: canCreate && canEdit ? 'pointer' : 'not-allowed', opacity: 0.65 }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -331,8 +347,15 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
               }}
             >
               {t('tools.orviloSkill.connect', { defaultValue: 'Connect' })}
-              <Icon icon={SquareArrowOutUpRight} size="small" />
-            </Flexbox>
+              <span className="anticon" role="img">
+                <SquareArrowOutUpRight
+                  fill={'transparent'}
+                  height={'14'}
+                  size={'14'}
+                  width={'14'}
+                />
+              </span>
+            </div>
           );
         }
         case OrviloSkillStatus.ERROR: {
@@ -349,11 +372,8 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={24}
-        justify={'space-between'}
+      <div
+        className="flex flex-row items-center gap-6 justify-between"
         onClick={(e) => {
           e.stopPropagation();
           if (canEdit && server?.status === OrviloSkillStatus.CONNECTED) {
@@ -361,12 +381,12 @@ const OrviloSkillServerItem = memo<OrviloSkillServerItemProps>(
           }
         }}
       >
-        <Flexbox horizontal align={'center'} gap={SKILL_ICON_GAP}>
+        <div className="flex flex-row items-center" style={{ gap: SKILL_ICON_GAP }}>
           {icon}
           {label}
-        </Flexbox>
+        </div>
         {renderRightControl()}
-      </Flexbox>
+      </div>
     );
   },
 );

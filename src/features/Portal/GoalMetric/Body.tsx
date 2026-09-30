@@ -1,8 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
 import { Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { GoalSpend } from '@orvilo/types';
 import { InputNumber } from 'antd';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,11 +61,8 @@ const NodeRow = memo<{
   if (!view) return null;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.row}
-      gap={8}
+    <div
+      className={cx('flex flex-row items-center gap-2', styles.row)}
       onClick={() => openGoalNode(goalId, nodeId)}
     >
       {view.seq !== undefined && (
@@ -79,7 +75,7 @@ const NodeRow = memo<{
         {view.node.title}
       </Text>
       {extra}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -102,21 +98,18 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
     );
 
   return (
-    <Flexbox gap={0}>
+    <div className="flex flex-col gap-0">
       {events.map((event) => {
         const subject = graph.byId[event.entityId]?.node.title;
         return (
-          <Flexbox
-            horizontal
-            align={'baseline'}
-            className={styles.staticRow}
-            gap={10}
+          <div
+            className={cx('flex flex-row items-baseline gap-2.5', styles.staticRow)}
             key={event.id}
           >
             <Text className={styles.mono} fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
               {dayjs(event.createdAt).format('MM-DD HH:mm')}
             </Text>
-            <Flexbox flex={1} gap={1} style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
               <Text fontSize={13}>
                 {t(`goalProcess.eventType.${event.eventType}` as const)}
                 {subject ? ` · ${subject}` : ''}
@@ -125,11 +118,11 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
                 {t(`goalProcess.actor.${event.actorType}` as const)}
                 {event.reason ? ` · ${event.reason}` : ''}
               </Text>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -140,7 +133,7 @@ const Tasks = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph })
   const works = graph.nodes.filter((view) => view.node.kind === 'task');
 
   return (
-    <Flexbox gap={0}>
+    <div className="flex flex-col gap-0">
       {works.map((view) => (
         <NodeRow
           goalId={goalId}
@@ -148,7 +141,7 @@ const Tasks = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph })
           key={view.node.id}
           nodeId={view.node.id}
           extra={
-            <Flexbox horizontal align={'center'} gap={6}>
+            <div className="flex flex-row items-center gap-1.5">
               {view.integration && (
                 <RunIntegrationTag
                   integration={view.integration}
@@ -157,11 +150,11 @@ const Tasks = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph })
                 />
               )}
               <Tag size={'small'}>{t(`goalProcess.nodeStatus.${view.node.status}` as const)}</Tag>
-            </Flexbox>
+            </div>
           }
         />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -176,7 +169,7 @@ const Findings = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
   );
 
   return (
-    <Flexbox gap={0}>
+    <div className="flex flex-col gap-0">
       {findings.map((view) => (
         <NodeRow
           goalId={goalId}
@@ -197,7 +190,7 @@ const Findings = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
           }
         />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -279,9 +272,9 @@ const BudgetField = memo<{
   };
 
   return (
-    <Flexbox gap={2}>
+    <div className="flex flex-col gap-0.5">
       <span className={styles.label}>{label}</span>
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-row items-center gap-2">
         <Text className={styles.mono} style={{ fontSize: 20 }} weight={600}>
           {money ? formatUsd(used) : used}
         </Text>
@@ -309,8 +302,8 @@ const BudgetField = memo<{
           onChange={setDraft}
           onPressEnter={() => void commit()}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -352,12 +345,12 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
       );
 
     return (
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         <span className={styles.label}>{t('goalProcess.metricDetail.budget.perTaskTitle')}</span>
-        <Flexbox gap={0}>
+        <div className="flex flex-col gap-0">
           {rows.map((row) => {
             const body = (
-              <Flexbox horizontal align={'center'} gap={8} key={row.taskId}>
+              <div className="flex flex-row items-center gap-2" key={row.taskId}>
                 {row.view?.seq !== undefined && (
                   <Text
                     className={styles.mono}
@@ -384,27 +377,27 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
                 <Text className={styles.mono} style={{ flex: 'none' }} weight={500}>
                   {formatUsd(row.totalCost)}
                 </Text>
-              </Flexbox>
+              </div>
             );
 
             // A row without a graph node is a Task the snapshot no longer
             // carries — still billed, but nothing to open.
             return row.view ? (
-              <Flexbox
-                className={styles.row}
+              <div
+                className={cx('flex flex-col', styles.row)}
                 key={row.taskId}
                 onClick={() => openGoalNode(goalId, row.view!.node.id)}
               >
                 {body}
-              </Flexbox>
+              </div>
             ) : (
-              <Flexbox className={styles.staticRow} key={row.taskId}>
+              <div className={cx('flex flex-col', styles.staticRow)} key={row.taskId}>
                 {body}
-              </Flexbox>
+              </div>
             );
           })}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -423,8 +416,8 @@ const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }
   ).length;
 
   return (
-    <Flexbox gap={20}>
-      <Flexbox gap={14}>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-[14px]">
         <span className={styles.label}>{t('goalProcess.metricDetail.budget.controlTitle')}</span>
         <BudgetField
           cap={maxTotalCost}
@@ -454,9 +447,9 @@ const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }
         <Text fontSize={12} style={{ lineHeight: 1.7 }} type={'secondary'}>
           {t('goalProcess.metricDetail.budget.raiseNote')}
         </Text>
-      </Flexbox>
+      </div>
       <CostBreakdown goalId={goalId} graph={graph} spend={spend} />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -469,9 +462,9 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
   const works = graph.nodes.filter((view) => view.node.kind === 'task' && view.attempts.length > 0);
 
   return (
-    <Flexbox gap={14}>
+    <div className="flex flex-col gap-[14px]">
       {startedAt && (
-        <Flexbox gap={2}>
+        <div className="flex flex-col gap-0.5">
           <span className={styles.label}>{t('goalProcess.metricDetail.duration.total')}</span>
           <Text className={styles.mono} style={{ fontSize: 20 }} weight={600}>
             {formatSpan(end.getTime() - startedAt.getTime())}
@@ -482,11 +475,11 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
               ? dayjs(completedAt).format('MM-DD HH:mm')
               : t('goalProcess.metricDetail.duration.now')}
           </Text>
-        </Flexbox>
+        </div>
       )}
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         <span className={styles.label}>{t('goalProcess.metricDetail.duration.taskSpans')}</span>
-        <Flexbox gap={0}>
+        <div className="flex flex-col gap-0">
           {works.map((view) => {
             const first = view.attempts[0];
             const last = view.attempts.at(-1)!;
@@ -512,9 +505,9 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
               />
             );
           })}
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 
@@ -535,29 +528,29 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
   );
 
   return (
-    <Flexbox gap={14}>
-      <Flexbox gap={2}>
+    <div className="flex flex-col gap-[14px]">
+      <div className="flex flex-col gap-0.5">
         <span className={styles.label}>{t('goalProcess.metricDetail.liveness.latest')}</span>
         <Text className={styles.mono} style={{ fontSize: 20 }} weight={600}>
           {latest ? dayjs(latest).format('MM-DD HH:mm') : '—'}
         </Text>
-      </Flexbox>
+      </div>
       {running.length > 0 && (
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           <span className={styles.label}>{t('goalProcess.metricDetail.liveness.running')}</span>
-          <Flexbox gap={0}>
+          <div className="flex flex-col gap-0">
             {running.map((view) => (
               <NodeRow goalId={goalId} graph={graph} key={view.node.id} nodeId={view.node.id} />
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
       {/* The contract that makes "walk away" safe: event-driven advancement
           plus the recovery sweep. State it where the user checks for a pulse. */}
       <Text fontSize={12} style={{ lineHeight: 1.7 }} type={'secondary'}>
         {t('goalProcess.metricDetail.liveness.driver')}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -572,14 +565,14 @@ const Body = memo(() => {
   const { goalId, metric } = view;
 
   return (
-    <Flexbox flex={1} padding={16} style={{ minHeight: 0, overflowY: 'auto' }}>
+    <div className="flex flex-col flex-1 p-4" style={{ minHeight: 0, overflowY: 'auto' }}>
       {metric === 'lifecycle' && <Lifecycle goalId={goalId} graph={graph} />}
       {metric === 'tasks' && <Tasks goalId={goalId} graph={graph} />}
       {metric === 'findings' && <Findings goalId={goalId} graph={graph} />}
       {metric === 'budget' && <Budget goalId={goalId} graph={graph} />}
       {metric === 'duration' && <Duration goalId={goalId} graph={graph} />}
       {metric === 'liveness' && <Liveness goalId={goalId} graph={graph} />}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   ChevronDownIcon,
@@ -9,15 +8,18 @@ import {
   TerminalIcon,
   WrenchIcon,
 } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessAgentModeSync } from '@/business/client/hooks/useBusinessAgentMode';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 import { useEffectiveAgentMode } from '@/features/ChatInput/hooks/useEffectiveAgentMode';
 import { useToggleAgentMode } from '@/features/ChatInput/hooks/useToggleAgentMode';
 import { usePermission } from '@/hooks/usePermission';
+
+import { SimpleTooltip } from '../SimpleTooltip';
 
 const styles = createStaticStyles(({ css }) => ({
   activeOption: css`
@@ -176,7 +178,9 @@ const ModeSelector = memo(() => {
       <div className={styles.agentTooltipTitle}>{t('chatMode.agent')}</div>
       {AGENT_CAPS.map(({ key, icon }) => (
         <div className={styles.agentTooltipCap} key={key}>
-          <Icon icon={icon} size={12} />
+          <span className="anticon" role="img">
+            {createElement(icon, { size: 12, width: 12, height: 12, fill: 'transparent' })}
+          </span>
           {t(`chatMode.agentCap.${key}`)}
         </div>
       ))}
@@ -192,62 +196,68 @@ const ModeSelector = memo(() => {
   const agentDesc = canSelectAgentMode ? t('chatMode.agentDesc') : t('chatMode.agentUnsupported');
 
   const popoverContent = (
-    <Flexbox gap={4} style={{ maxWidth: 320, minWidth: 280 }}>
-      <Flexbox
-        horizontal
-        align="center"
-        gap={12}
+    <div className="flex flex-col gap-1" style={{ maxWidth: 320, minWidth: 280 }}>
+      <div
         className={cx(
-          styles.option,
-          currentMode === 'agent' && styles.activeOption,
-          !canSelectAgentMode && styles.optionDisabled,
+          'flex flex-row items-center gap-3',
+          cx(
+            styles.option,
+            currentMode === 'agent' && styles.activeOption,
+            !canSelectAgentMode && styles.optionDisabled,
+          ),
         )}
         onClick={() => handleSelect('agent')}
       >
-        <Flexbox
-          align="center"
-          className={styles.optionIcon}
-          height={32}
-          justify="center"
-          width={32}
+        <div
+          className={cx(
+            'flex flex-col items-center h-[32px] justify-center w-[32px]',
+            styles.optionIcon,
+          )}
         >
-          <Icon icon={InfinityIcon} size={16} />
-        </Flexbox>
-        <Flexbox flex={1}>
+          <span className="anticon" role="img">
+            <InfinityIcon fill={'transparent'} height={16} size={16} width={16} />
+          </span>
+        </div>
+        <div className="flex flex-col flex-1">
           <div className={styles.optionTitle}>{t('chatMode.agent')}</div>
           <div className={styles.optionDesc}>{agentDesc}</div>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
-      <Flexbox
-        horizontal
-        align="center"
-        className={cx(styles.option, currentMode === 'chat' && styles.activeOption)}
-        gap={12}
+      <div
+        className={cx(
+          'flex flex-row items-center gap-3',
+          cx(styles.option, currentMode === 'chat' && styles.activeOption),
+        )}
         onClick={() => handleSelect('chat')}
       >
-        <Flexbox
-          align="center"
-          className={styles.optionIcon}
-          height={32}
-          justify="center"
-          width={32}
+        <div
+          className={cx(
+            'flex flex-col items-center h-[32px] justify-center w-[32px]',
+            styles.optionIcon,
+          )}
         >
-          <Icon icon={MessageCircleIcon} size={16} />
-        </Flexbox>
-        <Flexbox flex={1}>
+          <span className="anticon" role="img">
+            <MessageCircleIcon fill={'transparent'} height={16} size={16} width={16} />
+          </span>
+        </div>
+        <div className="flex flex-col flex-1">
           <div className={styles.optionTitle}>{t('chatMode.chat')}</div>
           <div className={styles.optionDesc}>{t('chatMode.chatDesc')}</div>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 
   const button = (
     <div className={cx(styles.button, disabled && styles.buttonDisabled)}>
-      <Icon icon={CurrentIcon} size={14} />
+      <span className="anticon" role="img">
+        <CurrentIcon fill={'transparent'} height={14} size={14} width={14} />
+      </span>
       <span>{t(`chatMode.${currentMode}`)}</span>
-      <Icon icon={ChevronDownIcon} size={12} />
+      <span className="anticon" role="img">
+        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+      </span>
     </div>
   );
 
@@ -255,30 +265,32 @@ const ModeSelector = memo(() => {
 
   if (disabled)
     return (
-      <Tooltip title={disabledReason}>
+      <SimpleTooltip title={disabledReason}>
         <div>{button}</div>
-      </Tooltip>
+      </SimpleTooltip>
     );
 
   return (
-    <Popover
-      className={styles.popoverPopup}
-      content={popoverContent}
-      open={!disabled && open}
-      placement="topLeft"
-      trigger="click"
-      styles={{
-        // Match the inner viewport's corner to the enlarged popup radius so its
-        // border corners don't poke through the rounded popup.
-        content: {
+    <Popover open={!disabled && open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          <div>{open ? button : <SimpleTooltip title={buttonTooltip}>{button}</SimpleTooltip>}</div>
+        }
+      />
+      <PopoverContent
+        align={'start'}
+        className={cx('w-auto', styles.popoverPopup)}
+        side={'top'}
+        style={{
+          // Match the inner viewport's corner to the enlarged popup radius so
+          // its border corners don't poke through the rounded popup.
           border: `1px solid ${cssVar.colorBorderSecondary}`,
           borderRadius: cssVar.borderRadiusLG,
           padding: 4,
-        },
-      }}
-      onOpenChange={handleOpenChange}
-    >
-      <div>{open ? button : <Tooltip title={buttonTooltip}>{button}</Tooltip>}</div>
+        }}
+      >
+        {popoverContent}
+      </PopoverContent>
     </Popover>
   );
 });

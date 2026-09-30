@@ -37,7 +37,12 @@ export async function checkProviderBinding(
   // Absent host composition still enters the canonical broker, with network access refused.
   const active = composition ?? createClosedProviderComposition(model, userId);
 
-  const scope = structuredClone(await active.authorizeScope(userId));
+  const scope = structuredClone(
+    await active.authorizeScope(userId).catch((error: unknown) => {
+      console.error(error);
+      throw new TRPCError({ code: 'FORBIDDEN' });
+    }),
+  );
   if (scope.ownerId !== userId || scope.principalId !== userId) {
     throw new TRPCError({ code: 'FORBIDDEN' });
   }

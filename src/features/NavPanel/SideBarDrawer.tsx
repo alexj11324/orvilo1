@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, DrawerPopup, DrawerPortal, DrawerRoot, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { XIcon } from 'lucide-react';
@@ -110,9 +109,9 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
               <div className={styles.body}>
                 <Suspense
                   fallback={
-                    <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
+                    <div className="flex flex-col gap-[1px] py-[1px] px-1">
                       <SkeletonList rows={3} />
-                    </Flexbox>
+                    </div>
                   }
                 >
                   {children}

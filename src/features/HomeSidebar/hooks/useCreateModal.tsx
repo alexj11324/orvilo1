@@ -1,4 +1,3 @@
-import { Block, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, createModal, type ModalInstance, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Lightbulb, PencilLineIcon, RefreshCw, X } from 'lucide-react';
@@ -28,24 +27,24 @@ interface ExampleItemProps {
 
 const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, prompt }) => {
   return (
-    <Block
-      clickable
-      variant={'outlined'}
+    <div
+      className="flex cursor-pointer flex-col border hover:bg-[var(--ant-color-fill-tertiary)]"
       style={{
+        borderColor: cssVar.colorBorderSecondary,
+        background: cssVar.colorBgContainer,
         borderRadius: cssVar.borderRadiusLG,
-        cursor: 'pointer',
       }}
       onClick={() => onClick(prompt)}
     >
-      <Flexbox gap={4} paddingBlock={12} paddingInline={14}>
+      <div className="flex flex-col gap-1 py-3 px-[14px]">
         <Text ellipsis fontSize={14} style={{ fontWeight: 500 }}>
           {title}
         </Text>
         <Text color={cssVar.colorTextTertiary} ellipsis={{ rows: 2 }} fontSize={12}>
           {description}
         </Text>
-      </Flexbox>
-    </Block>
+      </div>
+    </div>
   );
 });
 
@@ -62,26 +61,23 @@ const Examples = memo<ExamplesProps>(({ suggestMode, onExampleClick }) => {
   if (questions.length === 0) return null;
 
   return (
-    <Flexbox gap={16}>
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <Lightbulb color={cssVar.colorTextDescription} size={18} />
           <Text color={cssVar.colorTextSecondary}>{tCommon('home.suggestQuestions')}</Text>
-        </Flexbox>
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={4}
-          style={{ cursor: 'pointer' }}
-          onClick={refresh}
-        >
+        </div>
+        <div className="flex items-center gap-1" style={{ cursor: 'pointer' }} onClick={refresh}>
           <ActionIcon icon={RefreshCw} size={'small'} />
           <Text color={cssVar.colorTextSecondary} fontSize={12}>
             {tCommon('switch')}
           </Text>
-        </Flexbox>
-      </Flexbox>
-      <Flexbox gap={12} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+        </div>
+      </div>
+      <div
+        className="flex flex-col gap-3"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}
+      >
         {questions.map((item) => {
           const prompt = tSuggest(item.promptKey as any);
           return (
@@ -94,8 +90,8 @@ const Examples = memo<ExamplesProps>(({ suggestMode, onExampleClick }) => {
             />
           );
         })}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -203,18 +199,18 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
     );
 
     return (
-      <Flexbox gap={24} paddingBlock={'16px 24px'} paddingInline={24}>
+      <div className="flex flex-col gap-6 px-6" style={{ paddingBlock: '16px 24px' }}>
         {/* Header: Start Blank + Close */}
-        <Flexbox horizontal align="center" gap={4} justify="flex-end">
+        <div className="flex items-center gap-1 justify-end">
           <Button icon={<PencilLineIcon size={14} />} type="text" onClick={handleCreateBlank}>
             {t('createModal.createBlank')}
           </Button>
           <ActionIcon icon={X} onClick={handleClose} />
-        </Flexbox>
+        </div>
         {/* Title */}
-        <Flexbox align="center">
+        <div className="flex flex-col items-center">
           <h3 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>{modalTitle}</h3>
-        </Flexbox>
+        </div>
 
         {/* ChatInput */}
         <ChatInputProvider
@@ -248,7 +244,7 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
 
         {/* Examples */}
         <Examples suggestMode={type} onExampleClick={handleExampleClick} />
-      </Flexbox>
+      </div>
     );
   },
 );

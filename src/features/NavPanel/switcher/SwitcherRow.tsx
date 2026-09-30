@@ -1,6 +1,5 @@
-import { Block, Icon } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -33,15 +32,11 @@ interface SwitcherRowProps {
 }
 
 const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLabel }) => (
-  <Block
-    clickable
-    horizontal
-    align={'center'}
-    className={active ? `${styles.row} ${styles.current}` : styles.row}
-    flex={'none'}
-    gap={8}
-    height={36}
-    variant={'borderless'}
+  <div
+    className={cx(
+      active ? `${styles.row} ${styles.current}` : styles.row,
+      'flex h-[36px] flex-none cursor-pointer items-center gap-2',
+    )}
     onClick={() => onSelect(item.id)}
   >
     <Avatar avatar={item.avatar} background={item.background} shape={'square'} size={28} />
@@ -61,8 +56,8 @@ const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLab
         {privateLabel}
       </Text>
     )}
-    {active && <Icon color={cssVar.colorText} icon={CheckIcon} size={14} />}
-  </Block>
+    {active && <CheckIcon color={cssVar.colorText} size={14} />}
+  </div>
 ));
 
 SwitcherRow.displayName = 'SwitcherRow';

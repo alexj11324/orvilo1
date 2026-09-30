@@ -155,9 +155,10 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
       <NavHeader
         left={
           <SidebarHeaderSelectPopover
-            content={
+            content={(closePopover) => (
               <SwitcherMenu
                 activeId={detail?.project.slug ?? detail?.project.id}
+                closePopover={closePopover}
                 error={error}
                 isLoading={isLoading && items.length === 0}
                 items={items}
@@ -166,7 +167,7 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
                 onRetry={() => mutate()}
                 onSelect={handleSelect}
               />
-            }
+            )}
           >
             <SidebarHeaderSelectTrigger
               avatar={detail?.project.avatar || detail?.project.name || t('sidebar.title')}

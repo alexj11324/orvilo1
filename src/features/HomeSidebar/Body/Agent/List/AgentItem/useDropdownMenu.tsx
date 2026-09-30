@@ -1,4 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { SessionDefaultGroup, type SidebarAgentLabel, type SidebarVisibility } from '@orvilo/types';
@@ -27,6 +26,7 @@ import { useAgentTransferMenuItem } from '@/business/client/hooks/useAgentTransf
 import { useAgentTransferToMemberMenuItem } from '@/business/client/hooks/useAgentTransferToMemberMenuItem';
 import { openEditingPopover } from '@/features/EditingPopover/store';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -81,7 +81,7 @@ export const useAgentDropdownMenu = ({
   title,
   userId,
   visibility,
-}: UseAgentDropdownMenuParams): (() => MenuProps['items']) => {
+}: UseAgentDropdownMenuParams): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['chat', 'common', 'setting']);
   const navigate = useWorkspaceAwareNavigate();
 
@@ -531,7 +531,7 @@ export const useAgentDropdownMenu = ({
                 : []),
             ]
           : []),
-      ] as MenuProps['items'],
+      ] as SidebarMenuItems,
     [
       activeWorkspaceId,
       anchor,

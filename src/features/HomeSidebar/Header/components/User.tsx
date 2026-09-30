@@ -1,8 +1,7 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -41,14 +40,11 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
 
   return (
     <UserPanel>
-      <Block
-        clickable
-        horizontal
-        align={'center'}
-        className={styles.trigger}
-        gap={8}
-        paddingBlock={2}
-        variant={'borderless'}
+      <div
+        className={cx(
+          styles.trigger,
+          'flex cursor-pointer items-center gap-2 py-[2px] hover:bg-[var(--ant-color-fill-tertiary)]',
+        )}
         style={{
           borderRadius: 10,
           minWidth: 32,
@@ -64,7 +60,7 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
           size={28}
         />
         {!lite && (
-          <Flexbox horizontal align={'center'} gap={4} style={{ overflow: 'hidden' }}>
+          <div className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
             {!isSignedIn && !activeIdentity ? (
               <ProductLogo color={cssVar.colorText} size={28} type={'text'} />
             ) : (
@@ -72,14 +68,10 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
                 {displayName}
               </Text>
             )}
-            <Icon
-              color={cssVar.colorTextDescription}
-              icon={ChevronDownIcon}
-              id={USER_DROPDOWN_ICON_ID}
-            />
-          </Flexbox>
+            <ChevronDownIcon color={cssVar.colorTextDescription} id={USER_DROPDOWN_ICON_ID} />
+          </div>
         )}
-      </Block>
+      </div>
     </UserPanel>
   );
 });

@@ -2,13 +2,13 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { MenuProps } from '@lobehub/ui';
 import type { NavigationFavorite, NavigationFavoriteTargetType } from '@orvilo/types';
 import { ChevronDown, ChevronUp, MoreHorizontalIcon, PinOff } from 'lucide-react';
 import { type MouseEventHandler, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { SidebarMenuAction } from '@/components/ui/sidebar';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -41,7 +41,7 @@ const FavoriteRow = ({
   showReorder = true,
 }: FavoriteRowProps) => {
   const { t } = useTranslation('common');
-  const menuItems: MenuProps['items'] = [
+  const menuItems: SidebarMenuItems = [
     {
       key: 'unpin',
       icon: <PinOff size={14} />,
@@ -72,13 +72,6 @@ const FavoriteRow = ({
     <SidebarNavItem
       contextMenuItems={menuItems}
       icon={FAVORITE_TARGET_ICONS[item.targetType]}
-      render={
-        <WorkspaceLink
-          draggable={false}
-          to={workTargetPath(item.targetType, item.targetId, item.title)}
-          onClick={onClick}
-        />
-      }
       title={favoriteLabel(item.targetType, item.title, t, item.targetId)}
       actions={
         <SidebarDropdownMenu items={menuItems}>
@@ -86,6 +79,13 @@ const FavoriteRow = ({
             <MoreHorizontalIcon />
           </SidebarMenuAction>
         </SidebarDropdownMenu>
+      }
+      render={
+        <WorkspaceLink
+          draggable={false}
+          to={workTargetPath(item.targetType, item.targetId, item.title)}
+          onClick={onClick}
+        />
       }
     />
   );

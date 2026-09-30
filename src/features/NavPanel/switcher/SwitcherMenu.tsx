@@ -1,11 +1,11 @@
-import { Flexbox, Icon, Input, usePopoverContext } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { Input } from '@/components/ui/input';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
 import { filterSwitcherItems, pickRecentItems, type SwitcherItem } from './switcherItems';
@@ -61,6 +61,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 interface SwitcherMenuProps {
   activeId?: string;
+  closePopover?: () => void;
   error?: unknown;
   isLoading?: boolean;
   items: SwitcherItem[];
@@ -71,9 +72,18 @@ interface SwitcherMenuProps {
 }
 
 const SwitcherMenu = memo<SwitcherMenuProps>(
-  ({ activeId, error, isLoading, items, kind, onRetry, onSelect, searchPlaceholder }) => {
+  ({
+    activeId,
+    closePopover,
+    error,
+    isLoading,
+    items,
+    kind,
+    onRetry,
+    onSelect,
+    searchPlaceholder,
+  }) => {
     const { t } = useTranslation('common');
-    const { close } = usePopoverContext();
     const { ids, touch } = useSwitcherRecents(kind);
     const [query, setQuery] = useState('');
 
@@ -90,29 +100,35 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
 
     const handleSelect = (id: string) => {
       touch(id);
-      close();
+      closePopover?.();
       if (id !== activeId) onSelect(id);
     };
 
     const showRecent = recentItems.length > 0;
 
     return (
-      <Flexbox className={styles.root}>
+      <div className={cx(styles.root, 'flex flex-col')}>
         <div className={styles.search}>
-          <Input
-            allowClear
-            autoFocus
-            placeholder={searchPlaceholder}
-            prefix={<Icon color={cssVar.colorTextTertiary} icon={SearchIcon} size={14} />}
-            size={'small'}
-            value={query}
-            variant={'borderless'}
-            onChange={(event) => setQuery(event.target.value)}
-            onPressEnter={() => {
-              const first = visibleItems[0];
-              if (first) handleSelect(first.id);
-            }}
-          />
+          <div className="relative">
+            <SearchIcon
+              className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2"
+              size={14}
+              style={{ color: cssVar.colorTextTertiary }}
+            />
+            <Input
+              autoFocus
+              className="h-6 border-none bg-transparent pl-5 shadow-none"
+              placeholder={searchPlaceholder}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  const first = visibleItems[0];
+                  if (first) handleSelect(first.id);
+                }
+              }}
+            />
+          </div>
         </div>
         <AsyncBoundary
           data={isLoading ? undefined : items}
@@ -122,16 +138,16 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
           isLoading={isLoading}
           loading={<SkeletonList rows={4} />}
           empty={
-            <Flexbox align={'center'} padding={16}>
+            <div className="flex flex-col items-center p-4">
               <Text fontSize={13} type={'secondary'}>
                 {t('navPanel.searchResultEmpty')}
               </Text>
-            </Flexbox>
+            </div>
           }
           onRetry={onRetry}
         >
           <div className={styles.list}>
-            <Flexbox>
+            <div className="flex flex-col">
               {showRecent && (
                 <>
                   <Text as={'div'} className={styles.section}>
@@ -161,10 +177,10 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
                   onSelect={handleSelect}
                 />
               ))}
-            </Flexbox>
+            </div>
           </div>
         </AsyncBoundary>
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,4 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { LucideCopy, Pen, PictureInPicture2Icon, Pin, PinOff, Trash } from 'lucide-react';
 import { useMemo } from 'react';
@@ -7,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentGroupTransferMenuItem';
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
 import { openEditingPopover } from '@/features/EditingPopover/store';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { usePermission } from '@/hooks/usePermission';
 import { useResourceManageable } from '@/hooks/useResourceManageable';
@@ -36,7 +36,7 @@ export const useGroupDropdownMenu = ({
   pinned,
   title,
   userId,
-}: UseGroupDropdownMenuParams): (() => MenuProps['items']) => {
+}: UseGroupDropdownMenuParams): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['chat', 'common']);
 
   const { allowed: canEdit } = usePermission('edit_own_content');
@@ -154,7 +154,7 @@ export const useGroupDropdownMenu = ({
               },
             ]
           : []),
-      ] as MenuProps['items'],
+      ] as SidebarMenuItems,
     [
       anchor,
       avatar,

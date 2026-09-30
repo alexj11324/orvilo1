@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { type ItemType } from 'antd/es/menu/interface';
 import { BoxIcon } from 'lucide-react';
 import { useCallback } from 'react';
@@ -29,7 +28,7 @@ export const useProjectMenuItems = () => {
 
   const createProjectMenuItem = useCallback(
     (): ItemType => ({
-      icon: <Icon icon={BoxIcon} />,
+      icon: <BoxIcon size={14} />,
       key: 'createProject',
       label: t('createNew.title'),
       onClick: (info) => {

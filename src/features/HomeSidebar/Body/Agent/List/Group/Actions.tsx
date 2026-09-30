@@ -1,14 +1,14 @@
-import { type MenuProps } from '@lobehub/ui';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 interface ActionsProps {
-  dropdownMenu: MenuProps['items'];
+  dropdownMenu: SidebarMenuItems;
   isLoading?: boolean;
 }
 

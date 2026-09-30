@@ -1,12 +1,5 @@
 'use client';
 
-import {
-  type DropdownItem,
-  type DropdownMenuProps as LegacyDropdownMenuProps,
-  type IconProps,
-  type MenuInfo,
-  type MenuProps,
-} from '@lobehub/ui';
 import { cn } from 'cn';
 import {
   type ComponentType,
@@ -43,23 +36,34 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
-type MenuItems = (NonNullable<MenuProps['items']>[number] | DropdownItem | NativeContextMenuItem)[];
+export interface SidebarMenuInfo {
+  domEvent: unknown;
+  item: EventTarget | null;
+  key: string;
+  keyPath: string[];
+}
 
-interface RenderableItem {
-  children?: MenuItems;
+export interface SidebarMenuItemData {
+  children?: SidebarMenuItems;
   closeOnClick?: boolean;
   danger?: boolean;
   desc?: ReactNode;
   disabled?: boolean;
   extra?: ReactNode;
-  icon?: IconProps['icon'];
+  icon?: ComponentType | ReactElement;
   key?: Key;
   label?: ReactNode;
-  onClick?: (info: MenuInfo) => void;
+  onClick?: (info: SidebarMenuInfo) => void;
   onTitleMouseEnter?: (info: { domEvent: unknown; key: string }) => void;
   title?: ReactNode;
   type?: string;
 }
+
+export type SidebarMenuItems = (SidebarMenuItemData | NativeContextMenuItem)[];
+
+type MenuItems = SidebarMenuItems;
+
+type RenderableItem = SidebarMenuItemData;
 
 interface LinkLabelProps {
   children?: ReactNode;
@@ -71,11 +75,11 @@ interface LinkLabelProps {
 
 export interface SidebarDropdownMenuProps {
   children: ReactElement;
-  items: MenuItems | (() => MenuItems);
-  onOpenChange?: LegacyDropdownMenuProps['onOpenChange'];
-  open?: LegacyDropdownMenuProps['open'];
-  placement?: LegacyDropdownMenuProps['placement'];
-  portalProps?: LegacyDropdownMenuProps['portalProps'];
+  items: SidebarMenuItems | (() => SidebarMenuItems);
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
+  placement?: string;
+  portalProps?: { container?: HTMLElement | null };
 }
 
 const getLabel = (item: RenderableItem) => item.label ?? item.title;
@@ -92,6 +96,7 @@ const getLinkLabel = (label: ReactNode) => {
   return {
     content: children,
     render: createElement(label.type, {
+      role: 'link',
       ...linkProps,
       className: cn('text-inherit', label.props.className),
       style: { ...label.props.style, textDecoration: 'none' },
@@ -128,7 +133,7 @@ const invokeItemClick = (
 ) => {
   if (!item.onClick) return;
   const key = String(item.key ?? keyPath.at(-1) ?? '');
-  item.onClick({ domEvent: event, item: event.currentTarget, key, keyPath } as MenuInfo);
+  item.onClick({ domEvent: event, item: event.currentTarget, key, keyPath });
 };
 
 export const renderSidebarMenuItems = (

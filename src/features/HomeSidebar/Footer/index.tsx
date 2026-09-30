@@ -1,7 +1,5 @@
 'use client';
 
-import { type MenuProps } from '@lobehub/ui';
-import { Block, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
@@ -23,6 +21,9 @@ import { openFeedbackModal } from '@/components/FeedbackModal';
 import { DOCUMENTS_REFER_URL, GITHUB } from '@/const/url';
 import Billboard from '@/features/Billboard';
 import { useBillboardMenuItems } from '@/features/Billboard/MenuItems';
+import SidebarDropdownMenu, {
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import UserAvatar from '@/features/User/UserAvatar';
@@ -34,7 +35,7 @@ import { useAnalytics } from '@/libs/analytics/client';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors/general';
 
-type FooterMenuItems = NonNullable<MenuProps['items']>;
+type FooterMenuItems = SidebarMenuItems;
 
 /**
  * Wrap each clickable menu item with a unified click tracker, preserving any
@@ -107,14 +108,14 @@ const Footer = memo(() => {
   }, []);
 
   const { helpMenuItems, trackedMenuKeys } = useMemo<{
-    helpMenuItems: MenuProps['items'];
+    helpMenuItems: SidebarMenuItems;
     trackedMenuKeys: string[];
   }>(() => {
     const ownItems: FooterMenuItems = [
       ...(footer.showSettingsEntry && !isDevMode
         ? [
             {
-              icon: <Icon icon={Settings2} />,
+              icon: <Settings2 size={14} />,
               key: 'setting',
               label: <WorkspaceLink to="/settings">{t(settingLabelKey)}</WorkspaceLink>,
             },
@@ -124,7 +125,7 @@ const Footer = memo(() => {
           ]
         : []),
       {
-        icon: <Icon icon={Book} />,
+        icon: <Book size={14} />,
         key: 'docs',
         label: (
           <a href={DOCUMENTS_REFER_URL} rel="noopener noreferrer" target="_blank">
@@ -133,7 +134,7 @@ const Footer = memo(() => {
         ),
       },
       {
-        icon: <Icon icon={Feather} />,
+        icon: <Feather size={14} />,
         key: 'feedback',
         label: t('userPanel.feedback'),
         onClick: handleOpenFeedbackModal,
@@ -146,7 +147,7 @@ const Footer = memo(() => {
       ...(SOCIAL_URL.discord
         ? [
             {
-              icon: <Icon icon={DiscordIcon} />,
+              icon: <DiscordIcon size={14} />,
               key: 'discord',
               label: (
                 <a href={SOCIAL_URL.discord} rel="noopener noreferrer" target="_blank">
@@ -160,7 +161,7 @@ const Footer = memo(() => {
         type: 'divider',
       },
       {
-        icon: <Icon icon={FileClockIcon} />,
+        icon: <FileClockIcon size={14} />,
         key: 'changelog',
         label: t('changelog'),
         onClick: handleOpenChangelogModal,
@@ -168,7 +169,7 @@ const Footer = memo(() => {
       ...(footer.layout === 'compact'
         ? [
             {
-              icon: <Icon icon={Download} />,
+              icon: <Download size={14} />,
               key: 'get-app',
               label: <WorkspaceLink to="/settings/about">{t('getApp')}</WorkspaceLink>,
             },
@@ -177,7 +178,7 @@ const Footer = memo(() => {
       ...(footer.layout === 'compact' && !footer.hideGitHub
         ? [
             {
-              icon: <Icon icon={GithubIcon} />,
+              icon: <GithubIcon size={14} />,
               key: 'github',
               label: (
                 <a href={GITHUB} rel="noopener noreferrer" target="_blank">
@@ -230,9 +231,9 @@ const Footer = memo(() => {
   return (
     <>
       {footer.layout === 'expanded' ? (
-        <Flexbox horizontal align={'center'} gap={2} justify={'space-between'} padding={8}>
-          <Flexbox horizontal align={'center'} flex={1} gap={2}>
-            <DropdownMenu
+        <div className="flex items-center gap-0.5 justify-between p-2">
+          <div className="flex items-center flex-1 gap-0.5">
+            <SidebarDropdownMenu
               items={helpMenuItems}
               placement="topLeft"
               onOpenChange={handleMenuOpenChange}
@@ -243,40 +244,37 @@ const Footer = memo(() => {
                 icon={CircleHelp}
                 size={16}
               />
-            </DropdownMenu>
+            </SidebarDropdownMenu>
             {!footer.hideGitHub && (
               <a aria-label={'GitHub'} href={GITHUB} rel="noopener noreferrer" target={'_blank'}>
                 <ActionIcon icon={GithubIcon} size={16} title={'GitHub'} />
               </a>
             )}
             <UserPanel>
-              <Block
-                clickable
-                align={'center'}
-                justify={'center'}
-                padding={4}
-                variant={'borderless'}
+              <div
+                className="flex flex-col items-center justify-center p-1"
+                className="cursor-pointer"
               >
                 <UserAvatar size={20} />
-              </Block>
+              </div>
             </UserPanel>
-          </Flexbox>
+          </div>
           <ThemeButton placement={'topCenter'} size={16} />
-        </Flexbox>
+        </div>
       ) : (
         // Linear's bottom bar: `?` help anchors the left; the right cluster is
         // the agent-panel switch followed by the avatar. The toggle rides the
         // global `showRightPanel` state — the panel itself materializes on the
         // surfaces that host it (agent conversation, task detail, …).
-        <Flexbox horizontal align={'center'} justify={'space-between'} padding={8}>
-          <DropdownMenu
+        <div className="flex items-center justify-between p-2">
+          <SidebarDropdownMenu
             items={helpMenuItems}
             placement="topLeft"
             onOpenChange={handleMenuOpenChange}
           >
             <ActionIcon aria-label={t('userPanel.help')} icon={CircleHelp} size={16} />
-          </DropdownMenu>
-          <Flexbox horizontal align={'center'} gap={2}>
+          </SidebarDropdownMenu>
+          <div className="flex items-center gap-0.5">
             {isHomeSidebar && <ToggleRightPanelButton id={null} size={16} />}
             {isDevMode && (
               <WorkspaceLink to="/settings">
@@ -289,18 +287,15 @@ const Footer = memo(() => {
               </WorkspaceLink>
             )}
             <UserPanel>
-              <Block
-                clickable
-                align={'center'}
-                justify={'center'}
-                padding={4}
-                variant={'borderless'}
+              <div
+                className="flex flex-col items-center justify-center p-1"
+                className="cursor-pointer"
               >
                 <UserAvatar size={20} />
-              </Block>
+              </div>
             </UserPanel>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
       {isHomeSidebar && <Billboard />}
     </>

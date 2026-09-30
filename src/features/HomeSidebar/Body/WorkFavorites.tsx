@@ -14,7 +14,6 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { type MenuProps } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { Hash, LucideCheck, MoreHorizontalIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
@@ -31,6 +30,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -171,7 +171,7 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey, open = true, onOpenCh
         key: 'show',
         label: t('navPanel.show'),
       },
-    ] as MenuProps['items'];
+    ] as SidebarMenuItems;
   }, [favoritePageSize, t, updateSystemStatus]);
 
   // Linear keeps the Favorites section header mounted even when the workspace

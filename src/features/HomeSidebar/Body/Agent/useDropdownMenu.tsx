@@ -1,9 +1,9 @@
-import { type MenuProps } from '@lobehub/ui';
 import { Hash, LucideCheck, SlidersHorizontalIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { openCustomizeSidebarModal } from '@/features/HomeSidebar/Body/CustomizeSidebarModal';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
@@ -15,7 +15,7 @@ interface AgentActionsDropdownMenuProps {
 
 export const useAgentActionsDropdownMenu = ({
   openConfigGroupModal,
-}: AgentActionsDropdownMenuProps): MenuProps['items'] => {
+}: AgentActionsDropdownMenuProps): SidebarMenuItems => {
   const { t } = useTranslation('common');
 
   const agentPageSize = useGlobalStore(systemStatusSelectors.agentPageSize);
@@ -56,7 +56,7 @@ export const useAgentActionsDropdownMenu = ({
         label: t('navPanel.customizeSidebar'),
         onClick: () => openCustomizeSidebarModal(),
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     agentPageSize,
     updateSystemStatus,

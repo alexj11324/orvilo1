@@ -64,7 +64,7 @@ describe('SidebarDropdownMenu', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open workspace menu' }));
-    const settings = await screen.findByRole('menuitem', { name: 'Settings' });
+    const settings = await screen.findByRole('link', { name: 'Settings' });
 
     expect(settings.tagName).toBe('A');
     expect(settings).toHaveAttribute('href', '/settings');
@@ -150,7 +150,7 @@ describe('SidebarContextMenu', () => {
       ),
     );
     fireEvent.contextMenu(screen.getByRole('button', { name: 'Link commands' }));
-    const settings = await screen.findByRole('menuitem', { name: 'Settings' });
+    const settings = await screen.findByRole('link', { name: 'Settings' });
     expect(settings.tagName).toBe('A');
     expect(settings).toHaveAttribute('href', '/settings');
     expect(settings.querySelector('a, button')).toBeNull();

@@ -1,12 +1,15 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
 import { LayersIcon, PlusIcon, SquarePenIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { SidebarMenuButton, SidebarMenuItemData } from '@/components/ui/sidebar';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
+import {
+  type SidebarMenuItemData,
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -22,7 +25,7 @@ const CreateRow = memo(() => {
   const { t } = useTranslation(['common', 'project']);
   const [creatingView, setCreatingView] = useState(false);
 
-  const items = useMemo<MenuProps['items']>(
+  const items = useMemo<SidebarMenuItems>(
     () => [
       {
         icon: <SquarePenIcon />,
@@ -48,13 +51,13 @@ const CreateRow = memo(() => {
 
   return (
     <>
-      <SidebarMenuItem>
+      <SidebarMenuItemData>
         <SidebarDropdownMenu items={items}>
           <SidebarMenuButton aria-label={t('navPanel.create')} tooltip={t('navPanel.create')}>
             <PlusIcon />
           </SidebarMenuButton>
         </SidebarDropdownMenu>
-      </SidebarMenuItem>
+      </SidebarMenuItemData>
       <NewViewModal open={creatingView} onClose={() => setCreatingView(false)} />
     </>
   );

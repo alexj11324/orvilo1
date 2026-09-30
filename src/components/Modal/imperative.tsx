@@ -212,7 +212,10 @@ function createModalSystem(): ModalSystem {
                 style={semanticStyles?.backdrop}
               />
               <AlertModalPopup
+                // Confirm dialogs presented role=dialog before the base-ui
+                // migration; keep that exposed role for callers/tests.
                 className={classNames?.popup ?? className}
+                role="dialog"
                 style={semanticStyles?.popup}
                 width={width}
               >

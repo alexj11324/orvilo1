@@ -27,7 +27,12 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
         subtitle={t('device.confirm.description', { clientName })}
         title={t('device.confirm.title')}
         footer={
-          <form action="/oidc/device" method="post" style={{ width: '100%' }}>
+          <form
+            action="/oidc/device"
+            method="post"
+            style={{ width: '100%' }}
+            onSubmit={() => setIsLoading(true)}
+          >
             {xsrf && <input name="xsrf" type="hidden" value={xsrf} />}
             <input name="user_code" type="hidden" value={userCode} />
             <input name="confirm" type="hidden" value="yes" />
@@ -38,7 +43,6 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
                 size="lg"
                 type="submit"
                 variant="default"
-                onClick={() => setIsLoading(true)}
               >
                 {t('device.confirm.authorize')}
               </Button>

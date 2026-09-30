@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { confirmModal, createModal, ModalHost, useModalContext } from '.';
@@ -95,6 +95,19 @@ describe('createModal', () => {
 });
 
 describe('confirmModal', () => {
+  it('exposes role=dialog so confirm actions are reachable via the dialog role', async () => {
+    renderHost();
+
+    const instance = confirmModal({ content: 'sure?', title: 'confirm' });
+
+    const dialog = (await screen.findByText('sure?')).closest('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    expect(within(dialog as HTMLElement).getByRole('button', { name: 'OK' })).toBeInTheDocument();
+
+    act(() => instance.close());
+    await waitFor(() => expect(screen.queryByText('sure?')).not.toBeInTheDocument());
+  });
+
   it('async onOk closes on resolve', async () => {
     renderHost();
     let resolve!: () => void;

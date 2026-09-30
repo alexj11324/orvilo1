@@ -19,7 +19,7 @@ export const RunCommandStreaming = memo<BuiltinStreamingProps<RunCommandParams>>
 
   return (
     <CodeBlock
-      animated
+      streaming
       wrap
       code={command}
       language={'sh'}

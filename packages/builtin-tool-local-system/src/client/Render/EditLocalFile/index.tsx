@@ -9,7 +9,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
   ({ args, pluginState, pluginError }) => {
-    if (!args) return <Skeleton.Text rows={4} />;
+    if (!args)
+      return (
+        <div className="flex flex-col gap-2">
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
+          <Skeleton style={{ width: '60%' }} />
+        </div>
+      );
 
     // Support both IPC format (file_path) and ComputerRuntime format (path)
     const filePath = args.file_path || args.path || '';

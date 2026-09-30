@@ -65,7 +65,11 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
       </div>
 
       {isLoading ? (
-        <Skeleton.Text rows={3} />
+        <div className="flex flex-col gap-2">
+          <Skeleton />
+          <Skeleton />
+          <Skeleton style={{ width: '60%' }} />
+        </div>
       ) : (
         <div className="flex flex-col gap-2">
           {isAmbiguous ? (

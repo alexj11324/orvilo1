@@ -309,10 +309,12 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
               <InputNumber
                 min={2}
                 style={{ width: 120 }}
-                suffix={t('builtins.orvilo-task.goal.roundsUnit')}
                 value={args.maxIterations ?? undefined}
                 onChange={(value) => patch({ maxIterations: value })}
               />
+              <span className="text-muted-foreground">
+                {t('builtins.orvilo-task.goal.roundsUnit')}
+              </span>
             </div>
             <div className="flex flex-col gap-1">
               <div className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</div>

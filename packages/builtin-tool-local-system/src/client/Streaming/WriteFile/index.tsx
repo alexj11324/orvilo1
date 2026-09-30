@@ -36,7 +36,7 @@ export const WriteFileStreaming = memo<BuiltinStreamingProps<WriteFileArgs>>(({ 
 
   return (
     <CodeBlock
-      animated
+      streaming
       wrap
       code={content}
       language={ext || 'text'}

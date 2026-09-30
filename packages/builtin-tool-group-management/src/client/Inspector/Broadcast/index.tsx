@@ -7,7 +7,7 @@ import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AvatarGroup from '@/components/Avatar/AvatarGroup';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { shinyTextStyles } from '@/styles';
@@ -76,7 +76,7 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-group-management.inspector.broadcast.title')}
         </span>
-        {avatarItems.length > 0 && <Avatar.Group items={avatarItems} shape={'circle'} size={24} />}
+        {avatarItems.length > 0 && <AvatarGroup items={avatarItems} shape={'circle'} size={24} />}
       </div>
     );
   },

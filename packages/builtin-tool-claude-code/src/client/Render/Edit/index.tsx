@@ -15,7 +15,15 @@ interface EditArgs {
 }
 
 const Edit = memo<BuiltinRenderProps<EditArgs>>(({ args }) => {
-  if (!args) return <Skeleton.Text rows={4} />;
+  if (!args)
+    return (
+      <div className="flex flex-col gap-2">
+        <Skeleton />
+        <Skeleton />
+        <Skeleton />
+        <Skeleton style={{ width: '60%' }} />
+      </div>
+    );
 
   const filePath = args.file_path || '';
   const fileName = filePath ? path.basename(filePath) : '';

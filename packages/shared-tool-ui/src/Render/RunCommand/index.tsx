@@ -2,7 +2,7 @@
 
 import type { RunCommandState } from '@orvilo/tool-runtime';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 

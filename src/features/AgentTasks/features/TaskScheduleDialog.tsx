@@ -15,6 +15,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item';
@@ -100,13 +101,16 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
           const value = result?.data?.remindAt;
           setRemindAt(value ? new Date(value) : null);
         })
+        .catch(() => {
+          if (alive) toast.error(t('taskList.schedule.loadFailed'));
+        })
         .finally(() => {
           if (alive) setReminderLoaded(true);
         });
       return () => {
         alive = false;
       };
-    }, [identifier]);
+    }, [identifier, t]);
 
     const months = useMemo(
       () =>
@@ -131,11 +135,13 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
           await refreshTaskList();
           setDueDate(next);
           close();
+        } catch {
+          toast.error(t('taskList.schedule.saveFailed'));
         } finally {
           setBusy(false);
         }
       },
-      [busy, close, identifier, refreshTaskList, updateTask],
+      [busy, close, identifier, refreshTaskList, t, updateTask],
     );
 
     const saveReminder = useCallback(
@@ -146,11 +152,13 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
           await taskService.setReminder(identifier, next);
           setRemindAt(next);
           close();
+        } catch {
+          toast.error(t('taskList.schedule.saveFailed'));
         } finally {
           setBusy(false);
         }
       },
-      [busy, close, identifier],
+      [busy, close, identifier, t],
     );
 
     const stepMonth = (delta: number) =>
@@ -405,6 +413,8 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
 );
 
 TaskScheduleDialogContent.displayName = 'TaskScheduleDialogContent';
+
+export { TaskScheduleDialogContent };
 
 export interface OpenTaskScheduleDialogProps {
   dueDate: string | null;

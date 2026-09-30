@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { DurableReceiptStore } from './actionGateway';
+import type { DurableReceiptStore, RecoverableReceiptStore } from './actionGateway';
 import type { DurableReceipt } from './contracts';
 
 export interface ReceiptSql {
@@ -18,7 +18,7 @@ CREATE TABLE action_receipts (
 
 /** Durable reservation ownership never expires: an ambiguous effect must be reconciled,
  * never automatically repeated by a new process. The token remains inside this adapter. */
-export class SqlDurableReceiptStore implements DurableReceiptStore {
+export class SqlDurableReceiptStore implements DurableReceiptStore, RecoverableReceiptStore {
   private readonly owners = new Map<string, string>();
 
   constructor(private readonly database: ReceiptSql) {}
@@ -67,5 +67,46 @@ export class SqlDurableReceiptStore implements DurableReceiptStore {
       [key, token, JSON.stringify(receipt)],
     );
     if (result.rows.length !== 1) throw new Error('Receipt owner, identity or transition changed');
+  }
+  async read(key: string) {
+    const result = await this.database.query<{ receipt: DurableReceipt }>(
+      'SELECT receipt FROM action_receipts WHERE reservation_key=$1',
+      [key],
+    );
+    return result.rows[0]?.receipt;
+  }
+
+  async claimRecovery(key: string, expected: DurableReceipt) {
+    const token = randomUUID();
+    const result = await this.database.query<{ id: string }>(
+      `
+      UPDATE action_receipts SET owner_token=$3
+      WHERE reservation_key=$1 AND receipt=$2::jsonb
+        AND receipt->>'status' IN ('prepared','applied','outcome_unknown')
+      RETURNING id`,
+      [key, JSON.stringify(expected), token],
+    );
+    return result.rows.length === 1 ? token : undefined;
+  }
+
+  async finishRecovery(
+    key: string,
+    token: string,
+    expected: DurableReceipt,
+    verified: DurableReceipt,
+  ) {
+    if (verified.status !== 'verified' || !verified.evidence.length) return false;
+    const result = await this.database.query<{ id: string }>(
+      `
+      UPDATE action_receipts SET receipt=$4::jsonb
+      WHERE reservation_key=$1 AND owner_token=$2 AND receipt=$3::jsonb
+        AND receipt->>'status' IN ('prepared','applied','outcome_unknown')
+        AND (receipt - ARRAY['status','updatedAt','evidence','error']) =
+            ($4::jsonb - ARRAY['status','updatedAt','evidence','error'])
+        AND ($4::jsonb->>'updatedAt')::numeric >= (receipt->>'updatedAt')::numeric
+      RETURNING id`,
+      [key, token, JSON.stringify(expected), JSON.stringify(verified)],
+    );
+    return result.rows.length === 1;
   }
 }

@@ -354,6 +354,9 @@ export function createActionGateway(deps: {
  * This is single-host filesystem storage, not a distributed database transaction.
  * Reservation directories are never reclaimed automatically: a crash before the first
  * receipt write blocks that key until trusted reconciliation. No stale-lock takeover. */
+/** Filesystem receipts intentionally have no recovery takeover capability: an
+ * incomplete receipt remains blocked. Only a store implementing atomic durable
+ * recovery ownership/CAS may be used by createActionReceiptRecovery. */
 export class FileDurableReceiptStore implements DurableReceiptStore {
   private readonly owned = new Map<string, string>();
   constructor(private readonly directory: string) {}
@@ -403,4 +406,94 @@ export class FileDurableReceiptStore implements DurableReceiptStore {
       await handle.close();
     }
   }
+}
+
+/** Trusted reconciliation only. This capability never grants mutation/reservation ownership. */
+export interface RecoverableReceiptStore {
+  claimRecovery: (key: string, expected: DurableReceipt) => Promise<string | undefined>;
+  finishRecovery: (
+    key: string,
+    token: string,
+    expected: DurableReceipt,
+    verified: DurableReceipt,
+  ) => Promise<boolean>;
+  read: (key: string) => Promise<DurableReceipt | undefined>;
+}
+
+/** Same original request and current authority are required. Cross-epoch evidence
+ * adoption is intentionally unsupported. A read-only postcondition cannot authorize replay. */
+export function createActionReceiptRecovery(deps: {
+  authority: ActionAuthority;
+  /** Trusted supervisor must bind proof to this original receipt/fence and keep
+   * the original writer stopped and its effects drained through reconciliation. */
+  confirmQuiescent: (request: ActionRequest, receipt: DurableReceipt) => Promise<boolean>;
+  verifier: Pick<ActionExecutor, 'authorize' | 'verify'>;
+  receipts: RecoverableReceiptStore;
+  now?: () => number;
+}) {
+  const now = deps.now ?? Date.now;
+  return {
+    async recover(input: ActionRequest): Promise<ControlResult<DurableReceipt>> {
+      try {
+        const request: unknown = structuredClone(input);
+        if (!validRequestShape(request))
+          return failure('invalid_request', 'Malformed recovery request');
+        if (request.schemaVersion !== CONTROL_PLANE_VERSION)
+          return failure('unsupported_version', 'Unsupported action schema');
+        return await deps.authority.withAdmission(request, async (snapshot) => {
+          const admitted = validate(request, snapshot, now());
+          if (!admitted.ok) return admitted;
+          const scoped = await deps.verifier.authorize(request, snapshot);
+          if (!scoped.ok) return scoped;
+          const key = keyOf(request);
+          const receipt = await deps.receipts.read(key);
+          const rechecked = validate(request, snapshot, now());
+          if (!rechecked.ok) return rechecked;
+          if (!receipt) return failure('outcome_unknown', 'No durable receipt exists');
+          if (
+            receipt.requestDigest !== hash(canonical(request)) ||
+            receipt.schemaVersion !== CONTROL_PLANE_VERSION ||
+            canonical(receipt.fence) !== canonical(request.fence) ||
+            receipt.commitmentId !== request.commitmentId ||
+            receipt.idempotencyKey !== request.idempotencyKey ||
+            receipt.actionKind !== request.action.kind
+          ) {
+            return failure('idempotency_conflict', 'Receipt does not match original action');
+          }
+          if (receipt.status === 'verified') return { ok: true as const, value: receipt };
+          if (!['prepared', 'applied', 'outcome_unknown'].includes(receipt.status))
+            return failure('outcome_unknown', 'Receipt cannot be reconciled');
+          if (!(await deps.confirmQuiescent(request, receipt)))
+            return failure('not_quiescent', 'Original writer and effects are not proven drained');
+          const token = await deps.receipts.claimRecovery(key, receipt);
+          if (!token) return failure('outcome_unknown', 'Receipt changed during recovery');
+          // Rotating reservation ownership prevents late original persistence. The
+          // authoritative admission lock must also drain any original target effect.
+          const beforeVerify = validate(request, snapshot, now());
+          if (!beforeVerify.ok) return beforeVerify;
+          const checked = await deps.verifier.verify(request, snapshot.commitment);
+          const finalAdmission = validate(request, snapshot, now());
+          if (!finalAdmission.ok) return finalAdmission;
+          if (
+            !checked.passed ||
+            !checked.evidence.length ||
+            checked.evidence.some((item) => typeof item !== 'string' || !item.trim())
+          )
+            return failure('outcome_unknown', 'Read-only postconditions did not establish success');
+          const verified: DurableReceipt = {
+            ...receipt,
+            status: 'verified',
+            evidence: [...receipt.evidence, ...checked.evidence],
+            updatedAt: Math.max(now(), receipt.updatedAt),
+          };
+          delete verified.error;
+          if (!(await deps.receipts.finishRecovery(key, token, receipt, verified)))
+            return failure('outcome_unknown', 'Recovery ownership changed');
+          return { ok: true as const, value: verified };
+        });
+      } catch {
+        return failure('outcome_unknown', 'Trusted receipt reconciliation unavailable');
+      }
+    },
+  };
 }

@@ -7,6 +7,7 @@ import {
   taskDispatches,
   tasks,
   taskTopics,
+  topics,
   verifyCheckResults,
   verifyRuns,
   workspaceMembers,
@@ -166,6 +167,26 @@ export class CanonicalVerifyCompletion {
     evidence: CanonicalCompletionEvidence,
   ): Promise<string | undefined> {
     const mappings = structuredClone(evidence.mappings);
+    const [liveTask] = await this.db
+      .select({ id: tasks.id, isDeleted: tasks.isDeleted, deletedAt: tasks.deletedAt })
+      .from(tasks)
+      .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, binding.workspaceId)))
+      .limit(1);
+    const [liveTopic] = await this.db
+      .select({ id: topics.id, isDeleted: topics.isDeleted, deletedAt: topics.deletedAt })
+      .from(topics)
+      .where(and(eq(topics.id, binding.topicId), eq(topics.workspaceId, binding.workspaceId)))
+      .for('update')
+      .limit(1);
+    if (
+      !liveTask ||
+      liveTask.isDeleted ||
+      liveTask.deletedAt ||
+      !liveTopic ||
+      liveTopic.isDeleted ||
+      liveTopic.deletedAt
+    )
+      return 'canonical_resource_deleted';
     const [topic] = await this.db
       .select()
       .from(taskTopics)

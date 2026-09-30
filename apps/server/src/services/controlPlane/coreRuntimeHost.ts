@@ -33,6 +33,7 @@ import type { CanonicalCompletionOutcome, CanonicalReceiptMapping } from './cano
 import { CanonicalVerifyCompletion } from './canonicalCompletion';
 import type { CanonicalRunBinding } from './canonicalRun';
 import { CanonicalRunAuthority } from './canonicalRun';
+import { CanonicalSessionSnapshots } from './canonicalSessionSnapshot';
 
 interface HostJournal {
   binding: CanonicalRunBinding;
@@ -596,6 +597,94 @@ export class CanonicalCoreRuntimeHost {
     return this.supervisor.terminate(this.journal.isolation.treeId);
   }
 
+  /** Read every receipt: unmapped ambiguous effects cannot disappear from recovery. */
+  private async loadReceipts(): Promise<DurableReceipt[]> {
+    let directories: string[];
+    try {
+      directories = await readdir(this.receipts);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return [];
+      throw error;
+    }
+    const receipts: DurableReceipt[] = [];
+    const identities = new Set<string>();
+    for (const directory of directories) {
+      if (!/^[a-f0-9]{64}$/.test(directory)) throw new Error('Unexpected receipt entry');
+      const receipt: DurableReceipt = JSON.parse(
+        await readFile(path.join(this.receipts, directory, 'receipt.json'), 'utf8'),
+      );
+      if (identities.has(receipt.id)) throw new Error('Ambiguous durable receipt identity');
+      identities.add(receipt.id);
+      receipts.push(receipt);
+    }
+    return receipts;
+  }
+
+  /** Host-only observation. Prime history contributes an optional hash, never authority. */
+  captureRecoverySnapshot(historyContentHash?: string) {
+    return new CanonicalSessionSnapshots(this.options.database).capture(this.journal.binding, {
+      commitments: [...this.commitments.values()],
+      completionMappings: this.options.completionMappings ?? [],
+      loadReceipts: () => this.loadReceipts(),
+      historyContentHash,
+    });
+  }
+
+  /** Metadata admission is separate from restarting execution. File receipts have no
+   * safe takeover adapter: incomplete work remains blocked, including unmapped work. */
+  async inspectRecoverySnapshot(snapshotId: string, historyContentHash?: string) {
+    const recovered = await new CanonicalSessionSnapshots(this.options.database).recover(
+      this.journal.binding,
+      snapshotId,
+      {
+        commitments: [...this.commitments.values()],
+        completionMappings: this.options.completionMappings ?? [],
+        loadReceipts: () => this.loadReceipts(),
+        historyContentHash,
+      },
+    );
+    if (!recovered.ok) return recovered;
+    return {
+      ok: true as const,
+      value: {
+        snapshot: recovered.value,
+        executionResume: 'unsupported' as const,
+        blockedReceiptIds: recovered.value.authority.receipts
+          .filter((receipt) => receipt.status !== 'verified')
+          .map((receipt) => receipt.id),
+      },
+    };
+  }
+
+  /** Even a valid authority snapshot cannot synthesize ACP session/load or restore
+   * a kernel/partially applied effect. Start a separately authorized fresh session. */
+  async resumeFromSnapshot(
+    snapshotId: string,
+    historyContentHash?: string,
+  ): Promise<ControlResult<never>> {
+    const inspected = await this.inspectRecoverySnapshot(snapshotId, historyContentHash);
+    if (!inspected.ok) return inspected;
+    if (inspected.value.blockedReceiptIds.length) {
+      return {
+        ok: false,
+        error: {
+          code: 'outcome_unknown',
+          message: 'Unreconciled durable receipts block execution recovery',
+          retryable: false,
+        },
+      };
+    }
+    return {
+      ok: false,
+      error: {
+        code: 'unsupported_capability',
+        message:
+          'Pinned Prime ACP cannot resume execution from an Orvilo snapshot; use a newly authorized session',
+        retryable: false,
+      },
+    };
+  }
+
   /** Explicit trusted completion request. A runtime end_turn never calls this.
    * Receipt IDs are looked up only inside this host's private durable namespace. */
   async reconcileCompletion(): Promise<CanonicalCompletionOutcome> {
@@ -606,28 +695,8 @@ export class CanonicalCoreRuntimeHost {
         this.journal.binding,
         {
           mappings: structuredClone(mappings),
-          loadReceipt: async (id) => {
-            let directories: string[];
-            try {
-              directories = await readdir(this.receipts);
-            } catch (error) {
-              if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
-                return undefined;
-              throw error;
-            }
-            let found: DurableReceipt | undefined;
-            for (const directory of directories) {
-              if (!/^[a-f0-9]{64}$/.test(directory)) throw new Error('Unexpected receipt entry');
-              const receipt: DurableReceipt = JSON.parse(
-                await readFile(path.join(this.receipts, directory, 'receipt.json'), 'utf8'),
-              );
-              if (receipt.id === id) {
-                if (found) throw new Error('Ambiguous durable receipt identity');
-                found = receipt;
-              }
-            }
-            return found;
-          },
+          loadReceipt: async (id) =>
+            (await this.loadReceipts()).find((receipt) => receipt.id === id),
         },
       );
     } catch {

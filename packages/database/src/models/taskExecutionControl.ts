@@ -7,6 +7,7 @@ import {
   taskExecutionHandoffs,
   type TaskExecutionProof,
 } from '../schemas/taskExecutionControl';
+import { topics } from '../schemas/topic';
 import { workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase, Transaction } from '../type';
 import { TaskDispatchModel } from './taskDispatch';
@@ -77,6 +78,8 @@ export class TaskExecutionControlModel {
     if (
       !task ||
       !dispatch ||
+      task.isDeleted ||
+      task.deletedAt ||
       task.status !== 'running' ||
       task.currentTopicId !== b.topicId ||
       dispatch.taskId !== b.taskId ||
@@ -155,6 +158,14 @@ export class TaskExecutionControlModel {
       (grant.taskTopicId !== null && grant.taskTopicId !== topic.id)
     )
       fail('Stale delegated runtime');
+    const [contentTopic] = await tx
+      .select({ id: topics.id, isDeleted: topics.isDeleted, deletedAt: topics.deletedAt })
+      .from(topics)
+      .where(and(eq(topics.id, b.topicId), eq(topics.workspaceId, this.workspaceId)))
+      .for('update', { noWait: true })
+      .limit(1);
+    if (!contentTopic || contentTopic.isDeleted || contentTopic.deletedAt)
+      fail('Runtime topic deleted');
     return { topic, grant };
   }
 

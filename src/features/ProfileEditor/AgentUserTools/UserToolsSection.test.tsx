@@ -100,7 +100,7 @@ const renderSection = () =>
     />,
   );
 
-const labelText = () => screen.getByTestId('label').textContent;
+const labelText = () => screen.getByText(/settingAgent\.agentTools\.tab\w+/).textContent;
 
 describe('UserToolsSection — Workspace/User tool count', () => {
   beforeEach(() => {

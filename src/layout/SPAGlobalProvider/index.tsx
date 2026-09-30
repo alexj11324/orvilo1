@@ -1,6 +1,6 @@
 'use client';
 
-import { ContextMenuHost, ModalHost } from '@lobehub/ui';
+import { ContextMenuHost } from '@lobehub/ui';
 import { ModalHost as BaseModalHost, ToastHost } from '@lobehub/ui/base-ui';
 import { StyleProvider } from 'antd-style';
 import { domMax, LazyMotion } from 'motion/react';
@@ -117,7 +117,6 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
                     </OrviloAnalyticsProviderWrapper>
                   </StyleProvider>
                 </TooltipProvider>
-                <ModalHost />
                 <BaseModalHost />
                 <ToastHost />
                 <ReUIModalHost />

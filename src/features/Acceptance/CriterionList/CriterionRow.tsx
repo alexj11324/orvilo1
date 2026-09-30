@@ -1,6 +1,5 @@
 'use client';
 
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,11 +43,11 @@ export const CriterionRequiredChip = ({ onToggle, required }: CriterionRequiredC
   const { t } = useTranslation('verify');
 
   return (
-    <Tag
+    <Badge
       color={required ? 'info' : undefined}
-      size={'small'}
+      size="sm"
       style={onToggle ? { cursor: 'pointer' } : undefined}
-      variant={'filled'}
+      variant="secondary"
       onClick={
         onToggle
           ? (event) => {
@@ -59,7 +58,7 @@ export const CriterionRequiredChip = ({ onToggle, required }: CriterionRequiredC
       }
     >
       {t(required ? 'criterion.required' : 'criterion.optional')}
-    </Tag>
+    </Badge>
   );
 };
 
@@ -115,9 +114,9 @@ export const CriterionRow = ({
   >
     {icon}
     {seq !== undefined && <span className={styles.seq}>C{seq}</span>}
-    <Text ellipsis style={{ flex: 1, minWidth: 0 }}>
+    <div className="truncate min-w-0" style={{ flex: 1, minWidth: 0 }}>
       {title}
-    </Text>
+    </div>
     {children}
     {actions}
   </div>

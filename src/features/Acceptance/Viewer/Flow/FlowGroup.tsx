@@ -1,6 +1,6 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { Handle, Position, useNodeId } from '@xyflow/react';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckCircle2,
   ChevronDown,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { createElement, use } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { FlowAnchorContext } from './flowAnchor';
 import type { FlowGraphData } from './flowGraph';
@@ -132,9 +134,9 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
               {data.onToggle && (
                 <Button
                   aria-label={t('flow.expandGroup', { title: data.title })}
-                  className="nodrag nopan"
-                  size="small"
-                  type="text"
+                  className={cn('nodrag nopan')}
+                  size="sm"
+                  variant="ghost"
                   onClick={toggle}
                 >
                   <ChevronRight size={16} />
@@ -143,9 +145,9 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
               {data.onEnter && (
                 <Button
                   aria-label={t('flow.enterGroup', { title: data.title })}
-                  className="nodrag nopan"
-                  size="small"
-                  type="text"
+                  className={cn('nodrag nopan')}
+                  size="sm"
+                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
                     data.onEnter?.();
@@ -161,32 +163,32 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
             {data.onToggle && (
               <Button
                 aria-label={t('flow.collapseGroup', { title: data.title })}
-                className="nodrag nopan"
-                size="small"
-                type="text"
+                className={cn('nodrag nopan')}
+                size="sm"
+                variant="ghost"
                 onClick={toggle}
               >
                 <ChevronDown size={16} />
               </Button>
             )}
             {createElement(statusIcon, { size: 18, style: { color: flowStateColor(data.state) } })}
-            <Text ellipsis fontSize={13} style={{ flex: 1 }}>
+            <div className="truncate min-w-0 text-[13px]" style={{ flex: 1 }}>
               {data.title}
-            </Text>
-            <Text fontSize={12} type="secondary">
+            </div>
+            <div className="text-[12px] text-muted-foreground">
               {`${data.passed}/${data.total}`}
-            </Text>
+            </div>
             {Boolean(data.reviewed) && (
-              <Text fontSize={12} type="secondary">
+              <div className="text-[12px] text-muted-foreground">
                 {t('flow.groupReviewed', { count: data.reviewed })}
-              </Text>
+              </div>
             )}
             {data.onEnter && (
               <Button
                 aria-label={t('flow.enterGroup', { title: data.title })}
-                className="nodrag nopan"
-                size="small"
-                type="text"
+                className={cn('nodrag nopan')}
+                size="sm"
+                variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
                   data.onEnter?.();

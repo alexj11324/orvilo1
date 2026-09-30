@@ -1,20 +1,22 @@
 'use client';
 
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Select,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import type { GoalMetricComparison } from '@orvilo/types';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useGoalStore } from '@/store/goal';
 
 /**
@@ -58,9 +60,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
   return (
     <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={13} weight={500}>
-          {t('goalProcess.northStar.declare.keyLabel')}
-        </Text>
+        <div className="text-[13px] font-medium">{t('goalProcess.northStar.declare.keyLabel')}</div>
         <Input
           autoFocus
           placeholder={t('goalProcess.northStar.declare.keyPlaceholder')}
@@ -69,9 +69,9 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={13} weight={500}>
+        <div className="text-[13px] font-medium">
           {t('goalProcess.northStar.declare.titleLabel')}
-        </Text>
+        </div>
         <Input
           placeholder={t('goalProcess.northStar.declare.titlePlaceholder')}
           value={title}
@@ -80,22 +80,33 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
       </div>
       <div className="flex gap-3">
         <div className="flex flex-col flex-1 gap-1.5">
-          <Text fontSize={13} weight={500}>
+          <div className="text-[13px] font-medium">
             {t('goalProcess.northStar.declare.opLabel')}
-          </Text>
+          </div>
           <Select
             value={op}
-            options={(['gte', 'lte', 'gt', 'lt', 'eq'] as const).map((value) => ({
+            items={(['gte', 'lte', 'gt', 'lt', 'eq'] as const).map((value) => ({
               label: t(`goalProcess.northStar.op.${value}` as const),
               value,
             }))}
-            onChange={(value) => setOp(value as GoalMetricComparison)}
-          />
+            onValueChange={(value) => setOp(value as GoalMetricComparison)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['gte', 'lte', 'gt', 'lt', 'eq'] as const).map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(`goalProcess.northStar.op.${value}` as const)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col flex-1 gap-1.5">
-          <Text fontSize={13} weight={500}>
+          <div className="text-[13px] font-medium">
             {t('goalProcess.northStar.declare.targetLabel')}
-          </Text>
+          </div>
           <Input
             placeholder={'10000'}
             value={target}
@@ -110,7 +121,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
         <Button
           disabled={!key.trim() || !Number.isFinite(Number(target)) || target.trim() === ''}
           loading={busy}
-          type={'primary'}
+          variant="outline"
           onClick={() => void submit()}
         >
           {t('goalProcess.northStar.declare.submit')}

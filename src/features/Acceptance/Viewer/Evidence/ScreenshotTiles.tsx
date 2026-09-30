@@ -1,7 +1,6 @@
 'use client';
 
 import { Image } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Check, MessageSquare, X } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
@@ -390,10 +389,10 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
                 className={styles.swatch}
                 style={{ background: opened.color ?? cssVar.colorError }}
               />
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {numbered ? `${opened.label ?? openedNote! + 1} · ` : ''}
                 {opened.authorName}
-              </Text>
+              </div>
             </div>
             <div className={styles.noteBody}>{opened.comment}</div>
           </div>

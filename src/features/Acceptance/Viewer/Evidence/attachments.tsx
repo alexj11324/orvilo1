@@ -1,13 +1,15 @@
 'use client';
 
 import { Image } from '@lobehub/ui';
-import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 import { type ClipboardEvent, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Upload } from '@/components/Upload';
 import { useFileStore } from '@/store/file';
 
 /** 10MB — a screenshot, not a video; keeps the reject payload light. */
@@ -262,10 +264,10 @@ export const AttachmentUploadButton = memo<AttachmentUploadButtonProps>(({ disab
     >
       <Button
         disabled={disabled}
-        icon={<ImagePlus />}
         style={{ alignSelf: 'flex-start', minHeight: md ? undefined : 44 }}
-        type={'text'}
+        variant="ghost"
       >
+        <ImagePlus />
         {t('acceptance.review.attach')}
       </Button>
     </Upload>

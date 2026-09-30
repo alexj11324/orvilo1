@@ -1,9 +1,9 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { HistoryIcon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -78,9 +78,7 @@ const AutomationsPage = memo(() => {
 
   const headerLeft = (
     <div className="flex items-center gap-3">
-      <Text fontSize={15} weight={600}>
-        {t('page.title')}
-      </Text>
+      <div className="text-[15px] font-semibold">{t('page.title')}</div>
       <AutomationScopeSwitch scope={scope} onChange={setScope} />
     </div>
   );
@@ -94,7 +92,8 @@ const AutomationsPage = memo(() => {
           <div className="flex items-center gap-1.5">
             <AutomationStatusSelect value={statusFilter} onChange={setStatusFilter} />
             <WorkspaceLink to={'/automations/runs'}>
-              <Button icon={HistoryIcon} size={'small'} type={'text'}>
+              <Button size="sm" variant="ghost">
+                <HistoryIcon data-icon="inline-start" />
                 {t('overview.all_runs')}
               </Button>
             </WorkspaceLink>
@@ -105,11 +104,11 @@ const AutomationsPage = memo(() => {
                     <span className="inline-flex">
                       <Button
                         disabled={!canCreate}
-                        icon={PlusIcon}
-                        size={'small'}
-                        type={'primary'}
+                        size="sm"
+                        variant="outline"
                         onClick={startBlank}
                       >
+                        <PlusIcon data-icon="inline-start" />
                         {t('page.new_automation')}
                       </Button>
                     </span>

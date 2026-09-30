@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { BadgeCheck, GitCommitHorizontal } from 'lucide-react';
@@ -8,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
@@ -36,12 +36,12 @@ const SignInPrompt = memo(() => {
   const { t } = useTranslation('verify');
   return (
     <div className={`flex flex-col gap-2.5 ${local.signInPrompt}`}>
-      <Text weight={600}>{t('acceptance.comments.signInTitle')}</Text>
-      <Text fontSize={13} type={'secondary'}>
+      <div className="font-semibold">{t('acceptance.comments.signInTitle')}</div>
+      <div className="text-[13px] text-muted-foreground">
         {t('acceptance.comments.signInDescription')}
-      </Text>
+      </div>
       <div className="flex gap-2">
-        <Button href={buildAuthReturnUrl('signin', currentReturnPath())} type={'primary'}>
+        <Button href={buildAuthReturnUrl('signin', currentReturnPath())} variant="outline">
           {t('acceptance.comments.signIn')}
         </Button>
         <Button href={buildAuthReturnUrl('signup', currentReturnPath())}>
@@ -294,13 +294,11 @@ const AcceptanceDiscussion = memo(() => {
         </div>
       ) : error ? (
         // A read that failed says nothing about permission.
-        <Text fontSize={13} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground">
           {t('acceptance.comments.loadFailed')}
-        </Text>
+        </div>
       ) : isLoading ? null : isSignedIn ? ( // Neither line below is true yet while the answer is in flight.
-        <Text fontSize={13} type={'secondary'}>
-          {t('acceptance.comments.readOnly')}
-        </Text>
+        <div className="text-[13px] text-muted-foreground">{t('acceptance.comments.readOnly')}</div>
       ) : (
         <SignInPrompt />
       )}

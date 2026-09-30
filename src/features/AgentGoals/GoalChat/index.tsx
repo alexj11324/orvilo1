@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -27,9 +26,9 @@ const Welcome = memo(() => {
   const { t } = useTranslation('chat');
   return (
     <div className="flex flex-col items-center flex-1 justify-center" style={{ padding: 24 }}>
-      <Text style={{ fontSize: 14, textAlign: 'center' }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ fontSize: 14, textAlign: 'center' }}>
         {t('goalChat.welcome')}
-      </Text>
+      </div>
     </div>
   );
 });

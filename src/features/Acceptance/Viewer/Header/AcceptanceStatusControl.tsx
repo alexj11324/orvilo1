@@ -1,10 +1,10 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { CircleCheck, RotateCcw, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
 import { verifyService } from '@/services/verify';
 
 import { useAcceptanceScope } from '../AcceptanceScope';

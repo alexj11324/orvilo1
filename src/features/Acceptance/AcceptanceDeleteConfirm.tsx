@@ -1,19 +1,15 @@
 'use client';
 
-import {
-  Button,
-  Checkbox,
-  createModal,
-  type ModalInstance,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useClientDataSWR } from '@/libs/swr';
 import { verifyKeys } from '@/libs/swr/keys';
 import { verifyService } from '@/services/verify';
@@ -97,7 +93,7 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
 
   return (
     <div className="flex flex-col gap-3">
-      <Text fontSize={13} type={purge ? 'danger' : 'secondary'}>
+      <div className="text-[13px]" type={purge ? 'danger' : 'secondary'}>
         {purge
           ? translate('acceptance.workspace.deleteConfirm.purgeWarning')
           : batch
@@ -105,13 +101,9 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
                 count: ids.length,
               })
             : translate('acceptance.workspace.deleteConfirmDescription', { title })}
-      </Text>
-      {description && (
-        <Text fontSize={13} type={'secondary'}>
-          {description}
-        </Text>
-      )}
-      <Checkbox checked={purge} onChange={setPurge}>
+      </div>
+      {description && <div className="text-[13px] text-muted-foreground">{description}</div>}
+      <Checkbox checked={purge} onCheckedChange={(c) => setPurge(c === true)}>
         {size
           ? translate('acceptance.workspace.deleteConfirm.purgeOption', { size })
           : translate('acceptance.workspace.deleteConfirm.purgeOptionPlain')}
@@ -137,7 +129,12 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
         <Button disabled={pending} onClick={close}>
           {translate('actions.cancel')}
         </Button>
-        <Button danger loading={pending} type={'primary'} onClick={() => void run()}>
+        <Button
+          loading={pending}
+          variant="destructive"
+          variant="outline"
+          onClick={() => void run()}
+        >
           {okLabel}
         </Button>
       </div>

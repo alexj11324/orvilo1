@@ -1,9 +1,11 @@
 'use client';
 
-import { Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -44,9 +46,7 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
   return (
     <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={13} weight={500}>
-          {t('goalProcess.addTask.titleLabel')}
-        </Text>
+        <div className="text-[13px] font-medium">{t('goalProcess.addTask.titleLabel')}</div>
         <Input
           autoFocus
           placeholder={t('goalProcess.addTask.titlePlaceholder')}
@@ -58,9 +58,7 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={13} weight={500}>
-          {t('goalProcess.addTask.descriptionLabel')}
-        </Text>
+        <div className="text-[13px] font-medium">{t('goalProcess.addTask.descriptionLabel')}</div>
         <Textarea
           placeholder={t('goalProcess.addTask.descriptionPlaceholder')}
           rows={3}
@@ -74,7 +72,7 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
         <Button
           disabled={!title.trim()}
           loading={busy}
-          type={'primary'}
+          variant="outline"
           onClick={() => void submit()}
         >
           {t('goalProcess.frontier.add')}

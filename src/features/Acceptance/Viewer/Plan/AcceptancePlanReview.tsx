@@ -1,9 +1,10 @@
 'use client';
 
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { verifyService } from '@/services/verify';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
@@ -42,8 +43,8 @@ export function AcceptancePlanReview({ runId }: { runId: string | undefined }) {
         <div className="flex justify-end">
           <Button
             disabled={pending}
-            size="small"
-            type="text"
+            size="sm"
+            variant="ghost"
             onClick={() =>
               openGroupFeedbackModal({
                 title: t('flow.plan.requestChanges'),

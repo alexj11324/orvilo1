@@ -1,8 +1,10 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, FlaskConical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { experimentStatusVisual } from './experimentStatus';
 import type { GraphNodeData } from './GraphNode';
@@ -51,8 +53,8 @@ const ExperimentGroup = ({ data }: NodeProps) => {
         <Button
           aria-expanded
           aria-label={t('goalExperiment.collapseNamed', { title: view.node.title })}
-          className={'nodrag'}
-          size={'small'}
+          className={cn('nodrag')}
+          size="sm"
           style={{ minWidth: 0 }}
           title={view.node.title}
           onClick={(event) => {
@@ -68,8 +70,8 @@ const ExperimentGroup = ({ data }: NodeProps) => {
         </Button>
         <div className="flex gap-1" style={{ flexShrink: 0 }}>
           <Button
-            className={'nodrag'}
-            size={'small'}
+            className={cn('nodrag')}
+            size="sm"
             onClick={(event) => {
               event.stopPropagation();
               onInspect();
@@ -79,8 +81,8 @@ const ExperimentGroup = ({ data }: NodeProps) => {
           </Button>
           <Button
             aria-label={t('goalExperiment.drillNamed', { title: view.node.title })}
-            className={'nodrag'}
-            size={'small'}
+            className={cn('nodrag')}
+            size="sm"
             onClick={(event) => {
               event.stopPropagation();
               onEnter();
@@ -93,13 +95,13 @@ const ExperimentGroup = ({ data }: NodeProps) => {
       <div className="flex gap-3" style={{ paddingBlock: 6, paddingInline: 16 }}>
         <div className="flex items-center gap-[5px]">
           <status.icon color={status.color} size={13} />
-          <Text fontSize={12} style={{ color: status.color }}>
+          <div className="text-[12px]" style={{ color: status.color }}>
             {t(`goalExperiment.status.${view.node.status}`)}
-          </Text>
+          </div>
         </div>
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {t('goalExperiment.members', { count: memberCount ?? 0 })}
-        </Text>
+        </div>
       </div>
       <Handle position={Position.Bottom} type={'source'} />
     </div>

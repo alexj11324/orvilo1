@@ -1,7 +1,7 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { BotMessageSquare, ChevronRight } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -111,9 +111,9 @@ const RunningClock = memo<{ startedAt?: Date }>(({ startedAt }) => {
   const elapsed = useElapsed(startedAt);
   if (!elapsed) return null;
   return (
-    <Text className={styles.mono} fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} style={{ flex: 'none' }}>
       {t('goalProcess.running.elapsed', { duration: elapsed })}
-    </Text>
+    </div>
   );
 });
 
@@ -140,21 +140,22 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
             style={{ opacity: hasDetail ? 1 : 0 }}
           />
           <KindDot kind={view.node.kind} />
-          <Text ellipsis style={{ flexShrink: 1, minWidth: 0 }} weight={500}>
+          <div className="truncate min-w-0 font-medium" style={{ flexShrink: 1, minWidth: 0 }}>
             {coordinatorTitleKey ? t(coordinatorTitleKey as any) : view.node.title}
-          </Text>
-          <Text ellipsis fontSize={14} style={{ flexShrink: 1, minWidth: 0 }} type={'secondary'}>
+          </div>
+          <div
+            className="truncate min-w-0 text-[14px] text-muted-foreground"
+            style={{ flexShrink: 1, minWidth: 0 }}
+          >
             {summarize(view)}
-          </Text>
+          </div>
           {view.startedAt && <RunningClock startedAt={view.startedAt} />}
-          <Text
-            className={cx(styles.time, styles.mono)}
-            fontSize={12}
+          <div
+            className={cn('text-[12px] text-muted-foreground', cx(styles.time, styles.mono))}
             title={title}
-            type={'secondary'}
           >
             {text}
-          </Text>
+          </div>
         </div>
         {open && (
           <div className={`flex flex-col gap-2.5 ${styles.body}`}>
@@ -163,11 +164,11 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
                 {view.attempts.map((attempt) => (
                   <div className={`flex flex-col gap-0.5 ${styles.attempt}`} key={attempt.index}>
                     <div className="flex items-center gap-2">
-                      <Text fontSize={12} style={{ flex: 'none' }} weight={600}>
+                      <div className="text-[12px] font-semibold" style={{ flex: 'none' }}>
                         {t('goalProcess.attempts.nth', { index: attempt.index })}
-                      </Text>
-                      <Text
-                        fontSize={12}
+                      </div>
+                      <div
+                        className="text-[12px]"
                         style={{ flex: 'none' }}
                         type={
                           attempt.outcome === 'passed'
@@ -178,12 +179,10 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
                         }
                       >
                         {t(`goalProcess.attempts.${attempt.outcome}` as const)}
-                      </Text>
+                      </div>
                     </div>
                     {attempt.reason && (
-                      <Text fontSize={12} type={'secondary'}>
-                        {attempt.reason}
-                      </Text>
+                      <div className="text-[12px] text-muted-foreground">{attempt.reason}</div>
                     )}
                   </div>
                 ))}
@@ -197,9 +196,9 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
                 onClick={() => onSelect(finding.id)}
               >
                 <KindDot kind={'finding'} />
-                <Text fontSize={13}>
+                <div className="text-[13px]">
                   {t('goalProcess.activity.finding', { title: finding.title })}
-                </Text>
+                </div>
               </div>
             ))}
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { MessagesSquare } from 'lucide-react';
@@ -12,6 +12,7 @@ import urlJoin from 'url-join';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import Loading from '@/components/Loading/BrandTextLoading';
+import { Badge } from '@/components/reui/badge';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
@@ -125,45 +126,54 @@ const LessonDetail = memo(() => {
             {data && (
               <div className="flex flex-col gap-5" style={{ paddingBlock: '14px 64px' }}>
                 <div className="flex flex-col gap-2.5">
-                  <Text fontSize={12} type={'secondary'} weight={600}>
+                  <div className="text-[12px] text-muted-foreground font-semibold">
                     {t('rules.detail.eyebrow', { code: data.lesson.code })}
-                  </Text>
-                  <Text className={styles.title} fontSize={26} lineHeight={1.35} weight={700}>
+                  </div>
+                  <div
+                    className={cn('text-[26px] font-bold', styles.title)}
+                    style={{ lineHeight: 1.35 }}
+                  >
                     {data.lesson.title}
-                  </Text>
+                  </div>
                   <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                    <Text fontSize={12.5} type={'secondary'}>
+                    <div className="text-muted-foreground" style={{ fontSize: 12.5 }}>
                       {t('rules.detail.meta', {
                         hits: data.lesson.hitCount,
                         runs: data.lesson.hitRunCount,
                       })}
-                    </Text>
-                    {data.lesson.layer && <Tag>{data.lesson.layer}</Tag>}
+                    </div>
+                    {data.lesson.layer && <Badge variant="secondary">{data.lesson.layer}</Badge>}
                     {/* Only worth a tag when it is NOT active: the list only ever shows
                         active rules, so this is the stale-deep-link case. */}
                     {data.lesson.status !== 'active' && (
-                      <Tag color={'orange'}>{t(`rules.detail.status.${data.lesson.status}`)}</Tag>
+                      <Badge variant="warning">
+                        {t(`rules.detail.status.${data.lesson.status}`)}
+                      </Badge>
                     )}
                     {/* The real revision counter, not an invented version number — S60 forbids
                         faking one, and this table has the chain to back it up. */}
                     {data.lesson.currentRevision > 1 && (
-                      <Text fontSize={12} type={'secondary'}>
+                      <div className="text-[12px] text-muted-foreground">
                         {t('rules.detail.revision', { revision: data.lesson.currentRevision })}
-                      </Text>
+                      </div>
                     )}
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('rules.detail.updatedAt', {
                         time: dayjs(data.lesson.updatedAt).fromNow(),
                       })}
-                    </Text>
+                    </div>
                   </div>
                   {domainError && (
-                    <Text fontSize={12.5} type={'danger'}>
+                    <div className="text-destructive" style={{ fontSize: 12.5 }}>
                       {t('rules.detail.domainUnavailable')} ·{' '}
-                      <Text as={'button'} type={'info'} onClick={() => void mutateDomain()}>
+                      <button
+                        className="text-info"
+                        type={'button'}
+                        onClick={() => void mutateDomain()}
+                      >
                         {t('rules.detail.retry')}
-                      </Text>
-                    </Text>
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -176,20 +186,18 @@ const LessonDetail = memo(() => {
                 >
                   {sections?.map((section) => (
                     <div className={styles.sectionItem} key={section.key}>
-                      <Text fontSize={12} type={'secondary'} weight={600}>
+                      <div className="text-[12px] text-muted-foreground font-semibold">
                         <SectionLabel sectionKey={section.key} />
-                      </Text>
-                      <Text fontSize={14} lineHeight={1.65}>
+                      </div>
+                      <div className="text-[14px]" style={{ lineHeight: 1.65 }}>
                         {section.body}
-                      </Text>
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex flex-col gap-2.5">
-                  <Text fontSize={15} weight={600}>
-                    {t('rules.detail.examples')}
-                  </Text>
+                  <div className="text-[15px] font-semibold">{t('rules.detail.examples')}</div>
                   {data.hits.length === 0 ? (
                     <Empty>
                       <EmptyHeader>
@@ -208,17 +216,18 @@ const LessonDetail = memo(() => {
                         }}
                       >
                         <div className="flex items-start gap-3 justify-between">
-                          <Text className={styles.hitTitle} fontSize={13} lineHeight={1.65}>
+                          <div
+                            className={cn('text-[13px]', styles.hitTitle)}
+                            style={{ lineHeight: 1.65 }}
+                          >
                             {hit.example}
-                          </Text>
-                          <Tag color={hit.outcome === 'pass' ? 'green' : 'red'}>
+                          </div>
+                          <Badge variant={hit.outcome === 'pass' ? 'success' : 'destructive'}>
                             {t(`rules.detail.outcome.${hit.outcome}`)}
-                          </Tag>
+                          </Badge>
                         </div>
                         {hit.note && (
-                          <Text fontSize={12} type={'secondary'}>
-                            {hit.note}
-                          </Text>
+                          <div className="text-[12px] text-muted-foreground">{hit.note}</div>
                         )}
                         {hit.subjectType === 'topic' && activeAgentId ? (
                           <Link to={urlJoin('/agent', activeAgentId, hit.subjectId)}>
@@ -227,15 +236,15 @@ const LessonDetail = memo(() => {
                                 size={13}
                                 style={{ color: cssVar.colorTextSecondary }}
                               />
-                              <Text fontSize={12} type={'secondary'}>
+                              <div className="text-[12px] text-muted-foreground">
                                 {hit.runTitle ?? `#${hit.runIndex}`}
-                              </Text>
+                              </div>
                             </div>
                           </Link>
                         ) : (
-                          <Text fontSize={11} type={'secondary'}>
+                          <div className="text-[11px] text-muted-foreground">
                             {hit.runTitle ?? `#${hit.runIndex}`}
-                          </Text>
+                          </div>
                         )}
                       </div>
                     ))

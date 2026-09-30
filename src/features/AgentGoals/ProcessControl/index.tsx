@@ -1,11 +1,17 @@
 'use client';
 
-import { Accordion, type AccordionItemType, Tag, Text } from '@lobehub/ui/base-ui';
 import { experimentOwner } from '@orvilo/utils/goalGraph';
 import { createStaticStyles } from 'antd-style';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { usePermission } from '@/hooks/usePermission';
 import { goalService } from '@/services/goal';
 import { useChatStore } from '@/store/chat';
@@ -153,12 +159,8 @@ const ProcessControl = memo<ProcessControlProps>(
 
         {!hasExperiments && map}
 
-        <Accordion
-          defaultValue={['deliverables', 'findings', 'activity']}
-          gap={0}
-          indicatorPlacement="inline"
-          styles={{ header: { paddingBlock: 6, paddingInline: 0 } }}
-          items={
+        <Accordion defaultValue={['deliverables', 'findings', 'activity']}>
+          {(
             [
               // The structured acceptance standard the terminal goal acceptance is
               // gated on. Collapsed by default — reference material, like the task
@@ -172,13 +174,15 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'acceptance',
                 title: (
                   <div className="flex items-center gap-2">
-                    <Text fontSize={14} weight={600}>
-                      {t('goalAcceptance.title')}
-                    </Text>
-                    {criteriaIds.length > 0 && <Tag size={'small'}>{criteriaIds.length}</Tag>}
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[14px] font-semibold">{t('goalAcceptance.title')}</div>
+                    {criteriaIds.length > 0 && (
+                      <Badge size="sm" variant="secondary">
+                        {criteriaIds.length}
+                      </Badge>
+                    )}
+                    <div className="text-[12px] text-muted-foreground">
                       {t('goalAcceptance.gateHint')}
-                    </Text>
+                    </div>
                   </div>
                 ),
               },
@@ -194,11 +198,13 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'deliverables',
                 title: (
                   <div className="flex items-center gap-2">
-                    <Text fontSize={14} weight={600}>
+                    <div className="text-[14px] font-semibold">
                       {t('goalProcess.deliverables.title')}
-                    </Text>
+                    </div>
                     {graph.artifacts.length > 0 && (
-                      <Tag size={'small'}>{graph.artifacts.length}</Tag>
+                      <Badge size="sm" variant="secondary">
+                        {graph.artifacts.length}
+                      </Badge>
                     )}
                   </div>
                 ),
@@ -212,10 +218,14 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'findings',
                 title: (
                   <div className="flex items-center gap-2">
-                    <Text fontSize={14} weight={600}>
+                    <div className="text-[14px] font-semibold">
                       {t('goalProcess.findings.title')}
-                    </Text>
-                    {graph.findings.length > 0 && <Tag size={'small'}>{graph.findings.length}</Tag>}
+                    </div>
+                    {graph.findings.length > 0 && (
+                      <Badge size="sm" variant="secondary">
+                        {graph.findings.length}
+                      </Badge>
+                    )}
                   </div>
                 ),
               },
@@ -228,15 +238,20 @@ const ProcessControl = memo<ProcessControlProps>(
                 key: 'activity',
                 title: (
                   <div className="flex items-center gap-2">
-                    <Text fontSize={14} weight={600}>
+                    <div className="text-[14px] font-semibold">
                       {t('goalProcess.activity.title')}
-                    </Text>
+                    </div>
                   </div>
                 ),
               },
-            ].filter(Boolean) as AccordionItemType[]
-          }
-        />
+            ] as { children: ReactNode; key: string; title: ReactNode }[]
+          ).map((item) => (
+            <AccordionItem key={item.key} value={item.key}>
+              <AccordionTrigger>{item.title}</AccordionTrigger>
+              <AccordionContent>{item.children}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
     );
   },

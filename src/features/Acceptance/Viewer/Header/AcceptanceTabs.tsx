@@ -1,9 +1,11 @@
 'use client';
 
-import { Tabs, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ListChecks, MessagesSquare, Paperclip, Route } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export type AcceptanceTabKey = 'checks' | 'discussion' | 'resources' | 'flow';
 
@@ -68,25 +70,23 @@ const AcceptanceTabs = ({
   ];
 
   return (
-    <Tabs
-      activeKey={active}
-      classNames={{ list: styles.list }}
-      style={{ minWidth: 0, overflowX: 'auto' }}
-      variant={'square'}
-      items={tabs
-        .filter((tab) => tab.key !== 'flow' || flowCount > 0)
-        .map((tab) => ({
-          icon: <tab.icon size={16} />,
-          key: tab.key,
-          label: (
-            <div className="flex items-center gap-1.5">
-              {tab.label}
-              <Tag shape={'round'}>{tab.count}</Tag>
-            </div>
-          ),
-        }))}
-      onChange={(key) => onChange(key as AcceptanceTabKey)}
-    />
+    <Tabs value={active} onValueChange={(key) => onChange(key as AcceptanceTabKey)}>
+      <TabsList className={styles.list} style={{ minWidth: 0, overflowX: 'auto' }}>
+        {tabs
+          .filter((tab) => tab.key !== 'flow' || flowCount > 0)
+          .map((tab) => (
+            <TabsTrigger key={tab.key} value={tab.key}>
+              <tab.icon size={16} />
+              <div className="flex items-center gap-1.5">
+                {tab.label}
+                <Badge radius="full" variant="secondary">
+                  {tab.count}
+                </Badge>
+              </div>
+            </TabsTrigger>
+          ))}
+      </TabsList>
+    </Tabs>
   );
 };
 

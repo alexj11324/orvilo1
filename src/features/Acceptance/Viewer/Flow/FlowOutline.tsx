@@ -1,6 +1,6 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { Edge, Node } from '@xyflow/react';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   ArrowRight,
   CheckCircle2,
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import type { FlowGraphData } from './flowGraph';
 import { flowStateColor } from './FlowNode';
@@ -93,8 +95,8 @@ export function FlowOutline({
     return (
       <Button
         aria-expanded={group ? !data.collapsed : undefined}
-        className={styles.item}
-        type={data.selected ? 'default' : 'text'}
+        className={cn(styles.item)}
+        variant={data.selected ? 'outline' : 'ghost'}
         onClick={() => (group ? data.onToggle?.() : onSelect(node.id))}
       >
         <div className="flex items-center gap-2.5 w-full">
@@ -104,13 +106,13 @@ export function FlowOutline({
             'size': 18,
             'style': { color: flowStateColor(data.state), flex: 'none' },
           })}
-          <Text strong={group} style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
+          <div className="font-semibold" style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
             {data.title}
-          </Text>
+          </div>
           {group ? (
-            <Text fontSize={12} type="secondary">
+            <div className="text-[12px] text-muted-foreground">
               {data.passed}/{data.total}
-            </Text>
+            </div>
           ) : (
             <ChevronRight size={16} />
           )}
@@ -124,9 +126,9 @@ export function FlowOutline({
     if (!reference && (!label || label === branch.target.data.title)) return null;
     return (
       <Button
-        className={styles.branch}
+        className={cn(styles.branch)}
         key={branch.edge.id}
-        type="text"
+        variant="ghost"
         onClick={() => onSelect(branch.edge.id)}
       >
         {/* Top-aligned: a caption that wraps keeps its glyph on the first line and

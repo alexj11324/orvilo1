@@ -1,13 +1,17 @@
 'use client';
 
-import { Button, Skeleton, Tag, Text, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { Check, Plus, Target } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 
 import { openDeclareMetricModal } from './DeclareMetricModal';
@@ -63,39 +67,43 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
     return (
       <div className={`flex flex-col gap-1.5 ${styles.card}`}>
         <div className="flex items-center gap-2 justify-between">
-          <Text ellipsis fontSize={12} type={'secondary'}>
-            {card.label}
-          </Text>
+          <div className="truncate min-w-0 text-[12px] text-muted-foreground">{card.label}</div>
           <div className="flex items-center gap-1">
             {card.met && (
-              <Tag color={'success'} size={'small'}>
+              <Badge size="sm" variant="success">
                 <Check size={11} /> {t('goalProcess.northStar.met')}
-              </Tag>
+              </Badge>
             )}
             {/* Recording stays available after the target is met: the world
                 can regress, and a card whose only refresh path disappeared
                 would stay falsely met forever. */}
             {canEdit && (
-              <Tooltip title={t('goalProcess.northStar.record.title')}>
-                <Button
-                  icon={<Plus size={13} />}
-                  size={'small'}
-                  type={'text'}
-                  onClick={() => openRecordObservationModal(goalId, card.key, card.label)}
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openRecordObservationModal(goalId, card.key, card.label)}
+                    >
+                      <Plus size={13} />
+                    </Button>
+                  }
                 />
+                <TooltipContent>{t('goalProcess.northStar.record.title')}</TooltipContent>
               </Tooltip>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-baseline gap-1.5">
-            <Text className={card.met ? styles.metValue : ''} fontSize={20} weight={700}>
+            <div className={cn('text-[20px] font-bold', card.met ? styles.metValue : '')}>
               {formatMetricValue(card.current)}
-            </Text>
-            <Text fontSize={12} type={'secondary'}>
+            </div>
+            <div className="text-[12px] text-muted-foreground">
               {t(`goalProcess.northStar.op.${card.op}` as const)} {formatMetricValue(card.target)}
               {card.unit ? ` ${card.unit}` : ''}
-            </Text>
+            </div>
           </div>
           <Sparkline met={card.met} values={card.trend} />
         </div>
@@ -109,10 +117,10 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
             }}
           />
         </div>
-        <Text className={card.stale ? styles.stale : ''} fontSize={11} type={'secondary'}>
+        <div className={cn('text-[11px] text-muted-foreground', card.stale ? styles.stale : '')}>
           {freshness}
           {card.stale ? ` · ${t('goalProcess.northStar.staleWarning')}` : ''}
-        </Text>
+        </div>
       </div>
     );
   },
@@ -148,11 +156,11 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
     return (
       <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
         <Target color={cssVar.colorTextQuaternary} size={16} />
-        <Text fontSize={13} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground">
           {t('goalProcess.northStar.emptyHint')}
-        </Text>
+        </div>
         {canEdit && (
-          <Button size={'small'} type={'text'} onClick={() => openDeclareMetricModal(goalId)}>
+          <Button size="sm" variant="ghost" onClick={() => openDeclareMetricModal(goalId)}>
             {t('goalProcess.northStar.declare.title')}
           </Button>
         )}
@@ -176,7 +184,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
     return (
       <div className="flex gap-2.5">
         {criteria.map((criterion) => (
-          <Skeleton height={96} key={criterion.key} width={236} />
+          <Skeleton key={criterion.key} style={{ height: 96, width: 236 }} />
         ))}
       </div>
     );
@@ -187,13 +195,19 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
         <MetricCard canEdit={canEdit} card={card} goalId={goalId} key={card.key} />
       ))}
       {canEdit && (
-        <Tooltip title={t('goalProcess.northStar.declare.title')}>
-          <Button
-            icon={<Plus size={14} />}
-            style={{ alignSelf: 'center' }}
-            type={'text'}
-            onClick={() => openDeclareMetricModal(goalId)}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                style={{ alignSelf: 'center' }}
+                variant="ghost"
+                onClick={() => openDeclareMetricModal(goalId)}
+              >
+                <Plus size={14} />
+              </Button>
+            }
           />
+          <TooltipContent>{t('goalProcess.northStar.declare.title')}</TooltipContent>
         </Tooltip>
       )}
     </div>

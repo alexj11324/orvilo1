@@ -1,4 +1,3 @@
-import { ActionIcon, Button, DropdownMenu, Pagination, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -16,7 +15,11 @@ import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import TablePagination from '@/components/TablePagination';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -99,13 +102,9 @@ const StatCard = memo<{
   >
     <div className="flex items-center gap-2">
       {createElement(icon, { color: danger ? cssVar.colorError : cssVar.colorSuccess, size: 16 })}
-      <Text fontSize={12} type={'secondary'}>
-        {label}
-      </Text>
+      <div className="text-[12px] text-muted-foreground">{label}</div>
     </div>
-    <Text fontSize={22} weight={600}>
-      {value}
-    </Text>
+    <div className="text-[22px] font-semibold">{value}</div>
   </div>
 ));
 
@@ -168,9 +167,7 @@ const AutomationRunsPage = memo(() => {
         left={
           <div className="flex items-center gap-2">
             <HistoryIcon color={cssVar.colorTextTertiary} size={16} />
-            <Text fontSize={15} weight={600}>
-              {t('runs.title')}
-            </Text>
+            <div className="text-[15px] font-semibold">{t('runs.title')}</div>
           </div>
         }
         right={
@@ -210,7 +207,8 @@ const AutomationRunsPage = memo(() => {
                 })),
               ]}
             >
-              <Button icon={ChevronDownIcon} iconPosition={'end'} size={'small'}>
+              <Button iconPosition={'end'} size="sm">
+                <ChevronDownIcon data-icon="inline-start" />
                 {statusFilter ? t(`run_status.${statusFilter}`) : t('overview.all_statuses')}
               </Button>
             </DropdownMenu>
@@ -249,13 +247,13 @@ const AutomationRunsPage = memo(() => {
             <AsyncError error={error} onRetry={() => void mutate()} />
           ) : isLoading && runs.length === 0 ? (
             <div className="flex flex-col p-6">
-              <Text type={'secondary'}>{t('runs.title')}…</Text>
+              <div className="text-muted-foreground">{t('runs.title')}…</div>
             </div>
           ) : runs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="flex flex-col items-center gap-2">
                 <BotMessageSquare color={cssVar.colorTextQuaternary} size={32} />
-                <Text type={'secondary'}>{t('run_history.no_matches')}</Text>
+                <div className="text-muted-foreground">{t('run_history.no_matches')}</div>
               </div>
             </div>
           ) : (
@@ -277,34 +275,32 @@ const AutomationRunsPage = memo(() => {
                   {run.sourceTaskIdentifier ? (
                     <div style={{ minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
                       <WorkspaceLink to={automationDetailPath(run.sourceTaskIdentifier)}>
-                        <Text ellipsis color={'inherit'} weight={500}>
+                        <div className="truncate min-w-0 font-medium" style={{ color: 'inherit' }}>
                           {run.sourceTaskName || run.sourceTaskIdentifier}
-                        </Text>
+                        </div>
                       </WorkspaceLink>
                     </div>
                   ) : (
-                    <Text ellipsis fontSize={13} weight={500}>
+                    <div className="truncate min-w-0 text-[13px] font-medium">
                       {run.sourceTaskName ?? run.title ?? '—'}
-                    </Text>
+                    </div>
                   )}
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t(`run_source.${runTriggerLabel(run.trigger)}`)}
-                  </Text>
-                  <Text
-                    ellipsis
-                    fontSize={12}
+                  </div>
+                  <div
+                    className="truncate min-w-0 text-[12px] text-muted-foreground"
                     title={run.createdAt ? dayjs(run.createdAt).format('LLL') : undefined}
-                    type={'secondary'}
                   >
                     {run.createdAt ? dayjs(run.createdAt).fromNow() : '—'}
-                  </Text>
+                  </div>
                   <RunStatusBadge status={run.status} />
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {runDuration(
                       run.createdAt ? String(run.createdAt) : null,
                       run.completedAt ? String(run.completedAt) : null,
                     )}
-                  </Text>
+                  </div>
                   <ActionIcon
                     disabled={!run.topicId}
                     icon={MessageSquareIcon}
@@ -319,12 +315,12 @@ const AutomationRunsPage = memo(() => {
               ))}
               {total > PAGE_SIZE && (
                 <div className="flex justify-center py-4">
-                  <Pagination
+                  <TablePagination
                     current={page}
                     pageSize={PAGE_SIZE}
-                    showSizeChanger={false}
+                    pageSizeOptions={[PAGE_SIZE]}
                     total={total}
-                    onChange={setPage}
+                    onChange={(next) => setPage(next)}
                   />
                 </div>
               )}

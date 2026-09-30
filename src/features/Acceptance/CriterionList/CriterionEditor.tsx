@@ -1,11 +1,20 @@
 'use client';
 
-import { Button, Select, Switch, Text, toast } from '@lobehub/ui/base-ui';
 import { type VerifierType, verifierTypes } from '@orvilo/const/verify';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { VerifyCriterionDraft } from '@/services/verify';
 
@@ -85,9 +94,7 @@ export const CriterionEditor = ({
   return (
     <div className="flex flex-col gap-4" style={{ padding: 16 }}>
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={12} type={'secondary'}>
-          {t('criterion.titleLabel')}
-        </Text>
+        <div className="text-[12px] text-muted-foreground">{t('criterion.titleLabel')}</div>
         <Input
           autoFocus
           placeholder={t('criterion.titlePlaceholder')}
@@ -97,9 +104,7 @@ export const CriterionEditor = ({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={12} type={'secondary'}>
-          {t('criterion.descriptionLabel')}
-        </Text>
+        <div className="text-[12px] text-muted-foreground">{t('criterion.descriptionLabel')}</div>
         <Textarea
           placeholder={t('criterion.descriptionPlaceholder')}
           rows={2}
@@ -110,28 +115,34 @@ export const CriterionEditor = ({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={12} type={'secondary'}>
-          {t('criterion.verifierLabel')}
-        </Text>
+        <div className="text-[12px] text-muted-foreground">{t('criterion.verifierLabel')}</div>
         <Select
-          options={verifierOptions}
+          items={verifierOptions}
           value={verifierType}
-          optionRender={(option) => (
-            <div className="flex flex-col gap-0.5">
-              <Text>{option.label}</Text>
-              <Text fontSize={12} type={'secondary'}>
-                {t(`criterion.verifierTypeDesc.${option.value as VerifierType}` as const)}
-              </Text>
-            </div>
-          )}
-          onChange={(value) => patch({ verifierType: value as VerifierType })}
-        />
+          onValueChange={(value) => patch({ verifierType: value as VerifierType })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {verifierOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <div className="flex flex-col gap-0.5">
+                  <div>{option.label}</div>
+                  <div className="text-[12px] text-muted-foreground">
+                    {t(`criterion.verifierTypeDesc.${option.value as VerifierType}` as const)}
+                  </div>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {isProgram ? t('criterion.scriptLabel') : t('criterion.instructionLabel')}
-        </Text>
+        </div>
         {isProgram ? (
           <Textarea
             rows={3}
@@ -142,9 +153,9 @@ export const CriterionEditor = ({
             }
           />
         ) : instructionLinked ? (
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {t('criterion.instructionLinked')}
-          </Text>
+          </div>
         ) : (
           <Textarea
             placeholder={t('criterion.instructionPlaceholder')}
@@ -159,17 +170,17 @@ export const CriterionEditor = ({
       <div className="flex items-center gap-2.5">
         <Switch
           checked={draft.required !== false}
-          size={'small'}
-          onChange={(checked) => patch({ required: checked })}
+          size="sm"
+          onCheckedChange={(checked) => patch({ required: checked })}
         />
-        <Text fontSize={13}>{t('criterion.requiredHint')}</Text>
+        <div className="text-[13px]">{t('criterion.requiredHint')}</div>
       </div>
 
       <div className="flex items-center justify-between">
         {onDelete ? (
           <Button
-            danger
-            type={'text'}
+            variant="destructive"
+            variant="ghost"
             onClick={() => {
               onDelete();
               onClose();
@@ -185,7 +196,7 @@ export const CriterionEditor = ({
           <Button
             disabled={!draft.title.trim()}
             loading={saving}
-            type={'primary'}
+            variant="outline"
             onClick={handleSave}
           >
             {t(isNew ? 'criterion.add' : 'criterion.save')}

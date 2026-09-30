@@ -1,9 +1,9 @@
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { PanelRightCloseIcon } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { ChatList } from '@/features/Conversation';
 import MessageItem from '@/features/Conversation/Messages';
@@ -39,8 +39,10 @@ export const GoalSupervision = ({ agentId, goalId, onCollapse, topicId }: GoalSu
     <GoalChatProvider agentId={agentId} goalId={goalId} initialTopicId={topicId}>
       <div className="flex flex-col h-full" style={{ overflow: 'hidden' }}>
         <NavHeader
-          left={<Text ellipsis>{agentTitle || t('goalProcess.manager.title')}</Text>}
           showTogglePanelButton={false}
+          left={
+            <div className="truncate min-w-0">{agentTitle || t('goalProcess.manager.title')}</div>
+          }
           right={
             <ActionIcon
               icon={PanelRightCloseIcon}

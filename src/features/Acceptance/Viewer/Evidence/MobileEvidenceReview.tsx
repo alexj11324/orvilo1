@@ -1,12 +1,14 @@
 'use client';
 
-import { ActionIcon, Button, Segmented, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 import { ZOOM_STEPS } from '../Review/rejectDraft';
 import type { RejectReviewModel } from '../Review/useRejectReview';
@@ -107,12 +109,12 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
                 size={{ blockSize: 44, size: 20 }}
                 onClick={() => model.selectEvidence(activeIndex - 1)}
               />
-              <Text aria-live={'polite'} style={{ flex: 1, textAlign: 'center' }}>
+              <div aria-live={'polite'} style={{ flex: 1, textAlign: 'center' }}>
                 {t('acceptance.review.imageNumber', {
                   current: activeIndex + 1,
                   total: evidence.length,
                 })}
-              </Text>
+              </div>
               <ActionIcon
                 aria-label={t('acceptance.review.nextImage')}
                 disabled={activeIndex >= evidence.length - 1}
@@ -138,17 +140,19 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
               {/* A mode switch, not an action button. A single button labelled
                   with the mode it would LEAVE says nothing about which mode is
                   on, and its 44px slab sat oddly beside the small zoom icons. */}
-              <Segmented
-                size={'small'}
-                value={drawing ? 'draw' : 'browse'}
-                options={[
-                  { label: t('acceptance.review.browseImage'), value: 'browse' },
-                  { label: t('acceptance.review.drawRegion'), value: 'draw' },
-                ]}
-                onChange={(value) => {
-                  if ((value === 'draw') !== drawing) model.advance('toggle-draw');
+              <ToggleGroup
+                size="sm"
+                value={[drawing ? 'draw' : 'browse']}
+                onValueChange={(value) => {
+                  if (value.length > 0 && (value[0] === 'draw') !== drawing)
+                    model.advance('toggle-draw');
                 }}
-              />
+              >
+                <ToggleGroupItem value="browse">
+                  {t('acceptance.review.browseImage')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="draw">{t('acceptance.review.drawRegion')}</ToggleGroupItem>
+              </ToggleGroup>
               <div className="flex flex-col flex-1" />
               <ActionIcon
                 aria-label={t('acceptance.review.zoomOut')}
@@ -157,7 +161,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
                 size={{ blockSize: 44, size: 20 }}
                 onClick={() => model.stepZoom(-1)}
               />
-              <Text fontSize={12}>{Math.round(zoom * 100)}%</Text>
+              <div className="text-[12px]">{Math.round(zoom * 100)}%</div>
               <ActionIcon
                 aria-label={t('acceptance.review.zoomIn')}
                 disabled={zoom >= ZOOM_STEPS.at(-1)!}
@@ -168,7 +172,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
             </div>
             {/* The hint is the region's receipt: it says the box landed AND
                 that it is still editable, right above the note it belongs to. */}
-            <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
               {drawing && activeAnnotations.length > 0
                 ? t('acceptance.review.mobileDrawnHint', { count: activeAnnotations.length })
                 : t(
@@ -176,13 +180,13 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
                       ? 'acceptance.review.mobileDrawHint'
                       : 'acceptance.review.mobileBrowseHint',
                   )}
-            </Text>
+            </div>
           </>
         )}
         <div className={styles.editor}>
           {annotations.length > 0 && (
             <>
-              <Text strong>{t('acceptance.review.regionComments')}</Text>
+              <div className="font-semibold">{t('acceptance.review.regionComments')}</div>
               <MobileRegionNotes
                 annotations={annotations}
                 evidence={evidence}
@@ -192,7 +196,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
               />
             </>
           )}
-          <Text strong>{t('acceptance.review.supplement')}</Text>
+          <div className="font-semibold">{t('acceptance.review.supplement')}</div>
           <Textarea
             aria-label={t('acceptance.review.supplement')}
             placeholder={t('acceptance.review.rejectPlaceholder')}
@@ -209,21 +213,21 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
             uploading={uploading}
             onRemove={model.removeAttachment}
           />
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {t('acceptance.review.draftSaved')}
-          </Text>
+          </div>
         </div>
       </div>
       <div className={styles.footer}>
         {failed && (
-          <Text role={'alert'} type={'danger'}>
+          <div className="text-destructive" role={'alert'}>
             {t('acceptance.review.submitFailed')}
-          </Text>
+          </div>
         )}
         <Button
           disabled={!canSubmit}
           loading={loading}
-          type={'primary'}
+          variant="outline"
           onClick={model.submitReject}
         >
           {t('acceptance.review.confirmReject')}

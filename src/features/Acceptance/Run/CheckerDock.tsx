@@ -1,4 +1,3 @@
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import type { VerifyCheckItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useThemeMode } from 'antd-style';
 import {
@@ -19,7 +18,9 @@ import {
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import RingLoadingIcon from '@/components/RingLoading';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { VerifyCheckResultItem } from '@/database/schemas/verify';
 import { verifyService } from '@/services/verify';
@@ -258,10 +259,10 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
         </div>
       ))}
       <Button
-        block
-        icon={Plus}
-        size="small"
-        type="dashed"
+        className="w-full"
+        className="border-dashed"
+        size="sm"
+        variant="outline"
         onClick={() =>
           setDraftItems([
             ...draftItems,
@@ -279,13 +280,14 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
           ])
         }
       >
+        <Plus data-icon="inline-start" />
         {t('editor.add')}
       </Button>
       <div className="flex gap-2">
-        <Button loading={busy} size="small" type="primary" onClick={saveEdit}>
+        <Button loading={busy} size="sm" variant="default" onClick={saveEdit}>
           {t('editor.save')}
         </Button>
-        <Button size="small" onClick={() => setEditing(false)}>
+        <Button size="sm" onClick={() => setEditing(false)}>
           {t('editor.cancel')}
         </Button>
       </div>
@@ -296,13 +298,13 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
     if (phase === 'draft')
       return (
         <div className="flex gap-2" style={{ flexWrap: 'wrap', marginTop: 12 }}>
-          <Button loading={busy} size="small" type="primary" onClick={onConfirm}>
+          <Button loading={busy} size="sm" variant="default" onClick={onConfirm}>
             {t('dock.confirm')}
           </Button>
-          <Button size="small" onClick={startEdit}>
+          <Button size="sm" onClick={startEdit}>
             {t('dock.edit')}
           </Button>
-          <Button size="small" onClick={onSkip}>
+          <Button size="sm" onClick={onSkip}>
             {t('dock.skip')}
           </Button>
         </div>

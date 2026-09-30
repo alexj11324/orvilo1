@@ -1,21 +1,18 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import {
-  ActionIcon,
-  Avatar,
-  confirmModal,
-  DropdownMenu,
-  Tag,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentItem } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { Link2, MoreHorizontal, Trash2 } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -150,18 +147,23 @@ const CommentCard = memo<CommentCardProps>(
           className={`flex items-center gap-2 flex-wrap ${variant === 'boxed' ? styles.boxHeader : undefined}`}
         >
           {variant === 'plain' && <CommentAvatar comment={comment} size={18} />}
-          <Text
-            className={nameOverride ? styles.headline : styles.authorName}
-            fontSize={13}
-            weight={600}
+          <div
+            className={cn(
+              'text-[13px] font-semibold',
+              nameOverride ? styles.headline : styles.authorName,
+            )}
           >
             {name}
-          </Text>
+          </div>
           {comment.author.type === 'agent' && (
-            <Tag size={'small'}>{t('acceptance.comments.author.agent')}</Tag>
+            <Badge size="sm" variant="secondary">
+              {t('acceptance.comments.author.agent')}
+            </Badge>
           )}
           {comment.author.status !== 'active' && (
-            <Tag size={'small'}>{t(`acceptance.comments.author.${comment.author.status}`)}</Tag>
+            <Badge size="sm" variant="secondary">
+              {t(`acceptance.comments.author.${comment.author.status}`)}
+            </Badge>
           )}
           {anchored ? (
             /*
@@ -198,7 +200,7 @@ const CommentCard = memo<CommentCardProps>(
                 <ActionIcon
                   icon={MoreHorizontal}
                   loading={deleting}
-                  size={'small'}
+                  size="sm"
                   title={t('acceptance.comments.moreActions')}
                 />
               </DropdownMenu>

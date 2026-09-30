@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Select, Text, toast } from '@lobehub/ui/base-ui';
 import { isDraftVerifyRun } from '@orvilo/const/verify';
 import { createStaticStyles } from 'antd-style';
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
@@ -9,6 +8,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
+import { toast } from '@/components/toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useSingleton } from '@/hooks/useSingleton';
 import { verifyService } from '@/services/verify';
 
@@ -215,18 +223,16 @@ const AcceptanceCheckInventory = ({
     <>
       <div className="flex items-center gap-2 flex-wrap">
         <div className={`flex items-center flex-1 gap-2 ${styles.toolbarHeading}`}>
-          <Text strong style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
+          <div className="font-semibold" style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
             {t('acceptance.checks.title')}
-          </Text>
+          </div>
           <div className="flex flex-col flex-1" />
           {toolbar}
         </div>
         <div className={`flex items-center gap-2 ${styles.filters}`}>
           <Select
-            className={styles.filterSelect}
             value={filter}
-            variant={'filled'}
-            options={[
+            items={[
               { label: t('acceptance.filter.all', { count: counts.total }), value: 'all' },
               {
                 label: t('acceptance.filter.pending', { count: counts.pending }),
@@ -245,24 +251,48 @@ const AcceptanceCheckInventory = ({
                 value: 'ignored',
               },
             ]}
-            onChange={(value) => setFilter(value as CheckFilter)}
-          />
+            onValueChange={(value) => setFilter(value as CheckFilter)}
+          >
+            <SelectTrigger className={styles.filterSelect}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {t('acceptance.filter.all', { count: counts.total })}
+              </SelectItem>
+              <SelectItem value="pending">
+                {t('acceptance.filter.pending', { count: counts.pending })}
+              </SelectItem>
+              <SelectItem value="needsFix">
+                {t('acceptance.filter.needsFix', { count: counts.needsFix })}
+              </SelectItem>
+              <SelectItem value="accepted">
+                {t('acceptance.filter.accepted', { count: counts.accepted })}
+              </SelectItem>
+              <SelectItem value="ignored">
+                {t('acceptance.filter.ignored', { count: counts.ignored })}
+              </SelectItem>
+            </SelectContent>
+          </Select>
           {data.rounds.length > 1 && (
             <Select
-              className={styles.filterSelect}
               value={roundFilter === null ? 'all' : String(roundFilter)}
-              variant={'filled'}
-              options={[
-                { label: t('acceptance.filter.roundAll'), value: 'all' },
-                ...[...data.rounds].reverse().map((round) => ({
-                  label: isDraftVerifyRun(round.run)
-                    ? t('flow.pendingPlan')
-                    : t('acceptance.round', { round: round.run.roundIndex }),
-                  value: String(round.run.roundIndex),
-                })),
-              ]}
-              onChange={(value) => setRoundFilter(value === 'all' ? null : Number(value))}
-            />
+              onValueChange={(value) => setRoundFilter(value === 'all' ? null : Number(value))}
+            >
+              <SelectTrigger className={styles.filterSelect}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('acceptance.filter.roundAll')}</SelectItem>
+                {[...data.rounds].reverse().map((round) => (
+                  <SelectItem key={round.run.roundIndex} value={String(round.run.roundIndex)}>
+                    {isDraftVerifyRun(round.run)
+                      ? t('flow.pendingPlan')
+                      : t('acceptance.round', { round: round.run.roundIndex })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           {grouped && (
             <ActionIcon

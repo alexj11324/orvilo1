@@ -1,14 +1,16 @@
 'use client';
 
-import { ActionIcon, Button, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { GoalStatus } from '@orvilo/const/goal';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { LayoutGridIcon, ListIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import GoalSkeleton from '@/components/Skeleton/Goal';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -123,11 +125,12 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
           agentId ? (
             <AgentBreadcrumb agentId={agentId} title={t('goalList.title')} />
           ) : (
-            <Text weight={600}>{t('goalList.title')}</Text>
+            <div className="font-semibold">{t('goalList.title')}</div>
           )
         }
         right={
-          <Button icon={PlusIcon} size={'small'} type={'fill'} onClick={() => openCreateGoal()}>
+          <Button size="sm" variant="secondary" onClick={() => openCreateGoal()}>
+            <PlusIcon data-icon="inline-start" />
             {t('goalPage.create')}
           </Button>
         }
@@ -143,15 +146,12 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
         ) : error ? (
           <div className="flex flex-col rounded-md border border-border" style={{ padding: 32 }}>
             <div className="flex flex-col items-center gap-3">
-              <Text weight={600}>{t('goalList.loadError')}</Text>
-              <Text fontSize={13} type={'secondary'}>
+              <div className="font-semibold">{t('goalList.loadError')}</div>
+              <div className="text-[13px] text-muted-foreground">
                 {t('goalList.loadErrorDescription')}
-              </Text>
-              <Button
-                icon={RefreshCwIcon}
-                size={'small'}
-                onClick={() => void refreshGoals(scopeId)}
-              >
+              </div>
+              <Button size="sm" onClick={() => void refreshGoals(scopeId)}>
+                <RefreshCwIcon data-icon="inline-start" />
                 {t('goalList.retry')}
               </Button>
             </div>
@@ -163,35 +163,27 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
             <div className={`flex flex-col ${styles.overview}`}>
               <div className="flex items-center gap-5 justify-between flex-wrap">
                 <div className="flex flex-col gap-[3px]">
-                  <Text fontSize={20} weight={600}>
-                    {t('goalPage.title')}
-                  </Text>
-                  <Text type={'secondary'}>{t('goalPage.description')}</Text>
+                  <div className="text-[20px] font-semibold">{t('goalPage.title')}</div>
+                  <div className="text-muted-foreground">{t('goalPage.description')}</div>
                 </div>
                 <div className="flex gap-5">
                   <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
-                    <Text fontSize={20} weight={600}>
-                      {summary.total}
-                    </Text>
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[20px] font-semibold">{summary.total}</div>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('goalPage.metrics.total')}
-                    </Text>
+                    </div>
                   </div>
                   <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
-                    <Text fontSize={20} weight={600}>
-                      {summary.pursuing}
-                    </Text>
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[20px] font-semibold">{summary.pursuing}</div>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('goalPage.metrics.pursuing')}
-                    </Text>
+                    </div>
                   </div>
                   <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
-                    <Text fontSize={20} weight={600}>
-                      {summary.delivered}
-                    </Text>
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[20px] font-semibold">{summary.delivered}</div>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('goalPage.metrics.delivered')}
-                    </Text>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -199,27 +191,20 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Text fontSize={16} weight={600}>
-                    {t('goalPage.listTitle')}
-                  </Text>
+                  <div className="text-[16px] font-semibold">{t('goalPage.listTitle')}</div>
                   <span className={styles.countBadge}>{visibleGoalCount}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Segmented
-                    size={'small'}
-                    value={filter}
-                    options={[
-                      {
-                        label: t('goalPage.filter.open'),
-                        value: 'active',
-                      },
-                      {
-                        label: t('goalPage.filter.all'),
-                        value: 'all',
-                      },
-                    ]}
-                    onChange={(value) => setFilter(value as 'active' | 'all')}
-                  />
+                  <ToggleGroup
+                    size="sm"
+                    value={[filter]}
+                    onValueChange={(value) => {
+                      if (value.length > 0) setFilter(value[0] as 'active' | 'all');
+                    }}
+                  >
+                    <ToggleGroupItem value="active">{t('goalPage.filter.open')}</ToggleGroupItem>
+                    <ToggleGroupItem value="all">{t('goalPage.filter.all')}</ToggleGroupItem>
+                  </ToggleGroup>
                   <ActionIcon
                     icon={ListIcon}
                     size={'small'}
@@ -263,7 +248,7 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
               </div>
               {visibleLimit < filteredGoals.length && (
                 <div className="flex flex-col items-center" style={{ paddingBlock: 8 }}>
-                  <Button size={'small'} onClick={loadMoreGoals}>
+                  <Button size="sm" onClick={loadMoreGoals}>
                     {t('goalPage.loadMore')}
                   </Button>
                 </div>

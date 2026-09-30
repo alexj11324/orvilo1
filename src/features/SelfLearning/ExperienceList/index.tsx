@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { DnaIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -105,12 +104,10 @@ const ExperienceList = memo(() => {
             {domain && activeAgentId && (
               <div className="flex flex-col gap-5" style={{ paddingBlock: '22px 64px' }}>
                 <div className="flex flex-col gap-1">
-                  <Text fontSize={26} weight={700}>
-                    {t('experience.title')}
-                  </Text>
-                  <Text type={'secondary'}>
+                  <div className="text-[26px] font-bold">{t('experience.title')}</div>
+                  <div className="text-muted-foreground">
                     {t('experience.subtitle', { count: habits.length, name: domain.title })}
-                  </Text>
+                  </div>
                 </div>
                 {habits.length === 0 ? (
                   <Empty>

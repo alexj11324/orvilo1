@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
 import { ChevronRight } from 'lucide-react';
 import { memo } from 'react';
@@ -17,17 +16,20 @@ const AutomationBreadcrumb = memo<{ taskId: string }>(({ taskId }) => {
         {
           title: (
             <WorkspaceLink to={'/automations'}>
-              <Text color={'inherit'} weight={500}>
+              <div className="font-medium" style={{ color: 'inherit' }}>
                 {t('page.title')}
-              </Text>
+              </div>
             </WorkspaceLink>
           ),
         },
         {
           title: (
-            <Text ellipsis color={'inherit'} style={{ maxWidth: 240 }} weight={500}>
+            <div
+              className="truncate min-w-0 font-medium"
+              style={{ color: 'inherit', maxWidth: 240 }}
+            >
               {name || taskId}
-            </Text>
+            </div>
           ),
         },
       ]}

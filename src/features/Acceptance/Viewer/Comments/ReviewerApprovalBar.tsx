@@ -1,12 +1,13 @@
 'use client';
 
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { BadgeCheck } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -103,13 +104,13 @@ const ReviewerApprovalBar = memo(() => {
     <div className={`flex flex-col gap-2.5 ${styles.card}`}>
       <div className="flex items-center gap-2">
         <BadgeCheck color={approvedCurrentRound ? cssVar.colorSuccess : undefined} size={18} />
-        <Text weight={600}>
+        <div className="font-semibold">
           {mine
             ? mine.contextRoundIndex === null
               ? t('acceptance.comments.youApprovedNoRound')
               : t('acceptance.comments.youApproved', { round: mine.contextRoundIndex })
             : t('acceptance.comments.approve')}
-        </Text>
+        </div>
       </div>
       <span className={styles.description}>
         {approvedCurrentRound
@@ -136,7 +137,7 @@ const ReviewerApprovalBar = memo(() => {
           <Button
             loading={pending}
             style={{ alignSelf: 'flex-end' }}
-            type={'primary'}
+            variant="outline"
             onClick={() => void approve()}
           >
             {mine ? t('acceptance.comments.approveAgain') : t('acceptance.comments.approve')}

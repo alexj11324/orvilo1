@@ -1,7 +1,8 @@
 'use client';
 
-import { DraggablePanel, Text } from '@lobehub/ui/base-ui';
+import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import { PanelRightOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
@@ -137,7 +138,7 @@ const AcceptanceLedgerRail = () => {
           onClick={() => onExpandChange(true)}
         >
           <PanelRightOpen size={14} />
-          <Text className={styles.chipCount}>{data.rounds.length}</Text>
+          <div className={cn(styles.chipCount)}>{data.rounds.length}</div>
         </div>
       )}
       {isNarrowViewport ? (

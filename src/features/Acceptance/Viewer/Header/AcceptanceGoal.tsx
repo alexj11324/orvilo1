@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronsDownUp, ChevronsUpDown, GitBranch, GitCommitHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
@@ -103,8 +103,8 @@ const AcceptanceGoal = ({ editSlot }: AcceptanceGoalProps) => {
           Its controls therefore ride the sentence's own row — a header strip
           with nothing left to say is just an empty band of space. */}
       <div className="flex gap-1" style={{ alignItems: collapsed ? 'center' : 'flex-start' }}>
-        <Text
-          ellipsis={collapsed}
+        <div
+          className="truncate min-w-0"
           title={collapsed ? (requirement ?? emptyLabel) : undefined}
           style={{
             flex: 1,
@@ -114,7 +114,7 @@ const AcceptanceGoal = ({ editSlot }: AcceptanceGoalProps) => {
           }}
         >
           {requirement ?? emptyLabel}
-        </Text>
+        </div>
         {!collapsed && editSlot}
         <ActionIcon
           data-goal-toggle

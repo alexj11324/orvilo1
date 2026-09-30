@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowRightIcon } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
@@ -57,14 +56,12 @@ export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
       <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
         <div className="flex items-center gap-[7px]">
           <GoalStatusGlyph size={13} status={goal.status} />
-          <Text ellipsis fontSize={15} weight={600}>
-            {goal.title}
-          </Text>
+          <div className="truncate min-w-0 text-[15px] font-semibold">{goal.title}</div>
         </div>
         {goal.requirement && goal.requirement !== goal.title && (
-          <Text ellipsis fontSize={12} type={'secondary'}>
+          <div className="truncate min-w-0 text-[12px] text-muted-foreground">
             {goal.requirement}
-          </Text>
+          </div>
         )}
       </div>
       <GoalProgress

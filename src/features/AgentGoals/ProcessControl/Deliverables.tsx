@@ -1,7 +1,7 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ExternalLink, FileDown, FileText, Link2 } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -116,20 +116,20 @@ const DeliverableRow = memo<{
       {/* The title takes the slack so the attribution and the timestamp form
           right-aligned columns; letting the title size itself left every row's
           attribution starting at a different x. */}
-      <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+      <div className="truncate min-w-0 font-medium" style={{ flex: 1, minWidth: 0 }}>
         {artifact.title || artifact.identifier || t('goalProcess.deliverables.untitled')}
-      </Text>
+      </div>
       {!!producerTitle && (
         <div className={`flex items-center gap-1.5 ${styles.producer}`}>
           <KindDot kind={'task'} />
-          <Text ellipsis fontSize={12} type={'secondary'}>
+          <div className="truncate min-w-0 text-[12px] text-muted-foreground">
             {t('goalProcess.deliverables.from', { title: producerTitle })}
-          </Text>
+          </div>
         </div>
       )}
-      <Text className={styles.time} fontSize={12} title={title} type={'secondary'}>
+      <div className={cn('text-[12px] text-muted-foreground', styles.time)} title={title}>
         {text}
-      </Text>
+      </div>
     </RowTag>
   );
 });
@@ -159,9 +159,9 @@ const Deliverables = memo<{ graph: GoalGraphView }>(({ graph }) => {
     return (
       <div className="flex items-center gap-1.5">
         <Link2 color={cssVar.colorTextQuaternary} size={14} />
-        <Text fontSize={13} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground">
           {t('goalProcess.deliverables.empty')}
-        </Text>
+        </div>
       </div>
     );
 

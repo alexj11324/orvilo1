@@ -1,11 +1,12 @@
 'use client';
 
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 import { ZOOM_STEPS } from '../Review/rejectDraft';
@@ -183,17 +184,17 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
               </div>
               <div className={styles.notes}>
                 <div className="flex flex-col gap-0.5">
-                  <Text strong fontSize={13}>
+                  <div className="font-semibold text-[13px]">
                     {t('acceptance.review.regionComments')}
-                  </Text>
-                  <Text fontSize={12} type={'secondary'}>
+                  </div>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('acceptance.review.annotateHint')}
-                  </Text>
+                  </div>
                 </div>
                 {activeAnnotations.length === 0 && (
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('acceptance.review.regionCommentsEmpty')}
-                  </Text>
+                  </div>
                 )}
                 <RegionNotes
                   annotations={activeAnnotations}
@@ -207,16 +208,16 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
       )}
       <div className={styles.footer}>
         {failed && (
-          <Text role={'alert'} type={'danger'}>
+          <div className="text-destructive" role={'alert'}>
             {t('acceptance.review.submitFailed')}
-          </Text>
+          </div>
         )}
         <div className="flex flex-col gap-2.5" style={{ width: '100%' }}>
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {hasEvidence
               ? t('acceptance.review.supplement')
               : t('acceptance.review.rejectDescription', { title: checkTitle })}
-          </Text>
+          </div>
           <Textarea
             placeholder={t('acceptance.review.rejectPlaceholder')}
             rows={2}
@@ -241,7 +242,7 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
             <Button
               disabled={!canSubmit}
               loading={loading}
-              type={'primary'}
+              variant="outline"
               onClick={model.submitReject}
             >
               {t('acceptance.review.confirmReject')}

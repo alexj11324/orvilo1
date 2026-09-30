@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Trash2 } from 'lucide-react';
@@ -196,11 +195,11 @@ export const AnnotatedImage = memo<AnnotatedImageProps>(
             {annotations.map(
               (annotation, index) =>
                 annotation.comment && (
-                  <Text fontSize={12} key={index} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground" key={index}>
                     {numbered ? `${annotation.label ?? index + 1}. ` : ''}
                     {annotation.authorName ? `${annotation.authorName}: ` : ''}
                     {annotation.comment}
-                  </Text>
+                  </div>
                 ),
             )}
           </div>

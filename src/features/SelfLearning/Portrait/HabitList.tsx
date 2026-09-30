@@ -1,7 +1,5 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { ActionIcon, DropdownMenu, Popover, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -17,7 +15,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import urlJoin from 'url-join';
 
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import type { ExpertiseHabit } from '@/services/expertise';
@@ -154,21 +156,43 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
   return (
     <div className={cx(styles.row, 'flex flex-col gap-1.5')}>
       <div className="flex items-start gap-3">
-        <Text code fontSize={12} style={{ flex: 'none', marginTop: 2 }} type={'secondary'}>
+        <div
+          className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground"
+          style={{ flex: 'none', marginTop: 2 }}
+        >
           {habit.code}
-        </Text>
-        <Popover
-          // Long enough that dragging the pointer down the list does not fetch every row.
-          openDelay={420}
-          // Below the row by preference, so the row the reader is pointing at stays visible
-          // while they move into the card.
-          placement={'bottomRight'}
-          // Preference, not a rule: reading down a list parks the pointer on the last visible
-          // row, and pinning the card downward there pushes its body off-screen. Base UI's
-          // default side avoidance flips it back above when the space below runs out.
-          positionerProps={{ collisionPadding: 12 }}
-          trigger={'hover'}
-          content={
+        </div>
+        <Popover openOnHover delay={420}>
+          <PopoverTrigger
+            render={
+              <div
+                className={cx(styles.previewTarget, 'flex flex-col gap-0.5')}
+                style={{ flex: 1, minWidth: 0 }}
+                onClick={() => navigate(lessonPath)}
+                // base-ui gives the trigger role="button" and focus, but brings no activation of
+                // its own, so a keyboard user could tab here and have Enter do nothing.
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  navigate(lessonPath);
+                }}
+              >
+                <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                  <div className="font-medium" style={{ fontSize: 13.5 }}>
+                    {habit.title}
+                  </div>
+                  {habit.taughtByUser && (
+                    <Badge variant="secondary">
+                      {t('habit.taughtTag')} · {dayjs(habit.createdAt).fromNow()}
+                    </Badge>
+                  )}
+                  {domainTitle && <Badge variant="secondary">{domainTitle}</Badge>}
+                </div>
+                <div className="text-[12px] text-muted-foreground">{hint}</div>
+              </div>
+            }
+          />
+          <PopoverContent align="end" className="w-auto p-0" side="bottom">
             <LessonPreview
               code={habit.code}
               layer={habit.layer}
@@ -176,40 +200,12 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
               lessonPath={lessonPath}
               title={habit.title}
             />
-          }
-        >
-          <div
-            className={cx(styles.previewTarget, 'flex flex-col gap-0.5')}
-            style={{ flex: 1, minWidth: 0 }}
-            onClick={() => navigate(lessonPath)}
-            // base-ui gives the trigger role="button" and focus, but brings no activation of
-            // its own, so a keyboard user could tab here and have Enter do nothing.
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return;
-              event.preventDefault();
-              navigate(lessonPath);
-            }}
-          >
-            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-              <Text fontSize={13.5} weight={500}>
-                {habit.title}
-              </Text>
-              {habit.taughtByUser && (
-                <Tag>
-                  {t('habit.taughtTag')} · {dayjs(habit.createdAt).fromNow()}
-                </Tag>
-              )}
-              {domainTitle && <Tag>{domainTitle}</Tag>}
-            </div>
-            <Text fontSize={12} type={'secondary'}>
-              {hint}
-            </Text>
-          </div>
+          </PopoverContent>
         </Popover>
         <RecentDots recent={habit.recent} />
         <div className={cx('teach', 'flex items-center gap-1')} style={{ flex: 'none' }}>
           <DropdownMenu items={menu}>
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
+            <ActionIcon icon={MoreHorizontalIcon} size="sm" />
           </DropdownMenu>
         </div>
       </div>
@@ -250,10 +246,10 @@ const HabitList = memo<HabitListProps>(
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2 justify-between" style={{ flexWrap: 'wrap' }}>
           <div className="flex items-baseline gap-2">
-            <Text weight={600}>{t('habits.title')}</Text>
-            <Text fontSize={12} type={'secondary'}>
+            <div className="font-semibold">{t('habits.title')}</div>
+            <div className="text-[12px] text-muted-foreground">
               {t('habits.summary', { count: habits.length })}
-            </Text>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {viewAllPath && (

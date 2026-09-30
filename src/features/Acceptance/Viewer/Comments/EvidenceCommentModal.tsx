@@ -1,12 +1,14 @@
 'use client';
 
-import { Button, createModal, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 import type { AcceptanceEvidence } from '../Checks/types';
@@ -142,14 +144,14 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
         />
         <div className="flex items-center gap-2 justify-end">
           {!rect && (
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('acceptance.comments.regionMissing')}
-            </Text>
+            </div>
           )}
           <Button
             disabled={!rect || !trimmed}
             loading={submitting}
-            type={'primary'}
+            variant="outline"
             onClick={() => void submit()}
           >
             {t('acceptance.comments.send')}

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -54,13 +53,13 @@ const TriggerCard = memo(() => {
       >
         <TimerIcon color={cssVar.colorTextTertiary} size={18} />
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-          <Text ellipsis fontSize={13} weight={500}>
+          <div className="truncate min-w-0 text-[13px] font-medium">
             {summary || t('trigger.unconfigured')}
-          </Text>
+          </div>
           {nextRun ? (
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('trigger.next_run', { time: dayjs(nextRun.toDate()).fromNow() })}
-            </Text>
+            </div>
           ) : null}
         </div>
         <ChevronRightIcon color={cssVar.colorTextTertiary} size={14} />

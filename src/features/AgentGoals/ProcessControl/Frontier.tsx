@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceStatus, GoalDecisionOption } from '@orvilo/types';
 import { Divider } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -10,6 +9,8 @@ import { createElement, Fragment, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { openAddGoalTaskModal } from '@/features/AgentGoals/AddTaskModal';
@@ -179,9 +180,12 @@ const AttemptReason = memo<{ reason?: string | null }>(({ reason }) => {
   const { t } = useTranslation('chat');
   const copy = coordinatorReasonCopy(reason);
   return (
-    <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} type={'secondary'}>
+    <div
+      className="truncate min-w-0 text-[12px] text-muted-foreground"
+      style={{ flex: 1, minWidth: 0 }}
+    >
       {copy ? t(copy.key as any, copy.params) : (reason ?? '')}
-    </Text>
+    </div>
   );
 });
 
@@ -196,16 +200,14 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
       <span className={styles.label}>{t('goalProcess.attempts.title')}</span>
       {view.attempts.map((attempt) => (
         <div className={cn('flex items-baseline gap-2.5', styles.attempt)} key={attempt.index}>
-          <Text
-            className={styles.mono}
-            fontSize={12}
+          <div
+            className={cn('text-[12px] text-muted-foreground', styles.mono)}
             style={{ flex: 'none', width: 60 }}
-            type={'secondary'}
           >
             {t('goalProcess.attempts.nth', { index: attempt.index })}
-          </Text>
-          <Text
-            fontSize={12}
+          </div>
+          <div
+            className="text-[12px]"
             style={{ flex: 'none' }}
             type={
               attempt.outcome === 'passed'
@@ -216,7 +218,7 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
             }
           >
             {t(`goalProcess.attempts.${attempt.outcome}` as const)}
-          </Text>
+          </div>
           <AttemptReason reason={attempt.reason} />
         </div>
       ))}
@@ -230,11 +232,7 @@ AttemptLedger.displayName = 'GoalAttemptLedger';
 const RunningClock = memo<{ startedAt?: Date }>(({ startedAt }) => {
   const elapsed = useElapsed(startedAt);
   if (!elapsed) return null;
-  return (
-    <Text className={styles.mono} fontSize={12} type={'secondary'}>
-      {elapsed}
-    </Text>
-  );
+  return <div className={cn('text-[12px] text-muted-foreground', styles.mono)}>{elapsed}</div>;
 });
 
 RunningClock.displayName = 'GoalRunningClock';
@@ -242,9 +240,9 @@ RunningClock.displayName = 'GoalRunningClock';
 const DoneTime = memo<{ view: GoalNodeView }>(({ view }) => {
   const { text, title } = useActivityTime(view.node.resolvedAt ?? view.node.updatedAt);
   return (
-    <Text className={styles.mono} fontSize={12} title={title} type={'secondary'}>
+    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} title={title}>
       {text || '—'}
-    </Text>
+    </div>
   );
 });
 
@@ -254,9 +252,9 @@ const StaleBody = memo<{ view: GoalNodeView }>(({ view }) => {
   const { t } = useTranslation('chat');
   const { text } = useActivityTime(view.heartbeatAt);
   return (
-    <Text fontSize={13} type={'secondary'}>
+    <div className="text-[13px] text-muted-foreground">
       {t('goalProcess.stale.description', { duration: text })}
-    </Text>
+    </div>
   );
 });
 
@@ -293,9 +291,9 @@ const AcceptanceChip = memo<{ view: GoalNodeView }>(({ view }) => {
   if (!acceptance || !chip) return null;
 
   return (
-    <Tag
-      color={chip.color}
-      size={'small'}
+    <Badge
+      size="sm"
+      variant={chip.color === 'error' ? 'destructive' : (chip.color as 'info' | 'success')}
       style={{ cursor: 'pointer' }}
       // The evidence is the point: the chip is the way into it, opened in the
       // side Portal like every other drill-down on this page.
@@ -305,7 +303,7 @@ const AcceptanceChip = memo<{ view: GoalNodeView }>(({ view }) => {
       }}
     >
       {t(`goalProcess.acceptance.${chip.key}` as any)}
-    </Tag>
+    </Badge>
   );
 });
 
@@ -371,13 +369,21 @@ const FrontierRow = memo<{
       <div className="flex items-center gap-2.5">
         {view.seq !== undefined && <span className={styles.num}>#{view.seq}</span>}
         <RowGlyph kind={item.kind} view={view} />
-        <Text ellipsis style={{ flexShrink: 1, maxWidth: '60%', minWidth: 0 }} weight={500}>
+        <div
+          className="truncate min-w-0 font-medium"
+          style={{ flexShrink: 1, maxWidth: '60%', minWidth: 0 }}
+        >
           {coordinatorTitleKey ? t(coordinatorTitleKey as any) : node.title}
-        </Text>
+        </div>
         {tag && (
-          <Tag color={tag.color} size={'small'}>
+          <Badge
+            size="sm"
+            variant={
+              tag.color === 'error' ? 'destructive' : tag.color === 'info' ? 'info' : 'secondary'
+            }
+          >
             {tag.text}
-          </Tag>
+          </Badge>
         )}
         {deps.length > 0 && (
           <span className={styles.deps}>
@@ -415,9 +421,9 @@ const FrontierRow = memo<{
             // State the problem itself, in the user's language when the
             // coordinator's vocabulary is recognized — the buttons below
             // already carry the choices, so no extra framing sentence.
-            <Text fontSize={13} weight={500}>
+            <div className="text-[13px] font-medium">
               {gateReasonText ?? view.decision.question}
-            </Text>
+            </div>
           )}
           {item.kind === 'stale' && <StaleBody view={view} />}
           <AttemptLedger view={subject ?? view} />
@@ -443,10 +449,10 @@ const FrontierRow = memo<{
                         render={
                           <span style={{ display: 'inline-flex' }}>
                             <Button
-                              type={
+                              variant={
                                 option.id === view.decision?.recommendedOptionId
-                                  ? 'primary'
-                                  : 'default'
+                                  ? 'default'
+                                  : 'outline'
                               }
                               onClick={(event) => {
                                 stop(event);
@@ -481,12 +487,8 @@ FrontierRow.displayName = 'GoalFrontierRow';
 const AddTaskButton = memo<{ onAdd: FrontierActions['addTask'] }>(({ onAdd }) => {
   const { t } = useTranslation('chat');
   return (
-    <Button
-      icon={<Plus />}
-      size={'small'}
-      type={'text'}
-      onClick={() => openAddGoalTaskModal({ onAdd })}
-    >
+    <Button size="sm" variant="ghost" onClick={() => openAddGoalTaskModal({ onAdd })}>
+      <Plus />
       {t('goalProcess.frontier.add')}
     </Button>
   );
@@ -507,16 +509,14 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
         <div className="flex items-baseline gap-2">
-          <Text fontSize={16} weight={600}>
-            {t('goalProcess.frontier.title')}
-          </Text>
+          <div className="text-[16px] font-semibold">{t('goalProcess.frontier.title')}</div>
           {graph.frontier.length > 0 && (
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {graph.needsYou > 0
                 ? `${t('goalProcess.frontier.needsYou', { count: graph.needsYou })} · `
                 : ''}
               {t('goalProcess.frontier.advanceable', { count: graph.advanceable })}
-            </Text>
+            </div>
           )}
         </div>
         {canEdit && <AddTaskButton onAdd={actions.addTask} />}
@@ -529,24 +529,24 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
               <div className="flex items-center gap-2.5 p-3">
                 <RunningGlyph size={16} />
                 <div className="flex flex-col gap-0.5">
-                  <Text weight={500}>{t('goalProcess.planning.title')}</Text>
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="font-medium">{t('goalProcess.planning.title')}</div>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('goalProcess.planning.description')}
-                  </Text>
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col gap-0.5 p-3">
-                <Text weight={500}>
+                <div className="font-medium">
                   {achieved
                     ? t('goalProcess.frontier.achievedTitle')
                     : t('goalProcess.frontier.emptyTitle')}
-                </Text>
-                <Text fontSize={12} type={'secondary'}>
+                </div>
+                <div className="text-[12px] text-muted-foreground">
                   {achieved
                     ? t('goalProcess.frontier.achievedDescription')
                     : t('goalProcess.frontier.emptyDescription')}
-                </Text>
+                </div>
               </div>
             ))}
           {graph.frontier.map((item, index) => (

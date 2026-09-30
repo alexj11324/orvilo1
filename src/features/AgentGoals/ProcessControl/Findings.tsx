@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
@@ -71,19 +70,19 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
               line up as columns, matching the deliverables list directly
               above — otherwise the two adjacent sections read as different
               layouts of the same row. */}
-          <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+          <div className="truncate min-w-0 font-medium" style={{ flex: 1, minWidth: 0 }}>
             {view.node.title}
-          </Text>
-          <Text ellipsis className={styles.source} fontSize={12} type={'secondary'}>
+          </div>
+          <div className={cn('truncate min-w-0 text-[12px] text-muted-foreground', styles.source)}>
             {answered
               ? t('goalProcess.findings.answers', { title: answered.title })
               : view.producedBy
                 ? t('goalProcess.findings.from', { title: view.producedBy.title })
                 : ''}
-          </Text>
-          <Text className={styles.time} fontSize={12} title={title} type={'secondary'}>
+          </div>
+          <div className={cn('text-[12px] text-muted-foreground', styles.time)} title={title}>
             {text}
-          </Text>
+          </div>
         </div>
         {open && (
           <div className={cn('flex flex-col gap-2', styles.body)}>
@@ -95,9 +94,9 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
                 onClick={() => onSelect(problem.id)}
               >
                 <KindDot kind={'problem'} />
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('goalProcess.findings.answers', { title: problem.title })}
-                </Text>
+                </div>
               </div>
             ))}
             {/* The description is the producing run's handoff — actual Markdown
@@ -114,9 +113,9 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
                 onClick={() => onSelect(view.producedBy!.id)}
               >
                 <KindDot kind={'task'} />
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('goalProcess.findings.from', { title: view.producedBy.title })}
-                </Text>
+                </div>
               </div>
             )}
           </div>
@@ -139,9 +138,7 @@ const Findings = memo<{ graph: GoalGraphView; onSelect: (nodeId: string) => void
 
     if (findings.length === 0)
       return (
-        <Text fontSize={13} type={'secondary'}>
-          {t('goalProcess.findings.empty')}
-        </Text>
+        <div className="text-[13px] text-muted-foreground">{t('goalProcess.findings.empty')}</div>
       );
 
     return (

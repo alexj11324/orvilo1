@@ -1,6 +1,5 @@
 'use client';
 
-import { copyToClipboard } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ProductLogo } from '@/components/Branding';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   header: css`

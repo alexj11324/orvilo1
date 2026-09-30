@@ -1,5 +1,7 @@
 'use client';
 
+import { cn } from 'cn';
+import { TagIcon } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -73,21 +75,25 @@ const ProjectLabelPicker = memo<ProjectLabelPickerProps>(
     };
 
     return (
-      <Select
-        showSearch
-        className={className}
-        disabled={disabled || saving || query.isLoading}
-        id={id}
-        loading={saving || query.isLoading}
-        mode="multiple"
-        options={options.map((label) => ({ label: label.name, value: label.id }))}
-        placeholder={placeholder}
-        size="small"
-        value={[...labelIds]}
-        onChange={(value) => {
-          if (Array.isArray(value)) void save(value);
-        }}
-      />
+      <div className={cn('flex items-center gap-1.5', className)}>
+        <TagIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+        <Select
+          showSearch
+          className="flex-1"
+          disabled={disabled || saving || query.isLoading}
+          id={id}
+          loading={saving || query.isLoading}
+          mode="multiple"
+          options={options.map((label) => ({ label: label.name, value: label.id }))}
+          placeholder={placeholder}
+          popupClassName="w-auto! min-w-(--anchor-width)"
+          size="small"
+          value={[...labelIds]}
+          onChange={(value) => {
+            if (Array.isArray(value)) void save(value);
+          }}
+        />
+      </div>
     );
   },
 );

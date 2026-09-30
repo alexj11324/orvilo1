@@ -8,6 +8,8 @@ import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Susp
 
 import { OrviloAnalyticsProviderWrapper } from '@/components/Analytics/OrviloAnalyticsProviderWrapper';
 import { DragUploadProvider } from '@/components/DragUploadZone/DragUploadProvider';
+import { ModalHost as ReUIModalHost } from '@/components/Modal';
+import { ToastHost as ReUIToastHost } from '@/components/toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { isDesktop } from '@/const/version';
 import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
@@ -118,6 +120,8 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
                 <ModalHost />
                 <BaseModalHost />
                 <ToastHost />
+                <ReUIModalHost />
+                <ReUIToastHost />
                 <ContextMenuHost />
                 <Suspense>
                   <TaskDock />

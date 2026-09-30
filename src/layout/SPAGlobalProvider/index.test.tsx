@@ -43,6 +43,24 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
   };
 });
 
+vi.mock('@/components/Modal', async (importOriginal) => {
+  const React = await import('react');
+
+  return {
+    ...(await importOriginal<object>()),
+    ModalHost: () => React.createElement('div', { 'data-testid': 'reui-modal-host' }),
+  };
+});
+
+vi.mock('@/components/toast', async (importOriginal) => {
+  const React = await import('react');
+
+  return {
+    ...(await importOriginal<object>()),
+    ToastHost: () => React.createElement('div', { 'data-testid': 'reui-toast-host' }),
+  };
+});
+
 vi.mock('@/components/Analytics/OrviloAnalyticsProviderWrapper', async () => {
   const React = await import('react');
 
@@ -360,6 +378,8 @@ describe('SPAGlobalProvider', () => {
     expect(screen.getByTestId('legacy-modal-host')).toBeInTheDocument();
     expect(screen.getByTestId('base-modal-host')).toBeInTheDocument();
     expect(screen.getByTestId('toast-host')).toBeInTheDocument();
+    expect(screen.getByTestId('reui-modal-host')).toBeInTheDocument();
+    expect(screen.getByTestId('reui-toast-host')).toBeInTheDocument();
     expect(screen.getByTestId('context-menu-host')).toBeInTheDocument();
   });
 

@@ -72,6 +72,7 @@ export class McpEventWorker {
           if (result.status === 'waiting' && result.retryable) {
             retry = true;
             waiting = true;
+            errorCode = result.reason.replaceAll('-', '_');
             continue;
           }
           const saved = await this.dependencies.repository.settle(

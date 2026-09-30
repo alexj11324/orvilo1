@@ -121,6 +121,28 @@ describe('MCP Events Hono raw callback route', () => {
     expect((await request(occurrence())).status).toBe(503);
   });
 
+  it('rejects a signature forged under a different key before any persistence', async () => {
+    const raw = occurrence();
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const forged = createHmac('sha256', Buffer.alloc(32, 99))
+      .update(`event-1.${timestamp}.`)
+      .update(raw)
+      .digest('base64');
+    const response = await app.request('/api/webhooks/mcp-events/token-1', {
+      body: raw,
+      headers: {
+        'content-type': 'application/json',
+        'webhook-id': 'event-1',
+        'webhook-signature': `v1,${forged}`,
+        'webhook-timestamp': timestamp,
+        'x-mcp-subscription-id': 'remote-1',
+      },
+      method: 'POST',
+    });
+    expect(response.status).toBe(401);
+    expect((await database.query('SELECT id FROM mcp_event_inbox')).rows).toEqual([]);
+  });
+
   it('completes a delivery whose events match no enabled trigger', async () => {
     expect((await request(occurrence())).status).toBe(202);
     // The real admission service is installed — a delivery with no matching

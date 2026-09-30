@@ -107,6 +107,16 @@ describe('ReUI sidebar panel selection', () => {
       expect(screen.queryByText('Agent navigation')).not.toBeInTheDocument();
     },
   );
+
+  it.each(['/orvilo-team/agent/assistant', '/orvilo-team/memory', '/orvilo-team/settings/general'])(
+    'shows the loading skeleton on %s while its panel has not registered yet',
+    (route) => {
+      pathname = route;
+      render(<NavMain />);
+      expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
+      expect(screen.getByTestId('nav-sidebar-skeleton')).toBeInTheDocument();
+    },
+  );
 });
 
 describe('NavPanel', () => {

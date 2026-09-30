@@ -1,9 +1,10 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { Fragment, useSyncExternalStore } from 'react';
 
 import Body from '@/features/HomeSidebar/Body';
 import {
+  DEFAULT_NAV_SKELETON_SHAPE,
   NAV_SKELETON_SHAPES,
   NavSideBarSkeleton,
 } from '@/features/NavPanel/components/SideBarSkeleton';
@@ -13,6 +14,20 @@ import {
 } from '@/features/NavPanel/registry';
 import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
 import { SearchForm } from '@/features/ReUIShell/SearchForm';
+
+// Keys that own a route panel — their portals register only after the lazy
+// route chunk mounts, so a pending state must render the skeleton rather than
+// flashing the global navigation first.
+const PANEL_KEYS = new Set([
+  'agent',
+  'agent-docs',
+  'group',
+  'memory',
+  'resource',
+  'resourceLibrary',
+  'settings',
+  'workspace-settings',
+]);
 
 /**
  * Single-column nav, Linear-style: when the active route registered its own
@@ -24,10 +39,15 @@ export function NavMain() {
   const getContent = () => getNavPanelRegistrySnapshot().get(activeNavKey)?.node;
   const content = useSyncExternalStore(subscribeNavPanelRegistry, getContent, getContent);
 
-  if (content) return content;
+  // Keyed by navKey: unkeyed reuse would let one panel's component state bleed
+  // into the next panel when their trees share a component type.
+  if (content) return <Fragment key={activeNavKey}>{content}</Fragment>;
 
-  const isSettings = activeNavKey === 'settings' || activeNavKey === 'workspace-settings';
-  if (isSettings) return <NavSideBarSkeleton {...NAV_SKELETON_SHAPES[activeNavKey]} />;
+  if (PANEL_KEYS.has(activeNavKey)) {
+    return (
+      <NavSideBarSkeleton {...(NAV_SKELETON_SHAPES[activeNavKey] ?? DEFAULT_NAV_SKELETON_SHAPE)} />
+    );
+  }
 
   return (
     <>

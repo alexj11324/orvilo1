@@ -152,7 +152,6 @@ const Content = memo(() => {
       <div className={cx(styles.tabBar, 'flex items-center gap-1')}>
         <Tabs
           className={styles.tabs}
-          size={'small'}
           value={activeTab?.id ?? null}
           onValueChange={(next) => {
             if (typeof next === 'string') setActiveTab(topicKey, next);

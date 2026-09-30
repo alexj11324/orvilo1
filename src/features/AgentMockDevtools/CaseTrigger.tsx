@@ -2,7 +2,7 @@ import type { MockCase } from '@orvilo/agent-mock';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown } from 'lucide-react';
-import { memo, type ReactNode, useMemo, useState } from 'react';
+import { isValidElement, memo, type ReactNode, useMemo, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -157,7 +157,6 @@ const CasePanel = memo<CasePanelProps>(({ onClose, selectedCaseId, setSelectedCa
         <Input
           autoFocus
           placeholder="Search cases…"
-          size="small"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -213,7 +212,7 @@ export const CaseTrigger = memo<CaseTriggerProps>(({ children, placement = 'bott
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          children ?? (
+          children === undefined ? (
             <span className={styles.trigger}>
               {current ? (
                 <span className={styles.triggerName}>{current.name}</span>
@@ -222,6 +221,10 @@ export const CaseTrigger = memo<CaseTriggerProps>(({ children, placement = 'bott
               )}
               <ChevronDown size={12} />
             </span>
+          ) : isValidElement(children) ? (
+            children
+          ) : (
+            <span>{children}</span>
           )
         }
       />

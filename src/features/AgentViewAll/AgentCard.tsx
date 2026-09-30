@@ -3,7 +3,7 @@
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
-import { createStaticStyles, responsive } from 'antd-style';
+import { createStaticStyles, cssVar, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';

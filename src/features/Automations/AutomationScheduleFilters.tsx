@@ -85,9 +85,9 @@ export const AutomationStatusSelect = memo<AutomationStatusSelectProps>(({ onCha
         onClick: () => onChange(option),
       }))}
     >
-      <Button iconPosition={'end'} size="sm" title={t('overview.filter_automations')}>
-        <ChevronDownIcon data-icon="inline-start" />
+      <Button size="sm" title={t('overview.filter_automations')}>
         {value === 'all' ? t('overview.all_statuses') : t(`status.${value}`)}
+        <ChevronDownIcon data-icon="inline-end" />
       </Button>
     </DropdownMenu>
   );

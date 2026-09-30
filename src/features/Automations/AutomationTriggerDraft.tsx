@@ -228,7 +228,8 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
                     { label: t('taskSchedule.minutes', { ns: 'chat' }), value: 'minutes' },
                     { label: t('taskSchedule.hours', { ns: 'chat' }), value: 'hours' },
                   ]}
-                  onValueChange={(u: string) => {
+                  onValueChange={(u) => {
+                    if (!u) return;
                     const unit = u as IntervalUnit;
                     setIntervalUnit(unit);
                     const seconds = unit === 'hours' ? intervalValue * 3600 : intervalValue * 60;

@@ -6,11 +6,12 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { DropdownMenu } from '@/components/ItemsMenu';
 import { useGroupDropdownMenu } from '@/features/HomeSidebar/Body/Agent/List/AgentGroupItem/useDropdownMenu';
 import { useAgentDropdownMenu } from '@/features/HomeSidebar/Body/Agent/List/AgentItem/useDropdownMenu';
 import { useAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
-import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu, {
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 type MenuItems = SidebarMenuItems;
 
@@ -84,9 +85,9 @@ const ActionsDropdown = memo<ActionsDropdownProps>(({ getMenuItems, hideTrigger,
   if (hideTrigger) return null;
 
   return (
-    <DropdownMenu items={items}>
+    <SidebarDropdownMenu items={items}>
       <ActionIcon icon={EllipsisIcon} size={'small'} title={t('more')} />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

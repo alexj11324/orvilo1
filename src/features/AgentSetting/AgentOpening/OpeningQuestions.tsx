@@ -115,9 +115,11 @@ const OpeningQuestions = memo(() => {
           <Button
             // don't allow repeat
             disabled={disabled || openingQuestions.includes(questionInput.trim())}
-            icon={PlusIcon}
+            size={'icon'}
             onClick={addQuestion}
-          />
+          >
+            <PlusIcon />
+          </Button>
         </div>
 
         {isRepeat && (
@@ -128,12 +130,16 @@ const OpeningQuestions = memo(() => {
       <div className={styles.questionsList}>
         {openingQuestions.length > 0 ? (
           <Sortable
-            getItemValue={(item: QuestionItem) => item.id}
+            getItemValue={(item: QuestionItem) => String(item.id)}
             value={items}
             onValueChange={handleSortEnd}
           >
             {items.map((item: QuestionItem) => (
-              <SortableItem className={styles.questionItemContainer} key={item.id} value={item.id}>
+              <SortableItem
+                className={styles.questionItemContainer}
+                key={item.id}
+                value={String(item.id)}
+              >
                 {!disabled && <SortableItemHandle />}
                 <div className={styles.questionItemContent}>{item.content}</div>
                 <ActionIcon

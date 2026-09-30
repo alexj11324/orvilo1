@@ -207,16 +207,16 @@ const AutomationRunsPage = memo(() => {
                 })),
               ]}
             >
-              <Button iconPosition={'end'} size="sm">
-                <ChevronDownIcon data-icon="inline-start" />
+              <Button size="sm">
                 {statusFilter ? t(`run_status.${statusFilter}`) : t('overview.all_statuses')}
+                <ChevronDownIcon data-icon="inline-end" />
               </Button>
             </DropdownMenu>
           </div>
         }
       />
       <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer fullWidth paddingBlock={16} paddingInline={24}>
+        <WideScreenContainer fullWidth style={{ paddingBlock: 16, paddingInline: 24 }}>
           {stats && (
             <div className="flex gap-3" style={{ flexWrap: 'wrap', marginBlockEnd: 16 }}>
               <StatCard

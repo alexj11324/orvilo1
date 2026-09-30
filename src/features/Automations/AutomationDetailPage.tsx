@@ -215,7 +215,7 @@ const DetailHeaderActions = memo(() => {
         <ActionIcon
           disabled={!canEdit}
           icon={MoreHorizontalIcon}
-          size="sm"
+          size="small"
           title={t('detail.more_actions')}
         />
       </DropdownMenu>

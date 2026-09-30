@@ -2,7 +2,7 @@
 
 import { createStaticStyles } from 'antd-style';
 import { type LucideIcon, XIcon } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { createElement, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
@@ -46,7 +46,7 @@ const SettingsModalLayout = memo<SettingsModalLayoutProps>(
     const { close } = useModalContext();
 
     const tabItems = tabs?.map(({ icon, key, label }) => ({
-      icon: icon ? <icon size={16} /> : undefined,
+      icon: icon ? createElement(icon, { size: 16 }) : undefined,
       key,
       label,
     }));

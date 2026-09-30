@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import {
   FilePathDisplay,
   getFileLanguage,
@@ -77,9 +76,9 @@ const FileChangeRender = memo<BuiltinRenderProps<CodexFileChangeArgs, CodexFileC
 
     if (stats.total === 0) {
       return (
-        <Text className={styles.emptyState}>
+        <div className={styles.emptyState}>
           {t('builtins.codex.fileChange.noChanges', { defaultValue: 'No file changes' })}
-        </Text>
+        </div>
       );
     }
 
@@ -98,11 +97,11 @@ const FileChangeRender = memo<BuiltinRenderProps<CodexFileChangeArgs, CodexFileC
                     {path ? (
                       <FilePathDisplay filePath={path} />
                     ) : (
-                      <Text className={styles.unknownPath}>
+                      <div className={styles.unknownPath}>
                         {t('builtins.codex.fileChange.unknownFile', {
                           defaultValue: 'Unknown file',
                         })}
-                      </Text>
+                      </div>
                     )}
                   </div>
                   <LineStats linesAdded={change.linesAdded} linesDeleted={change.linesDeleted} />

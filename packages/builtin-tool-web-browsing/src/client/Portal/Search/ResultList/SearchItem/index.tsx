@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import type { UniformSearchResult } from '@orvilo/types';
@@ -100,9 +99,7 @@ const SearchItem = memo<SearchResultProps>((props) => {
               score={score}
             />
           </div>
-          <Text className={styles.url} type={'secondary'}>
-            {url}
-          </Text>
+          <div className={`text-muted-foreground ${styles.url}`}>{url}</div>
           <div className={cx('flex flex-col', styles.desc)}>{content}</div>
         </div>
       </div>

@@ -1,7 +1,7 @@
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 
 import { EngineAvatarGroup } from '../../../../components/EngineAvatar';
@@ -23,16 +23,16 @@ const TitleExtra = memo<TitleExtraProps>(({ category, score, highlight, engines 
       {typeof score === 'number' && (
         <SimpleTooltip title={t(highlight ? 'search.includedTooltip' : 'search.scoreTooltip')}>
           {highlight ? (
-            <Tag color={'blue'} style={{ marginInlineEnd: 0 }} variant={'filled'}>
+            <Badge style={{ marginInlineEnd: 0 }} variant="info" variant="secondary">
               {score.toFixed(1)}
-            </Tag>
+            </Badge>
           ) : (
-            <Text
+            <div
+              className="text-muted-foreground"
               style={{ textAlign: 'center', width: 32, wordBreak: 'keep-all' }}
-              type={'secondary'}
             >
               {score.toFixed(1)}
-            </Text>
+            </div>
           )}
         </SimpleTooltip>
       )}

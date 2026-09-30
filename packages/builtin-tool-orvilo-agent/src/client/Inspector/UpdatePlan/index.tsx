@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckCircle, DiffIcon } from 'lucide-react';
@@ -42,16 +41,22 @@ export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, 
           {t('builtins.orvilo-agent.apiName.updatePlan')}
         </span>
         {completed && (
-          <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
+          <span
+            className="font-mono rounded bg-muted px-1 text-[12px]"
+            style={{ color: cssVar.colorSuccess }}
+          >
             <CheckCircle size={12} />
             {t('builtins.orvilo-agent.apiName.updatePlan.completed')}
-          </Text>
+          </span>
         )}
         {hasUpdates && !completed && (
-          <Text code as={'span'} color={cssVar.colorWarning} fontSize={12}>
+          <span
+            className="font-mono rounded bg-muted px-1 text-[12px]"
+            style={{ color: cssVar.colorWarning }}
+          >
             <DiffIcon size={12} />
             {t('builtins.orvilo-agent.apiName.updatePlan.modified')}
-          </Text>
+          </span>
         )}
       </div>
     );

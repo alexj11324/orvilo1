@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { InitDocumentArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -51,19 +50,25 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
             {t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </span>
           {displayLines > 0 && (
-            <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
+            <span
+              className="font-mono rounded bg-muted px-1 text-[12px]"
+              style={{ color: cssVar.colorSuccess }}
+            >
               {' '}
               <Plus size={12} />
               <AnimatedNumber value={displayLines} />
               {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
-            </Text>
+            </span>
           )}
           {chars > 0 && (
-            <Text code as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
+            <span
+              className="font-mono rounded bg-muted px-1 text-[12px]"
+              style={{ color: cssVar.colorTextDescription }}
+            >
               {' '}
               <AnimatedNumber value={chars} />
               {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
-            </Text>
+            </span>
           )}
         </div>
       );
@@ -75,18 +80,24 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
           {t('builtins.orvilo-page-agent.apiName.initPage.result')}
         </span>
         {displayLines > 0 && (
-          <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
+          <span
+            className="font-mono rounded bg-muted px-1 text-[12px]"
+            style={{ color: cssVar.colorSuccess }}
+          >
             <Plus size={12} />
             <AnimatedNumber value={displayLines} />
             {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
-          </Text>
+          </span>
         )}
         {chars > 0 && (
-          <Text code as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
+          <span
+            className="font-mono rounded bg-muted px-1 text-[12px]"
+            style={{ color: cssVar.colorTextDescription }}
+          >
             {' '}
             <AnimatedNumber value={chars} />
             {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
-          </Text>
+          </span>
         )}
       </div>
     );

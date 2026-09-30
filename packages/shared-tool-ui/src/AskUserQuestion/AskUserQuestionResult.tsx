@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
@@ -185,7 +184,7 @@ export const AskUserQuestionResult = memo<AskUserQuestionResultProps>(
           ))}
           {multiple && <div className={styles.divider} />}
           <span className={styles.answer}>{freeformText}</span>
-          {isError && <Text type="warning">{labels.noAnswer}</Text>}
+          {isError && <div className="text-warning">{labels.noAnswer}</div>}
         </div>
       );
     }
@@ -208,7 +207,7 @@ export const AskUserQuestionResult = memo<AskUserQuestionResultProps>(
             <span className={styles.answer}>{supplementText}</span>
           </div>
         )}
-        {isError && <Text type="warning">{labels.noAnswer}</Text>}
+        {isError && <div className="text-warning">{labels.noAnswer}</div>}
       </div>
     );
   },

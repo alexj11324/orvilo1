@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { SearchFilesState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
@@ -69,14 +68,12 @@ export const createSearchLocalFilesInspector = ({
               (hasResults ? (
                 <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
               ) : (
-                <Text
-                  as={'span'}
-                  color={cssVar.colorTextDescription}
-                  fontSize={12}
-                  style={{ marginInlineStart: 4 }}
+                <span
+                  className="text-[12px]"
+                  style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
                 >
                   ({t(noResultsKey as any)})
-                </Text>
+                </span>
               ))}
           </span>
         </div>

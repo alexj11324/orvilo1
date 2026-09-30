@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
@@ -59,7 +58,7 @@ const GithubRunCommandRender = memo<
     <div className="flex flex-col gap-3">
       {normalized && (
         <div>
-          <Text className={styles.sectionLabel}>
+          <div className={styles.sectionLabel}>
             Command
             {success !== undefined && (
               <span
@@ -70,7 +69,7 @@ const GithubRunCommandRender = memo<
                 exit {exitCode ?? (success ? 0 : 1)}
               </span>
             )}
-          </Text>
+          </div>
           <CodeBlock
             wrap
             code={`gh ${normalized}`}
@@ -82,7 +81,7 @@ const GithubRunCommandRender = memo<
       )}
       {outputBody && (
         <div>
-          <Text className={styles.sectionLabel}>Output</Text>
+          <div className={styles.sectionLabel}>Output</div>
           <CodeBlock
             wrap
             code={outputBody}
@@ -94,9 +93,9 @@ const GithubRunCommandRender = memo<
       )}
       {stderr && (
         <div>
-          <Text className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
+          <div className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
             Stderr
-          </Text>
+          </div>
           <CodeBlock
             wrap
             code={stderr}

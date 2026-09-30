@@ -1,14 +1,15 @@
 import { Markdown } from '@lobehub/ui';
-import { Alert, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { CrawlResult } from '@orvilo/types';
 import type { CrawlSuccessResult } from '@orvilo/web-crawler';
 import { createStaticStyles, cx } from 'antd-style';
-import { Copy, ExternalLink } from 'lucide-react';
+import { CircleAlert, Copy, ExternalLink, Info } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { copyToClipboard } from '@/utils/clipboard';
 
 import { CRAWL_CONTENT_LIMITED_COUNT } from '../../../const';
@@ -108,19 +109,21 @@ const PageContent = memo<PageContentProps>(({ result }) => {
             <span>{result.crawler}</span>
           </div>
         </div>
-        <Alert
-          type={'error'}
-          extra={
-            <div style={{ maxWidth: 500, overflowX: 'scroll' }}>
-              <CodeBlock code={JSON.stringify(result.data, null, 2)} language={'json'} />
-            </div>
-          }
-          title={
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertTitle>
             <div style={{ textAlign: 'start' }}>
               {result.data.errorMessage || result.data.content}
             </div>
-          }
-        />
+          </AlertTitle>
+          <AlertAction>
+            {
+              <div style={{ maxWidth: 500, overflowX: 'scroll' }}>
+                <CodeBlock code={JSON.stringify(result.data, null, 2)} language={'json'} />
+              </div>
+            }
+          </AlertAction>
+        </Alert>
       </div>
     );
   }
@@ -134,11 +137,7 @@ const PageContent = memo<PageContentProps>(({ result }) => {
             <div className={styles.title}>{title || result.originalUrl}</div>
           </div>
         </div>
-        {description && (
-          <Text className={styles.description} ellipsis={{ rows: 4 }}>
-            {description}
-          </Text>
-        )}
+        {description && <div className={`line-clamp-4 ${styles.description}`}>{description}</div>}
         <div className={cx('flex flex-row items-center gap-1', styles.url)}>
           {siteName && <div>{siteName} · </div>}
           <a
@@ -172,26 +171,30 @@ const PageContent = memo<PageContentProps>(({ result }) => {
       {content && (
         <div className="flex flex-col gap-3" style={{ paddingBlock: '0 12px' }}>
           <div className="flex flex-row justify-between">
-            <Segmented
-              value={display}
-              variant={'filled'}
-              options={[
-                { label: t('search.crawPages.detail.preview'), value: DisplayType.Render },
-                { label: t('search.crawPages.detail.raw'), value: DisplayType.Raw },
-              ]}
-              onChange={(value) => setDisplay(value as DisplayType)}
-            />
-            <Button size={'icon'} variant={'ghost'} onClick={() => copyToClipboard(content)}>
+            <ToggleGroup
+              value={[display]}
+              onValueChange={(value) => value[0] && setDisplay(value[0] as DisplayType)}
+            >
+              <ToggleGroupItem value={DisplayType.Render}>
+                {t('search.crawPages.detail.preview')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value={DisplayType.Raw}>
+                {t('search.crawPages.detail.raw')}
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button size="icon" variant={'ghost'} onClick={() => copyToClipboard(content)}>
               <Copy size={14} />
             </Button>
           </div>
           {content.length > CRAWL_CONTENT_LIMITED_COUNT && (
-            <Alert
-              variant={'borderless'}
-              title={t('search.crawPages.detail.tooLong', {
-                characters: CRAWL_CONTENT_LIMITED_COUNT,
-              })}
-            />
+            <Alert className="border-transparent bg-transparent" variant="info">
+              <Info />
+              <AlertTitle>
+                {t('search.crawPages.detail.tooLong', {
+                  characters: CRAWL_CONTENT_LIMITED_COUNT,
+                })}
+              </AlertTitle>
+            </Alert>
           )}
           {display === DisplayType.Render ? (
             <Markdown variant={'chat'}>{content}</Markdown>

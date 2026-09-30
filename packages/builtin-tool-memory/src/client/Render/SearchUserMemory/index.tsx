@@ -1,12 +1,12 @@
 'use client';
 
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import {
   Accordion,
   AccordionContent,
@@ -74,16 +74,19 @@ const MemoryItem = memo<MemoryItemProps>(({ title, content, subContent, tags }) 
       {title && <div className={styles.itemTitle}>{title}</div>}
       {content && <div className={styles.itemContent}>{content}</div>}
       {subContent && (
-        <Text className={styles.itemContent} style={{ fontStyle: 'italic' }} type={'secondary'}>
+        <div
+          className={`text-muted-foreground ${styles.itemContent}`}
+          style={{ fontStyle: 'italic' }}
+        >
           {subContent}
-        </Text>
+        </div>
       )}
       {safeTags.length > 0 && (
         <div className={cn('flex', 'gap-1', 'flex-wrap', styles.tags)}>
           {safeTags.map((tag, index) => (
-            <Tag key={index} size={'small'}>
+            <Badge key={index} size="sm">
               {tag}
-            </Tag>
+            </Badge>
           ))}
         </div>
       )}
@@ -132,13 +135,13 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
           {activities.length > 0 && (
             <AccordionItem value="activities">
               <AccordionTrigger>
-                <Text className={styles.sectionHeader}>
+                <div className={styles.sectionHeader}>
                   <span>Activities</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({activities.length})
                   </Text>
-                </Text>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="flex flex-col">
@@ -160,13 +163,13 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
           {contexts.length > 0 && (
             <AccordionItem value="contexts">
               <AccordionTrigger>
-                <Text className={styles.sectionHeader}>
+                <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.contexts')}</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({contexts.length})
                   </Text>
-                </Text>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="flex flex-col">
@@ -188,13 +191,13 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
           {experiences.length > 0 && (
             <AccordionItem value="experiences">
               <AccordionTrigger>
-                <Text className={styles.sectionHeader}>
+                <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.experiences')}</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({experiences.length})
                   </Text>
-                </Text>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="flex flex-col">
@@ -216,13 +219,13 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
           {identities.length > 0 && (
             <AccordionItem value="identities">
               <AccordionTrigger>
-                <Text className={styles.sectionHeader}>
+                <div className={styles.sectionHeader}>
                   <span>Identities</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({identities.length})
                   </Text>
-                </Text>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="flex flex-col">
@@ -243,13 +246,13 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
           {preferences.length > 0 && (
             <AccordionItem value="preferences">
               <AccordionTrigger>
-                <Text className={styles.sectionHeader}>
+                <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.preferences')}</span>
                   <Text as={'span'} type={'secondary'}>
                     {' '}
                     ({preferences.length})
                   </Text>
-                </Text>
+                </div>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="flex flex-col">

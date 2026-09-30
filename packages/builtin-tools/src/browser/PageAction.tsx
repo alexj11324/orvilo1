@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -27,13 +26,9 @@ const PageAction = memo<BuiltinRenderProps<unknown, BrowserPageState, string>>(
       <div className={cn('flex', 'flex-col', 'gap-[2px]', styles.container)}>
         <div className="flex items-center gap-[6px]">
           <Globe size={14} />
-          <Text ellipsis>{content || pluginState?.title || 'Browser action'}</Text>
+          <div className="truncate">{content || pluginState?.title || 'Browser action'}</div>
         </div>
-        {pluginState?.url && (
-          <Text ellipsis className={styles.url}>
-            {pluginState.url}
-          </Text>
-        )}
+        {pluginState?.url && <div className={`truncate ${styles.url}`}>{pluginState.url}</div>}
       </div>
     );
   },

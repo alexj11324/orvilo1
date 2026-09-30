@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
 import { memo } from 'react';
@@ -25,9 +24,12 @@ export const ListWorkspaceMembersInspector = memo<
     >
       <span>{t('builtins.orvilo-task.apiName.listWorkspaceMembers')}</span>
       {typeof count === 'number' && (
-        <Text code as={'span'} color={cssVar.colorTextSecondary} fontSize={12}>
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          style={{ color: cssVar.colorTextSecondary }}
+        >
           {count}
-        </Text>
+        </span>
       )}
     </div>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { ModifyNodesArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -76,26 +75,38 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     const statsParts: ReactNode[] = [];
     if (counts.insert > 0) {
       statsParts.push(
-        <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12} key="insert">
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          key="insert"
+          style={{ color: cssVar.colorSuccess }}
+        >
           <Plus size={12} />
           {counts.insert}
-        </Text>,
+        </span>,
       );
     }
     if (counts.modify > 0) {
       statsParts.push(
-        <Text code as={'span'} color={cssVar.colorWarning} fontSize={12} key="modify">
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          key="modify"
+          style={{ color: cssVar.colorWarning }}
+        >
           <DiffIcon size={12} />
           {counts.modify}
-        </Text>,
+        </span>,
       );
     }
     if (counts.remove > 0) {
       statsParts.push(
-        <Text code as={'span'} color={cssVar.colorError} fontSize={12} key="remove">
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          key="remove"
+          style={{ color: cssVar.colorError }}
+        >
           <Minus size={12} />
           {counts.remove}
-        </Text>,
+        </span>,
       );
     }
 

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import type { CSSProperties } from 'react';
 import { memo } from 'react';
@@ -40,7 +39,7 @@ const ShowMore = memo<ShowMoreProps>(({ style, messageId, engines, resultsNumber
         openToolUI(messageId, WebBrowsingManifest.identifier);
       }}
     >
-      <Text ellipsis={{ rows: 2 }}>{t('search.viewMoreResults', { results: resultsNumber })}</Text>
+      <div className="line-clamp-2">{t('search.viewMoreResults', { results: resultsNumber })}</div>
       <div className="flex flex-row items-center gap-1">
         <EngineAvatarGroup engines={engines} />
       </div>

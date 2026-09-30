@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { EditFileState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -65,18 +64,26 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
     const statsParts: ReactNode[] = [];
     if (linesAdded > 0) {
       statsParts.push(
-        <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12} key="added">
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          key="added"
+          style={{ color: cssVar.colorSuccess }}
+        >
           <Plus size={12} />
           {linesAdded}
-        </Text>,
+        </span>,
       );
     }
     if (linesDeleted > 0) {
       statsParts.push(
-        <Text code as={'span'} color={cssVar.colorError} fontSize={12} key="deleted">
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          key="deleted"
+          style={{ color: cssVar.colorError }}
+        >
           <Minus size={12} />
           {linesDeleted}
-        </Text>,
+        </span>,
       );
     }
 

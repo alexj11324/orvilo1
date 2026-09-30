@@ -1,7 +1,8 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { ComponentProps, ReactNode } from 'react';
 import { memo } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 export const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`

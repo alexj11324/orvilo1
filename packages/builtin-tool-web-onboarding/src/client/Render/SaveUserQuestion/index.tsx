@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { InterestAreaKey } from '@orvilo/const';
 import type { BuiltinRenderProps, SaveUserQuestionInput } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -93,9 +92,9 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
       <div className="flex flex-col gap-4">
         {hasAgentIdentity && (
           <div className="flex flex-col gap-2">
-            <Text className={styles.sectionLabel}>
+            <div className={styles.sectionLabel}>
               {t('builtins.orvilo-web-onboarding.render.agent')}
-            </Text>
+            </div>
             <div className={styles.detailCard}>
               <div className="flex items-center gap-3">
                 <div className={styles.avatar}>{agentEmoji || '🤖'}</div>
@@ -107,9 +106,9 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
 
         {hasUserProfile && (
           <div className="flex flex-col gap-2">
-            <Text className={styles.sectionLabel}>
+            <div className={styles.sectionLabel}>
               {t('builtins.orvilo-web-onboarding.render.fullName')}
-            </Text>
+            </div>
             <div className={styles.detailCard}>
               <div className={styles.value}>{fullName}</div>
             </div>
@@ -118,9 +117,9 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
 
         {hasInterests && (
           <div className="flex flex-col gap-2">
-            <Text className={styles.sectionLabel}>
+            <div className={styles.sectionLabel}>
               {t('builtins.orvilo-web-onboarding.render.interests')}
-            </Text>
+            </div>
             <div className="flex" style={{ flexWrap: 'wrap', gap: 8 }}>
               {interestLabels.map((label) => (
                 <span className={styles.chip} key={label}>

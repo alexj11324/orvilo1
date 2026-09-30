@@ -1,7 +1,5 @@
 'use client';
-
 import { MaterialFileTypeIcon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ImageIcon } from 'lucide-react';
 import path from 'path-browserify-esm';
@@ -76,16 +74,7 @@ export const FilePathDisplay = memo<FilePathDisplayProps>(({ filePath, isDirecto
             variant={'raw'}
           />
         ))}
-      {displayPath && (
-        <Text
-          className={styles.text}
-          ellipsis={{
-            tooltipWhenOverflow: true,
-          }}
-        >
-          {displayPath}
-        </Text>
-      )}
+      {displayPath && <div className={`truncate ${styles.text}`}>{displayPath}</div>}
     </>
   );
 });

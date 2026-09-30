@@ -1,4 +1,3 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import {
   LucideAtom,
@@ -13,6 +12,8 @@ import {
   LucideUserRound,
 } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 interface CategoryAvatarProps {
   category: string;

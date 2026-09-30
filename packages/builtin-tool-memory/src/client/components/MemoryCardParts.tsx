@@ -1,11 +1,11 @@
 'use client';
 
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
 import {
   Accordion,
   AccordionContent,
@@ -102,9 +102,9 @@ export const MemorySection = memo<MemorySectionProps>(({ children, title, tone =
     className={cn('flex', 'flex-col', 'gap-2', memoryCardStyles.section)}
     style={{ paddingBlock: 16, paddingInline: 12 }}
   >
-    <Text fontSize={12} weight={500}>
+    <div className="text-[12px] font-medium">
       <span className={highlightTextStyles[tone]}>{title}</span>
-    </Text>
+    </div>
     {children}
   </div>
 ));
@@ -159,9 +159,7 @@ export const SummaryAccordion = memo<SummaryAccordionProps>(({ details, summary,
     <Accordion>
       <AccordionItem value="summary">
         <AccordionTrigger>
-          <Text fontSize={12} type={'secondary'} weight={500}>
-            Summary
-          </Text>
+          <div className="text-[12px] text-muted-foreground font-medium">Summary</div>
         </AccordionTrigger>
         <AccordionContent>
           <div className="flex flex-col gap-2 px-2" style={{ paddingBlock: '8px 12px' }}>
@@ -170,7 +168,7 @@ export const SummaryAccordion = memo<SummaryAccordionProps>(({ details, summary,
             {tags.length > 0 && (
               <div className={cn('flex', 'gap-2', 'flex-wrap', memoryCardStyles.tags)}>
                 {tags.map((tag, index) => (
-                  <Tag key={index}>{tag}</Tag>
+                  <Badge key={index}>{tag}</Badge>
                 ))}
               </div>
             )}

@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { PanelRight, PanelRightClose } from 'lucide-react';
@@ -8,6 +7,7 @@ import type { ReactNode } from 'react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
@@ -178,7 +178,7 @@ export const TaskResultCard = memo<TaskResultCardProps>(
               size: 15,
               style: { color: iconColor ?? cssVar.colorTextSecondary },
             })}
-          <Text className={styles.title}>{title}</Text>
+          <div className={styles.title}>{title}</div>
           {identifier && <span className={styles.identifier}>{identifier}</span>}
           {headerExtra}
           <div className={styles.spacer} />

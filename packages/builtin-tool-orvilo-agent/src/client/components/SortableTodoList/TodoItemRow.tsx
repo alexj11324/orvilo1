@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Checkbox } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CircleArrowRight, GripVertical, Trash2 } from 'lucide-react';
@@ -8,7 +7,9 @@ import type { ChangeEvent, KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { SortableItemHandle } from '@/components/reui/sortable';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { useTodoListStore } from './store';
 
@@ -141,11 +142,10 @@ const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
         />
       ) : (
         <Checkbox
-          backgroundColor={cssVar.colorSuccess}
           checked={isCompleted}
-          shape={'circle'}
-          style={{ borderWidth: 1.5 }}
-          onChange={handleToggle}
+          className="rounded-full"
+          style={{ borderWidth: 1.5, borderColor: cssVar.colorSuccess }}
+          onCheckedChange={handleToggle}
         />
       )}
       <Input

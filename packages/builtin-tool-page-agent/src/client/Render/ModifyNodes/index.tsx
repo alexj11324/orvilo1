@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { ModifyNodesArgs, ModifyOperation } from '@orvilo/editor-runtime';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -118,9 +117,7 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
                 <>
                   <X size={14} style={{ color: cssVar.colorError, flexShrink: 0 }} />
                   {result?.error && (
-                    <Text as={'span'} fontSize={11} type={'danger'}>
-                      {result.error}
-                    </Text>
+                    <span className="text-[11px] text-destructive">{result.error}</span>
                   )}
                 </>
               )}

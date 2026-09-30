@@ -1,9 +1,9 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { BuiltinPlaceholderProps, SearchQuery } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { shinyTextStyles } from '@/styles';
 
@@ -46,14 +46,14 @@ export const Search = memo<BuiltinPlaceholderProps<SearchQuery>>(({ args }) => {
           <span className="anticon" role="img">
             <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
           </span>
-          {query ? query : <Skeleton height={20} width={40} />}
+          {query ? query : <Skeleton style={{ height: 20, width: 40 }} />}
         </div>
 
-        <Skeleton height={20} width={40} />
+        <Skeleton style={{ height: 20, width: 40 }} />
       </div>
       <div className="flex flex-row gap-3">
         {['1', '2', '3', '4', '5'].map((id) => (
-          <Skeleton height={ITEM_HEIGHT} key={id} radius={8} width={ITEM_WIDTH} />
+          <Skeleton key={id} style={{ height: ITEM_HEIGHT, width: ITEM_WIDTH }} />
         ))}
       </div>
     </div>

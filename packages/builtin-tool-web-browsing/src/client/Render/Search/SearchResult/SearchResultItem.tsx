@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import type { UniformSearchResult } from '@orvilo/types';
@@ -53,12 +52,10 @@ const SearchResultItem = memo<UniformSearchResult & { style?: CSSProperties }>(
             'flex flex-col gap-0.5 justify-between rounded-md border bg-card cursor-pointer',
           )}
         >
-          <Text ellipsis={{ rows: 2 }}>{title}</Text>
+          <div className="line-clamp-2">{title}</div>
           <div className="flex flex-row items-center gap-1">
             <WebFavicon size={14} title={title} url={url} />
-            <Text ellipsis type={'secondary'}>
-              {host.replace('www.', '')}
-            </Text>
+            <div className="truncate text-muted-foreground">{host.replace('www.', '')}</div>
           </div>
         </div>
       </a>

@@ -1,4 +1,3 @@
-import { CheckboxGroup, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { SearchQuery } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import type { ReactNode } from 'react';
@@ -6,6 +5,8 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import SearchBarUI from '@/components/SearchBar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';
@@ -92,96 +93,117 @@ const SearchBar = memo<SearchBarProps>(
         </div>
         <div className="rounded-md border bg-card flex flex-col" style={{ gap: 24, padding: 12 }}>
           {isMobile ? (
-            <CheckboxGroup
-              value={engines}
-              options={Object.keys(ENGINE_ICON_MAP).map((item) => ({
-                label: (
-                  <div className="flex flex-row items-center gap-2">
-                    <EngineAvatar engine={item} />
-                    {item}
-                  </div>
-                ),
-                value: item,
-              }))}
-              onChange={(checkedValue) => {
-                setEngines(checkedValue);
-              }}
-            />
+            <div className="flex flex-row flex-wrap gap-3">
+              {Object.keys(ENGINE_ICON_MAP).map((item) => (
+                <label className="flex flex-row items-center gap-2" key={item}>
+                  <Checkbox
+                    checked={engines.includes(item)}
+                    onCheckedChange={(checked) => {
+                      setEngines(
+                        checked === true
+                          ? [...engines, item]
+                          : engines.filter((engine) => engine !== item),
+                      );
+                    }}
+                  />
+                  <EngineAvatar engine={item} />
+                  {item}
+                </label>
+              ))}
+            </div>
           ) : (
             <div className="flex flex-row items-start gap-2">
-              <Text className={styles.textHeader} type={'secondary'}>
+              <div className={`text-muted-foreground ${styles.textHeader}`}>
                 {t('search.searchEngine.title')}
-              </Text>
-              <CheckboxGroup
-                value={engines}
-                options={Object.keys(ENGINE_ICON_MAP).map((item) => ({
-                  label: (
-                    <div className="flex flex-row items-center gap-2">
-                      <EngineAvatar engine={item} />
-                      {item}
-                    </div>
-                  ),
-                  value: item,
-                }))}
-                onChange={(checkedValue) => {
-                  setEngines(checkedValue);
-                }}
-              />
+              </div>
+              <div className="flex flex-row flex-wrap gap-3">
+                {Object.keys(ENGINE_ICON_MAP).map((item) => (
+                  <label className="flex flex-row items-center gap-2" key={item}>
+                    <Checkbox
+                      checked={engines.includes(item)}
+                      onCheckedChange={(checked) => {
+                        setEngines(
+                          checked === true
+                            ? [...engines, item]
+                            : engines.filter((engine) => engine !== item),
+                        );
+                      }}
+                    />
+                    <EngineAvatar engine={item} />
+                    {item}
+                  </label>
+                ))}
+              </div>
             </div>
           )}
 
           {isMobile ? (
-            <CheckboxGroup
-              value={categories}
-              options={Object.keys(CATEGORY_ICON_MAP).map((item) => ({
-                label: (
-                  <div className="flex flex-row items-center gap-2">
-                    <CategoryAvatar category={item as any} />
-                    {t(`search.searchCategory.value.${item}` as any)}
-                  </div>
-                ),
-                value: item,
-              }))}
-              onChange={(checkedValue) => {
-                setCategories(checkedValue);
-              }}
-            />
+            <div className="flex flex-row flex-wrap gap-3">
+              {Object.keys(CATEGORY_ICON_MAP).map((item) => (
+                <label className="flex flex-row items-center gap-2" key={item}>
+                  <Checkbox
+                    checked={categories.includes(item)}
+                    onCheckedChange={(checked) => {
+                      setCategories(
+                        checked === true
+                          ? [...categories, item]
+                          : categories.filter((category) => category !== item),
+                      );
+                    }}
+                  />
+                  <CategoryAvatar category={item as any} />
+                  {t(`search.searchCategory.value.${item}` as any)}
+                </label>
+              ))}
+            </div>
           ) : (
             <div className="flex flex-row items-start gap-2">
-              <Text className={styles.textHeader} type={'secondary'}>
+              <div className={`text-muted-foreground ${styles.textHeader}`}>
                 {t('search.searchCategory.title')}
-              </Text>
-              <CheckboxGroup
-                value={categories}
-                options={Object.keys(CATEGORY_ICON_MAP).map((item) => ({
-                  label: (
-                    <div className="flex flex-row items-center gap-2">
-                      <CategoryAvatar category={item as any} />
-                      {t(`search.searchCategory.value.${item}` as any)}
-                    </div>
-                  ),
-                  value: item,
-                }))}
-                onChange={(checkedValue) => setCategories(checkedValue)}
-              />
+              </div>
+              <div className="flex flex-row flex-wrap gap-3">
+                {Object.keys(CATEGORY_ICON_MAP).map((item) => (
+                  <label className="flex flex-row items-center gap-2" key={item}>
+                    <Checkbox
+                      checked={categories.includes(item)}
+                      onCheckedChange={(checked) =>
+                        setCategories(
+                          checked === true
+                            ? [...categories, item]
+                            : categories.filter((category) => category !== item),
+                        )
+                      }
+                    />
+                    <CategoryAvatar category={item as any} />
+                    {t(`search.searchCategory.value.${item}` as any)}
+                  </label>
+                ))}
+              </div>
             </div>
           )}
 
           <div className="flex flex-row items-center gap-4 flex-wrap">
-            <Text className={styles.textHeader} type={'secondary'}>
+            <div className={`text-muted-foreground ${styles.textHeader}`}>
               {t('search.searchTimeRange.title')}
-            </Text>
-            <Segmented
-              value={time_range}
-              options={[
-                { label: t('search.searchTimeRange.value.anytime'), value: 'anytime' },
-                { label: t('search.searchTimeRange.value.day'), value: 'day' },
-                { label: t('search.searchTimeRange.value.week'), value: 'week' },
-                { label: t('search.searchTimeRange.value.month'), value: 'month' },
-                { label: t('search.searchTimeRange.value.year'), value: 'year' },
-              ]}
-              onChange={(e) => setTimeRange(e as any)}
-            />
+            </div>
+            <ToggleGroup
+              value={[time_range]}
+              onValueChange={(value) => value[0] && setTimeRange(value[0] as any)}
+            >
+              <ToggleGroupItem value="anytime">
+                {t('search.searchTimeRange.value.anytime')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="day">{t('search.searchTimeRange.value.day')}</ToggleGroupItem>
+              <ToggleGroupItem value="week">
+                {t('search.searchTimeRange.value.week')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="month">
+                {t('search.searchTimeRange.value.month')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="year">
+                {t('search.searchTimeRange.value.year')}
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
       </>

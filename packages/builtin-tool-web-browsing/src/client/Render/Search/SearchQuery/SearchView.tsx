@@ -1,8 +1,8 @@
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { shinyTextStyles } from '@/styles';
 
@@ -50,14 +50,14 @@ const SearchBar = memo<SearchBarProps>(
         </div>
 
         {searching ? (
-          <Skeleton height={20} width={40} />
+          <Skeleton style={{ height: 20, width: 40 }} />
         ) : (
           <div className="flex flex-row items-center gap-1">
             <EngineAvatarGroup engines={defaultEngines} />
             {!isMobile && (
-              <Text style={{ fontSize: 12 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 12 }}>
                 {resultsNumber}
-              </Text>
+              </div>
             )}
           </div>
         )}

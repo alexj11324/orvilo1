@@ -1,12 +1,12 @@
 'use client';
-
 import { Hotkey, KeyMapEnum } from '@lobehub/ui';
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Check, PenLine, Replace, Send, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
 import { registerPendingHotkeyCard } from '../pendingHotkeys';
@@ -280,23 +280,22 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
       style={{ justifyContent: showCountdown ? 'space-between' : 'flex-end', width: '100%' }}
     >
       {showCountdown && (
-        <Text fontSize={12} type="secondary">
+        <div className="text-[12px] text-muted-foreground">
           {expired ? labels.timeExpired : labels.timeRemaining(formatRemaining(remainingMs))}
-        </Text>
+        </div>
       )}
       <div className="flex gap-2">
-        <Button disabled={submitting} icon={<X />} onClick={handleSkip}>
-          {labels.skip}
+        <Button disabled={submitting} onClick={handleSkip}>
+          <X /> {labels.skip}
           <Hotkey compact keys={KeyMapEnum.Esc} variant="borderless" />
         </Button>
         <Button
           disabled={isSubmitDisabled}
-          icon={<Send />}
           loading={submitting}
-          type="primary"
+          variant="default"
           onClick={handleSubmit}
         >
-          {labels.submit}
+          <Send /> {labels.submit}
           <Hotkey compact inverseTheme keys={KeyMapEnum.Enter} variant="borderless" />
         </Button>
       </div>
@@ -307,48 +306,9 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
     <div className="flex flex-col gap-3" ref={rootRef}>
       {questions.length > 0 && (
         <Tabs
-          activeKey={escapeActive ? 'escape' : supplementActive ? 'supplement' : activeTab}
           className={styles.tabs}
-          variant="square"
-          items={[
-            ...questions.map((q, idx) => {
-              const done = isQuestionAnswered(q, picks, custom);
-              return {
-                key: String(idx),
-                label: (
-                  <div className="flex items-center gap-[6px]">
-                    <Text>Q{idx + 1}</Text>
-                    {done && <Check size={12} />}
-                  </div>
-                ),
-              };
-            }),
-            {
-              key: 'supplement',
-              label: (
-                <div className="flex items-center gap-[6px]">
-                  <PenLine size={12} />
-                  <Text>{labels.supplementEnter}</Text>
-                </div>
-              ),
-            },
-            ...(isMulti
-              ? [
-                  // Replace-all stays at the far right because it discards the
-                  // structured selections, unlike additional notes.
-                  {
-                    key: 'escape',
-                    label: (
-                      <div data-replace-all className="flex items-center gap-[6px]">
-                        <Replace size={12} />
-                        <Text>{labels.escapeEnter}</Text>
-                      </div>
-                    ),
-                  },
-                ]
-              : []),
-          ]}
-          onChange={(key: string) => {
+          value={escapeActive ? 'escape' : supplementActive ? 'supplement' : activeTab}
+          onValueChange={(key) => {
             if (key === 'escape') {
               setEscapeMode(true);
             } else if (key === 'supplement') {
@@ -357,7 +317,37 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
               setQuestionMode(key);
             }
           }}
-        />
+        >
+          <TabsList variant="line">
+            {questions.map((q, idx) => {
+              const done = isQuestionAnswered(q, picks, custom);
+              return (
+                <TabsTrigger key={String(idx)} value={String(idx)}>
+                  <div className="flex items-center gap-[6px]">
+                    <div>Q{idx + 1}</div>
+                    {done && <Check size={12} />}
+                  </div>
+                </TabsTrigger>
+              );
+            })}
+            <TabsTrigger value="supplement">
+              <div className="flex items-center gap-[6px]">
+                <PenLine size={12} />
+                <div>{labels.supplementEnter}</div>
+              </div>
+            </TabsTrigger>
+            {isMulti && (
+              // Replace-all stays at the far right because it discards the
+              // structured selections, unlike additional notes.
+              <TabsTrigger value="escape">
+                <div data-replace-all className="flex items-center gap-[6px]">
+                  <Replace size={12} />
+                  <div>{labels.escapeEnter}</div>
+                </div>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </Tabs>
       )}
 
       {escapeActive || supplementActive ? (

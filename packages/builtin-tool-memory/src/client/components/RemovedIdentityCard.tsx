@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Trash2 } from 'lucide-react';
@@ -41,9 +40,7 @@ export const RemovedIdentityCard = memo<RemovedIdentityCardProps>(({ data }) => 
       <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
         <Trash2 size={14} />
         <div className="flex flex-col flex-1">
-          <Text fontSize={13} weight={500}>
-            Identity removed
-          </Text>
+          <div className="text-[13px] font-medium">Identity removed</div>
         </div>
         {id && <span className={localStyles.id}>{id}</span>}
       </div>

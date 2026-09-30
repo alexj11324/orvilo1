@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { MoveFilesState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
@@ -39,9 +38,9 @@ export const createMoveLocalFilesInspector = (translationKey: string) => {
             {t(translationKey as any)}
           </span>
           {totalCount > 0 && (
-            <Text code as={'span'} fontSize={12}>
+            <span className="font-mono rounded bg-muted px-1 text-[12px]">
               {successCount === undefined ? totalCount : `${successCount}/${totalCount}`}
-            </Text>
+            </span>
           )}
           {!isLoading && successCount !== undefined && (
             <span style={{ marginInlineStart: 4 }}>

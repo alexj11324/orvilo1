@@ -1,5 +1,4 @@
 'use client';
-
 import {
   ReactCodeblockPlugin,
   ReactCodePlugin,
@@ -9,7 +8,6 @@ import {
   ReactTablePlugin,
 } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -17,7 +15,9 @@ import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import InputNumber from '@/components/InputNumber';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   CriterionList,
@@ -131,7 +131,7 @@ const Section = memo<SectionProps>(({ children, extra, label, onToggle, open }) 
           transition: 'transform 0.2s',
         }}
       />
-      <Text className={styles.sectionLabel}>{label}</Text>
+      <div className={styles.sectionLabel}>{label}</div>
       {extra}
     </div>
     {open && children}
@@ -225,13 +225,9 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
         </Section>
 
         <Section
+          extra={<span className={styles.seq}>{args.criteria.length}</span>}
           label={t('builtins.orvilo-task.goal.criteria')}
           open={openSections.criteria}
-          extra={
-            <Text as={'span'} className={styles.seq}>
-              {args.criteria.length}
-            </Text>
-          }
           onToggle={() => toggleSection('criteria')}
         >
           <div className="flex flex-col gap-[7px]">
@@ -281,9 +277,8 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
             </CriterionList>
             <div className="flex">
               <Button
-                icon={<Plus />}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 onClick={() =>
                   openCriterionEditModal({
                     criterion: {
@@ -297,7 +292,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
                   })
                 }
               >
-                {t('builtins.orvilo-task.goal.addCriterion')}
+                <Plus /> {t('builtins.orvilo-task.goal.addCriterion')}
               </Button>
             </div>
           </div>
@@ -310,7 +305,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
         >
           <div className="flex gap-6">
             <div className="flex flex-col gap-1">
-              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</Text>
+              <div className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</div>
               <InputNumber
                 min={2}
                 style={{ width: 120 }}
@@ -320,7 +315,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
               />
             </div>
             <div className="flex flex-col gap-1">
-              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</Text>
+              <div className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</div>
               <InputNumber
                 min={0}
                 placeholder={t('builtins.orvilo-task.goal.uncapped')}
@@ -331,7 +326,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
               />
             </div>
             <div className="flex flex-col gap-1">
-              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</Text>
+              <div className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</div>
               <InputNumber
                 max={10}
                 min={1}

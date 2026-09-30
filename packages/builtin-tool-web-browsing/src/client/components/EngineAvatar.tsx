@@ -1,6 +1,7 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 import { ENGINE_ICON_MAP } from '../../const';
 

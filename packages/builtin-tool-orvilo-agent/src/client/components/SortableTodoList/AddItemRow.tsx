@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Checkbox } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Plus } from 'lucide-react';
@@ -8,6 +7,8 @@ import type { ChangeEvent, KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 
 import { ADD_ITEM_ID, useTodoListStore } from './store';
@@ -90,7 +91,11 @@ const AddItemRow = memo<AddItemRowProps>(({ placeholder, showDragHandle = true, 
   return (
     <div className={cn('flex', 'items-center', 'gap-1', cx(styles.addRow, className))}>
       {showDragHandle && <div className={styles.dragHandlePlaceholder} />}
-      <Checkbox checked={false} shape={'circle'} style={{ borderWidth: 1.5, cursor: 'default' }} />
+      <Checkbox
+        checked={false}
+        className="rounded-full"
+        style={{ borderWidth: 1.5, cursor: 'default' }}
+      />
       <Input
         placeholder={defaultPlaceholder}
         ref={inputRef}

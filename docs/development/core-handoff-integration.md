@@ -41,7 +41,7 @@ The current isolated actual PostgreSQL evidence comprises:
 
 Phase recovery now runs five fresh Node processes against persistent PostgreSQL. Each commits its durable handoff stage, is terminated with SIGKILL, and is followed by a new process that recovers the next stage. Separate database backend termination during a transaction and trigger failure verify rollback and subsequent recovery. The source runtime identities and quiescence proofs in these model tests are fixtures; killing the test application does not prove termination of a supervised runtime tree. Physical runtime isolation and tree termination are exercised separately by the concrete host/supervisor acceptance tests. The final independent database rerun passed all 14 cases in 17.96 seconds.
 
-Scoped lint and whitespace checks passed. Final broad typecheck is pending; no full-repository typecheck pass is claimed. No production data, credentials, subscription, deployment or persistent permission changes were performed by this acceptance work.
+Scoped lint and whitespace checks passed. The final [full root-project comparison](../core-typecheck-comparison.md) completed: 7,854 diagnostics in both exact baseline and candidate, with no added diagnostic sites. Neither run passed. No production data, credentials, subscription, deployment or persistent permission changes were performed by this acceptance work.
 
 ## Real PostgreSQL recovery acceptance (2026-09-30)
 

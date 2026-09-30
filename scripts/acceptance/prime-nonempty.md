@@ -49,3 +49,10 @@ memory recovery, reconciliation of a real partially-applied tool effect, post-re
 behavior, production tenant-scoped snapshot persistence or permission to resume mutations.
 `PrimeExecutionRuntime` therefore continues advertising `resume:none` and ACP
 `loadSession:false` until the production recovery and authority contracts are implemented.
+
+The minimum supported alternative is a fresh ACP session under the newly registered
+owner and fence, with explicitly selected historical context supplied by the trusted
+host. Keep task authority, receipts and pending-effect reconciliation outside the
+Prime session. That path must reauthorize every new action and must not replay an
+ambiguous receipt. It resumes task work, not the prior Python heap or ACP transport;
+the existing atomic handoff host already provides the fresh-session boundary.

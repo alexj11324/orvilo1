@@ -269,7 +269,9 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
     const [paused, setPaused] = useState(false);
     const [current, setCurrent] = useState(0);
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
-    const autoplay = useSingleton(() => Autoplay({ delay: 6000, stopOnInteraction: false }));
+    const autoplay = useSingleton(() =>
+      Autoplay({ delay: 6000, stopOnFocusIn: false, stopOnInteraction: false }),
+    );
     const [slideHeight, setSlideHeight] = useState<number>();
     const { analytics } = useAnalytics();
 
@@ -294,18 +296,29 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
 
     useEffect(() => {
       if (!carouselApi) return;
-      const onSelect = () => {
+      let observed: Element | null = null;
+      const resizeObserver = new ResizeObserver(() => {
+        const slide = carouselApi.slideNodes()[carouselApi.selectedScrollSnap()];
+        if (slide) setSlideHeight(slide.offsetHeight);
+      });
+      const sync = () => {
         const idx = carouselApi.selectedScrollSnap();
         setCurrent(idx);
         const slide = carouselApi.slideNodes()[idx];
+        if (slide !== observed) {
+          if (observed) resizeObserver.unobserve(observed);
+          if (slide) resizeObserver.observe(slide);
+          observed = slide;
+        }
         if (slide) setSlideHeight(slide.offsetHeight);
       };
-      onSelect();
-      carouselApi.on('select', onSelect);
-      carouselApi.on('reInit', onSelect);
+      sync();
+      carouselApi.on('select', sync);
+      carouselApi.on('reInit', sync);
       return () => {
-        carouselApi.off('select', onSelect);
-        carouselApi.off('reInit', onSelect);
+        resizeObserver.disconnect();
+        carouselApi.off('select', sync);
+        carouselApi.off('reInit', sync);
       };
     }, [carouselApi]);
 

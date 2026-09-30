@@ -161,17 +161,21 @@ const ImportPreviewModal = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('importPreview.tables.name')}</TableHead>
-                    <TableHead>{t('importPreview.tables.count')}</TableHead>
+                    <TableHead className="sticky top-0 z-10 h-8 bg-background">
+                      {t('importPreview.tables.name')}
+                    </TableHead>
+                    <TableHead className="sticky top-0 z-10 h-8 bg-background">
+                      {t('importPreview.tables.count')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tables.map((table) => (
                     <TableRow key={table.name}>
-                      <TableCell>
+                      <TableCell className="py-1.5">
                         <div className={styles.tableName}>{table.name}</div>
                       </TableCell>
-                      <TableCell>{table.count}</TableCell>
+                      <TableCell className="py-1.5">{table.count}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

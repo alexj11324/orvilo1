@@ -1060,10 +1060,10 @@ function DataGridContainer({
 }) {
   return (
     <div
-      data-slot="data-grid"
       // relative: anchors floating chrome composed inside the container,
       // like the fill-drag preview outline.
       className={cn('relative w-full overflow-hidden', className)}
+      data-slot="data-grid"
     >
       {children}
     </div>

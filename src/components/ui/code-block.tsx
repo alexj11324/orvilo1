@@ -468,7 +468,6 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
   domIdBase,
   startLine = 1,
   onSelect,
-  foldable,
   foldRegion,
   folded,
   onToggleFold,
@@ -498,9 +497,6 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
       role={selectable ? 'option' : undefined}
       style={{ counterReset: `cb-line ${line.number - 1}` }}
       tabIndex={selectable ? -1 : undefined}
-      onClick={
-        selectable && onSelect ? (event) => onSelect(line.number, event.shiftKey) : undefined
-      }
       className={cn(
         LINE_BASE_CLASS,
         LINE_NUMBER_CLASS,
@@ -510,6 +506,9 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
         LINE_MOTION_CLASS,
         selectable && 'cursor-pointer',
       )}
+      onClick={
+        selectable && onSelect ? (event) => onSelect(line.number, event.shiftKey) : undefined
+      }
       /**
        * Every row re-seeds the counter, making its number absolute rather
        * than ordinal. That serves two features at once: folding can remove
@@ -534,6 +533,11 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
           aria-expanded={!folded}
           data-slot="code-block-fold-toggle"
           data-state={folded ? 'folded' : 'unfolded'}
+          /* Inside a role="option" row a focusable descendant is invalid ARIA,
+             so the toggle leaves the tab order when the block is selectable;
+             pointer use is unaffected. */
+          tabIndex={selectable ? -1 : undefined}
+          type="button"
           aria-label={
             folded
               ? `Unfold lines ${foldRegion.start + startLine - 1} to ${foldRegion.end + startLine - 1}`
@@ -567,11 +571,6 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
             event.stopPropagation();
             onToggleFold(foldRegion.start);
           }}
-          type="button"
-          /* Inside a role="option" row a focusable descendant is invalid ARIA,
-             so the toggle leaves the tab order when the block is selectable;
-             pointer use is unaffected. */
-          tabIndex={selectable ? -1 : undefined}
         >
           <svg
             aria-hidden="true"
@@ -589,6 +588,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
       ) : null}
       {actions && active ? (
         <span
+          contentEditable={false}
           data-side={inGutter ? 'gutter' : 'end'}
           data-slot="code-block-line-actions"
           className={cn(
@@ -608,7 +608,6 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
             inGutter &&
               'absolute top-1/2 left-0 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center',
           )}
-          contentEditable={false}
           /* An action is a control, not line content. Without this the click
              bubbles to a selectable row and toggles the very selection the
              action just consumed, so "add these 6 lines" left line 6 selected
@@ -634,27 +633,23 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
             className="bg-muted/80 text-muted-foreground hover:bg-muted ml-2 inline-flex h-(--code-block-fold-width) translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center rounded-sm px-1.5 align-top text-[0.8em] leading-none select-none"
             data-slot="code-block-fold-marker"
             tabIndex={selectable ? -1 : undefined}
+            type="button"
             onClick={(event) => {
               event.stopPropagation();
               onToggleFold?.(line.number);
             }}
-            /* Same centring as the fold toggle: chip height matches the fold
-               channel and the translate makes up the difference to the line
-               box, so the label sits on the code baseline's visual centre
-               instead of riding high. */
-            type="button"
           >
             {`... ${hiddenCount} lines`}
           </button>
         ) : null}
         {caret ? (
           <span
-            data-slot="code-block-caret"
             aria-hidden="true"
             /* An underline caret: a thin strip on the baseline, the shape a
                terminal uses, instead of a bold block that outweighs the text
                it follows. */
             className="ml-0.5 inline-block h-[0.12em] w-[0.55em] translate-y-[0.02em] animate-pulse rounded-[1px] bg-(--code-block-caret-color) motion-reduce:animate-none"
+            data-slot="code-block-caret"
           />
         ) : null}
       </span>

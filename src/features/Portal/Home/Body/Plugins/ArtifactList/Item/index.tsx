@@ -3,7 +3,6 @@ import { cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { CircuitBoard } from 'lucide-react';
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
 import PluginAvatar from '@/features/PluginAvatar';
@@ -21,8 +20,6 @@ export interface ArtifactItemProps {
 }
 
 const ArtifactItem = memo<ArtifactItemProps>(({ payload, messageId, identifier = 'unknown' }) => {
-  const { t } = useTranslation('plugin');
-
   const args = useYamlArguments(payload?.arguments);
 
   const pluginMeta = useToolStore(toolSelectors.getMetaById(identifier), isEqual);

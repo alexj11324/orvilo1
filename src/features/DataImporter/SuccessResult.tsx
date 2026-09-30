@@ -47,7 +47,7 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
   const { t } = useTranslation('common');
 
   const cellRender = (text: number | string) => {
-    return text ? text : <span className={styles.zeroCell}>0</span>;
+    return text || <span className={styles.zeroCell}>0</span>;
   };
   return (
     <Empty style={{ paddingBlock: 24, paddingInline: 0 }}>

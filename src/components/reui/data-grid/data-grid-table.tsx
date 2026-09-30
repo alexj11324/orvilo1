@@ -584,9 +584,9 @@ function DataGridTableAddRow() {
         }
       >
         <Button
+          size="sm"
           type="button"
           variant="ghost"
-          size="sm"
           // Block-level flex: inline-flex would sit on the cell's text
           // baseline and push the icon and label off vertical center.
           className={cn(
@@ -869,7 +869,7 @@ function DataGridTableHead({ children }: { children: ReactNode }) {
   );
 }
 
-function DataGridTableHeadRow({ children, rowId }: { children: ReactNode; rowId: string }) {
+function DataGridTableHeadRow({ children }: { children: ReactNode; rowId: string }) {
   const { props } = useDataGrid();
 
   return (
@@ -983,7 +983,7 @@ function DataGridTableHeadRowCell<TData extends object>({
         ...(props.tableLayout?.columnsResizable && {
           width: `calc(var(--header-${header.id}-size) * 1px)`,
         }),
-        ...(dndStyle ? dndStyle : null),
+        ...(dndStyle || null),
       }}
     >
       {children}
@@ -1341,7 +1341,7 @@ function DataGridTableFootRowCell({
 }
 
 function DataGridTableBodyRowSkeleton({ children }: { children: ReactNode }) {
-  const { table, props } = useDataGrid();
+  const { props } = useDataGrid();
 
   return (
     <tr
@@ -1438,9 +1438,9 @@ function DataGridTableBodyRow<TData extends object>({
       data-row-id={row.id}
       data-row-pinned={isRowPinned || undefined}
       data-row-pinned-boundary={pinnedBoundary}
-      data-state={table.options.enableRowSelection && row.getIsSelected() ? 'selected' : undefined}
-      style={{ ...(dndStyle ? dndStyle : null) }}
       data-row-status={rowStatus}
+      data-state={table.options.enableRowSelection && row.getIsSelected() ? 'selected' : undefined}
+      style={{ ...(dndStyle || null) }}
       // 1-based after the header row; row.index is the position in the data,
       // so the announced index stays absolute across pagination.
       className={cn(
@@ -1575,31 +1575,13 @@ function DataGridTableBodyRowCell<TData extends object>({
 
   const renderTd = (selection: ReturnType<typeof getDataGridCellSelectionCellAttrs> | null) => (
     <td
-      ref={dndRef}
-      // The id is what the controller's aria-activedescendant points at, so
-      // a screen reader tracks the focused cell through the container-focus
-      // model.
       aria-colindex={cellSelectionOn ? column.getIndex() + 1 : undefined}
       data-cell-status={props.getCellStatus?.(row.original, column.id)}
       data-column-index={columnIndex}
       data-last-col={isLastStartPinned ? 'start' : isFirstEndPinned ? 'end' : undefined}
       data-pinned={isPinned || undefined}
-      id={
-        cellSelectionOn
-          ? `${gridId}c-${toDataGridDomId(row.id)}-${toDataGridDomId(column.id)}`
-          : undefined
-      }
-      style={{
-        ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
-        // Paint containment clips at the padding edge, which would erase
-        // the ::before selection chrome on pinned cells.
-        ...(cellSelectionOn ? { contain: undefined } : null),
-        ...(props.tableLayout?.columnsResizable && {
-          width: `calc(var(--col-${column.id}-size) * 1px)`,
-        }),
-        ...(dndStyle ? dndStyle : null),
-      }}
-      {...(selection ? selection : null)}
+      ref={dndRef}
+      {...(selection || null)}
       className={cn(
         'align-middle',
         bodyCellSpacing,
@@ -1636,6 +1618,24 @@ function DataGridTableBodyRowCell<TData extends object>({
           : '',
         selection && dataGridCellSelectionCellClasses,
       )}
+      // The id is what the controller's aria-activedescendant points at, so
+      // a screen reader tracks the focused cell through the container-focus
+      // model.
+      id={
+        cellSelectionOn
+          ? `${gridId}c-${toDataGridDomId(row.id)}-${toDataGridDomId(column.id)}`
+          : undefined
+      }
+      style={{
+        ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
+        // Paint containment clips at the padding edge, which would erase
+        // the ::before selection chrome on pinned cells.
+        ...(cellSelectionOn ? { contain: undefined } : null),
+        ...(props.tableLayout?.columnsResizable && {
+          width: `calc(var(--col-${column.id}-size) * 1px)`,
+        }),
+        ...(dndStyle || null),
+      }}
       onMouseDown={
         selection
           ? (event) => {
@@ -2159,7 +2159,7 @@ const MemoizedDataGridTableBodyRows = memo(
     !!next.table.state.columnResizing.isResizingColumn || next.table._isSelectingCells === true,
 ) as typeof DataGridTableBodyRows;
 
-function DataGridTableHeader<TData extends object>() {
+function DataGridTableHeader<_TData extends object>() {
   const { table, props } = useDataGrid();
   const mergedHeaderGroups = getDataGridTableMergedHeaderGroups(table);
   const hasRightPinnedColumns = hasDataGridTableRightPinnedColumns(table);
@@ -2218,7 +2218,7 @@ function DataGridTableHeader<TData extends object>() {
   );
 }
 
-function DataGridTable<TData extends object>({
+function DataGridTable<_TData extends object>({
   footerContent,
   renderHeader = true,
 }: {

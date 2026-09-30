@@ -40,7 +40,6 @@ const SearchBar = memo<SearchBarProps>(
     defaultCategories = [],
     defaultEngines = [],
     defaultTimeRange,
-    aiSummary = true,
     defaultQuery,
     tooltip = true,
     searchAddon,

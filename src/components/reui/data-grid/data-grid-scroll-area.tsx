@@ -356,12 +356,12 @@ function DataGridScrollArea({
   return (
     <div className="relative" ref={containerRef}>
       <ScrollAreaPrimitive.Root
-        data-slot="data-grid-scroll-area"
+        className={cn('relative', className)}
         // Styling hook: present while the sticky-header scroll mode detects
         // vertical overflow, so consumers can style scrollable vs short
         // grids with a plain ancestor attribute selector.
-        className={cn('relative', className)}
         data-overflow-vertical={hasCustomVerticalOverflow ? 'true' : undefined}
+        data-slot="data-grid-scroll-area"
         {...props}
       >
         <ScrollAreaPrimitive.Viewport

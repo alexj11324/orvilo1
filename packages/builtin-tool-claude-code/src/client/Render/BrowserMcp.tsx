@@ -88,12 +88,12 @@ const Screenshot = memo<BrowserMcpRenderProps>(({ content, pluginState }) => {
       <div className="flex flex-col gap-2">
         {images.map((image, index) => (
           <div
-            key={image.fileId || image.url || index}
             // The border frames the capture, so it has to sit on the image's edge:
             // any padding reads as a mat around the screenshot rather than a frame.
             // `display: flex` also kills the inline-image baseline gap, which would
             // otherwise leave a sliver of background under the picture.
             className="rounded-lg border"
+            key={image.fileId || image.url || index}
             style={{ alignSelf: 'flex-start', display: 'flex', overflow: 'hidden', padding: 0 }}
           >
             {/* A full-page capture of the sidebar browser is tall (e.g. 720×1620), so

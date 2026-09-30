@@ -293,8 +293,8 @@ const AcceptanceChip = memo<{ view: GoalNodeView }>(({ view }) => {
   return (
     <Badge
       size="sm"
-      variant={chip.color === 'error' ? 'destructive' : (chip.color as 'info' | 'success')}
       style={{ cursor: 'pointer' }}
+      variant={chip.color === 'error' ? 'destructive' : (chip.color as 'info' | 'success')}
       // The evidence is the point: the chip is the way into it, opened in the
       // side Portal like every other drill-down on this page.
       onClick={(event) => {

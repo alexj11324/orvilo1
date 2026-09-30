@@ -1,9 +1,9 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { type ChatContextContent } from '@orvilo/types';
 import { COMPRESSIBLE_IMAGE_TYPES, compressImageFile } from '@orvilo/utils/compressImage';
 import { Buffer } from 'buffer.js';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { FILE_UPLOAD_BLACKLIST } from '@/const/file';
 import { fileService } from '@/services/file';
 import { ragService } from '@/services/rag';

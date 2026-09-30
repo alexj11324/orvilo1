@@ -1,7 +1,9 @@
-import { Slider, type SliderProps, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo, useMemo } from 'react';
+
+import { Slider } from '@/components/ui/slider';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { findClosestOptionIndex } from './utils';
 
@@ -62,8 +64,8 @@ export interface DiscreteSliderOption {
 }
 
 export interface DiscreteSliderProps extends Omit<
-  SliderProps,
-  'defaultValue' | 'max' | 'min' | 'onChange' | 'onChangeComplete' | 'step' | 'value'
+  ComponentProps<typeof Slider>,
+  'defaultValue' | 'max' | 'min' | 'onValueChange' | 'onValueCommitted' | 'step' | 'value'
 > {
   formatTooltip?: (value: number) => ReactNode;
   onChange?: (value: number) => void;
@@ -104,11 +106,11 @@ const DiscreteSlider = memo<DiscreteSliderProps>(
           min={0}
           step={1}
           value={currentIndex}
-          onChange={(index) => {
+          onValueChange={(index) => {
             const option = options[index];
             if (option) onChange?.(option.value);
           }}
-          onChangeComplete={(index) => {
+          onValueCommitted={(index) => {
             const option = options[index];
             if (option) onChangeComplete?.(option.value);
           }}
@@ -119,7 +121,10 @@ const DiscreteSlider = memo<DiscreteSliderProps>(
     return (
       <div className={cx('flex flex-col gap-1.5', styles.root, className)} style={style}>
         {formatTooltip && currentOption ? (
-          <Tooltip title={formatTooltip(currentOption.value)}>{slider}</Tooltip>
+          <Tooltip>
+            <TooltipTrigger render={slider} />
+            <TooltipContent>{formatTooltip(currentOption.value)}</TooltipContent>
+          </Tooltip>
         ) : (
           slider
         )}

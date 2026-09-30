@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Avatar, Button, Checkbox, Switch, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { useHover } from 'ahooks';
 import { createStaticStyles, cx } from 'antd-style';
@@ -10,8 +9,13 @@ import { type ChangeEvent } from 'react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import ImperativeModal from '@/components/ImperativeModal';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import AgentSelectionEmpty from '@/features/AgentSelectionEmpty';
@@ -43,7 +47,7 @@ const AvailableAgentItem = memo<{
       <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
-          onChange={() => {
+          onCheckedChange={() => {
             onToggle(_agentId);
           }}
           onClick={(e) => {
@@ -54,13 +58,9 @@ const AvailableAgentItem = memo<{
           <Avatar animation={isHovering} avatar={avatar} background={avatarBackground} size={40} />
         </div>
         <div className={'flex flex-1 flex-col'} style={{ gap: 2, minWidth: 0 }}>
-          <Text className={styles.title} weight={500}>
-            {title}
-          </Text>
+          <div className={cn('font-medium', styles.title)}>{title}</div>
           {description && (
-            <Text ellipsis className={styles.description}>
-              {description}
-            </Text>
+            <div className={cn('truncate min-w-0', styles.description)}>{description}</div>
           )}
         </div>
       </div>
@@ -388,26 +388,26 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
               {!isHostCurrentlyEnabled && (
                 <div className={cn('flex gap-3 items-center', styles.hostCard)}>
                   <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
-                    <Text
+                    <div
                       style={{ fontSize: 14, fontWeight: 500 }}
                       type={isHostRemoved ? 'secondary' : undefined}
                     >
                       {t('groupWizard.host.title')}
-                    </Text>
-                    <Text
+                    </div>
+                    <div
                       style={{ color: '#999', fontSize: 12 }}
                       type={isHostRemoved ? 'secondary' : undefined}
                     >
                       {t('groupWizard.host.description')}
-                    </Text>
+                    </div>
                   </div>
                   <div className={'flex gap-3 items-center'}>
                     <Tooltip>
                       <TooltipTrigger render={<span />}>
                         <Switch
                           checked={!isHostRemoved}
-                          size="small"
-                          onChange={(checked) => handleHostToggle(checked)}
+                          size="sm"
+                          onCheckedChange={(checked) => handleHostToggle(checked)}
                         />
                       </TooltipTrigger>
                       <TooltipContent>{t('groupWizard.host.tooltip')}</TooltipContent>

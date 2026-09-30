@@ -1,7 +1,8 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const LIST_BREAKPOINT = 600;
 

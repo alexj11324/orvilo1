@@ -12,7 +12,7 @@ const fixturePlugin: Plugin = {
 
     return `
       import { ConfigProvider, ErrorBoundary, Flexbox } from '@lobehub/ui';
-      import { Button } from '@lobehub/ui/base-ui';
+      import { Button } from '@/components/ui/button';
       export { ConfigProvider, ErrorBoundary, Flexbox, Button };
       export * from '@lobehub/ui/brand';
       export const loadToast = () => import('@lobehub/ui/base-ui');

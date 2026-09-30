@@ -1,4 +1,3 @@
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import fastDeepEqual from 'fast-deep-equal';
@@ -8,7 +7,9 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
 
+import ActionIcon from '@/components/ActionIcon';
 import { FormInput } from '@/components/FormInput';
+import { Button } from '@/components/ui/button';
 
 import { type KeyValueItem } from './utils';
 import { localListToRecord, recordToLocalList } from './utils';

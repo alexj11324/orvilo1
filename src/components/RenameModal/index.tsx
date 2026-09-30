@@ -1,16 +1,12 @@
 'use client';
 
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface RenameModalContentProps {
@@ -53,9 +49,9 @@ const RenameModalContent = memo<RenameModalContentProps>(
     return (
       <div className={'flex flex-col gap-5'}>
         {description ? (
-          <Text style={{ marginTop: -8 }} type={'secondary'}>
+          <div className="text-muted-foreground" style={{ marginTop: -8 }}>
             {description}
-          </Text>
+          </div>
         ) : null}
         <Input
           autoFocus

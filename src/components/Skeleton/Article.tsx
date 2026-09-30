@@ -1,8 +1,9 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import { type CSSProperties, memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ArticleSkeletonProps {
   avatar?: boolean | number;
@@ -16,8 +17,20 @@ const ArticleSkeleton = memo<ArticleSkeletonProps>(
   ({ avatar = false, className, rows = 3, style, title = true }) => {
     const body = (
       <div className={'flex flex-col gap-4'} style={{ width: '100%' }}>
-        {title !== false && <Skeleton.Text width={title === true ? '60%' : title} />}
-        {rows > 0 && <Skeleton.Text rows={rows} />}
+        {title !== false && (
+          <Skeleton className={'h-4'} style={{ width: title === true ? '60%' : title }} />
+        )}
+        {rows > 0 && (
+          <div className={'flex flex-col gap-2'}>
+            {Array.from({ length: rows }).map((_, index) => (
+              <Skeleton
+                className={'h-4'}
+                key={index}
+                style={{ width: index === rows - 1 ? '60%' : '100%' }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
 
@@ -30,7 +43,10 @@ const ArticleSkeleton = memo<ArticleSkeletonProps>(
 
     return (
       <div className={cn('flex gap-4', className)} style={{ ...style, width: '100%' }}>
-        <Skeleton.Avatar size={avatar === true ? 40 : avatar} />
+        <Skeleton
+          className={'rounded-full'}
+          style={{ height: avatar === true ? 40 : avatar, width: avatar === true ? 40 : avatar }}
+        />
         {body}
       </div>
     );

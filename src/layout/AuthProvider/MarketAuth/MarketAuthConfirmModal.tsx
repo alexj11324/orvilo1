@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
@@ -56,7 +55,7 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
     };
 
     const footer = (
-      <Text align={'center'} as={'div'} fontSize={13} type={'secondary'}>
+      <div className="text-center text-[13px] text-muted-foreground">
         <Trans
           i18nKey={'authorize.footer.agreement'}
           ns={'marketAuth'}
@@ -79,7 +78,7 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
             ),
           }}
         />
-      </Text>
+      </div>
     );
     return (
       <ImperativeModal
@@ -112,7 +111,7 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
               padding: 16,
             }}
           >
-            <Text align={'center'}>{ts('description', { appName: BRANDING_NAME })}</Text>
+            <div className="text-center">{ts('description', { appName: BRANDING_NAME })}</div>
           </div>
         </AuthCard>
       </ImperativeModal>

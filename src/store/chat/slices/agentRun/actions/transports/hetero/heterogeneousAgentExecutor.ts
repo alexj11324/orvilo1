@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type {
   AgentInterventionRequestData,
   AgentInterventionResponseData,
@@ -49,6 +48,7 @@ import {
 import { createNanoId } from '@orvilo/utils';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import {
   removeHeteroSessionBindingKeyForWorkingDirectory,
   removeHeteroSessionIdForWorkingDirectory,

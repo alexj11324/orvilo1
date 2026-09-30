@@ -2,12 +2,12 @@
 
 import { AgentIcon } from '@lobehub/icons';
 import { Markdown } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import Rate from '@/components/RatingOverview/Rate';
 import { type SkillCommentItem } from '@/types/discover';
 
@@ -125,13 +125,13 @@ const CommentItem = memo<{ item: SkillCommentItem }>(({ item }) => {
         <div className={'flex gap-3 items-center'}>
           <div className={styles.avatar}>{avatar}</div>
           <div className={'flex flex-col'} style={{ gap: 6 }}>
-            <Text className={styles.author}>{authorName}</Text>
+            <div className={cn(styles.author)}>{authorName}</div>
             {typeof item.rating === 'number' && (
               <Rate className={styles.rate} gap={3} size={16} value={item.rating} />
             )}
           </div>
         </div>
-        <Text className={styles.date}>{createdAt}</Text>
+        <div className={cn(styles.date)}>{createdAt}</div>
       </div>
       <Markdown className={styles.content} variant={'chat'}>
         {item.content}

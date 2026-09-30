@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
 import { type CSSProperties } from 'react';
@@ -21,7 +20,7 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
         className={cn('flex gap-1', className)}
         style={{ position: 'relative', width: '100%', ...style }}
       >
-        <Text
+        <div
           style={{
             color: 'inherit',
             flex: 1,
@@ -34,7 +33,7 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
           }}
         >
           {value || '--'}
-        </Text>
+        </div>
         <Button
           className={'text-muted-foreground size-6'}
           size={'icon'}
@@ -54,8 +53,8 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
       className={cn('flex gap-1 items-center', className)}
       style={{ overflow: 'hidden', position: 'relative', ...style }}
     >
-      <Text
-        ellipsis
+      <div
+        className="truncate min-w-0"
         style={{
           color: 'inherit',
           fontFamily: 'inherit',
@@ -66,7 +65,7 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
         }}
       >
         {value || '--'}
-      </Text>
+      </div>
       <Button
         className={'text-muted-foreground size-6'}
         size={'icon'}

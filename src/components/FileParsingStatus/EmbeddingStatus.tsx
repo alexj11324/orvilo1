@@ -1,10 +1,10 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { BoltIcon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
@@ -37,15 +37,14 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
           <div className={'flex'}>
             <Tooltip>
               <TooltipTrigger render={<span />}>
-                <Tag
+                <Badge
                   className={cx('chunk-tag', className)}
-                  color={'processing'}
-                  icon={createElement(BoltIcon, { size: 16 })}
                   style={{ cursor: 'pointer' }}
-                  variant={'filled'}
+                  variant="info"
                 >
+                  {createElement(BoltIcon, { size: 16 })}
                   {chunkCount}
-                </Tag>
+                </Badge>
               </TooltipTrigger>
               <TooltipContent>
                 {t('FileParsingStatus.chunks.embeddingStatus.processing')}
@@ -59,7 +58,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
         return (
           <Tooltip>
             <TooltipTrigger render={<span />}>
-              <Tag className={className} color={'error'} variant={'filled'}>
+              <Badge className={className} variant="destructive">
                 {t('FileParsingStatus.chunks.embeddingStatus.error')}{' '}
                 {createElement(RotateCwIcon, {
                   size: 16,
@@ -69,7 +68,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
                     onErrorClick?.('embedding');
                   },
                 })}
-              </Tag>
+              </Badge>
             </TooltipTrigger>
             <TooltipContent style={{ maxWidth: 340 }}>
               <div className={'flex flex-col gap-1'}>
@@ -93,18 +92,17 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
           <div className={'flex'}>
             <Tooltip>
               <TooltipTrigger render={<span />}>
-                <Tag
+                <Badge
                   className={cx('chunk-tag', className)}
-                  color={'purple'}
-                  icon={createElement(BoltIcon, { size: 16 })}
                   style={{ cursor: 'pointer' }}
-                  variant={'filled'}
+                  variant="info"
                   onClick={() => {
                     onClick?.(AsyncTaskStatus.Success);
                   }}
                 >
+                  {createElement(BoltIcon, { size: 16 })}
                   {chunkCount}
-                </Tag>
+                </Badge>
               </TooltipTrigger>
               <TooltipContent>
                 {t('FileParsingStatus.chunks.embeddingStatus.success')}

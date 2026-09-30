@@ -1,12 +1,14 @@
 'use client';
 
 import { SiGithub, SiX } from '@icons-pack/react-simple-icons';
-import { ActionIcon, Button, Spin, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ArrowRight, Link2Off, Loader2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import { Spinner as Spin } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { type SocialProfile, type SocialProvider } from './useSocialConnect';
@@ -54,12 +56,12 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
           <div className="flex items-center gap-2">
             <ProviderIcon size={18} />
             <div className="flex flex-col gap-0.5">
-              <Text style={{ fontSize: 13 }}>@{profile.username}</Text>
-              <Text style={{ fontSize: 11 }} type="secondary">
+              <div style={{ fontSize: 13 }}>@{profile.username}</div>
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {t('profileSetup.socialLinks.connected', {
                   defaultValue: 'Connected',
                 })}
-              </Text>
+              </div>
             </div>
           </div>
           <TooltipProvider>

@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type {
   TaskDetailActivityAuthor,
   TaskDetailData,
@@ -11,6 +10,7 @@ import type {
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { isTaskListKey, isWorkQueryTaskRowsKey, taskKeys } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';

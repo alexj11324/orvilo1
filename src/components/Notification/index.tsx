@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
 import { type HTMLAttributes, memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useIsDark } from '@/hooks/useIsDark';
 
 const styles = createStaticStyles(({ css }) => ({

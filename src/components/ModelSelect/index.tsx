@@ -1,6 +1,5 @@
 import { type IconAvatarProps } from '@lobehub/icons';
 import { LobeHub as Orvilo } from '@lobehub/icons';
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { type ChatModelCard } from '@orvilo/types';
 import { createStaticStyles, useResponsive } from 'antd-style';
 import { cn } from 'cn';
@@ -19,7 +18,9 @@ import { createElement, type CSSProperties, type FC, type HTMLAttributes } from 
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
+import { Badge } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type AiProviderSourceType } from '@/types/aiProvider';
 import { formatTokenNumber } from '@/utils/format';
@@ -88,9 +89,23 @@ const FeatureTagItem = memo<FeatureTagItemProps>(
     if (!enabled) return null;
 
     const tag = (
-      <Tag className={className} color={color} size={'small'}>
+      <Badge
+        className={className}
+        size="sm"
+        variant={
+          (color as
+            | 'info'
+            | 'success'
+            | 'warning'
+            | 'destructive'
+            | 'default'
+            | 'secondary'
+            | 'primary'
+            | undefined) ?? 'secondary'
+        }
+      >
         {createElement(icon, { size: 16 })}
-      </Tag>
+      </Badge>
     );
 
     if (disableTooltip) return tag;
@@ -195,9 +210,9 @@ const Context = memo(
     const tokensText = contextWindowTokens === 0 ? '∞' : formatTokenNumber(contextWindowTokens);
 
     const tag = (
-      <Tag className={styles.token} size={'small'}>
+      <Badge className={styles.token} size="sm" variant="secondary">
         {contextWindowTokens === 0 ? <InfinityIcon size={17} strokeWidth={1.6} /> : tokensText}
-      </Tag>
+      </Badge>
     );
 
     if (disableTooltip) return tag;
@@ -292,24 +307,28 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
           style={{ flexShrink: 1, minWidth: 0, overflow: 'hidden' }}
         >
           <ModelIcon model={id} size={20} />
-          <Text
-            style={mobile ? { maxWidth: '60vw' } : { minWidth: 0, overflow: 'hidden' }}
-            ellipsis={{
-              tooltip: displayNameOrId,
-              tooltipWhenOverflow: true,
-            }}
-          >
-            {displayNameOrId}
-          </Text>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <div
+                  className="truncate min-w-0"
+                  style={mobile ? { maxWidth: '60vw' } : { minWidth: 0, overflow: 'hidden' }}
+                >
+                  {displayNameOrId}
+                </div>
+              }
+            />
+            <TooltipContent>{displayNameOrId}</TooltipContent>
+          </Tooltip>
           {newBadgeLabel ? (
             <NewModelBadgeCore label={newBadgeLabel} releasedAt={releasedAt} />
           ) : (
             <NewModelBadgeI18n releasedAt={releasedAt} />
           )}
           {proBadgeLabel && (
-            <Tag color="gold" size="small">
+            <Badge size="sm" variant="warning">
               {proBadgeLabel}
-            </Tag>
+            </Badge>
           )}
         </div>
         {showInfoTag && (
@@ -356,9 +375,9 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
         ) : (
           <ProviderIcon provider={provider} size={size} type={type} />
         )}
-        <Text ellipsis color={'inherit'}>
+        <div className="truncate min-w-0" style={{ color: 'inherit' }}>
           {name}
-        </Text>
+        </div>
       </div>
     );
   },

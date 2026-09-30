@@ -1,10 +1,10 @@
 'use client';
 
-import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar, useResponsive } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Progress, ProgressIndicator, ProgressTrack } from '@/components/ui/progress';
 import { type SkillRatingDistribution } from '@/types/discover';
 import { formatShortenNumber } from '@/utils/format';
 
@@ -27,17 +27,17 @@ const RatingOverview = memo<RatingOverviewProps>(
     return (
       <div className={mobile ? 'flex flex-col gap-8' : 'flex flex-row gap-8'}>
         <div className="flex flex-col items-center gap-1.5" style={{ minWidth: 120 }}>
-          <Text style={{ fontSize: 48, fontWeight: 'bold', lineHeight: 1.2 }}>
+          <div style={{ fontSize: 48, fontWeight: 'bold', lineHeight: 1.2 }}>
             {displayAverage.toFixed(1)}
-          </Text>
+          </div>
           <Rate value={displayAverage} />
-          <Text type={'secondary'}>
+          <div className="text-muted-foreground">
             {totalCount > 0
               ? t('skills.details.rating.totalRatings', {
                   count: formatShortenNumber(totalCount),
                 } as any)
               : t('skills.details.rating.noRatings')}
-          </Text>
+          </div>
         </div>
         <div className="flex flex-1 flex-col justify-center">
           {stars.map((star) => {
@@ -45,16 +45,14 @@ const RatingOverview = memo<RatingOverviewProps>(
             const percent = totalCount > 0 ? (count / totalCount) * 100 : 0;
             return (
               <div className="flex items-center gap-2" key={star}>
-                <Text style={{ flexShrink: 0, width: 16 }} type={'secondary'}>
+                <div className="text-muted-foreground" style={{ flexShrink: 0, width: 16 }}>
                   {star}
-                </Text>
-                <Progress
-                  percent={percent}
-                  showInfo={false}
-                  size={'small'}
-                  strokeColor={cssVar.colorWarning}
-                  style={{ flex: 1, marginBottom: 0 }}
-                />
+                </div>
+                <Progress style={{ flex: 1, marginBottom: 0 }} value={percent}>
+                  <ProgressTrack>
+                    <ProgressIndicator style={{ background: cssVar.colorWarning }} />
+                  </ProgressTrack>
+                </Progress>
               </div>
             );
           })}

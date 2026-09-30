@@ -142,20 +142,24 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
     return (
       <div className={styles.container} style={style}>
         <div className={cn('flex gap-2', styles.title)}>
-          <div className={'flex flex-1'}>
+          <div className={'flex flex-1 flex-col'}>
             {keyPlaceholder || t('KeyValueEditor.keyPlaceholder')}
           </div>
-          <div className={'flex'} style={{ flex: 2 }}>
+          <div className={'flex flex-col'} style={{ flex: 2 }}>
             {valuePlaceholder || t('KeyValueEditor.valuePlaceholder')}
           </div>
-          <div className="flex" style={{ width: 30 }} />
+          <div className="flex flex-col" style={{ width: 30 }} />
         </div>
-        <div className={'flex'} style={{ width: '100%' }}>
+        <div className={'flex flex-col'} style={{ width: '100%' }}>
           {items.map((item) => {
             const isDuplicate = item.key.trim() && duplicateKeys.has(item.key.trim());
             return (
-              <div className={cn('flex gap-2', styles.row)} key={item.id} style={{ width: '100%' }}>
-                <div className={'flex flex-1'} style={{ position: 'relative' }}>
+              <div
+                className={cn('flex items-start gap-2', styles.row)}
+                key={item.id}
+                style={{ width: '100%' }}
+              >
+                <div className={'flex flex-1 flex-col'} style={{ position: 'relative' }}>
                   <FormInput
                     className={styles.input}
                     disabled={disabled}
@@ -178,7 +182,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                     </div>
                   )}
                 </div>
-                <div className={'flex'} style={{ flex: 2 }}>
+                <div className={'flex flex-col'} style={{ flex: 2 }}>
                   <FormInput
                     className={styles.input}
                     disabled={disabled}

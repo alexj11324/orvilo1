@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -16,7 +16,8 @@ import { Link } from 'react-router';
 import urlJoin from 'url-join';
 
 import ActionIcon from '@/components/ActionIcon';
-import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -162,8 +163,10 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
         >
           {habit.code}
         </div>
-        <Popover openOnHover delay={420}>
+        <Popover>
           <PopoverTrigger
+            openOnHover
+            delay={420}
             render={
               <div
                 className={cx(styles.previewTarget, 'flex flex-col gap-0.5')}
@@ -205,7 +208,7 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
         <RecentDots recent={habit.recent} />
         <div className={cx('teach', 'flex items-center gap-1')} style={{ flex: 'none' }}>
           <DropdownMenu items={menu}>
-            <ActionIcon icon={MoreHorizontalIcon} size="sm" />
+            <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
           </DropdownMenu>
         </div>
       </div>

@@ -446,8 +446,7 @@ const CreateDomainPage = memo(() => {
                     <GeneratingBorder generating={step === 'preparing'}>
                       <Textarea
                         autoFocus
-                        className={'bg-secondary'}
-                        className={step === 'preparing' ? 'border-transparent' : undefined}
+                        className={cx('bg-secondary', step === 'preparing' && 'border-transparent')}
                         disabled={step === 'preparing'}
                         placeholder={t('create.briefPlaceholder')}
                         rows={5}

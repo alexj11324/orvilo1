@@ -176,9 +176,11 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
             {evidence.map((hit, index) => (
               <div className="flex items-start gap-2" key={`${hit.createdAt}-${index}`}>
                 <div
-                  className="text-[12px]"
                   style={{ flex: 'none' }}
-                  type={hit.outcome === 'pass' ? 'secondary' : 'warning'}
+                  className={cn(
+                    'text-[12px]',
+                    hit.outcome === 'pass' ? 'text-muted-foreground' : 'text-warning',
+                  )}
                 >
                   {t(`rules.detail.outcome.${hit.outcome}`)}
                 </div>

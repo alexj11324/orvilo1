@@ -1,4 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
 import { confirmModal, toast, Upload } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { App } from 'antd';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useIsWorkspaceOwner } from '@/business/client/hooks/useIsWorkspaceOwner';
+import { type DropdownItem } from '@/components/ItemsMenu';
 import { openHeteroSessionImportModal } from '@/features/HeteroSessionImport';
 import { openWorkspaceDeleteAllModal } from '@/features/WorkspaceDeleteAllModal';
 import { usePermission } from '@/hooks/usePermission';
@@ -36,7 +36,7 @@ type TopicMaintenanceScope = 'own' | 'workspace';
 
 export const useTopicActionsDropdownMenu = (
   options: UseTopicActionsDropdownMenuOptions = {},
-): (() => MenuProps['items']) => {
+): (() => DropdownItem[]) => {
   const { t } = useTranslation(['topic', 'common']);
   const { modal } = App.useApp();
   const { onUploadClose } = options;
@@ -125,7 +125,7 @@ export const useTopicActionsDropdownMenu = (
 
   const enableHeteroSessionImport = useUserStore(labPreferSelectors.enableHeteroSessionImport);
 
-  return useCallback((): MenuProps['items'] => {
+  return useCallback((): DropdownItem[] => {
     const pageSizeOptions = [20, 40, 60, 100];
     const pageSizeItems = pageSizeOptions.map((size) => ({
       icon: topicPageSize === size ? <LucideCheck /> : <div />,
@@ -240,7 +240,7 @@ export const useTopicActionsDropdownMenu = (
             },
           ]
         : []),
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as DropdownItem[];
   }, [
     topicPageSize,
     updateSystemStatus,

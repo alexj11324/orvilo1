@@ -1,13 +1,12 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { type UserMemoryEffort } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import LevelSlider from '@/components/LevelSlider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';

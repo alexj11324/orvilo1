@@ -31,18 +31,30 @@ export interface DropdownMenuProps {
   open?: boolean;
   placement?: string;
   popupClassName?: string;
+  /** Overrides the portal container (e.g. render inside a mobile overlay). */
+  portalProps?: { container?: HTMLElement | null };
   style?: CSSProperties;
 }
 
 const DropdownMenu = memo<DropdownMenuProps>(
-  ({ children, className, items, onOpenChange, open, placement, popupClassName, style }) => {
+  ({
+    children,
+    className,
+    items,
+    onOpenChange,
+    open,
+    placement,
+    popupClassName,
+    portalProps,
+    style,
+  }) => {
     const { align, side } = popoverPlacement(placement ?? 'bottom');
     const resolvedItems = typeof items === 'function' ? items() : (items ?? []);
 
     return (
       <MenuPrimitive.Root open={open} onOpenChange={(nextOpen) => onOpenChange?.(nextOpen)}>
         <MenuPrimitive.Trigger className={className} render={children as ReactElement} />
-        <MenuPrimitive.Portal>
+        <MenuPrimitive.Portal {...portalProps}>
           <MenuPrimitive.Positioner
             align={align}
             className={cn('isolate outline-none', POPUP_Z_CLASS)}
@@ -64,15 +76,17 @@ DropdownMenu.displayName = 'DropdownMenu';
 export interface ContextMenuTriggerProps {
   children?: ReactNode;
   items?: DropdownItem[] | (() => DropdownItem[]);
+  /** Overrides the portal container (e.g. render inside a mobile overlay). */
+  portalProps?: { container?: HTMLElement | null };
 }
 
-const ContextMenuTrigger = memo<ContextMenuTriggerProps>(({ children, items }) => {
+const ContextMenuTrigger = memo<ContextMenuTriggerProps>(({ children, items, portalProps }) => {
   const resolvedItems = typeof items === 'function' ? items() : (items ?? []);
 
   return (
     <ContextMenuPrimitive.Root>
       <ContextMenuPrimitive.Trigger render={children as ReactElement} />
-      <ContextMenuPrimitive.Portal>
+      <ContextMenuPrimitive.Portal {...portalProps}>
         <ContextMenuPrimitive.Positioner className={cn('isolate outline-none', POPUP_Z_CLASS)}>
           <ContextMenuPrimitive.Popup className={POPUP_CLASSES}>
             {renderMenuItems(resolvedItems)}

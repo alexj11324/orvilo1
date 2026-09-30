@@ -1,4 +1,3 @@
-import { DatePicker } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -6,6 +5,7 @@ import { CalendarIcon, PlusIcon, XIcon } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import DatePicker from '@/components/DatePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

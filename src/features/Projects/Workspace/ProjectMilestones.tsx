@@ -1,5 +1,5 @@
 'use client';
-import { DatePicker, SortableList } from '@lobehub/ui';
+
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -8,6 +8,13 @@ import { CalendarIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lu
 import { createElement, memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import DatePicker from '@/components/DatePicker';
+import {
+  Sortable,
+  SortableItem,
+  SortableItemHandle,
+  SortableOverlay,
+} from '@/components/reui/sortable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
@@ -584,7 +591,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
           </>
         )}
         {canEdit && (
-          <SortableList.DragHandle
+          <SortableItemHandle
             aria-label={t('overview.milestoneDrag')}
             className={cx(DRAG_HANDLE_CLASS, styles.dragHandle)}
           />
@@ -617,26 +624,12 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
         </span>
       ) : (
         <>
-          <SortableList
-            gap={4}
-            items={milestones}
-            renderItem={(milestone) => (
-              <SortableList.Item id={milestone.id} key={milestone.id} variant={'borderless'}>
-                {renderCard(milestone)}
-              </SortableList.Item>
-            )}
-            renderOverlay={(milestone) => (
-              <div
-                className={cn('flex flex-row', styles.card)}
-                style={{ alignItems: 'center', gap: 8 }}
-              >
-                <MilestoneIcon size={MILESTONE_ICON_SIZE} />
-                <span className="text-sm" style={{ fontSize: 15, fontWeight: 450 }}>
-                  {milestone.name}
-                </span>
-              </div>
-            )}
-            onChange={(items) => {
+          <Sortable
+            className="flex flex-col"
+            getItemValue={(milestone) => milestone.id}
+            style={{ gap: 4 }}
+            value={milestones}
+            onValueCommit={(items) => {
               const ids = items.map((item) => item.id);
               if (ids.join('') === milestones.map((milestone) => milestone.id).join('')) return;
               void runMutation(
@@ -644,7 +637,30 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                 'overview.milestoneSaveError',
               );
             }}
-          />
+          >
+            {milestones.map((milestone) => (
+              <SortableItem key={milestone.id} value={milestone.id}>
+                {renderCard(milestone)}
+              </SortableItem>
+            ))}
+            <SortableOverlay>
+              {({ value }) => {
+                const milestone = milestones.find((item) => item.id === value);
+                if (!milestone) return null;
+                return (
+                  <div
+                    className={cn('flex flex-row', styles.card)}
+                    style={{ alignItems: 'center', gap: 8 }}
+                  >
+                    <MilestoneIcon size={MILESTONE_ICON_SIZE} />
+                    <span className="text-sm" style={{ fontSize: 15, fontWeight: 450 }}>
+                      {milestone.name}
+                    </span>
+                  </div>
+                );
+              }}
+            </SortableOverlay>
+          </Sortable>
           {/* The rail's fifth row in the reference: the unassigned bucket. The
               label links to the unfiltered issues page (the measured
               destination); expanding it lists the issues so one can be filed

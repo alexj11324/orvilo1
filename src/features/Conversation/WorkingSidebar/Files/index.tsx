@@ -1,6 +1,5 @@
 'use client';
 
-import { copyToClipboard, stopPropagation } from '@lobehub/ui';
 import { ActionIcon, Button, DropdownMenu, Input, toast } from '@lobehub/ui/base-ui';
 import type { ProjectFileIndexEntry } from '@orvilo/electron-client-ipc';
 import type { GitStatusEntry } from '@pierre/trees';
@@ -37,6 +36,7 @@ import { localFileService } from '@/services/electron/localFileService';
 import { projectFileService } from '@/services/projectFile';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { filterProjectFileEntries, mergeMissingDeletedEntries } from './fileFilter';
 import { isExcludedProjectFileEntry } from './fileVisibility';
@@ -208,7 +208,7 @@ const FilesSearchBar = memo<FilesSearchBarProps>(({ onClose, onDebouncedChange }
       }
       onChange={(e) => setSearchQuery(e.target.value)}
       onKeyDown={(event) => {
-        stopPropagation(event);
+        event.stopPropagation();
         if (event.key !== 'Escape') return;
         setSearchQuery('');
         onDebouncedChange('');

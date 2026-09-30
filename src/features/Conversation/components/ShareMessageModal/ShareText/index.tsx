@@ -1,4 +1,3 @@
-import { copyToClipboard } from '@lobehub/ui';
 import { Button, toast } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { cn } from 'cn';
@@ -11,6 +10,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { exportFile } from '@/utils/client';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { styles } from '../style';
 import Preview from './Preview';

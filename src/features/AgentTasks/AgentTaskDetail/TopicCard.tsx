@@ -1,4 +1,4 @@
-import { Markdown, stopPropagation } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { ActionIcon, Avatar, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -388,7 +388,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             </Text>
           )}
           {hasBody && (
-            <div className="flex flex-col" onClick={stopPropagation}>
+            <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
               <ActionIcon
                 icon={bodyExpanded ? ChevronDown : ChevronRight}
                 size={'small'}
@@ -397,7 +397,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
               />
             </div>
           )}
-          <div className="flex flex-col" onClick={stopPropagation}>
+          <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
               <DropdownMenuContent align={'end'} className="min-w-40">
@@ -436,7 +436,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           {/* The verdict's evidence, next to the delivery it judged — reading
               one should never require leaving for the acceptance page. */}
           {activity.verify && (
-            <div className="flex flex-col" onClick={stopPropagation}>
+            <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
               <RunVerifyDetail
                 extra={<RunVerifyTag verify={activity.verify} />}
                 operationId={activity.operationId}
@@ -445,7 +445,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           )}
           {showRunFollowUp &&
             (commenting ? (
-              <div className="flex flex-col" onClick={stopPropagation}>
+              <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <RunReplyEditor
                   onCancel={() => setCommenting(false)}
                   onSubmit={async (text) => {
@@ -455,7 +455,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
                 />
               </div>
             ) : (
-              <div className="flex justify-end gap-1" onClick={stopPropagation}>
+              <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                 {/* The run's own conversation was reachable only by clicking the
                     title, which said nothing about being a door. Asking the
                     agent a follow-up is the natural next move after reading a

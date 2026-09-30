@@ -61,6 +61,9 @@ const serializeSize = (size: unknown) =>
 
 vi.mock('@lobehub/ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),
+}));
+
+vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }));
 

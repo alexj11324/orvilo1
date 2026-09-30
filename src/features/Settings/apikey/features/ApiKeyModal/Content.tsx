@@ -1,13 +1,13 @@
 'use client';
 
 import { useModalContext } from '@lobehub/ui/base-ui';
-import { Form } from 'antd';
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { CheckCircle2, Copy, Loader2 } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {

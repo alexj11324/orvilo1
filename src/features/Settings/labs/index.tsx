@@ -1,7 +1,5 @@
 'use client';
 
-import { type FormGroupItemType, type FormItemProps } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
@@ -10,6 +8,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import Form, { type FormGroupItemType, type FormItemProps } from '@/components/GroupForm';
 import { Badge } from '@/components/reui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';

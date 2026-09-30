@@ -1,12 +1,11 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { type WindowsShellMode } from '@orvilo/electron-client-ipc';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import {
   Select,
   SelectContent,

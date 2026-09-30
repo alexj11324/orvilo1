@@ -1,5 +1,5 @@
 'use client';
-import { ContextMenuTrigger } from '@lobehub/ui';
+
 import { confirmModal, type DropdownItem, toast } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
@@ -22,6 +22,7 @@ import { useSearchParams } from 'react-router';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
+import { ContextMenuTrigger } from '@/components/ItemsMenu';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

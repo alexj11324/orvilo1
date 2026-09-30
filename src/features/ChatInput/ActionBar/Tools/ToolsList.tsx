@@ -1,10 +1,10 @@
 import { Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { ComponentType, ReactNode } from 'react';
 import { createElement, Fragment, isValidElement, memo } from 'react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 
 import type { ActionMenuItem } from '../../menuItems';
 import { useDetailPopoverState } from '../components/useDetailPopoverState';
@@ -68,8 +68,8 @@ interface ToolsListProps {
   items: ActionMenuItem[];
 }
 
-const DividerItem = memo<{ index: number }>(({ index }) => (
-  <Divider key={`divider-${index}`} style={{ margin: '4px 0' }} />
+const SeparatorItem = memo<{ index: number }>(({ index }) => (
+  <Separator key={`divider-${index}`} style={{ margin: '4px 0' }} />
 ));
 
 const RegularItem = memo<{
@@ -161,7 +161,7 @@ const ToolListItem = memo<{
   item: ToolItemData | null;
 }>(({ detailPopoverDisabled, item, index }) => {
   if (!item) return null;
-  if (item.type === 'divider') return <DividerItem index={index} />;
+  if (item.type === 'divider') return <SeparatorItem index={index} />;
   if (item.type === 'group')
     return <GroupItem detailPopoverDisabled={detailPopoverDisabled} index={index} item={item} />;
   return <RegularItem detailPopoverDisabled={detailPopoverDisabled} index={index} item={item} />;

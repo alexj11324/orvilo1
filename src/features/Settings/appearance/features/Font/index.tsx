@@ -1,13 +1,13 @@
 'use client';
 
-import type { FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { Select } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import type { FormGroupItemType } from '@/components/GroupForm';
+import Form from '@/components/GroupForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';

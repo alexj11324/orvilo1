@@ -224,9 +224,12 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ),
 }));
 
+vi.mock('@/utils/clipboard', () => ({
+  copyToClipboard: vi.fn(),
+}));
+
 vi.mock('@lobehub/ui', () => ({
   Center: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
-  copyToClipboard: vi.fn(),
   Empty: ({ description }: { description?: ReactNodeType }) => <div>{description}</div>,
   Flexbox: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
   Icon: () => <span />,

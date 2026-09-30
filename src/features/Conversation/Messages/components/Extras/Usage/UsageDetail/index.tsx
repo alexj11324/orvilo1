@@ -1,6 +1,5 @@
 import { type ModelPerformance, type ModelUsage } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { BadgeCent, CoinsIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import InfoTooltip from '@/components/InfoTooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -171,7 +171,7 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
             )}
             <div className="flex flex-col">
               <TokenProgress showIcon data={totalDetail} />
-              <Divider style={{ marginBlock: 8 }} />
+              <Separator style={{ marginBlock: 8 }} />
               {cacheRate && (
                 <div className="flex items-center gap-1 justify-between">
                   <div style={{ color: cssVar.colorTextSecondary }}>

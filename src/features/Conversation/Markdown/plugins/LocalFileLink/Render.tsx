@@ -1,6 +1,5 @@
 'use client';
 
-import { A } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import { createStaticStyles } from 'antd-style';
@@ -138,7 +137,7 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
         <TooltipTrigger
           render={
             <span style={{ display: 'inline-flex' }}>
-              <A
+              <a
                 {...(parsed ? { [RENDERER_HANDLED_LINK_ATTR]: 'true' } : {})}
                 className={styles.link}
                 href={linkHref}
@@ -148,7 +147,7 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
                   <FileIcon fileName={iconFileName} size={16} variant={'raw'} />
                 </span>
                 <span>{label}</span>
-              </A>
+              </a>
             </span>
           }
         />

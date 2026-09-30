@@ -1,8 +1,9 @@
 import { Tag } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { Timer } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Separator } from '@/components/ui/separator';
 
 interface HistoryDividerProps {
   enable?: boolean;
@@ -14,9 +15,9 @@ const HistoryDivider = memo<HistoryDividerProps>(({ enable }) => {
 
   return (
     <div style={{ padding: '0 20px' }}>
-      <Divider style={{ margin: 0, padding: '20px 0' }}>
+      <Separator style={{ margin: 0, padding: '20px 0' }}>
         <Tag icon={<Timer />}>{t('historyRange')}</Tag>
-      </Divider>
+      </Separator>
     </div>
   );
 });

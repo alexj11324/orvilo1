@@ -1,9 +1,9 @@
-import { DatePicker } from '@lobehub/ui';
-import { type DatePickerProps } from 'antd';
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import DatePicker, { type DatePickerProps } from '@/components/DatePicker';
 
 interface ApiKeyDatePickerProps extends Omit<DatePickerProps, 'onChange'> {
   onChange?: (date: Dayjs | null) => void;

@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   operations: {} as Record<string, MockOperation>,
 }));
 
-vi.mock('@lobehub/ui', () => ({
+vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: mocks.copyToClipboard,
 }));
 

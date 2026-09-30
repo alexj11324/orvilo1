@@ -1,13 +1,12 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { type BinaryStatus } from '@orvilo/electron-client-ipc';
 import { CheckCircle2, Copy, Loader2Icon, RefreshCw, XCircle } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';

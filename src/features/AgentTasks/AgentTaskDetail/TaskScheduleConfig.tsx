@@ -1,4 +1,3 @@
-import { InputNumber } from '@lobehub/ui';
 import { ActionIcon, Avatar, Button, Select, Switch, Tabs, Text } from '@lobehub/ui/base-ui';
 import type { TaskAutomationMode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -8,6 +7,7 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import InputNumber from '@/components/InputNumber';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';

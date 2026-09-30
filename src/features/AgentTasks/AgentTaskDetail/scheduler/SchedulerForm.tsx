@@ -1,10 +1,11 @@
-import { InputNumber } from '@lobehub/ui';
 import { Accordion, Checkbox, Select, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs, { type Dayjs } from 'dayjs';
 import { Globe, Hash, SlidersHorizontal } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import InputNumber from '@/components/InputNumber';
 
 import {
   buildCronPattern,

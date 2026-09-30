@@ -1,4 +1,3 @@
-import { Empty } from '@lobehub/ui';
 import { Avatar, Collapsible, Text } from '@lobehub/ui/base-ui';
 import type {
   BriefType,
@@ -25,6 +24,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
@@ -488,7 +488,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         }),
       )
     ) : (
-      <Empty
+      <SimpleEmpty
         description={t('taskDetail.activitiesEmpty')}
         icon={BotMessageSquare}
         style={{ marginTop: 8 }}

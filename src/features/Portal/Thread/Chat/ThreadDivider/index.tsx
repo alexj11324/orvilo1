@@ -1,9 +1,10 @@
 import { type IThreadType, ThreadType } from '@orvilo/types';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { GitBranch } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Separator } from '@/components/ui/separator';
 
 interface ThreadDividerProps {
   threadType?: IThreadType;
@@ -20,7 +21,7 @@ const ThreadDivider = memo<ThreadDividerProps>(({ threadType }) => {
 
   return (
     <div style={{ padding: '0 20px' }}>
-      <Divider style={{ margin: 0, padding: '20px 0' }}>
+      <Separator style={{ margin: 0, padding: '20px 0' }}>
         <div
           className="flex flex-row items-center gap-1.5"
           style={{ color: cssVar.colorTextDescription, fontSize: 12 }}
@@ -32,7 +33,7 @@ const ThreadDivider = memo<ThreadDividerProps>(({ threadType }) => {
             ? t('thread.dividerStandalone')
             : t('thread.dividerContinuation')}
         </div>
-      </Divider>
+      </Separator>
     </div>
   );
 });

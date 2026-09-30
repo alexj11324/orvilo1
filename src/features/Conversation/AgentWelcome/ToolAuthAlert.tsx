@@ -2,7 +2,6 @@
 
 import { ActionIcon, Alert, Avatar, Button, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
@@ -10,6 +9,7 @@ import { PlusIcon, XIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import {
   ConnectorConnectionMarketAuthRequiredError,
@@ -467,7 +467,7 @@ const ToolAuthAlert = memo(() => {
       description={
         <>
           {t('toolAuth.hint')}
-          <Divider dashed style={{ marginBlock: 12 }} />
+          <Separator dashed style={{ marginBlock: 12 }} />
           <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
             {pendingAuthTools.map((tool) => {
               if (tool.authType === 'composio') {

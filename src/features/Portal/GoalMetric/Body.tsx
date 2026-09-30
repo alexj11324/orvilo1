@@ -1,11 +1,11 @@
 import { Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { GoalSpend } from '@orvilo/types';
-import { InputNumber } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import InputNumber from '@/components/InputNumber';
 import { formatSpan, formatUsd } from '@/features/AgentGoals/goalPresentation';
 import {
   buildGoalGraphView,

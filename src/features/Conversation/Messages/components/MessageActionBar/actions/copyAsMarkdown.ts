@@ -1,4 +1,3 @@
-import { copyToClipboard } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { FileText } from 'lucide-react';
 import { useMemo } from 'react';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { cleanSpeakerTag } from '@/store/chat/utils/cleanSpeakerTag';
 import { unescapeMarkdown } from '@/store/chat/utils/unescapeMarkdown';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { defineAction } from '../defineAction';
 

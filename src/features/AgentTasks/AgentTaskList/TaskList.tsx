@@ -1,4 +1,3 @@
-import { Empty } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -15,6 +14,7 @@ import type { Components } from 'react-virtuoso';
 import { Virtuoso } from 'react-virtuoso';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { Separator } from '@/components/ui/separator';
 import { isInteractiveRowClick } from '@/features/MyWork/myWorkDisplay';
 import { taskMilestoneById, type TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
@@ -384,7 +384,7 @@ const TaskList = memo<TaskListProps>((props) => {
 
   const emptyState = (
     <div className="flex h-[80vh] w-full items-center justify-center">
-      <Empty
+      <SimpleEmpty
         description={props.emptyDescription ?? t('taskList.empty')}
         icon={ClipboardCheckIcon}
       />

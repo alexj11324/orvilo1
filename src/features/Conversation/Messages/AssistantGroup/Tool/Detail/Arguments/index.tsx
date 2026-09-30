@@ -1,5 +1,4 @@
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
 import { WrapText } from 'lucide-react';
 import { parse } from 'partial-json';
@@ -10,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import type { DescriptionItem } from '@/components/Descriptions';
 import Descriptions from '@/components/Descriptions';
 import { CodeBlock } from '@/components/ui/code-block';
+import { Separator } from '@/components/ui/separator';
 import { useYamlArguments } from '@/hooks/useYamlArguments';
 import { shinyTextStyles } from '@/styles';
 
@@ -101,7 +101,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
           {actions}
         </div>
       </div>
-      <Divider style={{ marginBlock: 0 }} />
+      <Separator style={{ marginBlock: 0 }} />
       {contentNode}
     </>
   );

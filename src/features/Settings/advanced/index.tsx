@@ -1,7 +1,5 @@
 'use client';
 
-import { type FormGroupItemType, type FormItemProps } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -10,6 +8,7 @@ import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import Form, { type FormGroupItemType, type FormItemProps } from '@/components/GroupForm';
 import {
   Select,
   SelectContent,

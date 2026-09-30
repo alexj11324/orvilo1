@@ -1,12 +1,12 @@
 import { ActionIcon, Button, toast } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
-import { Form } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { LucidePlus, LucideTrash } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { Input } from '@/components/ui/input';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({

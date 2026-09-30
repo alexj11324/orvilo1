@@ -1,10 +1,9 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import { Badge } from '@/components/reui/badge';
 import { FORM_STYLE } from '@/const/layoutTokens';
 

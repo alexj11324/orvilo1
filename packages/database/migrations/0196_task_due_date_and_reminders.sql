@@ -5,10 +5,13 @@ CREATE TABLE IF NOT EXISTS "task_reminders" (
 	"workspace_id" text,
 	"remind_at" timestamp with time zone NOT NULL,
 	"delivered_at" timestamp with time zone,
+	"attempt_count" integer DEFAULT 0 NOT NULL,
+	"next_attempt_at" timestamp with time zone,
 	"accessed_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);--> statement-breakpoint
+);
+--> statement-breakpoint
 ALTER TABLE "tasks" ADD COLUMN IF NOT EXISTS "due_date" date;--> statement-breakpoint
 ALTER TABLE "task_reminders" DROP CONSTRAINT IF EXISTS "task_reminders_task_id_tasks_id_fk";
 --> statement-breakpoint

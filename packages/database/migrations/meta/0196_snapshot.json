@@ -6,7 +6,7 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "20dade45-3e50-42f8-a764-6666efa9e1eb",
+  "id": "72cc3479-cb36-4b17-8d6d-64c68c066a34",
   "policies": {},
   "prevId": "0b7e50ad-4698-4ac8-a3d3-63a12d6ab716",
   "roles": {},
@@ -36268,6 +36268,19 @@
         },
         "delivered_at": {
           "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

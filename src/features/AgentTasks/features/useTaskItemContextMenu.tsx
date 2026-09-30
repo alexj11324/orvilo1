@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { TaskLabelSummary, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import {
   BarChart3Icon,
@@ -24,8 +23,10 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
 import type { WorkspaceMemberWithProfile } from '@/business/client/hooks/useWorkspaceMembers';
 import { STATUS_PROPERTY_ICON, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { confirmModal } from '@/components/Modal';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { openRenameModal } from '@/components/RenameModal';
+import { toast } from '@/components/toast';
 import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';
 import { resolveLabelColor } from '@/features/Labels/labelColor';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';

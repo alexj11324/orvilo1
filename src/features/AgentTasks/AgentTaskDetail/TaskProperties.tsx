@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { TaskPriority, TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { format, parseISO } from 'date-fns';
@@ -114,11 +113,11 @@ const TaskProperties = memo(() => {
       ) : (
         <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
       )}
-      <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+      <div className="font-medium" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
         {statusRow.kind === 'workflow'
           ? (workflowStateName ?? t(`taskDetail.workflow.category.${statusRow.category}` as never))
           : t(`taskDetail.${statusMeta.labelKey}` as never)}
-      </Text>
+      </div>
     </div>
   );
 
@@ -162,9 +161,9 @@ const TaskProperties = memo(() => {
               size={16}
               taskIdentifier={taskId}
             />
-            <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+            <div className="font-medium" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
               {t(`taskDetail.${priorityMeta.labelKey}` as never)}
-            </Text>
+            </div>
           </div>
         </TaskPriorityTag>
 
@@ -180,25 +179,22 @@ const TaskProperties = memo(() => {
               {assigneeUserId ? (
                 <>
                   <AssigneeUserAvatar size={16} userId={assigneeUserId} />
-                  <Text
-                    ellipsis
-                    fontSize={RAIL_VALUE_FONT_SIZE}
-                    style={{ minWidth: 0 }}
-                    weight={500}
+                  <div
+                    className="truncate block font-medium"
+                    style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
                   >
                     {memberMeta?.title}
-                  </Text>
+                  </div>
                 </>
               ) : (
                 <>
                   <UnassignedAssigneeIcon kind={'human'} size={16} />
-                  <Text
-                    fontSize={RAIL_VALUE_FONT_SIZE}
-                    style={{ color: cssVar.colorTextDescription }}
-                    weight={500}
+                  <div
+                    className="font-medium"
+                    style={{ color: cssVar.colorTextDescription, fontSize: RAIL_VALUE_FONT_SIZE }}
                   >
                     {t('taskDetail.assignee')}
-                  </Text>
+                  </div>
                 </>
               )}
             </div>
@@ -212,21 +208,21 @@ const TaskProperties = memo(() => {
           onClick={() => openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })}
         >
           <CalendarIcon color={cssVar.colorTextDescription} size={16} />
-          <Text
-            fontSize={RAIL_VALUE_FONT_SIZE}
-            weight={500}
+          <div
+            className="font-medium"
             style={{
               color: dueDate
                 ? parseISO(dueDate).getTime() < Date.now() - 24 * 60 * 60 * 1000
                   ? cssVar.colorWarning
                   : undefined
                 : cssVar.colorTextDescription,
+              fontSize: RAIL_VALUE_FONT_SIZE,
             }}
           >
             {dueDate
               ? format(parseISO(dueDate), 'MMM d, yyyy')
               : t('taskDetail.dueDate', { defaultValue: 'Due date' })}
-          </Text>
+          </div>
         </div>
 
         {/* Review-phase owner: visible once the task has someone accountable for
@@ -266,25 +262,25 @@ const TaskProperties = memo(() => {
                       {reviewerUserId ? (
                         <>
                           <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                          <Text
-                            ellipsis
-                            fontSize={RAIL_VALUE_FONT_SIZE}
-                            style={{ minWidth: 0 }}
-                            weight={500}
+                          <div
+                            className="truncate block font-medium"
+                            style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
                           >
                             {reviewerMeta?.title}
-                          </Text>
+                          </div>
                         </>
                       ) : (
                         <>
                           <UnassignedAssigneeIcon kind={'human'} size={16} />
-                          <Text
-                            fontSize={RAIL_VALUE_FONT_SIZE}
-                            style={{ color: cssVar.colorTextDescription }}
-                            weight={500}
+                          <div
+                            className="font-medium"
+                            style={{
+                              color: cssVar.colorTextDescription,
+                              fontSize: RAIL_VALUE_FONT_SIZE,
+                            }}
                           >
                             {t('taskDetail.reviewer')}
-                          </Text>
+                          </div>
                         </>
                       )}
                     </div>
@@ -307,13 +303,12 @@ const TaskProperties = memo(() => {
             {labels.length > 0 ? (
               <LabelChips labels={labels} max={3} />
             ) : (
-              <Text
-                fontSize={RAIL_VALUE_FONT_SIZE}
-                style={{ color: cssVar.colorTextDescription }}
-                weight={500}
+              <div
+                className="font-medium"
+                style={{ color: cssVar.colorTextDescription, fontSize: RAIL_VALUE_FONT_SIZE }}
               >
                 {t('taskDetail.labels.title')}
-              </Text>
+              </div>
             )}
           </div>
         </TaskLabelSelector>

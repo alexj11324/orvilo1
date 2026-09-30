@@ -1,7 +1,7 @@
 'use client';
 
 import { Freeze } from '@lobehub/ui';
-import { ActionIcon, confirmModal, FloatingPanel, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { FloatingPanel } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -18,6 +18,10 @@ import {
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -300,7 +304,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
       <AssigneeAvatar agentId={agentId} size={20} />
       {activity?.sourceTaskIdentifier && (
         <Tag
-          size={'small'}
+          size="sm"
           style={{ flex: 'none' }}
           title={t('taskDetail.topicSource', {
             identifier: activity.sourceTaskIdentifier,
@@ -309,13 +313,13 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
           {activity.sourceTaskIdentifier}
         </Tag>
       )}
-      <Text ellipsis style={{ flex: '0 1 auto', minWidth: 0 }} weight={500}>
+      <div className="truncate block font-medium" style={{ flex: '0 1 auto', minWidth: 0 }}>
         {activity?.title || drawerTitle || t('taskDetail.topicDrawer.untitled')}
-      </Text>
+      </div>
       {activity?.seq != null && (
-        <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
           #{activity.seq}
-        </Text>
+        </div>
       )}
       <RunIntegrationTag
         integration={activity?.integration}

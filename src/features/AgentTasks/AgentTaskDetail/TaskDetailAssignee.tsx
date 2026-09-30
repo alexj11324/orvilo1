@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { cssVar, useThemeMode } from 'antd-style';
 import { memo } from 'react';
@@ -47,17 +46,15 @@ const TaskDetailAssignee = memo(() => {
       {assigneeAgentId ? (
         <>
           <AssigneeAvatar agentId={assigneeAgentId} size={20} />
-          <Text ellipsis weight={500}>
-            {assigneeMeta?.title}
-          </Text>
+          <div className="truncate block font-medium">{assigneeMeta?.title}</div>
           <HeterogeneousTag type={assigneeHeterogeneousType} />
         </>
       ) : (
         <>
           <UnassignedAssigneeIcon kind={'agent'} />
-          <Text style={{ color: cssVar.colorTextDescription }} weight={500}>
+          <div className="font-medium" style={{ color: cssVar.colorTextDescription }}>
             {t('createTask.assignee')}
-          </Text>
+          </div>
         </>
       )}
     </div>

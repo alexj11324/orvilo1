@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CircleDashed } from 'lucide-react';
 import { memo } from 'react';
@@ -34,10 +33,8 @@ export const PendingAcceptanceCheckList = memo<PendingAcceptanceCheckListProps>(
       <CriterionList>
         {grouped && (
           <div className={`flex items-center gap-2 ${styles.groupHeader}`}>
-            <Text fontSize={12}>{groupLabel}</Text>
-            <Text fontSize={11} type={'secondary'}>
-              {items.length}
-            </Text>
+            <div className="text-[12px]">{groupLabel}</div>
+            <div className="text-[11px] text-muted-foreground">{items.length}</div>
           </div>
         )}
         {items.map((item, index) => (

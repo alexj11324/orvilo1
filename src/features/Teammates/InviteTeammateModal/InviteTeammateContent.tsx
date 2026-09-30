@@ -1,20 +1,17 @@
 'use client';
 
-import {
-  Alert,
-  Button,
-  ModalFooter,
-  Select,
-  Text,
-  TextArea,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCircle2, TriangleAlert, XCircle } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
+import { ModalFooter, useModalContext } from '@/components/Modal';
+import Select from '@/components/Select';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import Textarea from '@/components/ui/textarea';
 import { mutate } from '@/libs/swr';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 
@@ -174,13 +171,13 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
 
   return (
     <div className={cx(styles.body, 'flex flex-col gap-4')}>
-      <Alert showIcon={false} title={t('workspaceSetting.members.scopeExplainer')} type="info" />
+      <Alert variant="info">
+        <AlertTitle>{t('workspaceSetting.members.scopeExplainer')}</AlertTitle>
+      </Alert>
 
       <div className={cx(styles.field, 'flex flex-col')}>
-        <Text fontSize={13} weight={500}>
-          {t('workspaceSetting.members.emailsLabel')}
-        </Text>
-        <TextArea
+        <div className="text-[13px] font-medium">{t('workspaceSetting.members.emailsLabel')}</div>
+        <Textarea
           autoFocus
           placeholder={t('workspaceSetting.members.emailsPlaceholder')}
           rows={3}
@@ -188,21 +185,21 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
           onChange={(event) => setRawEmails(event.target.value)}
         />
         {invalid.length > 0 && (
-          <Text fontSize={12} type="danger">
+          <div className="text-[12px] text-destructive">
             {t('workspaceSetting.members.invalidEmails', { emails: invalid.join(', ') })}
-          </Text>
+          </div>
         )}
         {emails.length > 0 && (
-          <Text fontSize={12} type="secondary">
+          <div className="text-[12px] text-muted-foreground">
             {t('workspaceSetting.members.emailCount', { count: emails.length })}
-          </Text>
+          </div>
         )}
       </div>
 
       <div className={cx(styles.field, 'flex flex-col')}>
-        <Text fontSize={13} weight={500}>
+        <div className="text-[13px] font-medium">
           {t('workspaceSetting.members.workspaceRoleLabel')}
-        </Text>
+        </div>
         <Select
           options={workspaceRoleOptions}
           value={role}
@@ -211,9 +208,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
       </div>
 
       <div className={cx(styles.field, 'flex flex-col')}>
-        <Text fontSize={13} weight={500}>
-          {t('workspaceSetting.members.projectsLabel')}
-        </Text>
+        <div className="text-[13px] font-medium">{t('workspaceSetting.members.projectsLabel')}</div>
         <Select
           allowClear
           mode="multiple"
@@ -226,7 +221,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
           const project = projects.find((item) => item.id === projectId);
           return (
             <div className="flex items-center gap-2 justify-between" key={projectId}>
-              <Text fontSize={13}>{project?.name ?? projectId}</Text>
+              <div className="text-[13px]">{project?.name ?? projectId}</div>
               <Select
                 options={projectRoleOptions}
                 size="small"
@@ -239,7 +234,11 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
         })}
       </div>
 
-      {submitError && <Alert title={submitError} type="error" />}
+      {submitError && (
+        <Alert variant="destructive">
+          <AlertTitle>{submitError}</AlertTitle>
+        </Alert>
+      )}
 
       {result && (
         <div className={cx(styles.resultList, 'flex flex-col')}>
@@ -257,7 +256,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
                       : cssVar.colorError,
                   size: 14,
                 })}
-                <Text fontSize={12} type={entry.ok ? undefined : 'danger'}>
+                <div className={cn('text-[12px]', entry.ok ? undefined : 'text-destructive')}>
                   {emailFailed
                     ? t('workspaceSetting.members.inviteEmailFailed', { email: entry.email })
                     : entry.ok
@@ -266,7 +265,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
                           email: entry.email,
                           error: entry.error ?? '',
                         })}
-                </Text>
+                </div>
               </div>
             );
           })}
@@ -275,7 +274,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
 
       <ModalFooter>
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-        <Button disabled={!canSubmit} loading={submitting} type="primary" onClick={handleSubmit}>
+        <Button disabled={!canSubmit} loading={submitting} variant="default" onClick={handleSubmit}>
           {t('workspaceSetting.members.inviteAction', { count: emails.length })}
         </Button>
       </ModalFooter>

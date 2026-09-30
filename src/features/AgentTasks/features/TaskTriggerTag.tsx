@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ClockIcon } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
@@ -81,14 +81,17 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
         <SimpleTooltip title={data?.tooltip}>
           <div className="flex items-center gap-2.5" style={FLEX_MIN_WIDTH_0}>
             <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
-            <Text
-              ellipsis
+            <div
               style={FLEX_MIN_WIDTH_0}
-              type={data ? undefined : 'secondary'}
-              weight={data ? 500 : undefined}
+              className={cn(
+                'truncate',
+                'block',
+                data ? undefined : 'text-muted-foreground',
+                data ? 500 : undefined,
+              )}
             >
               {data?.primary ?? t('taskSchedule.tag.add')}
-            </Text>
+            </div>
           </div>
         </SimpleTooltip>
       );
@@ -102,9 +105,12 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
       <SimpleTooltip title={data.tooltip}>
         <div style={PILL_STYLE}>
           <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
-          <Text ellipsis fontSize={12} style={FLEX_MIN_WIDTH_0} type={'secondary'}>
+          <div
+            className="truncate block text-[12px] text-muted-foreground"
+            style={FLEX_MIN_WIDTH_0}
+          >
             {data.primary}
-          </Text>
+          </div>
         </div>
       </SimpleTooltip>
     );

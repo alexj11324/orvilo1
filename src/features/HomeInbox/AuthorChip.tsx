@@ -1,11 +1,12 @@
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_USER_AVATAR_URL } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { AlarmClockIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceMemberProfiles } from '@/business/client/hooks/useWorkspaceMemberProfiles';
+import Avatar from '@/components/Avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const AVATAR_SIZE = 16;
@@ -71,9 +72,9 @@ const AuthorChip = memo<AuthorChipProps>(({ userId, trigger }) => {
           <TooltipContent>{name}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <Text ellipsis className={styles.label} style={{ maxWidth: 72 }}>
+      <div className={cn('truncate', 'block', styles.label)} style={{ maxWidth: 72 }}>
         {name}
-      </Text>
+      </div>
     </div>
   );
 });

@@ -1,10 +1,10 @@
 import { ChatInput, ChatInputActionBar, SendButton, useEditor } from '@lobehub/editor/react';
-import { Button } from '@lobehub/ui/base-ui';
 import { $getRoot } from 'lexical';
 import { ChevronDownIcon, MessageCirclePlus } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import OpStatusTray from '@/features/Conversation/ChatInput/OpStatusTray';
 import { useConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
@@ -102,7 +102,8 @@ const FeedbackInput = memo<FeedbackInputProps>(
       return (
         <div className="flex flex-col gap-2">
           <OpStatusTray seamless />
-          <Button block icon={MessageCirclePlus} type={'fill'} onClick={() => setExpanded(true)}>
+          <Button className="w-full" variant="secondary" onClick={() => setExpanded(true)}>
+            <MessageCirclePlus data-icon="inline-start" />
             {t('taskDetail.sendFollowUp')}
           </Button>
         </div>
@@ -121,12 +122,8 @@ const FeedbackInput = memo<FeedbackInputProps>(
               left={
                 <div className="flex items-center gap-0.5">
                   {!disableCollapse && (
-                    <Button
-                      icon={ChevronDownIcon}
-                      size={'small'}
-                      type={'text'}
-                      onClick={() => setExpanded(false)}
-                    >
+                    <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
+                      <ChevronDownIcon data-icon="inline-start" />
                       {t('taskDetail.collapseReply')}
                     </Button>
                   )}

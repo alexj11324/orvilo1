@@ -1,7 +1,6 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { ActionIcon, Button, Select, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { Minimize2, Paperclip, X } from 'lucide-react';
@@ -9,6 +8,11 @@ import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } fr
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { useModalContext } from '@/components/Modal';
+import Select from '@/components/Select';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import {
   getAttachmentFileIdsFromEditor,
@@ -350,13 +354,13 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
             <TaskPriorityTag priority={priority} onChange={setPriority}>
               <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
-                <Text fontSize={12}>
+                <div className="text-[12px]">
                   {priority === 0
                     ? t('taskDetail.priority.none')
                     : t(
                         `taskDetail.priority.${(['', 'urgent', 'high', 'normal', 'low'] as const)[priority]}` as never,
                       )}
-                </Text>
+                </div>
               </div>
             </TaskPriorityTag>
 
@@ -370,14 +374,14 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
-                      <Text fontSize={12}>{memberMeta?.title}</Text>
+                      <div className="text-[12px]">{memberMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <Text color={cssVar.colorTextDescription} fontSize={12}>
+                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.member')}
-                      </Text>
+                      </div>
                     </>
                   )}
                 </div>
@@ -387,7 +391,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
             {lockAssignee ? (
               <div className="flex items-center gap-1.5 rounded-md px-2 py-1">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                <Text fontSize={12}>{assigneeMeta?.title}</Text>
+                <div className="text-[12px]">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector
@@ -399,14 +403,14 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                      <Text fontSize={12}>{assigneeMeta?.title}</Text>
+                      <div className="text-[12px]">{assigneeMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <Text color={cssVar.colorTextDescription} fontSize={12}>
+                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.assignee')}
-                      </Text>
+                      </div>
                     </>
                   )}
                 </div>
@@ -453,12 +457,12 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           </div>
 
           <Button
+            className="rounded-full"
             disabled={!canCreateTask || isCreating}
             loading={isCreating}
-            shape={'round'}
-            size={'small'}
+            size="sm"
             title={canCreateTask ? undefined : reason}
-            type={'primary'}
+            variant="default"
             onClick={handleSubmit}
           >
             {t('createTask.submit')}

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -49,9 +48,9 @@ const InboxPage = memo(() => {
     <div className="flex flex-col flex-1 h-full">
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
             {t('navigation.inbox')}
-          </Text>
+          </div>
         }
       />
       <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>

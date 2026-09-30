@@ -1,10 +1,11 @@
 'use client';
 
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ShieldCheck } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 
@@ -28,10 +29,10 @@ export const TaskAcceptanceHeader = memo<TaskAcceptanceHeaderProps>(
         onClick={onToggle}
       >
         <ShieldCheck color={cssVar.colorTextDescription} size={16} />
-        <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.acceptance.title')}
-        </Text>
-        {Boolean(count) && <Tag size={'small'}>{count}</Tag>}
+        </div>
+        {Boolean(count) && <Tag size="sm">{count}</Tag>}
         <AccordionArrowIcon isOpen={isOpen} style={{ color: cssVar.colorTextDescription }} />
       </div>
     );

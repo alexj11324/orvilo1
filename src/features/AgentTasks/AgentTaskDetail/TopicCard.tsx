@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { ActionIcon, Avatar, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import {
@@ -20,7 +19,12 @@ import type { KeyboardEvent } from 'react';
 import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import CollapsibleContent from '@/components/CollapsibleContent';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -329,35 +333,34 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           <TopicStatusIcon size={16} status={activity.status} />
           {activity.sourceTaskIdentifier && (
             <Tag
-              size={'small'}
+              size="sm"
               style={{ flexShrink: 0 }}
               title={t('taskDetail.topicSource', { identifier: activity.sourceTaskIdentifier })}
             >
               {activity.sourceTaskIdentifier}
             </Tag>
           )}
-          <Text
-            ellipsis
+          <div
             aria-disabled={activity.id ? undefined : true}
+            className="truncate block font-medium"
             role={activity.id ? 'button' : undefined}
             style={{ cursor: activity.id ? 'pointer' : undefined }}
             tabIndex={activity.id ? 0 : -1}
-            weight={500}
             onClick={handleOpen}
             onKeyDown={handleTitleKeyDown}
           >
             {activity.title}
-          </Text>
+          </div>
           {activity.seq != null && (
-            <Text fontSize={12} style={{ flexShrink: 0 }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
               #{activity.seq}
-            </Text>
+            </div>
           )}
           {/* Only mark machine-opened rounds: a `manual` tag on every row the
               user started themselves is noise, absence already means manual. */}
           {activity.trigger && activity.trigger !== 'manual' && (
             <Tag
-              size={'small'}
+              size="sm"
               style={{ flexShrink: 0 }}
               title={t(`taskDetail.runTrigger.${activity.trigger}` as const)}
             >
@@ -365,9 +368,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             </Tag>
           )}
           {durationText && (
-            <Text fontSize={12} style={{ flexShrink: 0 }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
               · {durationText}
-            </Text>
+            </div>
           )}
           {/* The verdict rides the header only while the run is folded; once
               open it moves down to sit on the checklist that justifies it. */}
@@ -383,9 +386,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
 
         <div className="flex shrink-0 items-center gap-2">
           {startedAt && (
-            <Text fontSize={12} title={startedAtTitle} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" title={startedAtTitle}>
               {startedAt}
-            </Text>
+            </div>
           )}
           {hasBody && (
             <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -425,12 +428,12 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
       {hasBody && bodyExpanded && (
         <div className={primary ? 'flex flex-col gap-3' : 'flex flex-col gap-2 px-1'}>
           {activity.summary && !(primary && activity.content) && (
-            <Text
-              fontSize={13}
+            <div
+              className="text-[13px]"
               style={{ color: cssVar.colorTextDescription, whiteSpace: 'pre-wrap' }}
             >
               {activity.summary}
-            </Text>
+            </div>
           )}
           {activity.content && <RunContent content={activity.content} unclamped={primary} />}
           {/* The verdict's evidence, next to the delivery it judged — reading

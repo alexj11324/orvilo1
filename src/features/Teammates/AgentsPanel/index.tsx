@@ -1,13 +1,16 @@
 'use client';
 
-import { Alert, Button, SkeletonText, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Bot, Check, Minus } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { WorkspaceAgentSummary } from '../api/contract';
@@ -111,7 +114,7 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
         </TooltipProvider>
       </div>
       <div>
-        <Tag color={STATUS_COLOR[status]}>
+        <Tag style={{ color: STATUS_COLOR[status] }}>
           {t(`workspaceSetting.agents.status.${status}`, { defaultValue: status })}
         </Tag>
       </div>
@@ -146,9 +149,9 @@ export const AgentsPanel = memo(() => {
       <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
         {Array.from({ length: 3 }).map((_, i) => (
           <div className="flex items-center gap-2.5" key={i}>
-            <SkeletonText style={{ marginBottom: 0, width: '30%' }} />
-            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
-            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '30%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
           </div>
         ))}
       </div>
@@ -156,15 +159,16 @@ export const AgentsPanel = memo(() => {
   }
   if (error) {
     return (
-      <Alert
-        title={t('workspaceSetting.agents.loadFailed')}
-        type="error"
-        action={
-          <Button size="small" onClick={() => void mutate()}>
-            {t('retry', { ns: 'common' })}
-          </Button>
-        }
-      />
+      <Alert variant="destructive">
+        <AlertTitle>{t('workspaceSetting.agents.loadFailed')}</AlertTitle>
+        <AlertAction>
+          {
+            <Button size="sm" onClick={() => void mutate()}>
+              {t('retry', { ns: 'common' })}
+            </Button>
+          }
+        </AlertAction>
+      </Alert>
     );
   }
 

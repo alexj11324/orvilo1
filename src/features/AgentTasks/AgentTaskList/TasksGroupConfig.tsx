@@ -1,4 +1,3 @@
-import { ActionIcon, Button, Select, Switch, Tabs } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import {
   ArrowDownWideNarrow,
@@ -10,8 +9,13 @@ import {
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Select from '@/components/Select';
+import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { useGlobalStore } from '@/store/global';
@@ -142,8 +146,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
       children: (
         <Switch
           checked={!options.hideCompleted}
-          size={'small'}
-          onChange={(checked) => {
+          size="sm"
+          onCheckedChange={(checked) => {
             setOptions((prev) => ({ ...prev, hideCompleted: !checked }));
           }}
         />
@@ -208,8 +212,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         children: (
           <Switch
             checked={options.orderCompletedByRecency}
-            size={'small'}
-            onChange={(checked) => {
+            size="sm"
+            onCheckedChange={(checked) => {
               setOptions((prev) => ({ ...prev, orderCompletedByRecency: checked }));
             }}
           />
@@ -224,8 +228,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
               children: (
                 <Switch
                   checked={options.showSubTasks}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     setOptions((prev) => ({ ...prev, showSubTasks: checked }));
                   }}
                 />
@@ -241,8 +245,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
               children: (
                 <Switch
                   checked={options.nestedSubTasks}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     setOptions((prev) => ({ ...prev, nestedSubTasks: checked }));
                   }}
                 />
@@ -259,8 +263,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
               children: (
                 <Switch
                   checked={options.showMilestone}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     setOptions((prev) => ({ ...prev, showMilestone: checked }));
                   }}
                 />
@@ -275,23 +279,22 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
     const panelContent = (
       <div className="flex w-[280px] flex-col gap-3">
         <Tabs
-          activeKey={viewMode}
-          items={[
-            { icon: <LayoutList size={'1em'} />, key: 'list', label: t('taskList.view.list') },
-            {
-              icon: <LayoutGrid size={'1em'} />,
-              key: 'kanban',
-              label: t('taskList.view.board'),
-            },
-          ]}
-          styles={{
-            list: { display: 'flex', width: '100%' },
-            tab: { flex: 1 },
-          }}
-          onChange={(key) =>
+          value={viewMode}
+          onValueChange={(key) =>
             updateSystemStatus({ taskListViewMode: key as TaskViewMode }, 'updateTaskListViewMode')
           }
-        />
+        >
+          <TabsList className="flex w-full">
+            <TabsTrigger className="flex-1 gap-1.5" value="list">
+              <LayoutList size={'1em'} />
+              {t('taskList.view.list')}
+            </TabsTrigger>
+            <TabsTrigger className="flex-1 gap-1.5" value="kanban">
+              <LayoutGrid size={'1em'} />
+              {t('taskList.view.board')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <FieldGroup className="gap-3">
           {(viewMode === 'kanban' ? boardFormItems : formItems).map((item) => (
             <Field key={item.label} orientation={'horizontal'}>
@@ -307,8 +310,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
           style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, paddingTop: 8 }}
         >
           <Button
-            size={'small'}
-            type={'text'}
+            size="sm"
+            variant="ghost"
             onClick={() => {
               // Restore the user's saved baseline; without one, the built-in
               // defaults are the baseline.
@@ -318,8 +321,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
             {t('taskList.form.reset')}
           </Button>
           <Button
-            size={'small'}
-            type={'text'}
+            size="sm"
+            variant="ghost"
             onClick={() => {
               updateSystemStatus(
                 { taskListViewDefaults: toStoredTaskListViewOptions(options) },

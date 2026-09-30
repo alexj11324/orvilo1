@@ -1,10 +1,13 @@
-import { ActionIcon, confirmModal, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailWorkspaceNode } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { FileLock2Icon, FileTextIcon, MoreHorizontal, Package, Trash } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
 import { openDocumentModal } from '@/features/DocumentModal/loader';
 import Time from '@/features/Home/components/Time';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
@@ -75,16 +78,19 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
         strokeWidth: 1.5,
         style: { flexShrink: 0 },
       })}
-      <Text ellipsis style={{ flex: 1, minWidth: 0 }} type={inaccessible ? 'secondary' : undefined}>
+      <div
+        className={cn('truncate', 'block', inaccessible ? 'text-muted-foreground' : undefined)}
+        style={{ flex: 1, minWidth: 0 }}
+      >
         {title}
-      </Text>
+      </div>
       {sizeLabel && (
-        <Text fontSize={12} style={{ flexShrink: 0 }} type="secondary">
+        <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
           {sizeLabel}
-        </Text>
+        </div>
       )}
       {node.sourceTaskIdentifier && (
-        <Tag size="small" style={{ flexShrink: 0 }}>
+        <Tag size="sm" style={{ flexShrink: 0 }}>
           {node.sourceTaskIdentifier}
         </Tag>
       )}
@@ -92,7 +98,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
           specific run". Information only: linking into the conversation needs the
           run's agent id, which the projection does not carry yet. */}
       {node.sourceTopicTitle && (
-        <Tag size="small" style={{ flexShrink: 0 }} title={node.sourceTopicTitle}>
+        <Tag size="sm" style={{ flexShrink: 0 }} title={node.sourceTopicTitle}>
           {node.sourceTopicTitle}
         </Tag>
       )}
@@ -136,10 +142,10 @@ const TaskArtifacts = memo(() => {
           onClick={() => setIsExpanded((prev) => !prev)}
         >
           <Package color={cssVar.colorTextDescription} size={16} />
-          <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+          <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
             {t('taskDetail.artifacts')}
-          </Text>
-          <Tag size="small">{items.length}</Tag>
+          </div>
+          <Tag size="sm">{items.length}</Tag>
           <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
         </div>
       </div>

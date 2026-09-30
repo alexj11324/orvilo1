@@ -1,5 +1,4 @@
 'use client';
-import { Alert, toast } from '@lobehub/ui/base-ui';
 import type { ProjectOrchestrationPolicy } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -8,6 +7,8 @@ import { createElement, memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Combobox,
@@ -260,41 +261,46 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
           </Button>
         </div>
         {policySWR.error && (
-          <Alert
-            description={errorMessage(policySWR.error, t('orchestration.loadError'))}
-            icon={<CircleAlertIcon size={16} />}
-            title={t('orchestration.loadError')}
-            type={'error'}
-            action={
-              <Button variant="outline" onClick={() => void reload()}>
-                {t('orchestration.retry')}
-              </Button>
-            }
-          />
+          <Alert variant="destructive">
+            <CircleAlertIcon size={16} />
+            <AlertTitle>{t('orchestration.loadError')}</AlertTitle>
+            <AlertDescription>
+              {errorMessage(policySWR.error, t('orchestration.loadError'))}
+            </AlertDescription>
+            <AlertAction>
+              {
+                <Button variant="outline" onClick={() => void reload()}>
+                  {t('orchestration.retry')}
+                </Button>
+              }
+            </AlertAction>
+          </Alert>
         )}
         {stale && (
-          <Alert
-            description={t('orchestration.staleDescription')}
-            title={t('orchestration.staleTitle')}
-            type={'warning'}
-            action={
-              <Button variant="outline" onClick={() => void reload()}>
-                {t('orchestration.reload')}
-              </Button>
-            }
-          />
+          <Alert variant="warning">
+            <AlertTitle>{t('orchestration.staleTitle')}</AlertTitle>
+            <AlertDescription>{t('orchestration.staleDescription')}</AlertDescription>
+            <AlertAction>
+              {
+                <Button variant="outline" onClick={() => void reload()}>
+                  {t('orchestration.reload')}
+                </Button>
+              }
+            </AlertAction>
+          </Alert>
         )}
         {saveError && (
-          <Alert
-            description={saveError}
-            title={t('orchestration.saveError')}
-            type={'error'}
-            action={
-              <Button variant="outline" onClick={() => void handleSave()}>
-                {t('orchestration.retrySave')}
-              </Button>
-            }
-          />
+          <Alert variant="destructive">
+            <AlertTitle>{t('orchestration.saveError')}</AlertTitle>
+            <AlertDescription>{saveError}</AlertDescription>
+            <AlertAction>
+              {
+                <Button variant="outline" onClick={() => void handleSave()}>
+                  {t('orchestration.retrySave')}
+                </Button>
+              }
+            </AlertAction>
+          </Alert>
         )}
         {!policySWR.error && (!draft || !view) ? (
           <div aria-busy="true" className="flex flex-col gap-3" role="status">

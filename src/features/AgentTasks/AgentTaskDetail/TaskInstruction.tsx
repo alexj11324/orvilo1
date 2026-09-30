@@ -1,10 +1,10 @@
 import { useEditor } from '@lobehub/editor/react';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Paperclip } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import ActionIcon from '@/components/ActionIcon';
 import CollapsibleContent from '@/components/CollapsibleContent';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';

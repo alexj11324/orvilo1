@@ -9,7 +9,7 @@ const { start, status, toastError } = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({ toast: { error: toastError } }));
+vi.mock('@/components/toast', () => ({ toast: { error: toastError } }));
 vi.mock('@orvilo/const', () => ({ isDesktop: false }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/services/githubOAuth', () => ({ githubOAuthService: { start, status } }));

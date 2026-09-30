@@ -23,7 +23,7 @@ Object.defineProperty(navigator, 'clipboard', {
   value: { writeText: mocks.copyToClipboard },
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   toast: { success: mocks.toastSuccess },
 }));

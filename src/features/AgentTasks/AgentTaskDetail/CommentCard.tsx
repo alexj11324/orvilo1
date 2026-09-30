@@ -1,13 +1,16 @@
 import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
 import { Markdown } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, confirmModal, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,13 +155,13 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
             <MessageCircle size={12} />
           </div>
         )}
-        <Text weight={500}>
+        <div className="font-medium">
           {activity.author?.name || t('taskDetail.activities.fallback.comment')}
-        </Text>
+        </div>
         {relTime && (
-          <Text fontSize={12} title={relTimeTitle} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground" title={relTimeTitle}>
             {relTime}
-          </Text>
+          </div>
         )}
       </div>
 
@@ -177,10 +180,10 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
           <div className="flex items-center justify-between gap-2">
             <AttachmentUploadButton onFiles={handleAttach} />
             <div className="flex gap-2">
-              <Button disabled={submitting} size={'small'} onClick={handleCancel}>
+              <Button disabled={submitting} size="sm" onClick={handleCancel}>
                 {t('taskDetail.comment.cancel')}
               </Button>
-              <Button loading={submitting} size={'small'} type={'primary'} onClick={handleSave}>
+              <Button loading={submitting} size="sm" variant="default" onClick={handleSave}>
                 {t('taskDetail.comment.save')}
               </Button>
             </div>

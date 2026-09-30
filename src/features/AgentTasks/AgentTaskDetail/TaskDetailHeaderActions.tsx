@@ -1,4 +1,3 @@
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import {
   CopyIcon,
   EyeOffIcon,
@@ -13,6 +12,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';

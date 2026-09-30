@@ -1,12 +1,13 @@
 'use client';
-import { createModal, type ModalInstance, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { t as translate } from 'i18next';
 import { BookOpen, LibraryBigIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, type ModalInstance } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';

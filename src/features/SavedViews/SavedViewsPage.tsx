@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Button, Popover, Select, Switch, Text } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
@@ -10,11 +9,16 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
 import SearchBar from '@/components/SearchBar';
+import Select from '@/components/Select';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import NavHeader from '@/features/NavHeader';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -157,11 +161,14 @@ const viewIcon = (view: SavedViewItem) =>
 
 const renderDateCell = (value: Date | string | null | undefined) =>
   value ? (
-    <Text fontSize={13} title={dayjs(value).format('YYYY-MM-DD HH:mm')} type={'secondary'}>
+    <div
+      className="text-[13px] text-muted-foreground"
+      title={dayjs(value).format('YYYY-MM-DD HH:mm')}
+    >
       {dayjs(value).fromNow()}
-    </Text>
+    </div>
   ) : (
-    <Text type={'secondary'}>—</Text>
+    <div className="text-muted-foreground">—</div>
   );
 
 const DIRECTORY_DOC_URL = '/docs/usage/getting-started/work';
@@ -333,13 +340,11 @@ const SavedViewsPage = memo(() => {
         key: 'owner',
         render: (view) => {
           const owner = ownerInfo(view);
-          if (!owner.name) return <Text type={'secondary'}>—</Text>;
+          if (!owner.name) return <div className="text-muted-foreground">—</div>;
           return (
             <div className={styles.ownerCell}>
               <Avatar avatar={owner.avatar} name={owner.name} size={20} />
-              <Text ellipsis fontSize={13}>
-                {owner.name}
-              </Text>
+              <div className="truncate block text-[13px]">{owner.name}</div>
             </div>
           );
         },
@@ -367,14 +372,12 @@ const SavedViewsPage = memo(() => {
   }, [ownerInfo, prefs.showCreated, prefs.showOwner, prefs.showUpdated, t]);
 
   const displayOptions = (
-    <Popover
-      placement="bottomRight"
-      trigger="click"
-      content={
+    <Popover>
+      <PopoverContent align="end" side="bottom">
         <div className={cx('flex flex-col gap-2.5', styles.displayPopover)}>
-          <Text fontSize={12} type="secondary" weight={500}>
+          <div className="text-[12px] text-muted-foreground font-medium">
             {t('savedViews.ordering')}
-          </Text>
+          </div>
           <Select
             aria-label={t('savedViews.ordering')}
             style={{ width: '100%' }}
@@ -405,9 +408,9 @@ const SavedViewsPage = memo(() => {
               if (value === 'asc' || value === 'desc') updatePrefs({ direction: value });
             }}
           />
-          <Text fontSize={12} type="secondary" weight={500}>
+          <div className="text-[12px] text-muted-foreground font-medium">
             {t('savedViews.displayProperties')}
-          </Text>
+          </div>
           {(
             [
               ['showOwner', 'savedViews.column.owner'],
@@ -416,21 +419,24 @@ const SavedViewsPage = memo(() => {
             ] as const
           ).map(([key, labelKey]) => (
             <div className="flex flex-row items-center justify-between" key={key}>
-              <Text fontSize={13}>{t(labelKey)}</Text>
+              <div className="text-[13px]">{t(labelKey)}</div>
               <Switch
                 checked={prefs[key]}
-                onChange={(checked) => updatePrefs({ [key]: checked })}
+                onCheckedChange={(checked) => updatePrefs({ [key]: checked })}
               />
             </div>
           ))}
         </div>
-      }
-    >
-      <ActionIcon
-        aria-label={t('savedViews.displayOptions')}
-        icon={Settings2Icon}
-        size="small"
-        title={t('savedViews.displayOptions')}
+      </PopoverContent>
+      <PopoverTrigger
+        render={
+          <ActionIcon
+            aria-label={t('savedViews.displayOptions')}
+            icon={Settings2Icon}
+            size="small"
+            title={t('savedViews.displayOptions')}
+          />
+        }
       />
     </Popover>
   );
@@ -439,21 +445,17 @@ const SavedViewsPage = memo(() => {
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
             {t('tab.views')}
-          </Text>
+          </div>
         }
         right={
-          <Button
-            size={'small'}
-            type="primary"
-            icon={
+          <Button size="sm" variant="default" onClick={() => setCreating(true)}>
+            {
               <span className="anticon" role="img">
                 <PlusIcon fill={'transparent'} height={16} size={16} width={16} />
               </span>
             }
-            onClick={() => setCreating(true)}
-          >
             {t('savedViews.newView')}
           </Button>
         }
@@ -512,26 +514,21 @@ const SavedViewsPage = memo(() => {
                     width={56}
                   />
                 </span>
-                <Text fontSize={15} weight={600}>
-                  {t('tab.views')}
-                </Text>
-                <Text fontSize={13} type="secondary">
+                <div className="text-[15px] font-semibold">{t('tab.views')}</div>
+                <div className="text-[13px] text-muted-foreground">
                   {t(
                     entityType === 'project'
                       ? 'teams.viewDirectoryDescriptionProjects'
                       : 'teams.viewDirectoryDescriptionIssues',
                   )}
-                </Text>
+                </div>
                 <div className="flex flex-row gap-2">
-                  <Button
-                    type="primary"
-                    icon={
+                  <Button variant="default" onClick={() => setCreating(true)}>
+                    {
                       <span className="anticon" role="img">
                         <PlusIcon fill={'transparent'} height={14} size={14} width={14} />
                       </span>
                     }
-                    onClick={() => setCreating(true)}
-                  >
                     {t('teams.viewCreateNew')}
                   </Button>
                   <Button

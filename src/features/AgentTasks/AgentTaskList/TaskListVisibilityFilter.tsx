@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import {
   DropdownMenu,
   DropdownMenuContent,

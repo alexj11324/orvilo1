@@ -17,27 +17,17 @@ vi.mock('@lobehub/ui', () => ({
   Icon: () => null,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
-  Button: ({
-    children,
-    disabled,
-    loading,
-    onClick,
-  }: {
-    children?: ReactNode;
-    disabled?: boolean;
-    loading?: boolean;
-    onClick?: () => void;
-  }) => (
-    <button disabled={disabled || loading} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Skeleton: { Text: () => <div data-testid="picker-skeleton" /> },
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+vi.mock('@/components/Modal', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createModal: vi.fn(),
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: { error: mocks.toastError },
+}));
+
+vi.mock('@/components/ui/skeleton', () => ({
+  Skeleton: () => <div data-testid="picker-skeleton" />,
 }));
 
 vi.mock('@/services/project', () => ({

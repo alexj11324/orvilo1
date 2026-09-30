@@ -1,11 +1,13 @@
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { type BriefAction, DEFAULT_BRIEF_ACTIONS, type TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Check, SquarePen, Workflow } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBriefStore } from '@/store/brief';
 import { useTaskStore } from '@/store/task';
@@ -45,7 +47,7 @@ type CommentMode = { type: 'feedback' } | { key: string; type: 'comment' };
 const SuccessTag = memo<{ label: string }>(({ label }) => (
   <div className="flex items-center gap-1">
     <Check color={cssVar.colorTextQuaternary} size={14} />
-    <Text className={styles.resolvedTag}>{label}</Text>
+    <div className={cn(styles.resolvedTag)}>{label}</div>
   </div>
 ));
 
@@ -92,13 +94,13 @@ const BriefCardActions = memo<BriefCardActionsProps>(
     }, [agentId, openTopicDrawer, setActiveTaskId, taskId, topicId, topicTitle]);
     const viewRunButton = showViewRun ? (
       <Button
-        className={'brief-view-run-btn'}
-        icon={Workflow}
-        size={'small'}
+        className={cn('brief-view-run-btn')}
+        size="sm"
         style={{ color: cssVar.colorTextSecondary }}
-        type={'text'}
+        variant="ghost"
         onClick={handleViewRun}
       >
+        <Workflow data-icon="inline-start" />
         {t('brief.viewRun')}
       </Button>
     ) : null;
@@ -273,14 +275,14 @@ const BriefCardActions = memo<BriefCardActionsProps>(
                   render={
                     <span className="inline-flex">
                       <Button
-                        className={'brief-comment-btn'}
-                        icon={SquarePen}
-                        shape={'round'}
+                        className={cn('rounded-full', 'brief-comment-btn')}
                         style={{
                           color: cssVar.colorTextSecondary,
                         }}
                         onClick={() => setCommentMode({ type: 'feedback' })}
-                      />
+                      >
+                        <SquarePen data-icon="inline-start" />
+                      </Button>
                     </span>
                   }
                 />
@@ -305,10 +307,9 @@ const BriefCardActions = memo<BriefCardActionsProps>(
 
             return (
               <Button
-                className={styles.actionBtn}
+                className={cn('rounded-full', styles.actionBtn)}
                 disabled={loadingKey === action.key}
                 key={action.key}
-                shape={'round'}
                 onClick={() => handleResolve(action.key)}
               >
                 {getActionLabel(action)}
@@ -317,9 +318,8 @@ const BriefCardActions = memo<BriefCardActionsProps>(
           })}
           {briefType === 'error' && (
             <Button
-              className={styles.actionBtn}
+              className={cn('rounded-full', styles.actionBtn)}
               disabled={loadingKey === 'ignore'}
-              shape={'round'}
               onClick={() => handleResolve('ignore')}
             >
               {t('brief.action.ignore')}
@@ -341,9 +341,8 @@ const BriefCardActions = memo<BriefCardActionsProps>(
               </BriefActionLink>
             ) : (
               <Button
-                className={styles.actionBtnPrimary}
+                className={cn('rounded-full', styles.actionBtnPrimary)}
                 disabled={loadingKey === primaryActions.key}
-                shape={'round'}
                 onClick={() => handleResolve(primaryActions.key)}
               >
                 {getActionLabel(primaryActions)}

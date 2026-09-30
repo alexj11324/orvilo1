@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -145,9 +144,7 @@ const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <Text fontSize={12} type={'secondary'}>
-        {t('taskDetail.goalTimeline.title')}
-      </Text>
+      <div className="text-[12px] text-muted-foreground">{t('taskDetail.goalTimeline.title')}</div>
       <div className={styles.rail}>
         {rounds.map(({ report, run, usage }, index) => (
           <GoalRoundPopover

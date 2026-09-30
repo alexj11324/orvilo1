@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -315,9 +314,9 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
                 />
                 {flatOptions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-4">
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('taskList.assigneeSearch.agentEmpty', { ns: 'chat' })}
-                    </Text>
+                    </div>
                   </div>
                 ) : (
                   <div

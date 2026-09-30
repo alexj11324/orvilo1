@@ -1,7 +1,6 @@
 'use client';
 
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -92,9 +91,9 @@ const GoalRoundPopover = memo<GoalRoundPopoverProps>(
               className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
             >
               <div className="flex flex-col gap-1.5" style={{ minWidth: 140 }}>
-                <Text fontSize={13} weight={500}>
+                <div className="text-[13px] font-medium">
                   {t('taskDetail.goalTimeline.round', { index })}
-                </Text>
+                </div>
                 {rows.map((row) => (
                   <div className="flex items-center justify-between gap-4" key={row.label}>
                     <span className={styles.label}>{row.label}</span>

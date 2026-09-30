@@ -1,13 +1,14 @@
-import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
-import { DropdownMenu, Progress, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import IssueRowChip from '@/components/IssueRowChip';
+import { DropdownMenu, type DropdownMenuProps } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
 
 import TaskStatusIcon from './TaskStatusIcon';
 
@@ -147,9 +148,9 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
             ) : (
               <TaskStatusIcon size={16} status={itemStatus} />
             )}
-            <Text ellipsis weight={isActive ? 'bold' : undefined}>
+            <div className={cn('truncate', 'block', isActive ? 'font-bold' : undefined)}>
               {subtask.task.name || subtask.task.identifier}
-            </Text>
+            </div>
           </div>
         ),
         onClick: () =>
@@ -216,13 +217,27 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
       <IssueRowChip
         data-row-interactive={interactive || undefined}
         icon={
-          <Progress
-            percent={data.percent}
-            showInfo={false}
-            size={14}
-            strokeColor={cssVar.colorSuccess}
-            type={'circle'}
-          />
+          <svg aria-hidden height={14} viewBox="0 0 14 14" width={14}>
+            <circle
+              cx={7}
+              cy={7}
+              fill="none"
+              r={5.5}
+              stroke={cssVar.colorFillSecondary}
+              strokeWidth={2.5}
+            />
+            <circle
+              cx={7}
+              cy={7}
+              fill="none"
+              r={5.5}
+              stroke={cssVar.colorSuccess}
+              strokeDasharray={`${(data.percent / 100) * 2 * Math.PI * 5.5} ${2 * Math.PI * 5.5}`}
+              strokeLinecap="round"
+              strokeWidth={2.5}
+              transform="rotate(-90 7 7)"
+            />
+          </svg>
         }
         onClick={interactive ? handleTagClick : undefined}
         onContextMenu={onRequestSubtasks ? handleTagClick : undefined}
@@ -234,12 +249,7 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
     if (!hasDropdown) return tag;
 
     return (
-      <DropdownMenu
-        items={navigationItems}
-        open={open}
-        trigger={'click'}
-        onOpenChange={handleOpenChange}
-      >
+      <DropdownMenu items={navigationItems} open={open} onOpenChange={handleOpenChange}>
         {tag}
       </DropdownMenu>
     );

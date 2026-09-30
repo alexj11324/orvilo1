@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -16,6 +15,7 @@ import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import DatePicker from '@/components/DatePicker';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
+import { toast } from '@/components/toast';
 import {
   Combobox,
   ComboboxChip,

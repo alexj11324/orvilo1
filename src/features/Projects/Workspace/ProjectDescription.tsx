@@ -1,12 +1,12 @@
 'use client';
 import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
-import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';

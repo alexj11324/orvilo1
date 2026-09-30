@@ -1,8 +1,9 @@
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { CheckCheckIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { type BriefItem } from '@/features/DailyBrief/types';
 import { useBriefStore } from '@/store/brief';
 
@@ -37,13 +38,8 @@ const MarkAllReadButton = memo<MarkAllReadButtonProps>(({ news, onResolved }) =>
   }, [news, onResolved, resolveBriefsAsRead, t]);
 
   return (
-    <Button
-      disabled={loading}
-      icon={CheckCheckIcon}
-      size={'small'}
-      type={'text'}
-      onClick={handleClick}
-    >
+    <Button disabled={loading} size="sm" variant="ghost" onClick={handleClick}>
+      <CheckCheckIcon data-icon="inline-start" />
       {t('inbox.news.markAllRead')}
     </Button>
   );

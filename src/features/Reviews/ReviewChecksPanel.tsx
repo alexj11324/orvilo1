@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   CheckCircle2Icon,
@@ -101,34 +100,33 @@ const ReviewChecksPanel = memo<{
   return (
     <div className={cx('flex flex-col', styles.card)}>
       <div className={cx('flex items-center gap-2', styles.cardHeader)}>
-        <Text weight={500}>{t('reviews.checks')}</Text>
-        <Text fontSize={12} type={'secondary'}>
+        <div className="font-medium">{t('reviews.checks')}</div>
+        <div className="text-[12px] text-muted-foreground">
           {t(visual.labelKey as never, { count: summary.failing })}
-        </Text>
+        </div>
         <div className="flex-1" />
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {checks.loaded}
           {checks.total !== null ? `/${checks.total}` : ''}
-        </Text>
+        </div>
       </div>
       {checks.items.map((check, index) => {
         const icon = checkStatusVisual(check.status);
         return (
           <div className={styles.checkRow} key={`${check.name}-${index}`}>
             {createElement(icon.icon, { color: icon.color, size: 14 })}
-            <Text fontSize={13}>{check.name}</Text>
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[13px]">{check.name}</div>
+            <div className="text-[12px] text-muted-foreground">
               {check.rawConclusion ?? check.rawStatus ?? ''}
-            </Text>
+            </div>
             {check.detailsUrl ? (
-              <Text
-                fontSize={12}
+              <div
+                className="text-[12px] text-muted-foreground"
                 style={{ cursor: 'pointer' }}
-                type={'secondary'}
                 onClick={() => window.open(check.detailsUrl!, '_blank', 'noopener,noreferrer')}
               >
                 <ExternalLinkIcon size={12} />
-              </Text>
+              </div>
             ) : null}
           </div>
         );

@@ -1,7 +1,7 @@
 'use client';
 
-import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useId, useMemo, useState } from 'react';
@@ -10,7 +10,10 @@ import { useParams, useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import { Badge as Tag } from '@/components/reui/badge';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
+import { TabsList } from '@/components/ui/tabs';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -184,9 +187,7 @@ const PullRequestRow = memo<{
         <GitPullRequestIcon fill={'transparent'} height={14} size={14} width={14} />
       </span>
       <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-        <Text ellipsis fontSize={13} weight={500}>
-          {item.title}
-        </Text>
+        <div className="truncate block text-[13px] font-medium">{item.title}</div>
       </div>
       {item.isDraft ? (
         <span
@@ -199,15 +200,15 @@ const PullRequestRow = memo<{
         </span>
       ) : null}
       {item.reviewDecision === 'APPROVED' ? (
-        <Tag color={'green'}>{t('reviews.decision.approved')}</Tag>
+        <Tag variant="success-light">{t('reviews.decision.approved')}</Tag>
       ) : null}
       {item.reviewDecision === 'CHANGES_REQUESTED' ? (
-        <Tag color={'red'}>{t('reviews.decision.changesRequested')}</Tag>
+        <Tag variant="destructive-light">{t('reviews.decision.changesRequested')}</Tag>
       ) : null}
       {item.updatedAt ? (
-        <Text className={styles.meta} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
+        <div className={cn(styles.meta)} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
           {reviewRelativeTime(item.updatedAt)}
-        </Text>
+        </div>
       ) : null}
     </WorkspaceLink>
   );
@@ -254,13 +255,9 @@ const QueueGroup = ({
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
           size={14}
         />
-        <Text fontSize={12} weight={500}>
-          {label}
-        </Text>
+        <div className="text-[12px] font-medium">{label}</div>
         {typeof count === 'number' ? (
-          <Text fontSize={12} type={'secondary'}>
-            {count}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{count}</div>
         ) : null}
       </button>
       <div hidden={collapsed} id={regionId}>
@@ -433,22 +430,21 @@ const ReviewsPage = memo(() => {
       <div className={styles.listChrome}>
         <NavHeader
           left={
-            <Text fontSize={13} style={{ paddingInlineStart: 4 }} weight={500}>
+            <div className="text-[13px] font-medium" style={{ paddingInlineStart: 4 }}>
               {t('tab.reviews')}
-            </Text>
+            </div>
           }
         />
         <div className={styles.tabs}>
-          <TabsRoot value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
+          <Tabs value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
             <TabsList>
-              <TabsIndicator />
               {tabs.map((item) => (
-                <TabsTab key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
+                <TabsTrigger key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
                   {item.label}
-                </TabsTab>
+                </TabsTrigger>
               ))}
             </TabsList>
-          </TabsRoot>
+          </Tabs>
         </div>
       </div>
       <div className={styles.listBody}>
@@ -521,17 +517,17 @@ const ReviewsPage = memo(() => {
               ) : null}
               {queueHasMore || (queueTail?.items.length ?? 0) > 0 ? (
                 <div className="flex flex-row items-center justify-between px-3">
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('reviews.loadedCount', {
                       loaded: allPullRequests.length,
                       total: queueTotal ?? '…',
                     })}
-                  </Text>
+                  </div>
                   {queueHasMore ? (
                     <Button
                       loading={queuePager.isLoading('queue')}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={loadMoreQueue}
                     >
                       {t('myWork.loadMore')}
@@ -597,9 +593,9 @@ const ReviewsPage = memo(() => {
       <span className="anticon" role="img">
         <GitPullRequestIcon fill={'transparent'} height={44} size={44} width={44} />
       </span>
-      <Text fontSize={13} type={'secondary'}>
+      <div className="text-[13px] text-muted-foreground">
         {t('reviews.detailEmpty', { count: queueTotal ?? allPullRequests.length })}
-      </Text>
+      </div>
     </div>
   );
 

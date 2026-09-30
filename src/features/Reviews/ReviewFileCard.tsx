@@ -1,6 +1,6 @@
 import { PatchDiff } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, FileDiffIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,15 +84,15 @@ const ReviewFileCard = memo<{
             width={14}
           />
         </span>
-        <Text className={styles.threadHeader} weight={500}>
+        <div className={cn('font-medium', styles.threadHeader)}>
           {file.status === 'renamed' && file.previousFilename
             ? `${file.previousFilename} → ${file.filename}`
             : file.filename}
-        </Text>
+        </div>
         <div className="flex flex-col flex-1" />
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           +{file.additions} −{file.deletions}
-        </Text>
+        </div>
       </div>
       {collapsed ? null : file.patch ? (
         <>
@@ -115,12 +115,12 @@ const ReviewFileCard = memo<{
           />
           {commentAt ? (
             <div className={cx('flex flex-col gap-2', styles.commentBox)}>
-              <Text className={styles.threadHeader}>
+              <div className={cn(styles.threadHeader)}>
                 {file.filename}:{commentAt.line} ·{' '}
                 {commentAt.side === 'LEFT'
                   ? t('reviews.commentSideLeft')
                   : t('reviews.commentSideRight')}
-              </Text>
+              </div>
               <CommentComposer
                 disabled={writeDisabled}
                 placeholder={t('reviews.commentPlaceholder')}
@@ -142,9 +142,7 @@ const ReviewFileCard = memo<{
         </>
       ) : (
         <div className="flex flex-col p-3">
-          <Text fontSize={12} type={'secondary'}>
-            {t('reviews.diffUnavailable')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('reviews.diffUnavailable')}</div>
         </div>
       )}
     </div>

@@ -1,4 +1,3 @@
-import { createModal, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { t as translate } from 'i18next';
@@ -7,6 +6,7 @@ import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
@@ -231,13 +231,7 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           <Button disabled={pending} variant="outline" onClick={close}>
             {t('resources.link.cancel')}
           </Button>
-          <Button
-            aria-busy={pending}
-
-            disabled={pending || pending}
-            type={'submit'}
-            variant="default"
-          >
+          <Button aria-busy={pending} disabled={pending || pending} type="submit" variant="default">
             {pending && <Spinner />}
             {t(savedId ? 'resources.link.save' : 'resources.link.add')}
           </Button>

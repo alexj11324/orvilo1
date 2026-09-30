@@ -1,11 +1,13 @@
 'use client';
 
-import { ActionIcon, Text, toast } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { ArrowUpRight, CheckIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,19 +116,24 @@ const TaskProjectSection = memo(() => {
   const milestoneTrigger = (title?: string) => (
     <div className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`} title={title}>
       <MilestoneIcon size={14} style={{ flex: 'none' }} />
-      <Text
-        ellipsis
-        fontSize={RAIL_VALUE_FONT_SIZE}
-        style={{ minWidth: 0 }}
-        type={milestone ? undefined : 'secondary'}
-        weight={500}
+      <div
+        style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+        className={cn(
+          'truncate',
+          'block',
+          'font-medium',
+          milestone ? undefined : 'text-muted-foreground',
+        )}
       >
         {milestone ? milestone.name : t('taskList.noMilestone')}
-      </Text>
+      </div>
       {milestoneDate && (
-        <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
+        <div
+          className="text-muted-foreground"
+          style={{ flex: 'none', fontSize: RAIL_VALUE_FONT_SIZE }}
+        >
           {`· ${milestoneDate}`}
-        </Text>
+        </div>
       )}
     </div>
   );
@@ -143,13 +150,13 @@ const TaskProjectSection = memo(() => {
               </span>
               <span className={'flex-1'}>{row.name}</span>
               {row.date && (
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {formatTaskItemDate(row.date, {
                     formatOtherYear: tCommon('time.formatOtherYear'),
                     formatThisYear: tCommon('time.formatThisYear'),
                     locale: i18n.language,
                   })}
-                </Text>
+                </div>
               )}
             </DropdownMenuItem>
           ))}
@@ -173,13 +180,19 @@ const TaskProjectSection = memo(() => {
         }
       >
         <MilestoneIcon size={14} style={{ flex: 'none' }} />
-        <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
+        <div
+          className="truncate block font-medium"
+          style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+        >
           {milestone ? milestone.name : t('taskList.noMilestone')}
-        </Text>
+        </div>
         {milestoneDate && (
-          <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
+          <div
+            className="text-muted-foreground"
+            style={{ flex: 'none', fontSize: RAIL_VALUE_FONT_SIZE }}
+          >
             {`· ${milestoneDate}`}
-          </Text>
+          </div>
         )}
       </div>
     );
@@ -195,15 +208,17 @@ const TaskProjectSection = memo(() => {
           style={{ flex: 'none' }}
         />
       ) : null}
-      <Text
-        ellipsis
-        fontSize={RAIL_VALUE_FONT_SIZE}
-        style={{ minWidth: 0 }}
-        type={projectName ? undefined : 'secondary'}
-        weight={500}
+      <div
+        style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+        className={cn(
+          'truncate',
+          'block',
+          'font-medium',
+          projectName ? undefined : 'text-muted-foreground',
+        )}
       >
         {projectName ?? t('taskDetail.noProject')}
-      </Text>
+      </div>
     </>
   );
 

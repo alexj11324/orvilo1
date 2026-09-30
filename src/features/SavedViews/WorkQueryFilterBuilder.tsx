@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Button, Select, Tag, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryEntityType, WorkQueryValue } from '@orvilo/types';
 import { workQueryFieldSpec, workQueryFieldSpecs } from '@orvilo/types';
 import { PlusIcon, XIcon } from 'lucide-react';
@@ -8,6 +7,10 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { Badge as Tag } from '@/components/reui/badge';
+import Select from '@/components/Select';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys, workAttentionKeys } from '@/libs/swr/keys';
@@ -476,20 +479,18 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
         ) : null}
         <div className="flex">
           <Button
-            icon={PlusIcon}
-            size="small"
-            type="text"
+            size="sm"
+            variant="ghost"
             onClick={() => onChange({ ...value, rows: [...value.rows, newFilterRow(entityType)] })}
           >
+            <PlusIcon data-icon="inline-start" />
             {t('savedViews.filters.add')}
           </Button>
         </div>
         {value.rows.length === 0 &&
         !value.slots.some((slot) => slot.type === 'node') &&
         value.any.length === 0 ? (
-          <Text fontSize={12} type="secondary">
-            {t('savedViews.filters.empty')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('savedViews.filters.empty')}</div>
         ) : null}
       </div>
     );

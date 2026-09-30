@@ -1,15 +1,5 @@
 'use client';
 
-import {
-  Alert,
-  Button,
-  confirmModal,
-  createModal,
-  Select,
-  SkeletonText,
-  Tag,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Crown, PauseCircle, PlayCircle, Repeat, UserMinus } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -18,7 +8,14 @@ import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
+import { confirmModal, createModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import Select from '@/components/Select';
+import { toast } from '@/components/toast';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
+import { Skeleton } from '@/components/ui/skeleton';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -235,7 +232,7 @@ const MemberRow = memo<MemberRowProps>(
               }
             />
           ) : (
-            <Tag color={ROLE_TAG_COLOR[member.role] ?? 'default'}>
+            <Tag style={{ color: ROLE_TAG_COLOR[member.role] ?? 'default' }}>
               {t(`workspaceSetting.members.role.${member.role}`, {
                 defaultValue: member.role,
               })}
@@ -249,7 +246,9 @@ const MemberRow = memo<MemberRowProps>(
 
         <div>
           <Tag
-            color={status === 'active' ? 'green' : status === 'suspended' ? 'orange' : 'default'}
+            style={{
+              color: status === 'active' ? 'green' : status === 'suspended' ? 'orange' : 'default',
+            }}
           >
             {t(STATUS_LABEL[status])}
           </Tag>
@@ -260,7 +259,7 @@ const MemberRow = memo<MemberRowProps>(
         <div>
           {menuItems.length > 0 && (
             <SidebarDropdownMenu items={menuItems}>
-              <Button disabled={mutating} size="small" type="text">
+              <Button disabled={mutating} size="sm" variant="ghost">
                 ⋯
               </Button>
             </SidebarDropdownMenu>
@@ -355,9 +354,9 @@ export const MembersPanel = memo(() => {
       <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
         {Array.from({ length: 4 }).map((_, i) => (
           <div className="flex items-center gap-2.5" key={i}>
-            <SkeletonText style={{ marginBottom: 0, width: '40%' }} />
-            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
-            <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '40%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '20%' }} />
           </div>
         ))}
       </div>
@@ -365,15 +364,16 @@ export const MembersPanel = memo(() => {
   }
   if (error) {
     return (
-      <Alert
-        title={t('workspaceSetting.members.loadFailed')}
-        type="error"
-        action={
-          <Button size="small" onClick={() => void mutate()}>
-            {t('retry', { ns: 'common' })}
-          </Button>
-        }
-      />
+      <Alert variant="destructive">
+        <AlertTitle>{t('workspaceSetting.members.loadFailed')}</AlertTitle>
+        <AlertAction>
+          {
+            <Button size="sm" onClick={() => void mutate()}>
+              {t('retry', { ns: 'common' })}
+            </Button>
+          }
+        </AlertAction>
+      </Alert>
     );
   }
 
@@ -400,15 +400,16 @@ export const MembersPanel = memo(() => {
         // A failed pending-transfer lookup is NOT "no transfer" — hiding it
         // would let the owner open a second request and leave the recipient
         // unable to see or answer the pending one.
-        <Alert
-          title={t('workspaceSetting.members.transferLoadFailed')}
-          type="warning"
-          action={
-            <Button size="small" onClick={() => void refreshTransfer()}>
-              {t('retry', { ns: 'common' })}
-            </Button>
-          }
-        />
+        <Alert variant="warning">
+          <AlertTitle>{t('workspaceSetting.members.transferLoadFailed')}</AlertTitle>
+          <AlertAction>
+            {
+              <Button size="sm" onClick={() => void refreshTransfer()}>
+                {t('retry', { ns: 'common' })}
+              </Button>
+            }
+          </AlertAction>
+        </Alert>
       )}
       {pendingTransfer && (isTransferInitiator || isTransferRecipient) && (
         <div className={styles.transferBanner}>
@@ -425,15 +426,15 @@ export const MembersPanel = memo(() => {
               <>
                 <Button
                   disabled={mutating}
-                  size="small"
-                  type="primary"
+                  size="sm"
+                  variant="default"
                   onClick={() => void handleTransferRespond(true)}
                 >
                   {t('workspaceSetting.members.transferAccept')}
                 </Button>
                 <Button
                   disabled={mutating}
-                  size="small"
+                  size="sm"
                   onClick={() => void handleTransferRespond(false)}
                 >
                   {t('workspaceSetting.members.transferDecline')}
@@ -441,7 +442,7 @@ export const MembersPanel = memo(() => {
               </>
             )}
             {isTransferInitiator && (
-              <Button disabled={mutating} size="small" onClick={() => void handleTransferCancel()}>
+              <Button disabled={mutating} size="sm" onClick={() => void handleTransferCancel()}>
                 {t('workspaceSetting.members.transferCancel')}
               </Button>
             )}

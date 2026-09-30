@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +57,11 @@ const TaskVisibilityChipLabel = memo<TaskVisibilityChipLabelProps>(
     return (
       <div className={styles.chip} style={{ gap: variant === 'tag' ? 10 : 6 }} {...rest}>
         <IconComp color={iconColor} size={iconSize} />
-        {variant === 'tag' ? <Text weight={500}>{label}</Text> : <Text fontSize={12}>{label}</Text>}
+        {variant === 'tag' ? (
+          <div className="font-medium">{label}</div>
+        ) : (
+          <div className="text-[12px]">{label}</div>
+        )}
       </div>
     );
   },

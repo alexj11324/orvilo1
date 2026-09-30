@@ -1,7 +1,6 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { ActionIcon, Button, Text, toast } from '@lobehub/ui/base-ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import type { TaskIntentAnalysis } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -13,7 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import ActionIcon from '@/components/ActionIcon';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -422,11 +424,11 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             // putting it in the same column as the name.
             description: (
               <div className="flex flex-col items-start gap-0.5">
-                <Text>{result.name || draft.name}</Text>
+                <div>{result.name || draft.name}</div>
                 <Button
-                  size={'small'}
+                  size="sm"
                   style={{ paddingInline: 0 }}
-                  type={'text'}
+                  variant="ghost"
                   onClick={() =>
                     navigate(
                       taskDetailPath(
@@ -718,13 +720,13 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             <TaskPriorityTag priority={priority} onChange={setPriority}>
               <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
-                <Text fontSize={12}>
+                <div className="text-[12px]">
                   {priority === 0
                     ? t('taskDetail.priority.none')
                     : t(
                         `taskDetail.priority.${(['', 'urgent', 'high', 'normal', 'low'] as const)[priority]}` as never,
                       )}
-                </Text>
+                </div>
               </div>
             </TaskPriorityTag>
 
@@ -738,14 +740,14 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
-                      <Text fontSize={12}>{memberMeta?.title}</Text>
+                      <div className="text-[12px]">{memberMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <Text color={cssVar.colorTextDescription} fontSize={12}>
+                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.member')}
-                      </Text>
+                      </div>
                     </>
                   )}
                 </div>
@@ -755,7 +757,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             {lockAssignee ? (
               <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-[3px]">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                <Text fontSize={12}>{assigneeMeta?.title}</Text>
+                <div className="text-[12px]">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector
@@ -767,14 +769,14 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                      <Text fontSize={12}>{assigneeMeta?.title}</Text>
+                      <div className="text-[12px]">{assigneeMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <Text color={cssVar.colorTextDescription} fontSize={12}>
+                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.assignee')}
-                      </Text>
+                      </div>
                     </>
                   )}
                 </div>
@@ -815,16 +817,16 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             )}
 
             <div className="flex items-center gap-0.5">
+              {/* The shimmer is a text-clipped gradient in the foreground color, so
+                  it only reads on a light surface. Dropping the filled style while
+                  reading also matches what is happening: the button has handed the
+                  draft off and is no longer the thing to press. */}
               <Button
+                className="rounded-full"
                 loading={isCreating || isAnalyzing}
-                shape={'round'}
-                size={'small'}
+                size="sm"
                 title={canCreateTask ? undefined : reason}
-                // The shimmer is a text-clipped gradient in the foreground color, so
-                // it only reads on a light surface. Dropping the filled style while
-                // reading also matches what is happening: the button has handed the
-                // draft off and is no longer the thing to press.
-                type={isAnalyzing ? 'default' : 'primary'}
+                variant={isAnalyzing ? 'outline' : 'default'}
                 disabled={
                   !canCreateTask ||
                   isCreating ||

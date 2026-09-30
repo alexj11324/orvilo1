@@ -1,10 +1,10 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { EllipsisIcon, Link2Icon, PlusIcon } from 'lucide-react';
 import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';

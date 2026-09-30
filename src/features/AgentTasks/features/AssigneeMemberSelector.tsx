@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { UserRoundX } from 'lucide-react';
@@ -296,9 +295,9 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
             <SkeletonList rows={6} />
           ) : flatOptions.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-4">
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskList.assigneeSearch.memberEmpty')}
-              </Text>
+              </div>
             </div>
           ) : (
             <div

@@ -1,7 +1,8 @@
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 interface SubtaskGraphPlan {
   alreadyDone: string[];
@@ -22,9 +23,9 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
 
   return (
     <div className="flex flex-col gap-3" style={{ paddingBlock: 8 }}>
-      <Text fontSize={13} style={{ color: cssVar.colorTextSecondary }}>
+      <div className="text-[13px]" style={{ color: cssVar.colorTextSecondary }}>
         {t('taskDetail.runAll.description')}
-      </Text>
+      </div>
 
       <div className="flex flex-col gap-2">
         {plan.layers.map((layer, index) => {
@@ -39,12 +40,12 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
               style={{ paddingBlock: 8, paddingInline: 12 }}
             >
               <div className="flex items-center justify-between gap-2">
-                <Text fontSize={13} weight={600}>
+                <div className="text-[13px] font-semibold">
                   {t('taskDetail.runAll.layer', { index: index + 1 })}
-                </Text>
-                <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+                </div>
+                <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                   {hint}
-                </Text>
+                </div>
               </div>
               <div className="flex flex-wrap gap-1">
                 {layer.map((id) => (
@@ -63,21 +64,21 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
         plan.blockedExternally.length > 0) && (
         <div className="flex flex-col gap-1">
           {plan.alreadyDone.length > 0 && (
-            <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.alreadyDone', { count: plan.alreadyDone.length })}
-            </Text>
+            </div>
           )}
           {plan.ineligible.length > 0 && (
-            <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.ineligible', { count: plan.ineligible.length })}
-            </Text>
+            </div>
           )}
           {plan.blockedExternally.length > 0 && (
-            <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.blockedExternally', {
                 count: plan.blockedExternally.length,
               })}
-            </Text>
+            </div>
           )}
         </div>
       )}
@@ -87,11 +88,11 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
           className="rounded-md border border-border"
           style={{ paddingBlock: 8, paddingInline: 12 }}
         >
-          <Text fontSize={12} style={{ color: cssVar.colorWarning }}>
+          <div className="text-[12px]" style={{ color: cssVar.colorWarning }}>
             {t('taskDetail.runAll.cycleWarning', {
               members: [...plan.cycles, ...plan.blockedByCycle].join(', '),
             })}
-          </Text>
+          </div>
         </div>
       )}
     </div>

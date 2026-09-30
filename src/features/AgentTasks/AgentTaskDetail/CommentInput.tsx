@@ -1,10 +1,11 @@
 import { SendButton, useEditor } from '@lobehub/editor/react';
-import { Avatar, toast } from '@lobehub/ui/base-ui';
 import { $getRoot } from 'lexical';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import { mentionFilledClassName } from '@/features/ChatInput/InputEditor/mentionStyle';
 import { EditorCanvas } from '@/features/EditorCanvas';

@@ -1,4 +1,3 @@
-import { Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskLabelSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckIcon, PlusIcon } from 'lucide-react';
@@ -7,6 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { resolveLabelColor } from '@/features/Labels/labelColor';
 import NavItem from '@/features/NavPanel/components/NavItem';
@@ -262,9 +262,9 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
             <SkeletonList rows={4} />
           ) : flatOptions.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-4">
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskDetail.labels.empty')}
-              </Text>
+              </div>
             </div>
           ) : (
             <div

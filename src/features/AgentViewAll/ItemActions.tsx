@@ -1,6 +1,5 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
 import { ActionIcon, DropdownMenu } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { EllipsisIcon } from 'lucide-react';
@@ -10,8 +9,9 @@ import { useTranslation } from 'react-i18next';
 import { useGroupDropdownMenu } from '@/features/HomeSidebar/Body/Agent/List/AgentGroupItem/useDropdownMenu';
 import { useAgentDropdownMenu } from '@/features/HomeSidebar/Body/Agent/List/AgentItem/useDropdownMenu';
 import { useAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 
-type MenuItems = NonNullable<MenuProps['items']>;
+type MenuItems = SidebarMenuItems;
 
 /** Drop leading / trailing / consecutive dividers left behind by filtering. */
 const collapseDividers = (menu: MenuItems): MenuItems => {
@@ -51,11 +51,11 @@ interface ItemActionsProps {
    * Hands the filtered menu-items getter back to the row/card, which feeds it
    * to its ContextMenuTrigger so right-click shows the same menu as "…".
    */
-  onMenuReady?: (getItems: () => MenuProps['items']) => void;
+  onMenuReady?: (getItems: () => SidebarMenuItems) => void;
 }
 
 interface ActionsDropdownProps extends Omit<ItemActionsProps, 'anchor'> {
-  getMenuItems: () => MenuProps['items'];
+  getMenuItems: () => SidebarMenuItems;
 }
 
 /** Shared "…" trigger: adapts a sidebar item menu for the flat view-all list. */
@@ -63,7 +63,7 @@ const ActionsDropdown = memo<ActionsDropdownProps>(({ getMenuItems, hideTrigger,
   const { t } = useTranslation('common');
 
   const items = useMemo(
-    () => (): MenuProps['items'] =>
+    () => (): SidebarMenuItems =>
       // Pin and move-to-group organize the sidebar; they're meaningless in
       // this flat view-all list, so drop them (and any dividers left over).
       collapseDividers(

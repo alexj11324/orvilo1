@@ -1,5 +1,6 @@
 'use client';
 
+import { Flexbox, Input, TextArea } from '@lobehub/ui';
 import {
   Button,
   createModal,
@@ -14,8 +15,6 @@ import { Sparkles } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useClientDataSWR } from '@/libs/swr';
 
 const GENERATE_SWR_KEY = 'document-to-skill-meta';
@@ -193,9 +192,9 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
     }, [busy, canSubmit, close, onSubmit, trimmedDescription, trimmedName, trimmedTitle]);
 
     return (
-      <div className="flex flex-col gap-4">
+      <Flexbox gap={16}>
         {onGenerate ? (
-          <div className="flex items-center gap-2 justify-between">
+          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
             <Text style={{ fontSize: 12 }} type={'secondary'}>
               {generating
                 ? tChat('workingPanel.skills.convert.generating')
@@ -204,9 +203,9 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
             <Button icon={Sparkles} loading={generating} size={'small'} onClick={handleRegenerate}>
               {tChat('workingPanel.skills.convert.regenerate')}
             </Button>
-          </div>
+          </Flexbox>
         ) : null}
-        <div className="flex flex-col gap-1.5">
+        <Flexbox gap={6}>
           <Text type={'secondary'}>{tChat('workingPanel.skills.convert.nameLabel')}</Text>
           <Input
             disabled={generating}
@@ -227,8 +226,8 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
               {tChat('workingPanel.skills.convert.nameHint')}
             </Text>
           )}
-        </div>
-        <div className="flex flex-col gap-1.5">
+        </Flexbox>
+        <Flexbox gap={6}>
           <Text type={'secondary'}>{tChat('workingPanel.skills.convert.titleLabel')}</Text>
           <Input
             disabled={generating}
@@ -239,23 +238,22 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
               setError(undefined);
             }}
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
+        </Flexbox>
+        <Flexbox gap={6}>
           <Text type={'secondary'}>{tChat('workingPanel.skills.convert.descriptionLabel')}</Text>
-          <Textarea
+          <TextArea
+            autoSize={{ maxRows: 4, minRows: 2 }}
             disabled={generating}
             placeholder={tChat('workingPanel.skills.convert.descriptionPlaceholder')}
-            rows={2}
-            style={{ maxHeight: '4lh' }}
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
               setError(undefined);
             }}
           />
-        </div>
+        </Flexbox>
         {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
-        <div className="flex gap-2 justify-end">
+        <Flexbox horizontal gap={8} justify={'flex-end'}>
           <Button disabled={busy} onClick={close}>
             {tCommon('cancel')}
           </Button>
@@ -267,8 +265,8 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
           >
             {tChat('workingPanel.skills.convert.action')}
           </Button>
-        </div>
-      </div>
+        </Flexbox>
+      </Flexbox>
     );
   },
 );

@@ -1,12 +1,12 @@
 'use client';
 
+import type { MenuProps } from '@lobehub/ui';
+import { ContextMenuTrigger, Icon } from '@lobehub/ui';
 import type { SkillResourceTreeNode } from '@orvilo/types';
 import { Input, type InputRef } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { ChevronDown, ChevronRight, File, FolderIcon, FolderOpenIcon } from 'lucide-react';
-import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
-import { ContextMenuTrigger, type MenuProps } from '@/components/ItemsMenu';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   item: css`
@@ -179,25 +179,9 @@ const TreeNode = memo<{
         title={node.path}
         onClick={handleClick}
       >
-        {isDir && (
-          <span className="anticon" role="img">
-            {createElement(isExpanded ? ChevronDown : ChevronRight, {
-              size: 14,
-              width: 14,
-              height: 14,
-              fill: 'transparent',
-            })}
-          </span>
-        )}
+        {isDir && <Icon icon={isExpanded ? ChevronDown : ChevronRight} size={14} />}
         {!isDir && <span style={{ flexShrink: 0, width: 14 }} />}
-        <span className="anticon" role="img">
-          {createElement(isDir ? (isExpanded ? FolderOpenIcon : FolderIcon) : File, {
-            size: 16,
-            width: 16,
-            height: 16,
-            fill: 'transparent',
-          })}
-        </span>
+        <Icon icon={isDir ? (isExpanded ? FolderOpenIcon : FolderIcon) : File} size={16} />
         {isEditing ? (
           <Input
             classNames={{ input: styles.editingInput, root: styles.editingInputRoot }}
@@ -317,9 +301,7 @@ const FileTree = memo<FileTreeProps>(
         onClick={() => onSelectFile(rootFilePath)}
       >
         <span style={{ flexShrink: 0, width: 14 }} />
-        <span className="anticon" role="img">
-          <File fill={'transparent'} height={16} size={16} width={16} />
-        </span>
+        <Icon icon={File} size={16} />
         <span className={styles.label}>{rootFileLabel}</span>
       </div>
     );

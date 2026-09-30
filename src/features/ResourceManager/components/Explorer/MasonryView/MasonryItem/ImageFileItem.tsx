@@ -1,12 +1,12 @@
+import { Icon, stopPropagation, Tooltip } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { Image } from 'antd';
 import { createStaticStyles, cx, keyframes } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
-import { createElement, memo, useRef, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
 import { formatSize } from '@/utils/format';
@@ -223,14 +223,11 @@ const ImageFileItem = memo<ImageFileItemProps>(
             <div
               className={cx(styles.placeholder, status === 'loading' && styles.placeholderLoading)}
             >
-              <span className={cx('anticon', styles.placeholderIcon)} role="img">
-                {createElement(readPlaceholderIcon(status), {
-                  size: 28,
-                  width: 28,
-                  height: 28,
-                  fill: 'transparent',
-                })}
-              </span>
+              <Icon
+                className={styles.placeholderIcon}
+                icon={readPlaceholderIcon(status)}
+                size={28}
+              />
               {status === 'error' && (
                 <>
                   <div className={styles.placeholderReason}>
@@ -284,7 +281,7 @@ const ImageFileItem = memo<ImageFileItemProps>(
         {!isNull(chunkingStatus) && chunkingStatus ? (
           <div
             className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
-            onClick={(event) => event.stopPropagation()}
+            onClick={stopPropagation}
           >
             <ChunksBadge
               chunkCount={chunkCount}
@@ -298,7 +295,7 @@ const ImageFileItem = memo<ImageFileItemProps>(
           </div>
         ) : (
           isSupportedForChunking && (
-            <SimpleTooltip title={t('FileManager.actions.chunkingTooltip')}>
+            <Tooltip title={t('FileManager.actions.chunkingTooltip')}>
               <div
                 className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
                 style={{ cursor: 'pointer' }}
@@ -316,7 +313,7 @@ const ImageFileItem = memo<ImageFileItemProps>(
                   type={'text'}
                 />
               </div>
-            </SimpleTooltip>
+            </Tooltip>
           )
         )}
       </>

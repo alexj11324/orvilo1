@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ArrowUpIcon, FolderIcon, HouseIcon } from 'lucide-react';
@@ -8,6 +7,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Input } from '@/components/ui/input';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useFetchDeviceDirectory } from '@/store/device/directoryHooks';
 
@@ -45,9 +45,9 @@ export const RemoteDirectoryBrowser = ({
   };
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       <Text type={'secondary'}>{t('workingDirectory.browseDescription')}</Text>
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex items-center gap-2">
         <ActionIcon
           aria-label={t('workingDirectory.home')}
           disabled={loading}
@@ -69,32 +69,32 @@ export const RemoteDirectoryBrowser = ({
           style={{ flex: 1, minWidth: 0 }}
           value={displayedPath}
           onChange={(event) => setDraft(event.target.value)}
-          onPressEnter={() => navigate(displayedPath.trim() || undefined)}
+          onKeyDown={(e) => e.key === 'Enter' && navigate(displayedPath.trim() || undefined)}
         />
         <Button disabled={loading} onClick={() => navigate(displayedPath.trim() || undefined)}>
           {t('workingDirectory.openPath')}
         </Button>
-      </Flexbox>
+      </div>
       {directory && directory.roots.length > 1 && (
-        <Flexbox horizontal gap={8} wrap={'wrap'}>
+        <div className="flex flex-wrap gap-2">
           {directory.roots.map((root) => (
             <Button disabled={loading} key={root} size={'small'} onClick={() => navigate(root)}>
               {root}
             </Button>
           ))}
-        </Flexbox>
+        </div>
       )}
-      <Flexbox
+      <div
         aria-busy={isLoading}
-        gap={4}
+        className="flex flex-col gap-1"
         key={directory?.path ?? path ?? 'home'}
         style={{ height: 'min(320px, 40vh)', overflow: 'auto' }}
       >
         {isLoading ? (
-          <Flexbox align={'center'} flex={1} gap={8} justify={'center'}>
+          <div className="flex flex-1 flex-col items-center justify-center gap-2">
             <NeuralNetworkLoading />
             <Text type={'secondary'}>{t('workingDirectory.foldersLoading')}</Text>
-          </Flexbox>
+          </div>
         ) : (
           <>
             {entries.map((entry) => (
@@ -123,18 +123,18 @@ export const RemoteDirectoryBrowser = ({
               />
             ))}
             {error ? (
-              <Flexbox align={'center'} gap={8} padding={16} role={'alert'}>
+              <div className="flex flex-col items-center gap-2 p-4" role={'alert'}>
                 <Text style={{ textAlign: 'center', whiteSpace: 'normal' }} type={'secondary'}>
                   {t('workingDirectory.foldersLoadFailed')}
                 </Text>
                 <Button disabled={loading} onClick={() => void retry()}>
                   {tCommon('retry')}
                 </Button>
-              </Flexbox>
+              </div>
             ) : directory && entries.length === 0 ? (
-              <Flexbox align={'center'} flex={1} justify={'center'}>
+              <div className="flex flex-1 flex-col items-center justify-center">
                 <Text type={'secondary'}>{t('workingDirectory.foldersEmpty')}</Text>
-              </Flexbox>
+              </div>
             ) : null}
             {hasMore && !error && (
               <Button disabled={loading} loading={isLoadingMore} onClick={() => void loadMore()}>
@@ -143,17 +143,17 @@ export const RemoteDirectoryBrowser = ({
             )}
           </>
         )}
-      </Flexbox>
+      </div>
       {submitError && (
         <Text role={'alert'} type={'danger'}>
           {submitError}
         </Text>
       )}
-      <Flexbox horizontal gap={8} justify={'space-between'} wrap={'wrap'}>
+      <div className="flex flex-wrap justify-between gap-2">
         <Button disabled={loading} onClick={() => onManual(displayedPath)}>
           {t('workingDirectory.enterPathManually')}
         </Button>
-        <Flexbox horizontal gap={8}>
+        <div className="flex gap-2">
           <Button disabled={loading} onClick={onCancel}>
             {tCommon('cancel')}
           </Button>
@@ -167,8 +167,8 @@ export const RemoteDirectoryBrowser = ({
           >
             {t('workingDirectory.useFolder')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 };

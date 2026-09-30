@@ -1,12 +1,12 @@
-import { copyToClipboard } from '@lobehub/ui';
+import { type FormItemProps } from '@lobehub/ui';
+import { copyToClipboard, Flexbox, Form } from '@lobehub/ui';
 import { Button, Switch, toast } from '@lobehub/ui/base-ui';
+import { FORM_STYLE } from '@orvilo/const';
 import { exportFile } from '@orvilo/utils/client';
-import { cx } from 'antd-style';
 import { CopyIcon } from 'lucide-react';
-import { cloneElement, memo, type ReactElement, type ReactNode, useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import { useShareData } from '../ShareDataProvider';
@@ -14,14 +14,6 @@ import { styles } from '../style';
 import Preview from './Preview';
 import { generateMarkdown } from './template';
 import { type FieldType } from './type';
-
-interface ShareFormItem {
-  children: ReactElement<Record<string, unknown>>;
-  label: ReactNode;
-  layout?: 'horizontal' | 'vertical';
-  name: keyof FieldType;
-  valuePropName?: 'checked' | 'activeKey';
-}
 
 const DEFAULT_FIELD_VALUE: FieldType = {
   includeTool: true,
@@ -34,11 +26,12 @@ const ShareText = memo(() => {
   const [fieldValue, setFieldValue] = useState(DEFAULT_FIELD_VALUE);
   const { t } = useTranslation(['chat', 'common']);
 
-  const settings: ShareFormItem[] = [
+  const settings: FormItemProps[] = [
     {
       children: <Switch />,
       label: t('shareModal.withSystemRole'),
       layout: 'horizontal',
+      minWidth: undefined,
       name: 'withSystemRole',
       valuePropName: 'checked',
     },
@@ -46,6 +39,7 @@ const ShareText = memo(() => {
       children: <Switch />,
       label: t('shareModal.withRole'),
       layout: 'horizontal',
+      minWidth: undefined,
       name: 'withRole',
       valuePropName: 'checked',
     },
@@ -53,6 +47,7 @@ const ShareText = memo(() => {
       children: <Switch />,
       label: t('shareModal.includeUser'),
       layout: 'horizontal',
+      minWidth: undefined,
       name: 'includeUser',
       valuePropName: 'checked',
     },
@@ -60,6 +55,7 @@ const ShareText = memo(() => {
       children: <Switch />,
       label: t('shareModal.includeTool'),
       layout: 'horizontal',
+      minWidth: undefined,
       name: 'includeTool',
       valuePropName: 'checked',
     },
@@ -103,36 +99,24 @@ const ShareText = memo(() => {
 
   return (
     <>
-      <div
-        className={cx(styles.body, 'flex flex-col gap-4')}
-        style={{ flexDirection: !isMobile ? 'row' : 'column' }}
-      >
+      <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
         <Preview content={content} />
-        <div className={cx(styles.sidebar, 'flex flex-col gap-3')}>
-          <FieldGroup>
-            {settings.map((item) => (
-              <Field
-                key={String(item.name)}
-                orientation={item.layout === 'vertical' ? 'vertical' : 'horizontal'}
-              >
-                <FieldLabel>{item.label}</FieldLabel>
-                {item.valuePropName
-                  ? cloneElement(item.children, {
-                      [item.valuePropName]: fieldValue[item.name],
-                      onChange: (v: unknown) => {
-                        setFieldValue((prev) => ({ ...prev, [item.name]: v }) as typeof prev);
-                        const onChange = item.children.props['onChange'];
-                        if (typeof onChange === 'function') onChange(v);
-                      },
-                    })
-                  : item.children}
-              </Field>
-            ))}
-          </FieldGroup>
+        <Flexbox className={styles.sidebar} gap={12}>
+          <Form
+            initialValues={DEFAULT_FIELD_VALUE}
+            items={settings}
+            itemsType={'flat'}
+            onValuesChange={(_, v) => setFieldValue(v)}
+            {...FORM_STYLE}
+          />
           {!isMobile && button}
-        </div>
-      </div>
-      {isMobile && <div className={cx(styles.footer, 'flex gap-2')}>{button}</div>}
+        </Flexbox>
+      </Flexbox>
+      {isMobile && (
+        <Flexbox horizontal className={styles.footer} gap={8}>
+          {button}
+        </Flexbox>
+      )}
     </>
   );
 });

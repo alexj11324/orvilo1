@@ -1,10 +1,10 @@
-import { type EmptyProps } from '@lobehub/ui';
-import { Center, Empty } from '@lobehub/ui';
 import { MessageSquareText } from 'lucide-react';
-import { memo } from 'react';
+import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-interface TopicEmptyProps extends Omit<EmptyProps, 'icon'> {
+import SimpleEmpty from '@/components/SimpleEmpty';
+
+interface TopicEmptyProps extends Omit<ComponentProps<typeof SimpleEmpty>, 'description' | 'icon'> {
   search?: boolean;
 }
 
@@ -12,19 +12,18 @@ const TopicEmpty = memo<TopicEmptyProps>(({ search, ...rest }) => {
   const { t } = useTranslation('topic');
 
   return (
-    <Center height="100%" style={{ minHeight: '50vh' }} width="100%">
-      <Empty
+    <div
+      className="flex items-center justify-center"
+      style={{ minHeight: '50vh', height: '100%', width: '100%' }}
+    >
+      <SimpleEmpty
         description={search ? t('searchResultEmpty') : t('guide.desc')}
+        descriptionProps={{ fontSize: 14 }}
         icon={MessageSquareText}
-        descriptionProps={{
-          fontSize: 14,
-        }}
-        style={{
-          maxWidth: 400,
-        }}
+        style={{ maxWidth: 400 }}
         {...rest}
       />
-    </Center>
+    </div>
   );
 });
 

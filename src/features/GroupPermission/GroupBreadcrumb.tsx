@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -55,7 +56,7 @@ const GroupBreadcrumb = memo<GroupBreadcrumbProps>(({ groupId, title }) => {
   return (
     <AntBreadcrumb
       className={styles.breadcrumb}
-      separator={<ChevronRight size={14} />}
+      separator={<Icon icon={ChevronRight} size={14} />}
       items={[
         {
           title: (

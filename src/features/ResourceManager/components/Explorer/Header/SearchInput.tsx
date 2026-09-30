@@ -2,11 +2,11 @@
 
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { useDebounce } from 'ahooks';
-import { Input } from 'antd';
 import { SearchIcon, XIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 
 const SearchInput = memo(() => {
@@ -14,7 +14,7 @@ const SearchInput = memo(() => {
   const [expanded, setExpanded] = useState(false);
   const [showIcon, setShowIcon] = useState(true);
   const [localQuery, setLocalQuery] = useState('');
-  const inputRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const setSearchQuery = useResourceManagerStore((s) => s.setSearchQuery);
 
   const debouncedQuery = useDebounce(localQuery, { wait: 350 });
@@ -68,22 +68,35 @@ const SearchInput = memo(() => {
         }}
         onTransitionEnd={handleTransitionEnd}
       >
-        <Input
-          placeholder={t('FileManager.search.placeholder')}
-          prefix={<SearchIcon size={14} />}
-          ref={inputRef}
-          size="small"
-          style={{ width: 200 }}
-          value={localQuery}
-          suffix={
-            localQuery ? (
-              <XIcon size={14} style={{ cursor: 'pointer' }} onClick={handleCollapse} />
-            ) : undefined
-          }
-          onBlur={handleBlur}
-          onChange={(e) => setLocalQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
+        <div className="relative" style={{ width: 200 }}>
+          <SearchIcon
+            size={14}
+            style={{ left: 8, position: 'absolute', top: '50%', transform: 'translateY(-50%)' }}
+          />
+          <Input
+            className="h-8 pl-7 text-xs"
+            placeholder={t('FileManager.search.placeholder')}
+            ref={inputRef}
+            style={{ width: 200 }}
+            value={localQuery}
+            onBlur={handleBlur}
+            onChange={(e) => setLocalQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          {localQuery ? (
+            <XIcon
+              size={14}
+              style={{
+                cursor: 'pointer',
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+              }}
+              onClick={handleCollapse}
+            />
+          ) : undefined}
+        </div>
       </div>
       {showIcon && (
         <ActionIcon icon={SearchIcon} style={{ marginRight: 4 }} onClick={handleExpand} />

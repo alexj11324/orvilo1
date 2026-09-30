@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Segmented, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { snakeCase } from 'es-toolkit/compat';
@@ -88,12 +87,12 @@ const FlagRow = memo<FlagRowProps>(({ flagKey }) => {
 
   return (
     <div className={cx(styles.row, isOverridden && styles.rowOverridden)}>
-      <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+      <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
         <Text ellipsis className={styles.name}>
           {snakeCase(flagKey as string)}
         </Text>
         <span className={styles.meta}>server: {String(original)}</span>
-      </Flexbox>
+      </div>
       <Segmented
         className={styles.control}
         options={segmentOptions}

@@ -1,8 +1,8 @@
-import { Image } from '@lobehub/ui';
+import { Flexbox, Icon, Image } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
 import { cssVar } from 'antd-style';
-import { createElement, memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getProviderMeta } from './providerMeta';
@@ -41,17 +41,17 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
   if (!meta || isAllConnected) return null;
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+    <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+      <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
         {typeof meta.icon === 'string' ? (
           <Image alt={meta.label} height={16} src={meta.icon} style={{ flex: 'none' }} width={16} />
         ) : (
-          createElement(meta.icon, { color: cssVar.colorText, fill: cssVar.colorText, size: 16 })
+          <Icon color={cssVar.colorText} fill={cssVar.colorText} icon={meta.icon} size={16} />
         )}
         <Text ellipsis fontSize={13}>
           {meta.label}
         </Text>
-      </div>
+      </Flexbox>
       <Button
         disabled={disabled}
         loading={isConnecting}
@@ -61,7 +61,7 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
       >
         {t('taskTemplate.action.connect.short')}
       </Button>
-    </div>
+    </Flexbox>
   );
 });
 

@@ -1,4 +1,4 @@
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Markdown } from '@lobehub/ui';
 import { Accordion, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { GoalGraphSnapshot } from '@orvilo/types';
 import type { ReactNode } from 'react';
@@ -32,9 +32,9 @@ export const ExperimentDetail = ({
   const relations = experimentRelations(graph, view.node.id);
   const inputs = experimentInputs(snapshot, view.node.id);
   return (
-    <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
-      <div className="flex flex-col gap-2.5" style={{ padding: 16, flexShrink: 0 }}>
-        <div className="flex gap-2 flex-wrap">
+    <Flexbox flex={1} style={{ minHeight: 0 }}>
+      <Flexbox gap={10} padding={16} style={{ flexShrink: 0 }}>
+        <Flexbox horizontal gap={8} wrap={'wrap'}>
           <Tag>{t('goalExperiment.number', { number: view.seq })}</Tag>
           <Tag>
             {t(
@@ -43,11 +43,11 @@ export const ExperimentDetail = ({
                 : `goalProcess.nodeStatus.${view.node.status}`,
             )}
           </Tag>
-        </div>
+        </Flexbox>
         <Text as={'h2'} fontSize={18} weight={600}>
           {view.node.title}
         </Text>
-        <div className="flex gap-2 flex-wrap">
+        <Flexbox horizontal gap={8} wrap={'wrap'}>
           {view.node.taskId && (
             <Button size={'small'} onClick={() => openTask(view.node.taskId!)}>
               {t('goalExperiment.execution')}
@@ -63,26 +63,26 @@ export const ExperimentDetail = ({
               {t('goalExperiment.acceptance')}
             </Button>
           )}
-        </div>
-      </div>
-      <div className="flex flex-col gap-5" style={{ padding: 16, minHeight: 0, overflowY: 'auto' }}>
-        <div className="flex flex-col gap-2" style={{ flexShrink: 0 }}>
+        </Flexbox>
+      </Flexbox>
+      <Flexbox gap={20} padding={16} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <Flexbox gap={8} style={{ flexShrink: 0 }}>
           <Text weight={600}>{t('goalExperiment.result')}</Text>
           {view.findings.length === 0 && (
             <Text type={'secondary'}>{t('goalExperiment.noResult')}</Text>
           )}
           {view.findings.map((finding) => (
-            <div className="flex flex-col gap-1.5" key={finding.id}>
+            <Flexbox gap={6} key={finding.id}>
               <Text weight={500}>{finding.title}</Text>
               {finding.description && (
                 <Markdown fontSize={13} style={{ flexShrink: 0 }} variant={'chat'}>
                   {finding.description}
                 </Markdown>
               )}
-            </div>
+            </Flexbox>
           ))}
-        </div>
-        <div className="flex flex-col gap-2" style={{ flexShrink: 0 }}>
+        </Flexbox>
+        <Flexbox gap={8} style={{ flexShrink: 0 }}>
           <Text weight={600}>{t('goalExperiment.lineage')}</Text>
           {relations.parents.length === 0 && (
             <Text type={'secondary'}>{t('goalExperiment.baseline')}</Text>
@@ -109,7 +109,7 @@ export const ExperimentDetail = ({
               </Button>
             )),
           )}
-        </div>
+        </Flexbox>
         <Accordion
           defaultValue={['instruction']}
           indicatorPlacement="inline"
@@ -126,19 +126,19 @@ export const ExperimentDetail = ({
             },
             {
               children: (
-                <div className="flex flex-col gap-2">
+                <Flexbox gap={8}>
                   <Text fontSize={12} type={'secondary'}>
                     {t('goalExperiment.inputHint')}
                   </Text>
                   {inputs.map((input) => (
-                    <div className="flex flex-col gap-1" key={input.workVersionId}>
+                    <Flexbox gap={4} key={input.workVersionId}>
                       <Text>{input.work?.title ?? t('goalExperiment.unavailableInput')}</Text>
                       <Text fontSize={12} style={{ overflowWrap: 'anywhere' }} type={'secondary'}>
                         {input.workVersionId}
                       </Text>
-                    </div>
+                    </Flexbox>
                   ))}
-                </div>
+                </Flexbox>
               ),
               key: 'inputs',
               title: t('goalExperiment.inputs', { count: inputs.length }),
@@ -146,7 +146,7 @@ export const ExperimentDetail = ({
           ]}
         />
         {children}
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 };

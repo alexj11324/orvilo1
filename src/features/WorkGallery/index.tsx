@@ -1,6 +1,6 @@
 'use client';
 
-import { Empty } from '@lobehub/ui';
+import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Avatar, Button } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -236,7 +236,7 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
   const renderBody = () => {
     if (error && items.length === 0)
       return (
-        <div className={cx('flex flex-col items-center justify-center gap-3', styles.emptyState)}>
+        <Center className={styles.emptyState} gap={12}>
           <Empty
             description={t('work.loadError')}
             icon={TriangleAlertIcon}
@@ -245,30 +245,30 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
           <button className={styles.retry} type={'button'} onClick={() => reload()}>
             {t('work.retry')}
           </button>
-        </div>
+        </Center>
       );
 
     if (items.length === 0)
       return (
-        <div className={cx('flex flex-col items-center justify-center', styles.emptyState)}>
+        <Center className={styles.emptyState}>
           <Empty
             description={t('work.empty.desc')}
             icon={PackageOpenIcon}
             title={t('work.empty.title')}
           />
-        </div>
+        </Center>
       );
 
     if (filteredItems.length === 0)
       return (
-        <div className={cx('flex flex-col items-center justify-center', styles.emptyState)}>
+        <Center className={styles.emptyState}>
           <Empty description={t('work.agentEmpty.desc')} title={t('work.agentEmpty.title')} />
-        </div>
+        </Center>
       );
 
     return (
       <>
-        <div className="flex flex-col gap-8">
+        <Flexbox gap={32}>
           {groups.map((group) => (
             <section key={group.key}>
               <div className={styles.groupHeader}>
@@ -294,12 +294,12 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
               </div>
             </section>
           ))}
-        </div>
+        </Flexbox>
         <div aria-hidden ref={sentinelRef} style={{ height: 1 }} />
         {isLoadingMore ? (
-          <div className="flex flex-col" style={{ marginBlockStart: 12 }}>
+          <Flexbox style={{ marginBlockStart: 12 }}>
             <WorkGalleryCardsSkeleton count={4} />
-          </div>
+          </Flexbox>
         ) : error ? (
           <div className={styles.loadMoreError}>
             <span>{t('work.loadMoreError')}</span>
@@ -315,9 +315,9 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
   return isLoadingInitial && items.length === 0 ? (
     <WorkGallerySkeleton />
   ) : (
-    <div className={cx('flex flex-col', styles.container)}>
+    <Flexbox className={styles.container}>
       {agentIds.length > 0 && (
-        <div className={cx('flex items-center gap-1', styles.filterBar)}>
+        <Flexbox horizontal align={'center'} className={styles.filterBar} gap={4}>
           <Button
             className={cx(styles.agentFilter, !activeAgentId && styles.agentFilterActive)}
             size={'small'}
@@ -334,10 +334,10 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
               onSelect={setActiveAgentId}
             />
           ))}
-        </div>
+        </Flexbox>
       )}
-      <div className={cx('flex flex-col', styles.scroll)}>{renderBody()}</div>
-    </div>
+      <Flexbox className={styles.scroll}>{renderBody()}</Flexbox>
+    </Flexbox>
   );
 });
 

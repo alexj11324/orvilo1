@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -41,7 +40,7 @@ const WorkspaceGeneral = memo(() => {
   const workspace = useActiveWorkspace();
 
   return (
-    <Flexbox gap={8} width={'100%'}>
+    <div className="flex w-full flex-col gap-2">
       <Text fontSize={20} weight={600}>
         {t('workspaceSetting.tab.general', { defaultValue: 'General' })}
       </Text>
@@ -66,7 +65,7 @@ const WorkspaceGeneral = memo(() => {
           {workspace?.createdAt ? dayjs(workspace.createdAt).format('MMM D, YYYY') : '—'}
         </Text>
       </GeneralField>
-    </Flexbox>
+    </div>
   );
 });
 

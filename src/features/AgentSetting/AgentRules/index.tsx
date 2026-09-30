@@ -1,6 +1,6 @@
 'use client';
 
-import { FormGroup } from '@lobehub/ui';
+import { Block, Flexbox, FormGroup, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
@@ -64,10 +64,10 @@ const AgentRules = memo(() => {
         loading={<Text type={'secondary'}>{t('agentRules.loading')}</Text>}
         onRetry={() => mutate()}
       >
-        <div className="flex flex-col rounded-md border border-border" style={{ padding: 0 }}>
+        <Block padding={0} variant={'outlined'}>
           {domains.map((domain) => (
             <div className={styles.row} key={domain.id}>
-              <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
+              <Flexbox gap={2} style={{ minWidth: 0 }}>
                 <Text weight={500}>{domain.title}</Text>
                 {/* Scope and size, in counts — the same facts the rules page leads with. */}
                 <Text fontSize={12} type={'secondary'}>
@@ -76,13 +76,13 @@ const AgentRules = memo(() => {
                     runs: domain.runCount,
                   })}
                 </Text>
-              </div>
-              <ChevronRightIcon size={14} style={{ opacity: 0.4 }} />
+              </Flexbox>
+              <Icon icon={ChevronRightIcon} size={14} style={{ opacity: 0.4 }} />
             </div>
           ))}
-        </div>
+        </Block>
       </AsyncBoundary>
-      <div className="flex items-center gap-2 justify-between flex-wrap">
+      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
         <Text fontSize={12} type={'secondary'}>
           {t('agentRules.summary', { count: ruleCount })}
         </Text>
@@ -93,7 +93,7 @@ const AgentRules = memo(() => {
             </Button>
           </Link>
         )}
-      </div>
+      </Flexbox>
     </FormGroup>
   );
 });

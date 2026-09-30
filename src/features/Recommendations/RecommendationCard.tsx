@@ -1,3 +1,4 @@
+import { Block, Flexbox } from '@lobehub/ui';
 import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
@@ -51,48 +52,49 @@ export const RecommendationCard = memo<RecommendationCardProps>(
     if (compact)
       return (
         <Button className={styles.compactRow} loading={loading} type={'text'} onClick={handleClick}>
-          <div className="flex items-start gap-2.5" style={{ width: '100%' }}>
-            <div className="flex flex-col flex-none py-[2px]">
+          <Flexbox horizontal align={'flex-start'} gap={10} style={{ width: '100%' }}>
+            <Flexbox flex={'none'} paddingBlock={2}>
               {renderIcon(RECOMMENDATION_ICON_SIZE.compact)}
-            </div>
+            </Flexbox>
             <Text className={cx(homeType.itemTitleProse, styles.compactTitle)} style={{ flex: 1 }}>
               {title}
             </Text>
-          </div>
+          </Flexbox>
         </Button>
       );
 
     return (
-      <div
-        className={cx(cx(briefStyles.card, styles.card), 'flex flex-col gap-3 p-3 border')}
-        style={{
-          borderColor: cssVar.colorBorderSecondary,
-          background: cssVar.colorBgContainer,
-          borderRadius: cssVar.borderRadiusLG,
-        }}
+      <Block
+        className={cx(briefStyles.card, styles.card)}
+        gap={12}
+        padding={12}
+        style={{ borderRadius: cssVar.borderRadiusLG }}
+        variant={'outlined'}
       >
-        <div className="flex items-center gap-4 justify-between">
-          <div
-            className="flex items-center gap-2"
+        <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
+          <Flexbox
+            horizontal
+            align={'center'}
+            gap={8}
             style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
           >
             {renderIcon(RECOMMENDATION_ICON_SIZE.regular)}
             <Text ellipsis fontSize={16} weight={500}>
               {title}
             </Text>
-          </div>
-        </div>
+          </Flexbox>
+        </Flexbox>
         <Divider dashed style={{ marginBlock: 0 }} />
         {description.trim().length > 0 ? <BriefCardSummary summary={description} /> : null}
-        <div className="flex items-center gap-2 justify-between" style={{ flexWrap: 'wrap' }}>
-          <div className="flex items-center gap-2">
+        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
+          <Flexbox horizontal align={'center'} gap={8}>
             {tagLabel ? (
               <Tag size={'small'} variant={'outlined'}>
                 {tagLabel}
               </Tag>
             ) : null}
-          </div>
-          <div className="flex items-center gap-2">
+          </Flexbox>
+          <Flexbox horizontal align={'center'} gap={8}>
             <Button
               className={briefStyles.actionBtnPrimary}
               loading={loading}
@@ -101,9 +103,9 @@ export const RecommendationCard = memo<RecommendationCardProps>(
             >
               {ctaLabel}
             </Button>
-          </div>
-        </div>
-      </div>
+          </Flexbox>
+        </Flexbox>
+      </Block>
     );
   },
 );

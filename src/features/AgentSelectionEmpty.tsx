@@ -1,10 +1,13 @@
-import { type EmptyProps } from '@lobehub/ui';
-import { Center, Empty } from '@lobehub/ui';
 import { Users } from 'lucide-react';
-import { memo } from 'react';
+import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-interface AgentSelectionEmptyProps extends Omit<EmptyProps, 'icon' | 'variant'> {
+import SimpleEmpty from '@/components/SimpleEmpty';
+
+interface AgentSelectionEmptyProps extends Omit<
+  ComponentProps<typeof SimpleEmpty>,
+  'description' | 'icon'
+> {
   search?: boolean;
   variant?: 'noAvailable' | 'noSelected' | 'empty';
 }
@@ -23,19 +26,18 @@ const AgentSelectionEmpty = memo<AgentSelectionEmptyProps>(
     }
 
     return (
-      <Center height="100%" style={{ minHeight: '30vh' }} width="100%">
-        <Empty
+      <div
+        className="flex items-center justify-center"
+        style={{ minHeight: '30vh', height: '100%', width: '100%' }}
+      >
+        <SimpleEmpty
           description={description}
+          descriptionProps={{ fontSize: 14 }}
           icon={Users}
-          descriptionProps={{
-            fontSize: 14,
-          }}
-          style={{
-            maxWidth: 400,
-          }}
+          style={{ maxWidth: 400 }}
           {...rest}
         />
-      </Center>
+      </div>
     );
   },
 );

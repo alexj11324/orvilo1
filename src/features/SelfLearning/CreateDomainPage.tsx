@@ -1,9 +1,9 @@
 'use client';
 
+import { Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
 import { ActionIcon, Button, Popover, Text, toast } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { createStaticStyles, cssVar } from 'antd-style';
 import {
   AnchorIcon,
   ArrowLeftIcon,
@@ -20,8 +20,6 @@ import urlJoin from 'url-join';
 
 import GeneratingBorder from '@/components/GeneratingBorder';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import { useResolvedAgentRouteId } from '@/features/AgentRoute/useResolvedAgentRouteId';
 import NavHeader from '@/features/NavHeader';
@@ -318,18 +316,17 @@ const CreateDomainPage = memo(() => {
     const isRefining = refiningTarget === target;
 
     return (
-      <div className="flex flex-col gap-2" onKeyDown={(e) => onAdjustmentKeyDown(target, e)}>
-        <Textarea
+      <Flexbox gap={8} onKeyDown={(e) => onAdjustmentKeyDown(target, e)}>
+        <TextArea
           autoFocus
-          className="bg-muted/50"
+          autoSize={{ maxRows: 5, minRows: 2 }}
           disabled={isRefining}
           placeholder={t(`create.adjust.placeholder.${target}`)}
-          rows={2}
-          style={{ maxHeight: 120 }}
           value={adjustments[target]}
+          variant={'filled'}
           onChange={(e) => setAdjustments((current) => ({ ...current, [target]: e.target.value }))}
         />
-        <div className="flex justify-end">
+        <Flexbox horizontal justify={'end'}>
           <Button
             disabled={!adjustments[target].trim() || isRefining}
             icon={RefreshCwIcon}
@@ -338,7 +335,7 @@ const CreateDomainPage = memo(() => {
           >
             {isRefining ? t('create.adjust.adjusting') : t('create.adjust.action')}
           </Button>
-        </div>
+        </Flexbox>
         {isRefining && (
           <Text fontSize={12} type={'secondary'}>
             {remainingSeconds > 0
@@ -348,7 +345,7 @@ const CreateDomainPage = memo(() => {
               : t('create.generatingAlmostDone')}
           </Text>
         )}
-      </div>
+      </Flexbox>
     );
   };
 
@@ -397,7 +394,7 @@ const CreateDomainPage = memo(() => {
   ];
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <Flexbox height={'100%'} width={'100%'}>
       <NavHeader
         styles={{ left: { paddingInlineStart: 24 } }}
         left={
@@ -410,13 +407,13 @@ const CreateDomainPage = memo(() => {
           ) : null
         }
       />
-      <div className={cx(styles.body, 'flex flex-col flex-1 w-full')}>
+      <Flexbox className={styles.body} flex={1} width={'100%'}>
         <WideScreenContainer minWidth={960}>
-          <div className={cx(styles.content, 'flex flex-col')} onKeyDown={onKeyDown}>
-            <div className={cx(styles.head, 'flex')}>
-              <div className="flex flex-col flex-1 gap-1.5">
+          <Flexbox className={styles.content} onKeyDown={onKeyDown}>
+            <Flexbox horizontal className={styles.head}>
+              <Flexbox flex={1} gap={6}>
                 {step === 'review' && (
-                  <div className="flex">
+                  <Flexbox horizontal>
                     <Button
                       icon={ArrowLeftIcon}
                       size={'small'}
@@ -425,7 +422,7 @@ const CreateDomainPage = memo(() => {
                     >
                       {t('create.back')}
                     </Button>
-                  </div>
+                  </Flexbox>
                 )}
                 {step === 'review' && draft ? (
                   <input
@@ -444,25 +441,25 @@ const CreateDomainPage = memo(() => {
                       {t('create.briefHelp')}
                     </Text>
                     <GeneratingBorder generating={step === 'preparing'}>
-                      <Textarea
+                      <TextArea
                         autoFocus
-                        className={cn(step === 'preparing' && 'border-0 focus-visible:ring-0')}
+                        autoSize={{ maxRows: 10, minRows: 5 }}
                         disabled={step === 'preparing'}
                         placeholder={t('create.briefPlaceholder')}
-                        rows={5}
-                        style={{ maxHeight: 240 }}
                         value={brief}
+                        variant={step === 'preparing' ? 'borderless' : 'outlined'}
                         onChange={(e) => setBrief(e.target.value)}
                       />
                     </GeneratingBorder>
                     {step === 'preparing' ? (
-                      <div
-                        className={cx(
-                          styles.generatingStatus,
-                          'flex items-center gap-2.5 justify-between',
-                        )}
+                      <Flexbox
+                        horizontal
+                        align={'center'}
+                        className={styles.generatingStatus}
+                        gap={10}
+                        justify={'space-between'}
                       >
-                        <div className="flex items-center gap-2">
+                        <Flexbox horizontal align={'center'} gap={8}>
                           <NeuralNetworkLoading size={18} />
                           <div
                             aria-label={t('create.generating')}
@@ -480,7 +477,7 @@ const CreateDomainPage = memo(() => {
                               ))}
                             </div>
                           </div>
-                        </div>
+                        </Flexbox>
                         <Text fontSize={12} type={'secondary'}>
                           {remainingSeconds > 0
                             ? t('create.generatingCountdown', {
@@ -488,9 +485,9 @@ const CreateDomainPage = memo(() => {
                               })
                             : t('create.generatingAlmostDone')}
                         </Text>
-                      </div>
+                      </Flexbox>
                     ) : (
-                      <div className="flex items-center justify-end">
+                      <Flexbox horizontal align={'center'} justify={'end'}>
                         <Button
                           disabled={!brief.trim()}
                           icon={SparklesIcon}
@@ -499,27 +496,26 @@ const CreateDomainPage = memo(() => {
                         >
                           {t('create.generate')}
                         </Button>
-                      </div>
+                      </Flexbox>
                     )}
                   </>
                 )}
-              </div>
-            </div>
+              </Flexbox>
+            </Flexbox>
 
             {step === 'review' && draft && (
-              <div className={cx(styles.body, 'flex flex-col')}>
-                <div className={cx(styles.reviewSection, 'flex flex-col gap-2.5')}>
+              <Flexbox className={styles.body}>
+                <Flexbox className={styles.reviewSection} gap={10}>
                   <Text fontSize={13} weight={600}>
                     {t('create.field.brief')}
                   </Text>
-                  <Textarea
-                    className="bg-muted/50"
-                    rows={3}
-                    style={{ maxHeight: 192 }}
+                  <TextArea
+                    autoSize={{ maxRows: 8, minRows: 3 }}
                     value={brief}
+                    variant={'filled'}
                     onChange={(e) => setBrief(e.target.value)}
                   />
-                  <div className="flex justify-end" style={{ paddingBlockEnd: 8 }}>
+                  <Flexbox horizontal justify={'end'} style={{ paddingBlockEnd: 8 }}>
                     <Button
                       disabled={!brief.trim() || !!refiningTarget}
                       icon={RefreshCwIcon}
@@ -528,76 +524,72 @@ const CreateDomainPage = memo(() => {
                     >
                       {t('create.regenerate')}
                     </Button>
-                  </div>
-                </div>
+                  </Flexbox>
+                </Flexbox>
                 <Divider style={{ margin: 0 }} />
-                <div className={cx(styles.reviewSection, 'flex flex-col gap-3')}>
-                  <div className="flex items-start gap-2 justify-between">
+                <Flexbox className={styles.reviewSection} gap={12}>
+                  <Flexbox horizontal align={'flex-start'} gap={8} justify={'space-between'}>
                     <Text fontSize={14} type={'secondary'}>
                       {t('create.reviewHelp')}
                     </Text>
-                    <div className="flex flex-col flex-none">
-                      {renderAdjustmentButton('rationale')}
-                    </div>
-                  </div>
-                  <Textarea
+                    <Flexbox flex={'none'}>{renderAdjustmentButton('rationale')}</Flexbox>
+                  </Flexbox>
+                  <TextArea
+                    autoSize={{ maxRows: 8, minRows: 2 }}
+                    className={styles.rationale}
                     // An in-flight adjustment answers from the draft as it was when the
                     // request left, so edits made meanwhile would be silently overwritten
                     // when the response merges back.
-                    className={cn('border-0 focus-visible:ring-0', styles.rationale)}
                     disabled={refiningTarget === 'rationale'}
                     placeholder={t('create.field.rationalePlaceholder')}
-                    rows={2}
-                    style={{ maxHeight: 192 }}
                     value={draft.rationale ?? ''}
+                    variant={'borderless'}
                     onChange={(e) => patch({ rationale: e.target.value })}
                   />
-                </div>
+                </Flexbox>
 
-                <div className={cx(styles.reviewSection, 'flex flex-col gap-2.5')}>
-                  <div className="flex items-center justify-between">
+                <Flexbox className={styles.reviewSection} gap={10}>
+                  <Flexbox horizontal align={'center'} justify={'space-between'}>
                     <Text fontSize={13} weight={600}>
                       {t('create.field.domainFilter')}
                     </Text>
                     {renderAdjustmentButton('domainFilter')}
-                  </div>
-                  <Textarea
-                    className="bg-muted/50"
-                    rows={2}
-                    style={{ maxHeight: 144 }}
+                  </Flexbox>
+                  <TextArea
+                    autoSize={{ maxRows: 6, minRows: 2 }}
                     value={draft.domainFilter}
+                    variant={'filled'}
                     onChange={(e) => patch({ domainFilter: e.target.value })}
                   />
-                </div>
-                <div className={cx(styles.reviewSection, 'flex flex-col gap-2.5')}>
-                  <div className="flex items-center justify-between">
+                </Flexbox>
+                <Flexbox className={styles.reviewSection} gap={10}>
+                  <Flexbox horizontal align={'center'} justify={'space-between'}>
                     <Text fontSize={13} weight={600}>
                       {t('create.field.outOfScope')}
                     </Text>
                     {renderAdjustmentButton('outOfScope')}
-                  </div>
-                  <Textarea
-                    className="bg-muted/50"
+                  </Flexbox>
+                  <TextArea
+                    autoSize={{ maxRows: 5, minRows: 2 }}
                     placeholder={t('create.field.outOfScopePlaceholder')}
-                    rows={2}
-                    style={{ maxHeight: 120 }}
                     value={draft.outOfScope ?? ''}
+                    variant={'filled'}
                     onChange={(e) => patch({ outOfScope: e.target.value })}
                   />
-                </div>
+                </Flexbox>
 
-                <div className={cx(styles.reviewSection, 'flex flex-col gap-2.5')}>
-                  <div className="flex items-center gap-2 justify-between">
-                    <div className="flex items-center gap-2">
-                      <AnchorIcon color={cssVar.colorTextTertiary} size={16} />
+                <Flexbox className={styles.reviewSection} gap={10}>
+                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+                    <Flexbox horizontal align={'center'} gap={8}>
+                      <Icon color={cssVar.colorTextTertiary} icon={AnchorIcon} size={16} />
                       <Text fontSize={13} weight={600}>
                         {t('create.anchor.canon')}
                       </Text>
                       <Text fontSize={12} type={'secondary'}>
                         {t('create.anchor.canonHint')}
                       </Text>
-                    </div>
-                    <div className="flex items-center gap-1">
+                    </Flexbox>
+                    <Flexbox horizontal align={'center'} gap={4}>
                       {renderAdjustmentButton('canonEntries')}
                       <Button
                         icon={PlusIcon}
@@ -619,8 +611,8 @@ const CreateDomainPage = memo(() => {
                       >
                         {t('create.anchor.addCanon')}
                       </Button>
-                    </div>
-                  </div>
+                    </Flexbox>
+                  </Flexbox>
                   {draft.canonEntries.length === 0 && (
                     <Text fontSize={12} type={'secondary'}>
                       {t('create.anchor.noCanon')}
@@ -629,12 +621,13 @@ const CreateDomainPage = memo(() => {
                   {draft.canonEntries.map((entry, i) => (
                     <div className={styles.itemRow} key={i}>
                       <span className={styles.seq}>E{i + 1}</span>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex gap-2">
+                      <Flexbox gap={4}>
+                        <Flexbox horizontal gap={8}>
                           <Input
                             placeholder={t('create.anchor.canonTitle')}
                             style={{ flex: 1 }}
                             value={entry.title}
+                            variant={'filled'}
                             onChange={(e) =>
                               patch({
                                 canonEntries: draft.canonEntries.map((c, j) =>
@@ -653,6 +646,7 @@ const CreateDomainPage = memo(() => {
                             placeholder={t('create.anchor.canonSource')}
                             style={{ flex: 1 }}
                             value={entry.source}
+                            variant={'filled'}
                             onChange={(e) =>
                               patch({
                                 canonEntries: draft.canonEntries.map((c, j) =>
@@ -661,13 +655,12 @@ const CreateDomainPage = memo(() => {
                               })
                             }
                           />
-                        </div>
-                        <Textarea
-                          className="border-0 focus-visible:ring-0"
+                        </Flexbox>
+                        <TextArea
+                          autoSize={{ maxRows: 4, minRows: 1 }}
                           placeholder={t('create.anchor.canonStatement')}
-                          rows={1}
-                          style={{ maxHeight: 96 }}
                           value={entry.statement}
+                          variant={'borderless'}
                           onChange={(e) =>
                             patch({
                               canonEntries: draft.canonEntries.map((c, j) =>
@@ -676,7 +669,7 @@ const CreateDomainPage = memo(() => {
                             })
                           }
                         />
-                      </div>
+                      </Flexbox>
                       <ActionIcon
                         icon={Trash2Icon}
                         size={'small'}
@@ -686,11 +679,11 @@ const CreateDomainPage = memo(() => {
                       />
                     </div>
                   ))}
-                </div>
-                <div className={cx(styles.reviewSection, 'flex flex-col gap-2.5')}>
-                  <div className="flex items-center gap-2 justify-between">
-                    <div className="flex items-center gap-2">
-                      <LayersIcon color={cssVar.colorTextTertiary} size={16} />
+                </Flexbox>
+                <Flexbox className={styles.reviewSection} gap={10}>
+                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+                    <Flexbox horizontal align={'center'} gap={8}>
+                      <Icon color={cssVar.colorTextTertiary} icon={LayersIcon} size={16} />
                       <Text fontSize={13} weight={600}>
                         {t('create.anchor.layers')}
                       </Text>
@@ -699,8 +692,8 @@ const CreateDomainPage = memo(() => {
                           ? t('create.anchor.layersFrom', { ref: draft.layerCanonRef })
                           : t('create.anchor.layersInvented')}
                       </Text>
-                    </div>
-                    <div className="flex items-center gap-1">
+                    </Flexbox>
+                    <Flexbox horizontal align={'center'} gap={4}>
                       {renderAdjustmentButton('layers')}
                       <Button
                         icon={PlusIcon}
@@ -721,8 +714,8 @@ const CreateDomainPage = memo(() => {
                       >
                         {t('create.anchor.addLayer')}
                       </Button>
-                    </div>
-                  </div>
+                    </Flexbox>
+                  </Flexbox>
                   {draft.layers.length === 0 && (
                     <Text fontSize={12} type={'secondary'}>
                       {t('create.anchor.noLayers')}
@@ -731,10 +724,11 @@ const CreateDomainPage = memo(() => {
                   {draft.layers.map((layer, i) => (
                     <div className={styles.itemRow} key={i}>
                       <span className={styles.seq}>L{i + 1}</span>
-                      <div className="flex flex-col gap-1">
+                      <Flexbox gap={4}>
                         <Input
                           placeholder={t('create.anchor.layerTitle')}
                           value={layer.title}
+                          variant={'filled'}
                           onChange={(e) =>
                             patch({
                               layers: draft.layers.map((l, j) =>
@@ -750,9 +744,9 @@ const CreateDomainPage = memo(() => {
                           }
                         />
                         <Input
-                          className="border-0 focus-visible:ring-0"
                           placeholder={t('create.anchor.layerDesc')}
                           value={layer.description ?? ''}
+                          variant={'borderless'}
                           onChange={(e) =>
                             patch({
                               layers: draft.layers.map((l, j) =>
@@ -761,7 +755,7 @@ const CreateDomainPage = memo(() => {
                             })
                           }
                         />
-                      </div>
+                      </Flexbox>
                       <ActionIcon
                         icon={Trash2Icon}
                         size={'small'}
@@ -769,13 +763,13 @@ const CreateDomainPage = memo(() => {
                       />
                     </div>
                   ))}
-                </div>
-              </div>
+                </Flexbox>
+              </Flexbox>
             )}
 
             {step === 'review' && (
-              <div className={cx(styles.footer, 'flex items-center justify-end')}>
-                <div className="flex items-center gap-1">
+              <Flexbox horizontal align={'center'} className={styles.footer} justify={'end'}>
+                <Flexbox horizontal align={'center'} gap={4}>
                   <Button
                     disabled={!!refiningTarget || !canCreate}
                     loading={creating}
@@ -784,13 +778,13 @@ const CreateDomainPage = memo(() => {
                   >
                     {t('create.confirm')}
                   </Button>
-                </div>
-              </div>
+                </Flexbox>
+              </Flexbox>
             )}
-          </div>
+          </Flexbox>
         </WideScreenContainer>
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 });
 

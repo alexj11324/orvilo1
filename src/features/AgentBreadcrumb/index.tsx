@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
@@ -62,7 +63,7 @@ const AgentBreadcrumb = memo<AgentBreadcrumbProps>(({ agentId, extraItems, title
   return (
     <AntBreadcrumb
       className={styles.breadcrumb}
-      separator={<ChevronRight size={14} />}
+      separator={<Icon icon={ChevronRight} size={14} />}
       items={[
         {
           title: (

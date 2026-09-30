@@ -1,4 +1,4 @@
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Icon, Markdown } from '@lobehub/ui';
 import { Button as BaseButton, createModal, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { UpdateInfo } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
@@ -86,7 +86,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
   const [isInstalling, setIsInstalling] = useState(false);
 
   return (
-    <div className="flex flex-col gap-3" style={{ maxWidth: 480 }}>
+    <Flexbox gap={12} style={{ maxWidth: 480 }}>
       <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>{updateInfo.version}</div>
       {updateInfo.releaseNotes &&
         (typeof updateInfo.releaseNotes === 'string' ? (
@@ -100,7 +100,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
             ))}
           </div>
         ))}
-      <div className="flex gap-2 justify-end">
+      <Flexbox horizontal gap={8} justify={'flex-end'}>
         <BaseButton
           onClick={() => {
             autoUpdateService.installLater();
@@ -119,8 +119,8 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
         >
           {tElectron('updater.restartAndInstall')}
         </BaseButton>
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 });
 
@@ -198,7 +198,7 @@ export const UpdateNotification: React.FC = () => {
           type="button"
           onClick={() => setInstallConfirmMode(null)}
         >
-          <X style={{ fontSize: 14 }} />
+          <Icon icon={X} style={{ fontSize: 14 }} />
         </button>
       </div>
     );

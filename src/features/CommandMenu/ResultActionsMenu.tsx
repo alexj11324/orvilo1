@@ -1,4 +1,4 @@
-import { copyToClipboard } from '@lobehub/ui';
+import { copyToClipboard, Icon } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import { Command } from 'cmdk';
@@ -10,15 +10,7 @@ import {
   LinkIcon,
   UserRoundPlusIcon,
 } from 'lucide-react';
-import {
-  createElement,
-  memo,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -100,7 +92,7 @@ const ResultActionsMenu = memo(() => {
     if (detailPath) {
       entries.push(
         {
-          icon: <CornerDownLeftIcon />,
+          icon: <Icon icon={CornerDownLeftIcon} />,
           key: 'open',
           label: t('cmdk.resultActions.open'),
           run: () => {
@@ -109,7 +101,7 @@ const ResultActionsMenu = memo(() => {
           },
         },
         {
-          icon: <LinkIcon />,
+          icon: <Icon icon={LinkIcon} />,
           key: 'copy-link',
           label: t('cmdk.resultActions.copyLink'),
           run: () => {
@@ -130,7 +122,7 @@ const ResultActionsMenu = memo(() => {
     if (actionTarget.type === 'task') {
       entries.push(
         {
-          icon: <CircleDashedIcon />,
+          icon: <Icon icon={CircleDashedIcon} />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -138,14 +130,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <UserRoundPlusIcon />,
+          icon: <Icon icon={UserRoundPlusIcon} />,
           key: 'assign-to-me',
           label: t('cmdk.resultActions.assignToMe'),
           run: () =>
             runMutation(() => updateTask(actionTarget.id, { assigneeUserId: selfUserId! })),
         },
         {
-          icon: <BarChart3Icon />,
+          icon: <Icon icon={BarChart3Icon} />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -155,7 +147,7 @@ const ResultActionsMenu = memo(() => {
     } else if (actionTarget.type === 'project') {
       entries.push(
         {
-          icon: <CircleDashedIcon />,
+          icon: <Icon icon={CircleDashedIcon} />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -163,14 +155,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <UserRoundPlusIcon />,
+          icon: <Icon icon={UserRoundPlusIcon} />,
           key: 'lead-to-me',
           label: t('cmdk.resultActions.setLeadToMe'),
           run: () =>
             runMutation(() => projectService.update(actionTarget.id, { leadUserId: selfUserId! })),
         },
         {
-          icon: <BarChart3Icon />,
+          icon: <Icon icon={BarChart3Icon} />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -198,7 +190,7 @@ const ResultActionsMenu = memo(() => {
     if (actionTarget.type === 'task') {
       return USER_SELECTABLE_STATUSES.map((status) => ({
         disabled: !canEdit,
-        icon: createElement(STATUS_META[status].icon, { color: STATUS_META[status].color }),
+        icon: <Icon color={STATUS_META[status].color} icon={STATUS_META[status].icon} />,
         key: `status-${status}`,
         label: t(`taskDetail.status.${status}`, { ns: 'chat' }),
         run: () =>

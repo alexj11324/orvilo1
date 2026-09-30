@@ -1,11 +1,11 @@
 import { toast } from '@lobehub/ui/base-ui';
-import { Input } from 'antd';
 import { type TFunction } from 'i18next';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Input } from '@/components/ui/input';
 import { ConnectorSourceType } from '@/database/schemas';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useToolStore } from '@/store/tool';
@@ -353,9 +353,10 @@ const AddConnectorModal = memo<AddConnectorModalProps>(({ open, onClose, connect
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
               />
-              <Input.Password
+              <Input
                 autoComplete="new-password"
                 placeholder={t('connector.add.clientSecret', 'OAuth Client Secret (optional)')}
+                type="password"
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
               />

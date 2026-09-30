@@ -1,5 +1,4 @@
 'use client';
-import { type DropdownItem, type MenuInfo } from '@lobehub/ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -16,7 +15,10 @@ import {
   STATUS_META,
   USER_SELECTABLE_STATUSES,
 } from '@/features/AgentTasks/features/taskStatusMeta';
-import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import DropdownMenu, {
+  type SidebarMenuInfo,
+  type SidebarMenuItemData,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 const styles = createStaticStyles(({ css }) => ({
   /**
@@ -97,7 +99,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       disabled: busy,
     });
 
-    const statusItems = useMemo<DropdownItem[]>(
+    const statusItems = useMemo<SidebarMenuItemData[]>(
       () =>
         USER_SELECTABLE_STATUSES.map((status) => {
           const meta = STATUS_META[status];
@@ -107,7 +109,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
             label: t(`chat:taskDetail.${meta.labelKey}` as never, {
               defaultValue: meta.label,
             }),
-            onClick: ({ domEvent }: MenuInfo) => {
+            onClick: ({ domEvent }: SidebarMenuInfo) => {
               domEvent.stopPropagation();
               onSetStatus(status);
             },
@@ -116,7 +118,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       [onSetStatus, t],
     );
 
-    const priorityItems = useMemo<DropdownItem[]>(
+    const priorityItems = useMemo<SidebarMenuItemData[]>(
       () =>
         PRIORITY_LEVELS.map((level) => {
           const meta = PRIORITY_META[level];
@@ -127,7 +129,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
             label: t(`chat:taskDetail.${meta.labelKey}` as never, {
               defaultValue: meta.label,
             }),
-            onClick: ({ domEvent }: MenuInfo) => {
+            onClick: ({ domEvent }: SidebarMenuInfo) => {
               domEvent.stopPropagation();
               onSetPriority(level);
             },
@@ -136,7 +138,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       [onSetPriority, t],
     );
 
-    const actionItems = useMemo<DropdownItem[]>(
+    const actionItems = useMemo<SidebarMenuItemData[]>(
       () => [
         {
           children: statusItems,
@@ -169,7 +171,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
           icon: Trash2Icon,
           key: 'delete',
           label: t('delete'),
-          onClick: ({ domEvent }: MenuInfo) => {
+          onClick: ({ domEvent }: SidebarMenuInfo) => {
             domEvent.stopPropagation();
             onDelete();
           },

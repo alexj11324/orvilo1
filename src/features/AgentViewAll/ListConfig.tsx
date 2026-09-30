@@ -1,7 +1,7 @@
 'use client';
 
 import { type FormItemProps } from '@lobehub/ui';
-import { Form, Popover } from '@lobehub/ui';
+import { Flexbox, Form, Icon, Popover } from '@lobehub/ui';
 import { ActionIcon, Select, Tabs } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import {
@@ -83,7 +83,7 @@ const ListConfig = memo<ListConfigProps>(
       },
       {
         children: (
-          <div className="flex items-center gap-2">
+          <Flexbox horizontal align={'center'} gap={8}>
             <ActionIcon
               icon={options.orderDirection === 'asc' ? ArrowUpNarrowWide : ArrowDownWideNarrow}
               size={'small'}
@@ -103,19 +103,19 @@ const ListConfig = memo<ListConfigProps>(
                 setOptions((prev) => ({ ...prev, orderBy: value }));
               }}
             />
-          </div>
+          </Flexbox>
         ),
         label: t('agentViewAll.form.ordering'),
       },
     ];
 
     const panelContent = (
-      <div className="flex flex-col gap-3 w-[280px]">
+      <Flexbox gap={12} width={280}>
         <Tabs
           activeKey={viewMode}
           items={[
-            { icon: <LayoutList />, key: 'list', label: t('agentViewAll.view.list') },
-            { icon: <LayoutGrid />, key: 'card', label: t('agentViewAll.view.card') },
+            { icon: <Icon icon={LayoutList} />, key: 'list', label: t('agentViewAll.view.list') },
+            { icon: <Icon icon={LayoutGrid} />, key: 'card', label: t('agentViewAll.view.card') },
           ]}
           styles={{
             list: { display: 'flex', width: '100%' },
@@ -133,7 +133,7 @@ const ListConfig = memo<ListConfigProps>(
             item: { padding: 0 },
           }}
         />
-      </div>
+      </Flexbox>
     );
 
     return (

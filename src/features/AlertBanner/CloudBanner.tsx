@@ -1,6 +1,6 @@
 'use client';
 
-import { lobeStaticStylish } from '@lobehub/ui';
+import { Center, Flexbox, Icon, lobeStaticStylish } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { useSize } from 'ahooks';
@@ -61,7 +61,7 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
   }, [size, contentSize, mobile]);
 
   const content = (
-    <div className="flex items-center flex-none gap-2" ref={contentRef}>
+    <Flexbox horizontal align={'center'} flex={'none'} gap={8} ref={contentRef}>
       <b>{t('alert.cloud.title', { name: ORVILO_CLOUD })}:</b>
       <span>
         {t(mobile ? 'alert.cloud.descOnMobile' : 'alert.cloud.desc', {
@@ -69,19 +69,19 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
           name: ORVILO_CLOUD,
         })}
       </span>
-    </div>
+    </Flexbox>
   );
   return (
-    <div
+    <Center
+      className={isDarkMode ? styles.containerDark : styles.containerLight}
+      flex={'none'}
+      height={BANNER_HEIGHT}
+      paddingInline={16}
       ref={ref}
-      style={{ height: BANNER_HEIGHT }}
-      className={cx(
-        isDarkMode ? styles.containerDark : styles.containerLight,
-        'flex items-center justify-center flex-none px-4 w-full',
-      )}
+      width={'100%'}
     >
       <div className={styles.background} />
-      <div className={cx(styles.wrapper, 'flex items-center justify-center gap-4 w-full')}>
+      <Center horizontal className={styles.wrapper} gap={16} width={'100%'}>
         {isTruncated ? <Marquee pauseOnHover>{content}</Marquee> : content}
         <a
           href={`${OFFICIAL_URL}?utm_source=${UTM_SOURCE}&utm_medium=banner`}
@@ -89,11 +89,11 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
           target="_blank"
         >
           <Button size={'small'} type="primary">
-            {t('alert.cloud.action')} <ArrowRightIcon />
+            {t('alert.cloud.action')} <Icon icon={ArrowRightIcon} />
           </Button>
         </a>
-      </div>
-    </div>
+      </Center>
+    </Center>
   );
 });
 

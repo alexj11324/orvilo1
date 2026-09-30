@@ -1,4 +1,4 @@
-import { FormItem, Input, InputPassword } from '@lobehub/ui';
+import { Flexbox, FormItem, Input, InputPassword } from '@lobehub/ui';
 import { Alert, Button, RadioGroup } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
 import { Divider, Form } from 'antd';
@@ -189,7 +189,7 @@ const MCPManifestForm = ({
         }}
       />
       <Form form={form} layout={'vertical'}>
-        <div className="flex flex-col">
+        <Flexbox>
           <Form.Item
             initialValue={'http'}
             label={t('dev.mcp.type.title')}
@@ -371,7 +371,7 @@ const MCPManifestForm = ({
             </>
           )}
           <FormItem colon={false} label={t('dev.mcp.testConnectionTip')} layout={'horizontal'}>
-            <div className="flex items-center gap-2 justify-end">
+            <Flexbox horizontal align={'center'} gap={8} justify={'flex-end'}>
               <Button
                 loading={isTesting}
                 type={!!mcpType ? 'primary' : undefined}
@@ -379,7 +379,7 @@ const MCPManifestForm = ({
               >
                 {isOAuth ? t('dev.mcp.auth.oauth.authorize') : t('dev.mcp.testConnection')}
               </Button>
-            </div>
+            </Flexbox>
           </FormItem>
           {(connectionError || testState.error) && (
             <Alert
@@ -411,7 +411,7 @@ const MCPManifestForm = ({
           >
             <Input placeholder={'https://plugin-avatar.com'} />
           </FormItem>
-        </div>
+        </Flexbox>
       </Form>
     </>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Markdown } from '@lobehub/ui';
 import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -44,18 +44,18 @@ const AgentInfo = memo(() => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-3">
+      <Flexbox gap={12}>
         <Skeleton.Avatar shape={'square'} size={64} />
         <Skeleton height={32} width={200} />
-        <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
+        <Flexbox width={'min(100%, 640px)'}>
           <Skeleton.Text rows={2} />
-        </div>
-      </div>
+        </Flexbox>
+      </Flexbox>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <Flexbox gap={12}>
       <Avatar
         avatar={isInbox ? meta.avatar || DEFAULT_INBOX_AVATAR : meta.avatar || DEFAULT_AVATAR}
         background={meta.backgroundColor}
@@ -66,12 +66,12 @@ const AgentInfo = memo(() => {
       <Text fontSize={24} weight={'bold'}>
         {displayTitle}
       </Text>
-      <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
+      <Flexbox width={'min(100%, 640px)'}>
         <Markdown fontSize={fontSize} variant={'chat'}>
           {message}
         </Markdown>
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 });
 

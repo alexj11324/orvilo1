@@ -1,9 +1,8 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -106,9 +105,15 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
           title={ts('title')}
           width={'100%'}
         >
-          <Block padding={16} variant={'filled'}>
+          <div
+            style={{
+              background: cssVar.colorFillTertiary,
+              borderRadius: cssVar.borderRadius,
+              padding: 16,
+            }}
+          >
             <Text align={'center'}>{ts('description', { appName: BRANDING_NAME })}</Text>
-          </Block>
+          </div>
         </AuthCard>
       </ImperativeModal>
     );

@@ -1,12 +1,13 @@
 'use client';
 
 import { SiGithub, SiX } from '@icons-pack/react-simple-icons';
-import { Flexbox, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Button, Spin, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ArrowRight, Link2Off, Loader2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { type SocialProfile, type SocialProvider } from './useSocialConnect';
 
@@ -42,38 +43,44 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
     if (profile) {
       // Connected state
       return (
-        <Flexbox
-          horizontal
-          align="center"
-          gap={12}
-          justify="space-between"
+        <div
+          className="flex items-center justify-between gap-3"
           style={{
             background: cssVar.colorFillQuaternary,
             borderRadius: cssVar.borderRadiusLG,
             padding: '8px 12px',
           }}
         >
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex items-center gap-2">
             <ProviderIcon size={18} />
-            <Flexbox gap={2}>
+            <div className="flex flex-col gap-0.5">
               <Text style={{ fontSize: 13 }}>@{profile.username}</Text>
               <Text style={{ fontSize: 11 }} type="secondary">
                 {t('profileSetup.socialLinks.connected', {
                   defaultValue: 'Connected',
                 })}
               </Text>
-            </Flexbox>
-          </Flexbox>
-          <Tooltip title={t('profileSetup.socialLinks.disconnect', { defaultValue: 'Disconnect' })}>
-            <ActionIcon
-              disabled={isDisabled}
-              icon={isDisconnecting ? Loader2 : Link2Off}
-              loading={isDisconnecting}
-              size="small"
-              onClick={onDisconnect}
-            />
-          </Tooltip>
-        </Flexbox>
+            </div>
+          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <ActionIcon
+                    disabled={isDisabled}
+                    icon={isDisconnecting ? Loader2 : Link2Off}
+                    loading={isDisconnecting}
+                    size="small"
+                    onClick={onDisconnect}
+                  />
+                }
+              />
+              <TooltipContent>
+                {t('profileSetup.socialLinks.disconnect', { defaultValue: 'Disconnect' })}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       );
     }
 
@@ -93,7 +100,7 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
         }}
         onClick={onConnect}
       >
-        <Flexbox horizontal align="center" flex={1} justify="space-between">
+        <div className="flex flex-1 items-center justify-between">
           <span>
             {isConnecting
               ? t('profileSetup.socialLinks.connecting', { defaultValue: 'Connecting...' })
@@ -103,7 +110,7 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
                 })}
           </span>
           {!isConnecting && <ArrowRight size={14} style={{ opacity: 0.5 }} />}
-        </Flexbox>
+        </div>
       </Button>
     );
   },

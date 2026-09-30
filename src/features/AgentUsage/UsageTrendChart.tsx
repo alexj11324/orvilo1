@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
+import { Block, Flexbox } from '@lobehub/ui';
 import { Segmented, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { memo, useMemo, useState } from 'react';
@@ -52,8 +53,8 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 justify-between">
+    <Block gap={16} variant={'borderless'}>
+      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
         <Text fontSize={16} weight={500}>
           {t('usageStats.chart.title')}
         </Text>
@@ -65,7 +66,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
           ]}
           onChange={(value) => setType(value as ShowType)}
         />
-      </div>
+      </Flexbox>
       {isLoading ? (
         <Skeleton height={320} />
       ) : (
@@ -86,18 +87,15 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
 
             return (
               <ChartTooltipFrame>
-                <div className="flex flex-col" style={{ paddingBlock: 8, paddingInline: 16 }}>
+                <Flexbox paddingBlock={8} paddingInline={16}>
                   <Text as={'p'} style={{ margin: 0 }}>
                     {label}
                   </Text>
-                </div>
+                </Flexbox>
                 {visibleItems.length > 0 && (
                   <>
                     <Divider style={{ margin: 0 }} />
-                    <div
-                      className="flex flex-col gap-1"
-                      style={{ paddingBlock: 8, paddingInline: 16 }}
-                    >
+                    <Flexbox gap={4} paddingBlock={8} paddingInline={16}>
                       {visibleItems.map(({ color, name, value }) => (
                         <ChartTooltipRow
                           color={color ?? '#1668dc'}
@@ -110,7 +108,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
                           }
                         />
                       ))}
-                    </div>
+                    </Flexbox>
                   </>
                 )}
               </ChartTooltipFrame>
@@ -121,7 +119,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
           }
         />
       )}
-    </div>
+    </Block>
   );
 });
 

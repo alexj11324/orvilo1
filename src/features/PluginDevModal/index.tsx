@@ -1,3 +1,4 @@
+import { Flexbox } from '@lobehub/ui';
 import { Button, Drawer, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
@@ -112,7 +113,7 @@ const DevModal = memo<DevModalProps>(
     const buttonStyle = mobile ? { flex: 1 } : { margin: 0 };
 
     const footer = (
-      <div className="flex flex-1 gap-3 justify-between">
+      <Flexbox horizontal flex={1} gap={12} justify={'space-between'}>
         {isEditMode ? (
           <Popconfirm
             arrow={false}
@@ -136,7 +137,7 @@ const DevModal = memo<DevModalProps>(
         ) : (
           <div />
         )}
-        <div className="flex gap-3">
+        <Flexbox horizontal gap={12}>
           <Button
             style={buttonStyle}
             onClick={() => {
@@ -153,8 +154,8 @@ const DevModal = memo<DevModalProps>(
           >
             {t(isEditMode ? 'dev.update' : 'dev.save')}
           </Button>
-        </div>
-      </div>
+        </Flexbox>
+      </Flexbox>
     );
 
     return (
@@ -185,23 +186,24 @@ const DevModal = memo<DevModalProps>(
             onOpenChange(false);
           }}
         >
-          <div
-            className="flex gap-0"
-            style={{ height: '100%' }}
+          <Flexbox
+            horizontal
+            gap={0}
+            height={'100%'}
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
-            <div className="flex flex-col gap-4 p-6" style={{ flex: 3, overflowY: 'auto' }}>
+            <Flexbox flex={3} gap={16} padding={24} style={{ overflowY: 'auto' }}>
               <MCPManifestForm
                 enableOAuth={enableOAuth}
                 form={form}
                 isEditMode={isEditMode}
                 onAuthorizeOAuth={runOAuthFlow}
               />
-            </div>
+            </Flexbox>
             <PluginPreview form={form} />
-          </div>
+          </Flexbox>
         </Drawer>
       </Form.Provider>
     );

@@ -1,3 +1,9 @@
-import type { FormGroupItemType } from '@lobehub/ui';
+export interface StorageFormItem {
+  children: React.ReactNode;
+  desc?: React.ReactNode;
+  label?: React.ReactNode;
+}
 
-export const useTransferAgentsFormItem = (): FormGroupItemType['children'] | null => null;
+export type StorageFormItems = StorageFormItem[];
+
+export const useTransferAgentsFormItem = (): StorageFormItems | null => null;

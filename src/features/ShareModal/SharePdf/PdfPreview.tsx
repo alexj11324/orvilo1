@@ -1,5 +1,6 @@
 'use client';
 
+import { Flexbox } from '@lobehub/ui';
 import { Button, createModal, Spin } from '@lobehub/ui/base-ui';
 import { Input } from 'antd';
 import { createStaticStyles, cx } from 'antd-style';
@@ -161,7 +162,7 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
 
       {numPages > 1 && (
         <div className={styles.fullscreenNavigation}>
-          <div className="flex items-center gap-3">
+          <Flexbox horizontal align="center" gap={12}>
             <Button
               className={styles.fullscreenButton}
               disabled={pageNumber <= 1}
@@ -170,7 +171,7 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
               type="text"
               onClick={goToPrev}
             />
-            <div className="flex items-center gap-2">
+            <Flexbox horizontal align="center" gap={8}>
               <Input
                 className={styles.fullscreenPageInput}
                 max={numPages}
@@ -184,7 +185,7 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
                 }}
               />
               <span className={styles.fullscreenPageText}>/ {numPages}</span>
-            </div>
+            </Flexbox>
             <Button
               className={styles.fullscreenButton}
               disabled={pageNumber >= numPages}
@@ -193,7 +194,7 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
               type="text"
               onClick={goToNext}
             />
-          </div>
+          </Flexbox>
         </div>
       )}
     </div>
@@ -326,7 +327,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
 
       {pdfData && numPages > 1 && (
         <div className={localStyles.footerNavigation}>
-          <div className="flex items-center gap-2 justify-center">
+          <Flexbox horizontal align="center" gap={8} justify="center">
             <Button
               disabled={pageNumber <= 1}
               icon={<ChevronLeft size={16} />}
@@ -334,7 +335,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
               type="text"
               onClick={goToPrevPage}
             />
-            <div className="flex items-center gap-1">
+            <Flexbox horizontal align="center" gap={4}>
               <Input
                 className={localStyles.pageInput}
                 max={numPages}
@@ -348,7 +349,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
                 }}
               />
               <span className={localStyles.pageNumberText}>/ {numPages}</span>
-            </div>
+            </Flexbox>
             <Button
               disabled={pageNumber >= numPages}
               icon={<ChevronRight size={16} />}
@@ -356,7 +357,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
               type="text"
               onClick={goToNextPage}
             />
-          </div>
+          </Flexbox>
         </div>
       )}
     </div>

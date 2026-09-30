@@ -1,6 +1,6 @@
-import { FileTypeIcon } from '@lobehub/ui';
+import { Center, FileTypeIcon, Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text, Upload } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowUpIcon, PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -87,42 +87,34 @@ const EmptyPlaceholder = () => {
   // way back instead of the onboarding prompt.
   if (sourceFilter !== ResourceSourceFilter.All) {
     return (
-      <div
-        className="flex flex-col items-center justify-center gap-3 h-[100%] w-[100%]"
-        style={{ paddingBottom: 100 }}
-      >
+      <Center gap={12} height={'100%'} style={{ paddingBottom: 100 }} width={'100%'}>
         <Text as={'h4'}>{t('FileManager.emptyStatus.filteredTitle')}</Text>
         <Button size={'small'} onClick={() => setSourceFilter(ResourceSourceFilter.All)}>
           {t('FileManager.emptyStatus.actions.showAllSources')}
         </Button>
-      </div>
+      </Center>
     );
   }
 
   if (!canCreate) {
     return (
-      <div
-        className="flex flex-col items-center justify-center h-[100%] w-[100%]"
-        style={{ paddingBottom: 100 }}
-      >
+      <Center height={'100%'} style={{ paddingBottom: 100 }} width={'100%'}>
         <Text as={'h4'}>{t('FileManager.emptyStatus.title')}</Text>
-      </div>
+      </Center>
     );
   }
 
   return (
-    <div
-      className="flex flex-col items-center justify-center gap-6 h-[100%] w-[100%]"
-      style={{ paddingBottom: 100 }}
-    >
-      <div className="flex flex-col justify-center" style={{ textAlign: 'center' }}>
+    <Center gap={24} height={'100%'} style={{ paddingBottom: 100 }} width={'100%'}>
+      <Flexbox justify={'center'} style={{ textAlign: 'center' }}>
         <Text as={'h4'}>{t('FileManager.emptyStatus.title')}</Text>
         <Text type={'secondary'}>{t('FileManager.emptyStatus.or')}</Text>
-      </div>
-      <div className="flex flex-row gap-3">
+      </Flexbox>
+      <Flexbox horizontal gap={12}>
         {!libraryId && (
-          <div
-            className={cx('flex flex-col p-4', styles.card)}
+          <Flexbox
+            className={styles.card}
+            padding={16}
             onClick={() => {
               open();
             }}
@@ -134,21 +126,11 @@ const EmptyPlaceholder = () => {
             <FileTypeIcon
               className={styles.icon}
               color={cssVar.purple}
+              icon={<Icon color={'#fff'} icon={PlusIcon} />}
               size={ICON_SIZE}
               type={'folder'}
-              icon={
-                <span className="anticon" role="img">
-                  <PlusIcon
-                    color={'#fff'}
-                    fill={'transparent'}
-                    height={'1em'}
-                    size={'1em'}
-                    width={'1em'}
-                  />
-                </span>
-              }
             />
-          </div>
+          </Flexbox>
         )}
         <Upload
           multiple={true}
@@ -158,26 +140,16 @@ const EmptyPlaceholder = () => {
             return false;
           }}
         >
-          <div className={cx('flex flex-col p-4', styles.card)}>
+          <Flexbox className={styles.card} padding={16}>
             <span className={styles.actionTitle}>{t('FileManager.emptyStatus.actions.file')}</span>
             <div className={styles.glow} style={{ background: cssVar.gold }} />
             <FileTypeIcon
               className={styles.icon}
               color={cssVar.gold}
+              icon={<Icon color={'#fff'} icon={ArrowUpIcon} />}
               size={ICON_SIZE}
-              icon={
-                <span className="anticon" role="img">
-                  <ArrowUpIcon
-                    color={'#fff'}
-                    fill={'transparent'}
-                    height={'1em'}
-                    size={'1em'}
-                    width={'1em'}
-                  />
-                </span>
-              }
             />
-          </div>
+          </Flexbox>
         </Upload>
         <Upload
           directory
@@ -192,7 +164,7 @@ const EmptyPlaceholder = () => {
             return false;
           }}
         >
-          <div className={cx('flex flex-col p-4', styles.card)}>
+          <Flexbox className={styles.card} padding={16}>
             <span className={styles.actionTitle}>
               {t('FileManager.emptyStatus.actions.folder')}
             </span>
@@ -200,24 +172,14 @@ const EmptyPlaceholder = () => {
             <FileTypeIcon
               className={styles.icon}
               color={cssVar.geekblue}
+              icon={<Icon color={'#fff'} icon={ArrowUpIcon} />}
               size={ICON_SIZE}
               type={'folder'}
-              icon={
-                <span className="anticon" role="img">
-                  <ArrowUpIcon
-                    color={'#fff'}
-                    fill={'transparent'}
-                    height={'1em'}
-                    size={'1em'}
-                    width={'1em'}
-                  />
-                </span>
-              }
             />
-          </div>
+          </Flexbox>
         </Upload>
-      </div>
-    </div>
+      </Flexbox>
+    </Center>
   );
 };
 

@@ -1,4 +1,4 @@
-import { type GenericItemType } from '@lobehub/ui';
+import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
 import { type CSSProperties } from 'react';
@@ -87,17 +87,7 @@ const KnowledgeBaseItem = memo<KnowledgeBaseItemProps>(
     // active-library header and its switcher.
     const icon = useMemo(() => {
       if (isLoading) {
-        return (
-          <span className="anticon animate-spin" role="img">
-            <Loader2Icon
-              color={cssVar.colorTextDescription}
-              fill={'transparent'}
-              height={18}
-              size={18}
-              width={18}
-            />
-          </span>
-        );
+        return <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={18} />;
       }
 
       return (
@@ -125,7 +115,7 @@ const KnowledgeBaseItem = memo<KnowledgeBaseItemProps>(
           actions={<Actions dropdownMenu={dropdownMenu} />}
           active={active}
           className={className}
-          contextMenuItems={dropdownMenu as () => GenericItemType[]}
+          contextMenuItems={dropdownMenu}
           disabled={editing}
           icon={icon}
           key={id}

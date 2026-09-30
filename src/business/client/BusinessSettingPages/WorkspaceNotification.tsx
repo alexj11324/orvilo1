@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Switch, Text } from '@lobehub/ui/base-ui';
 import type { NotificationChannelSettings, NotificationSettings } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -96,11 +95,8 @@ const ItemRows = memo<{
     <>
       {Object.entries(categories).map(([category, items]) =>
         Object.entries(items ?? {}).map(([item, enabled]) => (
-          <Flexbox
-            horizontal
-            align="center"
-            className={styles.itemRow}
-            justify="space-between"
+          <div
+            className={`${styles.itemRow} flex items-center justify-between`}
             key={`${category}.${item}`}
           >
             <Text className={styles.itemLabel}>
@@ -111,7 +107,7 @@ const ItemRows = memo<{
               size="small"
               onChange={(value: boolean) => onToggle(category, item, value)}
             />
-          </Flexbox>
+          </div>
         )),
       )}
     </>
@@ -126,33 +122,27 @@ const ChannelRow = memo<{
 }>(({ def, settings, onToggleChannel, onToggleItem }) => {
   const { t } = useTranslation('setting');
   return (
-    <Flexbox gap={0}>
-      <Flexbox
-        horizontal
-        align="center"
-        className={styles.channelRow}
-        gap={12}
-        justify="space-between"
-      >
-        <Flexbox horizontal align="center" gap={10}>
-          <Icon icon={def.icon} size={16} />
-          <Flexbox gap={0}>
+    <div className="flex flex-col">
+      <div className={`${styles.channelRow} flex items-center justify-between gap-3`}>
+        <div className="flex items-center gap-2.5">
+          <def.icon size={16} />
+          <div className="flex flex-col">
             <Text className={styles.channelLabel}>{t(def.labelKey)}</Text>
             <Text fontSize={12} type="secondary">
               {t(def.descriptionKey)}
             </Text>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         <Switch
           checked={settings?.enabled !== false}
           onChange={(value: boolean) => onToggleChannel(def.key, value)}
         />
-      </Flexbox>
+      </div>
       <ItemRows
         channel={settings ?? {}}
         onToggle={(category, item, value) => onToggleItem(def.key, category, item, value)}
       />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -168,9 +158,9 @@ export const WorkspaceNotification = memo(() => {
     updateWorkspaceUserPreference({ notification: partial });
 
   return (
-    <Flexbox className={styles.container}>
+    <div className={`${styles.container} flex flex-col`}>
       <Text className={styles.pageTitle}>{t('workspaceSetting.notification.title')}</Text>
-      <Flexbox className={styles.section}>
+      <div className={`${styles.section} flex flex-col`}>
         <Text className={styles.groupTitle}>{t('workspaceSetting.notification.channels')}</Text>
         {CHANNELS.map((def) => (
           <ChannelRow
@@ -183,8 +173,8 @@ export const WorkspaceNotification = memo(() => {
             }
           />
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

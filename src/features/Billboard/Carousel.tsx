@@ -1,8 +1,9 @@
 'use client';
 
+import { Flexbox, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { Carousel as AntCarousel } from 'antd';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { X } from 'lucide-react';
 import * as m from 'motion/react-m';
 import {
@@ -17,7 +18,6 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAnalytics } from '@/libs/analytics/client';
 import type { GlobalBillboard, GlobalBillboardItem } from '@/types/serverConfig';
 
@@ -204,27 +204,21 @@ const ItemContent = memo<{
   );
 
   return (
-    <div className="flex flex-col gap-[0px]">
+    <Flexbox gap={0}>
       {item.cover && <img alt="" className={styles.image} src={item.cover} />}
-      <div className={cx(styles.itemBody, 'flex flex-col gap-1')}>
+      <Flexbox className={styles.itemBody} gap={4}>
         {titleOverflow ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger render={<span className="inline-flex">{titleNode}</span>} />
-              <TooltipContent side="top">{resolved.title}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip placement="top" title={resolved.title}>
+            {titleNode}
+          </Tooltip>
         ) : (
           titleNode
         )}
         {descNode &&
           (descOverflow ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger render={<span className="inline-flex">{descNode}</span>} />
-                <TooltipContent side="top">{resolved.description}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip placement="top" title={resolved.description}>
+              {descNode}
+            </Tooltip>
           ) : (
             descNode
           ))}
@@ -247,8 +241,8 @@ const ItemContent = memo<{
             </a>
           )
         )}
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 });
 
@@ -334,7 +328,7 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
                 </div>
               ))}
             </AntCarousel>
-            <div className={cx(styles.dots, 'flex gap-1.5 justify-center')}>
+            <Flexbox horizontal className={styles.dots} gap={6} justify="center">
               {set.items.map((item, idx) => (
                 <div
                   className={`${styles.dot} ${current === idx ? styles.dotActive : ''}`}
@@ -342,7 +336,7 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
                   onClick={() => carouselRef.current?.goTo(idx)}
                 />
               ))}
-            </div>
+            </Flexbox>
           </>
         )}
       </m.div>

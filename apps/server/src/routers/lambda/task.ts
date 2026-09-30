@@ -24,6 +24,7 @@ import {
 } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
+import { TaskReminderModel } from '@/database/models/taskReminder';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
@@ -80,6 +81,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       taskIntegration: new TaskIntegrationService(ctx.serverDB, ctx.userId, wsId),
       taskLifecycle: new TaskLifecycleService(ctx.serverDB, ctx.userId, wsId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
+      taskReminderModel: new TaskReminderModel(ctx.serverDB, ctx.userId, wsId),
       teamModel: new TeamModel(ctx.serverDB, ctx.userId, wsId ?? ''),
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
       taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, wsId),
@@ -181,6 +183,8 @@ const updateSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
   description: z.string().optional(),
+  /** Issue deadline as `YYYY-MM-DD`; `null` clears it. */
+  dueDate: z.iso.date().nullish(),
   editorData: z.unknown().optional(),
   /**
    * Optimistic-concurrency guard for domain-critical mutations (assignee,
@@ -2284,6 +2288,42 @@ export const taskRouter = router({
         });
       }
     }),
+
+  /**
+   * Linear's "Remind me" — a per-user reminder on a task. Read ACL (not the
+   * write gate) is the right floor: a reminder changes only the caller's own
+   * row, never the task, so viewers may arm one for themselves. `remindAt`
+   * `null` clears the caller's reminder.
+   */
+  setReminder: taskProcedure
+    .input(idInput.merge(z.object({ remindAt: z.coerce.date().nullable() })))
+    .mutation(async ({ input, ctx }) => {
+      const resolved = await resolveOrThrow(ctx.taskModel, input.id);
+      const remindAt = input.remindAt ?? null;
+      if (remindAt && remindAt.getTime() <= Date.now()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'remindAt must be in the future',
+        });
+      }
+      if (remindAt === null) {
+        await ctx.taskReminderModel.clearReminder(resolved.id);
+        return { data: { remindAt: null }, message: 'Reminder cleared', success: true };
+      }
+      const row = await ctx.taskReminderModel.setReminder(resolved.id, remindAt);
+      return {
+        data: { remindAt: row.remindAt },
+        message: 'Reminder set',
+        success: true,
+      };
+    }),
+
+  /** The caller's own reminder on a task — feeds the menu/rail checked state. */
+  getReminder: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
+    const resolved = await resolveOrThrow(ctx.taskModel, input.id);
+    const row = await ctx.taskReminderModel.getReminder(resolved.id);
+    return { data: row ? { remindAt: row.remindAt } : null, success: true };
+  }),
 
   acquireTaskLock: taskProcedureWrite.input(idInput).mutation(async ({ ctx, input }) => {
     if (!ctx.workspaceId) return { expiresAt: null, holderId: null, lockedByOther: false };

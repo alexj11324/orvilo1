@@ -48,6 +48,8 @@ export interface TaskUpdatePayload {
   assigneeUserId?: string | null;
   beforeId?: string | null;
   description?: string;
+  /** `YYYY-MM-DD` calendar date or `null` to clear. */
+  dueDate?: string | null;
   editorData?: unknown;
   instruction?: string;
   /** The dropped column's membership fields — server-side scope geometry. */

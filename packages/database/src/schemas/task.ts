@@ -23,6 +23,7 @@ import { isNotNull, isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   foreignKey,
   index,
@@ -179,6 +180,14 @@ export const tasks = pgTable(
      * orders subtasks within their parent only.
      */
     position: doublePrecision('position'),
+
+    /**
+     * Issue deadline as a calendar date (`YYYY-MM-DD`), matching Linear's
+     * dueDate. NULL = no due date. Calendar-date rather than timestamptz:
+     * the picker offers whole days only, and a date is rendered against the
+     * viewer's locale instead of an instant.
+     */
+    dueDate: date('due_date', { mode: 'string' }),
 
     // Automation mode (mutually exclusive with each other; null = no automation)
     automationMode: text('automation_mode').$type<'heartbeat' | 'schedule'>(),

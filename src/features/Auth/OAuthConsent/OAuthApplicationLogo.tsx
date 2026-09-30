@@ -45,7 +45,7 @@ const OAuthApplicationLogo = memo<OAuthApplicationLogoProps>(
           <LockKeyholeIcon size={size} />
         )}
         <div className={styles.connectorLine} />
-        <div className={cx(styles.connector, 'flex items-center justify-center')}>
+        <div className={cx(styles.connector, 'flex flex-col items-center justify-center')}>
           <Link2Icon style={{ color: cssVar.colorTextSecondary, fontSize: 20 }} />
         </div>
         <div className={styles.connectorLine} />

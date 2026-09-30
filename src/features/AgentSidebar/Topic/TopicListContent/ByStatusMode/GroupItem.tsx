@@ -35,7 +35,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
           <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
             {statusIcon && (
-              <div className="flex items-center justify-center flex-none h-[16px] w-[16px]">
+              <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
                 <statusIcon.icon color={statusIcon.color} size={{ size: 13 }} />
               </div>
             )}

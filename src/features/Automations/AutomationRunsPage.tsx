@@ -252,7 +252,7 @@ const AutomationRunsPage = memo(() => {
               <Text type={'secondary'}>{t('runs.title')}…</Text>
             </div>
           ) : runs.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center justify-center py-12">
               <div className="flex flex-col items-center gap-2">
                 <BotMessageSquare color={cssVar.colorTextQuaternary} size={32} />
                 <Text type={'secondary'}>{t('run_history.no_matches')}</Text>

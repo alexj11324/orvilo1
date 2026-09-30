@@ -43,7 +43,7 @@ export const TaskAcceptanceHeader = memo<TaskAcceptanceHeaderProps>(
         {toggle}
         {/* Lives outside the toggle: opening the report should not also fold
           the section the user is reading. */}
-        <div className="flex" onClick={(event) => event.stopPropagation()}>
+        <div className="flex flex-col" onClick={(event) => event.stopPropagation()}>
           {extra}
         </div>
       </div>

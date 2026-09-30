@@ -93,7 +93,7 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
     return (
       <div className={`flex flex-col ${styles.container}`}>
         <div
-          className={`flex items-center justify-center ${styles.banner}`}
+          className={`flex flex-col items-center justify-center ${styles.banner}`}
           style={{ background: cssVar.colorFillTertiary }}
         >
           <Avatar

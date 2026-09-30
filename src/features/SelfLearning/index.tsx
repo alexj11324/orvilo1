@@ -181,7 +181,7 @@ const SelfLearning = memo(() => {
             isEmpty={!error && allDomains.length === 0}
             empty={
               <div
-                className="flex items-center justify-center h-full w-full"
+                className="flex flex-col items-center justify-center h-full w-full"
                 style={{ minHeight: '50vh' }}
               >
                 <Empty style={{ maxWidth: 420 }}>

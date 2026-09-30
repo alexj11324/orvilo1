@@ -261,7 +261,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
           {isLoading ? (
             <SkeletonList rows={4} />
           ) : flatOptions.length === 0 ? (
-            <div className="flex items-center justify-center p-4">
+            <div className="flex flex-col items-center justify-center p-4">
               <Text fontSize={12} type={'secondary'}>
                 {t('taskDetail.labels.empty')}
               </Text>

@@ -16,7 +16,10 @@ const DetailNotFound = memo(() => {
   const { t } = useTranslation('memory');
 
   return (
-    <div className="flex items-center justify-center flex-1 gap-3 p-12" style={{ width: '100%' }}>
+    <div
+      className="flex flex-col items-center justify-center flex-1 gap-3 p-12"
+      style={{ width: '100%' }}
+    >
       <FileQuestionIcon size={32} style={{ color: cssVar.colorTextTertiary }} />
       <div className="flex flex-col items-center gap-1">
         <Text fontSize={16} weight={600}>

@@ -89,7 +89,7 @@ const MessageBranch = memo<MessageBranchProps>(({ activeBranchIndex, count, mess
       >
         <ChevronLeft size={16} />
       </div>
-      <div className={cn('flex items-center justify-center', styles.text)}>
+      <div className={cn('flex flex-col items-center justify-center', styles.text)}>
         {activeBranchIndex + 1}/{count}
       </div>
       <div

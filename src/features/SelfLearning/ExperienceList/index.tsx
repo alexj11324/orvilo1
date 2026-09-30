@@ -87,7 +87,7 @@ const ExperienceList = memo(() => {
             loading={<Loading debugId={'SelfLearningExperience'} />}
             empty={
               <div
-                className="flex items-center justify-center h-full w-full"
+                className="flex flex-col items-center justify-center h-full w-full"
                 style={{ minHeight: '50vh' }}
               >
                 <Empty>

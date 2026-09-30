@@ -123,7 +123,7 @@ const TaskStatusCascadeModalContent = ({
             return (
               <div className={`flex items-center gap-2.5 ${styles.row}`} key={task.identifier}>
                 <StatusIcon color={meta.color} size={16} />
-                <div className="flex flex-1">
+                <div className="flex flex-col flex-1">
                   <Text ellipsis>{task.name || task.identifier}</Text>
                 </div>
                 <Text color={cssVar.colorTextTertiary}>

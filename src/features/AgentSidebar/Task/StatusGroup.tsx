@@ -41,7 +41,7 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
       <AccordionHeader>
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
           <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
-            <div className="flex items-center justify-center flex-none h-[24px] w-[24px]">
+            <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[24px]">
               <meta.icon color={meta.color} size={{ size: 14, strokeWidth: 1.75 }} />
             </div>
             <Text ellipsis fontSize={13} style={{ color: cssVar.colorTextSecondary, flex: 1 }}>

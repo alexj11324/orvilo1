@@ -51,13 +51,13 @@ const ReviewSubmitPanel = memo<{
         <Text weight={500}>{t('reviews.submitReviewTitle')}</Text>
       </div>
       {pendingReviewId ? (
-        <div className={cx('flex items-center gap-2', styles.banner)} role={'status'}>
+        <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'status'}>
           <GitPullRequestDraftIcon color={cssVar.colorWarning} size={14} />
           <Text fontSize={12}>{t('reviews.pendingDraftBanner')}</Text>
         </div>
       ) : null}
       {unknownIntent ? (
-        <div className={cx('flex items-center gap-2', styles.banner)} role={'alert'}>
+        <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
           <RefreshCwIcon color={cssVar.colorWarning} size={14} />
           <Text fontSize={12}>{t('reviews.outcomeUnknown')}</Text>
           <div className="flex-1" />
@@ -67,7 +67,7 @@ const ReviewSubmitPanel = memo<{
         </div>
       ) : null}
       {stale ? (
-        <div className={cx('flex items-center gap-2', styles.banner)} role={'alert'}>
+        <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
           <Text fontSize={12}>{t('reviews.headDrifted')}</Text>
         </div>
       ) : null}

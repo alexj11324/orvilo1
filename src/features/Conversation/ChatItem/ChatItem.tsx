@@ -80,8 +80,8 @@ const ChatItem = memo<ChatItemProps>(
         }}
       >
         <div
-          className={cn('flex flex-col items-center gap-2', 'message-header')}
-          style={{ flexDirection: isUser ? 'horizontal-reverse' : 'horizontal' }}
+          className={cn('flex items-center gap-2', 'message-header')}
+          style={{ flexDirection: isUser ? 'row-reverse' : 'row' }}
         >
           {showAvatar &&
             (customAvatarRender ? customAvatarRender(avatar, avatarContent) : avatarContent)}

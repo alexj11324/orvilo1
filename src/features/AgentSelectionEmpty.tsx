@@ -27,7 +27,7 @@ const AgentSelectionEmpty = memo<AgentSelectionEmptyProps>(
 
     return (
       <div
-        className="flex items-center justify-center"
+        className="flex flex-col items-center justify-center"
         style={{ minHeight: '30vh', height: '100%', width: '100%' }}
       >
         <SimpleEmpty

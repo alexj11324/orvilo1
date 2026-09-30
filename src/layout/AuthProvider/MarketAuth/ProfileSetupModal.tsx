@@ -545,7 +545,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                       }}
                     >
                       <div
-                        className="flex items-center justify-center"
+                        className="flex flex-col items-center justify-center"
                         style={{
                           background: bannerUrl ? 'rgba(0,0,0,0.4)' : 'transparent',
                           height: '100%',

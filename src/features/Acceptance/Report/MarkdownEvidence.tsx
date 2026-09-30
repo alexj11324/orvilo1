@@ -324,14 +324,14 @@ export const DocumentViewer = memo<{ fileName?: string | null; markdown?: boolea
 
     if (loading)
       return (
-        <div className="flex items-center justify-center flex-1 h-full">
+        <div className="flex flex-col items-center justify-center flex-1 h-full">
           <Loading debugId="verify-document-viewer" />
         </div>
       );
 
     if (error || fileData === null)
       return (
-        <div className="flex items-center justify-center flex-1 h-full" gap={8}>
+        <div className="flex flex-col items-center justify-center flex-1 h-full" gap={8}>
           <Text type="secondary">{t('report.document.failed')}</Text>
           <a href={url} rel="noreferrer" target="_blank">
             {t('report.document.openOriginal')}

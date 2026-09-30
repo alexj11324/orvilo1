@@ -20,7 +20,7 @@ const SearchResult = memo(() => {
 
   if (topics.length === 0)
     return (
-      <div className="flex items-center justify-center" style={{ paddingBlock: 12 }}>
+      <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 12 }}>
         <Text type={'secondary'}>{t('searchResultEmpty')}</Text>
       </div>
     );

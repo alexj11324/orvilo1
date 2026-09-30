@@ -160,7 +160,7 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
   const content = (() => {
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center flex-1">
+        <div className="flex flex-col items-center justify-center flex-1">
           <NeuralNetworkLoading size={24} />
         </div>
       );
@@ -168,7 +168,7 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
 
     if (error) {
       return (
-        <div className="flex items-center justify-center flex-1">
+        <div className="flex flex-col items-center justify-center flex-1">
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -183,7 +183,7 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
 
     if (data.length === 0) {
       return (
-        <div className="flex items-center justify-center flex-1">
+        <div className="flex flex-col items-center justify-center flex-1">
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">

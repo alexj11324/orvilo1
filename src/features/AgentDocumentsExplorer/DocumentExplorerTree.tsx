@@ -425,7 +425,10 @@ const DocumentExplorerTree = memo<Props>(({ agentId, data, mutate, onOpenDocumen
         // Keep the toolbar reachable (new folder / new doc) above the placeholder.
         <div className="flex flex-col h-full">
           {toolbar}
-          <div className="flex items-center justify-center flex-1" style={{ paddingBlock: 24 }}>
+          <div
+            className="flex flex-col items-center justify-center flex-1"
+            style={{ paddingBlock: 24 }}
+          >
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant={'icon'}>

@@ -56,7 +56,10 @@ const AgentDocumentsEmpty = memo(() => {
   };
 
   return (
-    <div className="flex items-center justify-center flex-1 h-full w-full" style={{ padding: 24 }}>
+    <div
+      className="flex flex-col items-center justify-center flex-1 h-full w-full"
+      style={{ padding: 24 }}
+    >
       <div className="flex flex-col items-center gap-4">
         <Empty>
           <EmptyHeader>

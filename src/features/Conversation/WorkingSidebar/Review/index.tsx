@@ -396,7 +396,7 @@ const Review = memo<ReviewProps>(
 
     if (!data && isLoading) {
       return (
-        <div className="flex items-center justify-center flex-1">
+        <div className="flex flex-col items-center justify-center flex-1">
           <NeuralNetworkLoading size={48} />
         </div>
       );
@@ -594,7 +594,7 @@ const Review = memo<ReviewProps>(
           </div>
         </div>
         {isEmpty ? (
-          <div className="flex items-center justify-center flex-1 gap-2 py-6">
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">

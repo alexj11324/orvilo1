@@ -34,7 +34,7 @@ const EMPTY_LEFT_ACTIONS: [] = [];
 const Welcome = memo(() => {
   const { t } = useTranslation('topic');
   return (
-    <div className="flex flex-1 items-center justify-center p-6">
+    <div className="flex flex-col flex-1 items-center justify-center p-6">
       <Text style={{ fontSize: 15 }} type={'secondary'}>
         {t('taskManager.welcome')}
       </Text>

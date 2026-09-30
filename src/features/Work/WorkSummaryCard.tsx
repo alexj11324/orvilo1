@@ -251,7 +251,7 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
         )}
         onClick={clickable ? handleOpen : undefined}
       >
-        <div className={cx('flex items-center justify-center', styles.icon)}>
+        <div className={cx('flex flex-col items-center justify-center', styles.icon)}>
           <Icon size={18} />
         </div>
         <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>

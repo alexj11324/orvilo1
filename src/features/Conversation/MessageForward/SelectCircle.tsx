@@ -38,7 +38,7 @@ interface SelectCircleProps {
 const SelectCircle = memo<SelectCircleProps>(({ checked, className }) => (
   <div
     className={cn(
-      'flex items-center justify-center',
+      'flex flex-col items-center justify-center',
       cx(styles.circle, checked && styles.checked, className),
     )}
   >

@@ -13,7 +13,7 @@ const TopicEmpty = memo<TopicEmptyProps>(({ search, ...rest }) => {
 
   return (
     <div
-      className="flex items-center justify-center"
+      className="flex flex-col items-center justify-center"
       style={{ minHeight: '50vh', height: '100%', width: '100%' }}
     >
       <SimpleEmpty

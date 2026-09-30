@@ -34,7 +34,7 @@ export const ErrorActionContainer = memo<CenterProps>(
   ({ children, className, gap = 24, padding = 24, ...rest }) => {
     return (
       <div
-        className={cn('flex items-center justify-center', cx(styles.container, className))}
+        className={cn('flex flex-col items-center justify-center', cx(styles.container, className))}
         style={{ gap, padding }}
         {...rest}
       >
@@ -66,7 +66,7 @@ export const FormAction = memo<
   }) => {
     return (
       <div
-        className={cn('flex items-center justify-center', cx(styles.form, className))}
+        className={cn('flex flex-col items-center justify-center', cx(styles.form, className))}
         style={{ gap }}
         {...rest}
       >

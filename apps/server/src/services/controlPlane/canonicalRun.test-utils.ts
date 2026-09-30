@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { sql } from 'drizzle-orm';
-
 import { TaskExecutionControlModel } from '@/database/models/taskExecutionControl';
 import {
   agents,
@@ -12,7 +10,7 @@ import {
   workspaceMembers,
   workspaces,
 } from '@/database/schemas';
-import { TASK_EXECUTION_CONTROL_CANDIDATE_SQL } from '@/database/schemas/taskExecutionControl';
+import { installTaskExecutionControlCandidate } from '@/database/schemas/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
 import { createTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
@@ -24,7 +22,7 @@ export async function createCanonicalRunFixture(
   db: OrviloDatabase,
   state: 'registering' | 'running' = 'running',
 ): Promise<CanonicalRunBinding> {
-  await db.execute(sql.raw(TASK_EXECUTION_CONTROL_CANDIDATE_SQL));
+  await installTaskExecutionControlCandidate(db);
   const userId = await createTestUser(db);
   const [workspace] = await db
     .insert(workspaces)

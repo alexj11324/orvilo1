@@ -21,13 +21,13 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import { TASK_EXECUTION_CONTROL_CANDIDATE_SQL } from '../../schemas/taskExecutionControl';
+import { installTaskExecutionControlCandidate } from '../../schemas/taskExecutionControl';
 import type { OrviloDatabase } from '../../type';
 import { type RuntimeRunBinding, TaskExecutionControlModel } from '../taskExecutionControl';
 import { TaskTopicModel } from '../taskTopic';
 
 const db = await getTestDB();
-await db.execute(sql.raw(TASK_EXECUTION_CONTROL_CANDIDATE_SQL));
+await installTaskExecutionControlCandidate(db);
 let b: RuntimeRunBinding;
 const identity = {
   treeId: 'source-tree',
@@ -238,8 +238,12 @@ describe('canonical durable runtime handoff', () => {
       BEGIN
         IF NEW.id = '${i.id}' AND NEW.phase = 'transferred' THEN RAISE EXCEPTION 'fixture transfer history failure'; END IF;
         RETURN NEW;
-      END $$;
-      CREATE TRIGGER ${trigger} BEFORE UPDATE ON task_execution_handoffs FOR EACH ROW EXECUTE FUNCTION ${functionName}();`),
+      END $$`),
+    );
+    await db.execute(
+      sql.raw(
+        `CREATE TRIGGER ${trigger} BEFORE UPDATE ON task_execution_handoffs FOR EACH ROW EXECUTE FUNCTION ${functionName}()`,
+      ),
     );
     try {
       await expect(model().transfer(i.id, 2)).rejects.toThrow();
@@ -247,11 +251,8 @@ describe('canonical durable runtime handoff', () => {
       expect((await model().read(i.id))?.phase).toBe('quiescent');
       expect((await model().read(i.id))?.revision).toBe(2);
     } finally {
-      await db.execute(
-        sql.raw(
-          `DROP TRIGGER ${trigger} ON task_execution_handoffs; DROP FUNCTION ${functionName}();`,
-        ),
-      );
+      await db.execute(sql.raw(`DROP TRIGGER ${trigger} ON task_execution_handoffs`));
+      await db.execute(sql.raw(`DROP FUNCTION ${functionName}()`));
     }
     const retried = await model().transfer(i.id, 2);
     expect(retried.epoch).toBe(b.executionEpoch + 1);
@@ -343,8 +344,12 @@ describe('canonical durable runtime handoff', () => {
       BEGIN
         IF NEW.id = '${i.id}' AND NEW.phase = 'transferred' THEN PERFORM pg_sleep(30); END IF;
         RETURN NEW;
-      END $$;
-      CREATE TRIGGER ${trigger} BEFORE UPDATE ON task_execution_handoffs FOR EACH ROW EXECUTE FUNCTION ${trigger}_fn();`),
+      END $$`),
+      );
+      await db.execute(
+        sql.raw(
+          `CREATE TRIGGER ${trigger} BEFORE UPDATE ON task_execution_handoffs FOR EACH ROW EXECUTE FUNCTION ${trigger}_fn()`,
+        ),
       );
       let interrupted: Promise<unknown> | undefined;
       try {
@@ -374,11 +379,8 @@ describe('canonical durable runtime handoff', () => {
         );
         await interrupted;
         await pool.end();
-        await db.execute(
-          sql.raw(
-            `DROP TRIGGER ${trigger} ON task_execution_handoffs; DROP FUNCTION ${trigger}_fn();`,
-          ),
-        );
+        await db.execute(sql.raw(`DROP TRIGGER ${trigger} ON task_execution_handoffs`));
+        await db.execute(sql.raw(`DROP FUNCTION ${trigger}_fn()`));
       }
       for (const error of connectionErrors) expect(error.message).toMatch(/terminat/i);
       const reopenedPool = new Pool({ connectionString: process.env.DATABASE_TEST_URL, max: 1 });

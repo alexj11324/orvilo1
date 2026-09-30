@@ -79,3 +79,13 @@ CREATE TABLE IF NOT EXISTS task_execution_handoffs (
  user_id text NOT NULL, phase text NOT NULL CHECK(phase IN ('prepared','quiescing','quiescent','transferred','resumed')), revision integer NOT NULL DEFAULT 0, record jsonb NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS task_execution_handoffs_active ON task_execution_handoffs(task_id) WHERE phase <> 'resumed';`;
+
+/** Prepared execution accepts one command. This installer is for disposable tests, not production startup. */
+export async function installTaskExecutionControlCandidate(db: {
+  execute: (query: ReturnType<typeof sql.raw>) => Promise<unknown>;
+}) {
+  for (const statement of TASK_EXECUTION_CONTROL_CANDIDATE_SQL.split(';')) {
+    const command = statement.trim();
+    if (command) await db.execute(sql.raw(command));
+  }
+}

@@ -6,7 +6,7 @@ import { useCallback, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
-import { type ActionDropdownMenuItems } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
+import type { ActionDropdownMenuItems } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import { useConversationStore, useConversationStoreApi } from '@/features/Conversation';
 import { useAddUserMessageHotkey } from '@/hooks/useHotkeys';
 import { useUserStore } from '@/store/user';
@@ -117,6 +117,6 @@ export const useSendMenuItems = (): ActionDropdownMenuItems => {
         onClick: handleAddUserMessage,
       },
     ],
-    [useCmdEnterToSend, updatePreference, hotkey, handleAddAIMessage, handleAddUserMessage],
+    [useCmdEnterToSend, updatePreference, hotkey, handleAddAIMessage, handleAddUserMessage, t],
   );
 };

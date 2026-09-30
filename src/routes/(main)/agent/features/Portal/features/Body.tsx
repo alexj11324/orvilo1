@@ -15,7 +15,7 @@ const Body = ({ children }: PropsWithChildren) => {
   return (
     <div
       className={cn('flex flex-col', cx(body, 'portal-body'))}
-      style={{ width: '100%', flex: 1, height: 0, position: 'relative' }}
+      style={{ flex: 1, height: 0, position: 'relative', width: '100%' }}
     >
       {children}
     </div>

@@ -1,5 +1,3 @@
-import type { FormProps } from '@lobehub/ui';
-
 export const HEADER_HEIGHT = 64;
 export const MOBILE_NABBAR_HEIGHT = 44;
 export const MOBILE_TABBAR_HEIGHT = 48;
@@ -31,7 +29,7 @@ export const CONVERSATION_KEEP_WIDTH = 420;
 export const MARKET_SIDEBAR_WIDTH = 400;
 export const FOLDER_WIDTH = 270;
 export const MAX_WIDTH = 1024;
-export const FORM_STYLE: FormProps = {
+export const FORM_STYLE = {
   itemMinWidth: 'max(34%, 240px)',
   style: { maxWidth: MAX_WIDTH, width: '100%' },
 };

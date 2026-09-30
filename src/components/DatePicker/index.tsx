@@ -15,10 +15,12 @@ export interface DatePickerProps {
   'aria-label'?: string;
   'className'?: string;
   'classNames'?: { popup?: { root?: string } };
+  'defaultValue'?: Dayjs | null;
   'disabled'?: boolean;
   'format'?: string | ((date: Dayjs) => string);
   'minDate'?: Dayjs;
   'onChange'?: (value: Dayjs | Dayjs[] | null) => void;
+  'onOpenChange'?: (open: boolean) => void;
   'open'?: boolean;
   'panelRender'?: (panel: ReactNode) => ReactNode;
   'picker'?: PickerMode;
@@ -159,10 +161,12 @@ const DatePicker = memo<DatePickerProps>(
     'aria-label': ariaLabel,
     className,
     classNames,
+    defaultValue,
     disabled,
     format,
     minDate,
     onChange,
+    onOpenChange,
     'open': openProp,
     panelRender,
     picker = 'date',
@@ -175,16 +179,25 @@ const DatePicker = memo<DatePickerProps>(
     value,
   }) => {
     const [innerOpen, setInnerOpen] = useState(false);
+    const [innerValue, setInnerValue] = useState<Dayjs | null>(defaultValue ?? null);
     const open = openProp ?? innerOpen;
-    const setOpen = openProp === undefined ? setInnerOpen : undefined;
+    const setOpen =
+      openProp === undefined
+        ? (next: boolean) => {
+            setInnerOpen(next);
+            onOpenChange?.(next);
+          }
+        : onOpenChange;
+    const currentValue = value === undefined ? innerValue : value;
 
     const display = useMemo(() => {
-      if (!value) return '';
-      if (typeof format === 'function') return format(value);
-      return value.format(format ?? 'YYYY-MM-DD');
-    }, [format, value]);
+      if (!currentValue) return '';
+      if (typeof format === 'function') return format(currentValue);
+      return currentValue.format(format ?? 'YYYY-MM-DD');
+    }, [format, currentValue]);
 
     const pick = (date: Dayjs | null) => {
+      setInnerValue(date);
       onChange?.(date);
       setOpen?.(false);
     };
@@ -194,18 +207,18 @@ const DatePicker = memo<DatePickerProps>(
       <>
         {isDayPicker ? (
           <Calendar
-            defaultMonth={value?.toDate() ?? minDate?.toDate()}
+            defaultMonth={currentValue?.toDate() ?? minDate?.toDate()}
             disabled={minDate ? { before: minDate.startOf('day').toDate() } : undefined}
             mode="single"
-            selected={value?.toDate()}
+            selected={currentValue?.toDate()}
             onSelect={(date) => pick(date ? dayjs(date) : null)}
           />
         ) : (
           <PeriodGrid
             disabledBefore={minDate}
             picker={picker}
-            value={value}
-            viewYear={value?.year() ?? dayjs().year()}
+            value={currentValue}
+            viewYear={currentValue?.year() ?? dayjs().year()}
             onPick={pick}
           />
         )}
@@ -234,12 +247,13 @@ const DatePicker = memo<DatePickerProps>(
           <span className={cn('flex-1 truncate text-left', !display && 'text-muted-foreground')}>
             {display || placeholder}
           </span>
-          {allowClear && value ? (
+          {allowClear && currentValue ? (
             <span
               aria-hidden
               className="flex items-center text-muted-foreground hover:text-foreground"
               onClick={(e) => {
                 e.stopPropagation();
+                setInnerValue(null);
                 onChange?.(null);
               }}
             >

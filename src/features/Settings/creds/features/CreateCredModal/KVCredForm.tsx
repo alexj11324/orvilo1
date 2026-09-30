@@ -65,7 +65,7 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
   };
 
   return (
-    <Form<FormValues>
+    <Form
       form={form}
       initialValues={{ kvPairs: [{ key: '', value: '' }] }}
       layout="vertical"

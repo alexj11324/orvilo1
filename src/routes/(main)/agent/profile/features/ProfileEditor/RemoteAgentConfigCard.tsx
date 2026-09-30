@@ -152,7 +152,8 @@ const ChangeDeviceContent = memo<ChangeDeviceContentProps>(
     );
 
     const handleDeviceSelect = useCallback(
-      (dId: string) => {
+      (dId: string | null) => {
+        if (dId === null) return;
         setSelectedDeviceId(dId);
         void checkCapability(dId);
       },

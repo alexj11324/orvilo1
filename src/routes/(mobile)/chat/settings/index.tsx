@@ -1,7 +1,7 @@
 'use client';
 
 import { cssVar } from 'antd-style';
-import { memo, useState } from 'react';
+import { createElement, isValidElement, memo, useState } from 'react';
 
 import MobileContentLayout from '@/components/server/MobileNavLayout';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,7 +42,11 @@ export default memo(() => {
         <TabsList>
           {(cateItems ?? []).map((item) => (
             <TabsTrigger key={item.key} value={item.key}>
-              {item.icon}
+              {isValidElement(item.icon)
+                ? item.icon
+                : typeof item.icon === 'function'
+                  ? createElement(item.icon)
+                  : null}
               {item.label}
             </TabsTrigger>
           ))}

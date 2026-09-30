@@ -27,8 +27,26 @@ export interface SidebarContextMenuProps {
   onMenuOpen?: (closeMenu: () => void) => void;
 }
 
-const resolveItems = (items: SidebarContextSidebarMenuItems) =>
+const resolveItems = (items: SidebarContextMenuItems) =>
   (typeof items === 'function' ? items() : items) ?? [];
+
+const isNativeMenuItem = (item: SidebarMenuItems[number]): item is NativeContextMenuItem => {
+  if (item === null) return true;
+  if (!item) return false;
+  if (item.type === 'divider') return true;
+  if (
+    item.type !== undefined &&
+    item.type !== 'group' &&
+    item.type !== 'submenu' &&
+    item.type !== 'checkbox' &&
+    item.type !== 'switch'
+  ) {
+    return false;
+  }
+  if ('children' in item && item.children && !item.children.every(isNativeMenuItem)) return false;
+  if (item.type === 'group' || item.type === 'submenu') return true;
+  return typeof item.key === 'string' || typeof item.key === 'number';
+};
 
 export default function SidebarContextMenu({
   children,
@@ -47,9 +65,14 @@ export default function SidebarContextMenu({
           return;
         }
         let useWebMenu = false;
-        showContextMenuWithFallback(resolvedItems, undefined, () => {
+        const nativeItems = resolvedItems.filter((item) => item !== undefined);
+        if (nativeItems.every(isNativeMenuItem)) {
+          showContextMenuWithFallback(nativeItems, undefined, () => {
+            useWebMenu = true;
+          });
+        } else {
           useWebMenu = true;
-        });
+        }
         if (!useWebMenu) {
           eventDetails.cancel();
           onMenuOpen?.(closeContextMenu);

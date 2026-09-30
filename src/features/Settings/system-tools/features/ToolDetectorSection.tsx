@@ -159,7 +159,7 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
                     size="icon-sm"
                     type="button"
                     variant="ghost"
-                    onClick={() => void copyToClipboard(status.path)}
+                    onClick={() => status.path && void copyToClipboard(status.path)}
                   >
                     <Copy size={14} />
                   </Button>

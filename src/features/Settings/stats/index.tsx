@@ -52,7 +52,7 @@ const StatsSetting = memo<StatsSettingProps>(
     dayjs.locale(i18n.language);
 
     const [groupBy, setGroupBy] = useState<GroupBy>(GroupBy.Model);
-    const [dateRange, setDateRange] = useState<dayjs.Dayjs>(dayjs(new Date()));
+    const [dateRange, setDateRange] = useState<dayjs.Dayjs>(() => dayjs(new Date()));
     const [dateStrings, setDateStrings] = useState<string>();
 
     const { data, isLoading, error, mutate } = useClientDataSWR(statsKeys.usageStat(), async () =>
@@ -63,16 +63,14 @@ const StatsSetting = memo<StatsSettingProps>(
       if (dateStrings) {
         mutate();
       }
-    }, [dateStrings]);
+    }, [dateStrings, mutate]);
 
-    const handleDateChange: DatePickerProps['onChange'] = (dates, dateStrings) => {
+    const handleDateChange: DatePickerProps['onChange'] = (dates) => {
       // Handle both single date and array
       const actualDate = Array.isArray(dates) ? dates[0] : dates;
       if (actualDate) {
         setDateRange(actualDate);
-      }
-      if (typeof dateStrings === 'string') {
-        setDateStrings(dateStrings);
+        setDateStrings(actualDate.format('YYYY-MM'));
       }
     };
 

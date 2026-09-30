@@ -8,10 +8,22 @@ interface SettingContainerProps extends HTMLAttributes<HTMLDivElement> {
   addonAfter?: ReactNode;
   addonBefore?: ReactNode;
   maxWidth?: number | string;
+  paddingBlock?: string | number;
+  paddingInline?: string | number;
   variant?: 'default' | 'secondary';
 }
 const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
-  ({ variant, maxWidth = 1024, children, addonAfter, addonBefore, style, ...rest }) => {
+  ({
+    variant,
+    maxWidth = 1024,
+    children,
+    addonAfter,
+    addonBefore,
+    paddingBlock,
+    paddingInline,
+    style,
+    ...rest
+  }) => {
     const theme = useTheme(); // Keep for colorBgContainerSecondary (not in cssVar)
     return (
       <div
@@ -22,6 +34,8 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
             variant === 'secondary' ? theme.colorBgContainerSecondary : cssVar.colorBgContainer,
           overflowX: 'hidden',
           overflowY: 'auto',
+          paddingBlock,
+          paddingInline,
           ...style,
         }}
       >

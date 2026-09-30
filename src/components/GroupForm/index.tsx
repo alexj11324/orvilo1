@@ -10,7 +10,6 @@ import { mergeWith } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
 import { Info, type LucideIcon } from 'lucide-react';
 import {
-  type ComponentProps,
   createElement,
   type CSSProperties,
   isValidElement,
@@ -27,8 +26,9 @@ import { useSingleton } from '@/hooks/useSingleton';
 
 type FormVariant = 'borderless' | 'filled' | 'outlined';
 
-export interface FormItemProps extends Omit<AntdFormItemProps, 'label'> {
+export interface FormItemProps extends Omit<AntdFormItemProps, 'children' | 'label'> {
   avatar?: ReactNode;
+  children?: ReactNode;
   desc?: ReactNode;
   divider?: boolean;
   hidden?: boolean;
@@ -72,18 +72,22 @@ interface FormGroupProps extends Omit<React.HTMLAttributes<HTMLElement>, 'childr
   extra?: ReactNode;
   gap?: number | string;
   icon?: LucideIcon;
+  itemClassName?: string;
   itemMinWidth?: string | number;
   itemVariant?: FormVariant;
   style?: CSSProperties;
+  styles?: { title?: CSSProperties };
   title?: ReactNode;
   variant?: FormVariant;
 }
 
 const FormGroupItems = ({
   items,
+  itemClassName,
   itemMinWidth,
   itemVariant = 'borderless',
 }: {
+  itemClassName?: string;
   itemMinWidth?: string | number;
   itemVariant?: FormVariant;
   items: FormItemProps[];
@@ -126,7 +130,7 @@ const FormGroupItems = ({
               {desc ? <div className="text-[12px] text-muted-foreground">{desc}</div> : null}
             </div>
             {hasBinding || typeof children === 'function' ? (
-              <AntdForm.Item style={{ marginBottom: 0 }} {...binding}>
+              <AntdForm.Item className={itemClassName} style={{ marginBottom: 0 }} {...binding}>
                 {children}
               </AntdForm.Item>
             ) : (
@@ -150,9 +154,11 @@ export const FormGroup = memo<FormGroupProps>(
     extra,
     gap = 16,
     icon,
+    itemClassName,
     itemMinWidth,
     itemVariant = 'borderless',
     style,
+    styles,
     title,
     variant = 'borderless',
     ...rest
@@ -166,7 +172,9 @@ export const FormGroup = memo<FormGroupProps>(
         <div className="flex flex-row items-center justify-between gap-4">
           <div className="flex flex-row items-center gap-2 min-w-0">
             {icon ? createElement(icon, { size: 18 }) : null}
-            <span className="font-semibold">{title}</span>
+            <span className="font-semibold" style={styles?.title}>
+              {title}
+            </span>
           </div>
           {extra}
         </div>
@@ -181,6 +189,7 @@ export const FormGroup = memo<FormGroupProps>(
       >
         {isFormItemArray(children) ? (
           <FormGroupItems
+            itemClassName={itemClassName}
             itemMinWidth={itemMinWidth}
             itemVariant={itemVariant}
             items={children as FormItemProps[]}
@@ -195,14 +204,15 @@ export const FormGroup = memo<FormGroupProps>(
 
 FormGroup.displayName = 'FormGroup';
 
-export interface FormProps extends Omit<AntdFormProps, 'children'> {
+export interface FormProps extends Omit<AntdFormProps, 'children' | 'classNames'> {
   children?: ReactNode;
+  classNames?: AntdFormProps['classNames'] & { item?: string };
   collapsible?: boolean;
   defaultActive?: boolean;
   footer?: ReactNode;
   gap?: number | string;
   itemMinWidth?: string | number;
-  items?: FormGroupItemType[] | FormItemProps[];
+  items?: (FormGroupItemType | FormItemProps)[];
   itemsType?: 'flat' | 'group';
   itemVariant?: FormVariant;
   variant?: FormVariant;
@@ -211,6 +221,7 @@ export interface FormProps extends Omit<AntdFormProps, 'children'> {
 const FormBase = memo<FormProps>(
   ({
     children,
+    classNames,
     collapsible,
     defaultActive,
     footer,
@@ -221,49 +232,54 @@ const FormBase = memo<FormProps>(
     itemVariant,
     variant = 'borderless',
     ...rest
-  }) => (
-    <AntdForm {...rest}>
-      <div className="flex flex-col" style={{ gap }}>
-        {itemsType === 'group'
-          ? (items as FormGroupItemType[] | undefined)?.map((group, index) => {
-              const groupVariant = group.variant ?? variant;
-              return (
-                <FormGroup
-                  collapsible={group.collapsible ?? collapsible}
-                  defaultActive={group.defaultActive ?? defaultActive}
-                  desc={group.desc}
-                  extra={group.extra}
-                  icon={group.icon}
-                  itemMinWidth={itemMinWidth}
-                  itemVariant={itemVariant}
-                  key={group.key ?? index}
-                  title={group.title}
-                  variant={groupVariant}
+  }) => {
+    const { item: itemClassName, ...antdClassNames } = classNames ?? {};
+    return (
+      <AntdForm {...rest} classNames={antdClassNames}>
+        <div className="flex flex-col" style={{ gap }}>
+          {itemsType === 'group'
+            ? (items as FormGroupItemType[] | undefined)?.map((group, index) => {
+                const groupVariant = group.variant ?? variant;
+                return (
+                  <FormGroup
+                    collapsible={group.collapsible ?? collapsible}
+                    defaultActive={group.defaultActive ?? defaultActive}
+                    desc={group.desc}
+                    extra={group.extra}
+                    icon={group.icon}
+                    itemClassName={itemClassName}
+                    itemMinWidth={itemMinWidth}
+                    itemVariant={itemVariant}
+                    key={group.key ?? index}
+                    title={group.title}
+                    variant={groupVariant}
+                  >
+                    {group.children}
+                  </FormGroup>
+                );
+              })
+            : (items as FormItemProps[] | undefined) && (
+                <div
+                  className={cx(
+                    'flex flex-col',
+                    variantClassName[variant],
+                    variant !== 'borderless' && 'p-4',
+                  )}
                 >
-                  {group.children}
-                </FormGroup>
-              );
-            })
-          : (items as FormItemProps[] | undefined) && (
-              <div
-                className={cx(
-                  'flex flex-col',
-                  variantClassName[variant],
-                  variant !== 'borderless' && 'p-4',
-                )}
-              >
-                <FormGroupItems
-                  itemMinWidth={itemMinWidth}
-                  itemVariant={itemVariant}
-                  items={items as FormItemProps[]}
-                />
-              </div>
-            )}
-        {children}
-      </div>
-      {footer}
-    </AntdForm>
-  ),
+                  <FormGroupItems
+                    itemClassName={itemClassName}
+                    itemMinWidth={itemMinWidth}
+                    itemVariant={itemVariant}
+                    items={items as FormItemProps[]}
+                  />
+                </div>
+              )}
+          {children}
+        </div>
+        {footer}
+      </AntdForm>
+    );
+  },
 );
 
 FormBase.displayName = 'Form';

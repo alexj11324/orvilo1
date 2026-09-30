@@ -147,7 +147,8 @@ const FontSettings = memo(() => {
                   options={interfaceFonts.options}
                   style={{ width: 320 }}
                   value={interfaceStack[0] || APPLICATION_DEFAULT_FONT}
-                  onChange={(value: string) =>
+                  onChange={(value) =>
+                    typeof value === 'string' &&
                     saveInterfaceStack(
                       value === APPLICATION_DEFAULT_FONT ? [] : [value, ...interfaceStack.slice(1)],
                     )
@@ -192,7 +193,8 @@ const FontSettings = memo(() => {
                   options={monospaceFonts.options}
                   style={{ width: 320 }}
                   value={monospaceStack[0] || APPLICATION_DEFAULT_FONT}
-                  onChange={(value: string) =>
+                  onChange={(value) =>
+                    typeof value === 'string' &&
                     saveMonospaceStack(
                       value === APPLICATION_DEFAULT_FONT ? [] : [value, ...monospaceStack.slice(1)],
                     )

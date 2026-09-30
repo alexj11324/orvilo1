@@ -7,9 +7,11 @@ import {
   createElement,
   type ElementType,
   type FocusEvent,
+  isValidElement,
   memo,
   type MouseEvent,
   type PointerEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react';
 
@@ -112,7 +114,7 @@ export interface NavItemProps extends Omit<ComponentProps<'div'>, 'children' | '
    * Optional href for cmd+click to open in new tab
    */
   href?: string;
-  icon?: LucideIcon;
+  icon?: LucideIcon | ReactElement;
   iconSize?: number;
   loading?: boolean;
   slots?: NavItemSlots;
@@ -223,6 +225,8 @@ const NavItem = memo<NavItemProps>(
           >
             {loading ? (
               <NeuralNetworkLoading size={iconSize} />
+            ) : isValidElement(icon) ? (
+              icon
             ) : (
               createElement(icon, { color: iconColor, size: iconSize })
             )}

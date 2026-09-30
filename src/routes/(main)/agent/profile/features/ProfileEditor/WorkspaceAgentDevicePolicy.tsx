@@ -331,6 +331,7 @@ const WorkspaceAgentDevicePolicy = memo<WorkspaceAgentDevicePolicyProps>(
             items={selectItems(targetOptions)}
             value={selectedValue}
             onValueChange={(value) => {
+              if (!value) return;
               const selection = parseExecutionTargetValue(value);
               if (!selection) return;
 

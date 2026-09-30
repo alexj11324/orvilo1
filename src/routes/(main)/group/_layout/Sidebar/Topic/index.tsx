@@ -4,7 +4,7 @@ import React, { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { renderSidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';

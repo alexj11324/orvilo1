@@ -5,6 +5,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Accordion } from '@/components/ui/accordion';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useTopicGroupCollapse } from '@/hooks/useTopicGroupCollapse';
@@ -53,7 +54,7 @@ const ByTimeMode = memo(() => {
         multiple
         style={{ display: 'flex', flexDirection: 'column', gap: 2 }}
         value={expandedKeys}
-        onValueChange={(next) => setExpandedKeys(next as string[])}
+        onValueChange={(next) => setExpandedKeys(next)}
       >
         {groupTopics.map((group) => (
           <GroupItem

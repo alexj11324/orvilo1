@@ -433,7 +433,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
             <div className={styles.title}>{t('settingAgent.prompt.title')}</div>
             <InfoTooltip
               iconStyle={{ cursor: 'help' }}
-              size={'small'}
+              size={14}
               title={t('settingAgent.prompt.desc')}
             />
           </div>

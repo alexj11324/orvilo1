@@ -66,6 +66,7 @@ const SortMembersModal = memo<SortMembersModalProps>(({ groupId, open, onCancel 
           className="flex flex-col gap-0.5"
           getItemValue={(item: AgentGroupMember) => item.id}
           value={list}
+          onValueChange={setList}
           onValueCommit={(next: AgentGroupMember[]) => {
             if (!canEdit) return;
 

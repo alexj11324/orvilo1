@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { createModal, useModalContext } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
 import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
 import { Button as BaseButton, Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -179,7 +180,9 @@ const ChangeDeviceContent = memo<ChangeDeviceContentProps>(
             disabled={loadingDevices}
             items={selectItems(deviceOptions)}
             value={selectedDeviceId}
-            onValueChange={handleDeviceSelect}
+            onValueChange={(value) => {
+              if (value) handleDeviceSelect(value);
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder={t('platformAgentConfig.selectDevice')} />

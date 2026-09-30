@@ -19,7 +19,7 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
-import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
@@ -39,7 +39,7 @@ export const useTopicItemDropdownMenu = ({
   id,
   status,
   toggleEditing,
-}: TopicItemDropdownMenuProps): (() => SidebarMenuItems) => {
+}: TopicItemDropdownMenuProps): (() => SidebarMenuItemData[]) => {
   const { t } = useTranslation(['topic', 'common']);
 
   const navigate = useWorkspaceAwareNavigate();
@@ -189,7 +189,7 @@ export const useTopicItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as SidebarMenuItems;
+    ].filter(Boolean) as SidebarMenuItemData[];
   }, [
     id,
     isCompleted,

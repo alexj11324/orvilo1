@@ -199,7 +199,7 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
                   <TooltipTrigger
                     render={
                       <span style={{ display: 'inline-flex' }}>
-                        <PaletteIcon size={{ size: 20, strokeWidth: 2.5 }} />
+                        <PaletteIcon size={20} strokeWidth={2.5} />
                       </span>
                     }
                   />

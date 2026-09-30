@@ -143,10 +143,8 @@ When('用户授权该设备', async function (this: CustomWorld) {
   );
 
   await expect(authorizeButton).toBeVisible();
-  // Regression: entering the loading state must not cancel the native POST —
-  // assert the form submission is actually dispatched before the navigation.
   const devicePost = this.page.waitForRequest(
-    (request) => request.method() === 'POST' && request.url().includes('/oidc/device'),
+    (request) => request.method() === 'POST' && new URL(request.url()).pathname === '/oidc/device',
   );
   await authorizeButton.click();
   await devicePost;

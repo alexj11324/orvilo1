@@ -1,13 +1,15 @@
 'use client';
 
-import { Alert, Text, toast } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
+import { toast } from '@/components/toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { useToolStore } from '@/store/tool';
@@ -137,32 +139,28 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
     // Render different Alert components based on type
     const renderAlert = () => {
       const sourceAlert = !isMarketplace ? (
-        <Alert
-          showIcon
-          title={t('protocolInstall.custom.security.description')}
-          type="warning"
-          variant={'borderless'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert />
+          <AlertTitle>{t('protocolInstall.custom.security.description')}</AlertTitle>
+        </Alert>
       ) : (
-        <Alert
-          showIcon
-          title={t('protocolInstall.marketplace.unverified.warning')}
-          type="warning"
-          variant={'borderless'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert />
+          <AlertTitle>{t('protocolInstall.marketplace.unverified.warning')}</AlertTitle>
+        </Alert>
       );
 
       return (
         <div className="flex flex-col gap-2">
           {sourceAlert}
           {isStdioMcp && (
-            <Alert
-              showIcon
-              description={t('protocolInstall.stdio.commandExecution.description')}
-              title={t('protocolInstall.stdio.commandExecution.title')}
-              type="warning"
-              variant={'borderless'}
-            />
+            <Alert variant="warning">
+              <TriangleAlert />
+              <AlertTitle>{t('protocolInstall.stdio.commandExecution.title')}</AlertTitle>
+              <AlertDescription>
+                {t('protocolInstall.stdio.commandExecution.description')}
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       );
@@ -206,9 +204,7 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
                   {schema.name}
                   <PluginTag type={'customPlugin'} />
                 </div>
-                <Text style={{ fontSize: 12 }} type={'secondary'}>
-                  {schema.description}
-                </Text>
+                <span className="text-[12px] text-muted-foreground">{schema.description}</span>
               </div>
             </div>
           </div>
@@ -217,14 +213,11 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
             <ConfigDisplay schema={schema} onConfigUpdate={setUpdatedConfig} />
             {/* Show connection test error */}
             {testState.error && (
-              <Alert
-                closable
-                showIcon
-                description={testState.error}
-                title={t('protocolInstall.messages.connectionTestFailed')}
-                type="error"
-                variant={'filled'}
-              />
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t('protocolInstall.messages.connectionTestFailed')}</AlertTitle>
+                <AlertDescription>{testState.error}</AlertDescription>
+              </Alert>
             )}
           </div>
         </div>

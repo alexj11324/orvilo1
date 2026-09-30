@@ -69,12 +69,7 @@ const Header = memo<HeaderProps>(
             >
               {resolvedTitle}
             </div>
-            <DropdownMenu
-              iconSpaceMode={'group'}
-              items={menuItems}
-              placement={'bottomLeft'}
-              popupProps={{ style: { minWidth: 200 } }}
-            >
+            <DropdownMenu items={menuItems} placement={'bottomLeft'} style={{ minWidth: 200 }}>
               <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
             </DropdownMenu>
           </div>

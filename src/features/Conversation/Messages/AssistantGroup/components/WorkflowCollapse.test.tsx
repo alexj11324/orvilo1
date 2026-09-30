@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AssistantContentBlock } from '@/types/index';
@@ -10,21 +10,6 @@ import type { AssistantContentBlock } from '@/types/index';
 import WorkflowCollapse from './WorkflowCollapse';
 
 let mockIsGenerating = true;
-
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Icon: ({ icon: IconComponent }: { icon?: ComponentType }) =>
-    IconComponent ? (
-      <div
-        data-icon={IconComponent.displayName || IconComponent.name || 'unknown'}
-        data-testid="icon"
-      >
-        <IconComponent />
-      </div>
-    ) : (
-      <div />
-    ),
-}));
 
 vi.mock('@/components/ui/accordion', () => ({
   Accordion: ({

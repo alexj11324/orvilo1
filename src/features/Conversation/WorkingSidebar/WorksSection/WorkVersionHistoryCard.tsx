@@ -124,7 +124,7 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
         </div>
         {title && (
           <div
-            className="truncate styles.title"
+            className={cn('truncate', styles.title)}
             onClick={
               handleTitleClick &&
               ((event) => {

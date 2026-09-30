@@ -1,5 +1,4 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AddResourceContent } from './AddResourceModal';
@@ -8,13 +7,6 @@ const mocks = vi.hoisted(() => ({
   addKnowledgeBase: vi.fn(),
   swr: { data: undefined as unknown, isLoading: false, isValidating: false },
   toastError: vi.fn(),
-}));
-
-vi.mock('@lobehub/ui', () => ({
-  Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
-  Flexbox: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Icon: () => null,
 }));
 
 vi.mock('@/components/Modal', async (importOriginal) => ({

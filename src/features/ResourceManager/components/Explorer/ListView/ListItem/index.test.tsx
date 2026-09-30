@@ -3,9 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import FileListItem from './index';
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Avatar: ({ alt }: { alt: string }) => <span data-testid="avatar">{alt}</span>,
+vi.mock('@/components/Avatar', () => ({
+  default: ({ alt }: { alt: string }) => <span data-testid="avatar">{alt}</span>,
 }));
 
 vi.mock('react-i18next', () => ({

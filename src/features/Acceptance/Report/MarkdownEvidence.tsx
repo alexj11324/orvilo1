@@ -1,7 +1,7 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronRight, FileText } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -298,7 +298,7 @@ export const CollapsibleMarkdownEvidence = memo<{
         onClick={() => setExpanded(!expanded)}
       >
         <ChevronRight
-          className="cx(styles.foldChevron, expanded && styles.foldChevronOpen)"
+          className={cx(styles.foldChevron, expanded && styles.foldChevronOpen)}
           size={14}
         />
         <span className={styles.fileCardIcon}>

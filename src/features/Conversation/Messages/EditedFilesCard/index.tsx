@@ -389,7 +389,7 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
           <FilePenLineIcon size={20} />
         </div>
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-          <div className="truncate styles.title">
+          <div className={cn('truncate', styles.title)}>
             {t('editedFiles.title', { count: entries.length })}
           </div>
           <LineStats

@@ -256,7 +256,7 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
           </div>
         </div>
         {data?.description && (
-          <div className="text-[13px] styles.description">{data.description}</div>
+          <div className={cn('text-[13px]', styles.description)}>{data.description}</div>
         )}
         {data?.meta && <div className="text-[12px] text-muted-foreground">{data.meta}</div>}
         {data?.secondaryMeta && (

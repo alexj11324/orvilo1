@@ -94,20 +94,23 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
                 <div className="font-mono rounded bg-muted px-1 text-[12px]">
                   v{version.version}
                 </div>
-                <div className="truncate styles.versionTitle">
+                <div className={cn('truncate', styles.versionTitle)}>
                   {t(`workingPanel.works.changeType.${version.changeType}` as never)}
                 </div>
               </div>
               <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                 {cost && (
                   <div
-                    className="font-mono rounded bg-muted px-1 text-[12px] styles.versionCost"
                     title={t('workingPanel.works.versionCost', { cost })}
+                    className={cn(
+                      'font-mono rounded bg-muted px-1 text-[12px]',
+                      styles.versionCost,
+                    )}
                   >
                     {cost}
                   </div>
                 )}
-                {time && <div className="text-muted-foreground styles.context">{time}</div>}
+                {time && <div className={cn('text-muted-foreground', styles.context)}>{time}</div>}
               </div>
             </div>
           </div>

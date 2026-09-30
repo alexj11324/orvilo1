@@ -209,7 +209,7 @@ const DocumentItem = memo<DocumentItemProps>(
         <IconComponent size={16} style={{ flexShrink: 0, marginTop: 2 }} />
         <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
           <div className="flex items-center justify-between">
-            <div className="truncate styles.title">{title}</div>
+            <div className={cn('truncate', styles.title)}>{title}</div>
             {!hideDelete && (
               <ActionIcon
                 icon={Trash2Icon}
@@ -220,7 +220,9 @@ const DocumentItem = memo<DocumentItemProps>(
               />
             )}
           </div>
-          {description && <div className="line-clamp-2 styles.description">{description}</div>}
+          {description && (
+            <div className={cn('line-clamp-2', styles.description)}>{description}</div>
+          )}
           {updatedAtLabel && <div className={styles.meta}>{updatedAtLabel}</div>}
         </div>
       </div>

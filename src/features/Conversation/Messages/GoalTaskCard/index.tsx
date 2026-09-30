@@ -89,7 +89,7 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
         )}
       </div>
       <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-        <div className="truncate styles.title">{title ?? goal.name}</div>
+        <div className={cn('truncate', styles.title)}>{title ?? goal.name}</div>
         <GoalStatusLine {...progress} />
       </div>
       {isActive && <GoalElapsedTime startedAt={startedAt} />}

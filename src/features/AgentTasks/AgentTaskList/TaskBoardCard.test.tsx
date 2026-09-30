@@ -40,10 +40,12 @@ vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Tooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
-    <span data-tooltip={String(title ?? '')}>{children}</span>
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children?: ReactNode }) => <span data-tooltip>{children}</span>,
+  TooltipProvider: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children, render }: { children?: ReactNode; render?: ReactNode }) => (
+    <>{render ?? children}</>
   ),
 }));
 

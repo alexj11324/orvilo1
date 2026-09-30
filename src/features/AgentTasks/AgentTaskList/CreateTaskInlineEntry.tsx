@@ -1,7 +1,6 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { Block, DropdownMenu, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, Text, toast } from '@lobehub/ui/base-ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import type { TaskIntentAnalysis } from '@orvilo/types';
@@ -15,6 +14,12 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { createGoalModal } from '@/features/AgentGoals/CreateGoalModal';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import {
@@ -416,7 +421,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             // toast itself, so lining the link up under the task name means
             // putting it in the same column as the name.
             description: (
-              <Flexbox align={'flex-start'} gap={2}>
+              <div className="flex flex-col items-start gap-0.5">
                 <Text>{result.name || draft.name}</Text>
                 <Button
                   size={'small'}
@@ -434,7 +439,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                 >
                   {t('taskIntent.openCreated')}
                 </Button>
-              </Flexbox>
+              </div>
             ),
             title: t('taskIntent.created'),
           });
@@ -643,9 +648,12 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     // are one thing being read, so lighting only the text area would draw a
     // second boundary the composer does not otherwise have.
     <GeneratingBorder generating={isAnalyzing || isSynthesizing}>
-      <Block
-        style={{ overflow: 'hidden', position: 'relative' }}
-        variant={'outlined'}
+      <div
+        className="relative overflow-hidden rounded-md border"
+        style={{
+          borderColor: cssVar.colorBorderSecondary,
+          background: cssVar.colorBgContainer,
+        }}
         onKeyDownCapture={handleKeyDown}
       >
         {!isHero && !isReviewing && (
@@ -672,7 +680,8 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         )}
         {/* Kept mounted through the review step so going back restores the draft
             exactly as it was, attachments and all. */}
-        <Flexbox
+        <div
+          className="flex flex-col"
           style={{
             display: isReviewing ? 'none' : undefined,
             fontSize: isHero ? 16 : 14,
@@ -695,11 +704,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             }}
             onContentChange={handleContentChange}
           />
-        </Flexbox>
-        <Flexbox
-          horizontal
-          align={'center'}
-          justify={'space-between'}
+        </div>
+        <div
+          className="flex items-center justify-between"
           style={{
             borderTop: `1px solid ${cssVar.colorBorderSecondary}`,
             display: isReviewing ? 'none' : undefined,
@@ -707,18 +714,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             paddingInline: '8px 16px',
           }}
         >
-          <Flexbox horizontal align={'center'} gap={2} wrap={'wrap'}>
+          <div className="flex flex-wrap items-center gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <Block
-                clickable
-                horizontal
-                align="center"
-                gap={6}
-                height={24}
-                paddingBlock={3}
-                paddingInline={8}
-                variant={'borderless'}
-              >
+              <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
                 <Text fontSize={12}>
                   {priority === 0
@@ -727,7 +725,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                         `taskDetail.priority.${(['', 'urgent', 'high', 'normal', 'low'] as const)[priority]}` as never,
                       )}
                 </Text>
-              </Block>
+              </div>
             </TaskPriorityTag>
 
             {activeWorkspaceId && (
@@ -736,16 +734,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                 taskVisibility={visibility}
                 onChange={handleMemberChange}
               >
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  gap={6}
-                  height={24}
-                  paddingBlock={3}
-                  paddingInline={8}
-                  variant={'borderless'}
-                >
+                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
@@ -759,39 +748,22 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                       </Text>
                     </>
                   )}
-                </Block>
+                </div>
               </AssigneeMemberSelector>
             )}
 
             {lockAssignee ? (
-              <Block
-                horizontal
-                align="center"
-                gap={6}
-                height={24}
-                paddingBlock={3}
-                paddingInline={8}
-                variant={'borderless'}
-              >
+              <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-[3px]">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
                 <Text fontSize={12}>{assigneeMeta?.title}</Text>
-              </Block>
+              </div>
             ) : (
               <AssigneeAgentSelector
                 currentAgentId={assigneeAgentId}
                 taskVisibility={isOtherMemberAssignee ? 'public' : undefined}
                 onChange={handleAgentChange}
               >
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  gap={6}
-                  height={24}
-                  paddingBlock={3}
-                  paddingInline={8}
-                  variant={'borderless'}
-                >
+                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
@@ -805,7 +777,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                       </Text>
                     </>
                   )}
-                </Block>
+                </div>
               </AssigneeAgentSelector>
             )}
 
@@ -815,9 +787,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
               title={t('upload.action.tooltip')}
               onClick={handleAttach}
             />
-          </Flexbox>
+          </div>
 
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1">
             {activeWorkspaceId && (
               <TaskVisibilityTag
                 visibility={visibility}
@@ -839,7 +811,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
               </TaskVisibilityTag>
             )}
 
-            <Flexbox horizontal align={'center'} gap={2}>
+            <div className="flex items-center gap-0.5">
               <Button
                 loading={isCreating || isAnalyzing}
                 shape={'round'}
@@ -870,32 +842,32 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
               {/* The escape hatch sits on the button it bypasses, so a user who
                   does not want the reading finds it exactly where they already
                   are — rather than in a setting they would have to know exists. */}
-              <DropdownMenu
-                placement={'bottomRight'}
-                items={[
-                  {
-                    key: 'create-directly',
-                    label: t('taskIntent.createDirectly'),
-                    onClick: () => void handleCreateDirectly(),
-                  },
-                ]}
-              >
-                <ActionIcon
-                  icon={ChevronDown}
-                  size={'small'}
-                  title={t('taskIntent.moreCreateOptions')}
-                  disabled={
-                    !canCreateTask ||
-                    isCreating ||
-                    isAnalyzing ||
-                    (!instruction.trim() && !hasAttachments)
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <ActionIcon
+                      icon={ChevronDown}
+                      size={'small'}
+                      title={t('taskIntent.moreCreateOptions')}
+                      disabled={
+                        !canCreateTask ||
+                        isCreating ||
+                        isAnalyzing ||
+                        (!instruction.trim() && !hasAttachments)
+                      }
+                    />
                   }
                 />
+                <DropdownMenuContent align={'end'}>
+                  <DropdownMenuItem onClick={() => void handleCreateDirectly()}>
+                    {t('taskIntent.createDirectly')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
               </DropdownMenu>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
-      </Block>
+            </div>
+          </div>
+        </div>
+      </div>
     </GeneratingBorder>
   );
 });

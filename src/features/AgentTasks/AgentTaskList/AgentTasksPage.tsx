@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -627,7 +626,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   });
 
   const headerLeft = (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-center gap-2">
       {headerVisibility.showBreadcrumb && <Breadcrumb />}
       <TabsRoot size={'small'} value={collection} onValueChange={handleCollectionChange}>
         <TabsList>
@@ -655,16 +654,16 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
           />
         </>
       )}
-    </Flexbox>
+    </div>
   );
 
   const pageHeader = (
     <NavHeader
       left={projectId ? undefined : headerLeft}
       right={
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           {milestoneFilterName && (
-            <Flexbox horizontal align={'center'} gap={2}>
+            <div className="flex items-center gap-0.5">
               <Text fontSize={12} type={'secondary'}>
                 {t('taskList.milestoneFilter', { name: milestoneFilterName })}
               </Text>
@@ -674,7 +673,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 title={t('taskList.milestoneFilterClear')}
                 onClick={clearMilestoneFilter}
               />
-            </Flexbox>
+            </div>
           )}
           {projectId && (
             <DropdownMenu
@@ -738,7 +737,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               onToggle={() => toggleTaskAgentPanel()}
             />
           )}
-        </Flexbox>
+        </div>
       }
       styles={{
         left: {
@@ -768,10 +767,13 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             : undefined
         }
       >
-        <Flexbox flex={1} height={'100%'}>
+        <div className="flex h-full flex-1 flex-col">
           {projectId && projectToolbar ? createPortal(pageHeader, projectToolbar) : pageHeader}
           {isMineBoard ? (
-            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+            <div
+              className="flex flex-1 flex-col"
+              style={{ overflowX: 'auto', overflowY: 'hidden' }}
+            >
               <KanbanBoard
                 myTaskScope={myTaskScope}
                 options={viewOptions}
@@ -782,7 +784,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     : 'taskList.mine.emptyAssigned',
                 )}
               />
-            </Flexbox>
+            </div>
           ) : isScheduledCollection ? (
             <WideScreenContainer
               fullWidth
@@ -800,9 +802,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 tasks={collectionTasks}
                 total={collectionTasksTotal}
                 emptyContent={
-                  <Flexbox align={'center'} paddingBlock={48}>
+                  <div className="flex flex-col items-center py-12">
                     <Text type={'secondary'}>{t('taskList.scheduled.empty')}</Text>
-                  </Flexbox>
+                  </div>
                 }
                 onPageChange={setCollectionPage}
                 onRefetch={() => collectionSWR.mutate()}
@@ -833,7 +835,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 onRetry={() => collectionSWR.mutate()}
               />
               {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
-                <Flexbox horizontal justify={'center'} paddingBlock={8}>
+                <div className="flex justify-center py-2">
                   <Pagination
                     current={collectionPage}
                     pageSize={COLLECTION_PAGE_SIZE}
@@ -841,20 +843,23 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     total={collectionTasksTotal}
                     onChange={setCollectionPage}
                   />
-                </Flexbox>
+                </div>
               )}
             </WideScreenContainer>
           ) : ordinarySurface === 'board' ? (
-            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+            <div
+              className="flex flex-1 flex-col"
+              style={{ overflowX: 'auto', overflowY: 'hidden' }}
+            >
               <KanbanBoard
                 agentId={agentId}
                 options={viewOptions}
                 projectId={projectId}
                 routeScope={routeScope}
               />
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox horizontal flex={1} style={{ minHeight: 0, minWidth: 0 }}>
+            <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
               <WideScreenContainer
                 fullWidth
                 gap={16}
@@ -908,7 +913,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                   />
                 </div>
               )}
-            </Flexbox>
+            </div>
           )}
           <CollaborationOverlay />
           {projectId && viewFilterSeed && (
@@ -919,7 +924,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               onClose={() => setAdvancedFilterOpen(false)}
             />
           )}
-        </Flexbox>
+        </div>
       </LinearTaskSyncProvider>
     </CollaborationProvider>
   );

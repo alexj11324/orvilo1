@@ -1,8 +1,7 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CalendarClock, HeartPulse } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
@@ -48,19 +47,16 @@ const TaskGroupPrefix = ({ group }: { group: TaskGroupMeta }) => {
   }
 
   if (group.groupBy === 'automationMode') {
-    return (
-      <Icon
-        color={cssVar.colorTextDescription}
-        icon={group.automationMode === 'heartbeat' ? HeartPulse : CalendarClock}
-        size={16}
-      />
-    );
+    return createElement(group.automationMode === 'heartbeat' ? HeartPulse : CalendarClock, {
+      color: cssVar.colorTextDescription,
+      size: 16,
+    });
   }
 
   if (group.groupBy === 'status') {
     if (group.workflowCategory) {
       const visual = WORKFLOW_CATEGORY_VISUALS[group.workflowCategory];
-      return <Icon color={visual.color} icon={visual.icon} size={16} />;
+      return createElement(visual.icon, { color: visual.color, size: 16 });
     }
     return <TaskStatusIcon size={16} status={group.status ?? 'backlog'} />;
   }
@@ -73,7 +69,7 @@ interface TaskGroupLabelProps {
 }
 
 const TaskGroupLabel = memo<TaskGroupLabelProps>(({ group }) => (
-  <Flexbox horizontal align={'center'} flex={'none'} gap={6} style={{ overflow: 'hidden' }}>
+  <div className="flex shrink-0 items-center gap-1.5" style={{ overflow: 'hidden' }}>
     <TaskGroupPrefix group={group} />
     <Text ellipsis weight={500}>
       {group.groupBy === 'assignee' && group.assigneeId ? (
@@ -84,7 +80,7 @@ const TaskGroupLabel = memo<TaskGroupLabelProps>(({ group }) => (
         group.label
       )}
     </Text>
-  </Flexbox>
+  </div>
 ));
 
 export default TaskGroupLabel;

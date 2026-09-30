@@ -10,7 +10,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { Center, Empty, Flexbox } from '@lobehub/ui';
+import { Empty } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import type { WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -824,7 +824,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         }));
 
   const skeletonBoard = (
-    <Flexbox horizontal className={styles.board}>
+    <div className={styles.board}>
       {skeletonColumns.map((col) => (
         <KanbanColumn
           loading
@@ -837,13 +837,13 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           total={0}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 
   const emptyState = (
-    <Center height={'80vh'} width={'100%'}>
+    <div className="flex h-[80vh] w-full items-center justify-center">
       <Empty description={emptyDescription ?? t('taskList.empty')} icon={ClipboardCheckIcon} />
-    </Center>
+    </div>
   );
 
   const board = (

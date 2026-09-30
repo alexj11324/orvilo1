@@ -1,5 +1,4 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { Flexbox, Form, Icon, Popover } from '@lobehub/ui';
+import { Form, type FormItemProps } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Switch, Tabs } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
@@ -12,6 +11,7 @@ import {
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { useGlobalStore } from '@/store/global';
@@ -183,7 +183,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         : [
             {
               children: (
-                <Flexbox horizontal align={'center'} gap={8}>
+                <div className="flex items-center gap-2">
                   <ActionIcon
                     size={'small'}
                     style={{ borderRadius: 9999 }}
@@ -206,7 +206,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                       setOptions((prev) => ({ ...prev, orderBy: value }));
                     }}
                   />
-                </Flexbox>
+                </div>
               ),
               label: t('taskList.form.ordering'),
             } satisfies FormItemProps,
@@ -284,13 +284,13 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
     const boardFormItems = [groupingFormItem, showCompletedFormItem];
 
     const panelContent = (
-      <Flexbox gap={12} width={280}>
+      <div className="flex w-[280px] flex-col gap-3">
         <Tabs
           activeKey={viewMode}
           items={[
-            { icon: <Icon icon={LayoutList} />, key: 'list', label: t('taskList.view.list') },
+            { icon: <LayoutList size={'1em'} />, key: 'list', label: t('taskList.view.list') },
             {
-              icon: <Icon icon={LayoutGrid} />,
+              icon: <LayoutGrid size={'1em'} />,
               key: 'kanban',
               label: t('taskList.view.board'),
             },
@@ -313,9 +313,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
             item: { padding: 0 },
           }}
         />
-        <Flexbox
-          horizontal
-          justify={'space-between'}
+        <div
+          className="flex justify-between"
           style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, paddingTop: 8 }}
         >
           <Button
@@ -341,24 +340,24 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
           >
             {t('taskList.form.setDefault')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
 
     return (
-      <Popover
-        arrow={false}
-        content={panelContent}
-        open={isViewConfigOpen}
-        placement={'bottomRight'}
-        trigger={['click']}
-        onOpenChange={setIsViewConfigOpen}
-      >
-        <ActionIcon
-          icon={Settings2Icon}
-          size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-          style={{ borderRadius: 9999 }}
+      <Popover open={isViewConfigOpen} onOpenChange={setIsViewConfigOpen}>
+        <PopoverTrigger
+          render={
+            <ActionIcon
+              icon={Settings2Icon}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              style={{ borderRadius: 9999 }}
+            />
+          }
         />
+        <PopoverContent align={'end'} className="w-auto p-3">
+          {panelContent}
+        </PopoverContent>
       </Popover>
     );
   },

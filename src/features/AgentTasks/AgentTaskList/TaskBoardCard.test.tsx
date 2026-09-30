@@ -203,15 +203,14 @@ describe('TaskBoardCard', () => {
   });
 
   it('exposes the open-run affordance for a running task with a live topic', () => {
-    const { container } = render(
+    render(
       <TaskBoardCard
         task={createTask({ currentTopicId: 'topic-1', name: 'Run me', status: 'running' })}
       />,
     );
 
-    const openRun = container.querySelector('[data-tooltip="Open run"]');
-    expect(openRun).toBeInTheDocument();
-    fireEvent.click(openRun!.querySelector('button')!);
+    const openRun = screen.getByRole('button', { name: 'Open run' });
+    fireEvent.click(openRun);
 
     expect(mocks.openTopicDrawer).toHaveBeenCalledWith('topic-1', {
       agentId: 'agt_owner',

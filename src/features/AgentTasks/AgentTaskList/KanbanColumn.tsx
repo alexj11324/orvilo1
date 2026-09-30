@@ -1,11 +1,10 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Icon } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronLeft, Plus } from 'lucide-react';
-import { memo, type ReactNode, useCallback } from 'react';
+import { createElement, memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { StatusVisual } from '@/components/ExecutionStatus';
@@ -276,7 +275,7 @@ export const CollapsedKanbanColumn = memo<CollapsedKanbanColumnProps>(
           type="button"
           onClick={onExpand}
         >
-          {statusIcon && <Icon color={statusIcon.color} icon={statusIcon.icon} size={16} />}
+          {statusIcon && createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
           <span
             className={cx(styles.collapsedLabel, !upright && styles.collapsedLabelRotated)}
             style={{ flex: 1, minHeight: 0 }}
@@ -370,7 +369,8 @@ const KanbanColumn = memo<KanbanColumnProps>(
               <TaskGroupLabel group={groupMeta} />
             ) : (
               <>
-                {statusIcon && <Icon color={statusIcon.color} icon={statusIcon.icon} size={16} />}
+                {statusIcon &&
+                  createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
                 <Text fontSize={13} weight={500}>
                   {label}
                 </Text>
@@ -418,7 +418,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             </SortableContext>
           ) : onCreate ? (
             <div className={styles.addPill} title={t('taskList.kanban.addTask')} onClick={onCreate}>
-              <Icon icon={Plus} size={16} />
+              <Plus size={16} />
             </div>
           ) : null}
           {footer}

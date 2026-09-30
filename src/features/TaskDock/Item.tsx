@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CopyIcon, ExternalLinkIcon, RotateCwIcon, XIcon } from 'lucide-react';
@@ -64,22 +63,17 @@ const Item = memo<ItemProps>(
     const closable = dismiss && status !== 'running' && status !== 'pending';
 
     return (
-      <Flexbox>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.container}
-          gap={12}
-          paddingBlock={8}
-          paddingInline={12}
+      <div className="flex flex-col">
+        <div
+          className={`flex items-center gap-3 px-3 py-2 ${styles.container}`}
           style={{ position: 'relative' }}
         >
           {icon}
-          <Flexbox flex={1} gap={2} style={{ overflow: 'hidden' }}>
+          <div className="flex flex-1 flex-col gap-0.5" style={{ overflow: 'hidden' }}>
             <div className={styles.title}>{title}</div>
             {detail}
             {extra}
-          </Flexbox>
+          </div>
 
           {cancel && (
             <ActionIcon
@@ -102,15 +96,11 @@ const Item = memo<ItemProps>(
           {status === 'running' && progress !== undefined && (
             <div className={styles.progress} style={{ insetInlineEnd: `${100 - progress}%` }} />
           )}
-        </Flexbox>
+        </div>
 
         {result && (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.result}
-            gap={8}
-            paddingBlock={6}
+          <div
+            className={`flex items-center gap-2 py-1.5 ${styles.result}`}
             style={{ paddingInlineEnd: 8, paddingInlineStart: solo ? 12 : 48 }}
           >
             <Text
@@ -136,9 +126,9 @@ const Item = memo<ItemProps>(
                 {result.action}
               </Button>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

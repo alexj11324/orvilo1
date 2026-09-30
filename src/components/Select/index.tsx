@@ -197,8 +197,6 @@ const Select = <Value extends string | number = string>({
               aria-label="search"
               className="h-7 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none"
               value={query}
-              // Keep keystrokes inside the input: the popup-level list
-              // typeahead would otherwise preventDefault each character.
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => event.stopPropagation()}
             />

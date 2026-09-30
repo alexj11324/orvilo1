@@ -1,9 +1,9 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { type ComponentType, type CSSProperties } from 'react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { MORE_FILE_PREVIEW_REQUEST_URL } from '@/const/url';
 import { downloadFile } from '@/utils/client/downloadFile';
 

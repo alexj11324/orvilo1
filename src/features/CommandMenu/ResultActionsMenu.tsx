@@ -1,5 +1,4 @@
 import { copyToClipboard } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import { Command } from 'cmdk';
 import {
@@ -23,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
+import { toast } from '@/components/toast';
 import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
 import {
   STATUS_META,

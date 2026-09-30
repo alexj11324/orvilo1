@@ -2,7 +2,6 @@
 
 import type { IEditor } from '@lobehub/editor';
 import { DiffAction, LITEXML_DIFFNODE_ALL_COMMAND } from '@lobehub/editor';
-import { Button } from '@lobehub/ui/base-ui';
 import { Space } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -10,6 +9,7 @@ import { Check, X } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useDocumentStore } from '@/store/document';
 
@@ -135,8 +135,8 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
       >
         <Space>
           <Button
-            size={'small'}
-            type="text"
+            size="sm"
+            variant="ghost"
             onClick={async () => {
               editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
                 action: DiffAction.Reject,
@@ -148,8 +148,8 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
             {t('modifier.rejectAll')}
           </Button>
           <Button
-            size={'small'}
-            type="fill"
+            size="sm"
+            variant="secondary"
             onClick={async () => {
               editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
                 action: DiffAction.Accept,

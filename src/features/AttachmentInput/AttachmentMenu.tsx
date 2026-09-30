@@ -1,11 +1,12 @@
 'use client';
 
-import { ActionIcon, Upload } from '@lobehub/ui/base-ui';
 import { css, cx } from 'antd-style';
 import { ChevronRight, FileUp, LibraryBig, PlusIcon, TypeIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Upload } from '@/components/Upload';
 import type { ExistingEditorAttachment } from '@/features/EditorCanvas/editorAttachments';
 import { openLibraryFilePicker } from '@/features/LibraryModal';
 

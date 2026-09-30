@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { CodeIcon, EyeIcon } from 'lucide-react';
@@ -10,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { CodeBlock } from '@/components/ui/code-block';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useTextFileLoader } from '../../hooks/useTextFileLoader';
 
@@ -73,14 +73,22 @@ const MarkdownViewer = memo<MarkdownViewerProps>(({ url }) => {
     <div className={cn('flex flex-col', styles.page)}>
       <div className={cn('flex items-center gap-1', styles.controls)}>
         <Tabs
-          activeKey={mode}
-          size={'small'}
-          items={[
-            { icon: <EyeIcon />, key: 'render', label: t('preview.render') },
-            { icon: <CodeIcon />, key: 'raw', label: t('preview.raw') },
-          ]}
-          onChange={(key) => setMode(key as PreviewMode)}
-        />
+          value={mode}
+          onValueChange={(key) => {
+            if (typeof key === 'string') setMode(key as PreviewMode);
+          }}
+        >
+          <TabsList size="sm">
+            <TabsTrigger value="render">
+              <EyeIcon />
+              {t('preview.render')}
+            </TabsTrigger>
+            <TabsTrigger value="raw">
+              <CodeIcon />
+              {t('preview.raw')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
       {mode === 'render' ? (
         <Markdown style={{ paddingBlock: 16, paddingInline: 24 }}>{fileData}</Markdown>

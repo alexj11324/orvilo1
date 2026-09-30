@@ -1,6 +1,5 @@
 'use client';
 
-import { Alert } from '@lobehub/ui/base-ui';
 import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Bot, InfoIcon, LockIcon, MonitorSmartphone, Share2, UsersIcon } from 'lucide-react';
@@ -8,6 +7,7 @@ import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 import {
   Empty,
   EmptyDescription,
@@ -284,13 +284,10 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
       {/* Everything below describes what happens once the group is shared, so
           say that once, up front, instead of qualifying each control. */}
       {sections.showPrivateNotice ? (
-        <Alert
-          icon={<InfoIcon />}
-          style={{ width: '100%' }}
-          title={t('permission.page.groupPrivateNotice')}
-          type={'info'}
-          variant={'outlined'}
-        />
+        <Alert style={{ width: '100%' }} variant="info">
+          <InfoIcon />
+          <AlertTitle>{t('permission.page.groupPrivateNotice')}</AlertTitle>
+        </Alert>
       ) : null}
       <div className="flex flex-col gap-4">
         {[memberGroup, configGroup]

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
@@ -74,9 +73,7 @@ interface SidebarProps {
 const Sidebar = memo<SidebarProps>(({ items, selectedKey, onSelect }) => (
   <aside className={styles.sidebar}>
     <div className={devDockPanelStyles.paneHeader}>
-      <Text fontSize={13} type={'secondary'} weight={600}>
-        Builtin Tool Renders
-      </Text>
+      <div className="text-[13px] text-muted-foreground font-semibold">Builtin Tool Renders</div>
     </div>
     <div className={styles.scroll}>
       <div className={styles.menu} role="menu">

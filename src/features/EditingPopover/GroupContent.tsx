@@ -1,10 +1,12 @@
 import { stopPropagation } from '@lobehub/ui';
-import { ActionIcon, Avatar, toast } from '@lobehub/ui/base-ui';
 import { Check, PaletteIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import EmojiPicker from '@/components/EmojiPicker';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';

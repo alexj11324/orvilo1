@@ -1,6 +1,5 @@
 import { type TypewriterEffectProps } from '@lobehub/ui/awesome';
 import { TypewriterEffect } from '@lobehub/ui/awesome';
-import { Text } from '@lobehub/ui/base-ui';
 import { LoadingDots } from '@lobehub/ui/chat';
 import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +18,7 @@ const OrviloMessage = memo<OrviloMessageProps>(({ sentences, fontSize = 24, ...r
   return (
     <div className="flex flex-col gap-2" {...rest}>
       <ProductLogo size={fontSize * 2} />
-      <Text as={'h1'} fontSize={fontSize} weight={'bold'}>
+      <h1 className="font-bold" style={{ fontSize }}>
         <TypewriterEffect
           cursorCharacter={<LoadingDots size={fontSize} variant={'pulse'} />}
           cursorFade={false}
@@ -31,7 +30,7 @@ const OrviloMessage = memo<OrviloMessageProps>(({ sentences, fontSize = 24, ...r
           sentences={sentences}
           typingSpeed={64}
         />
-      </Text>
+      </h1>
     </div>
   );
 });

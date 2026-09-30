@@ -1,6 +1,8 @@
-import { Button, createModal, ModalFooter, useModalContext } from '@lobehub/ui/base-ui';
 import { lazy, memo, type ReactNode, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 
 import type { EditorBridge } from './type';
 import { useEditorBridgeReady } from './useEditorBridgeReady';
@@ -41,7 +43,7 @@ const EditorModalFooter = memo<EditorModalFooterProps>(({ editorBridge, okText, 
   return (
     <ModalFooter>
       <Button onClick={close}>{t('cancel')}</Button>
-      <Button disabled={!ready} loading={confirmLoading} type={'primary'} onClick={handleConfirm}>
+      <Button disabled={!ready} loading={confirmLoading} variant="default" onClick={handleConfirm}>
         {okText ?? t('ok', { defaultValue: 'OK' })}
       </Button>
     </ModalFooter>

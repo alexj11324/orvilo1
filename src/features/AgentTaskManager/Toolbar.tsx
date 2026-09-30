@@ -1,8 +1,8 @@
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { Clock3Icon, PanelRightCloseIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
@@ -41,15 +41,13 @@ const Toolbar = memo(() => {
     <NavHeader
       showTogglePanelButton={false}
       left={
-        <Text
+        <div
+          className="text-muted-foreground truncate block"
           style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
-          type={'secondary'}
-          ellipsis={{
-            tooltipWhenOverflow: true,
-          }}
+          title={topicTitle}
         >
           {topicTitle}
-        </Text>
+        </div>
       }
       right={
         <>
@@ -96,7 +94,7 @@ const Toolbar = memo(() => {
                 </div>
               ) : (
                 <div className="p-4">
-                  <Text type={'secondary'}>{t('temp')}</Text>
+                  <div className="text-muted-foreground">{t('temp')}</div>
                 </div>
               )}
             </PopoverContent>

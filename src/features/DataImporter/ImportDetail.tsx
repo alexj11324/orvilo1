@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { Table } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -9,6 +8,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Button } from '@/components/ui/button';
 import { type ImportPgDataStructure } from '@/types/export';
 
 const getNonEmptyTables = (data: ImportPgDataStructure) => {
@@ -137,7 +137,7 @@ const ImportPreviewModal = ({
         >
           {t('cancel')}
         </Button>,
-        <Button key="confirm" type="primary" onClick={handleConfirm}>
+        <Button key="confirm" variant="default" onClick={handleConfirm}>
           {t('importPreview.confirmImport')}
         </Button>,
       ]}
@@ -149,12 +149,14 @@ const ImportPreviewModal = ({
             <div className="flex items-center justify-between" style={{ width: '100%' }}>
               <div className="flex items-center gap-2">
                 <Info className={styles.infoIcon} size={16} />
-                <Text strong>{t('importPreview.totalRecords', { count: totalRecords })}</Text>
+                <div className="font-semibold">
+                  {t('importPreview.totalRecords', { count: totalRecords })}
+                </div>
               </div>
               <div className="flex">
-                <Text type="secondary">
+                <div className="text-muted-foreground">
                   {t('importPreview.totalTables', { count: tables.length })}
-                </Text>
+                </div>
               </div>
             </div>
             <div className={cn('flex gap-1', styles.hash)}>

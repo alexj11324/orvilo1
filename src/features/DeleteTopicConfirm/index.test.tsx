@@ -9,7 +9,7 @@ import { confirmRemoveTopic } from './index';
 
 const confirmModalMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: confirmModalMock,
 }));

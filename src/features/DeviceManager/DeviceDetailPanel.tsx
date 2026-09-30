@@ -1,15 +1,21 @@
 'use client';
 
-import { ActionIcon, Avatar, Button, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type { DeviceListItem, DeviceWorkspaceShare } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { FolderOpenIcon, FolderPlusIcon, LockIcon, XIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
 import { Sortable, SortableItem, SortableItemHandle } from '@/components/reui/sortable';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
 import { openAddWorkingDirModal } from '@/features/WorkingDirectory';
@@ -72,9 +78,7 @@ const styles = createStaticStyles(({ css }) => ({
 // Section label — one consistent treatment for every field heading in the panel.
 const FieldLabel = memo<{ children: ReactNode; extra?: ReactNode }>(({ children, extra }) => (
   <div className="flex items-center justify-between">
-    <Text fontSize={12} type={'secondary'} weight={500}>
-      {children}
-    </Text>
+    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
     {extra}
   </div>
 ));
@@ -230,16 +234,16 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
       <div className={`flex items-center gap-3 ${styles.header}`}>
         <span className={styles.iconTile}>{getDeviceIcon(device.platform, 18)}</span>
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-          <Text ellipsis weight={600}>
+          <div className="truncate block font-semibold">
             {device.friendlyName || device.hostname || device.deviceId}
-          </Text>
+          </div>
           <div className="flex items-center gap-2">
-            <Tag color={online ? 'success' : 'default'} size={'small'}>
+            <Tag size="sm" variant={online ? 'success' : 'default'}>
               {online
                 ? t('devices.status.onlineConnections', { count: channels.length })
                 : t('devices.status.offline')}
             </Tag>
-            {isCurrent && <Tag size={'small'}>{t('devices.currentBadge')}</Tag>}
+            {isCurrent && <Tag size="sm">{t('devices.currentBadge')}</Tag>}
           </div>
         </div>
         <ActionIcon icon={XIcon} size={'small'} onClick={onClose} />
@@ -252,9 +256,9 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
       {!canEdit && (
         <div className="flex items-center gap-2">
           <LockIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {t('workspaceSetting.devices.readonlyHint')}
-          </Text>
+          </div>
         </div>
       )}
 
@@ -264,11 +268,11 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           <FieldLabel>{t('workspaceSetting.devices.enrolledByLabel')}</FieldLabel>
           <div className="flex items-center gap-2">
             <Avatar avatar={device.enroller.avatar ?? undefined} size={24} />
-            <Text>
+            <div>
               {device.enroller.fullName ||
                 device.enroller.username ||
                 t('workspaceSetting.devices.unknownEnroller')}
-            </Text>
+            </div>
           </div>
         </div>
       )}
@@ -279,10 +283,10 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           <FieldLabel>{t('devices.share.detailLabel')}</FieldLabel>
           {device.sharedWorkspaces.map((share) => (
             <div className="flex items-center gap-2" key={share.workspaceId}>
-              <Text ellipsis style={{ flex: 1, minWidth: 0 }}>
+              <div className="truncate block" style={{ flex: 1, minWidth: 0 }}>
                 {share.workspaceName ?? share.workspaceId}
-              </Text>
-              <Tag size={'small'}>
+              </div>
+              <Tag size="sm">
                 {share.visibility === 'private'
                   ? t('devices.share.visibilityTag.private')
                   : t('devices.share.visibilityTag.public')}
@@ -305,19 +309,19 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           channels.map((channel, index) => (
             <div className="flex items-center gap-2" key={`${channel.connectedAt}-${index}`}>
               <span className={styles.dot} style={{ background: cssVar.colorSuccess }} />
-              {channel.channel && <Tag size={'small'}>{channel.channel}</Tag>}
-              <Text fontSize={12} type={'secondary'}>
+              {channel.channel && <Tag size="sm">{channel.channel}</Tag>}
+              <div className="text-[12px] text-muted-foreground">
                 {t('devices.channel.connected', { time: dayjs(channel.connectedAt).fromNow() })}
-              </Text>
+              </div>
             </div>
           ))
         ) : (
           <div className="flex items-center gap-2">
             <span className={styles.dot} style={{ background: cssVar.colorTextQuaternary }} />
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('devices.status.offline')} ·{' '}
               {t('devices.lastSeen', { time: dayjs(device.lastSeen).fromNow() })}
-            </Text>
+            </div>
           </div>
         )}
       </div>
@@ -338,9 +342,9 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
         ) : device.friendlyName ? (
           // Read-only: render the canonical value (not the local draft), so a
           // value the caller can't actually commit never bleeds through.
-          <Text>{device.friendlyName}</Text>
+          <div>{device.friendlyName}</div>
         ) : (
-          <Text type={'secondary'}>—</Text>
+          <div className="text-muted-foreground">—</div>
         )}
       </div>
 
@@ -359,7 +363,8 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
               }}
             />
             {canBrowse && (
-              <Button icon={<FolderOpenIcon />} onClick={handleBrowse}>
+              <Button onClick={handleBrowse}>
+                {<FolderOpenIcon />}
                 {t('devices.edit.browse')}
               </Button>
             )}
@@ -367,9 +372,9 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
         ) : device.defaultCwd ? (
           // Code font only when there's an actual path to read; empty falls back
           // to the same dash style as Name so the two fields look consistent.
-          <Text className={styles.path}>{device.defaultCwd}</Text>
+          <div className={cn(styles.path)}>{device.defaultCwd}</div>
         ) : (
-          <Text type={'secondary'}>—</Text>
+          <div className="text-muted-foreground">—</div>
         )}
       </div>
 
@@ -390,9 +395,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           {t('devices.detail.recentDirs')}
         </FieldLabel>
         {device.workingDirs.length === 0 ? (
-          <Text fontSize={12} type={'secondary'}>
-            {t('devices.detail.noRecent')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('devices.detail.noRecent')}</div>
         ) : canEdit ? (
           <Sortable
             getItemValue={(item: { id: string }) => item.id}
@@ -405,9 +408,9 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
                 <SortableItem className={styles.recentItem} key={item.id} value={item.id}>
                   <SortableItemHandle />
                   <DirIcon repoType={item.repoType} />
-                  <Text className={styles.path} title={item.id}>
+                  <div className={cn(styles.path)} title={item.id}>
                     {item.id}
-                  </Text>
+                  </div>
                   <ActionIcon
                     icon={XIcon}
                     size={'small'}
@@ -423,9 +426,9 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           device.workingDirs.map((d) => (
             <div className={`flex items-center gap-2 ${styles.recentItem}`} key={d.path}>
               <DirIcon repoType={d.repoType} />
-              <Text className={styles.path} title={d.path}>
+              <div className={cn(styles.path)} title={d.path}>
                 {d.path}
-              </Text>
+              </div>
             </div>
           ))
         )}

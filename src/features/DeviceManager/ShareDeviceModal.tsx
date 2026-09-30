@@ -1,15 +1,5 @@
 'use client';
 
-import {
-  Button,
-  confirmModal,
-  createModal,
-  Select,
-  Tag,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import type { DeviceListItem, DeviceVisibility } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { t } from 'i18next';
@@ -20,6 +10,11 @@ import { useNavigate } from 'react-router';
 
 import { useWorkspaceOptionLabel } from '@/business/client/hooks/useWorkspaceOptionLabel';
 import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
+import { confirmModal, createModal, useModalContext } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import Select from '@/components/Select';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 
 import { refreshDeviceList } from './const';
@@ -99,7 +94,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
             <div className={`flex items-center gap-2 ${styles.optionRow}`}>
               {renderWorkspaceLabel(workspace)}
               {shared && (
-                <Tag size={'small'} style={{ flex: 'none', margin: 0 }}>
+                <Tag size="sm" style={{ flex: 'none', margin: 0 }}>
                   {tSetting('devices.share.alreadyShared')}
                 </Tag>
               )}
@@ -139,7 +134,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
         label: (
           <div className={`flex items-center gap-2 ${styles.optionRow}`}>
             <item.icon size={14} />
-            <Text style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</Text>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</div>
             <span className={styles.optionHint}>{item.desc}</span>
           </div>
         ),
@@ -213,11 +208,13 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
       <div className="flex flex-col items-center gap-5 justify-center" style={{ padding: 48 }}>
         <div className="flex flex-col items-center gap-3">
           <CircleCheck color={cssVar.colorSuccess} size={32} />
-          <Text weight={500}>{tSetting('devices.share.success', { name: completion.name })}</Text>
+          <div className="font-medium">
+            {tSetting('devices.share.success', { name: completion.name })}
+          </div>
         </div>
         <div className="flex gap-2">
           <Button onClick={close}>{tSetting('devices.share.done')}</Button>
-          <Button type={'primary'} onClick={goToTarget}>
+          <Button variant="default" onClick={goToTarget}>
             {tSetting('devices.share.goToTarget', { name: completion.name })}
           </Button>
         </div>
@@ -228,22 +225,22 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-4" style={{ padding: 24 }}>
-        <Text style={{ fontSize: 13 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 13 }}>
           {tSetting('devices.share.modalDesc')}
-        </Text>
+        </div>
 
         {workspaces.length === 0 ? (
           <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 24 }}>
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {tSetting('devices.share.empty')}
-            </Text>
+            </div>
           </div>
         ) : (
           <>
             <div className="flex flex-col gap-1.5">
-              <Text style={{ fontSize: 13, fontWeight: 500 }}>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>
                 {tSetting('devices.share.targetLabel')}
-              </Text>
+              </div>
               <Select
                 showSearch
                 classNames={{ value: styles.selectValue }}
@@ -256,9 +253,9 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Text style={{ fontSize: 13, fontWeight: 500 }}>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>
                 {tSetting('workspace.general.transferScope.title')}
-              </Text>
+              </div>
               <Select
                 classNames={{ value: styles.selectValue }}
                 options={visibilityOptions}
@@ -278,7 +275,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
         <Button
           disabled={!effectiveTargetId}
           loading={sharing}
-          type={'primary'}
+          variant="default"
           onClick={() => handleShare()}
         >
           {tSetting('devices.share.confirm')}

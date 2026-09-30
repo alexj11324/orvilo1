@@ -2,7 +2,6 @@
 
 import '@/app/globals.css';
 
-import { Alert } from '@lobehub/ui/base-ui';
 import { type AuthorizationPhase, type AuthorizationProgress } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { ArrowLeft, ArrowRight, Cloud, ExternalLink, LogOutIcon, Server } from 'lucide-react';
@@ -10,6 +9,7 @@ import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -350,7 +350,10 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
       </div>
 
       {failed && (
-        <Alert description={errorMessage} title={t('authResult.failed.title')} type="error" />
+        <Alert variant="destructive">
+          <AlertTitle>{t('authResult.failed.title')}</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
       )}
 
       {showEndpoint ? (

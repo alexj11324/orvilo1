@@ -1,7 +1,6 @@
 'use client';
 
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName, type AgentItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -10,9 +9,11 @@ import { memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import ActionIcon from '@/components/ActionIcon';
 import { ModelIcon } from '@/components/OrviloIcons';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -117,41 +118,39 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
 
     const modelSection = footerLoading ? (
       <div className={`flex items-center gap-3.5 ${styles.footer}`}>
-        <Skeleton height={16} width={90} />
-        <Skeleton height={16} width={60} />
+        <Skeleton style={{ height: 16, width: 90 }} />
+        <Skeleton style={{ height: 16, width: 60 }} />
       </div>
     ) : canConfigure && (merged.model || hasStats) ? (
       <div className={`flex items-center gap-3.5 flex-wrap ${styles.footer}`}>
         {merged.model && (
           <div className={`flex items-center gap-1.5 ${styles.statItem}`}>
             <ModelIcon model={merged.model} size={14} />
-            <Text fontSize={12} type={'secondary'}>
-              {merged.model}
-            </Text>
+            <div className="text-[12px] text-muted-foreground">{merged.model}</div>
           </div>
         )}
         {pluginCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <SkillsIcon size={13} />
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('agentProfile.skills', { count: pluginCount })}
-            </Text>
+            </div>
           </div>
         )}
         {knowledgeCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <BookOpen size={13} />
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('agentProfile.knowledgeBases', { count: knowledgeCount })}
-            </Text>
+            </div>
           </div>
         )}
         {fileCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <FileText size={13} />
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('agentProfile.files', { count: fileCount })}
-            </Text>
+            </div>
           </div>
         )}
       </div>

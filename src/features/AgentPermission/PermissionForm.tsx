@@ -1,6 +1,5 @@
 'use client';
 
-import { Alert } from '@lobehub/ui/base-ui';
 import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Bot, InfoIcon, LockIcon, MonitorSmartphone, Share2, UsersIcon } from 'lucide-react';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 import {
   Empty,
   EmptyDescription,
@@ -264,13 +264,10 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
       {/* Everything below describes what happens once the agent is shared, so
           say that once, up front, instead of qualifying each control. */}
       {isPrivate ? (
-        <Alert
-          icon={<InfoIcon />}
-          style={{ width: '100%' }}
-          title={t('permission.page.privateNotice')}
-          type={'info'}
-          variant={'outlined'}
-        />
+        <Alert style={{ width: '100%' }} variant="info">
+          <InfoIcon />
+          <AlertTitle>{t('permission.page.privateNotice')}</AlertTitle>
+        </Alert>
       ) : null}
       <Form
         items={[...(memberGroup ? [memberGroup] : []), configGroup]}

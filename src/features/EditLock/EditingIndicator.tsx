@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Loader2Icon, PencilIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -35,9 +34,9 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
     return (
       <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
         <Loader2Icon className="animate-spin" size={14} />
-        <Text ellipsis style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
+        <div className="truncate block" style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
           {checkingLabel}
-        </Text>
+        </div>
       </div>
     );
   }
@@ -54,9 +53,12 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
             <span style={{ display: 'inline-flex' }}>
               <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
                 <PencilIcon size={14} />
-                <Text ellipsis style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
+                <div
+                  className="truncate block"
+                  style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}
+                >
                   {label}
-                </Text>
+                </div>
               </div>
             </span>
           }

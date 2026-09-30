@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
@@ -9,6 +8,8 @@ import { cn } from 'cn';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -149,19 +150,19 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
               >
                 <AgentAvatar item={item} size={24} />
                 <div className="flex items-center flex-1 gap-1.5" style={{ minWidth: 0 }}>
-                  <Text ellipsis style={{ minWidth: 0 }} weight={600}>
+                  <div className="truncate block font-semibold" style={{ minWidth: 0 }}>
                     {displayTitle}
-                  </Text>
+                  </div>
                   {roleTag ? (
-                    <Tag size={'small'} style={{ flex: 'none' }}>
+                    <Tag size="sm" style={{ flex: 'none' }}>
                       {roleTag}
                     </Tag>
                   ) : null}
                 </div>
               </div>
-              <Text className={cardStyles.description} fontSize={12} type={'secondary'}>
+              <div className={cn('text-[12px]', 'text-muted-foreground', cardStyles.description)}>
                 {description}
-              </Text>
+              </div>
               {item.labels?.length ? (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <LabelTags labels={item.labels} />
@@ -187,17 +188,15 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
-                      <Text fontSize={12} type={'secondary'}>
-                        –
-                      </Text>
+                      <div className="text-[12px] text-muted-foreground">–</div>
                     )}
                   </div>
                 ) : (
                   <div />
                 )}
-                <Text className={cardStyles.updatedAt} fontSize={12}>
+                <div className={cn('text-[12px]', cardStyles.updatedAt)}>
                   {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
-                </Text>
+                </div>
               </div>
             </div>
           </WorkspaceLink>

@@ -1,13 +1,13 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { type SkillResourceTreeNode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { DotIcon, ExternalLinkIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import PublishedTime from '@/components/PublishedTime';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import SkillAvatar from '@/components/SkillAvatar';

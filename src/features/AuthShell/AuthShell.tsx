@@ -1,6 +1,5 @@
 'use client';
 
-import { ModalHost as BaseModalHost } from '@lobehub/ui/base-ui';
 import { memo, type PropsWithChildren } from 'react';
 
 import BusinessAuthProvider from '@/business/client/BusinessAuthProvider';

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -67,9 +66,12 @@ const AgentBreadcrumb = memo<AgentBreadcrumbProps>(({ agentId, extraItems, title
         {
           title: (
             <Link to={agentHomePath}>
-              <Text ellipsis as={'span'} color={'inherit'} style={{ maxWidth: 200 }} weight={500}>
+              <span
+                className="truncate block font-medium"
+                style={{ maxWidth: 200, color: 'inherit' }}
+              >
                 {displayTitle}
-              </Text>
+              </span>
             </Link>
           ),
         },
@@ -78,18 +80,18 @@ const AgentBreadcrumb = memo<AgentBreadcrumbProps>(({ agentId, extraItems, title
           : [
               {
                 title: (
-                  <Text as={'span'} color={'inherit'} weight={500}>
+                  <span className="font-medium" style={{ color: 'inherit' }}>
                     {title}
-                  </Text>
+                  </span>
                 ),
               },
             ]),
         ...(extraItems ?? []).map((item, index) => ({
           key: `extra-${index}`,
           title: (
-            <Text as={'span'} color={'inherit'} weight={500}>
+            <span className="font-medium" style={{ color: 'inherit' }}>
               {item}
-            </Text>
+            </span>
           ),
         })),
       ]}

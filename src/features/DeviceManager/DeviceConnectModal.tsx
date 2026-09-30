@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { DOWNLOAD_URL } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -11,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import CommandLine from '@/components/CommandLine';
 import ImperativeModal from '@/components/ImperativeModal';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const styles = createStaticStyles(({ css }) => ({
   footer: css`
@@ -57,11 +58,11 @@ const Step = memo<StepProps>(({ index, title, desc, children, last }) => (
       {!last && <span className={styles.line} />}
     </div>
     <div className="flex flex-col flex-1 gap-1" style={{ paddingBlockEnd: last ? 0 : 24 }}>
-      <Text weight={500}>{title}</Text>
+      <div className="font-medium">{title}</div>
       {desc && (
-        <Text color={cssVar.colorTextTertiary} lineHeight={1.6}>
+        <div className="leading-[1.6]" style={{ color: cssVar.colorTextTertiary }}>
           {desc}
-        </Text>
+        </div>
       )}
       {children && <div style={{ marginBlockStart: 12 }}>{children}</div>}
     </div>
@@ -148,30 +149,29 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
       >
         <div className="flex flex-col gap-5">
           {!isWorkspace && (
-            <Text color={cssVar.colorTextTertiary}>{t('devices.connectWizard.subtitle')}</Text>
+            <div style={{ color: cssVar.colorTextTertiary }}>
+              {t('devices.connectWizard.subtitle')}
+            </div>
           )}
 
           {isWorkspace ? null : (
             <Tabs
-              activeKey={active}
-              items={[
-                {
-                  icon: <MonitorDownIcon />,
-                  key: 'desktop',
-                  label: t('devices.connectWizard.method.desktop'),
-                },
-                {
-                  icon: <TerminalIcon />,
-                  key: 'cli',
-                  label: t('devices.connectWizard.method.cli'),
-                },
-              ]}
-              styles={{
-                list: { display: 'flex', width: '100%' },
-                tab: { flex: 1 },
+              value={active}
+              onValueChange={(key) => {
+                if (typeof key === 'string') setActive(key as 'cli' | 'desktop');
               }}
-              onChange={(key) => setActive(key as 'cli' | 'desktop')}
-            />
+            >
+              <TabsList style={{ display: 'flex', width: '100%' }}>
+                <TabsTrigger style={{ flex: 1 }} value="desktop">
+                  <MonitorDownIcon />
+                  {t('devices.connectWizard.method.desktop')}
+                </TabsTrigger>
+                <TabsTrigger style={{ flex: 1 }} value="cli">
+                  <TerminalIcon />
+                  {t('devices.connectWizard.method.cli')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           )}
 
           {!isWorkspace && active === 'desktop' ? (
@@ -182,7 +182,8 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
                 title={t('devices.connectWizard.desktop.step1')}
               >
                 <a href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank">
-                  <Button icon={<DownloadIcon />} type={'primary'}>
+                  <Button variant="default">
+                    {<DownloadIcon />}
                     {t('devices.connectWizard.desktop.downloadLink')}
                   </Button>
                 </a>
@@ -205,9 +206,9 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
 
           <div className={`flex items-center gap-2 ${styles.footer}`}>
             <ShieldCheckIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
-            <Text color={cssVar.colorTextTertiary} fontSize={12}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
               {t('devices.connectWizard.footer')}
-            </Text>
+            </div>
           </div>
         </div>
       </ImperativeModal>

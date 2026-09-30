@@ -1,11 +1,12 @@
 'use client';
 
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Skeleton } from '@/components/ui/skeleton';
 import SuggestQuestions, { type SuggestMode } from '@/features/SuggestQuestions';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
@@ -45,12 +46,12 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
       onClick={handleClick}
     >
       <div className="flex flex-col gap-1" style={{ paddingBlock: 12, paddingInline: 14 }}>
-        <Text ellipsis fontSize={14} style={{ fontWeight: 500 }}>
+        <div className="truncate block text-[14px]" style={{ fontWeight: 500 }}>
           {title}
-        </Text>
-        <Text color={cssVar.colorTextTertiary} ellipsis={{ rows: 2 }} fontSize={12}>
+        </div>
+        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
           {prompt}
-        </Text>
+        </div>
       </div>
     </div>
   );
@@ -67,8 +68,11 @@ const ChipSkeleton = memo(() => (
     style={{ borderRadius: cssVar.borderRadiusLG }}
   >
     <div className="flex flex-col gap-2" style={{ paddingBlock: 12, paddingInline: 14 }}>
-      <Skeleton.Text fontSize={14} width={96} />
-      <Skeleton.Text rows={2} width={['100%', '60%']} />
+      <Skeleton style={{ height: 14, width: 96 }} />
+      <div className="flex flex-col gap-2">
+        <Skeleton />
+        <Skeleton style={{ width: '60%' }} />
+      </div>
     </div>
   </div>
 ));
@@ -149,9 +153,9 @@ const SuggestionChips = memo<SuggestionChipsProps>(
             }}
           >
             <ActionIcon disabled={disabled} icon={RefreshCw} size={'small'} />
-            <Text color={cssVar.colorTextSecondary} fontSize={12}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
               {tCommon('switch')}
-            </Text>
+            </div>
           </div>
         </div>
       );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -18,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import SharedListSkeleton from '@/components/ListSkeleton';
+import { Button } from '@/components/ui/button';
 import { useElectronStore } from '@/store/electron';
 
 import DeviceDetailPanel from './DeviceDetailPanel';
@@ -184,12 +184,12 @@ const ConnectOption = memo<ConnectOptionProps>(({ icon, title, desc, badge, onCl
     </span>
     <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
       <div className="flex items-center gap-2">
-        <Text weight={500}>{title}</Text>
+        <div className="font-medium">{title}</div>
         {badge && <span className={styles.badge}>{badge}</span>}
       </div>
-      <Text color={cssVar.colorTextTertiary} fontSize={12}>
+      <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
         {desc}
-      </Text>
+      </div>
     </div>
     <ChevronRightIcon size={16} style={{ color: cssVar.colorTextQuaternary }} />
   </div>
@@ -216,9 +216,9 @@ const Capabilities = memo(() => {
   ];
   return (
     <div className="flex flex-col gap-4">
-      <Text fontSize={12} type={'secondary'} weight={500}>
+      <div className="text-[12px] text-muted-foreground font-medium">
         {t('devices.capabilities.title')}
-      </Text>
+      </div>
       <div className="flex gap-4">
         {items.map((cap) => (
           <div className={`flex flex-col flex-1 gap-3 ${styles.capabilityCard}`} key={cap.title}>
@@ -226,10 +226,10 @@ const Capabilities = memo(() => {
               <cap.icon size={18} />
             </span>
             <div className="flex flex-col gap-1">
-              <Text weight={500}>{cap.title}</Text>
-              <Text color={cssVar.colorTextTertiary} fontSize={12}>
+              <div className="font-medium">{cap.title}</div>
+              <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
                 {cap.desc}
-              </Text>
+              </div>
             </div>
           </div>
         ))}
@@ -312,19 +312,19 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
               <MonitorDownIcon size={28} />
             )}
           </span>
-          <Text fontSize={18} weight={600}>
+          <div className="text-[18px] font-semibold">
             {t(isWorkspace ? 'workspaceSetting.devices.heroTitle' : 'devices.empty.title')}
-          </Text>
-          <Text style={{ maxWidth: 440 }} type={'secondary'}>
+          </div>
+          <div className="text-muted-foreground" style={{ maxWidth: 440 }}>
             {t(isWorkspace ? 'workspaceSetting.devices.heroDesc' : 'devices.empty.desc')}
-          </Text>
+          </div>
           {isWorkspace && (
             <Button
-              icon={<TerminalIcon />}
               style={{ marginBlockStart: 8 }}
-              type={'primary'}
+              variant="default"
               onClick={() => onConnect('cli')}
             >
+              {<TerminalIcon />}
               {t('devices.empty.methodCli.title')}
             </Button>
           )}

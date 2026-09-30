@@ -1,10 +1,10 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme as useNextThemesTheme } from 'next-themes';
 import { createElement, memo, useMemo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';

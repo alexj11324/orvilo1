@@ -1,7 +1,9 @@
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Pause, Play, Repeat, RotateCcw, SkipForward, Square } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
+import { toast } from '@/components/toast';
 
 import { CaseTrigger } from './CaseTrigger';
 import { useAgentMockPlayer } from './hooks/useAgentMockPlayer';

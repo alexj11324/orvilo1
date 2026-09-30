@@ -1,8 +1,8 @@
 'use client';
 
-import { Avatar, Button, confirmModal, Tag, Text } from '@lobehub/ui/base-ui';
 import type { DeviceListItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   EyeOffIcon,
@@ -16,6 +16,10 @@ import {
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -277,9 +281,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
 
       <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
         <div className="flex items-center gap-2">
-          <Text ellipsis fontSize={15} weight={500}>
-            {displayName}
-          </Text>
+          <div className="truncate block text-[15px] font-medium">{displayName}</div>
           <span className={online ? styles.statusOnline : styles.statusOffline} />
           {isCurrent && <Tag>{t('devices.currentBadge')}</Tag>}
           {device.scope === 'workspace' && device.sharedFromPersonal && (
@@ -302,23 +304,22 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
           {isFallback && (
             <Tooltip>
               <TooltipTrigger render={<span />}>
-                <Tag icon={<TriangleAlertIcon />}>{t('devices.fallbackBadge')}</Tag>
+                <Tag>
+                  {<TriangleAlertIcon />}
+                  {t('devices.fallbackBadge')}
+                </Tag>
               </TooltipTrigger>
               <TooltipContent>{t('devices.fallbackTooltip')}</TooltipContent>
             </Tooltip>
           )}
         </div>
         <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-          <Text className={styles.activity} type={'secondary'}>
-            {activityText}
-          </Text>
+          <div className={cn('text-muted-foreground', styles.activity)}>{activityText}</div>
           {device.defaultCwd && (
             <>
               <span className={styles.metaDivider} />
               <FolderIcon size={12} style={{ color: cssVar.colorTextQuaternary }} />
-              <Text className={styles.cwd} type={'secondary'}>
-                {device.defaultCwd}
-              </Text>
+              <div className={cn('text-muted-foreground', styles.cwd)}>{device.defaultCwd}</div>
             </>
           )}
         </div>
@@ -347,7 +348,9 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
           <span onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger render={<span />}>
-                <Button icon={MoreHorizontalIcon} />
+                <Button>
+                  <MoreHorizontalIcon data-icon="inline-start" />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align={'end'}>
                 {[

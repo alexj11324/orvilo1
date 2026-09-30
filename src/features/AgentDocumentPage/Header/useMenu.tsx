@@ -1,6 +1,4 @@
 import { useEditor } from '@lobehub/editor/react';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { buildAgentDocumentUrl } from '@orvilo/builtin-tool-agent-documents';
 import { isDesktop } from '@orvilo/const';
 import { cssVar, useResponsive } from 'antd-style';
@@ -9,6 +7,9 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { type DropdownItem } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { formatPageEditorInfoTime } from '@/features/PageEditor/formatPageEditorInfoTime';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { agentDocumentService } from '@/services/agentDocument';

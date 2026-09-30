@@ -1,11 +1,12 @@
 'use client';
 
 import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
-import { Segmented, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { type AgentUsageBucket } from '@/types/usage/usageRecord';
 import { formatNumber, formatTokenNumber } from '@/utils/format';
 
@@ -54,20 +55,17 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 justify-between">
-        <Text fontSize={16} weight={500}>
-          {t('usageStats.chart.title')}
-        </Text>
-        <Segmented
-          value={type}
-          options={[
-            { label: t('usageStats.chart.spend'), value: ShowType.Spend },
-            { label: t('usageStats.chart.tokens'), value: ShowType.Token },
-          ]}
-          onChange={(value) => setType(value as ShowType)}
-        />
+        <div className="text-[16px] font-medium">{t('usageStats.chart.title')}</div>
+        <ToggleGroup
+          value={[type]}
+          onValueChange={(value) => value[0] && setType(value[0] as ShowType)}
+        >
+          <ToggleGroupItem value={ShowType.Spend}>{t('usageStats.chart.spend')}</ToggleGroupItem>
+          <ToggleGroupItem value={ShowType.Token}>{t('usageStats.chart.tokens')}</ToggleGroupItem>
+        </ToggleGroup>
       </div>
       {isLoading ? (
-        <Skeleton height={320} />
+        <Skeleton style={{ height: 320 }} />
       ) : (
         <BarChart
           showLegend
@@ -87,9 +85,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
             return (
               <ChartTooltipFrame>
                 <div className="flex flex-col py-2 px-4">
-                  <Text as={'p'} style={{ margin: 0 }}>
-                    {label}
-                  </Text>
+                  <p style={{ margin: 0 }}>{label}</p>
                 </div>
                 {visibleItems.length > 0 && (
                   <>

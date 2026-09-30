@@ -1,9 +1,11 @@
 'use client';
 
-import { Avatar, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
@@ -119,13 +121,16 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
           />
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center justify-between">
-              <Text
-                ellipsis
-                className={`${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`}
+              <div
+                className={cn(
+                  'truncate',
+                  'block',
+                  `${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`,
+                )}
                 onClick={onHeaderClick}
               >
                 {title}
-              </Text>
+              </div>
               {headerAction}
             </div>
             {description ? (
@@ -133,20 +138,17 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
                 <TooltipTrigger
                   render={
                     <span>
-                      <Text className={styles.description} ellipsis={{ rows: 2 }}>
-                        {description}
-                      </Text>
+                      <div className={cn('line-clamp-2', styles.description)}>{description}</div>
                     </span>
                   }
                 />
                 <TooltipContent>{description}</TooltipContent>
               </Tooltip>
             ) : loading ? (
-              <Skeleton.Text
-                className={styles.descriptionSkeleton}
-                rows={2}
-                width={['100%', '60%']}
-              />
+              <div className={cn('flex flex-col gap-2', styles.descriptionSkeleton)}>
+                <Skeleton />
+                <Skeleton style={{ width: '60%' }} />
+              </div>
             ) : null}
           </div>
         </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Select, Tabs } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import {
   ArrowDownWideNarrow,
@@ -12,8 +11,11 @@ import {
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import Form, { type FormItemProps } from '@/components/GroupForm';
+import Select from '@/components/Select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 
 import type { AgentGroupBy, AgentListViewOptions, AgentOrderBy } from './listViewOptions';
@@ -112,17 +114,22 @@ const ListConfig = memo<ListConfigProps>(
     const panelContent = (
       <div className="flex flex-col gap-3" style={{ width: 280 }}>
         <Tabs
-          activeKey={viewMode}
-          items={[
-            { icon: <LayoutList />, key: 'list', label: t('agentViewAll.view.list') },
-            { icon: <LayoutGrid />, key: 'card', label: t('agentViewAll.view.card') },
-          ]}
-          styles={{
-            list: { display: 'flex', width: '100%' },
-            tab: { flex: 1 },
+          value={viewMode}
+          onValueChange={(key) => {
+            if (typeof key === 'string') setViewMode(key as ViewMode);
           }}
-          onChange={(key) => setViewMode(key as ViewMode)}
-        />
+        >
+          <TabsList style={{ display: 'flex', width: '100%' }}>
+            <TabsTrigger style={{ flex: 1 }} value="list">
+              <LayoutList />
+              {t('agentViewAll.view.list')}
+            </TabsTrigger>
+            <TabsTrigger style={{ flex: 1 }} value="card">
+              <LayoutGrid />
+              {t('agentViewAll.view.card')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <Form
           className={styles.form}
           items={formItems}

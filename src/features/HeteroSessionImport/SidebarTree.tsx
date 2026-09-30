@@ -1,11 +1,13 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
-import { ActionIcon, DraggablePanel, Text } from '@lobehub/ui/base-ui';
+import { DraggablePanel } from '@lobehub/ui/base-ui';
 import type { HeteroSessionDirGroup, HeteroSessionDirPref } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight, Eye, EyeOff, Folder, FolderGit2, Timer, X } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -101,9 +103,9 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
               >
                 <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
                   {leading}
-                  <Text ellipsis fontSize={13}>
+                  <div className="truncate block text-[13px]">
                     {baseName(group.workingDirectory)}
-                  </Text>
+                  </div>
                 </div>
                 <span className="tree-actions" onClick={(e) => e.stopPropagation()}>
                   {isWatched ? (
@@ -147,9 +149,9 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                     </>
                   )}
                 </span>
-                <Text className="tree-count" fontSize={12} type="secondary">
+                <div className="tree-count text-[12px] text-muted-foreground">
                   {group.sessionCount}
-                </Text>
+                </div>
               </div>
             }
           />
@@ -176,12 +178,10 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
           )}
           onClick={() => onScopeChange('all')}
         >
-          <Text fontSize={13} weight={scope === 'all' ? 600 : 400}>
+          <div className={cn('text-[13px]', scope === 'all' ? 600 : 400)}>
             {t('heteroImport.allSessions')}
-          </Text>
-          <Text fontSize={12} type="secondary">
-            {totalCount.toLocaleString()}
-          </Text>
+          </div>
+          <div className="text-[12px] text-muted-foreground">{totalCount.toLocaleString()}</div>
         </div>
 
         {watched.length > 0 && (
@@ -205,12 +205,10 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 }}
               />
               <Timer size={13} style={{ opacity: 0.55 }} />
-              <Text fontSize={13} style={{ flex: 1 }} weight={500}>
+              <div className="text-[13px] font-medium" style={{ flex: 1 }}>
                 {t('heteroImport.watchedGroup')}
-              </Text>
-              <Text fontSize={12} type="secondary">
-                {watched.length}
-              </Text>
+              </div>
+              <div className="text-[12px] text-muted-foreground">{watched.length}</div>
             </div>
             {!collapsed.has('watched') &&
               watched.map((group) => {
@@ -252,12 +250,13 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                   }}
                 />
                 <Brand size={15} />
-                <Text fontSize={13} style={{ flex: 1 }} weight={scope === source ? 600 : 500}>
+                <div
+                  className={cn('text-[13px]', scope === source ? 600 : 500)}
+                  style={{ flex: 1 }}
+                >
                   {AGENT_LABEL[source]}
-                </Text>
-                <Text fontSize={12} type="secondary">
-                  {count}
-                </Text>
+                </div>
+                <div className="text-[12px] text-muted-foreground">{count}</div>
               </div>
               {open &&
                 dirs.map((group) =>
@@ -286,9 +285,9 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                   transition: 'transform .15s',
                 }}
               />
-              <Text fontSize={12} type="secondary">
+              <div className="text-[12px] text-muted-foreground">
                 {t('heteroImport.ignoredGroup', { count: ignored.length })}
-              </Text>
+              </div>
             </div>
             {showIgnored &&
               ignored.map((group) => {
@@ -305,9 +304,9 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                           >
                             <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
                               <Brand size={12} style={{ flex: 'none' }} />
-                              <Text ellipsis fontSize={13}>
+                              <div className="truncate block text-[13px]">
                                 {baseName(group.workingDirectory)}
-                              </Text>
+                              </div>
                             </div>
                             <span className="tree-actions" onClick={(e) => e.stopPropagation()}>
                               <Tooltip>

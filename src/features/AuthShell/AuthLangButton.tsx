@@ -1,10 +1,10 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { GlobeIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -30,16 +30,15 @@ const AuthLangButton = memo(() => {
       <DropdownMenuTrigger
         render={
           <Button
-            icon={GlobeIcon}
-            iconPosition="end"
-            size="small"
-            type="text"
+            size="sm"
+            variant="ghost"
             style={{
               height: 32,
               paddingInline: 8,
             }}
           >
-            <Text fontSize={12}>{currentLabel}</Text>
+            <div className="text-[12px]">{currentLabel}</div>
+            <GlobeIcon data-icon="inline-end" />
           </Button>
         }
       />
@@ -57,7 +56,7 @@ const AuthLangButton = memo(() => {
             }}
           >
             <div className="flex flex-col gap-1">
-              <Text style={{ lineHeight: 1.2 }}>{item.label}</Text>
+              <div style={{ lineHeight: 1.2 }}>{item.label}</div>
             </div>
           </DropdownMenuCheckboxItem>
         ))}

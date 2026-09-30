@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { UIChatMessage } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Component, memo, type ReactNode, useMemo } from 'react';
@@ -51,12 +50,8 @@ export class RenderBoundary extends Component<
         style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
       >
         <div className="flex flex-col gap-2">
-          <Text fontSize={14} type={'danger'} weight={500}>
-            {this.props.label} crashed
-          </Text>
-          <Text fontSize={12} type={'secondary'}>
-            {this.state.error.message}
-          </Text>
+          <div className="text-[14px] text-destructive font-medium">{this.props.label} crashed</div>
+          <div className="text-[12px] text-muted-foreground">{this.state.error.message}</div>
         </div>
       </div>
     );

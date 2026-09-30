@@ -1,10 +1,12 @@
-import { ActionIcon, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskTemplate } from '@orvilo/const';
 import { cssVar, cx } from 'antd-style';
 import { Clock, X } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
@@ -77,19 +79,19 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
           <Button
             className={styles.compactMain}
             disabled={loading || pendingCreate}
-            type={'text'}
+            variant="ghost"
             onClick={handleOpenDetail}
           >
             <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
               <div className="flex flex-col flex-none py-[2px]">
                 <TemplateBriefIcon spec={iconSpec} tileSize={RECOMMENDATION_ICON_SIZE.compact} />
               </div>
-              <Text
+              <span
                 className={cx(homeType.itemTitleProse, styles.compactTitle)}
                 style={{ flex: 1 }}
               >
                 {title}
-              </Text>
+              </span>
             </div>
           </Button>
           <ActionIcon
@@ -104,10 +106,10 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     const primaryButton = (
       <Button
-        className={briefStyles.actionBtnPrimary}
+        className={cx(briefStyles.actionBtnPrimary, 'rounded-full')}
         disabled={disabled}
         loading={loading || pendingCreate}
-        shape={'round'}
+        variant="default"
         onClick={handlePrimaryClick}
       >
         {primaryButtonLabel}
@@ -116,7 +118,6 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     return (
       <div
-        className={cx(briefStyles.card, styles.card)}
         style={{ borderRadius: cssVar.borderRadiusLG, cursor: 'pointer' }}
         className={cx(
           briefStyles.card,
@@ -135,9 +136,7 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
               className="flex flex-row items-center flex-1 gap-1.5"
               style={{ minWidth: 0, overflow: 'hidden' }}
             >
-              <Text ellipsis fontSize={16} weight={500}>
-                {title}
-              </Text>
+              <span className="truncate text-[16px] font-medium">{title}</span>
               <ActionIcon
                 icon={Clock}
                 size={12}
@@ -177,9 +176,9 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
         )}
         <div className="flex flex-row items-center gap-2 justify-between flex-wrap">
           <div className="flex flex-row items-center gap-2">
-            <Tag size={'small'} variant={'outlined'}>
+            <Badge size="sm" variant="outline">
               {t('taskTemplate.card.templateTag')}
-            </Tag>
+            </Badge>
           </div>
           <div className="flex flex-row items-center gap-2">{primaryButton}</div>
         </div>

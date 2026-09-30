@@ -1,4 +1,4 @@
-import { Block, ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Block, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import IssueRowChip from '@/components/IssueRowChip';
 import LabelChips from '@/features/Labels/LabelChips';
+import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import {
   getProjectMilestoneIssuesPath,
   type TaskMilestoneRef,
@@ -387,7 +388,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   ) : null;
 
   return (
-    <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
+    <SidebarContextMenu items={contextMenuItems} onMenuOpen={handleContextMenuOpen}>
       <Block
         clickable
         className={styles.row}
@@ -423,7 +424,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           </Flexbox>
         </Flexbox>
       </Block>
-    </ContextMenuTrigger>
+    </SidebarContextMenu>
   );
 });
 

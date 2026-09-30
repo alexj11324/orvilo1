@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   openTopicDrawer: vi.fn(),
   projects: [] as { id: string; name: string }[],
+  showContextMenuWithFallback: vi.fn((_items: unknown, _options: unknown, showWeb: () => void) => {
+    showWeb();
+  }),
+  taskContextMenu: vi.fn(),
   taskDetailMap: {} as Record<string, unknown>,
   updateTask: vi.fn(),
 }));
@@ -43,7 +47,13 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
   ),
 }));
 
+vi.mock('@/libs/contextMenu', () => ({
+  closeContextMenu: vi.fn(),
+  showContextMenuWithFallback: mocks.showContextMenuWithFallback,
+}));
+
 vi.mock('@/components/GeneratingBorder', () => ({
+  // Mirrors the real component: injected props die here, only children render.
   default: ({ children, generating }: { children: ReactNode; generating?: boolean }) => (
     <div data-generating={generating ? 'true' : 'false'}>{children}</div>
   ),
@@ -114,7 +124,7 @@ vi.mock('../features/formatTaskItemDate', () => ({
 }));
 
 vi.mock('../features/useTaskItemContextMenu', () => ({
-  useTaskItemContextMenu: () => ({ items: [], onContextMenu: vi.fn() }),
+  useTaskItemContextMenu: () => ({ items: [], onContextMenu: mocks.taskContextMenu }),
 }));
 
 const createTask = (overrides: Record<string, unknown> = {}) =>
@@ -140,6 +150,8 @@ describe('TaskBoardCard', () => {
     mocks.openTopicDrawer.mockClear();
     mocks.projects = [];
     mocks.updateTask.mockClear();
+    mocks.showContextMenuWithFallback.mockClear();
+    mocks.taskContextMenu.mockClear();
     mocks.taskDetailMap = {};
   });
 
@@ -222,6 +234,18 @@ describe('TaskBoardCard', () => {
     fireEvent.click(container.querySelector('[data-task-board-card]')!);
 
     expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('reaches the context-menu handler through a real DOM contextmenu on the card', () => {
+    const { container } = render(<TaskBoardCard task={createTask()} />);
+
+    // Regression: the trigger must bind the card div itself. A wrapper that
+    // drops injected props (GeneratingBorder) left the card without a
+    // contextmenu handler at all.
+    fireEvent.contextMenu(container.querySelector('[data-task-board-card]')!);
+
+    expect(mocks.taskContextMenu).toHaveBeenCalledTimes(1);
+    expect(mocks.taskContextMenu).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it('renders the project chip only when the projectId resolves to a name', () => {

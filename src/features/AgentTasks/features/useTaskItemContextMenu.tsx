@@ -47,7 +47,13 @@ type TaskItemRouteScope = 'agent' | 'global';
 
 interface TaskItemContextMenu {
   items: NativeContextMenuItem[];
-  onContextMenu: () => void;
+  /**
+   * Install the digit-accelerator handlers once the menu opens. Passes the
+   * close function of whichever surface opened (native popup or web menu) —
+   * the shared imperative `closeContextMenu` is the default so the legacy
+   * imperative menu keeps working unchanged.
+   */
+  onContextMenu: (closeMenu?: () => void) => void;
 }
 
 export interface TaskContextMenuTarget {
@@ -73,7 +79,7 @@ const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
 
 export interface TaskContextMenuActions {
   buildItems: (task: TaskContextMenuTarget) => NativeContextMenuItem[];
-  installKeyboardHandlers: (task: TaskContextMenuTarget) => void;
+  installKeyboardHandlers: (task: TaskContextMenuTarget, closeMenu?: () => void) => void;
   /**
    * Submenu titles appended outside `buildItems` (the Assignee entry) must
    * clear the tracked digit-accelerator hover — wire this to their
@@ -316,10 +322,11 @@ export const useTaskContextMenuActions = (
       ];
     };
 
-    const installKeyboardHandlers = (task: TaskContextMenuTarget) => {
+    const installKeyboardHandlers = (task: TaskContextMenuTarget, closeMenu?: () => void) => {
       if (!canEditTask) return;
       cleanupRef.current?.();
       activeSubmenuRef.current = null;
+      const close = closeMenu ?? closeContextMenu;
 
       const currentPriority = task.priority ?? 0;
 
@@ -355,7 +362,7 @@ export const useTaskContextMenuActions = (
               await refreshTaskList();
             })();
           }
-          closeContextMenu();
+          close();
           cleanup();
           return;
         }
@@ -387,7 +394,7 @@ export const useTaskContextMenuActions = (
               void changeTaskStatus(task.identifier, choice.status);
             }
           }
-          closeContextMenu();
+          close();
           cleanup();
         }
       };
@@ -538,7 +545,7 @@ export const useTaskItemContextMenu = (
     transferItems,
   ]);
   const onContextMenu = useCallback(
-    () => installKeyboardHandlers(task),
+    (closeMenu?: () => void) => installKeyboardHandlers(task, closeMenu),
     [installKeyboardHandlers, task],
   );
   return { items, onContextMenu };

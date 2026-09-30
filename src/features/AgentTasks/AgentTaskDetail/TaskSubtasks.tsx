@@ -9,9 +9,11 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { SidebarContextMenuPopup } from '@/features/NavPanel/components/SidebarContextMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { showContextMenu } from '@/libs/contextMenu';
+import { showContextMenuWithFallback } from '@/libs/contextMenu';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -190,6 +192,10 @@ const TaskSubtasks = memo(() => {
   const [isCreating, setIsCreating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const [isPlanning, setIsPlanning] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    anchor: { getBoundingClientRect: () => DOMRect };
+    items: NativeContextMenuItem[];
+  } | null>(null);
 
   const subtaskMap = useMemo(() => {
     const map = new Map<string, TaskDetailSubtask>();
@@ -222,18 +228,7 @@ const TaskSubtasks = memo(() => {
       const subtask = subtaskMap.get(node.key);
       if (!subtask) return;
       event.preventDefault();
-      showContextMenu(
-        buildItems({
-          assigneeAgentId: subtask.assignee?.id,
-          assigneeUserId: subtask.assigneeUserId,
-          identifier: subtask.identifier,
-          priority: subtask.priority,
-          status: subtask.status,
-          workflowCategory: subtask.workflowCategory,
-          workflowStateId: subtask.workflowStateId,
-        }),
-      );
-      installKeyboardHandlers({
+      const target = {
         assigneeAgentId: subtask.assignee?.id,
         assigneeUserId: subtask.assigneeUserId,
         identifier: subtask.identifier,
@@ -241,7 +236,23 @@ const TaskSubtasks = memo(() => {
         status: subtask.status,
         workflowCategory: subtask.workflowCategory,
         workflowStateId: subtask.workflowStateId,
+      };
+      const items = buildItems(target);
+      // The tree's right-click channel is not a DOM trigger: the native popup
+      // still wins on desktop, and the web fallback opens a ReUI menu anchored
+      // at the pointer.
+      let openedWebMenu = false;
+      showContextMenuWithFallback(items, undefined, () => {
+        openedWebMenu = true;
+        setContextMenu({
+          anchor: {
+            getBoundingClientRect: () =>
+              DOMRect.fromRect({ height: 0, width: 0, x: event.clientX, y: event.clientY }),
+          },
+          items,
+        });
       });
+      installKeyboardHandlers(target, openedWebMenu ? () => setContextMenu(null) : undefined);
     },
     [canEditTask, subtaskMap, buildItems, installKeyboardHandlers],
   );
@@ -381,6 +392,14 @@ const TaskSubtasks = memo(() => {
                 onRightClick={handleRightClick}
                 onSelect={(keys) => {
                   if (keys[0]) handleNavigate(keys[0]);
+                }}
+              />
+              <SidebarContextMenuPopup
+                anchor={contextMenu?.anchor}
+                items={contextMenu?.items ?? []}
+                open={Boolean(contextMenu)}
+                onOpenChange={(open) => {
+                  if (!open) setContextMenu(null);
                 }}
               />
             </Flexbox>

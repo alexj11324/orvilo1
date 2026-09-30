@@ -55,6 +55,7 @@ interface RenderableItem {
   key?: Key;
   label?: ReactNode;
   onClick?: (info: MenuInfo) => void;
+  onTitleMouseEnter?: (info: { domEvent: unknown; key: string }) => void;
   title?: ReactNode;
   type?: string;
 }
@@ -179,6 +180,9 @@ export const renderSidebarMenuItems = (
           <SubTrigger
             className={item.danger ? 'text-destructive' : undefined}
             disabled={item.disabled}
+            onPointerEnter={(event) =>
+              item.onTitleMouseEnter?.({ domEvent: event, key: String(key) })
+            }
           >
             {renderContent(item, label)}
           </SubTrigger>

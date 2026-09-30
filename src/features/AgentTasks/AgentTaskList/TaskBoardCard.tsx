@@ -1,4 +1,4 @@
-import { ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
@@ -410,15 +411,19 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       </div>
     );
 
-    const content = <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
-
     // The overlay twin never opens menus — it only previews the dragged card.
-    if (overlay) return content;
+    if (overlay) {
+      return <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
+    }
 
+    // The trigger has to clone the real DOM card: wrapping GeneratingBorder
+    // (which does not forward props) drops the injected contextmenu handlers.
     return (
-      <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-        {content}
-      </ContextMenuTrigger>
+      <GeneratingBorder generating={status === 'running'}>
+        <SidebarContextMenu items={contextMenuItems} onMenuOpen={handleContextMenuOpen}>
+          {card}
+        </SidebarContextMenu>
+      </GeneratingBorder>
     );
   },
 );

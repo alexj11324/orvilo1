@@ -13,17 +13,18 @@ import {
 } from '@/features/NavPanel/registry';
 import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
 
-/** Settings owns its categories; all other routes retain Orvilo's global navigation. */
+/**
+ * Single-column nav, Linear-style: when the active route registered its own
+ * panel (agent topics, memory, group, resource, settings…), that panel fills
+ * the sidebar column; routes without a panel keep the global navigation.
+ */
 export function NavMain() {
   const activeNavKey = useActiveNavKey();
-  const isSettings = activeNavKey === 'settings' || activeNavKey === 'workspace-settings';
-  const getContent = () =>
-    isSettings ? getNavPanelRegistrySnapshot().get(activeNavKey)?.node : undefined;
+  const getContent = () => getNavPanelRegistrySnapshot().get(activeNavKey)?.node;
   const content = useSyncExternalStore(subscribeNavPanelRegistry, getContent, getContent);
 
-  return isSettings ? (
-    (content ?? <NavSideBarSkeleton {...NAV_SKELETON_SHAPES[activeNavKey]} />)
-  ) : (
-    <Body />
-  );
+  if (content) return content;
+
+  const isSettings = activeNavKey === 'settings' || activeNavKey === 'workspace-settings';
+  return isSettings ? <NavSideBarSkeleton {...NAV_SKELETON_SHAPES[activeNavKey]} /> : <Body />;
 }

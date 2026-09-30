@@ -86,16 +86,27 @@ describe('ReUI sidebar panel selection', () => {
   });
 
   it.each([
-    '/orvilo-team/agent/assistant',
-    '/orvilo-team/agent/assistant/docs',
-    '/orvilo-team/tasks',
-  ])('preserves global navigation on %s', (route) => {
+    ['/orvilo-team/agent/assistant', 'agent'],
+    ['/orvilo-team/agent/assistant/docs', 'agent-docs'],
+    ['/orvilo-team/memory', 'memory'],
+  ])('swaps the registered %s panel into the column on %s', (route, key) => {
     pathname = route;
-    registerNavPanelContent('agent', Symbol('agent'), <div>Agent navigation</div>);
+    registerNavPanelContent(key, Symbol(key), <div>Route panel</div>);
     render(<NavMain />);
-    expect(screen.getByText('Global workspace navigation')).toBeInTheDocument();
-    expect(screen.queryByText('Agent navigation')).not.toBeInTheDocument();
+    expect(screen.getByText('Route panel')).toBeInTheDocument();
+    expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
   });
+
+  it.each(['/orvilo-team/tasks', '/'])(
+    'preserves global navigation on %s when no panel is registered',
+    (route) => {
+      pathname = route;
+      registerNavPanelContent('agent', Symbol('agent'), <div>Agent navigation</div>);
+      render(<NavMain />);
+      expect(screen.getByText('Global workspace navigation')).toBeInTheDocument();
+      expect(screen.queryByText('Agent navigation')).not.toBeInTheDocument();
+    },
+  );
 });
 
 describe('NavPanel', () => {

@@ -12,6 +12,7 @@ import {
   Paperclip,
   Repeat2,
 } from 'lucide-react';
+import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface FlowNodeData extends Record<string, unknown> {

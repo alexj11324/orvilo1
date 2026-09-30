@@ -1,3 +1,4 @@
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import { type ReactNode, type UIEvent } from 'react';
 import { memo, Suspense, useCallback, useLayoutEffect, useRef } from 'react';
 
@@ -51,7 +52,7 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
           onScroll={handleScroll}
         >
           <TooltipProvider>
-            <Suspense fallback={<SkeletonList paddingBlock={8} />}>{body}</Suspense>
+            <Suspense fallback={<SkeletonList style={{ paddingBlock: 8 }} />}>{body}</Suspense>
           </TooltipProvider>
         </ScrollAreaPrimitive.Viewport>
         <ScrollBar />

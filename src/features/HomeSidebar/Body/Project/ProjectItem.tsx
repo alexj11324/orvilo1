@@ -4,6 +4,7 @@ import { MoreHorizontalIcon, PencilIcon, TrashIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -74,7 +75,6 @@ const ProjectItem = memo<ProjectItemProps>(({ project }) => {
       <NavItem
         contextMenuItems={canManage ? menuItems : undefined}
         disabled={deleting}
-        icon={project.avatar || PROJECT_ENTITY_ICON}
         title={project.name}
         actions={
           canManage ? (
@@ -90,6 +90,13 @@ const ProjectItem = memo<ProjectItemProps>(({ project }) => {
               </Button>
             </SidebarDropdownMenu>
           ) : undefined
+        }
+        icon={
+          project.avatar && project.avatar !== '📦' ? (
+            <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
+          ) : (
+            PROJECT_ENTITY_ICON
+          )
         }
       />
     </WorkspaceLink>

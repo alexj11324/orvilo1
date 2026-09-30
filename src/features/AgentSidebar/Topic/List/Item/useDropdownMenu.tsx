@@ -22,13 +22,13 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import { type DropdownItem } from '@/components/ItemsMenu';
 import { openRenameModal } from '@/components/RenameModal';
 import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { createTopicForwardModal } from '@/features/Conversation/MessageForward/TopicForwardModal';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import { createMoveTopicsModal } from '@/features/MoveTopicsModal';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openShareModal } from '@/features/ShareModal';
 import { openTopicDoctorModal } from '@/features/TopicDoctorModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -302,7 +302,7 @@ export const useTopicItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as DropdownItem[];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     id,
     fav,

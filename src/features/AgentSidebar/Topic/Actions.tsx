@@ -2,7 +2,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
-import { DropdownMenu } from '@/components/ItemsMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 import { useTopicActionsDropdownMenu } from './useDropdownMenu';
 
@@ -11,9 +11,9 @@ const Actions = memo(() => {
   const menuItems = useTopicActionsDropdownMenu({ onUploadClose: () => setOpen(false) });
 
   return (
-    <DropdownMenu items={menuItems} open={open} onOpenChange={setOpen}>
+    <SidebarDropdownMenu items={menuItems} open={open} onOpenChange={setOpen}>
       <ActionIcon icon={MoreHorizontal} size={'small'} />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

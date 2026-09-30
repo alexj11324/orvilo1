@@ -2,8 +2,8 @@ import { PanelRight, PencilLine, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type DropdownItem } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 
@@ -17,7 +17,7 @@ export const useThreadItemDropdownMenu = ({
   id,
   sourceMessageId,
   toggleEditing,
-}: ThreadItemDropdownMenuProps): (() => DropdownItem[]) => {
+}: ThreadItemDropdownMenuProps): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['thread', 'common']);
   const { allowed: canEditThread } = usePermission('edit_own_content');
 
@@ -72,6 +72,6 @@ export const useThreadItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as DropdownItem[];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [id, sourceMessageId, canEditThread, removeThread, openThreadInPortal, toggleEditing, t]);
 };

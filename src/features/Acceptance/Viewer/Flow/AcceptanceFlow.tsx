@@ -246,7 +246,8 @@ export function AcceptanceFlow() {
                   ? t('flow.pendingPlan')
                   : t('acceptance.round', { round: Number(key) }),
             }))}
-            onValueChange={(value: string) => {
+            onValueChange={(value) => {
+              if (value === null) return;
               setRoundKey(value);
               setFocus(undefined);
               setSelected(undefined);

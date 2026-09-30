@@ -467,7 +467,7 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !accepting}
                     icon={Check}
                     loading={accepting}
-                    size="sm"
+                    size="small"
                     title={t('acceptance.review.accept')}
                     onClick={handleAccept}
                   />
@@ -475,14 +475,14 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !ignoring}
                     icon={Ban}
                     loading={ignoring}
-                    size="sm"
+                    size="small"
                     title={t('acceptance.review.ignore')}
                     onClick={handleIgnore}
                   />
                   <ActionIcon
                     disabled={reviewPending}
                     icon={MessageSquareX}
-                    size="sm"
+                    size="small"
                     title={t('acceptance.review.reject')}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -860,7 +860,7 @@ export const AcceptanceCheckRow = memo<{
               decision, never an appendix to one already made. */}
             {detailMode && reviewable && !activeReview && hasAnnotatableEvidence(check) && (
               <Button
-                outdent
+                className="-mx-2.5"
                 style={{ alignSelf: 'flex-start' }}
                 variant="ghost"
                 onClick={(event) => {
@@ -904,7 +904,7 @@ export const AcceptanceCheckRow = memo<{
               <div className="flex items-center gap-2 justify-between">
                 {canCommentEvidence ? (
                   <Button
-                    outdent
+                    className="-mx-2.5"
                     variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();

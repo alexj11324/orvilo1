@@ -2,20 +2,21 @@ import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
-import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useOverlayDropdownPortalProps } from '@/features/NavPanel/OverlayContainer';
 
 interface ActionProps {
-  dropdownMenu: DropdownItem[] | (() => DropdownItem[]);
+  dropdownMenu: SidebarMenuItems | (() => SidebarMenuItems);
 }
 
 const Actions = memo<ActionProps>(({ dropdownMenu }) => {
   const dropdownPortalProps = useOverlayDropdownPortalProps();
 
   return (
-    <DropdownMenu items={dropdownMenu} portalProps={dropdownPortalProps}>
+    <SidebarDropdownMenu items={dropdownMenu} portalProps={dropdownPortalProps}>
       <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

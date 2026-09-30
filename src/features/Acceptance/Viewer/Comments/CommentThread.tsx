@@ -112,12 +112,17 @@ const CommentThread = memo<CommentThreadProps>(
             </div>
           ) : (
             <div className={`flex gap-0.5 ${styles.panelActions}`}>
-              <Button outdent size="sm" variant="ghost" onClick={() => setReplying(true)}>
+              <Button
+                className="-mx-2.5"
+                size="sm"
+                variant="ghost"
+                onClick={() => setReplying(true)}
+              >
                 {t('acceptance.comments.reply')}
               </Button>
               {canResolve && (
                 <Button
-                  outdent
+                  className="-mx-2.5"
                   loading={resolving}
                   size="sm"
                   variant="ghost"
@@ -127,7 +132,12 @@ const CommentThread = memo<CommentThreadProps>(
                 </Button>
               )}
               {resolved && (
-                <Button outdent size="sm" variant="ghost" onClick={() => setOpenOverride(false)}>
+                <Button
+                  className="-mx-2.5"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setOpenOverride(false)}
+                >
                   {t('acceptance.comments.collapseThread')}
                 </Button>
               )}

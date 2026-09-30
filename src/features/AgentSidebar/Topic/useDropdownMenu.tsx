@@ -6,11 +6,11 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useIsWorkspaceOwner } from '@/business/client/hooks/useIsWorkspaceOwner';
-import { type DropdownItem } from '@/components/ItemsMenu';
 import { confirmModal, createModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Upload } from '@/components/Upload';
 import { openHeteroSessionImportModal } from '@/features/HeteroSessionImport';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openWorkspaceDeleteAllModal } from '@/features/WorkspaceDeleteAllModal';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
@@ -37,7 +37,7 @@ type TopicMaintenanceScope = 'own' | 'workspace';
 
 export const useTopicActionsDropdownMenu = (
   options: UseTopicActionsDropdownMenuOptions = {},
-): (() => DropdownItem[]) => {
+): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['topic', 'common']);
   const { onUploadClose } = options;
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -126,7 +126,7 @@ export const useTopicActionsDropdownMenu = (
 
   const enableHeteroSessionImport = useUserStore(labPreferSelectors.enableHeteroSessionImport);
 
-  return useCallback((): DropdownItem[] => {
+  return useCallback((): SidebarMenuItems => {
     const pageSizeOptions = [20, 40, 60, 100];
     const pageSizeItems = pageSizeOptions.map((size) => ({
       icon: topicPageSize === size ? <LucideCheck /> : <div />,
@@ -241,7 +241,7 @@ export const useTopicActionsDropdownMenu = (
             },
           ]
         : []),
-    ].filter(Boolean) as DropdownItem[];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     topicPageSize,
     updateSystemStatus,

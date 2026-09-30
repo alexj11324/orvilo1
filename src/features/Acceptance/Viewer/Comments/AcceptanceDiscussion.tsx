@@ -41,10 +41,17 @@ const SignInPrompt = memo(() => {
         {t('acceptance.comments.signInDescription')}
       </div>
       <div className="flex gap-2">
-        <Button href={buildAuthReturnUrl('signin', currentReturnPath())} variant="outline">
+        <Button
+          nativeButton={false}
+          render={<a href={buildAuthReturnUrl('signin', currentReturnPath())} />}
+          variant="outline"
+        >
           {t('acceptance.comments.signIn')}
         </Button>
-        <Button href={buildAuthReturnUrl('signup', currentReturnPath())}>
+        <Button
+          nativeButton={false}
+          render={<a href={buildAuthReturnUrl('signup', currentReturnPath())} />}
+        >
           {t('acceptance.comments.signUp')}
         </Button>
       </div>

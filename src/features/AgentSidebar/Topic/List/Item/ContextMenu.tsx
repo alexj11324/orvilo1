@@ -1,4 +1,11 @@
-import { memo, type PropsWithChildren, useCallback, useEffect, useRef } from 'react';
+import {
+  memo,
+  type PropsWithChildren,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 
@@ -15,24 +22,26 @@ import { type TopicItemDropdownMenuProps, useTopicItemDropdownMenu } from './use
  * The items thunk is pinned to a stable identity for the same reason — a fresh
  * one would flow into `cloneElement` below and break the row's memo anyway.
  */
-const TopicItemContextMenu = memo<PropsWithChildren<TopicItemDropdownMenuProps>>(
-  ({ children, fav, id, status, title }) => {
-    const { dropdownMenu } = useTopicItemDropdownMenu({ fav, id, status, title });
+const TopicItemContextMenu = memo<
+  Omit<PropsWithChildren<TopicItemDropdownMenuProps>, 'children'> & {
+    children: ReactElement;
+  }
+>(({ children, fav, id, status, title }) => {
+  const { dropdownMenu } = useTopicItemDropdownMenu({ fav, id, status, title });
 
-    const menuRef = useRef(dropdownMenu);
-    useEffect(() => {
-      menuRef.current = dropdownMenu;
-    }, [dropdownMenu]);
+  const menuRef = useRef(dropdownMenu);
+  useEffect(() => {
+    menuRef.current = dropdownMenu;
+  }, [dropdownMenu]);
 
-    const items = useCallback(() => {
-      const dropdownMenu = menuRef.current;
+  const items = useCallback(() => {
+    const dropdownMenu = menuRef.current;
 
-      return typeof dropdownMenu === 'function' ? dropdownMenu() : dropdownMenu;
-    }, []);
+    return typeof dropdownMenu === 'function' ? dropdownMenu() : dropdownMenu;
+  }, []);
 
-    return <SidebarContextMenu items={items}>{children}</SidebarContextMenu>;
-  },
-);
+  return <SidebarContextMenu items={items}>{children}</SidebarContextMenu>;
+});
 
 TopicItemContextMenu.displayName = 'TopicItemContextMenu';
 

@@ -116,7 +116,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
             items={(rubrics ?? []).map((rubric) => ({ label: rubric.title, value: rubric.id }))}
             value={rubricId}
             onValueChange={(value) => {
-              setRubricId(value);
+              setRubricId(value ?? undefined);
               setSelectedIds(new Set());
             }}
           >

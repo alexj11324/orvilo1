@@ -1,6 +1,7 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -93,7 +94,7 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-[13px]" type={purge ? 'danger' : 'secondary'}>
+      <div className={cn('text-[13px]', purge ? 'text-destructive' : 'text-muted-foreground')}>
         {purge
           ? translate('acceptance.workspace.deleteConfirm.purgeWarning')
           : batch
@@ -129,12 +130,7 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
         <Button disabled={pending} onClick={close}>
           {translate('actions.cancel')}
         </Button>
-        <Button
-          loading={pending}
-          variant="destructive"
-          variant="outline"
-          onClick={() => void run()}
-        >
+        <Button loading={pending} variant="destructive" onClick={() => void run()}>
           {okLabel}
         </Button>
       </div>

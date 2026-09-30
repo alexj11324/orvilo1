@@ -5,7 +5,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { EXECUTION_STATUS_VISUALS, type ExecutionStatusVisual } from '@/components/ExecutionStatus';
-import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import type { TaskGroupItem } from '@/store/task/slices/list/initialState';
 
@@ -35,7 +35,7 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
       <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
         <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
           <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[24px]">
-            <meta.icon color={meta.color} size={{ size: 14, strokeWidth: 1.75 }} />
+            <meta.icon color={meta.color} size={14} strokeWidth={1.75} />
           </div>
           <div
             className="truncate text-[13px]"

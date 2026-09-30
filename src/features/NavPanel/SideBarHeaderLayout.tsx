@@ -65,6 +65,14 @@ interface SideBarHeaderLayoutProps {
 const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
   ({ left, right, backTo = '/', showBack = true, breadcrumb = [], homeItem }) => {
     const navigate = useWorkspaceAwareNavigate();
+    const homeCrumb: BreadcrumbItem = homeItem ?? {
+      href: '/',
+      title: (
+        <span className="anticon" role="img">
+          <HomeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
+      ),
+    };
     const leftContent = left ? (
       <div
         className="flex flex-row items-center flex-1 gap-0.5"
@@ -83,17 +91,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
       <div className="flex flex-col flex-1 px-[6px]">
         <Breadcrumb className={styles.breadcrumb}>
           <BreadcrumbList>
-            {[
-              homeItem ?? {
-                href: '/',
-                title: (
-                  <span className="anticon" role="img">
-                    <HomeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                  </span>
-                ),
-              },
-              ...breadcrumb,
-            ].map((item, index, all) => (
+            {[homeCrumb, ...breadcrumb].map((item, index, all) => (
               <Fragment key={index}>
                 <BreadcrumbItem>
                   <BreadcrumbLink

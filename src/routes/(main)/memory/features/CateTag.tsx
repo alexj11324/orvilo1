@@ -1,5 +1,7 @@
 import { memo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
+
 import { useCateColor } from './useCateColor';
 
 interface CateTagProps {

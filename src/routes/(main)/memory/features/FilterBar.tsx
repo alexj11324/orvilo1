@@ -46,7 +46,7 @@ const FilterBar = memo<FilterBarProps>(
           <Select
             items={selectItems(sortOptions)}
             value={sortValue}
-            onValueChange={(value) => onSortChange(value)}
+            onValueChange={(value) => value && onSortChange(value)}
           >
             <SelectTrigger style={{ minWidth: 150 }}>
               <ArrowDownNarrowWide style={{ marginRight: 4 }} />

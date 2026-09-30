@@ -93,7 +93,7 @@ const PurgeButton = memo<Props>(({ iconOnly }) => {
       variant="destructive"
       onClick={handleClick}
     >
-      <Trash2Icon data-icon="inline-start" size={DESKTOP_HEADER_ICON_SIZE} />
+      <Trash2Icon data-icon="inline-start" size={DESKTOP_HEADER_ICON_SIZE.size} />
       {translate('purge.action', { ns: 'memory' })}
     </Button>
   );

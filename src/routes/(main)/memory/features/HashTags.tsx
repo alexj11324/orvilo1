@@ -2,6 +2,8 @@ import { cssVar } from 'antd-style';
 import { HashIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
+
 interface HashTagsProps {
   hashTags?: string[] | null;
 }

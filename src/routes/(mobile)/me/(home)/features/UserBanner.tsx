@@ -21,7 +21,7 @@ const UserBanner = memo(() => {
             <UserInfo />
           </WorkspaceLink>
           <WorkspaceLink style={{ color: 'inherit' }} to="/settings/stats">
-            <DataStatistics paddingInline={12} />
+            <DataStatistics style={{ paddingInline: 12 }} />
           </WorkspaceLink>
         </>
       ) : (

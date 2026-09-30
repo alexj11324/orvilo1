@@ -3,6 +3,8 @@ import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
+
 import HashTags from '../HashTags';
 import Time from '../Time';
 import { useCateColor } from '../useCateColor';
@@ -62,8 +64,6 @@ const GridCard = memo<GridCardProps>(
         className={cn('flex flex-col gap-1 p-1', styles.masonryCard)}
         style={{
           height: '100%',
-          background: cssVar.colorFillSecondary,
-
           background: cateColor?.backgroundColor,
         }}
         onClick={onClick}

@@ -3,6 +3,8 @@ import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
+
 import CateTag from '../CateTag';
 import HashTags from '../HashTags';
 import Time from '../Time';

@@ -40,7 +40,7 @@ export default memo(() => {
         onValueChange={(value) => setTab(value as ChatSettingsTabs)}
       >
         <TabsList>
-          {cateItems.map((item) => (
+          {(cateItems ?? []).map((item) => (
             <TabsTrigger key={item.key} value={item.key}>
               {item.icon}
               {item.label}

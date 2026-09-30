@@ -40,18 +40,8 @@ vi.mock('antd-style', async (importOriginal) => ({
 vi.mock('@orvilo/const', () => ({ resolveConnectorCatalogItem: () => undefined }));
 vi.mock('@lobehub/ui/icons', () => ({ McpIcon: () => null }));
 vi.mock('@/components/Plugins/PluginAvatar', () => ({ default: () => null }));
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Avatar: ({ title }: { title?: string }) => <span data-testid="author-avatar">{title}</span>,
-}));
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Avatar: ({ title }: { title?: string }) => <span data-testid="author-avatar">{title}</span>,
-  Tooltip: ({ children, title }: { children: ReactNode; title?: string }) => (
-    <div data-testid="author-tooltip" data-title={title}>
-      {children}
-    </div>
-  ),
+vi.mock('@/components/Avatar', () => ({
+  default: ({ title }: { title?: string }) => <span data-testid="author-avatar">{title}</span>,
 }));
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,

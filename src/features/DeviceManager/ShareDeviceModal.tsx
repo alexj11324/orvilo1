@@ -91,7 +91,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
         return {
           disabled,
           label: (
-            <div className={`flex items-center gap-2 ${styles.optionRow}`}>
+            <div className={`flex items-center gap-2 ${styles.optionRow}`} title={workspace.name}>
               {renderWorkspaceLabel(workspace)}
               {shared && (
                 <Tag size="sm" style={{ flex: 'none', margin: 0 }}>
@@ -103,7 +103,6 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
               )}
             </div>
           ),
-          title: workspace.name,
           value: workspace.id,
         };
       }),
@@ -132,13 +131,12 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
         ] as const
       ).map((item) => ({
         label: (
-          <div className={`flex items-center gap-2 ${styles.optionRow}`}>
+          <div className={`flex items-center gap-2 ${styles.optionRow}`} title={item.label}>
             <item.icon size={14} />
             <div style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</div>
             <span className={styles.optionHint}>{item.desc}</span>
           </div>
         ),
-        title: item.label,
         value: item.value,
       })),
     [tSetting],
@@ -243,12 +241,12 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
               </div>
               <Select
                 showSearch
-                classNames={{ value: styles.selectValue }}
+                className={styles.selectValue}
                 options={targetOptions}
                 placeholder={tSetting('devices.share.selectPlaceholder')}
                 style={{ width: '100%' }}
                 value={effectiveTargetId}
-                onChange={(value) => setTargetId(value as string)}
+                onChange={(value) => typeof value === 'string' && setTargetId(value)}
               />
             </div>
 
@@ -257,11 +255,13 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
                 {tSetting('workspace.general.transferScope.title')}
               </div>
               <Select
-                classNames={{ value: styles.selectValue }}
+                className={styles.selectValue}
                 options={visibilityOptions}
                 style={{ width: '100%' }}
                 value={visibility}
-                onChange={(value) => setVisibility(value as DeviceVisibility)}
+                onChange={(value) =>
+                  (value === 'private' || value === 'public') && setVisibility(value)
+                }
               />
             </div>
           </>

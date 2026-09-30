@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Button } from '@lobehub/ui/base-ui';
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog } from '@orvilo/const';
 import { getActivePluginIds, upsertPluginMode } from '@orvilo/types';
@@ -10,7 +9,9 @@ import { PlusIcon } from 'lucide-react';
 import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import type { ItemType } from '@/components/Menu';
+import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import ActionDropdown from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import ComposioServerItem from '@/features/ChatInput/ActionBar/Tools/ComposioServerItem';
@@ -700,12 +701,12 @@ const AgentTool = memo<AgentToolProps>(
     const button = (
       <Button
         disabled={!canEdit}
-        icon={PlusIcon}
         loading={updating}
-        size={'small'}
+        size="sm"
         style={{ color: cssVar.colorTextSecondary }}
-        type={'text'}
+        variant="ghost"
       >
+        <PlusIcon data-icon="inline-start" />
         {t('tools.add', { defaultValue: 'Add' })}
       </Button>
     );

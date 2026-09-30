@@ -3,7 +3,6 @@
  */
 import { alwaysOnToolIds, manualModeExcludeToolIds } from '@orvilo/builtin-tools';
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import UserToolsSection from './UserToolsSection';
@@ -45,15 +44,6 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
 // the header count wiring. The shared visibility predicate has focused coverage.
 vi.mock('@/features/ProfileEditor/AgentTool', () => ({ default: () => null }));
 vi.mock('@/features/ProfileEditor/PluginTag', () => ({ default: () => null }));
-
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Text: ({ children }: { children: ReactNode }) => <span data-testid="label">{children}</span>,
-}));
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Text: ({ children }: { children: ReactNode }) => <span data-testid="label">{children}</span>,
-}));
 
 // Apply the real selectors against the mock state.
 vi.mock('@/store/tool', () => ({
@@ -100,7 +90,7 @@ const renderSection = () =>
     />,
   );
 
-const labelText = () => screen.getByTestId('label').textContent;
+const labelText = () => screen.getByText(/·/).textContent;
 
 describe('UserToolsSection — Workspace/User tool count', () => {
   beforeEach(() => {

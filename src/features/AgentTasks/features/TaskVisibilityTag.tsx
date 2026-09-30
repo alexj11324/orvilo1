@@ -1,15 +1,21 @@
-import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 
 import { renderMenuCheck } from './menuExtra';
+import { SimpleTooltip } from './SimpleTooltip';
 import {
   getTaskVisibilityDefaultLabel,
   getTaskVisibilityLabelKey,
@@ -103,48 +109,31 @@ const TaskVisibilityTag = memo<TaskVisibilityTagProps>(
       defaultValue: getTaskVisibilityDefaultLabel(visibility),
     });
 
-    const menuItems = useMemo<DropdownItem[]>(
-      () =>
-        VISIBILITY_OPTIONS.map((option) => {
-          const OptionIcon = TASK_VISIBILITY_ICONS[option];
-          const isCurrent = option === visibility;
-          return {
-            extra: renderMenuCheck(isCurrent),
-            icon: <Icon color={cssVar.colorTextSecondary} icon={OptionIcon} size={16} />,
-            key: option,
-            label: t(getTaskVisibilityLabelKey(option) as never, {
-              defaultValue: getTaskVisibilityDefaultLabel(option),
-            }),
-            onClick: ({ domEvent }: MenuInfo) => {
-              domEvent.stopPropagation();
-              void handleVisibilityChange(option);
-            },
-          };
-        }),
-      [handleVisibilityChange, t, visibility],
-    );
-
     // Personal mode: the visibility column exists but the workspace-mode
     // filtering is inert — hide the UI entirely so users aren't asked to make
     // a meaningless choice.
     if (!activeWorkspaceId && !taskIdentifier) return null;
 
-    const triggerNode = children ? (
-      children
-    ) : loading ? (
-      <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
-    ) : (
-      <Tooltip title={label}>
-        <span className={styles.trigger} onClick={(e) => e.stopPropagation()}>
-          <IconComp size={size} />
-        </span>
-      </Tooltip>
-    );
+    const triggerNode =
+      children ||
+      (loading ? (
+        <Loader2Icon
+          className="animate-spin"
+          size={size}
+          style={{ color: cssVar.colorTextDescription }}
+        />
+      ) : (
+        <SimpleTooltip title={label}>
+          <span className={styles.trigger} onClick={(e) => e.stopPropagation()}>
+            <IconComp size={size} />
+          </span>
+        </SimpleTooltip>
+      ));
 
     if (disableDropdown) return <>{triggerNode}</>;
     if (lockedReason)
       return (
-        <Tooltip title={lockedReason}>
+        <SimpleTooltip title={lockedReason}>
           <span
             className={styles.triggerDisabled}
             style={{ display: 'inline-flex' }}
@@ -152,11 +141,11 @@ const TaskVisibilityTag = memo<TaskVisibilityTagProps>(
           >
             {triggerNode}
           </span>
-        </Tooltip>
+        </SimpleTooltip>
       );
     if (!canEdit)
       return (
-        <Tooltip title={reason}>
+        <SimpleTooltip title={reason}>
           <span
             className={styles.triggerDisabled}
             style={{ display: 'inline-flex' }}
@@ -164,12 +153,34 @@ const TaskVisibilityTag = memo<TaskVisibilityTagProps>(
           >
             {triggerNode}
           </span>
-        </Tooltip>
+        </SimpleTooltip>
       );
 
     return (
-      <DropdownMenu items={menuItems} open={open} onOpenChange={setOpen}>
-        {triggerNode}
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuContent className="min-w-40">
+          {VISIBILITY_OPTIONS.map((option) => {
+            const OptionIcon = TASK_VISIBILITY_ICONS[option];
+            return (
+              <DropdownMenuItem
+                key={option}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handleVisibilityChange(option);
+                }}
+              >
+                <OptionIcon size={16} style={{ color: cssVar.colorTextSecondary }} />
+                <span className="flex-1">
+                  {t(getTaskVisibilityLabelKey(option) as never, {
+                    defaultValue: getTaskVisibilityDefaultLabel(option),
+                  })}
+                </span>
+                {renderMenuCheck(option === visibility)}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
       </DropdownMenu>
     );
   },

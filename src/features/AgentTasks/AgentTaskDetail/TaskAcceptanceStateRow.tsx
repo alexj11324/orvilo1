@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import {
@@ -113,23 +112,19 @@ const TaskAcceptanceStateRow = memo(() => {
   const label = t(`taskDetail.acceptanceState.${meta.labelKey}`);
 
   return (
-    <Block
-      clickable
-      horizontal
-      align={'center'}
-      className={styles.propertyItem}
-      gap={8}
+    <div
+      className={`flex items-center gap-2 ${styles.propertyItem}`}
+      style={{ cursor: 'pointer' }}
       // The label may be truncated below, so the hover title carries it in
       // full ahead of the "click to review" hint.
       title={`${label} · ${t('taskDetail.acceptanceState.hint')}`}
       variant={'borderless'}
       onClick={() => openAcceptanceInPanel(acceptance.id)}
     >
-      <Icon
+      <meta.icon
+        className={'spin' in meta && meta.spin ? 'animate-spin' : undefined}
         color={meta.color}
-        icon={meta.icon}
         size={16}
-        spin={'spin' in meta && meta.spin}
         style={{ flex: 'none' }}
       />
       {/* The sidebar form is narrower than several labels; one line with an
@@ -138,7 +133,7 @@ const TaskAcceptanceStateRow = memo(() => {
       <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
         {label}
       </Text>
-    </Block>
+    </div>
   );
 });
 

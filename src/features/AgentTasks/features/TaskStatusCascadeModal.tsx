@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, createModal, ScrollArea, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -104,8 +103,8 @@ const TaskStatusCascadeModalContent = ({
   };
 
   return (
-    <Flexbox>
-      <Flexbox className={styles.content} gap={8}>
+    <div className="flex flex-col">
+      <div className={`flex flex-col gap-2 ${styles.content}`}>
         <Text as={'h3'} weight={'bold'}>
           {t('taskDetail.statusCascade.title')}
         </Text>
@@ -120,31 +119,26 @@ const TaskStatusCascadeModalContent = ({
             const status = task.status as TaskStatus | undefined;
             const meta = status ? STATUS_META[status] : STATUS_META.backlog;
 
+            const StatusIcon = meta.icon;
             return (
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.row}
-                gap={10}
-                key={task.identifier}
-              >
-                <Icon color={meta.color} icon={meta.icon} size={16} />
-                <Flexbox flex={1}>
+              <div className={`flex items-center gap-2.5 ${styles.row}`} key={task.identifier}>
+                <StatusIcon color={meta.color} size={16} />
+                <div className="flex flex-1">
                   <Text ellipsis>{task.name || task.identifier}</Text>
-                </Flexbox>
+                </div>
                 <Text color={cssVar.colorTextTertiary}>
                   {t(`taskDetail.status.${status ?? 'backlog'}`, { defaultValue: meta.label })}
                 </Text>
-              </Flexbox>
+              </div>
             );
           })}
         </ScrollArea>
-      </Flexbox>
-      <Flexbox horizontal className={styles.actions} gap={8} justify={'space-between'}>
+      </div>
+      <div className={`flex items-center justify-between gap-2 ${styles.actions}`}>
         <Button disabled={!!loadingAction} onClick={handleCancel}>
           {t('taskDetail.statusCascade.cancel')}
         </Button>
-        <Flexbox horizontal gap={8}>
+        <div className="flex gap-2">
           <Button
             disabled={!!loadingAction}
             loading={loadingAction === 'parent'}
@@ -160,9 +154,9 @@ const TaskStatusCascadeModalContent = ({
           >
             {t('taskDetail.statusCascade.updateAll')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 };
 

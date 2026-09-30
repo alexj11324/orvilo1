@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- unreadable-dependency placeholder, not a status
@@ -79,7 +78,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   };
 
   return (
-    <Flexbox className={styles.railSection}>
+    <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.prerequisites.title')}</span>
       <Text fontSize={12} role={'status'} style={{ paddingInline: 8 }} type={'secondary'}>
         {t(
@@ -97,10 +96,8 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
             ? WORKFLOW_CATEGORY_VISUALS[dep.workflowCategory]
             : undefined;
         return (
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={2}
+          <div
+            className="flex items-center gap-0.5"
             key={dep.relationId ?? `${dep.type}:${dep.id ?? dep.dependsOn}`}
           >
             <Button
@@ -111,9 +108,9 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
               type={'text'}
               icon={
                 unavailable ? (
-                  <Icon icon={CircleDashed} size={16} style={{ color: 'inherit' }} />
+                  <CircleDashed size={16} style={{ color: 'inherit' }} />
                 ) : workflowVisual ? (
-                  <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
+                  <workflowVisual.icon color={workflowVisual.color} size={16} />
                 ) : (
                   <TaskStatusIcon size={16} status={toTaskStatus(dep.status)} />
                 )
@@ -149,7 +146,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
                 }
               />
             )}
-          </Flexbox>
+          </div>
         );
       })}
       {!allowed && reason && (
@@ -162,7 +159,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           {error}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

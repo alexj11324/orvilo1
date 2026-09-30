@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -145,7 +144,7 @@ const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
   const elapsed = Math.max(1, goalRoundEnd(rounds.at(-1)!.run, now) - start);
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <Text fontSize={12} type={'secondary'}>
         {t('taskDetail.goalTimeline.title')}
       </Text>
@@ -179,7 +178,7 @@ const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
           {formatGoalDuration(elapsed)}
         </span>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

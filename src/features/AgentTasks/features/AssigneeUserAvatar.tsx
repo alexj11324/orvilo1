@@ -1,9 +1,9 @@
-import { Tooltip } from '@lobehub/ui';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
 
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
+import { SimpleTooltip } from './SimpleTooltip';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 
 interface AssigneeUserAvatarProps {
@@ -33,7 +33,7 @@ const AssigneeUserAvatar = memo<AssigneeUserAvatarProps>(({ userId, size = 18, t
     />
   );
 
-  return tooltip ? <Tooltip title={displayMeta.title}>{avatar}</Tooltip> : avatar;
+  return tooltip ? <SimpleTooltip title={displayMeta.title}>{avatar}</SimpleTooltip> : avatar;
 });
 
 export default AssigneeUserAvatar;

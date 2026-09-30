@@ -1,5 +1,4 @@
 import { SendButton, useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { Avatar, toast } from '@lobehub/ui/base-ui';
 import { $getRoot } from 'lexical';
 import { memo, useCallback, useState } from 'react';
@@ -91,8 +90,8 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
   }, [canEditTask, taskId, editor, addComment, clearAfterSend, submitting]);
 
   return (
-    <Flexbox className={styles.commentInputCard} gap={6} id="task-comment-composer">
-      <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0, width: '100%' }}>
+    <div className={`flex flex-col gap-1.5 ${styles.commentInputCard}`} id="task-comment-composer">
+      <div className="flex items-center gap-2" style={{ minWidth: 0, width: '100%' }}>
         <Avatar avatar={userAvatar} size={24} style={{ flexShrink: 0 }} />
         <div
           className={mentionFilledClassName}
@@ -121,7 +120,7 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
             }}
           />
         </div>
-        <Flexbox horizontal align={'center'} gap={4} style={{ flexShrink: 0 }}>
+        <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
           <AttachmentUploadButton onFiles={handleAttach} />
           <SendButton
             disabled={!canEditTask || (!canSubmit && !submitting)}
@@ -130,9 +129,9 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
             type={'text'}
             onClick={handleSubmit}
           />
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

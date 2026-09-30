@@ -1,7 +1,7 @@
-import { Block, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ClockIcon } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,8 @@ import {
   formatScheduleDescription,
   formatTimezoneName,
 } from '@/features/AgentTasks/AgentTaskDetail/scheduler/helpers';
+
+import { SimpleTooltip } from './SimpleTooltip';
 
 interface TaskTriggerTagProps {
   automationMode?: 'heartbeat' | 'schedule' | null;
@@ -20,7 +22,17 @@ interface TaskTriggerTagProps {
 }
 
 const FLEX_MIN_WIDTH_0 = { minWidth: 0 };
-const PILL_STYLE = { borderRadius: 24, minWidth: 0 };
+const PILL_STYLE: CSSProperties = {
+  alignItems: 'center',
+  background: cssVar.colorBgContainer,
+  border: `1px solid ${cssVar.colorBorderSecondary}`,
+  borderRadius: 24,
+  display: 'flex',
+  gap: 4,
+  height: 24,
+  minWidth: 0,
+  paddingInline: '4px 8px',
+};
 
 const TaskTriggerTag = memo<TaskTriggerTagProps>(
   ({ automationMode, heartbeatInterval, mode = 'tag', schedulePattern, scheduleTimezone }) => {
@@ -66,9 +78,9 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
       // lines and shift the rows below. Tooltip still surfaces the full text
       // plus timezone on hover, so no information is lost.
       return (
-        <Tooltip title={data?.tooltip}>
-          <Flexbox horizontal align="center" gap={10} style={FLEX_MIN_WIDTH_0}>
-            <Icon color={cssVar.colorTextDescription} icon={ClockIcon} size={16} />
+        <SimpleTooltip title={data?.tooltip}>
+          <div className="flex items-center gap-2.5" style={FLEX_MIN_WIDTH_0}>
+            <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
             <Text
               ellipsis
               style={FLEX_MIN_WIDTH_0}
@@ -77,8 +89,8 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
             >
               {data?.primary ?? t('taskSchedule.tag.add')}
             </Text>
-          </Flexbox>
-        </Tooltip>
+          </div>
+        </SimpleTooltip>
       );
     }
 
@@ -87,22 +99,14 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
     // Pill height (24px) only fits one line — drop the timezone here; the
     // tooltip surfaces it on hover.
     return (
-      <Tooltip title={data.tooltip}>
-        <Block
-          horizontal
-          align={'center'}
-          gap={4}
-          height={24}
-          paddingInline={'4px 8px'}
-          style={PILL_STYLE}
-          variant={'outlined'}
-        >
-          <Icon color={cssVar.colorTextDescription} icon={ClockIcon} size={16} />
+      <SimpleTooltip title={data.tooltip}>
+        <div style={PILL_STYLE}>
+          <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
           <Text ellipsis fontSize={12} style={FLEX_MIN_WIDTH_0} type={'secondary'}>
             {data.primary}
           </Text>
-        </Block>
-      </Tooltip>
+        </div>
+      </SimpleTooltip>
     );
   },
 );

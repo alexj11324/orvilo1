@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -22,6 +21,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { partitionSelfMember } from './assigneeMemberOptions';
 import { blockedPickerContentStyle, pickerTriggerStyle } from './pickerTriggerStyles';
+import { SimpleTooltip } from './SimpleTooltip';
 
 interface AssigneeMemberSelectorProps {
   children: ReactNode;
@@ -242,7 +242,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
                   size={22}
                 />
               ) : (
-                <Icon color={cssVar.colorTextDescription} icon={UserRoundX} size={18} />
+                <UserRoundX size={18} style={{ color: cssVar.colorTextDescription }} />
               )
             }
             onClick={() => handleSelect(option)}
@@ -258,14 +258,14 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
 
     if (blocked)
       return (
-        <Tooltip title={disabled ? t('taskDetail.reassignDisabled') : reason}>
+        <SimpleTooltip title={disabled ? t('taskDetail.reassignDisabled') : reason}>
           <div
             style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
             onClick={(event) => event.stopPropagation()}
           >
             <span style={blockedPickerContentStyle}>{children}</span>
           </div>
-        </Tooltip>
+        </SimpleTooltip>
       );
 
     return (
@@ -295,15 +295,14 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
           {activeWorkspaceId && isLoading ? (
             <SkeletonList rows={6} />
           ) : flatOptions.length === 0 ? (
-            <Flexbox align={'center'} justify={'center'} padding={16}>
+            <div className="flex items-center justify-center p-4">
               <Text fontSize={12} type={'secondary'}>
                 {t('taskList.assigneeSearch.memberEmpty')}
               </Text>
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox
-              gap={4}
-              padding={8}
+            <div
+              className="flex flex-col gap-1 p-2"
               ref={listRef}
               style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
             >
@@ -315,7 +314,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
                 </div>
               )}
               {otherMembers.map((member) => renderOption(toMemberOption(member)))}
-            </Flexbox>
+            </div>
           )}
         </PopoverContent>
       </Popover>

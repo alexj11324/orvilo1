@@ -1,12 +1,18 @@
 'use client';
 
-import { Block, type DropdownItem, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Text, toast } from '@lobehub/ui/base-ui';
 import { ArrowUpRight, CheckIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -58,13 +64,14 @@ const TaskProjectSection = memo(() => {
   // milestone but cannot re-file it.
   const canEdit = canEditTask && !!project?.userId && project.userId === currentUserId;
 
-  const milestoneItems = useMemo<DropdownItem[]>(() => {
-    if (!project) return [];
-    const change = async (milestoneId: string | null) => {
+  const changeMilestone = useMemo(() => {
+    if (!project) return null;
+    const projectId = project.id;
+    return async (milestoneId: string | null) => {
       if (!taskDatabaseId || pending) return;
       setPending(true);
       try {
-        await setTaskMilestone(project.id, taskDatabaseId, milestoneId);
+        await setTaskMilestone(projectId, taskDatabaseId, milestoneId);
       } catch {
         // Store action revalidates the project detail on success; on failure
         // the row keeps its last state and the toast carries the reason.
@@ -73,70 +80,17 @@ const TaskProjectSection = memo(() => {
         setPending(false);
       }
     };
-    return [
-      ...milestones.map((row) => ({
-        icon: row.id === milestone?.id ? <Icon icon={CheckIcon} /> : undefined,
-        key: row.id,
-        label: (
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-            <span>{row.name}</span>
-            {row.date && (
-              <Text fontSize={12} type={'secondary'}>
-                {formatTaskItemDate(row.date, {
-                  formatOtherYear: tCommon('time.formatOtherYear'),
-                  formatThisYear: tCommon('time.formatThisYear'),
-                  locale: i18n.language,
-                })}
-              </Text>
-            )}
-          </Flexbox>
-        ),
-        onClick: () => void change(row.id),
-      })),
-      { type: 'divider' },
-      {
-        icon: !milestone ? <Icon icon={CheckIcon} /> : undefined,
-        key: 'none',
-        label: t('taskList.noMilestone'),
-        onClick: () => void change(null),
-      },
-    ];
-  }, [project, milestones, milestone, taskDatabaseId, pending, setTaskMilestone, t, i18n, tCommon]);
+  }, [project, taskDatabaseId, pending, setTaskMilestone, t]);
 
   // A project write re-files the task; the project's task catalog on both
   // sides of the move is reconciled inside useTaskProjectChange.
-  const projectItems = useMemo<DropdownItem[]>(() => {
-    const change = (next: string | null) => {
+  const changeProject = useMemo(
+    () => (next: string | null) => {
       if (projectPending || next === taskProjectId) return;
       void applyProject(next, taskProjectId);
-    };
-    return [
-      ...projects.map((row) => ({
-        icon: row.id === taskProjectId ? <Icon icon={CheckIcon} /> : undefined,
-        key: row.id,
-        label: (
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-            <Avatar
-              avatar={row.avatar || undefined}
-              name={row.name}
-              shape={'square'}
-              size={16}
-              style={{ flex: 'none' }}
-            />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</span>
-          </Flexbox>
-        ),
-        onClick: () => change(row.id),
-      })),
-      { type: 'divider' },
-      {
-        icon: !taskProjectId ? <Icon icon={CheckIcon} /> : undefined,
-        key: 'none',
-        label: t('taskDetail.noProject'),
-        onClick: () => change(null),
-      },
-    ];
-  }, [projects, taskProjectId, projectPending, applyProject, t]);
+    },
+    [projectPending, applyProject, taskProjectId],
+  );
 
   if (!taskProjectId && !canPickProject) return null;
 
@@ -157,49 +111,16 @@ const TaskProjectSection = memo(() => {
 
   // Editable → the row is Linear's milestone picker (a dropdown trigger);
   // read-only → the same row links to the milestone-filtered issues list.
-  const milestoneRow = canEdit ? (
-    <DropdownMenu items={milestoneItems} placement={'bottomRight'}>
-      <Block
-        clickable
-        horizontal
-        align={'center'}
-        className={styles.railRow}
-        gap={8}
-        title={t('taskDetail.milestone.hint')}
-        variant={'borderless'}
-      >
-        <MilestoneIcon size={14} style={{ flex: 'none' }} />
-        <Text
-          ellipsis
-          fontSize={RAIL_VALUE_FONT_SIZE}
-          style={{ minWidth: 0 }}
-          type={milestone ? undefined : 'secondary'}
-          weight={500}
-        >
-          {milestone ? milestone.name : t('taskList.noMilestone')}
-        </Text>
-        {milestoneDate && (
-          <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
-            {`· ${milestoneDate}`}
-          </Text>
-        )}
-      </Block>
-    </DropdownMenu>
-  ) : (
-    <Block
-      clickable
-      horizontal
-      align={'center'}
-      className={styles.railRow}
-      gap={8}
-      title={milestone ? t('overview.milestoneSeeIssues', { ns: 'project' }) : undefined}
-      variant={'borderless'}
-      onClick={() =>
-        milestone && projectRef && navigate(getProjectMilestoneIssuesPath(projectRef, milestone.id))
-      }
-    >
+  const milestoneTrigger = (title?: string) => (
+    <div className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`} title={title}>
       <MilestoneIcon size={14} style={{ flex: 'none' }} />
-      <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
+      <Text
+        ellipsis
+        fontSize={RAIL_VALUE_FONT_SIZE}
+        style={{ minWidth: 0 }}
+        type={milestone ? undefined : 'secondary'}
+        weight={500}
+      >
         {milestone ? milestone.name : t('taskList.noMilestone')}
       </Text>
       {milestoneDate && (
@@ -207,8 +128,61 @@ const TaskProjectSection = memo(() => {
           {`· ${milestoneDate}`}
         </Text>
       )}
-    </Block>
+    </div>
   );
+
+  const milestoneRow =
+    canEdit && changeMilestone ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger render={milestoneTrigger(t('taskDetail.milestone.hint'))} />
+        <DropdownMenuContent align={'end'} className={'min-w-52'}>
+          {milestones.map((row) => (
+            <DropdownMenuItem key={row.id} onClick={() => void changeMilestone(row.id)}>
+              <span className={row.id === milestone?.id ? undefined : 'opacity-0'}>
+                <CheckIcon size={16} />
+              </span>
+              <span className={'flex-1'}>{row.name}</span>
+              {row.date && (
+                <Text fontSize={12} type={'secondary'}>
+                  {formatTaskItemDate(row.date, {
+                    formatOtherYear: tCommon('time.formatOtherYear'),
+                    formatThisYear: tCommon('time.formatThisYear'),
+                    locale: i18n.language,
+                  })}
+                </Text>
+              )}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => void changeMilestone(null)}>
+            <span className={!milestone ? undefined : 'opacity-0'}>
+              <CheckIcon size={16} />
+            </span>
+            <span className={'flex-1'}>{t('taskList.noMilestone')}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <div
+        className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`}
+        title={milestone ? t('overview.milestoneSeeIssues', { ns: 'project' }) : undefined}
+        onClick={() =>
+          milestone &&
+          projectRef &&
+          navigate(getProjectMilestoneIssuesPath(projectRef, milestone.id))
+        }
+      >
+        <MilestoneIcon size={14} style={{ flex: 'none' }} />
+        <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
+          {milestone ? milestone.name : t('taskList.noMilestone')}
+        </Text>
+        {milestoneDate && (
+          <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
+            {`· ${milestoneDate}`}
+          </Text>
+        )}
+      </div>
+    );
 
   const projectValue = (
     <>
@@ -237,21 +211,45 @@ const TaskProjectSection = memo(() => {
   // stays a distinct affordance beside it, so one click never both picks
   // and leaves the page. Read-only keeps the whole row as the link.
   const projectRow = canPickProject ? (
-    <Flexbox horizontal align={'center'} gap={4} style={{ minWidth: 0 }}>
-      <DropdownMenu items={projectItems} placement={'bottomRight'}>
-        <Block
-          clickable
-          horizontal
-          align={'center'}
-          className={styles.railRow}
-          flex={1}
-          gap={8}
-          style={{ minWidth: 0 }}
-          title={projectPending ? undefined : (projectName ?? t('taskDetail.noProject'))}
-          variant={'borderless'}
-        >
-          {projectValue}
-        </Block>
+    <div className={'flex items-center gap-1'} style={{ minWidth: 0 }}>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <div
+              className={`flex flex-1 cursor-pointer items-center gap-2 ${styles.railRow}`}
+              style={{ minWidth: 0 }}
+              title={projectPending ? undefined : (projectName ?? t('taskDetail.noProject'))}
+            >
+              {projectValue}
+            </div>
+          }
+        />
+        <DropdownMenuContent align={'end'} className={'min-w-52'}>
+          {projects.map((row) => (
+            <DropdownMenuItem key={row.id} onClick={() => changeProject(row.id)}>
+              <span className={row.id === taskProjectId ? undefined : 'opacity-0'}>
+                <CheckIcon size={16} />
+              </span>
+              <Avatar
+                avatar={row.avatar || undefined}
+                name={row.name}
+                shape={'square'}
+                size={16}
+                style={{ flex: 'none' }}
+              />
+              <span className={'flex-1'} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {row.name}
+              </span>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => changeProject(null)}>
+            <span className={!taskProjectId ? undefined : 'opacity-0'}>
+              <CheckIcon size={16} />
+            </span>
+            <span className={'flex-1'}>{t('taskDetail.noProject')}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
       </DropdownMenu>
       {project && projectRef ? (
         <ActionIcon
@@ -261,20 +259,15 @@ const TaskProjectSection = memo(() => {
           onClick={() => navigate(`/project/${projectRef}`)}
         />
       ) : null}
-    </Flexbox>
+    </div>
   ) : project && projectRef ? (
-    <Block
-      clickable
-      horizontal
-      align={'center'}
-      className={styles.railRow}
-      gap={8}
+    <div
+      className={`flex cursor-pointer items-center gap-2 ${styles.railRow}`}
       title={project.name}
-      variant={'borderless'}
       onClick={() => navigate(`/project/${projectRef}`)}
     >
       {projectValue}
-    </Block>
+    </div>
   ) : null;
 
   return (

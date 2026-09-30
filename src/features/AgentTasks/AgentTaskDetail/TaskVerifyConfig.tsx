@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox, Icon, TextArea } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -30,6 +29,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Textarea } from '@/components/ui/textarea';
 import {
   CriterionList,
   CriterionRequiredChip,
@@ -531,22 +531,16 @@ const TaskVerifyConfig = memo(() => {
     // hovering the requirement doesn't light up a big clickable block.
     const showRequirement = savedCount === 0 && requirementPreview.length > 0;
     const trigger = (
-      <Block
-        clickable
-        horizontal
-        align={'center'}
-        gap={8}
-        paddingBlock={4}
-        paddingInline={8}
-        style={{ width: 'fit-content' }}
-        variant={'borderless'}
+      <div
+        className="flex cursor-pointer items-center gap-2"
+        style={{ paddingBlock: 4, paddingInline: 8, width: 'fit-content' }}
         onClick={handleCollapsedClick}
       >
-        <Icon
-          color={cssVar.colorTextDescription}
-          icon={isConfigured ? ShieldCheck : Plus}
-          size={16}
-        />
+        {isConfigured ? (
+          <ShieldCheck color={cssVar.colorTextDescription} size={16} />
+        ) : (
+          <Plus color={cssVar.colorTextDescription} size={16} />
+        )}
         <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
           {t('verifyConfig.empty.title')}
         </Text>
@@ -557,28 +551,28 @@ const TaskVerifyConfig = memo(() => {
             {t('verifyConfig.collapsedHint')}
           </Text>
         )}
-      </Block>
+      </div>
     );
     if (!showRequirement) return trigger;
     return (
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         {trigger}
         <Text className={styles.collapsedRequirement} fontSize={14}>
           {requirementPreview}
         </Text>
-      </Flexbox>
+      </div>
     );
   }
 
   // ---- B. generating ----
   if (generating) {
     return (
-      <Block className={styles.section} variant={'outlined'}>
-        <Flexbox horizontal align={'center'} gap={12}>
+      <div className={`rounded-md border border-border ${styles.section}`}>
+        <div className="flex items-center gap-3">
           <NeuralNetworkLoading size={20} />
           <Text className={styles.subtitle}>{t('verifyConfig.generating')}</Text>
-        </Flexbox>
-      </Block>
+        </div>
+      </div>
     );
   }
 
@@ -589,29 +583,29 @@ const TaskVerifyConfig = memo(() => {
     // requirement textarea. Both live in the header, not as body buttons.
     const addMenuItems: DropdownItem[] = [
       {
-        icon: <Icon icon={Plus} />,
+        icon: <Plus size={16} />,
         key: 'manual-add',
         label: t('verifyConfig.manualAdd'),
         onClick: handleManualAdd,
       },
       {
-        icon: <Icon icon={ChevronRight} />,
+        icon: <ChevronRight size={16} />,
         key: 'from-template',
         label: t('verifyConfig.fromTemplate'),
         onClick: () => setShowTemplatePicker((v) => !v),
       },
     ];
     return (
-      <Block className={styles.section} variant={'outlined'}>
-        <Flexbox gap={12}>
-          <Flexbox horizontal align={'center'} justify={'space-between'}>
-            <Flexbox horizontal align={'center'} gap={8}>
-              <Icon icon={ShieldCheck} size={18} />
+      <div className={`rounded-md border border-border ${styles.section}`}>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={18} />
               <Text weight={600}>{t('verifyConfig.empty.title')}</Text>
-            </Flexbox>
+            </div>
             {/* Actions live top-right, de-emphasized, so they never outweigh the
                 requirement input that is the empty state's primary focus. */}
-            <Flexbox horizontal align={'center'} gap={4}>
+            <div className="flex items-center gap-1">
               <Button
                 disabled={!requirement.trim()}
                 icon={Sparkles}
@@ -624,16 +618,17 @@ const TaskVerifyConfig = memo(() => {
                 <ActionIcon icon={MoreHorizontal} size={'small'} />
               </DropdownMenu>
               <ActionIcon icon={ChevronUp} size={'small'} onClick={() => setExpanded(false)} />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
           <Text className={styles.subtitle}>
             {requirement.trim()
               ? t('verifyConfig.empty.materializeHint')
               : t('verifyConfig.empty.subtitle')}
           </Text>
-          <TextArea
-            autoSize={{ maxRows: 4, minRows: 2 }}
+          <Textarea
             placeholder={t('verifyConfig.requirementPlaceholder')}
+            rows={2}
+            style={{ maxHeight: '8em' }}
             value={requirement}
             onChange={(e) => handleRequirementChange(e.target.value)}
             onBlur={() => {
@@ -656,8 +651,8 @@ const TaskVerifyConfig = memo(() => {
               onChange={handlePickTemplate}
             />
           ) : null}
-        </Flexbox>
-      </Block>
+        </div>
+      </div>
     );
   }
 
@@ -678,7 +673,7 @@ const TaskVerifyConfig = memo(() => {
     },
     {
       disabled: !requirementText,
-      icon: <Icon icon={RotateCcw} />,
+      icon: <RotateCcw size={16} />,
       key: 'regenerate',
       label: t('verifyConfig.regenerate'),
       onClick: handleGenerate,
@@ -692,7 +687,7 @@ const TaskVerifyConfig = memo(() => {
     { type: 'divider' },
     {
       danger: true,
-      icon: <Icon icon={Trash} />,
+      icon: <Trash size={16} />,
       key: 'remove',
       label: t('taskDetail.acceptance.remove'),
       onClick: handleRemoveAll,
@@ -700,11 +695,11 @@ const TaskVerifyConfig = memo(() => {
   ];
 
   return (
-    <Flexbox className={styles.section}>
-      <Flexbox gap={12}>
+    <div className={styles.section}>
+      <div className="flex flex-col gap-3">
         {/* Definition and result modes share one title contract. Mode-specific
             controls stay on the right without changing the information hierarchy. */}
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
+        <div className="flex items-center justify-between">
           <TaskAcceptanceHeader isOpen count={drafts.length} onToggle={() => setExpanded(false)} />
           <DropdownMenu items={headerMenuItems} placement={'bottomRight'}>
             <ActionIcon
@@ -713,16 +708,16 @@ const TaskVerifyConfig = memo(() => {
               title={t('verifyConfig.moreActions')}
             />
           </DropdownMenu>
-        </Flexbox>
+        </div>
 
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text className={styles.subtitle} fontSize={12}>
             {t('taskDetail.acceptance.goal')}
           </Text>
           <Text type={requirementText ? undefined : 'secondary'}>
             {requirementText || t('verifyConfig.requirementEmpty')}
           </Text>
-        </Flexbox>
+        </div>
 
         <CriterionList>
           {drafts.map((item, index) => (
@@ -737,14 +732,14 @@ const TaskVerifyConfig = memo(() => {
                   placement={'bottomRight'}
                   items={[
                     {
-                      icon: <Icon icon={Pencil} />,
+                      icon: <Pencil size={16} />,
                       key: 'edit',
                       label: t('verifyConfig.edit'),
                       onClick: () => openCriterionDetail(item),
                     },
                     {
                       danger: true,
-                      icon: <Icon icon={Trash} />,
+                      icon: <Trash size={16} />,
                       key: 'remove',
                       label: t('verifyConfig.removeCriterion'),
                       onClick: () => handleRemove(item.id),
@@ -760,9 +755,8 @@ const TaskVerifyConfig = memo(() => {
                 </DropdownMenu>
               }
               icon={
-                <Icon
+                <CircleDashed
                   color={cssVar.colorTextQuaternary}
-                  icon={CircleDashed}
                   size={16}
                   style={{ flex: 'none' }}
                 />
@@ -779,13 +773,13 @@ const TaskVerifyConfig = memo(() => {
           ))}
         </CriterionList>
 
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2">
           <Button icon={Plus} size={'small'} type={'text'} onClick={handleManualAdd}>
             {t('verifyConfig.addCriterion')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

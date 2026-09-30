@@ -1,4 +1,3 @@
-import { Icon, Tooltip } from '@lobehub/ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
@@ -25,6 +24,7 @@ import {
   taskStatusChoices,
 } from '../AgentTaskList/kanbanBoardModel';
 import { renderMenuExtra } from './menuExtra';
+import { SimpleTooltip } from './SimpleTooltip';
 import { STATUS_META } from './taskStatusMeta';
 import { useIssueStatusMove } from './useIssueStatusMove';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
@@ -243,19 +243,24 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       },
     });
 
+    const TriggerIcon = (glyph ?? meta).icon;
     const triggerNode =
       children ||
       (loading ? (
         <span className={styles.trigger}>
-          <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+          <Loader2Icon
+            className="animate-spin"
+            size={size}
+            style={{ color: cssVar.colorTextDescription }}
+          />
         </span>
       ) : (
         <span className={styles.trigger}>
-          <Tooltip
+          <SimpleTooltip
             title={glyph?.label ?? t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}
           >
-            <Icon color={(glyph ?? meta).color} icon={(glyph ?? meta).icon} size={size} />
-          </Tooltip>
+            <TriggerIcon color={(glyph ?? meta).color} size={size} />
+          </SimpleTooltip>
         </span>
       ));
 
@@ -263,11 +268,11 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
 
     if (!canEditTask)
       return (
-        <Tooltip title={reason}>
+        <SimpleTooltip title={reason}>
           <span className={styles.triggerDisabled} onClick={(e) => e.stopPropagation()}>
             {triggerNode}
           </span>
-        </Tooltip>
+        </SimpleTooltip>
       );
 
     let pickIndex = 0;
@@ -306,6 +311,7 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
             );
             const visual =
               WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+            const VisualIcon = visual.icon;
             if (pickable) pickIndex += 1;
             const label = choiceLabel(choice);
             return (
@@ -317,7 +323,7 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
                   void handlePick(choice);
                 }}
               >
-                <Icon color={visual.color} icon={visual.icon} size={16} />
+                <VisualIcon color={visual.color} size={16} />
                 <span className="flex-1">{label}</span>
                 {pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined}
               </DropdownMenuItem>

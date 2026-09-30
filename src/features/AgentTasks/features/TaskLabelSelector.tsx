@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskLabelSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -25,6 +24,7 @@ import {
   blockedPickerTriggerStyle,
   pickerTriggerStyle,
 } from './pickerTriggerStyles';
+import { SimpleTooltip } from './SimpleTooltip';
 
 interface TaskLabelSelectorProps {
   /**
@@ -229,11 +229,11 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
 
     if (blocked)
       return (
-        <Tooltip title={disabled ? t('taskDetail.labels.disabled') : reason}>
+        <SimpleTooltip title={disabled ? t('taskDetail.labels.disabled') : reason}>
           <div style={blockedPickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
             <span style={blockedPickerContentStyle}>{children}</span>
           </div>
-        </Tooltip>
+        </SimpleTooltip>
       );
 
     return (
@@ -261,15 +261,14 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
           {isLoading ? (
             <SkeletonList rows={4} />
           ) : flatOptions.length === 0 ? (
-            <Flexbox align={'center'} justify={'center'} padding={16}>
+            <div className="flex items-center justify-center p-4">
               <Text fontSize={12} type={'secondary'}>
                 {t('taskDetail.labels.empty')}
               </Text>
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox
-              gap={4}
-              padding={8}
+            <div
+              className="flex flex-col gap-1 p-2"
               ref={listRef}
               style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
             >
@@ -295,7 +294,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
                       title={option.label.name}
                       extra={
                         assignedIds.has(option.label.id) ? (
-                          <Icon color={cssVar.colorTextDescription} icon={CheckIcon} size={14} />
+                          <CheckIcon size={14} style={{ color: cssVar.colorTextDescription }} />
                         ) : undefined
                       }
                       slots={{
@@ -314,7 +313,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
                   )}
                 </div>
               ))}
-            </Flexbox>
+            </div>
           )}
         </PopoverContent>
       </Popover>

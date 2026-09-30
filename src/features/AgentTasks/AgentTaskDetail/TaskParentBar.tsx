@@ -1,9 +1,9 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailData, TaskDetailSubtask, TaskWorkflowCategory } from '@orvilo/types';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { taskService } from '@/services/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -88,7 +88,7 @@ const TaskParentBar = memo(() => {
       : parent.agentId;
 
   return (
-    <Flexbox horizontal align="center" gap={8} style={{ maxWidth: '100%', minWidth: 0 }}>
+    <div className="flex items-center gap-2" style={{ maxWidth: '100%', minWidth: 0 }}>
       <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
         {t('taskDetail.subIssueOf')}
       </Text>
@@ -98,9 +98,18 @@ const TaskParentBar = memo(() => {
         type={'text'}
         icon={
           workflowGlyph ? (
-            <Tooltip title={workflowGlyph.label}>
-              <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={16} />
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <workflowGlyph.icon color={workflowGlyph.color} size={16} />
+                    </span>
+                  }
+                />
+                <TooltipContent>{workflowGlyph.label}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             <TaskStatusIcon size={16} status={parentStatus} />
           )
@@ -135,7 +144,7 @@ const TaskParentBar = memo(() => {
           />
         </span>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

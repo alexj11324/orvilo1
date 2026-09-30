@@ -1,4 +1,3 @@
-import { Block, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -32,6 +31,7 @@ import AssigneeAvatar from './AssigneeAvatar';
 import AssigneeMemberSelector from './AssigneeMemberSelector';
 import AssigneeUserAvatar from './AssigneeUserAvatar';
 import { formatTaskItemDate } from './formatTaskItemDate';
+import { SimpleTooltip } from './SimpleTooltip';
 import TaskPriorityTag from './TaskPriorityTag';
 import TaskStatusTag from './TaskStatusTag';
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
@@ -43,7 +43,7 @@ import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 // Linear's issue-row type ramp: 13px identifier (450) and title (500) on a
 // 44px row. The identifier column's width comes from the list
 // (`issueIdColumnStyle`), so every status mark lines up.
-const styles = createStaticStyles(({ css }) => ({
+const styles = createStaticStyles(({ css, cssVar }) => ({
   identifier: css`
     flex: none;
 
@@ -65,7 +65,13 @@ const styles = createStaticStyles(({ css }) => ({
     text-align: center;
   `,
   row: css`
+    cursor: pointer;
     min-height: 44px;
+    border-radius: ${cssVar.borderRadius};
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
   `,
   title: css`
     min-width: 0;
@@ -213,10 +219,13 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   ) : null;
 
   const isPrivate = task.visibility === 'private';
+  const PrivateIcon = TASK_VISIBILITY_ICONS.private;
   const privacyBadge = isPrivate ? (
-    <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-      <Icon color={cssVar.colorTextDescription} icon={TASK_VISIBILITY_ICONS.private} size={14} />
-    </Tooltip>
+    <SimpleTooltip
+      title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}
+    >
+      <PrivateIcon size={14} style={{ color: cssVar.colorTextDescription }} />
+    </SimpleTooltip>
   ) : null;
 
   // Linear's row grammar: priority, identifier, one status mark, title. The
@@ -224,7 +233,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   // badge beside the execution glyph. A nameless task has no separate title,
   // so its identifier renders as the row text instead.
   const titleRow = (
-    <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+    <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
       {hasName ? (
         <Text className={styles.identifier} type={'secondary'}>
@@ -277,17 +286,14 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         onRequestSubtasks={handleRequestSubtasks}
         onSubtaskClick={handleSubtaskClick}
       />
-    </Flexbox>
+    </div>
   );
 
   const assigneeNode = (
-    <Flexbox
-      horizontal
-      align={'center'}
+    <div
+      className="flex flex-none items-center gap-1"
       data-collab-id={`task:${task.id}:assignee`}
       data-collab-id-alt={`task:${task.identifier}:assignee`}
-      flex={'none'}
-      gap={4}
     >
       {status === 'paused'
         ? // Pending review: the member slot shows who owns the review — the
@@ -301,15 +307,13 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
               onChange={(userId) => void updateTask(task.identifier, { reviewerUserId: userId })}
             >
               {task.reviewerUserId ? (
-                <Tooltip title={tChat('taskDetail.reviewer')}>
-                  <span>
-                    <AssigneeUserAvatar userId={task.reviewerUserId} />
-                  </span>
-                </Tooltip>
+                <SimpleTooltip title={tChat('taskDetail.reviewer')}>
+                  <AssigneeUserAvatar userId={task.reviewerUserId} />
+                </SimpleTooltip>
               ) : (
-                <Tooltip title={tChat('taskDetail.reviewer')}>
+                <SimpleTooltip title={tChat('taskDetail.reviewer')}>
                   <UnassignedAssigneeIcon kind={'human'} />
-                </Tooltip>
+                </SimpleTooltip>
               )}
             </AssigneeMemberSelector>
           )
@@ -324,9 +328,11 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
               {task.assigneeUserId ? (
                 <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
               ) : (
-                <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
+                <SimpleTooltip
+                  title={status === 'running' ? undefined : tChat('taskList.assignTo')}
+                >
                   <UnassignedAssigneeIcon kind={'human'} />
-                </Tooltip>
+                </SimpleTooltip>
               )}
             </AssigneeMemberSelector>
           )}
@@ -339,19 +345,19 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         {task.assigneeAgentId ? (
           <AssigneeAvatar agentId={task.assigneeAgentId} tooltip={status !== 'running'} />
         ) : (
-          <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
+          <SimpleTooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
             <AssigneeAvatar agentId={task.assigneeAgentId} />
-          </Tooltip>
+          </SimpleTooltip>
         )}
       </AssigneeAgentSelector>
-    </Flexbox>
+    </div>
   );
 
   // Running cards get a one-tap door into the live run's conversation — the
   // steering surface — without routing through the detail page first.
   const openRunNode =
     status === 'running' && task.currentTopicId ? (
-      <Tooltip title={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}>
+      <SimpleTooltip title={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}>
         <ActionIcon
           icon={MessageSquareTextIcon}
           size={'small'}
@@ -364,7 +370,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
             });
           }}
         />
-      </Tooltip>
+      </SimpleTooltip>
     ) : null;
 
   const scheduleNode = task.automationMode ? (
@@ -389,41 +395,43 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
 
   return (
     <SidebarContextMenu items={contextMenuItems} onMenuOpen={handleContextMenuOpen}>
-      <Block
-        clickable
+      <div
         className={styles.row}
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
-        gap={4}
-        justify={'center'}
-        paddingBlock={4}
-        paddingInline={`${insetStart}px 12px`}
-        variant={'borderless'}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          justifyContent: 'center',
+          paddingBlock: 4,
+          paddingInline: `${insetStart}px 12px`,
+        }}
         onClick={handleClick}
       >
-        <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
+        <div className="flex items-center justify-between gap-1">
           {titleRow}
-          <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+          <div className="flex flex-none items-center gap-2">
             {/* Linear's right cluster: labels, then milestone and project. The
                 wrapper's data attribute is the display-properties toggle's hide
                 hook (`rowHideLabels`). */}
-            <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
+            <div className="flex flex-none items-center gap-1">
               {task.labels?.length ? (
-                <Flexbox data-task-labels flex={'none'} style={{ minWidth: 0 }}>
+                <div data-task-labels style={{ flex: 'none', minWidth: 0 }}>
                   <LabelChips labels={task.labels} max={2} />
-                </Flexbox>
+                </div>
               ) : null}
               {milestoneBadge}
               {trailingChips}
-            </Flexbox>
+            </div>
             {openRunNode}
             {scheduleNode}
             {assigneeNode}
             {timeNode}
-          </Flexbox>
-        </Flexbox>
-      </Block>
+          </div>
+        </div>
+      </div>
     </SidebarContextMenu>
   );
 });

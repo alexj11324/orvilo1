@@ -1,5 +1,4 @@
 import type { IconType } from '@lobehub/icons';
-import { Icon, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
@@ -21,6 +20,7 @@ import {
 import { usePermission } from '@/hooks/usePermission';
 
 import { renderMenuExtra } from './menuExtra';
+import { SimpleTooltip } from './SimpleTooltip';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
 import { useTaskPriorityChange } from './useTaskPriorityChange';
 
@@ -154,16 +154,22 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       children ||
       (loading ? (
         <span className={styles.trigger}>
-          <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+          <Loader2Icon
+            className="animate-spin"
+            size={size}
+            style={{ color: cssVar.colorTextDescription }}
+          />
         </span>
       ) : (
         <span
           className={isUrgent ? styles.triggerUrgent : styles.trigger}
           data-row-control={'priority'}
         >
-          <Tooltip title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}>
+          <SimpleTooltip
+            title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}
+          >
             <IconRender color={getPriorityIconColor(currentLevel)} size={size} />
-          </Tooltip>
+          </SimpleTooltip>
         </span>
       ));
 
@@ -171,7 +177,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
 
     if (!canEditTask)
       return (
-        <Tooltip title={reason}>
+        <SimpleTooltip title={reason}>
           <span
             className={styles.triggerDisabled}
             style={{ display: 'inline-flex' }}
@@ -179,7 +185,7 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
           >
             {triggerNode}
           </span>
-        </Tooltip>
+        </SimpleTooltip>
       );
 
     return (

@@ -1,5 +1,4 @@
 import { ChatInput, Editor, SendButton, useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ChevronLeft } from 'lucide-react';
@@ -43,7 +42,7 @@ const RunReplyEditor = memo<RunReplyEditorProps>(({ onSubmit, onCancel, placehol
       minHeight={30}
       resize={false}
       footer={
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} padding={8}>
+        <div className="flex items-center justify-between gap-2 p-2">
           <Button
             disabled={submitting}
             icon={<ChevronLeft size={14} />}
@@ -61,7 +60,7 @@ const RunReplyEditor = memo<RunReplyEditorProps>(({ onSubmit, onCancel, placehol
             type={'primary'}
             onClick={handleSubmit}
           />
-        </Flexbox>
+        </div>
       }
     >
       <Editor

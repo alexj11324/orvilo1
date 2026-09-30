@@ -27,7 +27,11 @@ const EditorCanvas: FC<EditorCanvasProps> = ({ defaultValue, editor, editorData 
       return { content: JSON.stringify(editorData), type: 'json' as const };
     }
 
-    return { content: defaultValue || '', type: 'markdown' as const };
+    // Empty markdown parses to a root without children in the editor runtime.
+    // Its text loader creates an editable paragraph for a new blank document.
+    if (!defaultValue?.trim()) return { content: defaultValue || '', type: 'text' as const };
+
+    return { content: defaultValue, type: 'markdown' as const };
   }, [editorData, defaultValue]);
 
   return (

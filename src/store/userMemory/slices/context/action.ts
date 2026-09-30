@@ -12,6 +12,8 @@ import { LayersEnum } from '@/types/userMemory';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type UserMemoryStore } from '../../store';
+import { invalidateMemoryCaches } from '../../utils/invalidate';
+import { getMemorySession, memorySessionKey, useMemorySession } from '../../utils/session';
 import { isMemoryListRequestCurrent } from '../utils/isMemoryListRequestCurrent';
 import { shouldSurfaceMemoryListError } from '../utils/shouldSurfaceMemoryListError';
 
@@ -24,7 +26,7 @@ export interface ContextQueryParams {
   sort?: 'capturedAt' | 'scoreImpact' | 'scoreUrgency';
 }
 
-type ContextListRequest = ContextQueryParams & { page: number };
+type ContextListRequest = ContextQueryParams & { page: number; session?: number };
 
 type Setter = StoreSetter<UserMemoryStore>;
 export const createContextSlice = (set: Setter, get: () => UserMemoryStore, _api?: unknown) =>
@@ -41,9 +43,12 @@ export class ContextActionImpl {
   }
 
   deleteContext = async (id: string): Promise<void> => {
+    const session = getMemorySession();
     await memoryCRUDService.deleteContext(id);
+    if (session !== getMemorySession()) return;
     // Reset list to refresh
     this.#get().resetContextsList({ q: this.#get().contextsQuery, sort: this.#get().contextsSort });
+    await invalidateMemoryCaches(session);
   };
 
   loadMoreContexts = (): void => {
@@ -60,6 +65,7 @@ export class ContextActionImpl {
   };
 
   internal_acceptContextsList = (data: any, request: ContextListRequest): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -96,6 +102,7 @@ export class ContextActionImpl {
   };
 
   internal_failContextsList = (error: unknown, request: ContextListRequest): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -142,8 +149,9 @@ export class ContextActionImpl {
    */
   useFetchContexts = (params: ContextQueryParams): SWRResponse<any> => {
     const page = params.page ?? 1;
+    const session = useMemorySession();
     const response = useSWR(
-      userMemoryKeys.contexts(params),
+      memorySessionKey(userMemoryKeys.contexts(params), session),
       async () => {
         const result = await userMemoryService.queryMemories({
           layer: LayersEnum.Context,
@@ -156,19 +164,20 @@ export class ContextActionImpl {
         return result;
       },
       {
+        keepPreviousData: false,
         revalidateOnFocus: false,
       },
     );
 
     useEffect(() => {
       if (response.data !== undefined)
-        this.internal_acceptContextsList(response.data, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.data]);
+        this.internal_acceptContextsList(response.data, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.data]);
 
     useEffect(() => {
       if (response.error !== undefined)
-        this.internal_failContextsList(response.error, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.error]);
+        this.internal_failContextsList(response.error, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.error]);
 
     return response;
   };

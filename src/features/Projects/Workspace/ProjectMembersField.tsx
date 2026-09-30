@@ -51,6 +51,10 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
+// Combobox values are strings; this sentinel marks the "invite teammate"
+// pseudo-option in the members picker.
+const INVITE_TEAMMATE_VALUE = '__inviteTeammate__';
+
 export function ProjectMembersField({
   projectId,
   query,
@@ -117,7 +121,7 @@ export function ProjectMembersField({
       ? [
           {
             label: t('properties.inviteAndAdd'),
-            value: 0,
+            value: INVITE_TEAMMATE_VALUE,
           },
         ]
       : []),
@@ -146,7 +150,7 @@ export function ProjectMembersField({
         }}
         onValueChange={async (value) => {
           if (lock.current || !canEdit || !Array.isArray(value)) return;
-          if (value.includes(0)) {
+          if (value.includes(INVITE_TEAMMATE_VALUE)) {
             if (capabilities.canInvite) {
               inviting.current = true;
               setOpen(false);
@@ -162,7 +166,7 @@ export function ProjectMembersField({
           lock.current = true;
           try {
             const current = new Set(members.map((member) => member.userId));
-            const next = new Set(value.filter((id): id is string => typeof id === 'string'));
+            const next = new Set(value.filter((id) => id !== INVITE_TEAMMATE_VALUE));
             for (const memberId of next) {
               if (
                 !current.has(memberId) &&

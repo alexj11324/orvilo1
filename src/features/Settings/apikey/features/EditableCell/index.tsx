@@ -154,7 +154,7 @@ const EditableCell = memo<EditableCellProps>(
               <Check />
             </Button>
             <Button
-              aria-label={t('common:cancel')}
+              aria-label={t('cancel', { ns: 'common' })}
               size="icon-sm"
               type="button"
               variant="ghost"

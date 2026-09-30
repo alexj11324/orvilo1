@@ -235,6 +235,9 @@ export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
   );
 }
 
+// Combobox values are strings; this sentinel marks the "no lead" pseudo-option.
+const NO_LEAD_VALUE = '__noLead__';
+
 export function ProjectLeadField({
   project,
 }: {
@@ -276,7 +279,7 @@ export function ProjectLeadField({
       title: t('properties.unavailableLead'),
       value: project.leadUserId,
     });
-  const leadPickerOptions = [{ label: t('properties.noLead'), value: 0 }, ...options];
+  const leadPickerOptions = [{ label: t('properties.noLead'), value: NO_LEAD_VALUE }, ...options];
   return (
     <>
       <label className={styles.accessibleLabel} htmlFor={id}>
@@ -285,10 +288,10 @@ export function ProjectLeadField({
       <Combobox
         disabled={saving || members.isLoading}
         items={leadPickerOptions.map((option) => option.value)}
-        value={project.leadUserId ?? 0}
+        value={project.leadUserId ?? NO_LEAD_VALUE}
         itemToStringLabel={(value) => {
           const option = leadPickerOptions.find((option) => option.value === value);
-          if (value === 0) return t('properties.addLead');
+          if (value === NO_LEAD_VALUE) return t('properties.addLead');
           return option && 'title' in option && typeof option.title === 'string'
             ? option.title
             : typeof option?.label === 'string'
@@ -296,9 +299,8 @@ export function ProjectLeadField({
               : String(value);
         }}
         onValueChange={(value) => {
-          if (value === null) return;
-          if ((value === 0 || typeof value === 'string') && value !== (project.leadUserId ?? 0))
-            void save({ leadUserId: value === 0 ? null : value });
+          if (value === null || value === (project.leadUserId ?? NO_LEAD_VALUE)) return;
+          void save({ leadUserId: value === NO_LEAD_VALUE ? null : value });
         }}
       >
         <>

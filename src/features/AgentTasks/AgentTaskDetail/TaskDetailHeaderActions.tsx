@@ -173,9 +173,12 @@ const TaskDetailHeaderActions = memo(() => {
 
     const visibilityItem = publishItem ?? makePrivateItem;
 
+    const resolvedTransferItems =
+      typeof transferItems === 'function' ? transferItems() : transferItems;
+
     const transferGroup =
-      transferItems && transferItems.length > 0
-        ? [...transferItems, ...(visibilityItem ? [visibilityItem] : [])]
+      resolvedTransferItems && resolvedTransferItems.length > 0
+        ? [...resolvedTransferItems, ...(visibilityItem ? [visibilityItem] : [])]
         : visibilityItem
           ? [visibilityItem]
           : [];

@@ -2,7 +2,7 @@
 import { ContextMenuTrigger } from '@lobehub/ui';
 import { confirmModal, type DropdownItem, toast } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
@@ -332,6 +332,7 @@ const PROJECT_PRIORITY_LABEL_KEY = {
  */
 const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
   const { t } = useTranslation('project');
+  const theme = useTheme();
   const health: null | ProjectHealth =
     project.health && project.health in PROJECT_HEALTH_META ? project.health : null;
   return (
@@ -347,12 +348,7 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
         style={{
           fontSize: 12,
           fontWeight: health ? undefined : 500,
-          color:
-            (health ? undefined : 'secondary') === 'danger'
-              ? 'var(--destructive)'
-              : (health ? undefined : 'secondary') === 'secondary'
-                ? 'var(--muted-foreground)'
-                : undefined,
+          color: health ? theme[PROJECT_HEALTH_META[health].color] : 'var(--muted-foreground)',
         }}
       >
         {health

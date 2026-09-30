@@ -118,7 +118,6 @@ const TaskAcceptanceStateRow = memo(() => {
       // The label may be truncated below, so the hover title carries it in
       // full ahead of the "click to review" hint.
       title={`${label} · ${t('taskDetail.acceptanceState.hint')}`}
-      variant={'borderless'}
       onClick={() => openAcceptanceInPanel(acceptance.id)}
     >
       <meta.icon

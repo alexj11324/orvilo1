@@ -807,7 +807,10 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                 }
                 onChange={setVisibility}
               >
-                <TaskVisibilityChipLabel height={24} paddingBlock={3} visibility={visibility} />
+                <TaskVisibilityChipLabel
+                  style={{ height: 24, paddingBlock: 3 }}
+                  visibility={visibility}
+                />
               </TaskVisibilityTag>
             )}
 

@@ -65,12 +65,7 @@ const DocumentModalHeader = memo<DocumentModalHeaderProps>(({ onDeleted }) => {
         {documentId && !isDocumentLoading && (
           <AutoSaveHint documentId={documentId} style={{ marginLeft: 4 }} />
         )}
-        <DropdownMenu
-          iconSpaceMode={'group'}
-          items={menuItems}
-          placement={'bottomLeft'}
-          popupProps={{ style: { minWidth: 200 } }}
-        >
+        <DropdownMenu items={menuItems} placement={'bottomLeft'} style={{ minWidth: 200 }}>
           <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
         </DropdownMenu>
       </div>

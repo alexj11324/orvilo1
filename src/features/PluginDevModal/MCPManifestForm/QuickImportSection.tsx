@@ -1,8 +1,10 @@
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
+import { CircleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { isDesktop } from '@/const/version';
 import { useToolStore } from '@/store/tool';
@@ -96,9 +98,9 @@ const QuickImportSection = ({
     return (
       <div>
         <Button
-          block // Make button full width
-          style={{ marginBottom: 16 }} // Add some spacing
-          type="dashed"
+          className="w-full"
+          style={{ marginBottom: 16 }}
+          variant="outline"
           onClick={() => {
             setImportError(null); // Clear previous errors when opening
             setIsImportModalVisible(true);
@@ -113,7 +115,10 @@ const QuickImportSection = ({
   return (
     <div className="flex flex-col gap-2">
       {importError && (
-        <Alert showIcon style={{ marginBottom: 8 }} title={importError} type="error" />
+        <Alert style={{ marginBottom: 8 }} variant="destructive">
+          <CircleAlert />
+          <AlertTitle>{importError}</AlertTitle>
+        </Alert>
       )}
       <Textarea
         rows={10}
@@ -140,14 +145,14 @@ const QuickImportSection = ({
       <div className="flex flex-row justify-between">
         <Button
           className={electronStylish.nodrag}
-          size={'small'}
+          size={'sm'}
           onClick={() => {
             setIsImportModalVisible(false);
           }}
         >
           {t('common:cancel')}
         </Button>
-        <Button size={'small'} type={'primary'} onClick={handleImportConfirm}>
+        <Button size={'sm'} variant={'default'} onClick={handleImportConfirm}>
           {t('common:import')}
         </Button>
       </div>

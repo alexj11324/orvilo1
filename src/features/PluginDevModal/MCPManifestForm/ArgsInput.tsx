@@ -1,8 +1,9 @@
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { Plus, X } from 'lucide-react';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface ArgsInputProps extends Omit<React.ComponentProps<'input'>, 'value' | 'onChange'> {
@@ -64,7 +65,14 @@ const ArgsInput = memo<ArgsInputProps>(({ value = [], onChange, ...res }) => {
               res.onBlur?.(e);
             }}
           />
-          <Button icon={Plus} size="small" type="primary" onClick={handleAddArg} />
+          <Button
+            aria-label={t('ArgsInput.addArgument')}
+            size="icon-sm"
+            variant="default"
+            onClick={handleAddArg}
+          >
+            <Plus />
+          </Button>
         </div>
       ) : (
         <>
@@ -86,12 +94,12 @@ const ArgsInput = memo<ArgsInputProps>(({ value = [], onChange, ...res }) => {
             </div>
           ))}
           <Button
-            icon={Plus}
-            size="small"
+            size="sm"
             style={{ alignSelf: 'flex-start' }}
-            type="dashed"
+            variant="outline"
             onClick={handleAddArg}
           >
+            <Plus data-icon="inline-start" />
             {t('ArgsInput.addArgument')}
           </Button>
         </>

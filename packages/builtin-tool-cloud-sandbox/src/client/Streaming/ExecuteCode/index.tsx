@@ -25,16 +25,7 @@ export const ExecuteCodeStreaming = memo<BuiltinStreamingProps<ExecuteCodeParams
   // Don't render if no code yet
   if (!code) return null;
 
-  return (
-    <CodeBlock
-      animated
-      wrap
-      code={code}
-      language={displayLanguage}
-      style={{ padding: '4px 8px' }}
-      variant={'default'}
-    />
-  );
+  return <CodeBlock wrap code={code} language={displayLanguage} />;
 });
 
 ExecuteCodeStreaming.displayName = 'ExecuteCodeStreaming';

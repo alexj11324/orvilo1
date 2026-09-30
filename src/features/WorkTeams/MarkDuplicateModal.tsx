@@ -74,7 +74,6 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
 
   return (
     <Modal
-      destroyOnHidden
       open={open}
       title={t('teams.markDuplicate')}
       width={480}

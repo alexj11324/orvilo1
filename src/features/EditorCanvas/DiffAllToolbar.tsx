@@ -125,10 +125,9 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
   return (
     <div className={styles.container}>
       <div
-        shadow
         style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
         className={cn(
-          'flex gap-2 p-1',
+          'flex gap-2 p-1 shadow-md',
           cx(styles.toolbar, isDarkMode ? styles.toolbarDark : styles.toolbarLight),
         )}
       >

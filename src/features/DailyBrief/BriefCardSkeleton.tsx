@@ -12,7 +12,6 @@ const BriefCardSkeleton = memo(() => {
       style={{
         border: `1px solid ${cssVar.colorBorder}`,
         borderRadius: cssVar.borderRadiusLG,
-        borderRadius: cssVar.borderRadiusLG,
       }}
     >
       <div className="flex items-center gap-4 justify-between">

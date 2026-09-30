@@ -113,8 +113,7 @@ const DocumentCard = memo<DocumentCardProps>(({ document }) => {
 
       {/* Floating expand/collapse button */}
       <Button
-        className={styles.expandButton}
-        className="rounded-full"
+        className={cn(styles.expandButton, 'rounded-full')}
         variant="outline"
         onClick={handleToggle}
       >

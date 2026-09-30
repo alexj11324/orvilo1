@@ -102,7 +102,7 @@ const GeneratingBorder = memo<GeneratingBorderProps>(
       <div
         style={{ ...style }}
         className={cn(
-          'flex',
+          'flex flex-col',
           [styles.shell, generating && styles.shellGenerating, className].filter(Boolean).join(' '),
         )}
       >

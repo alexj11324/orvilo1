@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { AskUserDraft, AskUserQuestionArgs } from '@orvilo/shared-tool-ui/ask-user';
 import {
@@ -59,18 +58,18 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
   if (interactionMode !== 'custom') {
     const questions = normalizeAskUserQuestions(args);
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {questions.map((q, idx) => (
-          <Flexbox gap={2} key={`${q.question}-${idx}`}>
+          <div className="flex flex-col gap-[2px]" key={`${q.question}-${idx}`}>
             {q.header && (
               <Text fontSize={12} type="secondary">
                 {q.header}
               </Text>
             )}
             <Text>{q.question}</Text>
-          </Flexbox>
+          </div>
         ))}
-      </Flexbox>
+      </div>
     );
   }
 

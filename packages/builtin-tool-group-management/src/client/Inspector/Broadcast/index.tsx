@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -72,12 +72,12 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
     }
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
+      <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-group-management.inspector.broadcast.title')}
         </span>
         {avatarItems.length > 0 && <Avatar.Group items={avatarItems} shape={'circle'} size={24} />}
-      </Flexbox>
+      </div>
     );
   },
 );

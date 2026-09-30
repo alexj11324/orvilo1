@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -110,23 +110,23 @@ const WebSearchRender = memo<BuiltinRenderProps<CodexWebSearchArgs, CodexWebSear
     if (!query && results.length === 0 && !output) return null;
 
     return (
-      <Flexbox className={styles.root}>
+      <div className={cn('flex', 'flex-col', styles.root)}>
         {query && (
-          <Flexbox horizontal className={styles.queryRow}>
+          <div className={cn('flex', styles.queryRow)}>
             <span className={styles.queryLabel}>
               {t('builtins.codex.webSearch.query', { defaultValue: 'Query' })}
             </span>
             <span className={styles.query}>{query}</span>
-          </Flexbox>
+          </div>
         )}
         {results.length > 0 && (
-          <Flexbox className={styles.resultList}>
+          <div className={cn('flex', 'flex-col', styles.resultList)}>
             {results.map((result, index) => {
               const key = result.url || `${result.title}-${index}`;
               const title = <span className={styles.title}>{result.title}</span>;
 
               return (
-                <Flexbox className={styles.resultItem} gap={3} key={key}>
+                <div className={cn('flex', 'flex-col', 'gap-[3px]', styles.resultItem)} key={key}>
                   {result.url ? (
                     <a href={result.url} rel={'noreferrer'} target={'_blank'}>
                       {title}
@@ -136,13 +136,13 @@ const WebSearchRender = memo<BuiltinRenderProps<CodexWebSearchArgs, CodexWebSear
                   )}
                   {result.url && <Text className={styles.url}>{result.url}</Text>}
                   {result.snippet && <Text className={styles.snippet}>{result.snippet}</Text>}
-                </Flexbox>
+                </div>
               );
             })}
-          </Flexbox>
+          </div>
         )}
         {output && <pre className={styles.output}>{output}</pre>}
-      </Flexbox>
+      </div>
     );
   },
 );

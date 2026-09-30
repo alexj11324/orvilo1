@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Play } from 'lucide-react';
@@ -75,7 +74,7 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
     if (isArgumentsStreaming && count === 0) {
       return (
         <div className={inspectorTextStyles.root}>
-          <Icon icon={Play} size={12} style={{ color: cssVar.colorWarning }} />
+          <Play size={12} style={{ color: cssVar.colorWarning }} />
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-task.apiName.runTasks')}
           </span>
@@ -85,7 +84,7 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
 
     return (
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
-        <Icon icon={Play} size={12} style={{ color: cssVar.colorWarning }} />
+        <Play size={12} style={{ color: cssVar.colorWarning }} />
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.runTasks')}
         </span>

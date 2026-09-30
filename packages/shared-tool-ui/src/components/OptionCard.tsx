@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
 
@@ -114,31 +114,33 @@ export interface OptionCardProps {
  */
 export const OptionCard = memo<OptionCardProps>(
   ({ index, label, description, highlighted, recommendedText, selected, disabled, onToggle }) => (
-    <Flexbox
-      horizontal
-      align="center"
+    <div
       aria-selected={selected}
-      gap={12}
       role="option"
-      className={cx(
-        styles.option,
-        selected && styles.optionSelected,
-        highlighted && styles.optionHighlighted,
+      className={cn(
+        'flex',
+        'items-center',
+        'gap-3',
+        cx(
+          styles.option,
+          selected && styles.optionSelected,
+          highlighted && styles.optionHighlighted,
+        ),
       )}
       onClick={() => {
         if (!disabled) onToggle();
       }}
     >
       <span className={styles.optionIndex}>{index}</span>
-      <Flexbox flex={1} gap={2}>
-        <Flexbox horizontal align="center" gap={8}>
+      <div className="flex flex-col flex-1 gap-[2px]">
+        <div className="flex items-center gap-2">
           <Text className={styles.optionLabel}>{label}</Text>
           {recommendedText && <span className={styles.recommendedBadge}>{recommendedText}</span>}
-        </Flexbox>
+        </div>
         {description && <span className={styles.optionDescription}>{description}</span>}
-      </Flexbox>
-      {selected && <Icon className={styles.optionCheck} icon={Check} size={16} />}
-    </Flexbox>
+      </div>
+      {selected && <Check className={styles.optionCheck} size={16} />}
+    </div>
   ),
 );
 

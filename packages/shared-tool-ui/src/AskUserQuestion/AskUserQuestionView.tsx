@@ -1,11 +1,13 @@
 'use client';
 
-import { Flexbox, Hotkey, Icon, KeyMapEnum, TextArea } from '@lobehub/ui';
+import { Hotkey, KeyMapEnum } from '@lobehub/ui';
 import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Check, PenLine, Replace, Send, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import { registerPendingHotkeyCard } from '../pendingHotkeys';
 import { formatRemaining, isQuestionAnswered } from './draft';
@@ -273,26 +275,23 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
   );
 
   const footer = (
-    <Flexbox
-      horizontal
-      align="center"
-      gap={8}
-      justify={showCountdown ? 'space-between' : 'flex-end'}
-      width={'100%'}
+    <div
+      className="flex items-center gap-2"
+      style={{ justifyContent: showCountdown ? 'space-between' : 'flex-end', width: '100%' }}
     >
       {showCountdown && (
         <Text fontSize={12} type="secondary">
           {expired ? labels.timeExpired : labels.timeRemaining(formatRemaining(remainingMs))}
         </Text>
       )}
-      <Flexbox horizontal gap={8}>
-        <Button disabled={submitting} icon={<Icon icon={X} />} onClick={handleSkip}>
+      <div className="flex gap-2">
+        <Button disabled={submitting} icon={<X />} onClick={handleSkip}>
           {labels.skip}
           <Hotkey compact keys={KeyMapEnum.Esc} variant="borderless" />
         </Button>
         <Button
           disabled={isSubmitDisabled}
-          icon={<Icon icon={Send} />}
+          icon={<Send />}
           loading={submitting}
           type="primary"
           onClick={handleSubmit}
@@ -300,12 +299,12 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
           {labels.submit}
           <Hotkey compact inverseTheme keys={KeyMapEnum.Enter} variant="borderless" />
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   return (
-    <Flexbox gap={12} ref={rootRef}>
+    <div className="flex flex-col gap-3" ref={rootRef}>
       {questions.length > 0 && (
         <Tabs
           activeKey={escapeActive ? 'escape' : supplementActive ? 'supplement' : activeTab}
@@ -317,20 +316,20 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
               return {
                 key: String(idx),
                 label: (
-                  <Flexbox horizontal align="center" gap={6}>
+                  <div className="flex items-center gap-[6px]">
                     <Text>Q{idx + 1}</Text>
-                    {done && <Icon icon={Check} size={12} />}
-                  </Flexbox>
+                    {done && <Check size={12} />}
+                  </div>
                 ),
               };
             }),
             {
               key: 'supplement',
               label: (
-                <Flexbox horizontal align="center" gap={6}>
-                  <Icon icon={PenLine} size={12} />
+                <div className="flex items-center gap-[6px]">
+                  <PenLine size={12} />
                   <Text>{labels.supplementEnter}</Text>
-                </Flexbox>
+                </div>
               ),
             },
             ...(isMulti
@@ -340,10 +339,10 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
                   {
                     key: 'escape',
                     label: (
-                      <Flexbox data-replace-all horizontal align="center" gap={6}>
-                        <Icon icon={Replace} size={12} />
+                      <div data-replace-all className="flex items-center gap-[6px]">
+                        <Replace size={12} />
                         <Text>{labels.escapeEnter}</Text>
-                      </Flexbox>
+                      </div>
                     ),
                   },
                 ]
@@ -362,12 +361,10 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
       )}
 
       {escapeActive || supplementActive ? (
-        <TextArea
-          autoSize={{ maxRows: 8, minRows: 3 }}
+        <Textarea
           disabled={expired || submitting}
           placeholder={supplementActive ? labels.supplementPlaceholder : labels.escapePlaceholder}
           value={supplementActive ? supplementText : escapeText}
-          variant="filled"
           onChange={(e) =>
             supplementActive
               ? handleSupplementTextChange(e.target.value)
@@ -409,7 +406,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
       )}
 
       {actionsPortalTarget ? createPortal(footer, actionsPortalTarget) : footer}
-    </Flexbox>
+    </div>
   );
 });
 

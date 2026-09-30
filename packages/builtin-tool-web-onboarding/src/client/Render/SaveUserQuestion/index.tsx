@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { InterestAreaKey } from '@orvilo/const';
 import type { BuiltinRenderProps, SaveUserQuestionInput } from '@orvilo/types';
@@ -91,47 +90,47 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
     if (!hasAgentIdentity && !hasUserProfile && !hasInterests) return null;
 
     return (
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         {hasAgentIdentity && (
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-2">
             <Text className={styles.sectionLabel}>
               {t('builtins.orvilo-web-onboarding.render.agent')}
             </Text>
             <div className={styles.detailCard}>
-              <Flexbox horizontal align="center" gap={12}>
+              <div className="flex items-center gap-3">
                 <div className={styles.avatar}>{agentEmoji || '🤖'}</div>
                 {agentName && <div className={styles.name}>{agentName}</div>}
-              </Flexbox>
+              </div>
             </div>
-          </Flexbox>
+          </div>
         )}
 
         {hasUserProfile && (
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-2">
             <Text className={styles.sectionLabel}>
               {t('builtins.orvilo-web-onboarding.render.fullName')}
             </Text>
             <div className={styles.detailCard}>
               <div className={styles.value}>{fullName}</div>
             </div>
-          </Flexbox>
+          </div>
         )}
 
         {hasInterests && (
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-2">
             <Text className={styles.sectionLabel}>
               {t('builtins.orvilo-web-onboarding.render.interests')}
             </Text>
-            <Flexbox horizontal style={{ flexWrap: 'wrap', gap: 8 }}>
+            <div className="flex" style={{ flexWrap: 'wrap', gap: 8 }}>
               {interestLabels.map((label) => (
                 <span className={styles.chip} key={label}>
                   {label}
                 </span>
               ))}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

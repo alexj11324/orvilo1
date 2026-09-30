@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 import type { BuiltinInterventionProps } from '@orvilo/types';
@@ -65,18 +64,12 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
     // Render success state (already installed)
     if (isPluginInstalled) {
       return (
-        <Flexbox
-          horizontal
-          align="center"
-          gap={12}
-          style={{
-            background: 'var(--lobe-fill-tertiary)',
-            borderRadius: 8,
-            padding: 16,
-          }}
+        <div
+          className="flex items-center gap-3"
+          style={{ background: 'var(--lobe-fill-tertiary)', borderRadius: 8, padding: 16 }}
         >
           <CheckCircle size={20} style={{ color: 'var(--lobe-success-6)' }} />
-          <Flexbox gap={4}>
+          <div className="flex flex-col gap-1">
             <span style={{ fontWeight: 600 }}>
               {isComposio || isOrviloSkill
                 ? t('agentBuilder.installPlugin.connectedAndEnabled')
@@ -85,8 +78,8 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
             <span style={{ color: 'var(--lobe-text-secondary)', fontSize: 12 }}>
               {composioAppInfo?.label || orviloSkillProviderInfo?.label || identifier}
             </span>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       );
     }
 
@@ -96,11 +89,11 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
       const isPendingAuth = composioServer?.status === ComposioServerStatus.PENDING_AUTH;
 
       return (
-        <Flexbox
-          gap={12}
+        <div
+          className="flex flex-col gap-3"
           style={{ background: 'var(--lobe-fill-tertiary)', borderRadius: 8, padding: 16 }}
         >
-          <Flexbox horizontal align="center" gap={12}>
+          <div className="flex items-center gap-3">
             {icon ? (
               <img
                 alt={composioAppInfo?.label || identifier}
@@ -112,19 +105,19 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
             ) : (
               <Avatar avatar="☁️" size={40} style={{ borderRadius: 8 }} />
             )}
-            <Flexbox flex={1} gap={4}>
-              <Flexbox horizontal align="center" gap={8}>
+            <div className="flex flex-col flex-1 gap-1">
+              <div className="flex items-center gap-2">
                 <span style={{ fontWeight: 600 }}>{composioAppInfo?.label || identifier}</span>
                 <span style={{ color: 'var(--lobe-text-tertiary)', fontSize: 12 }}>Composio</span>
-              </Flexbox>
+              </div>
               <span style={{ color: 'var(--lobe-text-secondary)', fontSize: 12 }}>
                 {isPendingAuth
                   ? t('agentBuilder.installPlugin.requiresAuth')
                   : t('agentBuilder.installPlugin.clickApproveToConnect')}
               </span>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -138,11 +131,11 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
         !orviloSkillServer || orviloSkillServer.status !== OrviloSkillStatus.CONNECTED;
 
       return (
-        <Flexbox
-          gap={12}
+        <div
+          className="flex flex-col gap-3"
           style={{ background: 'var(--lobe-fill-tertiary)', borderRadius: 8, padding: 16 }}
         >
-          <Flexbox horizontal align="center" gap={12}>
+          <div className="flex items-center gap-3">
             {icon ? (
               <img
                 alt={orviloSkillProviderInfo?.label || identifier}
@@ -154,23 +147,23 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
             ) : (
               <Avatar avatar="🔗" size={40} style={{ borderRadius: 8 }} />
             )}
-            <Flexbox flex={1} gap={4}>
-              <Flexbox horizontal align="center" gap={8}>
+            <div className="flex flex-col flex-1 gap-1">
+              <div className="flex items-center gap-2">
                 <span style={{ fontWeight: 600 }}>
                   {orviloSkillProviderInfo?.label || identifier}
                 </span>
                 <span style={{ color: 'var(--lobe-text-tertiary)', fontSize: 12 }}>
                   Orvilo Skill
                 </span>
-              </Flexbox>
+              </div>
               <span style={{ color: 'var(--lobe-text-secondary)', fontSize: 12 }}>
                 {isNotConnected
                   ? t('agentBuilder.installPlugin.requiresAuth')
                   : t('agentBuilder.installPlugin.clickApproveToConnect')}
               </span>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -181,11 +174,11 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
     const pluginType = source === 'market' ? 'MCP Plugin' : 'Builtin Tool';
 
     return (
-      <Flexbox
-        gap={12}
+      <div
+        className="flex flex-col gap-3"
         style={{ background: 'var(--lobe-fill-tertiary)', borderRadius: 8, padding: 16 }}
       >
-        <Flexbox horizontal align="center" gap={12}>
+        <div className="flex items-center gap-3">
           {pluginIcon && typeof pluginIcon === 'string' && pluginIcon.startsWith('http') ? (
             <img
               alt={pluginName}
@@ -197,17 +190,17 @@ const InstallPluginIntervention = memo<BuiltinInterventionProps<InstallPluginPar
           ) : (
             <Avatar avatar={pluginIcon || '🔧'} size={40} style={{ borderRadius: 8 }} />
           )}
-          <Flexbox flex={1} gap={4}>
-            <Flexbox horizontal align="center" gap={8}>
+          <div className="flex flex-col flex-1 gap-1">
+            <div className="flex items-center gap-2">
               <span style={{ fontWeight: 600 }}>{pluginName}</span>
               <span style={{ color: 'var(--lobe-text-tertiary)', fontSize: 12 }}>{pluginType}</span>
-            </Flexbox>
+            </div>
             <span style={{ color: 'var(--lobe-text-secondary)', fontSize: 12 }}>
               {t('agentBuilder.installPlugin.clickApproveToInstall')}
             </span>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
     );
   },
 );

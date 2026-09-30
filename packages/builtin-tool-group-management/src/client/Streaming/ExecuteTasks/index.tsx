@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinStreamingProps } from '@orvilo/types';
@@ -59,8 +59,8 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
     <div className={styles.container}>
       {tasksWithAgents.map((task, index) => (
         <div className={styles.taskCard} key={task.agentId || index}>
-          <Flexbox gap={8}>
-            <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
               <Avatar
                 avatar={task.agent?.avatar || DEFAULT_AVATAR}
                 background={task.agent?.backgroundColor || theme.colorBgContainer}
@@ -68,7 +68,7 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
                 size={20}
               />
               <span className={styles.taskTitle}>{task.title || task.agent?.title || 'Task'}</span>
-            </Flexbox>
+            </div>
             {task.instruction && (
               <div className={styles.instruction}>
                 <Markdown animated variant={'chat'}>
@@ -76,7 +76,7 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
                 </Markdown>
               </div>
             )}
-          </Flexbox>
+          </div>
         </div>
       ))}
     </div>

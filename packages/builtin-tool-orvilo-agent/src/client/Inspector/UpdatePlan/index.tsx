@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -44,13 +43,13 @@ export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, 
         </span>
         {completed && (
           <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
-            <Icon icon={CheckCircle} size={12} />
+            <CheckCircle size={12} />
             {t('builtins.orvilo-agent.apiName.updatePlan.completed')}
           </Text>
         )}
         {hasUpdates && !completed && (
           <Text code as={'span'} color={cssVar.colorWarning} fontSize={12}>
-            <Icon icon={DiffIcon} size={12} />
+            <DiffIcon size={12} />
             {t('builtins.orvilo-agent.apiName.updatePlan.modified')}
           </Text>
         )}

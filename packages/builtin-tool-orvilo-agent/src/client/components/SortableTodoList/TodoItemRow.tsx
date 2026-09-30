@@ -1,14 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, SortableList } from '@lobehub/ui';
 import { ActionIcon, Checkbox } from '@lobehub/ui/base-ui';
-import type { InputRef } from 'antd';
-import { Input } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { CircleArrowRight, Trash2 } from 'lucide-react';
+import { cn } from 'cn';
+import { CircleArrowRight, GripVertical, Trash2 } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { SortableItemHandle } from '@/components/reui/sortable';
 
 import { useTodoListStore } from './store';
 
@@ -53,7 +53,7 @@ interface TodoItemRowProps {
 
 const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
   const { t } = useTranslation('tool');
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const defaultPlaceholder = placeholder || t('orvilo-agent.todoItem.placeholder');
 
   // Find item by stable id
@@ -129,11 +129,12 @@ const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
   }, [id, toggleItem]);
 
   return (
-    <Flexbox horizontal align="center" className={styles.itemRow} gap={4} width="100%">
-      <SortableList.DragHandle className={cx(styles.dragHandle, 'drag-handle')} size="small" />
+    <div className={cn('flex', 'items-center', 'gap-1', styles.itemRow)} style={{ width: '100%' }}>
+      <SortableItemHandle className={cx(styles.dragHandle, 'drag-handle')}>
+        <GripVertical size={14} />
+      </SortableItemHandle>
       {isProcessing ? (
-        <Icon
-          icon={CircleArrowRight}
+        <CircleArrowRight
           size={16}
           style={{ color: cssVar.colorInfo, cursor: 'pointer', flexShrink: 0 }}
           onClick={handleToggle}
@@ -151,10 +152,8 @@ const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
         className={cx(isCompleted && styles.textCompleted, isProcessing && styles.textProcessing)}
         placeholder={defaultPlaceholder}
         ref={inputRef}
-        size="small"
         style={{ flex: 1 }}
         value={text}
-        variant="borderless"
         onChange={handleChange}
         onFocus={handleFocus}
         onKeyDown={handleKeyDown}
@@ -166,7 +165,7 @@ const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
         tabIndex={-1}
         onClick={handleDelete}
       />
-    </Flexbox>
+    </div>
   );
 });
 

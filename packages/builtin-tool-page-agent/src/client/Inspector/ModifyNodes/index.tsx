@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { ModifyNodesArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
@@ -78,7 +77,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     if (counts.insert > 0) {
       statsParts.push(
         <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12} key="insert">
-          <Icon icon={Plus} size={12} />
+          <Plus size={12} />
           {counts.insert}
         </Text>,
       );
@@ -86,7 +85,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     if (counts.modify > 0) {
       statsParts.push(
         <Text code as={'span'} color={cssVar.colorWarning} fontSize={12} key="modify">
-          <Icon icon={DiffIcon} size={12} />
+          <DiffIcon size={12} />
           {counts.modify}
         </Text>,
       );
@@ -94,7 +93,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     if (counts.remove > 0) {
       statsParts.push(
         <Text code as={'span'} color={cssVar.colorError} fontSize={12} key="remove">
-          <Icon icon={Minus} size={12} />
+          <Minus size={12} />
           {counts.remove}
         </Text>,
       );

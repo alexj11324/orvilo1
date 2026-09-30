@@ -1,6 +1,6 @@
 'use client';
 
-import { Block, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -112,10 +112,13 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
     };
 
     return (
-      <Block
-        clickable={!!identifier}
-        variant={'outlined'}
-        width={'100%'}
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
         onClick={identifier ? () => openTaskDetail(identifier) : undefined}
       >
         <div className={styles.taskItem}>
@@ -152,7 +155,7 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
             </Text>
           )}
         </div>
-      </Block>
+      </div>
     );
   },
 );

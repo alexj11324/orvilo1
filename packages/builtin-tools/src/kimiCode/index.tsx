@@ -1,6 +1,6 @@
 'use client';
 
-import { CodeDiff, Highlighter, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import {
   createEditLocalFileInspector,
@@ -18,9 +18,12 @@ import {
 } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspector, BuiltinInspectorProps, BuiltinRenderProps } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { createTwoFilesPatch } from 'diff';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock, parseUnifiedDiff } from '@/components/ui/code-block';
 
 import { countChangedLines, stripKimiLineNumbers } from './utils';
 
@@ -140,15 +143,13 @@ const TextResult = memo<BuiltinRenderProps>(({ content }) => {
   if (!content) return null;
 
   return (
-    <Highlighter
+    <CodeBlock
       wrap
+      code={content}
       language="text"
-      showLanguage={false}
       style={{ maxHeight: 240, overflow: 'auto' }}
-      variant="borderless"
-    >
-      {content}
-    </Highlighter>
+      variant="ghost"
+    />
   );
 });
 TextResult.displayName = 'KimiCodeTextResult';
@@ -171,15 +172,13 @@ const ReadRender = memo<BuiltinRenderProps<KimiFileArgs>>(({ args, content }) =>
   if (!source) return null;
 
   return (
-    <Highlighter
+    <CodeBlock
       wrap
+      code={source}
       language={path.extname(filePath).slice(1).toLowerCase() || 'text'}
-      showLanguage={false}
       style={{ maxHeight: 240, overflow: 'auto' }}
-      variant="borderless"
-    >
-      {source}
-    </Highlighter>
+      variant="ghost"
+    />
   );
 });
 ReadRender.displayName = 'KimiCodeReadRender';
@@ -201,15 +200,13 @@ const WriteRender = memo<BuiltinRenderProps<KimiFileArgs>>(({ args }) => {
   }
 
   return (
-    <Highlighter
+    <CodeBlock
       wrap
+      code={args.content}
       language={extension || 'text'}
-      showLanguage={false}
       style={{ maxHeight: 240, overflow: 'auto' }}
-      variant="borderless"
-    >
-      {args.content}
-    </Highlighter>
+      variant="ghost"
+    />
   );
 });
 WriteRender.displayName = 'KimiCodeWriteRender';
@@ -219,15 +216,24 @@ const EditRender = memo<BuiltinRenderProps<KimiEditArgs>>(({ args }) => {
 
   const filePath = args.path ?? '';
   return (
-    <CodeDiff
-      fileName={path.basename(filePath) || filePath}
-      language={path.extname(filePath).slice(1).toLowerCase() || undefined}
-      newContent={args.new_string ?? ''}
-      oldContent={args.old_string ?? ''}
-      showHeader={!!filePath}
-      variant="borderless"
-      viewMode="unified"
-    />
+    <>
+      {parseUnifiedDiff(
+        createTwoFilesPatch(
+          filePath || 'a/file',
+          filePath || 'b/file',
+          args.old_string ?? '',
+          args.new_string ?? '',
+        ),
+      ).map((file) => (
+        <CodeBlock
+          key={file.file}
+          label={filePath ? path.basename(filePath) || filePath : undefined}
+          language={path.extname(filePath).slice(1).toLowerCase() || undefined}
+          lines={file.lines}
+          variant="ghost"
+        />
+      ))}
+    </>
   );
 });
 EditRender.displayName = 'KimiCodeEditRender';

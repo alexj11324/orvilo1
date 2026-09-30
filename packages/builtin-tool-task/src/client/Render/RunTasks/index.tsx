@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -113,7 +112,14 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
     const failedCount = pluginState?.failed ?? results.filter((r) => !r.success).length;
 
     return (
-      <Block variant={'outlined'} width={'100%'}>
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
+      >
         <div className={styles.header}>
           <span className={styles.headerCount}>
             {t('builtins.orvilo-task.runTasks.count', { count: rows.length })}
@@ -135,10 +141,8 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
               <div className={styles.taskBody}>
                 <div className={styles.row}>
                   <span className={styles.identifier}>{row.identifier}</span>
-                  {success && (
-                    <Icon icon={Check} size={14} style={{ color: cssVar.colorSuccess }} />
-                  )}
-                  {failedRow && <Icon icon={X} size={14} style={{ color: cssVar.colorError }} />}
+                  {success && <Check size={14} style={{ color: cssVar.colorSuccess }} />}
+                  {failedRow && <X size={14} style={{ color: cssVar.colorError }} />}
                 </div>
                 {result?.topicId && <span className={styles.meta}>topic {result.topicId}</span>}
                 {failedRow && (
@@ -150,7 +154,7 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
             </div>
           );
         })}
-      </Block>
+      </div>
     );
   },
 );

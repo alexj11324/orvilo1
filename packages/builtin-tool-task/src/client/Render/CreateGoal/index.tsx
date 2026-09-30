@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { GoalStatus } from '@orvilo/const/goal';
 import type { BuiltinRenderProps } from '@orvilo/types';
@@ -17,7 +16,7 @@ import {
   Stamp,
   Target,
 } from 'lucide-react';
-import { memo, useEffect, useState } from 'react';
+import { createElement, memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -159,28 +158,28 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
         iconColor={cssVar.colorTextSecondary}
         title={snapshot?.goal.title ?? pluginState.name ?? args?.name}
       >
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          style={openGoal ? { cursor: 'pointer' } : undefined}
+        <div
+          className="flex items-center gap-2"
+          style={{ ...(openGoal ? { cursor: 'pointer' } : undefined) }}
           onClick={openGoal}
         >
-          <Icon
-            color={meta.color}
-            icon={meta.icon}
-            size={15}
-            spin={phase === 'running' || phase === 'verifying' || phase === 'repairing'}
-          />
-          <Flexbox flex={1} gap={2}>
-            <Flexbox horizontal align={'center'} justify={'space-between'}>
+          {createElement(meta.icon, {
+            className:
+              phase === 'running' || phase === 'verifying' || phase === 'repairing'
+                ? 'animate-spin'
+                : undefined,
+            size: 15,
+            style: { color: meta.color },
+          })}
+          <div className="flex flex-col flex-1 gap-[2px]">
+            <div className="flex items-center justify-between">
               <Text fontSize={13}>{phaseLabel(t, phase)}</Text>
               {!meta.settled && (
                 <Text code fontSize={12} type={'secondary'}>
                   {formatElapsed(now - new Date(pluginState.startedAt ?? Date.now()).getTime())}
                 </Text>
               )}
-            </Flexbox>
+            </div>
             <Text fontSize={12} type={'secondary'}>
               {meta.settled
                 ? t('builtins.orvilo-task.goal.settledHint')
@@ -188,8 +187,8 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
                     count: args?.criteria?.length ?? 0,
                   })}
             </Text>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </TaskResultCard>
     );
   },

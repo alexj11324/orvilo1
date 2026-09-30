@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinStreamingProps } from '@orvilo/types';
@@ -45,8 +45,8 @@ export const ExecuteTaskStreaming = memo<BuiltinStreamingProps<ExecuteTaskParams
 
   return (
     <div className={styles.container}>
-      <Flexbox gap={8}>
-        <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
           <Avatar
             avatar={agent?.avatar || DEFAULT_AVATAR}
             background={agent?.backgroundColor || theme.colorBgContainer}
@@ -54,13 +54,13 @@ export const ExecuteTaskStreaming = memo<BuiltinStreamingProps<ExecuteTaskParams
             size={24}
           />
           <span className={styles.agentTitle}>{agent?.title || 'Agent'}</span>
-        </Flexbox>
+        </div>
         <div className={styles.task}>
           <Markdown animated variant={'chat'}>
             {instruction}
           </Markdown>
         </div>
-      </Flexbox>
+      </div>
     </div>
   );
 });

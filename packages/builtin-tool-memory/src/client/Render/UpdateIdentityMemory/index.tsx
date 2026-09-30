@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
@@ -16,10 +15,10 @@ const UpdateIdentityMemoryRender = memo<
   if (isEmpty) return null;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {/* An update only sends the fields it writes, so naming them is the whole story */}
       {changedFields.length > 0 && (
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+        <div className="flex items-center gap-2 flex-wrap">
           <Text fontSize={12} type={'secondary'}>
             Updated
           </Text>
@@ -33,10 +32,10 @@ const UpdateIdentityMemoryRender = memo<
               · {mergeStrategy}
             </Text>
           )}
-        </Flexbox>
+        </div>
       )}
       <IdentityMemoryCard data={identity} fallbackTitle={'Updated Identity'} />
-    </Flexbox>
+    </div>
   );
 });
 

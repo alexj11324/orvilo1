@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
 import { Checkbox } from '@lobehub/ui/base-ui';
 import { TodoPanelHeader } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
@@ -65,7 +64,7 @@ const ReadOnlyTodoItem = memo<ReadOnlyTodoItemProps>(({ text, status }) => {
   if (isProcessing) {
     return (
       <div className={cx(styles.itemRow, styles.processingRow)}>
-        <Icon icon={CircleArrowRight} size={17} style={{ color: cssVar.colorInfo }} />
+        <CircleArrowRight size={17} style={{ color: cssVar.colorInfo }} />
         <span className={styles.textProcessing}>{text}</span>
       </div>
     );
@@ -111,12 +110,19 @@ const TodoListUI = memo<TodoListUIProps>(({ items }) => {
 
   return (
     // Outer container with background - matches AddTodoIntervention
-    <Block variant={'outlined'} width="100%">
+    <div
+      style={{
+        background: cssVar.colorBgContainer,
+        border: `1px solid ${cssVar.colorBorderSecondary}`,
+        borderRadius: cssVar.borderRadius,
+        width: '100%',
+      }}
+    >
       <TodoPanelHeader label={t(TODO_SUMMARY_LABEL_KEYS[summary.state])} summary={summary} />
       {items.map((item, index) => (
         <ReadOnlyTodoItem key={index} status={item.status} text={item.text} />
       ))}
-    </Block>
+    </div>
   );
 });
 

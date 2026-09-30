@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { InitDocumentArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
@@ -54,7 +53,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
           {displayLines > 0 && (
             <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
               {' '}
-              <Icon icon={Plus} size={12} />
+              <Plus size={12} />
               <AnimatedNumber value={displayLines} />
               {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
             </Text>
@@ -77,7 +76,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
         </span>
         {displayLines > 0 && (
           <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
-            <Icon icon={Plus} size={12} />
+            <Plus size={12} />
             <AnimatedNumber value={displayLines} />
             {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
           </Text>

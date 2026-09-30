@@ -1,9 +1,8 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleArrowRight, CircleCheckBig, ListTodo } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import { shinyTextStyles } from '../../styles';
 
@@ -215,11 +214,10 @@ export const TodoPanelHeader = memo<TodoSummaryContentProps>(({ label, summary }
 
   return (
     <div className={styles.header}>
-      <Icon
-        icon={STATE_ICONS[state]}
-        size={16}
-        style={{ color: stateColor(state), flexShrink: 0 }}
-      />
+      {createElement(STATE_ICONS[state], {
+        size: 16,
+        style: { color: stateColor(state), flexShrink: 0 },
+      })}
       <div className={styles.headerLabel}>
         <span>{label}</span>
         {detail && (

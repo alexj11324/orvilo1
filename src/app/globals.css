@@ -121,11 +121,9 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* ReUI menu utilities shipped by the base-nova registry components. */
-@utility cn-menu-target {
-    /* Marker hook for ReUI menu animations — intentionally no rules. */
-}
-
+/* ReUI menu utilities shipped by the base-nova registry components.
+   cn-menu-target is a marker class for ReUI's menu animations — left
+   undefined on purpose. */
 @utility cn-menu-translucent {
     background-color: color-mix(in oklab, var(--popover) 80%, transparent);
     backdrop-filter: blur(12px) saturate(1.5);

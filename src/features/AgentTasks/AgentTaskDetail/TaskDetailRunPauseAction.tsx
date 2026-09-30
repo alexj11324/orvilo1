@@ -1,9 +1,11 @@
-import { Button, confirmModal, SplitButton, Text } from '@lobehub/ui/base-ui';
-import { CalendarOffIcon, PlayIcon, RotateCcwIcon } from 'lucide-react';
+import { CalendarOffIcon, ChevronDownIcon, PlayIcon, RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
 import StopLoadingIcon from '@/components/StopLoading';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentStore } from '@/store/agent';
@@ -181,34 +183,44 @@ const TaskDetailRunPauseAction = memo(() => {
   if (isScheduled) {
     return (
       <div className="flex items-center gap-3">
-        <SplitButton disabled={!canEditTask || isCancellingSchedule} loading={isRunningNow}>
-          <SplitButton.Main
-            disabled={!canEditTask || isRunningNow}
-            icon={CalendarOffIcon}
-            loading={isCancellingSchedule}
+        <div className="inline-flex">
+          <Button
+            className="rounded-r-none"
+            disabled={!canEditTask || isCancellingSchedule || isRunningNow}
+            loading={isCancellingSchedule || isRunningNow}
             title={canEditTask ? undefined : reason}
+            variant="default"
             onClick={handleCancelSchedule}
           >
+            <CalendarOffIcon data-icon="inline-start" />
             {t('taskDetail.cancelSchedule')}
-          </SplitButton.Main>
-          <SplitButton.Menu
+          </Button>
+          <DropdownMenu
             items={[
               {
                 disabled: !canEditTask || isBlocked || isRunningNow || isCancellingSchedule,
-                icon: PlayIcon,
+                icon: <PlayIcon size="1em" />,
                 key: 'runNow',
                 label: t('taskDetail.runNow'),
                 onClick: handleRunNow,
               },
             ]}
-          />
-        </SplitButton>
+          >
+            <Button
+              className="rounded-l-none border-l-0"
+              disabled={!canEditTask || isCancellingSchedule || isRunningNow}
+              variant="default"
+            >
+              <ChevronDownIcon size={14} />
+            </Button>
+          </DropdownMenu>
+        </div>
         {countdownText && (
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {countdownText.type === 'days'
               ? t('taskDetail.nextRunCountdownDays', countdownText)
               : t('taskDetail.nextRunCountdown', countdownText)}
-          </Text>
+          </div>
         )}
       </div>
     );
@@ -225,7 +237,7 @@ const TaskDetailRunPauseAction = memo(() => {
   if (isStarting) {
     const pendingLabel = isRerun ? t('taskDetail.rerunTask') : t('taskDetail.runTask');
     return (
-      <Button disabled loading type={'primary'}>
+      <Button disabled loading variant="default">
         {pendingLabel}
       </Button>
     );
@@ -233,12 +245,8 @@ const TaskDetailRunPauseAction = memo(() => {
 
   if (canPause) {
     return (
-      <Button
-        disabled={!canEditTask}
-        icon={StopLoadingIcon}
-        title={reason}
-        onClick={handleRunOrPause}
-      >
+      <Button disabled={!canEditTask} title={reason} onClick={handleRunOrPause}>
+        <StopLoadingIcon data-icon="inline-start" />
         {t('taskDetail.stopTask')}
       </Button>
     );
@@ -250,11 +258,11 @@ const TaskDetailRunPauseAction = memo(() => {
   return (
     <Button
       disabled={!canEditTask || isBlocked}
-      icon={runIcon}
       title={!canEditTask ? reason : isBlocked ? t('taskDetail.prerequisites.blocked') : undefined}
-      type={'primary'}
+      variant="default"
       onClick={handleRunOrPause}
     >
+      {runIcon}
       {runLabel}
     </Button>
   );

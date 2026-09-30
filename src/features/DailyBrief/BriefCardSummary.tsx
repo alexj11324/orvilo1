@@ -1,9 +1,11 @@
 import { MaskShadow } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { useSize } from 'ahooks';
+import { cn } from 'cn';
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { lazy, memo, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { styles } from './style';
 
@@ -56,15 +58,17 @@ const BriefCardSummary = memo<BriefCardSummaryProps>(({ summary }) => {
 
       {isOverflow && (
         <Button
-          block
-          className={styles.expandLink}
-          icon={expanded ? ChevronsDownUpIcon : ChevronsUpDownIcon}
-          iconPosition={'end'}
-          size={'small'}
-          type={'text'}
+          className={cn('w-full', styles.expandLink)}
+          size="sm"
+          variant="ghost"
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? t('brief.collapse') : t('brief.expandAll')}
+          {expanded ? (
+            <ChevronsDownUpIcon data-icon="inline-end" />
+          ) : (
+            <ChevronsUpDownIcon data-icon="inline-end" />
+          )}
         </Button>
       )}
     </div>

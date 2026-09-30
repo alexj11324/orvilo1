@@ -47,7 +47,7 @@ vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
   },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: (opts: unknown) => mocks.confirmModal(opts),
 }));

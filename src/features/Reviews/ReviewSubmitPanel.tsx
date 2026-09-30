@@ -1,10 +1,9 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { GitPullRequestDraftIcon, PencilLineIcon, RefreshCwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import TextArea from '@/components/TextArea';
+import { Button } from '@/components/ui/button';
 
 import type { ReviewComposerController } from './useReviewComposer';
 
@@ -48,30 +47,30 @@ const ReviewSubmitPanel = memo<{
     <div className={cx('flex flex-col gap-2', styles.card)}>
       <div className="flex items-center gap-2">
         <PencilLineIcon color={cssVar.colorTextSecondary} size={14} />
-        <Text weight={500}>{t('reviews.submitReviewTitle')}</Text>
+        <div className="font-medium">{t('reviews.submitReviewTitle')}</div>
       </div>
       {pendingReviewId ? (
         <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'status'}>
           <GitPullRequestDraftIcon color={cssVar.colorWarning} size={14} />
-          <Text fontSize={12}>{t('reviews.pendingDraftBanner')}</Text>
+          <div className="text-[12px]">{t('reviews.pendingDraftBanner')}</div>
         </div>
       ) : null}
       {unknownIntent ? (
         <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
           <RefreshCwIcon color={cssVar.colorWarning} size={14} />
-          <Text fontSize={12}>{t('reviews.outcomeUnknown')}</Text>
+          <div className="text-[12px]">{t('reviews.outcomeUnknown')}</div>
           <div className="flex-1" />
-          <Button loading={verifying} size={'small'} onClick={() => void composer.verifyAndRetry()}>
+          <Button loading={verifying} size="sm" onClick={() => void composer.verifyAndRetry()}>
             {t('reviews.outcomeUnknownAction')}
           </Button>
         </div>
       ) : null}
       {stale ? (
         <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
-          <Text fontSize={12}>{t('reviews.headDrifted')}</Text>
+          <div className="text-[12px]">{t('reviews.headDrifted')}</div>
         </div>
       ) : null}
-      <TextArea
+      <Textarea
         disabled={disabled || stale}
         placeholder={t('reviews.reviewPlaceholder')}
         rows={4}
@@ -97,10 +96,10 @@ const ReviewSubmitPanel = memo<{
           {t('reviews.submitApprove')}
         </Button>
         <Button
-          danger
           disabled={disabled || stale || busy || commentOnly}
           loading={submitting === 'REQUEST_CHANGES'}
           title={commentOnly ? t('reviews.authorReviewCommentOnly') : undefined}
+          variant="destructive"
           onClick={() => void composer.submit('REQUEST_CHANGES', body.trim())}
         >
           {t('reviews.submitRequestChanges')}

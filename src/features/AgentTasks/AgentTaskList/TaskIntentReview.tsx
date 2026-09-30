@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { OptionCard } from '@orvilo/shared-tool-ui/components';
 import type { TaskIntentAnalysis } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -8,6 +7,8 @@ import { ArrowLeft, Check, Sparkles, Target } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
 import type { ClarificationAnswers } from './taskIntent';
@@ -196,9 +197,7 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
       <div className={`flex flex-col gap-1.5 ${styles.head}`}>
         <div className="flex items-center gap-1.5">
           <Sparkles color={cssVar.colorTextDescription} size={13} />
-          <Text fontSize={12} type={'secondary'}>
-            {t('taskIntent.reviewStep')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('taskIntent.reviewStep')}</div>
         </div>
         <input
           className={styles.title}
@@ -209,22 +208,18 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
       </div>
 
       <div className={`flex flex-col gap-4 ${styles.body}`}>
-        <Text fontSize={13} type={'secondary'}>
-          {analysis.summary}
-        </Text>
+        <div className="text-[13px] text-muted-foreground">{analysis.summary}</div>
 
         {showGoalExit && (
           <div className={`flex items-center gap-3 ${styles.goalCallout}`}>
             <Target color={cssVar.colorTextSecondary} size={16} />
             <div className="flex flex-1 flex-col gap-0.5">
-              <Text fontSize={13} weight={500}>
-                {t('taskIntent.goalCallout.title')}
-              </Text>
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[13px] font-medium">{t('taskIntent.goalCallout.title')}</div>
+              <div className="text-[12px] text-muted-foreground">
                 {analysis.kindReason || t('taskIntent.goalCallout.desc')}
-              </Text>
+              </div>
             </div>
-            <Button size={'small'} type={'fill'} onClick={onSwitchToGoal}>
+            <Button size="sm" variant="secondary" onClick={onSwitchToGoal}>
               {t('taskIntent.goalCallout.action')}
             </Button>
           </div>
@@ -232,22 +227,21 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
 
         {clarifications.length > 0 && (
           <Tabs
-            activeKey={String(activeIndex)}
             className={styles.tabs}
-            variant={'square'}
-            items={[
-              ...clarifications.map((_, index) => ({
-                key: String(index),
-                label: (
+            value={String(activeIndex)}
+            onValueChange={(key) => setActiveIndex(Number(key))}
+          >
+            <TabsList>
+              {clarifications.map((_, index) => (
+                <TabsTrigger key={index} value={String(index)}>
                   <span className="inline-flex items-center gap-1.5">
-                    <Text>{`Q${index + 1}`}</Text>
+                    <div>{`Q${index + 1}`}</div>
                     {isAnswered(index) && <Check size={12} />}
                   </span>
-                ),
-              })),
-            ]}
-            onChange={(key) => setActiveIndex(Number(key))}
-          />
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
 
         {active &&
@@ -263,11 +257,9 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
             return (
               <div className="flex flex-col gap-2.5" key={active.question}>
                 <div className="flex flex-col gap-0.5">
-                  <Text strong>{active.question}</Text>
+                  <div className="font-semibold">{active.question}</div>
                   {active.impact && (
-                    <Text fontSize={12} type={'secondary'}>
-                      {active.impact}
-                    </Text>
+                    <div className="text-[12px] text-muted-foreground">{active.impact}</div>
                   )}
                 </div>
 
@@ -299,15 +291,16 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
       </div>
 
       <div className={`flex items-center justify-between ${styles.footer}`}>
-        <Button icon={ArrowLeft} size={'small'} type={'text'} onClick={onBack}>
+        <Button size="sm" variant="ghost" onClick={onBack}>
+          <ArrowLeft data-icon="inline-start" />
           {t('taskIntent.back')}
         </Button>
         <Button
+          className="rounded-full"
           disabled={isCreating}
           loading={isCreating}
-          shape={'round'}
-          size={'small'}
-          type={'primary'}
+          size="sm"
+          variant="default"
           onClick={primary.action}
         >
           {primary.label}

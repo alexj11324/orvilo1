@@ -1,10 +1,11 @@
 'use client';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { DiamondIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { createElement, memo, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';

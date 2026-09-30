@@ -1,11 +1,17 @@
 'use client';
 
-import { ActionIcon, Alert, Button, confirmModal, Popover, Text, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { SavedViewVisibility, WorkQuery } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
-import { FilterIcon, PanelRightCloseIcon, PanelRightOpenIcon, Settings2Icon } from 'lucide-react';
+import {
+  FilterIcon,
+  PanelRightCloseIcon,
+  PanelRightOpenIcon,
+  Settings2Icon,
+  TriangleAlert,
+} from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -13,9 +19,15 @@ import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
+import { confirmModal } from '@/components/Modal';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { toast } from '@/components/toast';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Popover } from '@/components/ui/popover';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
@@ -182,23 +194,18 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
           <ProjectStatusIcon size={16} status={status} />
         </SimpleTooltip>
         <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-          <Text ellipsis weight={500}>
-            {project.name}
-          </Text>
+          <div className="truncate block font-medium">{project.name}</div>
         </div>
         {project.identifier ? (
-          <Text className={styles.identifier} fontSize={12}>
-            {project.identifier}
-          </Text>
+          <div className={cn('text-[12px]', styles.identifier)}>{project.identifier}</div>
         ) : null}
         {project.updatedAt ? (
-          <Text
-            className={styles.updatedAt}
-            fontSize={12}
+          <div
+            className={cn('text-[12px]', styles.updatedAt)}
             title={dayjs(project.updatedAt).format('YYYY-MM-DD HH:mm')}
           >
             {dayjs(project.updatedAt).fromNow()}
-          </Text>
+          </div>
         ) : null}
       </WorkspaceLink>
     </div>
@@ -228,12 +235,8 @@ const SavedViewProjectBoard = memo<{
           <div className={cx('flex flex-col', styles.boardColumn)} key={group.key}>
             <div className={cx('flex flex-row', styles.boardColumnHeader)}>
               <ProjectStatusIcon size={14} status={status} />
-              <Text fontSize={13} weight={500}>
-                {t(`status.${status}`)}
-              </Text>
-              <Text fontSize={12} type="secondary">
-                {group.total}
-              </Text>
+              <div className="text-[13px] font-medium">{t(`status.${status}`)}</div>
+              <div className="text-[12px] text-muted-foreground">{group.total}</div>
             </div>
             <div className={cx('flex flex-col', styles.boardColumnBody)}>
               {group.tasks.map((project) => (
@@ -246,7 +249,7 @@ const SavedViewProjectBoard = memo<{
                   onRetry={onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined}
                 />
               ) : group.hasMore && onLoadMoreGroup ? (
-                <Button size="small" onClick={() => onLoadMoreGroup(group.key)}>
+                <Button size="sm" onClick={() => onLoadMoreGroup(group.key)}>
                   {loadMoreLabel}
                 </Button>
               ) : null}
@@ -655,9 +658,9 @@ const SavedViewPage = memo(() => {
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
             {viewTitle}
-          </Text>
+          </div>
         }
         right={
           <div className="flex flex-row gap-2">
@@ -686,9 +689,9 @@ const SavedViewPage = memo(() => {
         }
       />
       <WorkSurfaceToolbar>
-        <Text fontSize={12} type="secondary">
+        <div className="text-[12px] text-muted-foreground">
           {t('savedViews.resultCount', { count: evaluation?.total ?? 0 })}
-        </Text>
+        </div>
         <div
           className="flex flex-row items-center gap-1.5"
           style={{ flex: 'none', marginInlineStart: 'auto' }}
@@ -703,13 +706,13 @@ const SavedViewPage = memo(() => {
                   <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
                     <div className="flex flex-row gap-2 justify-end">
-                      <Button size="small" onClick={cancelDraft}>
+                      <Button size="sm" onClick={cancelDraft}>
                         {t('cancel')}
                       </Button>
                       <Button
                         disabled={!dirty || !shareReady || !draft.name.trim()}
-                        size="small"
-                        type="primary"
+                        size="sm"
+                        variant="default"
                         onClick={() => void commitDraft()}
                       >
                         {t('save')}
@@ -735,13 +738,13 @@ const SavedViewPage = memo(() => {
                   <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
                     <div className="flex flex-row gap-2 justify-end">
-                      <Button size="small" onClick={cancelDraft}>
+                      <Button size="sm" onClick={cancelDraft}>
                         {t('cancel')}
                       </Button>
                       <Button
                         disabled={!dirty || !shareReady || !draft.name.trim()}
-                        size="small"
-                        type="primary"
+                        size="sm"
+                        variant="default"
                         onClick={() => void commitDraft()}
                       >
                         {t('save')}
@@ -786,22 +789,23 @@ const SavedViewPage = memo(() => {
               style={boardActive ? { flex: 1, minHeight: 0 } : undefined}
             >
               {conflict ? (
-                <Alert
-                  showIcon
-                  description={t('savedViews.conflictDesc')}
-                  title={t('savedViews.conflictTitle')}
-                  type="warning"
-                  action={
-                    <div className="flex flex-row gap-2">
-                      <Button size="small" onClick={reloadDraft}>
-                        {t('savedViews.conflictReload')}
-                      </Button>
-                      <Button size="small" onClick={() => void saveCopy()}>
-                        {t('savedViews.saveAs')}
-                      </Button>
-                    </div>
-                  }
-                />
+                <Alert variant="warning">
+                  <TriangleAlert />
+                  <AlertTitle>{t('savedViews.conflictTitle')}</AlertTitle>
+                  <AlertDescription>{t('savedViews.conflictDesc')}</AlertDescription>
+                  <AlertAction>
+                    {
+                      <div className="flex flex-row gap-2">
+                        <Button size="sm" onClick={reloadDraft}>
+                          {t('savedViews.conflictReload')}
+                        </Button>
+                        <Button size="sm" onClick={() => void saveCopy()}>
+                          {t('savedViews.saveAs')}
+                        </Button>
+                      </div>
+                    }
+                  </AlertAction>
+                </Alert>
               ) : null}
               {error ? (
                 <AsyncError
@@ -811,16 +815,15 @@ const SavedViewPage = memo(() => {
                 />
               ) : null}
               {error && !view ? null : evaluation?.needsRepair ? (
-                <Alert
-                  showIcon
-                  description={t('savedViews.needsRepairDesc')}
-                  title={t('savedViews.needsRepair')}
-                  type="warning"
-                />
+                <Alert variant="warning">
+                  <TriangleAlert />
+                  <AlertTitle>{t('savedViews.needsRepair')}</AlertTitle>
+                  <AlertDescription>{t('savedViews.needsRepairDesc')}</AlertDescription>
+                </Alert>
               ) : null}
               {evaluation?.needsRepair ? (
                 isLoading ? (
-                  <Text type="secondary">{t('savedViews.loading')}</Text>
+                  <div className="text-muted-foreground">{t('savedViews.loading')}</div>
                 ) : (
                   <SimpleEmpty description={t('savedViews.needsRepairEmpty')} />
                 )
@@ -861,7 +864,7 @@ const SavedViewPage = memo(() => {
                   ) : null}
                   {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
                     <div className="flex flex-row justify-center">
-                      <Button size="small" onClick={() => pagedMore.runLoadMore(loadMore)}>
+                      <Button size="sm" onClick={() => pagedMore.runLoadMore(loadMore)}>
                         {t('savedViews.loadMore')}
                       </Button>
                     </div>

@@ -1,11 +1,20 @@
-import { Accordion, Checkbox, Select, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import { Globe, Hash, SlidersHorizontal } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InputNumber from '@/components/InputNumber';
+import Select from '@/components/Select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 import {
   buildCronPattern,
@@ -234,10 +243,9 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
     <div className="flex flex-col gap-4">
       <div className="flex gap-3">
         <div className="flex flex-1 flex-col gap-1.5">
-          <Text className={styles.fieldLabel}>{t('taskSchedule.frequency')}</Text>
+          <div className={cn(styles.fieldLabel)}>{t('taskSchedule.frequency')}</div>
           <Select
             value={scheduleType}
-            variant="filled"
             options={SCHEDULE_TYPE_OPTIONS.map((opt) => ({
               label: t(opt.label as any),
               value: opt.value,
@@ -247,32 +255,29 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
         </div>
         {showTimeRow && (
           <div className="flex flex-1 flex-col gap-1.5">
-            <Text className={styles.fieldLabel}>{t('taskSchedule.time')}</Text>
+            <div className={cn(styles.fieldLabel)}>{t('taskSchedule.time')}</div>
             <Select
               options={TIME_OPTIONS}
               value={triggerTime.hour() * 60 + triggerTime.minute()}
-              variant="filled"
               onChange={handleTimeChange}
             />
           </div>
         )}
         {scheduleType === 'hourly' && (
           <div className="flex flex-1 flex-col gap-1.5">
-            <Text className={styles.fieldLabel}>{t('taskSchedule.every')}</Text>
+            <div className={cn(styles.fieldLabel)}>{t('taskSchedule.every')}</div>
             <div className="flex items-center gap-1.5">
               <InputNumber
                 max={24}
                 min={1}
                 style={{ flex: 1 }}
                 value={hourlyInterval}
-                variant="filled"
                 onChange={handleHourlyIntervalChange}
               />
-              <Text type="secondary">{t('taskSchedule.hours')}</Text>
+              <div className="text-muted-foreground">{t('taskSchedule.hours')}</div>
               <Select
                 style={{ width: 80 }}
                 value={triggerTime.minute()}
-                variant="filled"
                 options={[
                   { label: ':00', value: 0 },
                   { label: ':15', value: 15 },
@@ -288,7 +293,7 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
 
       {scheduleType === 'weekly' && (
         <div className="flex flex-col gap-1.5">
-          <Text className={styles.fieldLabel}>{t('taskSchedule.weekday')}</Text>
+          <div className={cn(styles.fieldLabel)}>{t('taskSchedule.weekday')}</div>
           <div className="flex gap-1.5">
             {WEEKDAYS.map(({ key, label }) => (
               <div
@@ -306,75 +311,69 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
         </div>
       )}
 
-      <Accordion
-        defaultValue={[]}
-        gap={0}
-        indicatorPlacement="inline"
-        styles={{ header: { paddingBlock: 6, paddingInline: 0 } }}
-        items={[
-          {
-            children: (
-              <div className="flex flex-col gap-3.5" style={{ paddingBlock: '8px 4px' }}>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Globe color={cssVar.colorTextDescription} size={14} />
-                    <Text className={styles.fieldLabel}>{t('taskSchedule.timezone')}</Text>
-                  </div>
-                  <Select
-                    showSearch
-                    options={TIMEZONE_OPTIONS}
-                    popupMatchSelectWidth={false}
-                    value={tz}
-                    variant="filled"
-                    optionRender={(option) => {
-                      const data = option as TimezoneOption;
-                      return (
-                        <div className={styles.timezoneOption}>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {data.label}
-                          </span>
-                          <span className={styles.timezoneOffset}>{data.offset}</span>
-                        </div>
-                      );
-                    }}
-                    onChange={handleTimezoneChange}
-                  />
+      <Accordion defaultValue={[]}>
+        <AccordionItem className="border-b-0" value="advanced">
+          <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 0 }}>
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal color={cssVar.colorTextDescription} size={14} />
+              <div style={{ color: cssVar.colorTextSecondary }}>
+                {t('taskSchedule.advancedSettings')}
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="flex flex-col gap-3.5" style={{ paddingBlock: '8px 4px' }}>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Globe color={cssVar.colorTextDescription} size={14} />
+                  <div className={cn(styles.fieldLabel)}>{t('taskSchedule.timezone')}</div>
                 </div>
+                <Select
+                  showSearch
+                  options={TIMEZONE_OPTIONS}
+                  value={tz}
+                  optionRender={(option) => {
+                    const data = option as TimezoneOption;
+                    return (
+                      <div className={styles.timezoneOption}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {data.label}
+                        </span>
+                        <span className={styles.timezoneOffset}>{data.offset}</span>
+                      </div>
+                    );
+                  }}
+                  onChange={handleTimezoneChange}
+                />
+              </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Hash color={cssVar.colorTextDescription} size={14} />
-                    <Text className={styles.fieldLabel}>{t('taskSchedule.maxExecutions')}</Text>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <InputNumber
-                      disabled={continuous}
-                      min={1}
-                      placeholder={t('taskSchedule.maxExecutionsPlaceholder')}
-                      style={{ flex: 1 }}
-                      value={maxExec ?? undefined}
-                      variant="filled"
-                      onChange={handleMaxExecChange}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Hash color={cssVar.colorTextDescription} size={14} />
+                  <div className={cn(styles.fieldLabel)}>{t('taskSchedule.maxExecutions')}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <InputNumber
+                    disabled={continuous}
+                    min={1}
+                    placeholder={t('taskSchedule.maxExecutionsPlaceholder')}
+                    style={{ flex: 1 }}
+                    value={maxExec ?? undefined}
+                    onChange={handleMaxExecChange}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={continuous}
+                      onCheckedChange={(checked) => handleContinuousChange(checked === true)}
                     />
-                    <Checkbox checked={continuous} onChange={handleContinuousChange}>
-                      {t('taskSchedule.continuous')}
-                    </Checkbox>
+                    <Label>{t('taskSchedule.continuous')}</Label>
                   </div>
                 </div>
               </div>
-            ),
-            key: 'advanced',
-            title: (
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal color={cssVar.colorTextDescription} size={14} />
-                <Text style={{ color: cssVar.colorTextSecondary }}>
-                  {t('taskSchedule.advancedSettings')}
-                </Text>
-              </div>
-            ),
-          },
-        ]}
-      />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 });

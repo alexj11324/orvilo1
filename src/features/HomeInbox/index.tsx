@@ -1,4 +1,3 @@
-import { ActionIcon, Segmented } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
@@ -10,7 +9,9 @@ import {
   useHomeUsageWidgetActive,
 } from '@/business/client/features/HomeUsageWidget';
 import { useWorkspaceMemberProfiles } from '@/business/client/hooks/useWorkspaceMemberProfiles';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { BriefCardSkeleton } from '@/features/DailyBrief/BriefCardSkeleton';
 import GroupBlock from '@/features/Home/components/GroupBlock';
 import { homeType } from '@/features/Home/components/homeType';
@@ -271,15 +272,14 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   // the first titled section's header — the primary "Needs you", or Unread when
   // there's nothing to handle. Only shown in a team workspace.
   const scopeToggle = isTeam ? (
-    <Segmented
-      size={'small'}
-      value={scope}
-      options={[
-        { label: t('inbox.scope.mine'), value: 'mine' },
-        { label: t('inbox.scope.team'), value: 'team' },
-      ]}
-      onChange={(value) => setScope(value as 'mine' | 'team')}
-    />
+    <ToggleGroup
+      size="sm"
+      value={[scope]}
+      onValueChange={(value) => value[0] && setScope(value[0] as 'mine' | 'team')}
+    >
+      <ToggleGroupItem value="mine">{t('inbox.scope.mine')}</ToggleGroupItem>
+      <ToggleGroupItem value="team">{t('inbox.scope.team')}</ToggleGroupItem>
+    </ToggleGroup>
   ) : undefined;
   const toggleSectionKey = scopeToggle
     ? resolveInboxScopeToggleSection({

@@ -1,9 +1,12 @@
-import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Check, ChevronDownIcon, ChevronUpIcon, MoreHorizontal, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import BriefCardActions from '@/features/DailyBrief/BriefCardActions';
 import BriefCardArtifacts from '@/features/DailyBrief/BriefCardArtifacts';
 import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
@@ -80,13 +83,13 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
       >
         <div className="flex items-center gap-2" style={{ overflow: 'hidden' }}>
           <BriefIcon muted={isResolved} size={24} type={brief.type} />
-          <Text ellipsis style={{ flex: 1 }} weight={500}>
+          <div className="truncate block font-medium" style={{ flex: 1 }}>
             {brief.title}
-          </Text>
+          </div>
           {isResolved && !expanded && (
             <div className="flex items-center gap-1">
               <Check color={cssVar.colorTextQuaternary} size={14} />
-              <Text className={briefStyles.resolvedTag}>{t('brief.resolved')}</Text>
+              <div className={cn(briefStyles.resolvedTag)}>{t('brief.resolved')}</div>
             </div>
           )}
           <Time date={brief.createdAt} />

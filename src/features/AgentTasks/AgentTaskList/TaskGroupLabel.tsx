@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CalendarClock, HeartPulse } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -71,7 +70,7 @@ interface TaskGroupLabelProps {
 const TaskGroupLabel = memo<TaskGroupLabelProps>(({ group }) => (
   <div className="flex shrink-0 items-center gap-1.5" style={{ overflow: 'hidden' }}>
     <TaskGroupPrefix group={group} />
-    <Text ellipsis weight={500}>
+    <div className="truncate block font-medium">
       {group.groupBy === 'assignee' && group.assigneeId ? (
         <AssigneeLabel agentId={group.assigneeId} />
       ) : group.groupBy === 'member' && group.assigneeUserId ? (
@@ -79,7 +78,7 @@ const TaskGroupLabel = memo<TaskGroupLabelProps>(({ group }) => (
       ) : (
         group.label
       )}
-    </Text>
+    </div>
   </div>
 ));
 

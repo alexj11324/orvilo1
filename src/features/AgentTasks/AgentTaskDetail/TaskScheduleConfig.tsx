@@ -1,14 +1,20 @@
-import { ActionIcon, Avatar, Button, Select, Switch, Tabs, Text } from '@lobehub/ui/base-ui';
 import type { TaskAutomationMode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarClockIcon, CalendarDays, Clock, RefreshCw, TimerIcon, Zap } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import InputNumber from '@/components/InputNumber';
+import Select from '@/components/Select';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -114,9 +120,9 @@ const IntervalTab = memo<IntervalTabProps>(({ currentInterval, disabled, taskId 
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Text className={styles.fieldLabel}>{t('taskSchedule.intervalLabel')}</Text>
+      <div className={cn(styles.fieldLabel)}>{t('taskSchedule.intervalLabel')}</div>
       <div className="flex items-center gap-2">
-        <Text type="secondary">{t('taskSchedule.every')}</Text>
+        <div className="text-muted-foreground">{t('taskSchedule.every')}</div>
         <InputNumber
           disabled={disabled}
           min={localUnit === 'minutes' ? MIN_MINUTES : 1}
@@ -137,7 +143,7 @@ const IntervalTab = memo<IntervalTabProps>(({ currentInterval, disabled, taskId 
           ]}
           onChange={handleUnitChange}
         />
-        <Text type="secondary">{t('taskSchedule.intervalSuffix')}</Text>
+        <div className="text-muted-foreground">{t('taskSchedule.intervalSuffix')}</div>
       </div>
     </div>
   );
@@ -300,61 +306,47 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
           size={40}
         />
         <div className="flex flex-1 flex-col gap-0.5">
-          <Text weight={500}>{t('taskSchedule.heading')}</Text>
-          <Text style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
+          <div className="font-medium">{t('taskSchedule.heading')}</div>
+          <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
             {summary?.primary ?? t('taskSchedule.summary.disabled')}
-          </Text>
+          </div>
           {summary?.secondary && (
-            <Text style={{ color: cssVar.colorTextDescription, fontSize: 11 }}>
+            <div style={{ color: cssVar.colorTextDescription, fontSize: 11 }}>
               {summary.secondary}
-            </Text>
+            </div>
           )}
         </div>
-        <Switch checked={enabled} disabled={!canEditTask} onChange={handleEnableChange} />
+        <Switch checked={enabled} disabled={!canEditTask} onCheckedChange={handleEnableChange} />
       </div>
 
       {enabled && nextRunText && (
         <div className={`flex items-center gap-2.5 ${styles.preview}`}>
           <Clock color={cssVar.colorTextDescription} size={16} />
-          <Text style={{ color: cssVar.colorTextSecondary }}>{t('taskSchedule.nextRun')}</Text>
-          <Text style={{ flex: 1, textAlign: 'right' }} weight={500}>
+          <div style={{ color: cssVar.colorTextSecondary }}>{t('taskSchedule.nextRun')}</div>
+          <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
             {nextRunText}
-          </Text>
+          </div>
         </div>
       )}
 
       {enabled && (
         <>
-          <Tabs
-            activeKey={automationMode ?? 'heartbeat'}
-            items={[
-              {
-                disabled: !canEditTask,
-                key: 'schedule',
-                label: (
-                  <div className="flex items-center justify-center gap-1.5">
-                    <CalendarDays size={14} />
-                    <span>{t('taskSchedule.schedulerTab')}</span>
-                  </div>
-                ),
-              },
-              {
-                disabled: !canEditTask,
-                key: 'heartbeat',
-                label: (
-                  <div className="flex items-center justify-center gap-1.5">
-                    <RefreshCw size={14} />
-                    <span>{t('taskSchedule.intervalTab')}</span>
-                  </div>
-                ),
-              },
-            ]}
-            styles={{
-              list: { display: 'flex', width: '100%' },
-              tab: { flex: 1 },
-            }}
-            onChange={handleModeChange}
-          />
+          <Tabs value={automationMode ?? 'heartbeat'} onValueChange={handleModeChange}>
+            <TabsList className="flex w-full">
+              <TabsTrigger className="flex-1" disabled={!canEditTask} value="schedule">
+                <div className="flex items-center justify-center gap-1.5">
+                  <CalendarDays size={14} />
+                  <span>{t('taskSchedule.schedulerTab')}</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger className="flex-1" disabled={!canEditTask} value="heartbeat">
+                <div className="flex items-center justify-center gap-1.5">
+                  <RefreshCw size={14} />
+                  <span>{t('taskSchedule.intervalTab')}</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           {automationMode === 'heartbeat' && (
             <IntervalTab
               currentInterval={finalCurrentInterval}
@@ -367,13 +359,13 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
           )}
           {canStartSchedule && (
             <Button
-              block
+              className="w-full"
               disabled={!canEditTask}
-              icon={CalendarClockIcon}
               loading={isStartingSchedule}
-              type="primary"
+              variant="default"
               onClick={handleStartScheduling}
             >
+              <CalendarClockIcon data-icon="inline-start" />
               {t('taskSchedule.startScheduling')}
             </Button>
           )}

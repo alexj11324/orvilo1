@@ -37,29 +37,15 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
   Icon: () => null,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useModalContext: () => ({ close: mocks.close, setCanDismissByClickOutside: vi.fn() }),
-  Button: ({
-    children,
-    disabled,
-    loading,
-    onClick,
-  }: {
-    children?: ReactNode;
-    disabled?: boolean;
-    loading?: boolean;
-    onClick?: () => void;
-  }) => (
-    <button disabled={disabled || loading} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
   confirmModal: (config: { onOk?: () => unknown }) => {
     mocks.onOk = config.onOk;
   },
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: { error: mocks.toastError },
 }));
 

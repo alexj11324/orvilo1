@@ -1,6 +1,5 @@
 'use client';
 
-import { createModal, type ModalInstance, useModalContext } from '@lobehub/ui/base-ui';
 import { addDays, format } from 'date-fns';
 import {
   BellIcon,
@@ -15,6 +14,7 @@ import {
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item';

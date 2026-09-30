@@ -1,10 +1,12 @@
-import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { homeType } from '@/features/Home/components/homeType';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
@@ -145,15 +147,15 @@ const RunningTasksCard = memo<RunningTasksCardProps>(({ action, bare, running, s
     <div className={cx(bare ? styles.bareRoot : styles.card, 'flex flex-col')}>
       <div className="flex items-center">
         <Button
-          className={cx(styles.head, bare && styles.bareHead)}
-          type={'text'}
+          className={cn(cx(styles.head, bare && styles.bareHead))}
+          variant="ghost"
           onClick={() => setOpen((v) => !v)}
         >
           <div className="flex items-center gap-2.5" style={{ width: '100%' }}>
             <RunningGlyph />
-            <Text className={homeType.itemTitle} style={{ flex: 1 }}>
+            <div className={cn(homeType.itemTitle)} style={{ flex: 1 }}>
               {t('inbox.running.title', { count: running.length })}
-            </Text>
+            </div>
             <RunningAgentAvatars running={running} />
             {createElement(open ? ChevronDownIcon : ChevronRightIcon, {
               color: cssVar.colorTextQuaternary,

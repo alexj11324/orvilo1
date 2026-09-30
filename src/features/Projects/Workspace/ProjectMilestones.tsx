@@ -1,6 +1,5 @@
 'use client';
 
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -9,12 +8,14 @@ import { createElement, memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import DatePicker from '@/components/DatePicker';
+import { confirmModal } from '@/components/Modal';
 import {
   Sortable,
   SortableItem,
   SortableItemHandle,
   SortableOverlay,
 } from '@/components/reui/sortable';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';

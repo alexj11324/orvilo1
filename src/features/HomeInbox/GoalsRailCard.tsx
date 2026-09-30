@@ -1,9 +1,11 @@
-import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { homeType } from '@/features/Home/components/homeType';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
@@ -97,9 +99,9 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
 
   return (
     <Button
-      className={cx(styles.row, bare && styles.bareRow)}
+      className={cn(cx(styles.row, bare && styles.bareRow))}
       disabled={!href}
-      type={'text'}
+      variant="ghost"
       onClick={() => href && navigate(href)}
     >
       <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
@@ -113,9 +115,12 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
             <TargetIcon color={cssVar.colorInfo} size={16} />
           )}
         </span>
-        <Text ellipsis className={homeType.itemTitle} style={{ flex: 1, minWidth: 0 }}>
+        <div
+          className={cn('truncate', 'block', homeType.itemTitle)}
+          style={{ flex: 1, minWidth: 0 }}
+        >
           {entry.title}
-        </Text>
+        </div>
         <GoalAgentAvatar agentId={entry.agentId} />
         {/* A goal is measured in the tasks it has closed, not in time — how far
             through its own decomposition it is says more at a glance. */}
@@ -177,8 +182,8 @@ const GoalsRailCard = memo<GoalsRailCardProps>(({ bare, entries }) => {
       ))}
       {collapsed && (
         <Button
-          className={cx(styles.row, bare && styles.bareRow, homeType.supporting)}
-          type={'text'}
+          className={cn(cx(styles.row, bare && styles.bareRow, homeType.supporting))}
+          variant="ghost"
           onClick={() => setExpanded(true)}
         >
           {t('inbox.goals.showAll', { count: entries.length })}

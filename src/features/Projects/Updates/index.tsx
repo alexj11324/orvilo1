@@ -1,6 +1,5 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -12,7 +11,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -350,7 +351,6 @@ export const ProjectUpdateComposer = memo<{
           )}
           <Button
             aria-busy={posting}
-
             disabled={!body.trim() || posting}
             variant="default"
             onClick={() => void post()}

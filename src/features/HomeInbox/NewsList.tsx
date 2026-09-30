@@ -1,10 +1,12 @@
-import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import BriefCardArtifacts from '@/features/DailyBrief/BriefCardArtifacts';
 import BriefIcon from '@/features/DailyBrief/BriefIcon';
 import { type BriefItem } from '@/features/DailyBrief/types';
@@ -104,7 +106,11 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
 
   return (
     <div className={cx(bare ? undefined : styles.section, 'flex flex-col')}>
-      <Button className={cx(styles.row, bare && styles.bareRow)} type={'text'} onClick={toggle}>
+      <Button
+        className={cn(cx(styles.row, bare && styles.bareRow))}
+        variant="ghost"
+        onClick={toggle}
+      >
         <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
           {brief.agent?.avatar ? (
             <Avatar
@@ -120,9 +126,8 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
           ) : (
             <BriefIcon muted={read} type={brief.type} />
           )}
-          <Text
-            ellipsis
-            className={homeType.itemTitle}
+          <div
+            className={cn('truncate', 'block', homeType.itemTitle)}
             style={{
               color: read ? cssVar.colorTextTertiary : undefined,
               flex: 1,
@@ -131,7 +136,7 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
             }}
           >
             {brief.title}
-          </Text>
+          </div>
           {showTime && <Time date={brief.createdAt} />}
           {createElement(expanded ? ChevronDownIcon : ChevronRightIcon, {
             color: cssVar.colorTextQuaternary,
@@ -187,8 +192,8 @@ const NewsList = memo<NewsListProps>(({ bare, news, showTime }) => {
       ))}
       {collapsed && (
         <Button
-          className={cx(styles.row, styles.bareRow, homeType.supporting)}
-          type={'text'}
+          className={cn(cx(styles.row, styles.bareRow, homeType.supporting))}
+          variant="ghost"
           onClick={() => setExpanded(true)}
         >
           {t('inbox.news.showAll', { count: news.length })}

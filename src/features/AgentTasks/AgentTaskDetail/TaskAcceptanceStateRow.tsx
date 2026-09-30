@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import {
   AlertTriangle,
@@ -129,9 +128,12 @@ const TaskAcceptanceStateRow = memo(() => {
       {/* The sidebar form is narrower than several labels; one line with an
           ellipsis keeps every row the same height, and the `title` above
           still carries the full label and hint on hover. */}
-      <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
+      <div
+        className="truncate block font-medium"
+        style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+      >
         {label}
-      </Text>
+      </div>
     </div>
   );
 });

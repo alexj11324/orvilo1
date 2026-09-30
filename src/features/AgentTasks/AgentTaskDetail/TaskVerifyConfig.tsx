@@ -1,18 +1,8 @@
 'use client';
 
-import {
-  ActionIcon,
-  Button,
-  confirmModal,
-  type DropdownItem,
-  DropdownMenu,
-  Select,
-  Tag,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   ChevronRight,
   ChevronUp,
@@ -28,7 +18,14 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge as Tag } from '@/components/reui/badge';
+import Select from '@/components/Select';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
   CriterionList,
@@ -541,15 +538,15 @@ const TaskVerifyConfig = memo(() => {
         ) : (
           <Plus color={cssVar.colorTextDescription} size={16} />
         )}
-        <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('verifyConfig.empty.title')}
-        </Text>
+        </div>
         {savedCount > 0 ? (
           <Tag>{t('verifyConfig.criteriaCount', { count: savedCount })}</Tag>
         ) : showRequirement ? null : (
-          <Text className={styles.subtitle} fontSize={12}>
+          <div className={cn('text-[12px]', styles.subtitle)}>
             {t('verifyConfig.collapsedHint')}
-          </Text>
+          </div>
         )}
       </div>
     );
@@ -557,9 +554,7 @@ const TaskVerifyConfig = memo(() => {
     return (
       <div className="flex flex-col gap-0.5">
         {trigger}
-        <Text className={styles.collapsedRequirement} fontSize={14}>
-          {requirementPreview}
-        </Text>
+        <div className={cn('text-[14px]', styles.collapsedRequirement)}>{requirementPreview}</div>
       </div>
     );
   }
@@ -570,7 +565,7 @@ const TaskVerifyConfig = memo(() => {
       <div className={`rounded-md border border-border ${styles.section}`}>
         <div className="flex items-center gap-3">
           <NeuralNetworkLoading size={20} />
-          <Text className={styles.subtitle}>{t('verifyConfig.generating')}</Text>
+          <div className={cn(styles.subtitle)}>{t('verifyConfig.generating')}</div>
         </div>
       </div>
     );
@@ -601,17 +596,13 @@ const TaskVerifyConfig = memo(() => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldCheck size={18} />
-              <Text weight={600}>{t('verifyConfig.empty.title')}</Text>
+              <div className="font-semibold">{t('verifyConfig.empty.title')}</div>
             </div>
             {/* Actions live top-right, de-emphasized, so they never outweigh the
                 requirement input that is the empty state's primary focus. */}
             <div className="flex items-center gap-1">
-              <Button
-                disabled={!requirement.trim()}
-                icon={Sparkles}
-                size={'small'}
-                onClick={handleGenerate}
-              >
+              <Button disabled={!requirement.trim()} size="sm" onClick={handleGenerate}>
+                <Sparkles data-icon="inline-start" />
                 {t('verifyConfig.generate')}
               </Button>
               <DropdownMenu items={addMenuItems} placement={'bottomRight'}>
@@ -620,11 +611,11 @@ const TaskVerifyConfig = memo(() => {
               <ActionIcon icon={ChevronUp} size={'small'} onClick={() => setExpanded(false)} />
             </div>
           </div>
-          <Text className={styles.subtitle}>
+          <div className={cn(styles.subtitle)}>
             {requirement.trim()
               ? t('verifyConfig.empty.materializeHint')
               : t('verifyConfig.empty.subtitle')}
-          </Text>
+          </div>
           <Textarea
             placeholder={t('verifyConfig.requirementPlaceholder')}
             rows={2}
@@ -711,12 +702,12 @@ const TaskVerifyConfig = memo(() => {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Text className={styles.subtitle} fontSize={12}>
+          <div className={cn('text-[12px]', styles.subtitle)}>
             {t('taskDetail.acceptance.goal')}
-          </Text>
-          <Text type={requirementText ? undefined : 'secondary'}>
+          </div>
+          <div className={cn(requirementText ? undefined : 'text-muted-foreground')}>
             {requirementText || t('verifyConfig.requirementEmpty')}
-          </Text>
+          </div>
         </div>
 
         <CriterionList>
@@ -774,7 +765,8 @@ const TaskVerifyConfig = memo(() => {
         </CriterionList>
 
         <div className="flex items-center gap-2">
-          <Button icon={Plus} size={'small'} type={'text'} onClick={handleManualAdd}>
+          <Button size="sm" variant="ghost" onClick={handleManualAdd}>
+            <Plus data-icon="inline-start" />
             {t('verifyConfig.addCriterion')}
           </Button>
         </div>

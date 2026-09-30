@@ -1,5 +1,4 @@
 import { stopPropagation } from '@lobehub/ui';
-import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext } from '@orvilo/types';
 import { agentDisplayName } from '@orvilo/types';
@@ -9,6 +8,8 @@ import { ChevronDownIcon, ChevronRightIcon, MessageSquarePlus } from 'lucide-rea
 import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import UnreadDot from '@/components/UnreadDot';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { homeType } from '@/features/Home/components/homeType';
@@ -190,13 +191,12 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
               title={agentDisplayName(agent)}
             />
           )}
-          <Text
-            ellipsis
-            className={homeType.itemTitle}
+          <div
+            className={cn('truncate', 'block', homeType.itemTitle)}
             style={{ flex: 1, fontWeight: read ? 400 : undefined, minWidth: 0 }}
           >
             {topic.title}
-          </Text>
+          </div>
           {showAuthor && <AuthorChip trigger={topic.trigger} userId={topic.userId} />}
           <Time date={topic.updatedAt ?? topic.createdAt} />
           {createElement(expanded ? ChevronDownIcon : ChevronRightIcon, {
@@ -227,18 +227,18 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <Button size={'small'} type={'text'} onClick={viewChat}>
+                <Button size="sm" variant="ghost" onClick={viewChat}>
                   {t('inbox.unread.viewChat')}
                 </Button>
                 <Button
                   disabled={!agentId}
-                  icon={MessageSquarePlus}
-                  size={'small'}
-                  type={'fill'}
+                  size="sm"
+                  variant="secondary"
                   onClick={() => setReplying(true)}
                   onFocus={preloadRunReplyEditor}
                   onPointerEnter={preloadRunReplyEditor}
                 >
+                  <MessageSquarePlus data-icon="inline-start" />
                   {t('inbox.unread.followUp')}
                 </Button>
               </div>

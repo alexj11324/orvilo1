@@ -1,13 +1,14 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { createElement, memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import type { StatusVisual } from '@/components/ExecutionStatus';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { TaskKanbanGroupBy, TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
@@ -358,12 +359,11 @@ const KanbanColumn = memo<KanbanColumnProps>(
           <div className={styles.headerTitle}>
             {headerVariant === 'loading' ? (
               <>
-                <Skeleton.Avatar
-                  shape={'square'}
-                  size={16}
-                  style={{ borderRadius: 4, flex: 'none' }}
+                <Skeleton
+                  className="rounded-md shrink-0"
+                  style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
                 />
-                <Skeleton height={14} style={{ minWidth: 64 }} width={64} />
+                <Skeleton style={{ minWidth: 64, height: 14, width: 64 }} />
               </>
             ) : headerVariant === 'group' && groupMeta ? (
               <TaskGroupLabel group={groupMeta} />
@@ -371,9 +371,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
               <>
                 {statusIcon &&
                   createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
-                <Text fontSize={13} weight={500}>
-                  {label}
-                </Text>
+                <div className="text-[13px] font-medium">{label}</div>
               </>
             )}
             {headerVariant !== 'loading' && <span className={styles.count}>{total}</span>}

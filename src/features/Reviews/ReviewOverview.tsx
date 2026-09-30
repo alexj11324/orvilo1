@@ -1,6 +1,6 @@
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 // GitHub check status is separate from Orvilo task and issue workflow status.
 /* eslint-disable @typescript-eslint/no-restricted-imports */
 import {
@@ -184,12 +184,8 @@ const ReviewOverview = memo<{
             name={pullRequest.author ?? '?'}
             size={20}
           />
-          <Text className={styles.authorName} fontSize={12}>
-            {pullRequest.author}
-          </Text>
-          <Text fontSize={12} type={'secondary'}>
-            ·
-          </Text>
+          <div className={cn('text-[12px]', styles.authorName)}>{pullRequest.author}</div>
+          <div className="text-[12px] text-muted-foreground">·</div>
           <span className={styles.branch} title={branchLabel}>
             {pullRequest.baseRef} ← {pullRequest.headRef}
           </span>
@@ -217,7 +213,7 @@ const ReviewOverview = memo<{
                 width={14}
               />
             </span>
-            <Text fontSize={13}>{t(state.key as never)}</Text>
+            <div className="text-[13px]">{t(state.key as never)}</div>
           </div>
         </section>
         <section>
@@ -233,16 +229,14 @@ const ReviewOverview = memo<{
                 { size: 14, width: 14, height: 14, color: checks.color, fill: 'transparent' },
               )}
             </span>
-            <Text fontSize={13}>
+            <div className="text-[13px]">
               {t(checks.labelKey as never, { count: pullRequest.checks.summary.failing })}
-            </Text>
+            </div>
           </div>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.branch')}</div>
-          <Text className={styles.railValue} fontSize={13}>
-            {branchLabel}
-          </Text>
+          <div className={cn('text-[13px]', styles.railValue)}>{branchLabel}</div>
         </section>
         <section>
           <div className={styles.railLabel}>

@@ -1,11 +1,13 @@
 import { Markdown } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 
 import CollectionFooter from './CollectionFooter';
@@ -48,23 +50,20 @@ const ThreadComment = memo<{ comment: ReviewThreadComment }>(({ comment }) => {
     <div className="flex flex-col gap-1 p-3">
       <div className="flex flex-row items-center gap-2">
         <Avatar avatar={comment.authorAvatar ?? undefined} name={comment.author ?? '?'} size={20} />
-        <Text fontSize={12} weight={500}>
-          {comment.author}
-        </Text>
+        <div className="text-[12px] font-medium">{comment.author}</div>
         {comment.outdated ? <Tag>{t('reviews.threadOutdated')}</Tag> : null}
         {comment.side ? (
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {comment.side === 'LEFT' ? t('reviews.commentSideLeft') : t('reviews.commentSideRight')}
-          </Text>
+          </div>
         ) : null}
         {comment.createdAt ? (
-          <Text
-            fontSize={12}
+          <div
+            className="text-[12px] text-muted-foreground"
             title={dayjs(comment.createdAt).format('YYYY-MM-DD HH:mm')}
-            type={'secondary'}
           >
             {dayjs(comment.createdAt).fromNow()}
-          </Text>
+          </div>
         ) : null}
       </div>
       <Markdown fontSize={13} variant={'chat'}>
@@ -102,9 +101,11 @@ const ReviewThreadCard = memo<{
     <div className={cx('flex flex-col', styles.card)}>
       {anchor ? (
         <div className={cx('flex flex-row items-center gap-2', styles.cardHeader)}>
-          <Text className={styles.threadHeader}>{anchor}</Text>
+          <div className={cn(styles.threadHeader)}>{anchor}</div>
           {thread.isOutdated ? <Tag>{t('reviews.threadOutdated')}</Tag> : null}
-          {thread.isResolved ? <Tag color={'green'}>{t('reviews.threadResolved')}</Tag> : null}
+          {thread.isResolved ? (
+            <Tag variant="success-light">{t('reviews.threadResolved')}</Tag>
+          ) : null}
         </div>
       ) : null}
       {comments.items.map((comment, index) => (
@@ -145,14 +146,12 @@ const ReviewThreadCard = memo<{
             }}
           />
         ) : thread.viewerCanReply === false ? (
-          <Text fontSize={12} type={'secondary'}>
-            {t('reviews.cannotReply')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('reviews.cannotReply')}</div>
         ) : (
           <Button
             disabled={writeDisabled || stale}
-            size={'small'}
-            type={'text'}
+            size="sm"
+            variant="ghost"
             onClick={() => setReplyOpen(true)}
           >
             {t('reviews.reply')}

@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type * as OrvilochatConst from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import type { BriefAction } from '@orvilo/types';
@@ -7,6 +6,7 @@ import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toast } from '@/components/toast';
 import { useBriefStore } from '@/store/brief';
 import { useTaskStore } from '@/store/task';
 

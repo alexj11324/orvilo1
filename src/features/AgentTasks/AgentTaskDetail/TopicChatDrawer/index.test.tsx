@@ -87,9 +87,8 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenuTrigger: ({ render }: { render?: ReactNode }) => render,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ActionIcon: ({
+vi.mock('@/components/ActionIcon', () => ({
+  default: ({
     disabled,
     icon,
     onClick,
@@ -113,6 +112,10 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
       {title}
     </button>
   ),
+}));
+
+vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   FloatingPanel: ({
     actions,
     children,

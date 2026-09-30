@@ -1,12 +1,13 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { MessageCircle, MessagesSquare } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useTaskStore } from '@/store/task';
 
@@ -63,7 +64,9 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
           footnote under the text it wrote. */}
       <div className="flex items-center gap-2">
         <Avatar avatar={activity.author?.avatar || DEFAULT_AVATAR} size={24} />
-        <Text weight={500}>{activity.author?.name ?? t('taskDetail.reportedByAgent')}</Text>
+        <div className="font-medium">
+          {activity.author?.name ?? t('taskDetail.reportedByAgent')}
+        </div>
       </div>
       <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
         {body}

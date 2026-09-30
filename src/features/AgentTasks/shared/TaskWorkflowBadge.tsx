@@ -1,6 +1,5 @@
 'use client';
 
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { ReactNode } from 'react';
@@ -8,6 +7,7 @@ import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Badge as Tag } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TaskWorkflowBadgeProps {
@@ -37,16 +37,19 @@ export const useTaskWorkflowGlyph = ({
     ...WORKFLOW_CATEGORY_VISUALS[workflowCategory],
     label: (
       <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
-        </Text>
-        <Text fontSize={12} style={{ fontFamily: cssVar.fontFamilyCode }} type={'secondary'}>
+        </div>
+        <div
+          className="text-[12px] text-muted-foreground"
+          style={{ fontFamily: cssVar.fontFamilyCode }}
+        >
           {workflowStateId}
-        </Text>
+        </div>
         {deliveryPending && (
-          <Text fontSize={12} type={'warning'}>
+          <div className="text-[12px] text-warning">
             {t('taskDetail.workflow.deliveryPendingHelp')}
-          </Text>
+          </div>
         )}
       </div>
     ),
@@ -75,12 +78,8 @@ const TaskWorkflowBadge = memo<TaskWorkflowBadgeProps>((props) => {
         <TooltipTrigger
           render={
             <span className="inline-flex">
-              <Tag
-                data-task-workflow-state={workflowCategory}
-                icon={createElement(glyph.icon, { color: glyph.color, size: 12 })}
-                size={'small'}
-                style={{ flexShrink: 0 }}
-              >
+              <Tag data-task-workflow-state={workflowCategory} size="sm" style={{ flexShrink: 0 }}>
+                {createElement(glyph.icon, { color: glyph.color, size: 12 })}
                 {label}
               </Tag>
             </span>

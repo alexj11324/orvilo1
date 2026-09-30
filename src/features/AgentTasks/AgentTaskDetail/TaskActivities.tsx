@@ -1,4 +1,3 @@
-import { Avatar, Collapsible, Text } from '@lobehub/ui/base-ui';
 import type {
   BriefType,
   TaskAutomationSnapshot,
@@ -22,9 +21,11 @@ import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
@@ -159,10 +160,13 @@ const FeedLine = memo<{ children: ReactNode; mark: ReactNode; time?: string }>(
   ({ children, mark, time }) => (
     <div className={`flex items-center gap-2 ${styles.activityLine}`}>
       <div className={styles.activityMark}>{mark}</div>
-      <Text ellipsis style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}>
+      <div
+        className="truncate block"
+        style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
+      >
         {children}
         <RelativeTime time={time} />
-      </Text>
+      </div>
     </div>
   ),
 );
@@ -519,17 +523,19 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         onClick={() => setIsExpanded((prev) => !prev)}
       >
         <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
-        <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.activities')}
-        </Text>
+        </div>
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
       </div>
       <Collapsible open={isExpanded}>
-        <div className="flex flex-col gap-3 px-3 py-1">
-          {commentInput}
-          {rows}
-        </div>
+        <CollapsibleContent>
+          <div className="flex flex-col gap-3 px-3 py-1">
+            {commentInput}
+            {rows}
+          </div>
+        </CollapsibleContent>
       </Collapsible>
     </div>
   );

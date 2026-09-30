@@ -1,4 +1,3 @@
-import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { MessageSquareTextIcon } from 'lucide-react';
@@ -6,7 +5,9 @@ import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import { Badge as Tag } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -361,15 +362,12 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,
           assigned executor top-right). */}
         <div className="flex items-center gap-2" style={{ minHeight: 24 }}>
-          <Text
-            ellipsis
-            fontSize={12}
+          <div
+            className="truncate block text-[12px] text-muted-foreground font-[450]"
             style={{ flex: 1, minWidth: 0 }}
-            type={'secondary'}
-            weight={450}
           >
             {task.identifier}
-          </Text>
+          </div>
           {privacyBadge}
           <div className="flex shrink-0 items-center gap-1">{executorNode}</div>
         </div>
@@ -419,7 +417,8 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           <LinearTaskSyncStatus taskId={task.id} />
           {projectName ? (
-            <Tag icon={<PROJECT_ENTITY_ICON size={12} />} size="small" variant="outlined">
+            <Tag size="sm" variant="primary-outline">
+              {<PROJECT_ENTITY_ICON size={12} />}
               {projectName}
             </Tag>
           ) : null}
@@ -432,9 +431,9 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             />
           ) : null}
           {status === 'scheduled' ? (
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-            </Text>
+            </div>
           ) : null}
         </div>
 
@@ -452,10 +451,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             {ownerNode}
           </div>
           {time ? (
-            <Text ellipsis fontSize={12} style={{ minWidth: 0 }} type={'secondary'}>
+            <div
+              className="truncate block text-[12px] text-muted-foreground"
+              style={{ minWidth: 0 }}
+            >
               {/* Linear cards stamp the creation date, not the last touch. */}
               {tChat('taskList.createdAt', { date: time, defaultValue: 'Created {{date}}' })}
-            </Text>
+            </div>
           ) : null}
           <div className="flex shrink-0 items-center gap-1" style={{ marginLeft: 'auto' }}>
             <TaskSubtaskProgressTag

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { BriefArtifactDocument, BriefArtifacts } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRightIcon, FileTextIcon } from 'lucide-react';
@@ -35,9 +34,9 @@ const BriefArtifactCard = memo<{ doc: BriefArtifactDocument }>(({ doc }) => {
       <div className={styles.iconWrap}>
         <FileTextIcon size={20} strokeWidth={1.5} style={{ color: cssVar.colorTextSecondary }} />
       </div>
-      <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+      <div className="truncate block font-medium" style={{ flex: 1, minWidth: 0 }}>
         {title}
-      </Text>
+      </div>
       <ChevronRightIcon size={16} style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }} />
     </div>
   );

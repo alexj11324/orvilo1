@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -72,9 +72,9 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
   );
 
   const allTasksLabel = (
-    <Text color={'inherit'} weight={500}>
+    <div className="font-medium" style={{ color: 'inherit' }}>
       {t('taskList.all')}
-    </Text>
+    </div>
   );
 
   // Project wins over team, matching Linear's "issue belongs to a project,
@@ -99,9 +99,12 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
                 size={14}
                 style={{ flex: 'none' }}
               />
-              <Text ellipsis color={'inherit'} style={{ maxWidth: 160, minWidth: 0 }} weight={500}>
+              <div
+                className="truncate block font-medium"
+                style={{ maxWidth: 160, minWidth: 0, color: 'inherit' }}
+              >
                 {project.name}
-              </Text>
+              </div>
             </span>
           </WorkspaceLink>
         ),
@@ -110,9 +113,12 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
       ? {
           title: (
             <WorkspaceLink to={`/teams/${team.id}`}>
-              <Text ellipsis color={'inherit'} style={{ maxWidth: 160, minWidth: 0 }} weight={500}>
+              <div
+                className="truncate block font-medium"
+                style={{ maxWidth: 160, minWidth: 0, color: 'inherit' }}
+              >
                 {team.name}
-              </Text>
+              </div>
             </WorkspaceLink>
           ),
         }
@@ -123,15 +129,17 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
       ? {
           key: `agent-${aid}`,
           title: (
-            <Text
-              ellipsis
-              color={'inherit'}
-              style={{ maxWidth: 160 }}
-              type={taskId ? undefined : 'secondary'}
-              weight={500}
+            <div
+              style={{ maxWidth: 160, color: 'inherit' }}
+              className={cn(
+                'truncate',
+                'block',
+                'font-medium',
+                taskId ? undefined : 'text-muted-foreground',
+              )}
             >
               {agentDisplayName(agentMeta)}
-            </Text>
+            </div>
           ),
         }
       : undefined;
@@ -150,9 +158,9 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
     key: identifier,
     title: (
       <WorkspaceLink to={taskDetailPath(identifier, agentId ?? undefined, name)}>
-        <Text color={'inherit'} weight={500}>
+        <div className="font-medium" style={{ color: 'inherit' }}>
           {identifier}
-        </Text>
+        </div>
       </WorkspaceLink>
     ),
   }));
@@ -170,25 +178,19 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
             }}
           >
             {taskIdentifier && (
-              <Text
-                as={'span'}
-                color={'inherit'}
-                style={{ flexShrink: 0 }}
-                type={'secondary'}
-                weight={500}
+              <span
+                className="text-muted-foreground font-medium"
+                style={{ flexShrink: 0, color: 'inherit' }}
               >
                 {taskIdentifier}
-              </Text>
+              </span>
             )}
-            <Text
-              ellipsis
-              as={'span'}
-              color={'inherit'}
-              style={{ flex: '1 1 auto', maxWidth: 240, minWidth: 0 }}
-              weight={500}
+            <span
+              className="truncate block font-medium"
+              style={{ flex: '1 1 auto', maxWidth: 240, minWidth: 0, color: 'inherit' }}
             >
               {taskTitle || taskId}
-            </Text>
+            </span>
           </span>
         ),
       }

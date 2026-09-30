@@ -1,5 +1,5 @@
-import type { TreeDataNode } from '@lobehub/ui/base-ui';
-import { ActionIcon, Collapsible, confirmModal, Text, toast, Tree } from '@lobehub/ui/base-ui';
+import { type TreeDataNode } from '@lobehub/ui/base-ui';
+import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { ListTodoIcon, PlayCircle, Plus } from 'lucide-react';
@@ -8,6 +8,10 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { SidebarContextMenuPopup } from '@/features/NavPanel/components/SidebarContextMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -91,13 +95,13 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         </TaskStatusTag>
       </span>
       {hasName && (
-        <Text fontSize={13} style={{ flex: 'none' }} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground" style={{ flex: 'none' }}>
           {task.identifier}
-        </Text>
+        </div>
       )}
-      <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }}>
+      <div className="truncate block text-[13px]" style={{ flex: 1, minWidth: 0 }}>
         {task.name || task.identifier}
-      </Text>
+      </div>
       {task.automationMode ? (
         <span
           style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
@@ -332,9 +336,12 @@ const TaskSubtasks = memo(() => {
                 onClick={() => setIsExpanded((prev) => !prev)}
               >
                 <ListTodoIcon color={cssVar.colorTextDescription} size={16} />
-                <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+                <div
+                  className="text-[13px] font-medium"
+                  style={{ color: cssVar.colorTextSecondary }}
+                >
                   {t('taskDetail.subtasks')}
-                </Text>
+                </div>
                 <AccordionArrowIcon
                   isOpen={isExpanded}
                   style={{ color: cssVar.colorTextDescription }}
@@ -365,39 +372,41 @@ const TaskSubtasks = memo(() => {
             </div>
           </div>
           <Collapsible open={isExpanded}>
-            <div className="flex flex-col gap-2">
-              {isCreating && (
-                <CreateTaskInlineEntry
-                  autoFocus
-                  agentId={agentId ?? undefined}
-                  defaultVisibility={parentVisibility}
-                  parentTaskId={taskId}
-                  placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
-                  onCollapse={() => setIsCreating(false)}
-                  onCreated={() => setIsCreating(false)}
+            <CollapsibleContent>
+              <div className="flex flex-col gap-2">
+                {isCreating && (
+                  <CreateTaskInlineEntry
+                    autoFocus
+                    agentId={agentId ?? undefined}
+                    defaultVisibility={parentVisibility}
+                    parentTaskId={taskId}
+                    placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
+                    onCollapse={() => setIsCreating(false)}
+                    onCreated={() => setIsCreating(false)}
+                  />
+                )}
+                <Tree
+                  blockNode
+                  defaultExpandAll
+                  showLine
+                  classNames={{ title: styles.subtaskTreeTitle }}
+                  styles={{ node: { height: 36 } }}
+                  treeData={treeData}
+                  onRightClick={handleRightClick}
+                  onSelect={(keys) => {
+                    if (keys[0]) handleNavigate(keys[0]);
+                  }}
                 />
-              )}
-              <Tree
-                blockNode
-                defaultExpandAll
-                showLine
-                classNames={{ title: styles.subtaskTreeTitle }}
-                styles={{ node: { height: 36 } }}
-                treeData={treeData}
-                onRightClick={handleRightClick}
-                onSelect={(keys) => {
-                  if (keys[0]) handleNavigate(keys[0]);
-                }}
-              />
-              <SidebarContextMenuPopup
-                anchor={contextMenu?.anchor}
-                items={contextMenu?.items ?? []}
-                open={Boolean(contextMenu)}
-                onOpenChange={(open) => {
-                  if (!open) setContextMenu(null);
-                }}
-              />
-            </div>
+                <SidebarContextMenuPopup
+                  anchor={contextMenu?.anchor}
+                  items={contextMenu?.items ?? []}
+                  open={Boolean(contextMenu)}
+                  onOpenChange={(open) => {
+                    if (!open) setContextMenu(null);
+                  }}
+                />
+              </div>
+            </CollapsibleContent>
           </Collapsible>
         </>
       ) : (
@@ -409,9 +418,9 @@ const TaskSubtasks = memo(() => {
             onClick={toggleCreating}
           >
             <Plus color={cssVar.colorTextDescription} size={16} />
-            <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+            <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
               {t('taskDetail.addSubtask')}
-            </Text>
+            </div>
           </div>
           {isCreating && (
             <CreateTaskInlineEntry

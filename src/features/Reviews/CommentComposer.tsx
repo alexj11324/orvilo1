@@ -1,7 +1,6 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 
-import TextArea from '@/components/TextArea';
+import { Button } from '@/components/ui/button';
 
 import type { WriteOutcome } from './types';
 
@@ -20,7 +19,7 @@ const CommentComposer = memo<{
   const [unconfirmed, setUnconfirmed] = useState(false);
   return (
     <div className="flex flex-col gap-2">
-      <TextArea
+      <Textarea
         disabled={disabled}
         placeholder={placeholder}
         rows={3}
@@ -28,15 +27,13 @@ const CommentComposer = memo<{
         onChange={setBody}
       />
       {unconfirmed && unknownHint ? (
-        <Text fontSize={12} type={'warning'}>
-          {unknownHint}
-        </Text>
+        <div className="text-[12px] text-warning">{unknownHint}</div>
       ) : null}
       <div className="flex justify-end">
         <Button
           disabled={disabled || !body.trim()}
           loading={submitting}
-          size={'small'}
+          size="sm"
           onClick={async () => {
             setSubmitting(true);
             const outcome = await onSubmit(body.trim());

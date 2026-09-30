@@ -1,10 +1,3 @@
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionRoot,
-  AccordionTrigger,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -15,6 +8,7 @@ import { Virtuoso } from 'react-virtuoso';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Accordion, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { isInteractiveRowClick } from '@/features/MyWork/myWorkDisplay';
 import { taskMilestoneById, type TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
@@ -103,9 +97,7 @@ const normalizeGroupBy = (value: TaskGroupBy | string | undefined, fallback: Tas
 const renderGroupTitle = (group: TaskGroupMeta, count: number, sub?: boolean) => (
   <div className="flex items-center justify-between gap-2">
     <TaskGroupLabel group={group} />
-    <Text fontSize={12} type={'secondary'}>
-      {count}
-    </Text>
+    <div className="text-[12px] text-muted-foreground">{count}</div>
     {sub ? (
       <Separator
         className="flex-1"
@@ -134,14 +126,13 @@ const TaskGroupHeader = memo<{
   const sub = item.kind === 'subGroup';
   return (
     <div style={{ paddingTop: item.first ? 0 : 8 }}>
-      <AccordionRoot
-        indicatorPlacement={'start'}
+      <Accordion
+        multiple
         value={item.collapsed ? [] : [item.key]}
-        variant={'borderless'}
         onValueChange={() => onToggle(item.key)}
       >
-        <AccordionItem value={item.key}>
-          <AccordionHeader
+        <AccordionItem className="border-b-0" value={item.key}>
+          <div
             style={{
               paddingBlock: 4,
               paddingInline: 12,
@@ -149,12 +140,15 @@ const TaskGroupHeader = memo<{
               borderRadius: 6,
             }}
           >
-            <AccordionTrigger style={{ padding: 0, minHeight: 28 }}>
+            <AccordionTrigger
+              className="[&_[data-slot=accordion-trigger-icon]]:mr-2 [&_[data-slot=accordion-trigger-icon]]:ml-0 [&_[data-slot=accordion-trigger-icon]]:order-first"
+              style={{ padding: 0, minHeight: 28 }}
+            >
               {renderGroupTitle(item.meta, item.count, sub)}
             </AccordionTrigger>
-          </AccordionHeader>
+          </div>
         </AccordionItem>
-      </AccordionRoot>
+      </Accordion>
     </div>
   );
 });
@@ -394,22 +388,24 @@ const TaskList = memo<TaskListProps>((props) => {
   const hiddenFooter = hiddenCount > 0 && (
     <div className="flex items-center justify-center gap-4 py-4" style={{ fontSize: 13 }}>
       <div className="flex items-center gap-1.5">
-        <Text weight={500}>{t('taskList.hiddenCompleted.count', { count: hiddenCount })}</Text>
-        <Text type={'secondary'}>{t('taskList.hiddenCompleted.suffix')}</Text>
+        <div className="font-medium">
+          {t('taskList.hiddenCompleted.count', { count: hiddenCount })}
+        </div>
+        <div className="text-muted-foreground">{t('taskList.hiddenCompleted.suffix')}</div>
       </div>
       {onShowHiddenCompleted && (
-        <Text style={{ cursor: 'pointer' }} weight={500} onClick={onShowHiddenCompleted}>
+        <div className="font-medium" style={{ cursor: 'pointer' }} onClick={onShowHiddenCompleted}>
           {t('taskList.hiddenCompleted.show')}
-        </Text>
+        </div>
       )}
     </div>
   );
 
   const truncatedFooter = isTruncated && (
     <div className="flex items-center justify-center py-4">
-      <Text fontSize={13} type={'secondary'}>
+      <div className="text-[13px] text-muted-foreground">
         {t('taskList.truncated', { loaded: tasks.length, total: storeTasksTotal })}
-      </Text>
+      </div>
     </div>
   );
 

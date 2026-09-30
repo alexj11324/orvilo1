@@ -1,4 +1,3 @@
-import { ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { ProjectStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -19,7 +18,9 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import DatePicker from '@/components/DatePicker';
 import EmojiPicker from '@/components/EmojiPicker';
+import { ModalFooter, useModalContext } from '@/components/Modal';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import {
   Combobox,

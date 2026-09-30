@@ -1,5 +1,4 @@
 'use client';
-import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowRightIcon, Link2Icon } from 'lucide-react';
@@ -12,6 +11,7 @@ import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';

@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Button, type DropdownItem, DropdownMenu, Modal } from '@lobehub/ui/base-ui';
 import type { SavedViewVisibility } from '@orvilo/types';
 import {
   CopyIcon,
@@ -12,6 +11,11 @@ import {
 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { Modal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 
 import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEditor';
 
@@ -182,7 +186,7 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
             <Button onClick={closeEditor}>{t('cancel')}</Button>
             <Button
               disabled={!dirty || !shareReady || !draft?.name.trim()}
-              type="primary"
+              variant="default"
               onClick={() =>
                 void onSave().then((saved) => {
                   if (saved) setEditing(false);

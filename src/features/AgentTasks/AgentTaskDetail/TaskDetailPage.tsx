@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -6,6 +5,7 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import { Button } from '@/components/ui/button';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
@@ -68,7 +68,7 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
             title={t('taskDetail.notFound.title')}
             extra={
               <Link to={'/tasks'}>
-                <Button type={'primary'}>{t('taskDetail.notFound.backToTasks')}</Button>
+                <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
               </Link>
             }
           />

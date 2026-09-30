@@ -1,10 +1,10 @@
 import { ChatInput, Editor, SendButton, useEditor } from '@lobehub/editor/react';
-import { Button } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 
 interface CommentInputProps {
@@ -39,14 +39,14 @@ const CommentInput = memo<CommentInputProps>(({ onSubmit, onCancel }) => {
         <div className="flex items-center gap-2 justify-between p-2">
           <Button
             disabled={submitting}
-            icon={ChevronLeft}
-            size={'small'}
-            type={'text'}
+            size="sm"
+            variant="ghost"
             style={{
               color: cssVar.colorTextDescription,
             }}
             onClick={onCancel}
           >
+            <ChevronLeft data-icon="inline-start" />
             {t('cancel', { ns: 'common' })}
           </Button>
           <SendButton

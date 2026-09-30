@@ -1,6 +1,6 @@
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { MessageSquareTextIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import IssueRowChip from '@/components/IssueRowChip';
 import LabelChips from '@/features/Labels/LabelChips';
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
@@ -236,9 +237,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
     <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
       {hasName ? (
-        <Text className={styles.identifier} type={'secondary'}>
-          {task.identifier}
-        </Text>
+        <div className={cn('text-muted-foreground', styles.identifier)}>{task.identifier}</div>
       ) : null}
       <span
         data-collab-id={`task:${task.id}:status`}
@@ -259,23 +258,26 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       </span>
       <LinearTaskSyncStatus taskId={task.id} />
       {privacyBadge}
-      <Text ellipsis className={styles.title} weight={500}>
+      <div className={cn('truncate', 'block', 'font-medium', styles.title)}>
         {hasName ? task.name : task.identifier}
-      </Text>
+      </div>
       {showParent && task.parent ? (
         <>
-          <Text aria-hidden className={styles.parentSeparator} type={'secondary'}>
+          <div aria-hidden className={cn('text-muted-foreground', styles.parentSeparator)}>
             ›
-          </Text>
-          <Text
-            ellipsis
-            className={styles.parent}
+          </div>
+          <div
             title={`${task.parent.identifier} ${task.parent.name ?? ''}`.trim()}
-            type={'secondary'}
-            weight={500}
+            className={cn(
+              'truncate',
+              'block',
+              'text-muted-foreground',
+              'font-medium',
+              styles.parent,
+            )}
           >
             {task.parent.name || task.parent.identifier}
-          </Text>
+          </div>
         </>
       ) : null}
       {scheduledBadge}
@@ -383,14 +385,12 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   ) : null;
 
   const timeNode = time ? (
-    <Text
-      align={'right'}
-      fontSize={12}
+    <div
+      className="text-right text-[12px] text-muted-foreground"
       style={{ fontWeight: 450, whiteSpace: 'nowrap', width: 48 }}
-      type={'secondary'}
     >
       {time}
-    </Text>
+    </div>
   ) : null;
 
   return (

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -120,13 +119,9 @@ interface SavedViewDetailsPanelProps {
 
 const DetailRow = memo<{ label: string; value: ReactNode }>(({ label, value }) => (
   <div className={cx('flex items-center justify-between gap-4', styles.metaRow)}>
-    <Text fontSize={12} type="secondary">
-      {label}
-    </Text>
+    <div className="text-[12px] text-muted-foreground">{label}</div>
     {typeof value === 'string' ? (
-      <Text ellipsis fontSize={13} weight={500}>
-        {value}
-      </Text>
+      <div className="truncate block text-[13px] font-medium">{value}</div>
     ) : (
       value
     )}
@@ -189,9 +184,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
         <div className={cx('flex flex-col', styles.card)}>
           <div className={cx('flex items-center gap-2.5', styles.cardHeader)}>
             <ListTodoIcon className={styles.titleIcon} size={16} />
-            <Text ellipsis fontSize={14} weight={600}>
-              {title}
-            </Text>
+            <div className="truncate block text-[14px] font-semibold">{title}</div>
           </div>
           <DetailRow
             label={t('savedViews.visibility', { ns: 'common' })}
@@ -210,9 +203,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
               owner.name ? (
                 <div className={styles.ownerCell}>
                   <Avatar avatar={owner.avatar} name={owner.name} size={20} />
-                  <Text ellipsis fontSize={13} weight={500}>
-                    {owner.name}
-                  </Text>
+                  <div className="truncate block text-[13px] font-medium">{owner.name}</div>
                 </div>
               ) : (
                 '—'
@@ -268,9 +259,12 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
             </div>
             <div className={styles.facetList}>
               {facetBuckets.length === 0 && restrictedCount === 0 ? (
-                <Text fontSize={12} style={{ paddingBlock: 4, paddingInline: 8 }} type="secondary">
+                <div
+                  className="text-[12px] text-muted-foreground"
+                  style={{ paddingBlock: 4, paddingInline: 8 }}
+                >
                   {t('savedViews.noMatches', { ns: 'common' })}
-                </Text>
+                </div>
               ) : (
                 <>
                   {facetBuckets.map((bucket) => (
@@ -278,7 +272,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                       className={cx('flex items-center justify-between', styles.facetRow)}
                       key={bucket.key ?? 'none'}
                     >
-                      <Text ellipsis fontSize={13}>
+                      <div className="truncate block text-[13px]">
                         {bucket.name ??
                           (bucket.key === null
                             ? t(
@@ -288,20 +282,16 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                                 { ns: 'common' },
                               )
                             : t('savedViews.facetRestricted', { ns: 'common' }))}
-                      </Text>
-                      <Text fontSize={12} type="secondary">
-                        {bucket.count}
-                      </Text>
+                      </div>
+                      <div className="text-[12px] text-muted-foreground">{bucket.count}</div>
                     </div>
                   ))}
                   {restrictedCount > 0 ? (
                     <div className={cx('flex items-center justify-between', styles.facetRow)}>
-                      <Text fontSize={13} type="secondary">
+                      <div className="text-[13px] text-muted-foreground">
                         {t('savedViews.facetRestricted', { ns: 'common' })}
-                      </Text>
-                      <Text fontSize={12} type="secondary">
-                        {restrictedCount}
-                      </Text>
+                      </div>
+                      <div className="text-[12px] text-muted-foreground">{restrictedCount}</div>
                     </div>
                   ) : null}
                 </>
@@ -313,9 +303,9 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
         {summary.groups.length > 0 ? (
           <div className={cx('flex flex-col', styles.card)}>
             <div className={cx('flex flex-col', styles.cardHeader)}>
-              <Text fontSize={12} type="secondary" weight={500}>
+              <div className="text-[12px] text-muted-foreground font-medium">
                 {t('savedViews.groupCounts', { ns: 'common' })}
-              </Text>
+              </div>
             </div>
             {summary.groups.map((group) => {
               const labelKey = COLUMN_I18N_KEYS[group.key];
@@ -335,11 +325,9 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                       color: cssVar.colorTextTertiary,
                       size: 14,
                     })}
-                    <Text fontSize={13}>{groupLabel}</Text>
+                    <div className="text-[13px]">{groupLabel}</div>
                   </div>
-                  <Text fontSize={12} type="secondary">
-                    {group.total}
-                  </Text>
+                  <div className="text-[12px] text-muted-foreground">{group.total}</div>
                 </div>
               );
             })}

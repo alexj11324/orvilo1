@@ -1,14 +1,3 @@
-import {
-  ActionIcon,
-  Button,
-  DropdownMenu,
-  Pagination,
-  TabsIndicator,
-  TabsList,
-  TabsRoot,
-  TabsTab,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, Plus, XIcon } from 'lucide-react';
@@ -18,6 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import TablePagination from '@/components/TablePagination';
+import { Button } from '@/components/ui/button';
+import { TabsList } from '@/components/ui/tabs';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import {
@@ -628,22 +622,22 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   const headerLeft = (
     <div className="flex items-center gap-2">
       {headerVisibility.showBreadcrumb && <Breadcrumb />}
-      <TabsRoot size={'small'} value={collection} onValueChange={handleCollectionChange}>
+      <Tabs value={collection} onValueChange={handleCollectionChange}>
         <TabsList>
-          <TabsIndicator />
-          <TabsTab value={'tasks'}>{t('taskList.title')}</TabsTab>
-          <TabsTab value={'scheduled'}>{t('taskList.scheduled.title')}</TabsTab>
-          {showMineCollection && <TabsTab value={'mine'}>{t('taskList.mine.title')}</TabsTab>}
+          <TabsTrigger value={'tasks'}>{t('taskList.title')}</TabsTrigger>
+          <TabsTrigger value={'scheduled'}>{t('taskList.scheduled.title')}</TabsTrigger>
+          {showMineCollection && (
+            <TabsTrigger value={'mine'}>{t('taskList.mine.title')}</TabsTrigger>
+          )}
         </TabsList>
-      </TabsRoot>
+      </Tabs>
       {isMineCollection && (
-        <TabsRoot size={'small'} value={myTaskScope} onValueChange={handleMyTaskScopeChange}>
+        <Tabs value={myTaskScope} onValueChange={handleMyTaskScopeChange}>
           <TabsList>
-            <TabsIndicator />
-            <TabsTab value={'assigned'}>{t('taskList.mine.assigned')}</TabsTab>
-            <TabsTab value={'created'}>{t('taskList.mine.created')}</TabsTab>
+            <TabsTrigger value={'assigned'}>{t('taskList.mine.assigned')}</TabsTrigger>
+            <TabsTrigger value={'created'}>{t('taskList.mine.created')}</TabsTrigger>
           </TabsList>
-        </TabsRoot>
+        </Tabs>
       )}
       {isScheduledCollection && (
         <>
@@ -664,9 +658,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
         <div className="flex items-center gap-1">
           {milestoneFilterName && (
             <div className="flex items-center gap-0.5">
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskList.milestoneFilter', { name: milestoneFilterName })}
-              </Text>
+              </div>
               <ActionIcon
                 icon={XIcon}
                 size={'small'}
@@ -690,7 +684,8 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 },
               ]}
             >
-              <Button icon={ChevronDownIcon} shape={'round'} size={'small'} type={'text'}>
+              <Button className="rounded-full" size="sm" variant="ghost">
+                <ChevronDownIcon data-icon="inline-start" />
                 {t(isScheduledCollection ? 'taskList.scheduled.title' : 'taskList.title')}
               </Button>
             </DropdownMenu>
@@ -803,7 +798,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 total={collectionTasksTotal}
                 emptyContent={
                   <div className="flex flex-col items-center py-12">
-                    <Text type={'secondary'}>{t('taskList.scheduled.empty')}</Text>
+                    <div className="text-muted-foreground">{t('taskList.scheduled.empty')}</div>
                   </div>
                 }
                 onPageChange={setCollectionPage}
@@ -836,7 +831,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               />
               {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
                 <div className="flex justify-center py-2">
-                  <Pagination
+                  <TablePagination
                     current={collectionPage}
                     pageSize={COLLECTION_PAGE_SIZE}
                     showSizeChanger={false}

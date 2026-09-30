@@ -262,7 +262,7 @@ const ActionIcon = memo<ActionIconProps>(
 
     return (
       <Tooltip>
-        <TooltipTrigger render={<span className="inline-flex">{node}</span>} />
+        <TooltipTrigger render={node} />
         <TooltipContent
           align={positioner?.align}
           side={positioner?.side}

@@ -1,6 +1,5 @@
 'use client';
 
-import { confirmModal, type DropdownItem, toast } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
 import { cn } from 'cn';
@@ -22,8 +21,11 @@ import { useSearchParams } from 'react-router';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
+import { type DropdownItem } from '@/components/ItemsMenu';
 import { ContextMenuTrigger } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

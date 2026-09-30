@@ -1,10 +1,11 @@
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR, INBOX_SESSION_ID } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { DEFAULT_INBOX_AVATAR } from '@/const/meta';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import BriefCardActions from '@/features/DailyBrief/BriefCardActions';
@@ -112,9 +113,12 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
         )}
         <div className="flex flex-col flex-1 gap-1.5" style={{ minWidth: 0 }}>
           <div className="flex items-center gap-2">
-            <Text ellipsis className={homeType.itemTitle} style={{ flex: 1, minWidth: 0 }}>
+            <div
+              className={cn('truncate', 'block', homeType.itemTitle)}
+              style={{ flex: 1, minWidth: 0 }}
+            >
               {brief.title}
-            </Text>
+            </div>
             {!hasTaskMeta && <Time date={brief.createdAt} />}
           </div>
           <BriefCardSummary summary={brief.summary} />

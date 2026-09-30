@@ -1,11 +1,12 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Check, ChevronDown, ChevronRight, CircleDashed, X } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useVerifyResults } from '@/features/Acceptance';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -69,9 +70,9 @@ const RunVerifyDetail = memo<{
     <div className="flex flex-col gap-1.5">
       <Button
         aria-expanded={expanded}
-        className={styles.header}
+        className={cn(styles.header)}
         title={t(expanded ? 'taskDetail.runCollapse' : 'taskDetail.runExpand')}
-        type={'text'}
+        variant="ghost"
         onClick={() => setExpanded((open) => !open)}
       >
         <div className="flex items-center gap-2">
@@ -80,9 +81,9 @@ const RunVerifyDetail = memo<{
           ) : (
             <ChevronRight color={cssVar.colorTextQuaternary} size={12} />
           )}
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {t('taskDetail.runVerify.checklist')}
-          </Text>
+          </div>
           {extra}
         </div>
       </Button>
@@ -98,14 +99,14 @@ const RunVerifyDetail = memo<{
               <div className={`flex flex-col gap-1 ${styles.check}`} key={result.id}>
                 <div className="flex items-center gap-2">
                   <meta.icon color={meta.color} size={14} style={{ flex: 'none' }} />
-                  <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }}>
+                  <div className="truncate block text-[13px]" style={{ flex: 1, minWidth: 0 }}>
                     {result.checkItemTitle}
-                  </Text>
+                  </div>
                 </div>
                 {reasoning && (
-                  <Text className={styles.reason} style={{ whiteSpace: 'pre-wrap' }}>
+                  <div className={cn(styles.reason)} style={{ whiteSpace: 'pre-wrap' }}>
                     {reasoning}
-                  </Text>
+                  </div>
                 )}
               </div>
             );

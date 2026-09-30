@@ -1,4 +1,3 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- unreadable-dependency placeholder, not a status
 import { CircleDashed, XIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
@@ -80,7 +80,11 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
   return (
     <div className={styles.railSection}>
       <span className={styles.railSectionLabel}>{t('taskDetail.prerequisites.title')}</span>
-      <Text fontSize={12} role={'status'} style={{ paddingInline: 8 }} type={'secondary'}>
+      <div
+        className="text-[12px] text-muted-foreground"
+        role={'status'}
+        style={{ paddingInline: 8 }}
+      >
         {t(
           blocked
             ? 'taskDetail.prerequisites.blocked'
@@ -88,7 +92,7 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
               ? 'taskDetail.prerequisites.ready'
               : 'taskDetail.prerequisites.empty',
         )}
-      </Text>
+      </div>
       {prerequisites.map((dep, index) => {
         const unavailable = !dep.status;
         const workflowVisual =
@@ -102,38 +106,38 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
           >
             <Button
               disabled={unavailable}
-              size={'small'}
+              size="sm"
               style={{ flex: 1, justifyContent: 'flex-start', minWidth: 0 }}
               title={dep.name ?? dep.dependsOn}
-              type={'text'}
-              icon={
-                unavailable ? (
-                  <CircleDashed size={16} style={{ color: 'inherit' }} />
-                ) : workflowVisual ? (
-                  <workflowVisual.icon color={workflowVisual.color} size={16} />
-                ) : (
-                  <TaskStatusIcon size={16} status={toTaskStatus(dep.status)} />
-                )
-              }
+              variant="ghost"
               onClick={() => navigate(taskDetailPath(dep.dependsOn, undefined, dep.name))}
             >
-              <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }}>
-                <Text as={'span'} fontSize={RAIL_VALUE_FONT_SIZE} type={'secondary'}>
+              {unavailable ? (
+                <CircleDashed size={16} style={{ color: 'inherit' }} />
+              ) : workflowVisual ? (
+                <workflowVisual.icon color={workflowVisual.color} size={16} />
+              ) : (
+                <TaskStatusIcon size={16} status={toTaskStatus(dep.status)} />
+              )}
+              <div
+                className="truncate block"
+                style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+              >
+                <span className="text-muted-foreground" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
                   {t('taskDetail.prerequisites.blockedBy')}{' '}
-                </Text>
-                <Text as={'span'} fontSize={RAIL_VALUE_FONT_SIZE} type={'secondary'}>
+                </span>
+                <span className="text-muted-foreground" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
                   {dep.dependsOn}
-                </Text>
+                </span>
                 {dep.name ? ` · ${dep.name}` : ''}
                 {unavailable ? ` · ${t('taskDetail.prerequisites.unavailable')}` : ''}
-              </Text>
+              </div>
             </Button>
             {allowed && (dep.relationId || dep.id) && (
               <Button
                 disabled={pending}
-                icon={XIcon}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 aria-label={t('taskDetail.prerequisites.removeBlocker', {
                   identifier: removalIdentifiers[index],
                 })}
@@ -144,20 +148,22 @@ const TaskPrerequisiteEditor = ({ taskId }: { taskId: string }) => {
                       : removeDependency(taskId, dep.id!, 'blocks'),
                   )
                 }
-              />
+              >
+                <XIcon data-icon="inline-start" />
+              </Button>
             )}
           </div>
         );
       })}
       {!allowed && reason && (
-        <Text fontSize={12} style={{ paddingInline: 8 }} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground" style={{ paddingInline: 8 }}>
           {reason}
-        </Text>
+        </div>
       )}
       {error && (
-        <Text fontSize={12} role={'alert'} style={{ paddingInline: 8 }} type={'danger'}>
+        <div className="text-[12px] text-destructive" role={'alert'} style={{ paddingInline: 8 }}>
           {error}
-        </Text>
+        </div>
       )}
     </div>
   );

@@ -1,10 +1,14 @@
 'use client';
 
-import { Button, createModal, ScrollArea, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { STATUS_META } from './taskStatusMeta';
 
@@ -105,15 +109,13 @@ const TaskStatusCascadeModalContent = ({
   return (
     <div className="flex flex-col">
       <div className={`flex flex-col gap-2 ${styles.content}`}>
-        <Text as={'h3'} weight={'bold'}>
-          {t('taskDetail.statusCascade.title')}
-        </Text>
-        <Text color={cssVar.colorTextSecondary}>
+        <h3 className="font-bold">{t('taskDetail.statusCascade.title')}</h3>
+        <div style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.statusCascade.description', {
             count: subtasks.length,
             status: t(`taskDetail.status.${targetStatus}`),
           })}
-        </Text>
+        </div>
         <ScrollArea className={styles.list}>
           {subtasks.map((task) => {
             const status = task.status as TaskStatus | undefined;
@@ -124,11 +126,11 @@ const TaskStatusCascadeModalContent = ({
               <div className={`flex items-center gap-2.5 ${styles.row}`} key={task.identifier}>
                 <StatusIcon color={meta.color} size={16} />
                 <div className="flex flex-col flex-1">
-                  <Text ellipsis>{task.name || task.identifier}</Text>
+                  <div className="truncate block">{task.name || task.identifier}</div>
                 </div>
-                <Text color={cssVar.colorTextTertiary}>
+                <div style={{ color: cssVar.colorTextTertiary }}>
                   {t(`taskDetail.status.${status ?? 'backlog'}`, { defaultValue: meta.label })}
-                </Text>
+                </div>
               </div>
             );
           })}
@@ -149,7 +151,7 @@ const TaskStatusCascadeModalContent = ({
           <Button
             disabled={!!loadingAction}
             loading={loadingAction === 'all'}
-            type={'primary'}
+            variant="default"
             onClick={() => void handleApply(true)}
           >
             {t('taskDetail.statusCascade.updateAll')}

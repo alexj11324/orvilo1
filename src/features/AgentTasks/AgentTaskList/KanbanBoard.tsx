@@ -10,7 +10,6 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { toast } from '@lobehub/ui/base-ui';
 import type { WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
@@ -20,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { toast } from '@/components/toast';
 import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,

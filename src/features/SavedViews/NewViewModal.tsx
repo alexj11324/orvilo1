@@ -1,11 +1,13 @@
 'use client';
 
-import { Button, Modal, Text, toast } from '@lobehub/ui/base-ui';
 import type { WorkQuery, WorkQueryEntityType, WorkQueryFilter } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Modal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { mutate } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -143,7 +145,7 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
       footer={
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>{t('cancel')}</Button>
-          <Button disabled={!ready} loading={saving} type="primary" onClick={() => void save()}>
+          <Button disabled={!ready} loading={saving} variant="default" onClick={() => void save()}>
             {t('savedViews.createView')}
           </Button>
         </div>
@@ -165,15 +167,15 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
             borderRadius: 8,
           }}
         >
-          <Text fontSize={12} type="secondary">
+          <div className="text-[12px] text-muted-foreground">
             {preview
               ? t('savedViews.previewCount', { count: preview.total })
               : t('savedViews.previewPending')}
-          </Text>
+          </div>
           {preview?.titles.map((title) => (
-            <Text ellipsis fontSize={12} key={title}>
+            <div className="truncate block text-[12px]" key={title}>
               · {title}
-            </Text>
+            </div>
           ))}
         </div>
       </div>

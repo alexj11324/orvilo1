@@ -1,8 +1,8 @@
 import type { IEditor } from '@lobehub/editor';
-import { toast } from '@lobehub/ui/base-ui';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { pickAndInsertAttachments } from '@/features/EditorCanvas/editorAttachments';
 
 interface UseAttachInstructionFilesOptions {

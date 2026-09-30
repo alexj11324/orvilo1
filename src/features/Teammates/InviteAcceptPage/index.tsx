@@ -1,14 +1,16 @@
 'use client';
 
-import { Alert, Button, SkeletonText, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { Users } from 'lucide-react';
+import { CircleCheck, TriangleAlert, Users } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import useSWR from 'swr';
 
 import Avatar from '@/components/Avatar';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { teammatesClient } from '../api/client';
 import type { WorkspaceRole } from '../api/contract';
@@ -96,7 +98,9 @@ const InviteAcceptPage = memo(() => {
   if (!token) {
     return (
       <div className={cx(styles.card, 'flex flex-col gap-4')}>
-        <Alert title={t('workspaceSetting.invite.invalidLink')} type="error" />
+        <Alert variant="destructive">
+          <AlertTitle>{t('workspaceSetting.invite.invalidLink')}</AlertTitle>
+        </Alert>
       </div>
     );
   }
@@ -104,9 +108,9 @@ const InviteAcceptPage = memo(() => {
   if (isLoading) {
     return (
       <div className={cx(styles.card, 'flex flex-col gap-4')}>
-        <SkeletonText style={{ width: 200 }} />
-        <SkeletonText style={{ width: 320 }} />
-        <SkeletonText style={{ width: 120 }} />
+        <Skeleton className="h-3" style={{ width: 200 }} />
+        <Skeleton className="h-3" style={{ width: 320 }} />
+        <Skeleton className="h-3" style={{ width: 120 }} />
       </div>
     );
   }
@@ -114,7 +118,9 @@ const InviteAcceptPage = memo(() => {
   if (error || !preview) {
     return (
       <div className={cx(styles.card, 'flex flex-col gap-4')}>
-        <Alert title={t('workspaceSetting.invite.loadFailed')} type="error" />
+        <Alert variant="destructive">
+          <AlertTitle>{t('workspaceSetting.invite.loadFailed')}</AlertTitle>
+        </Alert>
         <Button onClick={() => navigate('/', { replace: true })}>
           {t('workspaceSetting.invite.backHome')}
         </Button>
@@ -129,27 +135,25 @@ const InviteAcceptPage = memo(() => {
       <div className="flex items-center gap-3">
         <Avatar avatar={preview.workspace.avatar} name={preview.workspace.name} size={48} />
         <div className="flex flex-col gap-0.5">
-          <Text fontSize={18} weight={600}>
-            {preview.workspace.name}
-          </Text>
-          <Text fontSize={13} type="secondary">
+          <div className="text-[18px] font-semibold">{preview.workspace.name}</div>
+          <div className="text-[13px] text-muted-foreground">
             {t('workspaceSetting.invite.invitedBy', {
               name: preview.inviter.name ?? t('workspaceSetting.invite.unknownInviter'),
             })}
-          </Text>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <Text fontSize={13}>
+        <div className="text-[13px]">
           {t('workspaceSetting.invite.roleLine', { role: roleLabel })}
           {preview.emailHint ? ` · ${preview.emailHint}` : ''}
-        </Text>
+        </div>
         {preview.projects.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <Text fontSize={12} type="secondary">
+            <div className="text-[12px] text-muted-foreground">
               {t('workspaceSetting.invite.projectAccess')}
-            </Text>
+            </div>
             {preview.projects.map((project) => (
               <div className={styles.projectRow} key={project.id}>
                 {project.name} · {project.role}
@@ -160,27 +164,25 @@ const InviteAcceptPage = memo(() => {
       </div>
 
       {terminal ? (
-        <Alert
-          showIcon
-          type={preview.acceptedByCurrentUser ? 'success' : 'warning'}
-          title={
-            preview.acceptedByCurrentUser
+        <Alert variant={preview.acceptedByCurrentUser ? 'success' : 'warning'}>
+          {preview.acceptedByCurrentUser ? <CircleCheck /> : <TriangleAlert />}
+          <AlertTitle>
+            {preview.acceptedByCurrentUser
               ? t('workspaceSetting.invite.alreadyJoined')
               : t(`workspaceSetting.invite.status.${preview.status}`, {
                   defaultValue: preview.status,
-                })
-          }
-        />
+                })}
+          </AlertTitle>
+        </Alert>
       ) : (
         <>
-          {acceptError && <Alert title={acceptError} type="error" />}
-          <Button
-            disabled={accepting}
-            icon={<Users size={16} />}
-            loading={accepting}
-            type="primary"
-            onClick={handleAccept}
-          >
+          {acceptError && (
+            <Alert variant="destructive">
+              <AlertTitle>{acceptError}</AlertTitle>
+            </Alert>
+          )}
+          <Button disabled={accepting} loading={accepting} variant="default" onClick={handleAccept}>
+            {<Users size={16} />}
             {t('workspaceSetting.invite.acceptAction')}
           </Button>
         </>

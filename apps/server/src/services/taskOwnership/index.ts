@@ -1,6 +1,7 @@
+import type { TaskItem } from '@orvilo/types';
 import { and, asc, eq, lt } from 'drizzle-orm';
 
-import { TaskModel } from '@/database/models/task';
+import { TaskModel, type TaskMutationContext } from '@/database/models/task';
 import { matchesDispatchAssignee, TaskDispatchModel } from '@/database/models/taskDispatch';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -86,4 +87,45 @@ export const sweepTaskOwnershipInvariants = async (input: {
     );
   }
   return outcomes;
+};
+
+/**
+ * Execution-ownership transfer for system initiators — the single write path
+ * every non-interactive reassignment of a live task must take (Linear inbound
+ * sync, goal agent moves, …).
+ *
+ * Order is the protocol: fence the incumbent's active dispatch FIRST, then
+ * rewrite the assignee under `executionTransfer`, so no commit can ever read
+ * "stored owner B / running executor A". The cancellation sweep then settles
+ * the fenced dispatch and parks the task at 'paused' — this is the `park`
+ * successor policy; whether and when a successor dispatch starts is left to
+ * the caller's orchestrator. The interactive `restart` policy lives in
+ * `TaskService.handoffTask`, which additionally confirms the remote
+ * interrupt and dispatches the successor itself.
+ *
+ * `patch` may carry sibling fields alongside `assigneeAgentId` — they land in
+ * the same write. Pass `mutation.expectedDomainRevision` (usually the
+ * revision the task was read at) to CAS the transfer against interleaving
+ * writes.
+ */
+export const transferTaskExecutionOwnership = async (input: {
+  db: OrviloDatabase;
+  mutation?: TaskMutationContext;
+  patch: Parameters<TaskModel['update']>[1];
+  /** Fencing reason stamped on the incumbent dispatch's waitingReason. */
+  reason: string;
+  task: TaskItem;
+}): Promise<TaskItem | null> => {
+  if (input.task.status === 'running') {
+    await TaskDispatchModel.requestStopForTasks(input.db, [input.task.id], input.reason);
+  }
+  const taskModel = new TaskModel(
+    input.db,
+    input.task.createdByUserId ?? '',
+    input.task.workspaceId ?? undefined,
+  );
+  return taskModel.update(input.task.id, input.patch, {
+    ...input.mutation,
+    executionTransfer: true,
+  });
 };

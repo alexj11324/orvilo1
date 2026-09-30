@@ -1,5 +1,5 @@
 import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { confirmModal, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -26,6 +26,12 @@ interface AssigneeAgentSelectorProps {
   currentAgentId?: string | null;
   disabled?: boolean;
   onChange?: (agentId: string | null) => void;
+  /**
+   * Running-task mode: instead of a bare assignee update, the pick routes
+   * through `task.handoff` — an execution-ownership transfer that fences
+   * the incumbent's run. The user confirms the transfer first.
+   */
+  onHandoff?: (agentId: string | null) => void;
   taskIdentifier?: string;
   taskVisibility?: 'private' | 'public' | null;
 }
@@ -78,7 +84,7 @@ const triggerStyle: CSSProperties = {
 };
 
 const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
-  ({ children, currentAgentId, disabled, onChange, taskIdentifier, taskVisibility }) => {
+  ({ children, currentAgentId, disabled, onChange, onHandoff, taskIdentifier, taskVisibility }) => {
     const { t } = useTranslation(['chat', 'common', 'topic']);
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [key, setKey] = useState(0);
@@ -184,6 +190,19 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
           onChange(agentId);
           return;
         }
+        if (onHandoff) {
+          const next = agent
+            ? agentDisplayName(agent, t('untitledAgent', { ns: 'chat' }))
+            : unassignedLabel;
+          confirmModal({
+            cancelText: t('cancel', { ns: 'common' }),
+            content: t('taskDetail.handoff.confirm', { agent: next, ns: 'chat' }),
+            okText: t('taskDetail.handoff.transfer', { ns: 'chat' }),
+            title: t('taskDetail.handoff.title', { ns: 'chat' }),
+            onOk: () => onHandoff(agentId),
+          });
+          return;
+        }
         if (taskIdentifier)
           void updateTask(
             taskIdentifier,
@@ -204,7 +223,16 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
             },
           );
       },
-      [canEditTask, currentAgentId, onChange, taskIdentifier, updateTask],
+      [
+        canEditTask,
+        currentAgentId,
+        onChange,
+        onHandoff,
+        t,
+        taskIdentifier,
+        unassignedLabel,
+        updateTask,
+      ],
     );
 
     const handleSelect = useCallback(

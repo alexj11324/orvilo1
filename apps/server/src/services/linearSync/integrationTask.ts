@@ -12,6 +12,7 @@ import { agents } from '@/database/schemas/agent';
 import { projects } from '@/database/schemas/project';
 import { workspaceMembers } from '@/database/schemas/workspace';
 import type { OrviloDatabase } from '@/database/type';
+import { transferTaskExecutionOwnership } from '@/server/services/taskOwnership';
 
 import { linearCreateTriageStatus } from './linearCreateTriageStatus';
 
@@ -283,11 +284,36 @@ export class LinearIntegrationTaskService {
   /** Public-only lookup: private tasks are intentionally indistinguishable from missing tasks. */
   findPublicTask = (taskId: string) => this.taskModel.findById(taskId);
 
-  updatePublicTask = (
+  updatePublicTask = async (
     taskId: string,
     patch: Parameters<TaskModel['update']>[1],
     mutation: TaskMutationContext,
-  ) => this.taskModel.update(taskId, patch, mutation);
+  ) => {
+    // An agent-assignee write to a RUNNING task is an execution-ownership
+    // transfer, not an attribute edit: fence the incumbent's dispatch first,
+    // then rewrite — a bare update would produce the "stored owner B /
+    // running executor A" split-brain the handoff protocol exists to
+    // prevent (and the model-layer guard would reject it outright). Linear
+    // reassignment uses the park policy: settle + pause, and the
+    // orchestrator decides whether a successor dispatch starts.
+    if (patch.assigneeAgentId === undefined || mutation.executionTransfer === true) {
+      return this.taskModel.update(taskId, patch, mutation);
+    }
+    const task = await this.taskModel.findById(taskId);
+    if (!task || task.status !== 'running' || patch.assigneeAgentId === task.assigneeAgentId) {
+      return this.taskModel.update(taskId, patch, mutation);
+    }
+    return transferTaskExecutionOwnership({
+      db: this.db,
+      mutation: {
+        ...mutation,
+        expectedDomainRevision: mutation.expectedDomainRevision ?? task.domainRevision,
+      },
+      patch,
+      reason: 'linear_assignee_change',
+      task,
+    });
+  };
 
   /** Linear-side team transfer — dirties both planning scopes via moveToTeam. */
   movePublicTaskToTeam = (taskId: string, teamId: string | null, mutation: TaskMutationContext) =>

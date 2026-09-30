@@ -1032,20 +1032,30 @@ export class GoalService {
       // through the handoff still pointing at the previous agent.
       const graph = await this.requireGraph(goalId);
       const taskIds = graph.nodes.flatMap((node) => (node.taskId ? [node.taskId] : []));
-      const runningTaskIds: string[] = [];
-      for (const task of await this.taskModel.findByIds(taskIds)) {
-        if (task.status === 'completed' || task.status === 'canceled') continue;
-        if (task.assigneeAgentId === agentId) continue;
-        await this.taskModel.update(task.id, { assigneeAgentId: agentId });
-        if (task.status === 'running') runningTaskIds.push(task.id);
-        reassignedTaskIds.push(task.id);
-      }
-      // A reassigned RUNNING task's dispatch still executes under the previous
-      // agent — fence it so the incumbent is fenced off the immutable contract
-      // and the cancellation sweep parks the task for the coordinator to
-      // re-dispatch under the new owner.
+      const reassignable = (await this.taskModel.findByIds(taskIds)).filter(
+        (task) =>
+          task.status !== 'completed' &&
+          task.status !== 'canceled' &&
+          task.assigneeAgentId !== agentId,
+      );
+      const runningTaskIds = reassignable
+        .filter((task) => task.status === 'running')
+        .map((task) => task.id);
+      // Fence running incumbents BEFORE rewriting any assignee — the
+      // ownership-transfer ordering (never commit "stored owner B / running
+      // executor A"). The cancellation sweep then interrupts the remote
+      // writer and parks each task for the coordinator to re-dispatch under
+      // the new owner.
       if (runningTaskIds.length > 0) {
         await TaskDispatchModel.requestStopForTasks(this.db, runningTaskIds, 'goal_agent_change');
+      }
+      for (const task of reassignable) {
+        await this.taskModel.update(
+          task.id,
+          { assigneeAgentId: agentId },
+          task.status === 'running' ? { executionTransfer: true } : {},
+        );
+        reassignedTaskIds.push(task.id);
       }
     }
     return { goal, reassignedTaskIds };

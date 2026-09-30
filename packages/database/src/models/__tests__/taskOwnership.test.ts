@@ -161,6 +161,59 @@ describe('running-task assignee guard', () => {
   });
 });
 
+describe('update() model-level assignee invariant', () => {
+  it('rejects a running task assignee change through the bare update path', async () => {
+    // F3 regression: service callers (Linear inbound, goal moves) reach
+    // update() directly — the invariant must live below updateWithLog.
+    const taskModel = new TaskModel(db, userId, workspaceId);
+    const task = await createTask('OWN-10', 110, {
+      assigneeAgentId: 'agent-a',
+      status: 'running',
+    });
+
+    await expect(taskModel.update(task.id, { assigneeAgentId: 'agent-b' })).rejects.toBeInstanceOf(
+      TaskHandoffRequiredError,
+    );
+    await expect(taskModel.update(task.id, { assigneeAgentId: null })).rejects.toBeInstanceOf(
+      TaskHandoffRequiredError,
+    );
+
+    const unchanged = await db.select().from(tasks).where(eq(tasks.id, task.id));
+    expect(unchanged[0]).toMatchObject({ assigneeAgentId: 'agent-a', status: 'running' });
+  });
+
+  it('permits same-value, non-running, transfer-marked and park+reassign writes', async () => {
+    const taskModel = new TaskModel(db, userId, workspaceId);
+    const running = await createTask('OWN-11', 111, {
+      assigneeAgentId: 'agent-a',
+      status: 'running',
+    });
+
+    // Re-saving the incumbent is a no-op, not a transfer.
+    await expect(
+      taskModel.update(running.id, { assigneeAgentId: 'agent-a' }),
+    ).resolves.toMatchObject({ assigneeAgentId: 'agent-a' });
+    // Protocol writes carry the transfer mark.
+    await expect(
+      taskModel.update(running.id, { assigneeAgentId: 'agent-b' }, { executionTransfer: true }),
+    ).resolves.toMatchObject({ assigneeAgentId: 'agent-b', status: 'running' });
+
+    const runningAgain = await createTask('OWN-12', 112, {
+      assigneeAgentId: 'agent-a',
+      status: 'running',
+    });
+    // Parking and reassigning in one statement never reads back as running+B.
+    await expect(
+      taskModel.update(runningAgain.id, { assigneeAgentId: 'agent-b', status: 'paused' }),
+    ).resolves.toMatchObject({ assigneeAgentId: 'agent-b', status: 'paused' });
+
+    const idle = await createTask('OWN-13', 113, { assigneeAgentId: 'agent-a' });
+    await expect(taskModel.update(idle.id, { assigneeAgentId: 'agent-b' })).resolves.toMatchObject({
+      assigneeAgentId: 'agent-b',
+    });
+  });
+});
+
 describe('bounded cancellation', () => {
   it('stamps the cancel window on requestStop and counts each claim', async () => {
     const task = await createTask('OWN-5', 105, { status: 'running' });

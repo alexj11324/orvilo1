@@ -1,0 +1,133 @@
+import type { McpEventInbox } from './deliveryTypes';
+import type { SqlMcpEventWorkRepository } from './workerRepository';
+
+/** Temporary shape until the separate Core commit is materialized here.
+ * Integration must use EventDispatchAdmission from @orvilo/agent-execution/controlPlane.
+ * No runtime launch lives here. */
+export interface McpEventDispatchAdmission {
+  admit: (request: {
+    schemaVersion: 1;
+    tenantId: string;
+    workspaceId: string;
+    userId: string;
+    taskId: string;
+    triggerId: string;
+    triggerRevision: number;
+    sourceId: string;
+    subscriptionId: string;
+    eventId: string;
+    inboxRef: string;
+    idempotencyKey: string;
+  }) => Promise<
+    | { status: 'accepted'; dispatchId: string; operationId?: string }
+    | { status: 'duplicate'; dispatchId: string }
+    | { status: 'waiting'; reason: string; retryable: boolean }
+    | { status: 'denied'; reason: string }
+  >;
+}
+
+/** Called by the existing maintenance scheduler, never a second task runner. */
+export class McpEventWorker {
+  constructor(
+    private readonly dependencies: {
+      inbox: McpEventInbox;
+      repository: SqlMcpEventWorkRepository;
+      admission?: McpEventDispatchAdmission;
+      now?: () => number;
+      leaseMs?: number;
+      maxAttempts?: number;
+    },
+  ) {}
+
+  async pump(input: { limit?: number; tenantId?: string } = {}) {
+    // Deployment readiness is not a poison-message failure: leave receipts queued.
+    if (!this.dependencies.admission) return { claimed: 0, completed: 0, retried: 0 };
+    const now = this.dependencies.now ?? Date.now;
+    const deliveries = await this.dependencies.inbox.claim(
+      now(),
+      this.dependencies.leaseMs ?? 60_000,
+      input.limit ?? 20,
+      input.tenantId,
+    );
+    let completed = 0;
+    let retried = 0;
+    for (const delivery of deliveries) {
+      let retry = false;
+      let waiting = false;
+      let errorCode = 'admission_unavailable';
+      try {
+        const runs = await this.dependencies.repository.prepare(delivery, now());
+        for (const run of runs) {
+          if (run.status !== 'pending') continue;
+          if (!(await this.dependencies.repository.current(delivery, run, now()))) {
+            await this.dependencies.repository.settle(delivery, run, now(), {
+              status: 'denied',
+              reason: 'stale_binding',
+            });
+            continue;
+          }
+          const trigger = run.trigger;
+          const result = this.dependencies.admission
+            ? await this.dependencies.admission.admit({
+                schemaVersion: 1,
+                tenantId: trigger.tenantId,
+                workspaceId: trigger.workspaceId,
+                userId: trigger.userId,
+                taskId: trigger.taskId,
+                triggerId: trigger.id,
+                triggerRevision: trigger.revision,
+                sourceId: trigger.sourceId,
+                subscriptionId: delivery.subscriptionId,
+                eventId: delivery.event.eventId,
+                inboxRef: delivery.id,
+                idempotencyKey: run.idempotencyKey,
+              })
+            : { status: 'waiting' as const, reason: 'runtime-unavailable', retryable: true };
+          if (result.status === 'waiting' && result.retryable) {
+            retry = true;
+            waiting = true;
+            continue;
+          }
+          const saved = await this.dependencies.repository.settle(
+            delivery,
+            run,
+            now(),
+            result.status === 'accepted' || result.status === 'duplicate'
+              ? { status: 'accepted', dispatchId: result.dispatchId }
+              : { status: 'denied', reason: result.reason },
+          );
+          if (!saved) {
+            retry = true;
+            errorCode = 'lease_lost';
+          }
+        }
+      } catch {
+        // Exceptions can follow a committed core dispatch. Replay keeps the same key.
+        retry = true;
+        errorCode = 'admission_interrupted';
+        waiting = false;
+      }
+      const settled = await this.dependencies.inbox.settle(
+        delivery.id,
+        delivery.leaseToken!,
+        now(),
+        retry
+          ? {
+              status:
+                !waiting && delivery.attempts >= (this.dependencies.maxAttempts ?? 10)
+                  ? 'dead'
+                  : 'pending',
+              preserveAttempts: waiting,
+              availableAt: now() + Math.min(300_000, 1000 * 2 ** Math.min(delivery.attempts, 8)),
+              errorCode,
+            }
+          : { status: 'completed' },
+      );
+      if (settled) {
+        if (retry) retried++;
+        else completed++;
+      }
+    }
+    return { claimed: deliveries.length, completed, retried };
+  }
+}

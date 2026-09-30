@@ -1,4 +1,26 @@
 export default {
+  'events.cleanupPending':
+    'Local event reception is stopped. Remote subscription cleanup needs retry.',
+  'events.bindingUnavailable':
+    'Subscription is not active. Stop it before configuring another subscription.',
+  'events.stopped': 'Subscription stopped. You can configure a new subscription.',
+  'events.stop': 'Stop subscription',
+  'events.event': 'Event',
+  'events.arguments': 'Event arguments (JSON)',
+  'events.argumentsSchema': 'Required arguments schema',
+  'events.savePaused': 'Subscribe and save paused',
+  'events.savedPaused': 'Subscription saved. Task execution is paused.',
+  'events.workspaceRequired': 'Select a workspace to save an event trigger.',
+  'events.invalidArguments': 'Enter a JSON object for event arguments.',
+
+  'events.title': 'MCP event triggers',
+  'events.source': 'Connected event source',
+  'events.noSources': 'Connect an HTTP MCP source to discover its events.',
+  'events.unsupported': 'This source does not offer compatible webhook events.',
+  'events.unavailable':
+    'Event execution is not available yet. You can inspect the source\u2019s supported events.',
+  'events.enable': 'Enable event trigger',
+
   'actions.delete': 'Delete',
   'actions.open_in_new_tab': 'Open in new tab',
   'actions.pause': 'Pause',

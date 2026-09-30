@@ -67,6 +67,7 @@ import { linearImportRouter } from './linearImport';
 import { linearSyncRouter } from './linearSync';
 import { llmGenerationTracingRouter } from './llmGenerationTracing';
 import { marketRouter } from './market';
+import { mcpEventsRouter } from './mcpEvents';
 import { messageRouter } from './message';
 import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
@@ -129,6 +130,7 @@ export const lambdaRouter = router({
   collaboration: collaborationRouter,
   config: configRouter,
   connector: connectorRouter,
+  mcpEvents: mcpEventsRouter,
   creds: credsRouter,
   device: deviceRouter,
   document: documentRouter,

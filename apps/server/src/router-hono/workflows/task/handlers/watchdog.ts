@@ -1,6 +1,8 @@
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
+import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
+import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
 import { sweepTaskCancellations } from '@/server/services/taskCancellation';
 import { sweepTaskDispatchRecovery } from '@/server/services/taskDispatchRecovery';
 import { sweepPlanningTaskDispatchStarts } from '@/server/services/taskDispatchStart';
@@ -43,6 +45,23 @@ export async function watchdog(c: Context) {
     const ownershipOutcomes = await sweepTaskOwnershipInvariants({ db });
     const cancellationOutcomes = await sweepTaskCancellations({ db });
     const result = await runTaskWatchdog(db);
+    // Event ingress has its own durable leases, but shares this maintenance
+    // invocation and the core admission boundary with ordinary task dispatch.
+    // A missing event migration must not stop cancellation/watchdog recovery.
+    let eventInbox: unknown;
+    let eventSubscriptions: unknown;
+    try {
+      eventSubscriptions = await sweepMcpEventSubscriptions(db);
+    } catch {
+      eventSubscriptions = { status: 'unavailable' };
+      console.error('[task/watchdog] MCP event subscription maintenance unavailable');
+    }
+    try {
+      eventInbox = await sweepMcpEventInbox(db);
+    } catch {
+      eventInbox = { status: 'unavailable' };
+      console.error('[task/watchdog] MCP event inbox sweep unavailable');
+    }
     const abandonedDispatches = cancellationOutcomes.filter(
       (outcome) => outcome.outcome === 'abandoned',
     ).length;
@@ -61,6 +80,8 @@ export async function watchdog(c: Context) {
 
     return c.json({
       abandonedDispatches,
+      eventInbox,
+      eventSubscriptions,
       activeDispatches,
       canceledDispatches,
       driftFencedDispatches,

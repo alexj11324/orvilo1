@@ -206,6 +206,16 @@ export class TaskRunnerService {
       workspaceOverride,
     } = params;
 
+    // Events may enter only through the authoritative EventDispatchAdmission
+    // integration. A new trigger literal must not silently become an external
+    // run that bypasses its inbox/trigger/ownership fences.
+    if (trigger === 'event') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Event dispatch admission is not configured',
+      });
+    }
+
     const resolvedTask = await this.taskModel.resolve(idOrIdentifier);
     if (!resolvedTask) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });

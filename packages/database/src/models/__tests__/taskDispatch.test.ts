@@ -3,7 +3,16 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, goalNodes, goals, taskDispatches, tasks, users, workspaces } from '../../schemas';
+import {
+  agents,
+  goalNodes,
+  goals,
+  projects,
+  taskDispatches,
+  tasks,
+  users,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import {
   TaskDispatchIdempotencyConflictError,
@@ -28,6 +37,7 @@ const cleanup = async () => {
   await db.delete(tasks).where(eq(tasks.createdByUserId, otherUserId));
   await db.delete(agents).where(eq(agents.userId, userId));
   await db.delete(agents).where(eq(agents.userId, otherUserId));
+  await db.delete(projects).where(eq(projects.workspaceId, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, otherWorkspaceId));
   await db.delete(users).where(eq(users.id, userId));
@@ -105,6 +115,35 @@ const attachTaskToGoal = async (taskId: string, status: 'paused' | 'running', se
 };
 
 describe('TaskDispatchModel', () => {
+  it('persists event identity and applies project admission on duplicate delivery', async () => {
+    const task = await createTask('EVT-1', 101);
+    const [project] = await db
+      .insert(projects)
+      .values({
+        identifier: 'EVT',
+        name: 'Event project',
+        userId,
+        workspaceId,
+      })
+      .returning();
+    await db.update(tasks).set({ projectId: project.id }).where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const input = {
+      idempotencyKey: 'event:trigger-a:occurrence-a',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'event' as const,
+    };
+    const first = await model.request(input);
+    const replay = await model.request(input);
+    if (first.state === 'busy' || replay.state === 'busy') throw new Error('unexpected busy');
+    expect(first.dispatch.requestedBy).toBe(`event:${userId}`);
+    expect(first.dispatch.phase).toBe('waiting');
+    expect(first.dispatch.waitingReason).toBe('project_auto_dispatch_disabled');
+    expect(replay.dispatch.id).toBe(first.dispatch.id);
+    expect(replay.dispatch.waitingReason).toBe('project_auto_dispatch_disabled');
+  });
+
   it('allows only one active dispatch claim for a task', async () => {
     const task = await createTask('RUN-1', 1);
     const base = {

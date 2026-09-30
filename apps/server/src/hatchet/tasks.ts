@@ -19,6 +19,7 @@ import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { runHeartbeatTick } from '@/server/services/taskRunner/heartbeatTick';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
+import { TASK_WATCHDOG_CRON } from '@/server/services/taskWatchdogSchedule';
 
 interface GoalAdvanceInput {
   goalId: string;
@@ -136,7 +137,7 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     name: HATCHET_TASK_NAMES.taskWatchdog,
     executionTimeout: '15m',
     fn: async () => runInternalHandler(watchdog),
-    onCrons: ['*/5 * * * *'],
+    onCrons: [TASK_WATCHDOG_CRON],
     retries: 3,
   });
 

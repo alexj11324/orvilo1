@@ -1,10 +1,10 @@
 'use client';
 
-import { FormGroup } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { ComponentType } from 'react';
 
+import { FormGroup } from '@/components/GroupForm';
 import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 
 import SkeletonBar from './Bar';

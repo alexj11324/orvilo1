@@ -1,7 +1,7 @@
 'use client';
 
-import { FluentEmoji } from '@lobehub/ui';
 import { Result, Text } from '@lobehub/ui/base-ui';
+import { FrownIcon } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -27,7 +27,7 @@ const ConsentClientError = memo<ClientProps>(({ error }) => {
 
   return (
     <Result
-      icon={<FluentEmoji emoji={'🥵'} size={96} type={'anim'} />}
+      icon={<FrownIcon size={96} />}
       status={'error'}
       subTitle={
         <Text fontSize={16} type="secondary">

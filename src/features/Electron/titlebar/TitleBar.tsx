@@ -1,6 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { Divider } from 'antd';
+import { cx } from 'antd-style';
 import { memo } from 'react';
 
 import { useDeferredMount } from '@/hooks/useDeferredMount';
@@ -25,32 +25,27 @@ const TitleBar = memo(() => {
   const { padding, showCustomWinControl } = getTitleBarLayoutConfig(platform);
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={electronStylish.draggable}
-      height={TITLE_BAR_HEIGHT}
-      justify={'space-between'}
-      style={{ minHeight: TITLE_BAR_HEIGHT, padding }}
-      width={'100%'}
+    <div
+      className={cx(electronStylish.draggable, 'flex items-center justify-between w-full')}
+      style={{ height: TITLE_BAR_HEIGHT, minHeight: TITLE_BAR_HEIGHT, padding }}
     >
       <NavigationBar />
       {tabBarMounted && <TabBar />}
 
-      <Flexbox horizontal align={'center'} gap={4}>
-        <Flexbox horizontal className={electronStylish.nodrag} gap={8}>
+      <div className="flex items-center gap-1">
+        <div className={cx(electronStylish.nodrag, 'flex gap-2')}>
           <UpdateNotification />
           <DeviceGateway />
           <Connection />
-        </Flexbox>
+        </div>
         {showCustomWinControl && (
           <>
             <Divider orientation={'vertical'} />
             <WinControl />
           </>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

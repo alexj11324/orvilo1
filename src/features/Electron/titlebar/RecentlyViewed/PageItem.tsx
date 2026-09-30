@@ -1,10 +1,9 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { Pin, PinOff } from 'lucide-react';
-import React, { memo } from 'react';
+import React, { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -49,14 +48,11 @@ const PageItem = memo<PageItemProps>(({ item, isPinned, onClose }) => {
   };
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      className={cx(styles.item, isActive && styles.itemActive)}
-      gap={8}
+    <div
+      className={cx(cx(styles.item, isActive && styles.itemActive), 'flex items-center gap-2')}
       onClick={handleClick}
     >
-      {meta.icon && <Icon className={styles.icon} icon={meta.icon} size="small" />}
+      {meta.icon && createElement(meta.icon, { className: styles.icon, size: 16 })}
       <span className={styles.itemTitle}>{meta.title}</span>
       <ActionIcon
         className={cx('actionIcon', styles.actionIcon)}
@@ -65,7 +61,7 @@ const PageItem = memo<PageItemProps>(({ item, isPinned, onClose }) => {
         title={isPinned ? t('navigation.unpin') : t('navigation.pin')}
         onClick={handlePinToggle}
       />
-    </Flexbox>
+    </div>
   );
 });
 

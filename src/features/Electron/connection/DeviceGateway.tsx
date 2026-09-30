@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Popover, Switch } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { HardDrive, SettingsIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -120,10 +119,10 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
         : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
 
   const popoverContent = (
-    <Flexbox className={styles.popoverContent} gap={4}>
-      <Flexbox horizontal align="center" justify="space-between">
+    <div className={cx(styles.popoverContent, 'flex flex-col gap-1')}>
+      <div className="flex items-center justify-between">
         <span className={styles.statusTitle}>{t('gateway.title')}</span>
-        <Flexbox horizontal align="center" gap={6}>
+        <div className="flex items-center gap-1.5">
           <ActionIcon
             aria-label={t('gateway.manageDevices')}
             icon={SettingsIcon}
@@ -143,10 +142,10 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
               onChange={handleSwitchChange}
             />
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <span className={styles.scopeHint}>{connectionHint}</span>
-    </Flexbox>
+    </div>
   );
 
   return (

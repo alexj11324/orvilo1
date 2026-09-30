@@ -1,10 +1,8 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
-import { type ReactNode } from 'react';
+import { type ComponentProps, type ReactNode } from 'react';
 import { memo } from 'react';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -24,7 +22,7 @@ const styles = createStaticStyles(({ css }) => ({
 
 export type AuthCardVariant = 'auth16' | 'default';
 
-export interface AuthCardProps extends Omit<FlexboxProps, 'title'> {
+export interface AuthCardProps extends Omit<ComponentProps<'div'>, 'title'> {
   footer?: ReactNode;
   subtitle?: ReactNode;
   title?: ReactNode;
@@ -37,13 +35,15 @@ export const AuthCard = memo<AuthCardProps>(
     const { className, ...flexboxProps } = rest;
 
     return (
-      <Flexbox
-        className={cx(isAuth16 && styles.auth16Root, className)}
-        gap={isAuth16 ? 24 : undefined}
-        width={isAuth16 ? 'min(100%,384px)' : 'min(100%,440px)'}
+      <div
+        className={cx(cx(isAuth16 && styles.auth16Root, className), 'flex flex-col')}
+        style={{
+          gap: isAuth16 ? 24 : undefined,
+          width: isAuth16 ? 'min(100%,384px)' : 'min(100%,440px)',
+        }}
         {...flexboxProps}
       >
-        <Flexbox gap={isAuth16 ? 8 : 16}>
+        <div className="flex flex-col" style={{ gap: isAuth16 ? 8 : 16 }}>
           {title && (
             <Text
               align={isAuth16 ? 'center' : undefined}
@@ -70,12 +70,15 @@ export const AuthCard = memo<AuthCardProps>(
               {subtitle}
             </Text>
           )}
-        </Flexbox>
-        <Flexbox gap={isAuth16 ? 12 : 4} paddingBlock={isAuth16 ? 0 : 32}>
+        </div>
+        <div
+          className="flex flex-col"
+          style={{ gap: isAuth16 ? 12 : 4, paddingBlock: isAuth16 ? 0 : 32 }}
+        >
           {children}
-        </Flexbox>
+        </div>
         {footer}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,7 +1,7 @@
 'use client';
 
-import { FluentEmoji } from '@lobehub/ui';
 import { Result, Text } from '@lobehub/ui/base-ui';
+import { CircleCheckIcon, FrownIcon } from 'lucide-react';
 import React, { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
@@ -78,7 +78,7 @@ const SocialOAuthCallbackPage = memo(() => {
 
   return (
     <Result
-      icon={<FluentEmoji emoji={status === 'success' ? '✅' : '🥵'} size={96} type={'anim'} />}
+      icon={status === 'success' ? <CircleCheckIcon size={96} /> : <FrownIcon size={96} />}
       status={status}
       subTitle={
         <Text fontSize={16} type="secondary">

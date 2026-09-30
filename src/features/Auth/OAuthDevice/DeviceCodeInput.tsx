@@ -1,10 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Input } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import AuthCard from '@/features/AuthCard';
 
 interface DeviceCodeInputProps {
@@ -23,27 +23,26 @@ const DeviceCodeInput = memo<DeviceCodeInputProps>(({ xsrf, errorKey, userCode }
       footer={
         <form action="/oidc/device" method="post" style={{ width: '100%' }}>
           {xsrf && <input name="xsrf" type="hidden" value={xsrf} />}
-          <Flexbox gap={16}>
+          <div className="flex flex-col gap-4">
             <Input
               autoFocus
               autoComplete="off"
               defaultValue={userCode}
               name="user_code"
               placeholder={t('device.input.placeholder')}
-              size="large"
               style={{ fontFamily: 'monospace', letterSpacing: '0.15em', textAlign: 'center' }}
             />
             <Button block htmlType="submit" size="large" type="primary">
               {t('device.input.submit')}
             </Button>
-          </Flexbox>
+          </div>
         </form>
       }
     >
       {errorKey && (
-        <Block padding={16} variant="filled">
+        <div className="flex flex-col p-4">
           <Text style={{ color: 'red' }}>{t(errorKey as any)}</Text>
-        </Block>
+        </div>
       )}
     </AuthCard>
   );

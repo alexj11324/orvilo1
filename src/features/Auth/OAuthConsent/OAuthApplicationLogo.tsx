@@ -1,7 +1,6 @@
-import { Center, Flexbox, FluentEmoji, Icon } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { Link2Icon } from 'lucide-react';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { Link2Icon, LockKeyholeIcon } from 'lucide-react';
 import React, { memo } from 'react';
 
 import { ProductLogo } from '@/components/Branding';
@@ -39,19 +38,19 @@ const OAuthApplicationLogo = memo<OAuthApplicationLogoProps>(
     return isFirstParty ? (
       <Avatar alt={clientDisplayName} avatar={logoUrl!} shape={'square'} size={size} />
     ) : (
-      <Flexbox horizontal align={'center'} gap={8} justify={'center'}>
+      <div className="flex items-center gap-2 justify-center">
         {logoUrl ? (
           <Avatar alt={clientDisplayName} avatar={logoUrl} size={size} />
         ) : (
-          <FluentEmoji emoji={'🔐'} size={size} />
+          <LockKeyholeIcon size={size} />
         )}
         <div className={styles.connectorLine} />
-        <Center className={styles.connector}>
-          <Icon icon={Link2Icon} style={{ color: cssVar.colorTextSecondary, fontSize: 20 }} />
-        </Center>
+        <div className={cx(styles.connector, 'flex items-center justify-center')}>
+          <Link2Icon style={{ color: cssVar.colorTextSecondary, fontSize: 20 }} />
+        </div>
         <div className={styles.connectorLine} />
         <ProductLogo size={size} />
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,7 +1,7 @@
 'use client';
 
-import { FluentEmoji } from '@lobehub/ui';
 import { Button, Result, Text } from '@lobehub/ui/base-ui';
+import { CircleCheckIcon, FrownIcon, HourglassIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -112,13 +112,13 @@ const MarketAuthCallbackPage = () => {
   const getStatusIcon = () => {
     switch (status) {
       case 'success': {
-        return <FluentEmoji emoji={'✅'} size={96} type={'anim'} />;
+        return <CircleCheckIcon size={96} />;
       }
       case 'error': {
-        return <FluentEmoji emoji={'🥵'} size={96} type={'anim'} />;
+        return <FrownIcon size={96} />;
       }
       default: {
-        return <FluentEmoji emoji={'⌛'} size={96} type={'anim'} />;
+        return <HourglassIcon size={96} />;
       }
     }
   };

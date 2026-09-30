@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Alert, Text, toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -153,7 +152,7 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
       );
 
       return (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           {sourceAlert}
           {isStdioMcp && (
             <Alert
@@ -164,7 +163,7 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
               variant={'borderless'}
             />
           )}
-        </Flexbox>
+        </div>
       );
     };
 
@@ -189,25 +188,31 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
         onCancel={handleCancel}
         onOk={handleConfirm}
       >
-        <Flexbox gap={24}>
+        <div className="flex flex-col gap-6">
           {renderAlert()}
 
-          <Block horizontal gap={16} justify={'space-between'} padding={16} variant={'outlined'}>
-            <Flexbox horizontal gap={16}>
+          <div
+            className="flex gap-4 justify-between p-4 border"
+            style={{
+              borderColor: cssVar.colorBorderSecondary,
+              background: cssVar.colorBgContainer,
+            }}
+          >
+            <div className="flex gap-4">
               <PluginAvatar avatar={schema.icon} size={40} />
-              <Flexbox gap={2}>
-                <Flexbox horizontal align={'center'} gap={8}>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
                   {schema.name}
                   <PluginTag type={'customPlugin'} />
-                </Flexbox>
+                </div>
                 <Text style={{ fontSize: 12 }} type={'secondary'}>
                   {schema.description}
                 </Text>
-              </Flexbox>
-            </Flexbox>
-          </Block>
+              </div>
+            </div>
+          </div>
 
-          <Flexbox>
+          <div className="flex flex-col">
             <ConfigDisplay schema={schema} onConfigUpdate={setUpdatedConfig} />
             {/* Show connection test error */}
             {testState.error && (
@@ -220,8 +225,8 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
                 variant={'filled'}
               />
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </ImperativeModal>
     );
   },

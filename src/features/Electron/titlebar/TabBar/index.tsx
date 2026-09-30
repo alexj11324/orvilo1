@@ -11,8 +11,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, type DropdownItem, DropdownMenu } from '@lobehub/ui/base-ui';
+import { ActionIcon, type DropdownItem } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { cx } from 'antd-style';
 import { ChevronDown, Plus } from 'lucide-react';
@@ -22,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { captureVisibleTabPreviews } from '@/features/Electron/TabHost';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useRegisterDesktopTabHotkeys } from '@/hooks/useHotkeys/desktopTabScope';
@@ -258,12 +258,10 @@ const TabBar = () => {
   const measured = stripWidth > 0;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.container}
-      gap={TAB_GAP}
+    <div
+      className={cx(styles.container, 'flex items-center')}
       ref={stripRef}
+      style={{ gap: TAB_GAP }}
       onPointerEnter={captureVisibleTabPreviews}
     >
       {measured && (
@@ -329,23 +327,23 @@ const TabBar = () => {
             onClick={canCreate ? () => handleNewTab() : undefined}
           />
           {layout.hiddenCount > 0 && (
-            <DropdownMenu items={overflowItems} placement={'bottomRight'}>
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={cx(electronStylish.nodrag, styles.overflowButton)}
-                gap={2}
+            <SidebarDropdownMenu items={overflowItems} placement={'bottomRight'}>
+              <div
                 style={{ width: OVERFLOW_CONTROL_WIDTH }}
                 title={t('tab.overflow', { count: layout.hiddenCount })}
+                className={cx(
+                  cx(electronStylish.nodrag, styles.overflowButton),
+                  'flex items-center gap-0.5',
+                )}
               >
                 <ChevronDown size={12} />
                 {layout.hiddenCount}
-              </Flexbox>
-            </DropdownMenu>
+              </div>
+            </SidebarDropdownMenu>
           )}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

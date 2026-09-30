@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import React, { memo, useMemo, useState } from 'react';
 import { shallow } from 'zustand/shallow';
 
@@ -89,9 +88,9 @@ const SessionItem = memo<SessionItemProps>(({ id }) => {
   const addon = useMemo(
     () =>
       !showModel ? undefined : (
-        <Flexbox horizontal gap={4} style={{ flexWrap: 'wrap' }}>
+        <div className="flex gap-1" style={{ flexWrap: 'wrap' }}>
           <ModelTag model={model} />
-        </Flexbox>
+        </div>
       ),
     [showModel, model],
   );

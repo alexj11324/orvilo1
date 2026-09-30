@@ -1,7 +1,8 @@
-import { Flexbox, Snippet } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -51,21 +52,21 @@ const CliInstallState = ({
       )}
 
       {recommendedCommand && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text strong style={{ fontSize: 12 }}>
             {tKey('installWithNpm')}
           </Text>
-          <Snippet language={'bash'}>{recommendedCommand}</Snippet>
-        </Flexbox>
+          <CodeBlock wrap code={recommendedCommand} language="bash" variant="ghost" />
+        </div>
       )}
 
       {alternativeCommand && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text strong style={{ fontSize: 12 }}>
             {tKey('installWithBrew')}
           </Text>
-          <Snippet language={'bash'}>{alternativeCommand}</Snippet>
-        </Flexbox>
+          <CodeBlock wrap code={alternativeCommand} language="bash" variant="ghost" />
+        </div>
       )}
 
       <Text style={{ fontSize: 12 }} type="secondary">

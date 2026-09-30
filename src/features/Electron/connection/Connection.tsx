@@ -1,4 +1,3 @@
-import { Center, Flexbox } from '@lobehub/ui';
 import { Drawer } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Suspense, useCallback } from 'react';
@@ -46,16 +45,19 @@ const Connection = () => {
       >
         <Suspense
           fallback={
-            <Center style={{ height: '100%' }}>
+            <div className="flex items-center justify-center" style={{ height: '100%' }}>
               <BrandTextLoading debugId="Connection" />
-            </Center>
+            </div>
           }
         >
-          <Center style={{ height: '100%', overflow: 'auto', padding: 24 }}>
-            <Flexbox style={{ maxWidth: 560, width: '100%' }}>
+          <div
+            className="flex items-center justify-center"
+            style={{ height: '100%', overflow: 'auto', padding: 24 }}
+          >
+            <div className="flex flex-col" style={{ maxWidth: 560, width: '100%' }}>
               <LoginStep mode={'status'} onBack={handleClose} onNext={handleClose} />
-            </Flexbox>
-          </Center>
+            </div>
+          </div>
         </Suspense>
       </Drawer>
     </>

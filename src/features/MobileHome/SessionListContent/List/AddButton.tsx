@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { Plus } from 'lucide-react';
 import { memo } from 'react';
@@ -18,7 +17,7 @@ const AddButton = memo<{ groupId?: string }>(({ groupId }) => {
   });
 
   return (
-    <Flexbox flex={1} padding={mobile ? 16 : 0}>
+    <div className="flex flex-col flex-1" style={{ padding: mobile ? 16 : 0 }}>
       <Button
         block
         icon={Plus}
@@ -31,7 +30,7 @@ const AddButton = memo<{ groupId?: string }>(({ groupId }) => {
       >
         {t('newAgent')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 

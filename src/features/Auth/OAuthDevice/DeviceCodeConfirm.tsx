@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,7 +31,7 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
             {xsrf && <input name="xsrf" type="hidden" value={xsrf} />}
             <input name="user_code" type="hidden" value={userCode} />
             <input name="confirm" type="hidden" value="yes" />
-            <Flexbox gap={12}>
+            <div className="flex flex-col gap-3">
               <Button
                 block
                 htmlType="submit"
@@ -46,16 +45,16 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
               <Button block htmlType="submit" name="abort" size="large" value="yes">
                 {t('device.confirm.deny')}
               </Button>
-            </Flexbox>
+            </div>
           </form>
         }
       >
         {isFirstParty === false && (
-          <Flexbox style={{ marginBottom: 16 }}>
+          <div className="flex flex-col" style={{ marginBottom: 16 }}>
             <ThirdPartyNotice developerName={developerName} policyUri={policyUri} />
-          </Flexbox>
+          </div>
         )}
-        <Block padding={16} variant="filled">
+        <div className="flex flex-col p-4">
           <Text
             style={{
               fontFamily: 'monospace',
@@ -67,7 +66,7 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
           >
             {userCode}
           </Text>
-        </Block>
+        </div>
         <Text style={{ marginTop: 8 }} type="secondary">
           {t('device.confirm.codeHint')}
         </Text>

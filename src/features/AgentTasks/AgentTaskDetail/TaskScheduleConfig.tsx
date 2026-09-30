@@ -129,19 +129,17 @@ const IntervalTab = memo<IntervalTabProps>(({ currentInterval, disabled, taskId 
           placeholder={localUnit === 'minutes' ? String(MIN_MINUTES) : '1'}
           style={{ width: 100 }}
           value={localValue}
-          variant="filled"
           onChange={handleValueChange}
         />
         <Select
           disabled={disabled}
           style={{ flex: 1 }}
           value={localUnit}
-          variant="filled"
           options={[
             { label: t('taskSchedule.minutes'), value: 'minutes' },
             { label: t('taskSchedule.hours'), value: 'hours' },
           ]}
-          onChange={handleUnitChange}
+          onChange={(value) => handleUnitChange(value as IntervalUnit)}
         />
         <div className="text-muted-foreground">{t('taskSchedule.intervalSuffix')}</div>
       </div>

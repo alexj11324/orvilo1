@@ -1,6 +1,6 @@
 import { agentDisplayName } from '@orvilo/types';
 import { cn } from 'cn';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
@@ -196,7 +196,7 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
       }
     : undefined;
 
-  const crumbs = [
+  const crumbs: { key?: string; title: ReactNode }[] = [
     ownerCrumb ?? {
       title:
         taskId || agentCrumbNode ? (

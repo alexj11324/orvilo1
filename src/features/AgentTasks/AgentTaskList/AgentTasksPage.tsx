@@ -11,7 +11,7 @@ import ActionIcon from '@/components/ActionIcon';
 import { DropdownMenu } from '@/components/ItemsMenu';
 import TablePagination from '@/components/TablePagination';
 import { Button } from '@/components/ui/button';
-import { TabsList } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import {
@@ -781,65 +781,57 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               />
             </div>
           ) : isScheduledCollection ? (
-            <WideScreenContainer
-              fullWidth
-              gap={16}
-              paddingBlock={16}
-              paddingInline={16}
-              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-            >
-              <AutomationScheduleList
-                error={collectionSWR.error}
-                hasSettled={isCollectionListInit}
-                isFiltered={automationStatusFilter !== 'all'}
-                isLoading={!isCollectionListInit && !collectionSWR.error}
-                page={collectionPage}
-                tasks={collectionTasks}
-                total={collectionTasksTotal}
-                emptyContent={
-                  <div className="flex flex-col items-center py-12">
-                    <div className="text-muted-foreground">{t('taskList.scheduled.empty')}</div>
-                  </div>
-                }
-                onPageChange={setCollectionPage}
-                onRefetch={() => collectionSWR.mutate()}
-              />
+            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+              <div className="flex flex-col gap-4 px-4 py-4">
+                <AutomationScheduleList
+                  error={collectionSWR.error}
+                  hasSettled={isCollectionListInit}
+                  isFiltered={automationStatusFilter !== 'all'}
+                  isLoading={!isCollectionListInit && !collectionSWR.error}
+                  page={collectionPage}
+                  tasks={collectionTasks}
+                  total={collectionTasksTotal}
+                  emptyContent={
+                    <div className="flex flex-col items-center py-12">
+                      <div className="text-muted-foreground">{t('taskList.scheduled.empty')}</div>
+                    </div>
+                  }
+                  onPageChange={setCollectionPage}
+                  onRefetch={() => collectionSWR.mutate()}
+                />
+              </div>
             </WideScreenContainer>
           ) : isMineCollection ? (
-            <WideScreenContainer
-              fullWidth
-              gap={16}
-              paddingBlock={16}
-              paddingInline={16}
-              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-            >
-              <TaskList
-                data={isCollectionListInit || undefined}
-                error={collectionSWR.error}
-                items={collectionTasks}
-                options={myTaskViewOptions}
-                routeScope={routeScope}
-                emptyDescription={t(
-                  myTaskScope === 'created'
-                    ? 'taskList.mine.emptyCreated'
-                    : 'taskList.mine.emptyAssigned',
+            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+              <div className="flex flex-col gap-4 px-4 py-4">
+                <TaskList
+                  data={isCollectionListInit || undefined}
+                  error={collectionSWR.error}
+                  items={collectionTasks}
+                  options={myTaskViewOptions}
+                  routeScope={routeScope}
+                  emptyDescription={t(
+                    myTaskScope === 'created'
+                      ? 'taskList.mine.emptyCreated'
+                      : 'taskList.mine.emptyAssigned',
+                  )}
+                  isLoading={
+                    collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
+                  }
+                  onRetry={() => collectionSWR.mutate()}
+                />
+                {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
+                  <div className="flex justify-center py-2">
+                    <TablePagination
+                      current={collectionPage}
+                      pageSize={COLLECTION_PAGE_SIZE}
+                      pageSizeOptions={[COLLECTION_PAGE_SIZE]}
+                      total={collectionTasksTotal}
+                      onChange={(page) => setCollectionPage(page)}
+                    />
+                  </div>
                 )}
-                isLoading={
-                  collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
-                }
-                onRetry={() => collectionSWR.mutate()}
-              />
-              {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
-                <div className="flex justify-center py-2">
-                  <TablePagination
-                    current={collectionPage}
-                    pageSize={COLLECTION_PAGE_SIZE}
-                    showSizeChanger={false}
-                    total={collectionTasksTotal}
-                    onChange={setCollectionPage}
-                  />
-                </div>
-              )}
+              </div>
             </WideScreenContainer>
           ) : ordinarySurface === 'board' ? (
             <div
@@ -855,49 +847,45 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             </div>
           ) : (
             <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
-              <WideScreenContainer
-                fullWidth
-                gap={16}
-                paddingBlock={16}
-                paddingInline={16}
-                wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-              >
-                {projectId && (
-                  <IssueFilterChips
-                    agentName={agentName}
-                    filters={issueFilters}
-                    labelName={labelName}
-                    memberName={memberName}
-                    onClearAll={() => updateIssueFilters([])}
-                    onRemove={(key) =>
-                      updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+              <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+                <div className="flex flex-col gap-4 px-4 py-4">
+                  {projectId && (
+                    <IssueFilterChips
+                      agentName={agentName}
+                      filters={issueFilters}
+                      labelName={labelName}
+                      memberName={memberName}
+                      onClearAll={() => updateIssueFilters([])}
+                      onRemove={(key) =>
+                        updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+                      }
+                    />
+                  )}
+                  {!inlineCollapsed && (
+                    <CreateTaskInlineEntry
+                      agentId={agentId}
+                      lockAssignee={!!agentId}
+                      projectId={projectId}
+                    />
+                  )}
+                  <TaskList
+                    data={isTaskListInit || undefined}
+                    error={error}
+                    isLoading={isLoading || (!isTaskListInit && !error)}
+                    items={filteredIssueTasks}
+                    milestones={projectId ? projectMilestones : undefined}
+                    options={viewOptions}
+                    peekOnSelect={peekOnSelect}
+                    routeScope={routeScope}
+                    selectedIdentifier={selectedIdentifier ?? undefined}
+                    onRetry={() => mutate()}
+                    onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                    onShowHiddenCompleted={handleShowHiddenCompleted}
+                    onOpenTask={(task) =>
+                      navigate(taskDetailPath(task.identifier, undefined, task.name))
                     }
                   />
-                )}
-                {!inlineCollapsed && (
-                  <CreateTaskInlineEntry
-                    agentId={agentId}
-                    lockAssignee={!!agentId}
-                    projectId={projectId}
-                  />
-                )}
-                <TaskList
-                  data={isTaskListInit || undefined}
-                  error={error}
-                  isLoading={isLoading || (!isTaskListInit && !error)}
-                  items={filteredIssueTasks}
-                  milestones={projectId ? projectMilestones : undefined}
-                  options={viewOptions}
-                  peekOnSelect={peekOnSelect}
-                  routeScope={routeScope}
-                  selectedIdentifier={selectedIdentifier ?? undefined}
-                  onRetry={() => mutate()}
-                  onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                  onShowHiddenCompleted={handleShowHiddenCompleted}
-                  onOpenTask={(task) =>
-                    navigate(taskDetailPath(task.identifier, undefined, task.name))
-                  }
-                />
+                </div>
               </WideScreenContainer>
               {peekOnSelect && (
                 <div className={styles.detailPane}>

@@ -253,7 +253,7 @@ const TaskDetailRunPauseAction = memo(() => {
   }
 
   const runLabel = isRerun ? t('taskDetail.rerunTask') : t('taskDetail.runTask');
-  const runIcon = isRerun ? RotateCcwIcon : PlayIcon;
+  const RunIcon = isRerun ? RotateCcwIcon : PlayIcon;
 
   return (
     <Button
@@ -262,7 +262,7 @@ const TaskDetailRunPauseAction = memo(() => {
       variant="default"
       onClick={handleRunOrPause}
     >
-      {runIcon}
+      <RunIcon data-icon="inline-start" />
       {runLabel}
     </Button>
   );

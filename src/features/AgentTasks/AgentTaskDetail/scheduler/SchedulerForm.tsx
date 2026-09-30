@@ -250,7 +250,7 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
               label: t(opt.label as any),
               value: opt.value,
             }))}
-            onChange={handleScheduleTypeChange}
+            onChange={(value) => handleScheduleTypeChange(value as ScheduleType)}
           />
         </div>
         {showTimeRow && (
@@ -259,7 +259,7 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
             <Select
               options={TIME_OPTIONS}
               value={triggerTime.hour() * 60 + triggerTime.minute()}
-              onChange={handleTimeChange}
+              onChange={(value) => handleTimeChange(value as number)}
             />
           </div>
         )}
@@ -284,7 +284,7 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
                   { label: ':30', value: 30 },
                   { label: ':45', value: 45 },
                 ]}
-                onChange={handleHourlyMinuteChange}
+                onChange={(value) => handleHourlyMinuteChange(value as number)}
               />
             </div>
           </div>
@@ -343,7 +343,7 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
                       </div>
                     );
                   }}
-                  onChange={handleTimezoneChange}
+                  onChange={(value) => handleTimezoneChange(value as string)}
                 />
               </div>
 

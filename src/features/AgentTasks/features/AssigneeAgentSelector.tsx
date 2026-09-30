@@ -1,6 +1,6 @@
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { UserRoundX } from 'lucide-react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
@@ -267,7 +267,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
           ) : (
             <NavItem
               active={active}
-              icon={<UserRoundX size={18} style={{ color: cssVar.colorTextDescription }} />}
+              icon={UserRoundX}
               style={{ flexShrink: 0 }}
               title={unassignedLabel}
               onClick={() => handleSelect(option)}

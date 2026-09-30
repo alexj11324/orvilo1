@@ -639,7 +639,7 @@ const TaskVerifyConfig = memo(() => {
             <Select
               options={rubricOptions}
               placeholder={t('verifyConfig.templatePlaceholder')}
-              onChange={handlePickTemplate}
+              onChange={(value) => void handlePickTemplate(value as string)}
             />
           ) : null}
         </div>

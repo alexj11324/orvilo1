@@ -64,24 +64,24 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
             ) : (
               <div className="flex flex-col gap-4" style={{ width: 500 }}>
                 {t('importModal.finish.subTitle', { duration: (duration / 1000).toFixed(2) })}
-                <Table>
+                <Table className="border-collapse border">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('importModal.result.type')}</TableHead>
-                      <TableHead>{t('importModal.result.added')}</TableHead>
-                      <TableHead>{t('importModal.result.skips')}</TableHead>
-                      <TableHead>{t('importModal.result.errors')}</TableHead>
-                      <TableHead>{t('importModal.result.update')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.type')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.added')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.skips')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.errors')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.update')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {dataSource.map((row) => (
                       <TableRow key={row.title}>
-                        <TableCell>{cellRender(row.title)}</TableCell>
-                        <TableCell>{cellRender(row.added)}</TableCell>
-                        <TableCell>{cellRender(row.skips)}</TableCell>
-                        <TableCell>{cellRender(row.error)}</TableCell>
-                        <TableCell>{cellRender(row.updated)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.title)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.added)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.skips)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.error)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.updated)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

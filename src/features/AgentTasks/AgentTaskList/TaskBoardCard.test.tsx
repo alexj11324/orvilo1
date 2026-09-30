@@ -5,10 +5,12 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import KanbanColumn, { CollapsedKanbanColumn } from './KanbanColumn';
 import TaskBoardCard from './TaskBoardCard';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
+  droppableCalls: [] as { disabled?: boolean; id: string }[],
   fetchTaskDetail: vi.fn(),
   navigate: vi.fn(),
   openTopicDrawer: vi.fn(),
@@ -127,6 +129,53 @@ vi.mock('../features/formatTaskItemDate', () => ({
 
 vi.mock('../features/useTaskItemContextMenu', () => ({
   useTaskItemContextMenu: () => ({ items: [], onContextMenu: mocks.taskContextMenu }),
+}));
+
+vi.mock('@dnd-kit/core', () => ({
+  useDndContext: () => ({ active: null }),
+  useDroppable: ({ disabled, id }: { disabled?: boolean; id: string }) => {
+    mocks.droppableCalls.push({ disabled, id });
+    return { isOver: false, setNodeRef: () => {} };
+  },
+}));
+
+vi.mock('@dnd-kit/sortable', () => ({
+  SortableContext: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  useSortable: () => ({
+    attributes: {},
+    isDragging: false,
+    listeners: {},
+    setNodeRef: () => {},
+    transform: null,
+    transition: undefined,
+  }),
+  verticalListSortingStrategy: {},
+}));
+
+vi.mock('@/components/ActionIcon', () => ({
+  default: ({
+    'aria-label': ariaLabel,
+    'icon': Icon,
+    onClick,
+    title,
+  }: {
+    'aria-label'?: string;
+    'icon'?: unknown;
+    'onClick'?: () => void;
+    'title'?: string;
+  }) => (
+    <button aria-label={ariaLabel ?? title} title={title} type="button" onClick={onClick}>
+      {typeof Icon === 'function' ? <Icon size={14} /> : null}
+    </button>
+  ),
+}));
+
+vi.mock('./TaskGroupLabel', () => ({
+  default: () => <span data-group-label />,
+}));
+
+vi.mock('./TaskItemSkeleton', () => ({
+  default: () => <div data-task-skeleton />,
 }));
 
 const createTask = (overrides: Record<string, unknown> = {}) =>
@@ -258,5 +307,73 @@ describe('TaskBoardCard', () => {
     rerender(<TaskBoardCard task={createTask({ projectId: 'proj-gone' })} />);
     expect(screen.queryByText('Voyager Launch')).not.toBeInTheDocument();
     expect(screen.queryByText('proj-gone')).not.toBeInTheDocument();
+  });
+});
+
+describe('KanbanColumn (empty-board regression)', () => {
+  beforeEach(() => {
+    mocks.droppableCalls.length = 0;
+  });
+
+  it('keeps header, count, actions and the droppable body when the column has no cards', () => {
+    const onCreate = vi.fn();
+    const onHide = vi.fn();
+    render(
+      <KanbanColumn
+        droppable
+        columnKey="todo"
+        groupBy="status"
+        tasks={[]}
+        total={0}
+        onCreate={onCreate}
+        onHide={onHide}
+      />,
+    );
+
+    // Header: status label + zero count stay mounted with zero tasks.
+    expect(screen.getByText('taskList.kanban.todo')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+
+    // Actions: hide + add affordances render and stay wired. The add affordance
+    // exists twice — the header icon and the body's empty-column pill.
+    fireEvent.click(screen.getByTitle('taskList.kanban.hideColumn'));
+    expect(onHide).toHaveBeenCalledTimes(1);
+    const addAffordances = screen.getAllByTitle('taskList.kanban.addTask');
+    expect(addAffordances).toHaveLength(2);
+    fireEvent.click(addAffordances[0]);
+    fireEvent.click(addAffordances[1]);
+    expect(onCreate).toHaveBeenCalledTimes(2);
+
+    // The column still registers itself as a live drop target.
+    expect(mocks.droppableCalls).toContainEqual({ disabled: false, id: 'todo' });
+  });
+
+  it('registers the droppable as disabled when the column refuses drops', () => {
+    render(
+      <KanbanColumn columnKey="done" droppable={false} groupBy="status" tasks={[]} total={0} />,
+    );
+
+    expect(mocks.droppableCalls).toContainEqual({ disabled: true, id: 'done' });
+  });
+
+  it('keeps the folded rail a live drop target and expands on click', () => {
+    const onExpand = vi.fn();
+    render(
+      <CollapsedKanbanColumn
+        droppable
+        columnKey="done"
+        label="taskList.kanban.done"
+        total={3}
+        onExpand={onExpand}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: 'taskList.kanban.showColumn' });
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getByText('3')).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onExpand).toHaveBeenCalledTimes(1);
+
+    expect(mocks.droppableCalls).toContainEqual({ disabled: false, id: 'done' });
   });
 });

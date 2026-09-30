@@ -22,7 +22,7 @@ Desktop shortcut settings normalize Electron accelerator names for the platform-
 
 ## New topic navigation
 
-The agent sidebar completes the new-topic action against the source conversation before navigating to the bare agent URL. The action awaits topic switching and message refresh. Pending clicks are disabled; a failed action shows an error, keeps the current URL and allows retry. The explicit SWR data mutation propagates rejection without replaying the action as a revalidation.
+The agent sidebar completes the new-topic action against the source conversation before navigating to the bare agent URL. The action awaits topic switching and message refresh. Pending clicks are disabled; a rejected action shows an error, skips the explicit navigation and allows retry. Route subscriptions may also react to topic state changes; message revalidation follows the existing SWR error contract. The explicit SWR data mutation propagates rejection without replaying the action as a revalidation.
 
 ## Regression coverage
 

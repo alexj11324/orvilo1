@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { ChevronRight } from 'lucide-react';
@@ -110,7 +109,7 @@ const ToolTitle = memo<ToolTitleProps>(
                   {pluginTitle && (
                     <>
                       <span>{pluginTitle}</span>
-                      <Icon icon={ChevronRight} />
+                      <ChevronRight />
                     </>
                   )}
                   <span>{getToolDisplayName(apiName)}</span>

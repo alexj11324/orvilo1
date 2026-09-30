@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { AlertTriangle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +13,7 @@ const DeprecatedModelError = memo<DeprecatedModelErrorProps>(({ requestedModel }
 
   return (
     <BaseErrorForm
-      avatar={<Icon icon={AlertTriangle} size={24} />}
+      avatar={<AlertTriangle size={24} />}
       title={t('fetchError.title')}
       desc={t('response.OrviloModelDeprecated', {
         model: requestedModel ?? '-',

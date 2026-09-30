@@ -1,5 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Code2Icon, SquareDashedMousePointer } from 'lucide-react';
 import { memo } from 'react';
 
@@ -141,26 +141,26 @@ const getCodeSelectionMeta = (selection: ContextSelection): string => {
 };
 
 const CodeSelection = memo<{ selection: ContextSelection }>(({ selection }) => (
-  <Flexbox className={styles.codeContainer}>
-    <Flexbox horizontal className={styles.codeHeader} gap={6}>
+  <div className={cn('flex flex-col', styles.codeContainer)}>
+    <div className={cn('flex gap-1.5', styles.codeHeader)}>
       <Code2Icon size={14} />
       <div className={styles.codeMeta}>{getCodeSelectionMeta(selection)}</div>
-    </Flexbox>
+    </div>
     <pre className={styles.codeContent}>{selection.content}</pre>
-  </Flexbox>
+  </div>
 ));
 
 CodeSelection.displayName = 'UserMessageCodeSelection';
 
 /** A picked DOM element renders as what it is — its crop and locator, not a quote. */
 const ElementSelection = memo<{ selection: ElementContextSelection }>(({ selection }) => (
-  <Flexbox className={styles.codeContainer}>
-    <Flexbox horizontal className={styles.codeHeader} gap={6}>
+  <div className={cn('flex flex-col', styles.codeContainer)}>
+    <div className={cn('flex gap-1.5', styles.codeHeader)}>
       <SquareDashedMousePointer size={14} />
       <div className={styles.codeMeta}>
         {selection.element.selector || `<${selection.element.tag}>`}
       </div>
-    </Flexbox>
+    </div>
     {selection.element.thumbnailUrl ? (
       <img
         alt={selection.element.selector || selection.element.tag}
@@ -170,18 +170,18 @@ const ElementSelection = memo<{ selection: ElementContextSelection }>(({ selecti
     ) : (
       <div className={styles.elementText}>{selection.preview || selection.content}</div>
     )}
-  </Flexbox>
+  </div>
 ));
 
 ElementSelection.displayName = 'UserMessageElementSelection';
 
 const QuoteSelection = memo<{ selection: UserContextSelection }>(({ selection }) => (
-  <Flexbox className={styles.container}>
-    <Flexbox horizontal className={styles.wrapper} gap={4} padding={4}>
+  <div className={cn('flex flex-col', styles.container)}>
+    <div className={cn('flex gap-1 p-1', styles.wrapper)}>
       <span className={styles.quote}>"</span>
       <div className={styles.content}>{selection.content}</div>
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 QuoteSelection.displayName = 'UserMessageQuoteSelection';
@@ -199,11 +199,11 @@ const PageSelections = memo<PageSelectionsProps>(({ selections }) => {
   if (!selections || selections.length === 0) return null;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {selections.map((selection) => (
         <SelectionItem key={selection.id} selection={selection} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

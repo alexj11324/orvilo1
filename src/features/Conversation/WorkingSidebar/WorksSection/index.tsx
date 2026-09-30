@@ -1,13 +1,14 @@
-import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { WorkListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ClipboardListIcon, HistoryIcon, ListIcon } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { getAllWorkSummaries } from '@/features/Conversation/store/slices/data/workSummaries';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
@@ -48,7 +49,7 @@ const WorksModeToolbar = memo<{
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox horizontal className={styles.modeToolbar} gap={4}>
+    <div className={cn('flex gap-1', styles.modeToolbar)}>
       <ActionIcon
         active={mode === 'summary'}
         icon={ListIcon}
@@ -63,7 +64,7 @@ const WorksModeToolbar = memo<{
         title={t('workingPanel.works.viewMode.history')}
         onClick={() => setMode('history')}
       />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -159,25 +160,39 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
   const content = (() => {
     if (isLoading) {
       return (
-        <Center flex={1}>
+        <div className="flex items-center justify-center flex-1">
           <NeuralNetworkLoading size={24} />
-        </Center>
+        </div>
       );
     }
 
     if (error) {
       return (
-        <Center flex={1}>
-          <Empty description={t('workingPanel.works.error')} icon={ClipboardListIcon} />
-        </Center>
+        <div className="flex items-center justify-center flex-1">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ClipboardListIcon />
+              </EmptyMedia>
+              <EmptyDescription>{t('workingPanel.works.error')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       );
     }
 
     if (data.length === 0) {
       return (
-        <Center flex={1}>
-          <Empty description={t('workingPanel.works.empty')} icon={ClipboardListIcon} />
-        </Center>
+        <div className="flex items-center justify-center flex-1">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ClipboardListIcon />
+              </EmptyMedia>
+              <EmptyDescription>{t('workingPanel.works.empty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       );
     }
 
@@ -189,10 +204,10 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
   })();
 
   return (
-    <Flexbox className={styles.container} flex={1} gap={12}>
+    <div className={cn('flex flex-col flex-1 gap-3', styles.container)}>
       <WorksModeToolbar mode={mode} setMode={setMode} />
       {content}
-    </Flexbox>
+    </div>
   );
 });
 

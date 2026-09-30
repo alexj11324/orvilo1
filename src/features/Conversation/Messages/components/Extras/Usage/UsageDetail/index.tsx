@@ -1,13 +1,13 @@
-import { Center, Flexbox, Icon, Popover } from '@lobehub/ui';
 import { type ModelPerformance, type ModelUsage } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
 import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { BadgeCent, CoinsIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InfoTooltip from '@/components/InfoTooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -143,124 +143,113 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
   const ttft = performance?.ttft ? formatNumber(performance.ttft / 1000, 2) : undefined;
 
   return (
-    <Popover
-      placement={'top'}
-      trigger="hover"
-      content={
-        <Flexbox gap={8} style={{ minWidth: 200 }}>
+    <Popover>
+      <PopoverContent side="top">
+        <div className="flex flex-col gap-2" style={{ minWidth: 200 }}>
           {modelCard && <ModelCard {...modelCard} provider={provider} />}
 
-          <Flexbox gap={20}>
+          <div className="flex flex-col gap-5">
             {inputDetails.length > 1 && (
-              <Flexbox gap={4}>
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  gap={4}
-                  justify={'space-between'}
-                  width={'100%'}
-                >
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1 justify-between" style={{ width: '100%' }}>
                   <div style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>
                     {t('messages.tokenDetails.inputTitle')}
                   </div>
-                </Flexbox>
+                </div>
                 <TokenProgress showIcon data={inputDetails} />
-              </Flexbox>
+              </div>
             )}
             {outputDetails.length > 1 && (
-              <Flexbox gap={4}>
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  gap={4}
-                  justify={'space-between'}
-                  width={'100%'}
-                >
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1 justify-between" style={{ width: '100%' }}>
                   <div style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>
                     {t('messages.tokenDetails.outputTitle')}
                   </div>
-                </Flexbox>
+                </div>
                 <TokenProgress showIcon data={outputDetails} />
-              </Flexbox>
+              </div>
             )}
-            <Flexbox>
+            <div className="flex flex-col">
               <TokenProgress showIcon data={totalDetail} />
               <Divider style={{ marginBlock: 8 }} />
               {cacheRate && (
-                <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
+                <div className="flex items-center gap-1 justify-between">
                   <div style={{ color: cssVar.colorTextSecondary }}>
                     {t('messages.tokenDetails.cacheRate')}
                   </div>
                   <div style={{ fontWeight: 500 }}>{cacheRate}</div>
-                </Flexbox>
+                </div>
               )}
-              <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
+              <div className="flex items-center gap-1 justify-between">
                 <div style={{ color: cssVar.colorTextSecondary }}>
                   {t('messages.tokenDetails.total')}
                 </div>
                 <div style={{ fontWeight: 500 }}>{detailTotal}</div>
-              </Flexbox>
+              </div>
               {isShowCredit && (
-                <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
+                <div className="flex items-center gap-1 justify-between">
                   <div style={{ color: cssVar.colorTextSecondary }}>
                     {t('messages.tokenDetails.average')}
                   </div>
                   <div style={{ fontWeight: 500 }}>{averagePricing}</div>
-                </Flexbox>
+                </div>
               )}
               {tps && (
-                <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
-                  <Flexbox horizontal gap={8}>
+                <div className="flex items-center gap-1 justify-between">
+                  <div className="flex gap-2">
                     <div style={{ color: cssVar.colorTextSecondary }}>
                       {t('messages.tokenDetails.speed.tps.title')}
                     </div>
                     <InfoTooltip title={t('messages.tokenDetails.speed.tps.tooltip')} />
-                  </Flexbox>
+                  </div>
                   <div style={{ fontWeight: 500 }}>{tps}</div>
-                </Flexbox>
+                </div>
               )}
               {ttft && (
-                <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
-                  <Flexbox horizontal gap={8}>
+                <div className="flex items-center gap-1 justify-between">
+                  <div className="flex gap-2">
                     <div style={{ color: cssVar.colorTextSecondary }}>
                       {t('messages.tokenDetails.speed.ttft.title')}
                     </div>
                     <InfoTooltip title={t('messages.tokenDetails.speed.ttft.tooltip')} />
-                  </Flexbox>
+                  </div>
                   <div style={{ fontWeight: 500 }}>{ttft}s</div>
-                </Flexbox>
+                </div>
               )}
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
-      }
-    >
-      <Center
-        horizontal
-        gap={2}
-        style={{ cursor: 'pointer' }}
-        onClick={(e) => {
-          // Prevent Popover from closing and toggle the format
-          e.preventDefault();
-          e.stopPropagation();
-          updateSystemStatus({ tokenDisplayFormatShort: !isShortFormat });
-        }}
-      >
-        <Icon icon={isShowCredit ? BadgeCent : CoinsIcon} />
-        <AnimatedNumber
-          duration={1500}
-          // Force remount when switching between token/credit to prevent unwanted animation
-          key={isShowCredit ? 'credit' : 'token'}
-          value={totalCount}
-          formatter={(value) => {
-            const roundedValue = Math.round(value);
-            if (isShortFormat) {
-              return (formatShortenNumber(roundedValue) as string).toLowerCase?.();
-            }
-            return new Intl.NumberFormat('en-US').format(roundedValue);
-          }}
-        />
-      </Center>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+      <PopoverTrigger
+        openOnHover
+        render={
+          <div
+            className="flex items-center justify-center gap-0.5"
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => {
+              // Prevent Popover from closing and toggle the format
+              e.preventDefault();
+              e.stopPropagation();
+              updateSystemStatus({ tokenDisplayFormatShort: !isShortFormat });
+            }}
+          >
+            {createElement(isShowCredit ? BadgeCent : CoinsIcon, {})}
+            <AnimatedNumber
+              duration={1500}
+              // Force remount when switching between token/credit to prevent unwanted animation
+              key={isShowCredit ? 'credit' : 'token'}
+              value={totalCount}
+              formatter={(value) => {
+                const roundedValue = Math.round(value);
+                if (isShortFormat) {
+                  return (formatShortenNumber(roundedValue) as string).toLowerCase?.();
+                }
+                return new Intl.NumberFormat('en-US').format(roundedValue);
+              }}
+            />
+          </div>
+        }
+      />
     </Popover>
   );
 });

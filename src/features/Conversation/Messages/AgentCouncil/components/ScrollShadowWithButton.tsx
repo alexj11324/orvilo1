@@ -1,9 +1,17 @@
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox, ScrollShadow } from '@lobehub/ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type ComponentProps,
+  type CSSProperties,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   button: css`
@@ -38,78 +46,87 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-const ScrollShadowWithButton = memo<FlexboxProps>(({ children, ...rest }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
+type ScrollShadowWithButtonProps = ComponentProps<'div'> & {
+  justify?: CSSProperties['justifyContent'];
+};
 
-  const checkScrollability = useCallback(() => {
-    const container = scrollRef.current;
-    if (!container) return;
+const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
+  ({ children, justify, style, ...rest }) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(true);
 
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-    setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
-  }, []);
-
-  const handleScroll = useCallback(
-    (direction: 'left' | 'right') => {
+    const checkScrollability = useCallback(() => {
       const container = scrollRef.current;
       if (!container) return;
 
-      const scrollAmount = container.clientWidth / 1.5;
-      const targetScroll =
-        direction === 'left'
-          ? container.scrollLeft - scrollAmount
-          : container.scrollLeft + scrollAmount;
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
+    }, []);
 
-      container.scrollTo({
-        behavior: 'smooth',
-        left: targetScroll,
-      });
+    const handleScroll = useCallback(
+      (direction: 'left' | 'right') => {
+        const container = scrollRef.current;
+        if (!container) return;
 
-      setTimeout(checkScrollability, 300);
-    },
-    [checkScrollability],
-  );
+        const scrollAmount = container.clientWidth / 1.5;
+        const targetScroll =
+          direction === 'left'
+            ? container.scrollLeft - scrollAmount
+            : container.scrollLeft + scrollAmount;
 
-  useEffect(() => {
-    checkScrollability();
-  }, []);
+        container.scrollTo({
+          behavior: 'smooth',
+          left: targetScroll,
+        });
 
-  return (
-    <Flexbox horizontal className={styles.container} width={'100%'} {...rest}>
-      {canScrollLeft && (
-        <Button
-          className={cx(styles.button, styles.leftButton, 'scroll-button')}
-          icon={ChevronLeft}
-          shape={'circle'}
-          type={'default'}
-          onClick={() => handleScroll('left')}
-        />
-      )}
-      <ScrollShadow
-        hideScrollBar
-        offset={16}
-        orientation={'horizontal'}
-        ref={scrollRef}
-        size={16}
-        onScroll={checkScrollability}
-        onScrollCapture={checkScrollability}
+        setTimeout(checkScrollability, 300);
+      },
+      [checkScrollability],
+    );
+
+    useEffect(() => {
+      checkScrollability();
+    }, []);
+
+    return (
+      <div
+        className={cn('flex', styles.container)}
+        style={{ justifyContent: justify, width: '100%', ...style }}
+        {...rest}
       >
-        {children}
-      </ScrollShadow>
-      {canScrollRight && (
-        <Button
-          className={cx(styles.button, styles.rightButton, 'scroll-button')}
-          icon={ChevronRight}
-          shape={'circle'}
-          type={'default'}
-          onClick={() => handleScroll('right')}
-        />
-      )}
-    </Flexbox>
-  );
-});
+        {canScrollLeft && (
+          <Button
+            className={cx(styles.button, styles.leftButton, 'scroll-button')}
+            icon={ChevronLeft}
+            shape={'circle'}
+            type={'default'}
+            onClick={() => handleScroll('left')}
+          />
+        )}
+        <ScrollAreaPrimitive.Root>
+          <ScrollAreaPrimitive.Viewport
+            ref={scrollRef}
+            onScroll={checkScrollability}
+            onScrollCapture={checkScrollability}
+          >
+            {children}
+          </ScrollAreaPrimitive.Viewport>
+          <ScrollAreaPrimitive.Corner />
+        </ScrollAreaPrimitive.Root>
+        {canScrollRight && (
+          <Button
+            className={cx(styles.button, styles.rightButton, 'scroll-button')}
+            icon={ChevronRight}
+            shape={'circle'}
+            type={'default'}
+            onClick={() => handleScroll('right')}
+          />
+        )}
+      </div>
+    );
+  },
+);
 
 export default ScrollShadowWithButton;

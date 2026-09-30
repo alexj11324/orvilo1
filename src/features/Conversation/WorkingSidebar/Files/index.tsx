@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, copyToClipboard, Empty, Flexbox, Icon, stopPropagation } from '@lobehub/ui';
+import { copyToClipboard, stopPropagation } from '@lobehub/ui';
 import { ActionIcon, Button, DropdownMenu, Input, toast } from '@lobehub/ui/base-ui';
 import type { ProjectFileIndexEntry } from '@orvilo/electron-client-ipc';
 import type { GitStatusEntry } from '@pierre/trees';
@@ -21,6 +21,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { startWorkspaceFileDrag } from '@/features/ChatInput/InputEditor/workspaceFileDragData';
 import type { ExplorerTreeNode } from '@/features/ExplorerTree';
 import {
@@ -190,7 +191,7 @@ const FilesSearchBar = memo<FilesSearchBarProps>(({ onClose, onDebouncedChange }
   return (
     <Input
       placeholder={t('workingPanel.files.searchPlaceholder')}
-      prefix={<Icon icon={SearchIcon} size={13} />}
+      prefix={<SearchIcon size={13} />}
       ref={inputRef}
       size={'small'}
       style={{ width: '100%' }}
@@ -548,14 +549,14 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
 
   if (!data && isLoading) {
     return (
-      <Center flex={1}>
+      <div className="flex items-center justify-center flex-1">
         <NeuralNetworkLoading size={48} />
-      </Center>
+      </div>
     );
   }
 
   return (
-    <Flexbox height={'100%'} style={{ overflow: 'hidden' }} width={'100%'}>
+    <div className="flex flex-col" style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
       <div className={styles.subheader}>
         {searchExpanded ? (
           <div className={styles.search}>
@@ -610,18 +611,26 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
         />
       </div>
       {isEmpty && isFiltering && isSearching ? (
-        <Center flex={1}>
+        <div className="flex items-center justify-center flex-1">
           <NeuralNetworkLoading size={32} />
-        </Center>
+        </div>
       ) : isEmpty ? (
-        <Center flex={1} gap={8} paddingBlock={24}>
-          <Empty
-            icon={FileIcon}
-            description={t(
-              hasDisplayFilter ? 'workingPanel.files.noSearchResults' : 'workingPanel.files.empty',
-            )}
-          />
-        </Center>
+        <div className="flex items-center justify-center flex-1 gap-2 py-6">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <FileIcon />
+              </EmptyMedia>
+              <EmptyDescription>
+                {t(
+                  hasDisplayFilter
+                    ? 'workingPanel.files.noSearchResults'
+                    : 'workingPanel.files.empty',
+                )}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       ) : (
         <div className={styles.tree} style={treeStyleVars}>
           <ExplorerTree<ProjectFileIndexEntry>
@@ -640,7 +649,7 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
           />
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Accordion, Skeleton } from '@lobehub/ui/base-ui';
 import { getBuiltinRender } from '@orvilo/builtin-tools/renders';
 import { type CSSProperties } from 'react';
@@ -93,7 +92,7 @@ const Tool = memo<InspectorProps>(
               />
             ),
             children: (
-              <Flexbox gap={8} paddingBlock={8}>
+              <div className="flex flex-col gap-2 py-2">
                 {showDebug && !disableEditing && (
                   <Debug
                     apiName={apiName}
@@ -115,7 +114,7 @@ const Tool = memo<InspectorProps>(
                   toolCallId={toolCallId}
                   type={type}
                 />
-              </Flexbox>
+              </div>
             ),
             key: 'tool',
             title: (

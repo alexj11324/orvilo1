@@ -1,4 +1,3 @@
-import { Block, Highlighter } from '@lobehub/ui';
 import { type AlertProps, Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
@@ -13,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import useBusinessErrorAlertConfig from '@/business/client/hooks/useBusinessErrorAlertConfig';
 import useBusinessErrorContent from '@/business/client/hooks/useBusinessErrorContent';
 import useRenderBusinessChatErrorMessageExtra from '@/business/client/hooks/useRenderBusinessChatErrorMessageExtra';
+import { CodeBlock } from '@/components/ui/code-block';
 import ErrorContent from '@/features/Conversation/ChatItem/components/ErrorContent';
 import { useConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
 import { dataSelectors, useConversationStore } from '@/features/Conversation/store';
@@ -73,18 +73,19 @@ const getErrorDetails = (error?: ChatMessageError | null) => {
 };
 
 const loading = () => (
-  <Block
-    align={'center'}
-    padding={16}
-    variant={'outlined'}
+  <div
+    className="flex flex-col items-center p-4"
     style={{
+      border: `1px solid ${cssVar.colorBorder}`,
+      borderRadius: cssVar.borderRadiusLG,
+
       overflow: 'hidden',
       position: 'relative',
       width: '100%',
     }}
   >
     <Skeleton height={36} />
-  </Block>
+  </div>
 );
 
 const ExceededContextWindowError = dynamic(() => import('./ExceededContextWindowError'), {
@@ -531,14 +532,12 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
           message: displayMessage,
           extra:
             !isSharedTopic && errorDetails ? (
-              <Highlighter
-                actionIconSize={'small'}
-                language={'json'}
-                padding={8}
-                variant={'borderless'}
-              >
-                {JSON.stringify(errorDetails, null, 2)}
-              </Highlighter>
+              <CodeBlock
+                code={JSON.stringify(errorDetails, null, 2)}
+                language="json"
+                style={{ padding: 8 }}
+                variant="ghost"
+              />
             ) : undefined,
         }}
         onRegenerate={canRetry ? handleManualRetry : undefined}

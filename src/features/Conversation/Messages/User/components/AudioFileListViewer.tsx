@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import AudioPlayer from '@/features/AudioPlayer';
@@ -18,7 +17,7 @@ const AudioFileListViewer = memo<AudioFileListViewerProps>(({ items, messageId }
   ]);
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {items.map((item) => (
         <AudioPlayer
           alt={item.alt}
@@ -30,7 +29,7 @@ const AudioFileListViewer = memo<AudioFileListViewerProps>(({ items, messageId }
           onRetryUpload={() => retryVoiceMessage(messageId)}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

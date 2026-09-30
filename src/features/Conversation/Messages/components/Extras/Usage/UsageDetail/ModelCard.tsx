@@ -1,13 +1,14 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Tabs } from '@lobehub/ui/base-ui';
 import { getCachedTextInputUnitRate, getWriteCacheInputUnitRate } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowDownToDot, ArrowUpFromDot, BookUp2Icon, CircleFadingArrowUp } from 'lucide-react';
 import { type OrviloDefaultAiModelListItem } from 'model-bank';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelIcon } from '@/components/OrviloIcons';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
@@ -42,26 +43,22 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
   const formatPrice = getPrice(pricing || { units: [] });
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.container}
-        flex={1}
-        gap={40}
-        justify={'space-between'}
+    <div className="flex flex-col gap-2">
+      <div
+        className={cn('flex items-center flex-1 justify-between', styles.container)}
+        style={{ gap: 40 }}
       >
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2">
           <ModelIcon model={id} size={22} />
-          <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-            <Flexbox horizontal align={'center'} gap={8} style={{ lineHeight: '12px' }}>
+          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+            <div className="flex items-center gap-2" style={{ lineHeight: '12px' }}>
               {displayName || id}
-            </Flexbox>
+            </div>
             <span className={styles.desc}>{provider}</span>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {!!pricing && (
-          <Flexbox>
+          <div className="flex flex-col">
             <Tabs
               activeKey={isShowCredit ? 'credit' : 'token'}
               size={'small'}
@@ -70,9 +67,18 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
                 {
                   key: 'credit',
                   label: (
-                    <Tooltip title={t('messages.modelCard.creditTooltip')}>
-                      <span>{t('messages.modelCard.credit')}</span>
-                    </Tooltip>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <span style={{ display: 'inline-flex' }}>
+                              <span>{t('messages.modelCard.credit')}</span>
+                            </span>
+                          }
+                        />
+                        <TooltipContent>{t('messages.modelCard.creditTooltip')}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   ),
                 },
               ]}
@@ -80,60 +86,96 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
                 updateSystemStatus({ isShowCredit: key === 'credit' });
               }}
             />
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
       {isShowCredit ? (
-        <Flexbox horizontal justify={'space-between'}>
+        <div className="flex justify-between">
           <div />
-          <Flexbox horizontal align={'center'} className={styles.pricing} gap={8}>
+          <div className={cn('flex items-center gap-2', styles.pricing)}>
             {t('messages.modelCard.creditPricing')}:
             {getCachedTextInputUnitRate(pricing) && (
-              <Tooltip
-                title={t('messages.modelCard.pricing.inputCachedTokens', {
-                  amount: formatPrice.cachedInput,
-                })}
-              >
-                <Flexbox horizontal gap={2}>
-                  <Icon icon={CircleFadingArrowUp} />
-                  {formatPrice.cachedInput}
-                </Flexbox>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <div className="flex gap-0.5">
+                          <CircleFadingArrowUp />
+                          {formatPrice.cachedInput}
+                        </div>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {t('messages.modelCard.pricing.inputCachedTokens', {
+                      amount: formatPrice.cachedInput,
+                    })}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {getWriteCacheInputUnitRate(pricing) && (
-              <Tooltip
-                title={t('messages.modelCard.pricing.writeCacheInputTokens', {
-                  amount: formatPrice.writeCacheInput,
-                })}
-              >
-                <Flexbox horizontal gap={2}>
-                  <Icon icon={BookUp2Icon} />
-                  {formatPrice.writeCacheInput}
-                </Flexbox>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <div className="flex gap-0.5">
+                          <BookUp2Icon />
+                          {formatPrice.writeCacheInput}
+                        </div>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {t('messages.modelCard.pricing.writeCacheInputTokens', {
+                      amount: formatPrice.writeCacheInput,
+                    })}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
-            <Tooltip
-              title={t('messages.modelCard.pricing.inputTokens', { amount: formatPrice.input })}
-            >
-              <Flexbox horizontal gap={2}>
-                <Icon icon={ArrowUpFromDot} />
-                {formatPrice.input}
-              </Flexbox>
-            </Tooltip>
-            <Tooltip
-              title={t('messages.modelCard.pricing.outputTokens', { amount: formatPrice.output })}
-            >
-              <Flexbox horizontal gap={2}>
-                <Icon icon={ArrowDownToDot} />
-                {formatPrice.output}
-              </Flexbox>
-            </Tooltip>
-          </Flexbox>
-        </Flexbox>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <div className="flex gap-0.5">
+                        <ArrowUpFromDot />
+                        {formatPrice.input}
+                      </div>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t('messages.modelCard.pricing.inputTokens', { amount: formatPrice.input })}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <div className="flex gap-0.5">
+                        <ArrowDownToDot />
+                        {formatPrice.output}
+                      </div>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t('messages.modelCard.pricing.outputTokens', { amount: formatPrice.output })}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
       ) : (
         <div style={{ height: 18 }} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

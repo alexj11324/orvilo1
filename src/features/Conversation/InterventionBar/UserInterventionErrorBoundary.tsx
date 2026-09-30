@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Highlighter, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { safeParseJSON } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
@@ -10,6 +9,7 @@ import { Component, memo, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { CodeBlock } from '@/components/ui/code-block';
 import { useUserStore } from '@/store/user';
 import { toolInterventionSelectors } from '@/store/user/selectors';
 
@@ -88,7 +88,7 @@ const UserInterventionFallback = memo<UserInterventionFallbackProps>(
     const approvalMode = useUserStore(toolInterventionSelectors.approvalMode);
     const json = useMemo(() => formatRequestArgs(requestArgs), [requestArgs]);
     const actions = (
-      <Flexbox horizontal justify={'flex-end'}>
+      <div className="flex justify-end">
         <ApprovalActions
           apiName={apiName}
           approvalMode={approvalMode}
@@ -97,13 +97,13 @@ const UserInterventionFallback = memo<UserInterventionFallbackProps>(
           messageId={toolMessageId}
           toolCallId={toolCallId}
         />
-      </Flexbox>
+      </div>
     );
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <div className={styles.notice}>
-          <Icon className={styles.icon} icon={AlertTriangle} size={14} />
+          <AlertTriangle className={styles.icon} size={14} />
           <span className={styles.title}>{t('tool.intervention.renderFallback.title')}</span>
           <span className={styles.description}>
             {t('tool.intervention.renderFallback.description')}
@@ -112,11 +112,9 @@ const UserInterventionFallback = memo<UserInterventionFallbackProps>(
         <Text fontSize={12} type="secondary">
           {identifier} / {apiName} · {t('tool.intervention.renderFallback.rawJson')}
         </Text>
-        <Highlighter wrap actionIconSize="small" language="json" variant="borderless">
-          {json}
-        </Highlighter>
+        <CodeBlock wrap code={json} language="json" variant="ghost" />
         {actionsPortalTarget ? createPortal(actions, actionsPortalTarget) : actions}
-      </Flexbox>
+      </div>
     );
   },
 );

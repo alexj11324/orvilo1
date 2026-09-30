@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, Freeze, Icon, Popover } from '@lobehub/ui';
+import { Freeze } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { VerifyCodingScope } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import type { TFunction } from 'i18next';
 import {
   BadgeCheckIcon,
@@ -12,10 +13,11 @@ import {
   CheckSquareIcon,
   FileTextIcon,
 } from 'lucide-react';
-import { memo, type PropsWithChildren, useState } from 'react';
+import { createElement, memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClientDataSWR } from '@/libs/swr';
 import { agentService } from '@/services/agent';
 import { documentService } from '@/services/document';
@@ -237,8 +239,8 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
         <ArticleSkeleton avatar rows={2} />
       </div>
     ) : (
-      <Flexbox className={styles.content} gap={12}>
-        <Flexbox horizontal align="center" gap={12}>
+      <div className={cn('flex flex-col gap-3', styles.content)}>
+        <div className="flex items-center gap-3">
           {reference.type === 'agent' && data?.avatar ? (
             <Avatar
               avatar={data.avatar}
@@ -247,15 +249,13 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
               size={36}
             />
           ) : (
-            <span className={styles.icon}>
-              <Icon icon={icon} size={19} />
-            </span>
+            <span className={styles.icon}>{createElement(icon, { size: 19 })}</span>
           )}
-          <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
             <span className={styles.type}>{typeLabel}</span>
             <span className={styles.title}>{data?.title || fallbackTitle}</span>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {data?.description && (
           <Text className={styles.description} fontSize={13}>
             {data.description}
@@ -271,22 +271,16 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
             {data.secondaryMeta}
           </Text>
         )}
-      </Flexbox>
+      </div>
     );
 
     return (
-      <Popover
-        // Disabling the SWR key clears data before the exit animation finishes.
-        content={<Freeze frozen={!open}>{content}</Freeze>}
-        mouseEnterDelay={0.35}
-        open={open}
-        placement="top"
-        styles={{ content: { borderRadius: 12, overflow: 'hidden', padding: 0 } }}
-        trigger="hover"
-        triggerProps={{ role: 'link' }}
-        onOpenChange={setOpen}
-      >
-        {children}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger openOnHover delay={350} render={<span role="link">{children}</span>} />
+        <PopoverContent side="top" style={{ borderRadius: 12, overflow: 'hidden', padding: 0 }}>
+          {/* Disabling the SWR key clears data before the exit animation finishes. */}
+          <Freeze frozen={!open}>{content}</Freeze>
+        </PopoverContent>
       </Popover>
     );
   },

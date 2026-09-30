@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { getBuiltinRender } from '@orvilo/builtin-tools/renders';
 import { type ChatPluginPayload } from '@orvilo/types';
 import { safeParseJSON } from '@orvilo/utils';
@@ -25,7 +24,7 @@ const CustomRender = memo<CustomRenderProps>(
     if (!Render) return null;
 
     return (
-      <Flexbox gap={12} id={toolCallId} width={'100%'}>
+      <div className="flex flex-col gap-3" id={toolCallId} style={{ width: '100%' }}>
         <Render
           apiName={plugin?.apiName}
           args={safeParseJSON(plugin?.arguments)}
@@ -35,7 +34,7 @@ const CustomRender = memo<CustomRenderProps>(
           pluginState={pluginState}
           toolCallId={toolCallId}
         />
-      </Flexbox>
+      </div>
     );
   },
 );

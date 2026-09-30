@@ -1,7 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { registerPendingHotkeyCard } from '@orvilo/shared-tool-ui/pending-hotkeys';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleStop, CornerDownLeft } from 'lucide-react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -319,7 +319,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
     if (!canUseResource) return null;
 
     return (
-      <Flexbox className={styles.container} ref={containerRef}>
+      <div className={cn('flex flex-col', styles.container)} ref={containerRef}>
         <div className={styles.optionList} role="radiogroup">
           {choices.map((c, index) => {
             if (c === 'reject') {
@@ -392,7 +392,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
             </span>
           </Button>
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

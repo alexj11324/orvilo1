@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox, Popover } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DEFAULT_AVATAR } from '@/const/index';
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
@@ -74,30 +74,34 @@ const Render = memo<MarkdownElementProps<MentionProps>>(({ children, node }) => 
   }
 
   return (
-    <Popover
-      trigger="click"
-      content={
-        <Flexbox gap={12} style={{ overflow: 'hidden' }} width={320}>
-          <Flexbox horizontal align="center" gap={8}>
-            <Avatar
-              avatar={member.avatar || DEFAULT_AVATAR}
-              background={member.backgroundColor ?? undefined}
-              shape={'square'}
-              style={{ flex: 'none' }}
-            />
-            <Flexbox style={{ overflow: 'hidden' }}>
-              <Text ellipsis type={'secondary'}>
-                {member.description}
-              </Text>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
-      }
-    >
-      <span className={styles.mention}>
-        {'@'}
-        {member.title || name || children}
-      </span>
+    <Popover>
+      <PopoverContent>
+        {
+          <div className="flex flex-col gap-3" style={{ width: 320, overflow: 'hidden' }}>
+            <div className="flex items-center gap-2">
+              <Avatar
+                avatar={member.avatar || DEFAULT_AVATAR}
+                background={member.backgroundColor ?? undefined}
+                shape={'square'}
+                style={{ flex: 'none' }}
+              />
+              <div className="flex flex-col" style={{ overflow: 'hidden' }}>
+                <Text ellipsis type={'secondary'}>
+                  {member.description}
+                </Text>
+              </div>
+            </div>
+          </div>
+        }
+      </PopoverContent>
+      <PopoverTrigger
+        render={
+          <span className={styles.mention}>
+            {'@'}
+            {member.title || name || children}
+          </span>
+        }
+      />
     </Popover>
   );
 });

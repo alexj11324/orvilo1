@@ -1,10 +1,11 @@
 'use client';
 
-import { copyToClipboard, Flexbox, PatchDiff } from '@lobehub/ui';
+import { copyToClipboard, PatchDiff } from '@lobehub/ui';
 import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles, cssVar as themeCssVar } from 'antd-style';
+import { cn } from 'cn';
 import { CopyIcon, LocateFixedIcon, Undo2Icon } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
@@ -272,7 +273,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
           {additions > 0 && deletions > 0 && ' '}
           {deletions > 0 && <span className={styles.deletions}>-{deletions}</span>}
         </span>
-        <Flexbox horizontal align={'center'} className={styles.actions} gap={2}>
+        <div className={cn('flex items-center gap-0.5', styles.actions)}>
           <ActionIcon
             className={styles.rowAction}
             icon={CopyIcon}
@@ -297,7 +298,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
               onClick={handleRevert}
             />
           )}
-        </Flexbox>
+        </div>
       </div>
     );
   },

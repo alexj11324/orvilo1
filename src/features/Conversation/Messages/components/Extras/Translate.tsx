@@ -1,4 +1,4 @@
-import { copyToClipboard, Flexbox, Icon, Markdown } from '@lobehub/ui';
+import { copyToClipboard, Markdown } from '@lobehub/ui';
 import { ActionIcon, Tag, toast } from '@lobehub/ui/base-ui';
 import { type ChatTranslate } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -21,16 +21,16 @@ const Translate = memo<TranslateProps>(({ content = '', from, to, id, loading })
   const clearTranslate = useConversationStore((s) => s.clearTranslate);
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
         <div>
-          <Flexbox horizontal gap={4}>
+          <div className="flex gap-1">
             <Tag style={{ margin: 0 }}>{from ? t(`lang.${from}` as any) : '...'}</Tag>
-            <Icon color={cssVar.colorTextTertiary} icon={ChevronsRight} />
+            <ChevronsRight color={cssVar.colorTextTertiary} />
             <Tag>{t(`lang.${to}` as any)}</Tag>
-          </Flexbox>
+          </div>
         </div>
-        <Flexbox horizontal>
+        <div className="flex">
           <ActionIcon
             icon={CopyIcon}
             size={'small'}
@@ -55,14 +55,14 @@ const Translate = memo<TranslateProps>(({ content = '', from, to, id, loading })
               setShow(!show);
             }}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {!show ? null : loading && !content ? (
         <BubblesLoading />
       ) : (
         <Markdown variant={'chat'}>{content}</Markdown>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
+
 import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { memo, useMemo, useState } from 'react';
 
@@ -125,13 +125,13 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
       items={[
         {
           children: (
-            <Block gap={16} padding={12} style={{ marginBlock: 8 }} variant={'outlined'}>
+            <div className="flex flex-col gap-4 p-3" style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}>
               {instruction && (
-                <Block padding={12}>
+                <div className="flex flex-col p-3">
                   <Text fontSize={13} type={'secondary'}>
                     {instruction}
                   </Text>
-                </Block>
+                </div>
               )}
 
               {/* Initializing State - no taskDetail yet or no blocks */}
@@ -152,7 +152,7 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
 
               {/* Error State */}
               {!isInitializing && isError && taskDetail && <ErrorState taskDetail={taskDetail} />}
-            </Block>
+            </div>
           ),
           key: id,
           title: <TaskTitle metrics={metrics} status={status} title={title} />,

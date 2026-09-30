@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { AlertTriangle, RotateCw } from 'lucide-react';
 import { memo } from 'react';
@@ -24,12 +23,12 @@ const QuotaLimitError = memo<QuotaLimitErrorProps>(({ id, onRetry }) => {
 
   return (
     <BaseErrorForm
-      avatar={<Icon icon={AlertTriangle} size={24} />}
+      avatar={<AlertTriangle size={24} />}
       title={t('response.QuotaLimitReachedCloud')}
       action={
         <Button
           disabled={onRetry ? false : disabled}
-          icon={<Icon icon={RotateCw} />}
+          icon={<RotateCw />}
           loading={loading}
           size={'small'}
           type={'primary'}

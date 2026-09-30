@@ -1,10 +1,11 @@
-import { Center, Flexbox, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { type ChatFileChunk } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import FileIcon from '@/components/FileIcon';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useChatStore } from '@/store/chat';
 
@@ -20,27 +21,38 @@ const ChunkItem = memo<ChunkItemProps>(({ id, fileId, similarity, text, filename
   const openFilePreview = useChatStore((s) => s.openFilePreview);
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight)}
-      gap={4}
+    <div
       key={id}
+      className={cn(
+        'flex items-center gap-1',
+        cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
+      )}
       onClick={(e) => {
         e.stopPropagation();
         openFilePreview({ chunkId: id, chunkText: text, fileId });
       }}
     >
       <FileIcon fileName={filename} fileType={fileType} size={20} variant={'raw'} />
-      <Flexbox horizontal gap={12} justify={'space-between'} style={{ maxWidth: 200 }}>
+      <div className="flex gap-3 justify-between" style={{ maxWidth: 200 }}>
         <Text ellipsis>{filename}</Text>
         {similarity && (
-          <Tooltip title={similarity}>
-            <Center className={styles.badge}>{similarity.toFixed(1)}</Center>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <div className={cn('flex items-center justify-center', styles.badge)}>
+                      {similarity.toFixed(1)}
+                    </div>
+                  </span>
+                }
+              />
+              <TooltipContent>{similarity}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

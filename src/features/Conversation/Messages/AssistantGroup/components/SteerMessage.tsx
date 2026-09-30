@@ -1,6 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,12 +30,12 @@ const SteerMessage = memo<SteerMessageProps>(({ id }) => {
   if (!item) return null;
 
   return (
-    <Flexbox align={'flex-end'} data-message-id={id} data-steer-message={id}>
-      <Flexbox align={'flex-start'} className={styles.bubble} gap={4}>
+    <div className="flex flex-col items-end" data-message-id={id} data-steer-message={id}>
+      <div className={cn('flex flex-col items-start gap-1', styles.bubble)}>
         <Tag>{t('steer.tag')}</Tag>
         <UserMessageContent {...item} />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

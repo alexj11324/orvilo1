@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import {
   type ActivateToolsParams,
@@ -8,9 +7,10 @@ import {
 import { builtinToolIdentifiers } from '@orvilo/builtin-tools/identifiers';
 import { safeParseJSON } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronRight, Edit3Icon } from 'lucide-react';
-import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
+import { createElement, memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -174,7 +174,7 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
       );
 
     const actions = (
-      <Flexbox horizontal justify={'flex-end'}>
+      <div className="flex justify-end">
         <ApprovalActions
           apiName={apiName}
           approvalMode={approvalMode}
@@ -184,12 +184,12 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
           toolCallId={toolCallId}
           onBeforeApprove={() => pendingEditedArgumentsRef.current}
         />
-      </Flexbox>
+      </div>
     );
 
     return (
-      <Flexbox gap={4}>
-        <Flexbox horizontal align="center" className={styles.description} gap={6}>
+      <div className="flex flex-col gap-1">
+        <div className={cn('flex items-center gap-1.5', styles.description)}>
           {pluginMeta?.avatar && (
             <Avatar
               avatar={pluginMeta.avatar}
@@ -203,20 +203,17 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
             {toolTitle} → {actionTitle}
             {actionTitleSuffix}
           </span>
-        </Flexbox>
+        </div>
 
         {activationReason && <div className={styles.reason}>{activationReason}</div>}
 
         {argCount > 0 && (
           <>
-            <Flexbox
-              horizontal
-              align="center"
-              className={styles.collapseHeader}
-              gap={4}
+            <div
+              className={cn('flex items-center gap-1', styles.collapseHeader)}
               onClick={() => setShowArgs(!showArgs)}
             >
-              <Icon icon={showArgs ? ChevronDown : ChevronRight} size={14} />
+              {createElement(showArgs ? ChevronDown : ChevronRight, { size: 14 })}
               <span>
                 {t('tool.intervention.viewParameters', {
                   count: argCount,
@@ -234,13 +231,13 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
                   }}
                 />
               )}
-            </Flexbox>
+            </div>
             {showArgs && <Arguments arguments={renderedArgs} />}
           </>
         )}
 
         {actionsPortalTarget ? createPortal(actions, actionsPortalTarget) : actions}
-      </Flexbox>
+      </div>
     );
   },
 );

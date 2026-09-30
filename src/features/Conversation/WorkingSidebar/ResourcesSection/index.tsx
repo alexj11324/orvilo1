@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
@@ -32,13 +31,10 @@ const ResourcesSection = memo<ResourcesSectionProps>(({ deviceId, enabled = true
   const workingDirectory = useEffectiveWorkingDirectory(activeAgentId);
 
   return (
-    <Flexbox
+    <div
+      className="flex flex-col flex-1 gap-4 py-2"
       data-testid={`workspace-${filter}`}
-      flex={1}
-      gap={16}
-      paddingBlock={8}
-      paddingInline={'8px 12px'}
-      style={{ minHeight: 0 }}
+      style={{ paddingInline: '8px 12px', minHeight: 0 }}
     >
       {isHetero && workingDirectory && filter === 'skills' && (
         <SkillsGroup deviceId={deviceId} workingDirectory={workingDirectory} />
@@ -53,7 +49,7 @@ const ResourcesSection = memo<ResourcesSectionProps>(({ deviceId, enabled = true
           workingDirectory={workingDirectory}
         />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

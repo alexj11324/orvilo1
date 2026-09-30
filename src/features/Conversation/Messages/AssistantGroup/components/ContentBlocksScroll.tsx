@@ -1,10 +1,12 @@
 'use client';
 
-import { Flexbox, ScrollArea } from '@lobehub/ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import type { UIChatMessage } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import type { RefObject } from 'react';
 import { memo, useMemo } from 'react';
+
+import { ScrollBar } from '@/components/ui/scroll-area';
 
 import { resolveAssistantGroupFromMessages } from '../utils/resolveAssistantGroupFromMessages';
 import ContentBlock from './ContentBlock';
@@ -67,7 +69,7 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
   }, [assistantIdFromProps, blocksFromProps, messagesList]);
 
   const list = (
-    <Flexbox gap={variant === 'workflow' ? 8 : undefined}>
+    <div className="flex flex-col" style={{ gap: variant === 'workflow' ? 8 : undefined }}>
       {blocks.map((block) => (
         <ContentBlock
           key={block.renderKey ?? block.id}
@@ -76,10 +78,17 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
           disableEditing={disableEditing}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 
-  const body = variant === 'workflow' ? <Flexbox paddingBlock={'4px 8px'}>{list}</Flexbox> : list;
+  const body =
+    variant === 'workflow' ? (
+      <div className="flex flex-col" style={{ paddingBlock: '4px 8px' }}>
+        {list}
+      </div>
+    ) : (
+      list
+    );
 
   if (!scroll) {
     return body;
@@ -88,24 +97,18 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
   const scrollClass = variant === 'task' ? styles.scrollTask : styles.scrollWorkflow;
 
   return (
-    <ScrollArea
-      disableContentFit
-      scrollFade
-      className={styles.scrollRoot}
-      contentProps={{ style: { paddingInlineEnd: 12 } }}
-      scrollbarProps={{
-        style: {
-          marginInlineEnd: 2,
-        },
-      }}
-      viewportProps={{
-        className: scrollClass,
-        ref: scrollRef as RefObject<HTMLDivElement>,
-        onScroll,
-      }}
-    >
-      {body}
-    </ScrollArea>
+    <ScrollAreaPrimitive.Root className={styles.scrollRoot}>
+      <ScrollAreaPrimitive.Viewport
+        className={scrollClass}
+        ref={scrollRef as RefObject<HTMLDivElement>}
+        style={{ paddingInlineEnd: 12 }}
+        onScroll={onScroll}
+      >
+        {body}
+      </ScrollAreaPrimitive.Viewport>
+      <ScrollBar style={{ marginInlineEnd: 2 }} />
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { LayersEnum } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -67,7 +66,7 @@ const RECEIPT_ROLLBACK_LABEL_BY_STATUS = {
 const renderReceiptIcon = (kind: AgentSignalReceiptView['kind']) => {
   if (kind === 'skill') return <SkillsIcon size={28} />;
   const LucideIconComponent = RECEIPT_LUCIDE_ICON_BY_KIND[kind];
-  return LucideIconComponent ? <Icon icon={LucideIconComponent} size={28} /> : null;
+  return LucideIconComponent ? <LucideIconComponent size={28} /> : null;
 };
 
 interface AgentSignalReceiptListProps {

@@ -1,9 +1,9 @@
 'use client';
 
-import { Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Button, Skeleton, toast } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -21,6 +21,14 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   getCiVisual,
   getPullRequestState,
@@ -364,38 +372,50 @@ const Overview = memo<OverviewProps>(
         />
 
         {pullRequest && prVisual && ci && (
-          <Tooltip title={`#${pullRequest.number} ${pullRequest.title}`}>
-            <div>
-              <OverviewRow
-                icon={prVisual.icon}
-                iconColor={prVisual.color}
-                trailing={
-                  <span
-                    className={styles.pill}
-                    style={{ background: `color-mix(in srgb,  12%, transparent)`, color: ci.color }}
-                  >
-                    <Icon icon={ci.icon} size={12} />
-                    {shouldShowCiLabel(ciStatus)
-                      ? t(
-                          `workingPanel.overview.ci.${ciStatus as 'failure' | 'pending'}` as 'workingPanel.overview.ci.failure',
-                        )
-                      : null}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <div>
+                      <OverviewRow
+                        icon={prVisual.icon}
+                        iconColor={prVisual.color}
+                        trailing={
+                          <span
+                            className={styles.pill}
+                            style={{
+                              background: `color-mix(in srgb,  12%, transparent)`,
+                              color: ci.color,
+                            }}
+                          >
+                            <ci.icon size={12} />
+                            {shouldShowCiLabel(ciStatus)
+                              ? t(
+                                  `workingPanel.overview.ci.${ciStatus as 'failure' | 'pending'}` as 'workingPanel.overview.ci.failure',
+                                )
+                              : null}
+                          </span>
+                        }
+                        value={
+                          <>
+                            <span className={rowStyles.num}>#{pullRequest.number}</span>
+                            {pullRequest.title}
+                          </>
+                        }
+                        onClick={
+                          pullRequest.url
+                            ? () => void electronSystemService.openExternalLink(pullRequest.url)
+                            : undefined
+                        }
+                      />
+                    </div>
                   </span>
                 }
-                value={
-                  <>
-                    <span className={rowStyles.num}>#{pullRequest.number}</span>
-                    {pullRequest.title}
-                  </>
-                }
-                onClick={
-                  pullRequest.url
-                    ? () => void electronSystemService.openExternalLink(pullRequest.url)
-                    : undefined
-                }
               />
-            </div>
-          </Tooltip>
+              <TooltipContent>{`#${pullRequest.number} ${pullRequest.title}`}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </>
     );
@@ -413,7 +433,7 @@ const Overview = memo<OverviewProps>(
           value={t('workingPanel.overview.environmentError')}
           trailing={
             <Button
-              icon={<Icon icon={RefreshCwIcon} size={12} />}
+              icon={<RefreshCwIcon size={12} />}
               size={'small'}
               onClick={() => void refreshGit()}
             >
@@ -434,7 +454,7 @@ const Overview = memo<OverviewProps>(
     );
 
     return (
-      <Flexbox className={styles.body}>
+      <div className={cn('flex flex-col', styles.body)}>
         {hasWorkspace && (
           <>
             <OverviewHeader
@@ -445,29 +465,27 @@ const Overview = memo<OverviewProps>(
               repoType={repoType}
               onClick={() => onOpenTab('files')}
             />
-            <Flexbox className={styles.section}>{workspaceSection}</Flexbox>
+            <div className={cn('flex flex-col', styles.section)}>{workspaceSection}</div>
           </>
         )}
 
         {environmentAvailable && !workingDirectory && (
-          <Empty
-            className={cx(styles.section, styles.emptyWorkspace)}
-            description={t('workingPanel.overview.workspace.emptyDesc')}
-            icon={LaptopIcon}
-            title={t('workingPanel.overview.workspace.empty')}
-          />
+          <Empty className={cx(styles.section, styles.emptyWorkspace)}>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <LaptopIcon />
+              </EmptyMedia>
+              <EmptyTitle>{t('workingPanel.overview.workspace.empty')}</EmptyTitle>
+              <EmptyDescription>{t('workingPanel.overview.workspace.emptyDesc')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         <ProgressSection className={styles.section} />
 
         {visibleWorks.length > 0 && (
-          <Flexbox className={styles.section}>
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={styles.sectionHeader}
-              justify={'space-between'}
-            >
+          <div className={cn('flex flex-col', styles.section)}>
+            <div className={cn('flex items-center justify-between', styles.sectionHeader)}>
               <span className={styles.sectionTitle}>{t('workingPanel.overview.outputs')}</span>
               <Button
                 outdent={'end'}
@@ -477,23 +495,26 @@ const Overview = memo<OverviewProps>(
               >
                 {t('workingPanel.overview.viewAll')}
               </Button>
-            </Flexbox>
+            </div>
             {visibleWorks.map((work) => (
               <WorkSummaryCard item={work} key={work.id} variant={'inline'} />
             ))}
-          </Flexbox>
+          </div>
         )}
 
         {!environmentAvailable && !topicId && visibleWorks.length === 0 && (
-          <Empty
-            className={styles.section}
-            description={t('workingPanel.overview.empty')}
-            icon={BoxesIcon}
-            title={t('workingPanel.overview.emptyTitle')}
-          />
+          <Empty className={styles.section}>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <BoxesIcon />
+              </EmptyMedia>
+              <EmptyTitle>{t('workingPanel.overview.emptyTitle')}</EmptyTitle>
+              <EmptyDescription>{t('workingPanel.overview.empty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
-        <Flexbox className={styles.section}>
+        <div className={cn('flex flex-col', styles.section)}>
           <OverviewRow
             weak
             icon={SkillsIcon}
@@ -512,8 +533,8 @@ const Overview = memo<OverviewProps>(
               onClick={() => onOpenTab('documents')}
             />
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

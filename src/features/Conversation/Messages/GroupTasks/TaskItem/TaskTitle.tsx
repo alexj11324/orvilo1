@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { ThreadStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -47,9 +46,9 @@ const TaskStatusIndicator = memo<{ status?: ThreadStatus }>(({ status }) => {
   let icon;
 
   if (isCompleted) {
-    icon = <Icon color={cssVar.colorSuccess} icon={ListChecksIcon} />;
+    icon = <ListChecksIcon color={cssVar.colorSuccess} />;
   } else if (isError) {
-    icon = <Icon color={cssVar.colorError} icon={XIcon} />;
+    icon = <XIcon color={cssVar.colorError} />;
   } else if (isProcessing || isInitializing) {
     icon = <NeuralNetworkLoading size={16} />;
   } else {
@@ -57,21 +56,20 @@ const TaskStatusIndicator = memo<{ status?: ThreadStatus }>(({ status }) => {
   }
 
   return (
-    <Block
-      horizontal
-      align={'center'}
-      flex={'none'}
-      gap={4}
-      height={24}
-      justify={'center'}
-      variant={'outlined'}
-      width={24}
+    <div
+      className="flex items-center gap-1 justify-center"
       style={{
+        flex: 'none',
+        height: 24,
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+        width: 24,
+
         fontSize: 12,
       }}
     >
       {icon}
-    </Block>
+    </div>
   );
 });
 
@@ -118,24 +116,24 @@ const MetricsDisplay = memo<MetricsDisplayProps>(({ metrics, status }) => {
   if (!hasSteps && !hasToolCalls && !hasTime) return null;
 
   return (
-    <Flexbox horizontal align="center" gap={8}>
+    <div className="flex items-center gap-2">
       {/* Steps */}
       {hasSteps && (
-        <Flexbox horizontal align="center" gap={2}>
-          <Icon color={cssVar.colorTextTertiary} icon={Footprints} size={12} />
+        <div className="flex items-center gap-0.5">
+          <Footprints color={cssVar.colorTextTertiary} size={12} />
           <Text fontSize={12} type="secondary">
             {steps}
           </Text>
-        </Flexbox>
+        </div>
       )}
       {/* Tool calls */}
       {hasToolCalls && (
-        <Flexbox horizontal align="center" gap={2}>
-          <Icon color={cssVar.colorTextTertiary} icon={Wrench} size={12} />
+        <div className="flex items-center gap-0.5">
+          <Wrench color={cssVar.colorTextTertiary} size={12} />
           <Text fontSize={12} type="secondary">
             {toolCalls}
           </Text>
-        </Flexbox>
+        </div>
       )}
       {/* Time */}
       {hasTime && (
@@ -147,7 +145,7 @@ const MetricsDisplay = memo<MetricsDisplayProps>(({ metrics, status }) => {
               : null}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -155,7 +153,7 @@ MetricsDisplay.displayName = 'MetricsDisplay';
 
 const TaskTitle = memo<TaskTitleProps>(({ title, status, metrics, agent }) => {
   return (
-    <Flexbox horizontal align="center" gap={6}>
+    <div className="flex items-center gap-1.5">
       <TaskStatusIndicator status={status} />
       {agent && (
         <Avatar
@@ -169,7 +167,7 @@ const TaskTitle = memo<TaskTitleProps>(({ title, status, metrics, agent }) => {
         {title}
       </Text>
       {metrics && <MetricsDisplay metrics={metrics} status={status} />}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { Divider } from 'antd';
 import isEqual from 'fast-deep-equal';
@@ -54,11 +53,11 @@ const CouncilList = memo<CouncilListProps>(({ members, displayMode, activeTab })
       const MIN_WIDTH = CONVERSATION_MIN_WIDTH / 2;
       return (
         <ScrollShadowWithButton justify={wideScreen ? 'flex-start' : 'center'}>
-          <Flexbox
-            horizontal
-            justify={wideScreen ? 'flex-start' : 'center'}
-            paddingInline={16}
+          <div
+            className="flex px-4"
             style={{
+              justifyContent: wideScreen ? 'flex-start' : 'center',
+
               minWidth: MIN_WIDTH * members.length + 32 + 32 * (members.length - 1),
             }}
           >
@@ -66,17 +65,18 @@ const CouncilList = memo<CouncilListProps>(({ members, displayMode, activeTab })
               if (!member) return null;
               return (
                 <Fragment key={member.id}>
-                  <Flexbox
-                    gap={12}
+                  <div
+                    className="flex flex-col gap-3"
                     key={member.id}
-                    width={`min(${MIN_WIDTH}px, 100%)`}
                     style={{
+                      width: `min(${MIN_WIDTH}px, 100%)`,
+
                       minWidth: MIN_WIDTH,
                       position: 'relative',
                     }}
                   >
                     <CouncilMember index={idx} item={member} />
-                  </Flexbox>
+                  </div>
                   {idx < members?.length - 1 && (
                     <Divider
                       dashed
@@ -87,7 +87,7 @@ const CouncilList = memo<CouncilListProps>(({ members, displayMode, activeTab })
                 </Fragment>
               );
             })}
-          </Flexbox>
+          </div>
         </ScrollShadowWithButton>
       );
     }

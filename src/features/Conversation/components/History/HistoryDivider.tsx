@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { Timer } from 'lucide-react';
@@ -16,7 +15,7 @@ const HistoryDivider = memo<HistoryDividerProps>(({ enable }) => {
   return (
     <div style={{ padding: '0 20px' }}>
       <Divider style={{ margin: 0, padding: '20px 0' }}>
-        <Tag icon={<Icon icon={Timer} />}>{t('historyRange')}</Tag>
+        <Tag icon={<Timer />}>{t('historyRange')}</Tag>
       </Divider>
     </div>
   );

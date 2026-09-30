@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+
 import { Tag } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -48,11 +48,11 @@ const TasksMessage = memo<TasksMessageProps>(({ id }) => {
       time={createdAt}
       titleAddon={<Tag>{t('task.batchTasks', { count: tasks.length })}</Tag>}
     >
-      <Flexbox gap={8} width={'100%'}>
+      <div className="flex flex-col gap-2" style={{width: '100%'}}>
         {tasks.map((task) => (
           <TaskItem item={task} key={task.id} />
         ))}
-      </Flexbox>
+      </div>
     </ChatItem>
   );
 }, isEqual);

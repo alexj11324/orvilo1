@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { LOADING_FLAT } from '@orvilo/const';
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import { type ModelPerformance, type ModelUsage } from '@orvilo/types';
@@ -47,7 +46,7 @@ export const AssistantMessageExtra = memo<AssistantMessageExtraProps>(
     if (!showUsage && !showTts && !showTranslate) return null;
 
     return (
-      <Flexbox gap={8} style={{ marginTop: !!tools?.length ? 8 : 4 }}>
+      <div className="flex flex-col gap-2" style={{ marginTop: !!tools?.length ? 8 : 4 }}>
         {showUsage && (
           <Usage model={model!} performance={performance} provider={provider!} usage={usage} />
         )}
@@ -61,7 +60,7 @@ export const AssistantMessageExtra = memo<AssistantMessageExtraProps>(
             <Translate id={id} loading={loading} {...extra?.translate} />
           </ExtraContainer>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

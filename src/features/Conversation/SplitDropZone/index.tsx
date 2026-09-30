@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { PanelRight } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,8 +42,8 @@ const SplitDropZone = memo<{ children: ReactNode }>(({ children }) => {
     useConversationPanelDrop();
 
   return (
-    <Flexbox
-      className={styles.root}
+    <div
+      className={cn('flex flex-col', styles.root)}
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
       onDragOver={onDragOver}
@@ -52,16 +52,16 @@ const SplitDropZone = memo<{ children: ReactNode }>(({ children }) => {
     >
       {children}
       {dragKind && (
-        <Flexbox align={'center'} className={styles.overlay} justify={'center'}>
-          <Flexbox align={'center'} gap={8} style={{ color: cssVar.colorInfo }}>
-            <Icon icon={PanelRight} size={28} />
+        <div className={cn('flex flex-col items-center justify-center', styles.overlay)}>
+          <div className="flex flex-col items-center gap-2" style={{ color: cssVar.colorInfo }}>
+            <PanelRight size={28} />
             <Text style={{ color: 'inherit', fontSize: 14, fontWeight: 500 }}>
               {t('openOnRightHint')}
             </Text>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

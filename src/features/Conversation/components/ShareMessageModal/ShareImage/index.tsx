@@ -1,7 +1,8 @@
 import { type FormItemProps } from '@lobehub/ui';
-import { Flexbox, Form } from '@lobehub/ui';
+import { Form } from '@lobehub/ui';
 import { Button, Switch, Tabs } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type UIChatMessage } from '@orvilo/types';
+import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -106,7 +107,7 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
 
     return (
       <>
-        <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
+        <div className={cn('flex gap-4', styles.body)}>
           <Preview
             context={context}
             title={title}
@@ -114,7 +115,7 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
             message={message}
             previewId={previewId}
           />
-          <Flexbox className={styles.sidebar} gap={12}>
+          <div className={cn('flex flex-col gap-3', styles.sidebar)}>
             <Form
               initialValues={DEFAULT_FIELD_VALUE}
               items={settings}
@@ -123,13 +124,9 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
               {...FORM_STYLE}
             />
             {!isMobile && button}
-          </Flexbox>
-        </Flexbox>
-        {isMobile && (
-          <Flexbox horizontal className={styles.footer} gap={8}>
-            {button}
-          </Flexbox>
-        )}
+          </div>
+        </div>
+        {isMobile && <div className={cn('flex gap-2', styles.footer)}>{button}</div>}
       </>
     );
   },

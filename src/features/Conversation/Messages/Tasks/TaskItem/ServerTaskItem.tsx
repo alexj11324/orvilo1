@@ -1,6 +1,6 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
+
 import { Accordion } from '@lobehub/ui/base-ui';
 import { memo, useMemo, useState } from 'react';
 
@@ -53,7 +53,7 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
       items={[
         {
           children: (
-            <Block gap={16} padding={12} style={{ marginBlock: 8 }} variant={'outlined'}>
+            <div className="flex flex-col gap-4 p-3" style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}>
               {expanded && (
                 <TaskContent
                   id={id}
@@ -64,7 +64,7 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
                   threadId={threadId}
                 />
               )}
-            </Block>
+            </div>
           ),
           key: id,
           title: <TaskTitle metrics={metrics} status={status} title={title} />,

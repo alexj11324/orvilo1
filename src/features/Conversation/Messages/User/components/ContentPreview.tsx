@@ -1,4 +1,4 @@
-import { Flexbox, MaskShadow } from '@lobehub/ui';
+import { MaskShadow } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { useTranslation } from 'react-i18next';
 
@@ -16,11 +16,11 @@ const ContentPreview = ({ content, id }: ContentPreviewProps) => {
   const [openMessageDetail] = useChatStore((s) => [s.openMessageDetail]);
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       <MaskShadow>
         <MarkdownMessage>{content.slice(0, 1000)}</MarkdownMessage>
       </MaskShadow>
-      <Flexbox padding={4}>
+      <div className="flex flex-col p-1">
         <Button
           block
           size={'small'}
@@ -31,8 +31,8 @@ const ContentPreview = ({ content, id }: ContentPreviewProps) => {
         >
           {t('chatList.longMessageDetail')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 export default ContentPreview;

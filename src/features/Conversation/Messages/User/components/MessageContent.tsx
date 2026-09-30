@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 
 import CollapsibleContent from '@/components/CollapsibleContent';
@@ -32,7 +31,7 @@ const UserMessageContent = memo<UIChatMessage>(
     );
 
     return (
-      <Flexbox gap={8} id={id}>
+      <div className="flex flex-col gap-2" id={id}>
         {selections && selections.length > 0 && <PageSelections selections={selections} />}
         {textBody && <CollapsibleContent>{textBody}</CollapsibleContent>}
         {imageList && imageList?.length > 0 && <ImageFileListViewer items={imageList} />}
@@ -41,7 +40,7 @@ const UserMessageContent = memo<UIChatMessage>(
           <AudioFileListViewer items={audioList} messageId={id} />
         )}
         {fileList && fileList?.length > 0 && <FileListViewer items={fileList} />}
-      </Flexbox>
+      </div>
     );
   },
 );

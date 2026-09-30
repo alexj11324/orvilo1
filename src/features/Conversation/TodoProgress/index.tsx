@@ -1,11 +1,10 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Checkbox, Tag } from '@lobehub/ui/base-ui';
 import { type StepContextTodos } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDown, ChevronUp, CircleArrowRight } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
@@ -174,8 +173,8 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
       onClick={toggleExpanded}
     >
       {/* Header */}
-      <Flexbox horizontal align="center" gap={8} justify="space-between">
-        <Flexbox horizontal align="center" gap={8} style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex items-center gap-2 justify-between">
+        <div className="flex items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
           <svg className={styles.ring} height={RING_SIZE} width={RING_SIZE}>
             <circle
               className={styles.ringTrack}
@@ -207,13 +206,12 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
               {completed}/{total}
             </span>
           </Tag>
-        </Flexbox>
-        <Icon
-          icon={expanded ? ChevronUp : ChevronDown}
-          size={16}
-          style={{ color: cssVar.colorTextTertiary, flexShrink: 0 }}
-        />
-      </Flexbox>
+        </div>
+        {createElement(expanded ? ChevronUp : ChevronDown, {
+          size: 16,
+          style: { color: cssVar.colorTextTertiary, flexShrink: 0 },
+        })}
+      </div>
 
       {/* Expandable Todo List */}
       <div className={cx(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}>
@@ -225,11 +223,7 @@ const TodoProgress = memo<TodoProgressProps>(({ className, topAttached }) => {
           if (isProcessing) {
             return (
               <div className={cx(styles.itemRow, styles.processingRow)} key={index}>
-                <Icon
-                  icon={CircleArrowRight}
-                  size={17}
-                  style={{ color: cssVar.colorTextSecondary }}
-                />
+                <CircleArrowRight size={17} style={{ color: cssVar.colorTextSecondary }} />
                 <span className={styles.textProcessing}>{item.text}</span>
               </div>
             );

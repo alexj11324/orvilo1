@@ -1,6 +1,7 @@
-import { Center, Flexbox, Icon, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ScrollText } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,32 +41,32 @@ const History = memo(() => {
   );
 
   return (
-    <Flexbox paddingInline={16} style={{ paddingBottom: 8 }}>
+    <div className="flex flex-col px-4" style={{ paddingBottom: 8 }}>
       <HistoryDivider enable />
       {enableCompressHistory && !!content && (
-        <Flexbox className={styles.container} gap={8}>
-          <Flexbox horizontal align={'flex-start'} gap={8}>
-            <Center height={20} width={20}>
-              <Icon icon={ScrollText} size={16} style={{ color: cssVar.colorTextDescription }} />
-            </Center>
+        <div className={cn('flex flex-col gap-2', styles.container)}>
+          <div className="flex items-start gap-2">
+            <div className="flex items-center justify-center" style={{ height: 20, width: 20 }}>
+              <ScrollText size={16} style={{ color: cssVar.colorTextDescription }} />
+            </div>
             <Text type={'secondary'}>{t('historySummary')}</Text>
             {model && (
               <div>
                 <ModelTag model={model} />
               </div>
             )}
-          </Flexbox>
-          <Flexbox horizontal align={'flex-start'} gap={8}>
-            <Flexbox align={'center'} padding={8} width={20}>
+          </div>
+          <div className="flex items-start gap-2">
+            <div className="flex flex-col items-center p-2" style={{ width: 20 }}>
               <div className={styles.line} />
-            </Flexbox>
+            </div>
             <Markdown className={styles.content} variant={'chat'}>
               {content}
             </Markdown>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

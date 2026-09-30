@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, Skeleton, Text, toast, Tooltip } from '@lobehub/ui/base-ui';
+import { Avatar, Skeleton, Text, toast } from '@lobehub/ui/base-ui';
 import type { DocumentLikeSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';

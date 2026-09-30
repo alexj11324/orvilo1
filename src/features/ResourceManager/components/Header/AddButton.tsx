@@ -12,6 +12,7 @@ import { type ChangeEvent } from 'react';
 import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useCurrentFolderId } from '@/features/ResourceManager/hooks/useCurrentFolderId';
 import { useTopLevelFileUpload } from '@/features/ResourceManager/hooks/useTopLevelFileUpload';
@@ -74,7 +75,6 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
   const uploadTopLevel = useTopLevelFileUpload({ rootLevel });
 
   // TODO: Migrate Notion import to use createResource
-  import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
   // Keep old functions temporarily for components not yet migrated
   const createDocument = useFileStore((s) => s.createDocument);
 

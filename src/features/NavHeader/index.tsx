@@ -1,5 +1,5 @@
 import { cx } from 'antd-style';
-import type { ComponentProps, type CSSProperties, type ReactNode } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 
 import { TooltipProvider } from '@/components/ui/tooltip';

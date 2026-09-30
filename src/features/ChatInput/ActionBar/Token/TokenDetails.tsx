@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
-import { SimpleTooltip } from '../SimpleTooltip';
+import { SimpleTooltip } from '../../SimpleTooltip';
 import TokenProgress from './TokenProgress';
 import { type TokenBreakdown } from './useTokenBreakdown';
 

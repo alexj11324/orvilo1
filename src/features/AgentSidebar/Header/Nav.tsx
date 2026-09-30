@@ -55,6 +55,8 @@ const Nav = memo(() => {
   const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   const { mutate } = useActionSWR(topicActionKeys.openNewOrSave(), openNewTopicOrSaveTopic);
+  const latestPathname = useRef(pathname);
+  latestPathname.current = pathname;
   const newTopicPending = useRef(false);
   const [isOpeningTopic, setIsOpeningTopic] = useState(false);
   const handleNewTopic = async () => {
@@ -66,7 +68,16 @@ const Nav = memo(() => {
       // activeTopicId. Passing the action promise also propagates failures;
       // SWR revalidation alone resolves even when its fetcher fails.
       await mutate(openNewTopicOrSaveTopic(), { revalidate: false });
-      if (agentId) router.push(urlJoin('/agent', agentId));
+      // switchTopic's route subscriber can expose the blank composer before
+      // revalidation finishes. A newer send/navigation owns the destination;
+      // this late continuation must not send it back to the blank topic.
+      if (
+        agentId &&
+        latestPathname.current === pathname &&
+        !useChatStore.getState().activeTopicId
+      ) {
+        router.push(urlJoin('/agent', agentId));
+      }
     } catch {
       toast.error(t('unknownError', { ns: 'common' }));
     } finally {

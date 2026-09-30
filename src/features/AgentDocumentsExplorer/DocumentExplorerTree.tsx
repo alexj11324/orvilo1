@@ -1,4 +1,3 @@
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { AGENT_DOCUMENT_CATEGORY } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
@@ -8,6 +7,7 @@ import { memo, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { KeyedMutator } from 'swr';
 
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { buildAgentDocumentPath } from '@/features/AgentDocumentPage/navigation';
 import type {
   ExplorerTreeCanDropCtx,
@@ -378,7 +378,7 @@ const DocumentExplorerTree = memo<Props>(({ agentId, data, mutate, onOpenDocumen
         !isFolder && !isSkill && node.data?.category === AGENT_DOCUMENT_CATEGORY;
       if (isConvertibleToSkill && !isMulti) {
         items.push({
-          icon: <Icon icon={SkillsIcon} size={14} />,
+          icon: <SkillsIcon size={14} />,
           key: 'convert-to-skill',
           label: t('workingPanel.resources.tree.convertToSkill'),
           onClick: () => handleConvertToSkill(node.data!),
@@ -423,12 +423,19 @@ const DocumentExplorerTree = memo<Props>(({ agentId, data, mutate, onOpenDocumen
     <div className={styles.tree} ref={containerRef} style={treeStyle}>
       {nodes.length === 0 ? (
         // Keep the toolbar reachable (new folder / new doc) above the placeholder.
-        <Flexbox height={'100%'}>
+        <div className="flex flex-col h-full">
           {toolbar}
-          <Center flex={1} paddingBlock={24}>
-            <Empty description={t('workingPanel.resources.emptyDocuments')} icon={FileTextIcon} />
-          </Center>
-        </Flexbox>
+          <div className="flex items-center justify-center flex-1" style={{ paddingBlock: 24 }}>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant={'icon'}>
+                  <FileTextIcon />
+                </EmptyMedia>
+                <EmptyDescription>{t('workingPanel.resources.emptyDocuments')}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        </div>
       ) : (
         <ExplorerTree<AgentDocumentItem>
           iconsColored

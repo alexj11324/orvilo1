@@ -1,12 +1,21 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { Steps } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import {
+  Stepper,
+  StepperDescription,
+  StepperIndicator,
+  StepperItem,
+  StepperNav,
+  StepperSeparator,
+  StepperTitle,
+  StepperTrigger,
+} from '@/components/reui/stepper';
 
 const styles = createStaticStyles(({ css }) => ({
   loopBack: css`
@@ -51,24 +60,32 @@ const HowItWorksContent = memo(() => {
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox gap={12}>
-      <Steps
-        className={styles.steps}
-        current={-1}
-        direction={'vertical'}
-        size={'small'}
-        items={[1, 2, 3].map((index) => ({
-          description: t(`goalEmpty.step${index}.desc` as never),
-          title: t(`goalEmpty.step${index}.title` as never),
-        }))}
-      />
-      <Flexbox horizontal align={'flex-start'} className={styles.loopBack} gap={8}>
-        <Icon className={styles.loopIcon} icon={RotateCcwIcon} size={13} />
+    <div className="flex flex-col gap-3">
+      <Stepper className={styles.steps} defaultValue={0} orientation={'vertical'}>
+        <StepperNav>
+          {[1, 2, 3].map((index) => (
+            <StepperItem key={index} step={index}>
+              <StepperTrigger>
+                <StepperIndicator>{index}</StepperIndicator>
+                <div className="flex flex-col">
+                  <StepperTitle>{t(`goalEmpty.step${index}.title` as never)}</StepperTitle>
+                  <StepperDescription>
+                    {t(`goalEmpty.step${index}.desc` as never)}
+                  </StepperDescription>
+                </div>
+              </StepperTrigger>
+              {index < 3 && <StepperSeparator />}
+            </StepperItem>
+          ))}
+        </StepperNav>
+      </Stepper>
+      <div className={`flex items-start gap-2 ${styles.loopBack}`}>
+        <RotateCcwIcon className={styles.loopIcon} size={13} />
         <Text fontSize={12} style={{ lineHeight: 1.6 }} type={'secondary'}>
           {t('goalEmpty.loop')}
         </Text>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

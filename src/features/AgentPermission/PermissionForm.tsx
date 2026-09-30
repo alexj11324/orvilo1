@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormGroupItemType } from '@lobehub/ui';
-import { Empty, Form, Icon } from '@lobehub/ui';
+import { Form } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -10,6 +10,13 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import PolicySelect, { type PolicyOption } from '@/features/ResourcePermission/PolicySelect';
 import { getSelectionPolicyLabelKeys } from '@/features/ResourcePermission/selectionPolicyLabels';
@@ -135,12 +142,15 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
 
   if (!isWorkspaceAgent) {
     return (
-      <Empty
-        description={t('permission.page.personalDesc')}
-        icon={LockIcon}
-        title={t('permission.page.personalTitle')}
-        type={'page'}
-      />
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant={'icon'}>
+            <LockIcon />
+          </EmptyMedia>
+          <EmptyTitle>{t('permission.page.personalTitle')}</EmptyTitle>
+          <EmptyDescription>{t('permission.page.personalDesc')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
@@ -150,7 +160,7 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
           {
             avatar: (
               <span className={styles.rowIcon}>
-                <Icon icon={UsersIcon} size={16} />
+                <UsersIcon size={16} />
               </span>
             ),
             children: (
@@ -180,7 +190,7 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
           {
             avatar: (
               <span className={styles.rowIcon}>
-                <Icon icon={Share2} size={16} />
+                <Share2 size={16} />
               </span>
             ),
             children: (
@@ -206,7 +216,7 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
       {
         avatar: (
           <span className={styles.rowIcon}>
-            <Icon icon={Bot} size={16} />
+            <Bot size={16} />
           </span>
         ),
         children: (
@@ -225,7 +235,7 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
       {
         avatar: (
           <span className={styles.rowIcon}>
-            <Icon icon={MonitorSmartphone} size={16} />
+            <MonitorSmartphone size={16} />
           </span>
         ),
         children: (
@@ -256,7 +266,7 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
           say that once, up front, instead of qualifying each control. */}
       {isPrivate ? (
         <Alert
-          icon={<Icon icon={InfoIcon} />}
+          icon={<InfoIcon />}
           style={{ width: '100%' }}
           title={t('permission.page.privateNotice')}
           type={'info'}

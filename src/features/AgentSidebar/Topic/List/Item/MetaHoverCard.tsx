@@ -1,10 +1,9 @@
-import { Icon } from '@lobehub/ui';
 import type { ChatTopicMetadata } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { Clock } from 'lucide-react';
 import { GitBranchIcon, GitForkIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
@@ -97,12 +96,11 @@ interface DetailRowProps {
 
 const DetailRow = memo<DetailRowProps>(({ icon, iconColor, title, children }) => (
   <div className={styles.row}>
-    <Icon
-      className={styles.rowIcon}
-      icon={icon}
-      size={15}
-      style={iconColor ? { color: iconColor } : undefined}
-    />
+    {createElement(icon, {
+      className: styles.rowIcon,
+      size: 15,
+      style: iconColor ? { color: iconColor } : undefined,
+    })}
     <span className={styles.rowText} title={title}>
       {children}
     </span>
@@ -177,9 +175,8 @@ const MetaHoverCard = memo<MetaHoverCardProps>(({ metadata, title, time, topicId
             : `#${pullRequest.number}`;
           const prInner = (
             <>
-              <Icon
+              <prVisual.icon
                 className={styles.rowIcon}
-                icon={prVisual.icon}
                 size={15}
                 style={{ color: prVisual.color }}
               />

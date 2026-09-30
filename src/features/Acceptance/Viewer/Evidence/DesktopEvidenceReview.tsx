@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import { ZOOM_STEPS } from '../Review/rejectDraft';
 import type { RejectReviewModel } from '../Review/useRejectReview';
@@ -128,10 +129,10 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
   return (
     <div className={styles.body}>
       {activeEvidence && (
-        <Flexbox flex={1} gap={12} style={{ minHeight: 0 }}>
-          <Flexbox gap={12} height={'100%'} style={{ minHeight: 0 }}>
+        <div className="flex flex-col flex-1 gap-3" style={{ minHeight: 0 }}>
+          <div className="flex flex-col gap-3 h-full" style={{ minHeight: 0 }}>
             {evidence.length > 1 && (
-              <Flexbox horizontal gap={8} style={{ overflowX: 'auto', flex: 'none' }}>
+              <div className="flex gap-2" style={{ overflowX: 'auto', flex: 'none' }}>
                 {evidence.map((item, index) => (
                   <button
                     aria-pressed={item.id === activeEvidence.id}
@@ -151,7 +152,7 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                     <img alt={''} src={item.fileUrl} />
                   </button>
                 ))}
-              </Flexbox>
+              </div>
             )}
             <div className={styles.stageRow} style={{ position: 'relative' }}>
               <EvidenceStage
@@ -181,14 +182,14 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                 />
               </div>
               <div className={styles.notes}>
-                <Flexbox gap={2}>
+                <div className="flex flex-col gap-0.5">
                   <Text strong fontSize={13}>
                     {t('acceptance.review.regionComments')}
                   </Text>
                   <Text fontSize={12} type={'secondary'}>
                     {t('acceptance.review.annotateHint')}
                   </Text>
-                </Flexbox>
+                </div>
                 {activeAnnotations.length === 0 && (
                   <Text fontSize={12} type={'secondary'}>
                     {t('acceptance.review.regionCommentsEmpty')}
@@ -201,8 +202,8 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                 />
               </div>
             </div>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
       <div className={styles.footer}>
         {failed && (
@@ -210,21 +211,22 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
             {t('acceptance.review.submitFailed')}
           </Text>
         )}
-        <Flexbox gap={10} style={{ width: '100%' }}>
+        <div className="flex flex-col gap-2.5" style={{ width: '100%' }}>
           <Text fontSize={12} type={'secondary'}>
             {hasEvidence
               ? t('acceptance.review.supplement')
               : t('acceptance.review.rejectDescription', { title: checkTitle })}
           </Text>
-          <TextArea
-            autoSize={{ maxRows: 5, minRows: 2 }}
+          <Textarea
             placeholder={t('acceptance.review.rejectPlaceholder')}
+            rows={2}
+            style={{ maxHeight: '5lh' }}
             value={comment}
             onChange={(event) => model.setComment(event.target.value)}
             onPaste={handlePaste}
           />
-          <Flexbox horizontal align={'flex-start'} gap={8}>
-            <Flexbox horizontal flex={1} gap={8}>
+          <div className="flex items-start gap-2">
+            <div className="flex flex-1 gap-2">
               <AttachmentUploadButton disabled={loading} onFiles={model.uploadFiles} />
               <AttachmentStrip
                 attachments={attachments}
@@ -232,7 +234,7 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                 uploading={uploading}
                 onRemove={model.removeAttachment}
               />
-            </Flexbox>
+            </div>
             <Button disabled={loading} onClick={close}>
               {t('acceptance.actions.cancel')}
             </Button>
@@ -244,8 +246,8 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
             >
               {t('acceptance.review.confirmReject')}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </div>
     </div>
   );

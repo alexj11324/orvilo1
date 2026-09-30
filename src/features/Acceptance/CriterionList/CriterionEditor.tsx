@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox, Input, TextArea } from '@lobehub/ui';
 import { Button, Select, Switch, Text, toast } from '@lobehub/ui/base-ui';
 import { type VerifierType, verifierTypes } from '@orvilo/const/verify';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type { VerifyCriterionDraft } from '@/services/verify';
 
 /**
@@ -82,8 +83,8 @@ export const CriterionEditor = ({
   };
 
   return (
-    <Flexbox gap={16} padding={16}>
-      <Flexbox gap={6}>
+    <div className="flex flex-col gap-4" style={{ padding: 16 }}>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={12} type={'secondary'}>
           {t('criterion.titleLabel')}
         </Text>
@@ -93,21 +94,22 @@ export const CriterionEditor = ({
           value={draft.title}
           onChange={(event) => patch({ title: event.target.value })}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox gap={6}>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={12} type={'secondary'}>
           {t('criterion.descriptionLabel')}
         </Text>
-        <TextArea
-          autoSize={{ maxRows: 6, minRows: 2 }}
+        <Textarea
           placeholder={t('criterion.descriptionPlaceholder')}
+          rows={2}
+          style={{ maxHeight: '6lh' }}
           value={draft.description ?? ''}
           onChange={(event) => patch({ description: event.target.value })}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox gap={6}>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={12} type={'secondary'}>
           {t('criterion.verifierLabel')}
         </Text>
@@ -115,24 +117,25 @@ export const CriterionEditor = ({
           options={verifierOptions}
           value={verifierType}
           optionRender={(option) => (
-            <Flexbox gap={2}>
+            <div className="flex flex-col gap-0.5">
               <Text>{option.label}</Text>
               <Text fontSize={12} type={'secondary'}>
                 {t(`criterion.verifierTypeDesc.${option.value as VerifierType}` as const)}
               </Text>
-            </Flexbox>
+            </div>
           )}
           onChange={(value) => patch({ verifierType: value as VerifierType })}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox gap={6}>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={12} type={'secondary'}>
           {isProgram ? t('criterion.scriptLabel') : t('criterion.instructionLabel')}
         </Text>
         {isProgram ? (
-          <TextArea
-            autoSize={{ maxRows: 8, minRows: 3 }}
+          <Textarea
+            rows={3}
+            style={{ maxHeight: '8lh' }}
             value={String(draft.verifierConfig?.command ?? '')}
             onChange={(event) =>
               patch({ verifierConfig: { ...draft.verifierConfig, command: event.target.value } })
@@ -143,25 +146,26 @@ export const CriterionEditor = ({
             {t('criterion.instructionLinked')}
           </Text>
         ) : (
-          <TextArea
-            autoSize={{ maxRows: 10, minRows: 3 }}
+          <Textarea
             placeholder={t('criterion.instructionPlaceholder')}
+            rows={3}
+            style={{ maxHeight: '10lh' }}
             value={draft.instruction ?? ''}
             onChange={(event) => patch({ instruction: event.target.value })}
           />
         )}
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal align={'center'} gap={10}>
+      <div className="flex items-center gap-2.5">
         <Switch
           checked={draft.required !== false}
           size={'small'}
           onChange={(checked) => patch({ required: checked })}
         />
         <Text fontSize={13}>{t('criterion.requiredHint')}</Text>
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
+      <div className="flex items-center justify-between">
         {onDelete ? (
           <Button
             danger
@@ -176,7 +180,7 @@ export const CriterionEditor = ({
         ) : (
           <span />
         )}
-        <Flexbox horizontal gap={8}>
+        <div className="flex gap-2">
           <Button onClick={onClose}>{t('criterion.cancel')}</Button>
           <Button
             disabled={!draft.title.trim()}
@@ -186,8 +190,8 @@ export const CriterionEditor = ({
           >
             {t(isNew ? 'criterion.add' : 'criterion.save')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 };

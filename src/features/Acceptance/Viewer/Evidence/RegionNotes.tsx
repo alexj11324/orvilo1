@@ -1,12 +1,13 @@
 'use client';
 
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Crosshair, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import type { DraftAnnotationEntry, RejectableEvidence } from '../Review/rejectDraft';
 
@@ -73,14 +74,15 @@ const RegionNoteRow = memo<RegionNoteRowProps>(
     const { t } = useTranslation('verify');
 
     return (
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         {caption}
-        <Flexbox horizontal align={'flex-start'} gap={8}>
+        <div className="flex items-start gap-2">
           {badge}
-          <TextArea
+          <Textarea
             aria-label={t('acceptance.review.annotationPlaceholder', { index })}
-            autoSize={{ maxRows: 5, minRows: 1 }}
             placeholder={placeholder}
+            rows={1}
+            style={{ maxHeight: '5lh' }}
             style={{ flex: 1, fontSize }}
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -91,8 +93,8 @@ const RegionNoteRow = memo<RegionNoteRowProps>(
             size={{ blockSize: 44, size: 18 }}
             onClick={onRemove}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -163,7 +165,7 @@ export const MobileRegionNotes = memo<MobileRegionNotesProps>(
               type={'button'}
               onClick={() => onJump(annotation.evidenceId)}
             >
-              <Icon icon={Crosshair} size={13} />
+              <Crosshair size={13} />
               {t('acceptance.review.regionImage', {
                 image: imageIndex + 1,
                 region: regionIndex + 1,

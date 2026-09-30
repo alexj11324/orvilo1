@@ -19,14 +19,9 @@ const topicMetaCardMock = vi.hoisted(() => ({
     | undefined,
 }));
 
-// Assertions key on the raw lucide displayName, which the real Icon does not
-// expose in the DOM.
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Icon: ({ icon }: { icon?: { displayName?: string } }) => (
-    <div data-icon={icon?.displayName} data-testid="topic-item-icon" />
-  ),
-}));
+// Assertions key on the raw lucide displayName / class names — the row
+// renders icons directly now; the metaCardData mock below tags them with
+// `data-icon` like the old `@lobehub/ui` Icon mock did.
 
 vi.mock('motion/react', () => ({
   AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -115,9 +110,9 @@ vi.mock('./MetaHoverCard', () => ({
   default: () => null,
 }));
 vi.mock('./metaCardData', () => {
-  const CiIcon = () => null;
+  const CiIcon = () => <div data-icon="CiIcon" data-testid="topic-item-icon" />;
   CiIcon.displayName = 'CiIcon';
-  const PullRequestIcon = () => null;
+  const PullRequestIcon = () => <div data-icon="PullRequestIcon" data-testid="topic-item-icon" />;
   PullRequestIcon.displayName = 'PullRequestIcon';
 
   return {
@@ -380,8 +375,9 @@ describe('TopicItem active state', () => {
       routeTopicId: undefined,
     });
 
-    render(<TopicItem id="tpc_test" status={status} title="Topic" />);
+    const { container } = render(<TopicItem id="tpc_test" status={status} title="Topic" />);
 
-    expect(screen.getByTestId('topic-item-icon')).toHaveAttribute('data-icon', icon);
+    const iconClass = icon === 'Clock' ? 'lucide-clock' : 'lucide-circle-check';
+    expect(container.querySelector(`svg.${iconClass}`)).toBeInTheDocument();
   });
 });

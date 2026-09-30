@@ -1,6 +1,6 @@
 'use client';
 
-import { Block, Center, Empty, Flexbox, Icon, Image, Markdown } from '@lobehub/ui';
+import { Image, Markdown } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type {
   VerifyAgentPlanConfig,
@@ -38,11 +38,19 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import { memo, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import Loading from '@/components/Loading/BrandTextLoading';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import AudioPlayer from '@/features/AudioPlayer';
 import type { VerifyEvidenceWithUrl } from '@/services/verify';
 
@@ -792,7 +800,10 @@ const EvidenceItem = memo<{
     isInlineProse;
 
   return (
-    <Flexbox gap={6} style={isDocument ? { flex: 1, minHeight: 0 } : undefined}>
+    <div
+      className="flex flex-col gap-1.5"
+      style={{ ...(isDocument ? { flex: 1, minHeight: 0 } : undefined) }}
+    >
       {!hideLabel && (
         <Text strong fontSize={13}>
           {label}
@@ -806,7 +817,10 @@ const EvidenceItem = memo<{
         </Text>
       )}
       {e.fileUrl && imageEvidenceTypes.has(e.type) ? (
-        <Flexbox align={flat ? undefined : 'flex-start'} style={{ maxWidth: '100%' }}>
+        <div
+          className="flex flex-col"
+          style={{ alignItems: flat ? undefined : 'flex-start', maxWidth: '100%' }}
+        >
           <Image
             preview
             alt={e.description ?? label}
@@ -816,7 +830,7 @@ const EvidenceItem = memo<{
               flat ? { borderRadius: 0, maxWidth: '100%', width: '100%' } : { maxWidth: '100%' }
             }
           />
-        </Flexbox>
+        </div>
       ) : e.fileUrl && e.type === 'video' ? (
         <video controls className={styles.evidenceVideo} src={e.fileUrl} />
       ) : e.fileUrl && e.type === 'audio' ? (
@@ -850,7 +864,7 @@ const EvidenceItem = memo<{
       ) : (
         <span className={styles.softTag}>{e.type}</span>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -872,7 +886,7 @@ const EvidenceFileButton = memo<{
       onClick={onClick}
     >
       <span className={styles.evidenceFileIcon}>
-        <Icon icon={CATEGORY_ICON[evidenceCategory(evidence.type)]} size={13} />
+        {createElement(CATEGORY_ICON[evidenceCategory(evidence.type)], { size: 13 })}
       </span>
       <span className={styles.evidenceFileBody}>
         <span className={styles.evidenceFileName}>{name}</span>
@@ -907,17 +921,14 @@ const EvidenceDrawer = memo<{
     }}
     onClose={onClose}
   >
-    <Flexbox
-      gap={20}
-      height={'100%'}
-      paddingBlock={12}
-      paddingInline={16}
-      style={{ overflow: 'auto' }}
+    <div
+      className="flex flex-col gap-5 h-full"
+      style={{ paddingBlock: 12, paddingInline: 16, overflow: 'auto' }}
     >
       {evidence.map((e, index) => (
         <EvidenceItem evidence={e} index={index + 1} key={e.id} />
       ))}
-    </Flexbox>
+    </div>
   </AcceptanceDrawer>
 ));
 
@@ -1012,7 +1023,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
         onClick={() => hasBody && setOpen((o) => !o)}
       >
         <span style={{ color: meta.dot, display: 'flex' }}>
-          <Icon icon={meta.icon} size={16} />
+          <meta.icon size={16} />
         </span>
         <span className={styles.rowTitle} data-failed={state === 'failed'}>
           {result?.checkItemTitle || planItem?.title || row.id}
@@ -1025,7 +1036,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
                 key={cat}
                 title={`${t(`report.evidence.category.${cat}`)} × ${categoryCounts[cat]}`}
               >
-                <Icon icon={CATEGORY_ICON[cat]} size={12} />
+                {createElement(CATEGORY_ICON[cat], { size: 12 })}
                 {categoryCounts[cat]}
               </span>
             ) : null,
@@ -1034,9 +1045,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
             <span className={styles.softTag}>{t('report.verdict.notExecuted')}</span>
           )}
           {!required && <span className={styles.softTag}>{t('report.check.optional')}</span>}
-          {hasBody && (
-            <Icon className={styles.chev} data-open={open} icon={ChevronRight} size={14} />
-          )}
+          {hasBody && <ChevronRight className="styles.chev" data-open={open} size={14} />}
         </span>
       </button>
       {open && hasBody && (
@@ -1066,7 +1075,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
                   <span className={styles.surfaceList}>
                     {requiredEvidence.map((spec) => (
                       <span className={styles.surfaceChip} key={spec.type} title={spec.hint}>
-                        <Icon icon={CATEGORY_ICON[evidenceCategory(spec.type)]} size={12} />
+                        {createElement(CATEGORY_ICON[evidenceCategory(spec.type)], { size: 12 })}
                         {t(`report.evidence.medium.${spec.type}`)}
                       </span>
                     ))}
@@ -1128,10 +1137,22 @@ const ReportPageState = memo<{
   icon: typeof AlertTriangle;
   title: string;
 }>(({ action, description, icon, title }) => (
-  <Center gap={16} height={'100%'} style={{ minHeight: '70vh' }} width={'100%'}>
-    <Empty description={description} icon={icon} title={title} />
+  <div
+    className="flex items-center justify-center flex-col gap-4 h-full w-full"
+    style={{ minHeight: '70vh' }}
+  >
+    <Empty>
+      <EmptyHeader>
+        {icon ? (
+          <EmptyMedia variant={'icon'}>{createElement(icon, { size: 20 })}</EmptyMedia>
+        ) : null}
+        {title ? <EmptyTitle>{title}</EmptyTitle> : null}
+        {description ? <EmptyDescription>{description}</EmptyDescription> : null}
+      </EmptyHeader>
+      {action ? <EmptyContent>{action}</EmptyContent> : null}
+    </Empty>
     {action}
-  </Center>
+  </div>
 ));
 
 const formatScopeDate = (value: string | undefined): string | undefined => {
@@ -1198,10 +1219,10 @@ const CodingScopeCard = memo<{
   const pullRequestContent =
     hasPullRequest && pullRequest ? (
       <>
-        <Icon icon={GitPullRequest} size={15} />
+        <GitPullRequest size={15} />
         <span className={styles.prNumber}>{pullRequestLabel(pullRequest, t)}</span>
         {pullRequest.title && <span className={styles.prTitle}>{pullRequest.title}</span>}
-        {pullRequestUrl && <Icon icon={ExternalLink} size={13} />}
+        {pullRequestUrl && <ExternalLink size={13} />}
       </>
     ) : null;
   const shortCommit = commit && commit.length > 12 ? commit.slice(0, 10) : commit;
@@ -1232,19 +1253,19 @@ const CodingScopeCard = memo<{
       <div className={styles.scopeMetaLine}>
         {branch && (
           <span className={styles.branchChip} title={branch}>
-            <Icon icon={GitBranch} size={15} />
+            <GitBranch size={15} />
             <code>{branch}</code>
           </span>
         )}
         {commit && (
           <span className={styles.commitChip} title={commit}>
-            <Icon icon={GitCommit} size={14} />
+            <GitCommit size={14} />
             <code>{shortCommit}</code>
           </span>
         )}
         {date && (
           <span className={styles.scopeMetaItem}>
-            <Icon icon={CalendarClock} size={13} />
+            <CalendarClock size={13} />
             <span>{date}</span>
           </span>
         )}
@@ -1252,7 +1273,7 @@ const CodingScopeCard = memo<{
           <span className={styles.surfaceList}>
             {surfaces.map((surface) => (
               <span className={styles.surfaceChip} key={surface}>
-                <Icon icon={SURFACE_ICON[surface]} size={12} />
+                {createElement(SURFACE_ICON[surface], { size: 12 })}
                 {t(`report.surface.${surface}`)}
               </span>
             ))}
@@ -1260,7 +1281,7 @@ const CodingScopeCard = memo<{
         )}
         {entry && (
           <span className={cx(styles.scopeMetaItem, styles.scopeEntry)} title={entry}>
-            <Icon icon={Terminal} size={13} />
+            <Terminal size={13} />
             <code>{entry}</code>
           </span>
         )}
@@ -1274,8 +1295,8 @@ const CodingScopeCard = memo<{
             target="_blank"
             title={t('report.scope.origin')}
           >
-            <Icon icon={MessagesSquare} size={13} />
-            <Icon icon={ExternalLink} size={11} />
+            <MessagesSquare size={13} />
+            <ExternalLink size={11} />
           </a>
         )}
       </div>
@@ -1370,7 +1391,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
     <div className={styles.scroll}>
       <div className={styles.page}>
         <main>
-          <Flexbox gap={12}>
+          <div className="flex flex-col gap-3">
             {/* Verdict above the title, not trailing it — the same order the
                 acceptance page uses. A badge parked after a long title wraps
                 to its own line anyway, and then reads as an afterthought
@@ -1384,7 +1405,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
                     color: VERDICT_META[verdict].color,
                   }}
                 >
-                  <Icon icon={VERDICT_META[verdict].icon} size={15} />
+                  {createElement(VERDICT_META[verdict].icon, { size: 15 })}
                   {t(`report.verdict.${verdict}`)}
                 </span>
               </div>
@@ -1405,11 +1426,11 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
 
             {liveStatus && (
               <div className={styles.liveBanner}>
-                <Icon icon={Clock3} size={14} />
+                <Clock3 size={14} />
                 {t(liveStatusLabelKey[liveStatus])}
               </div>
             )}
-          </Flexbox>
+          </div>
 
           {visible.length > 0 ? (
             <div className={styles.checks}>
@@ -1421,15 +1442,15 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
               ))}
             </div>
           ) : (
-            <Block align={'center'} padding={24}>
+            <div className="flex flex-col items-center" style={{ padding: 24 }}>
               <Text type={'secondary'}>{t('report.filterEmpty')}</Text>
-            </Block>
+            </div>
           )}
 
           {report?.content && (
             <details className={styles.narrative}>
               <summary className={styles.narrativeSummary}>
-                <Icon icon={ChevronRight} size={13} />
+                <ChevronRight size={13} />
                 {t('report.sections.details')}
               </summary>
               <div className={styles.narrativeBody}>
@@ -1441,7 +1462,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
           {interactionCost && (
             <details className={styles.narrative}>
               <summary className={styles.narrativeSummary}>
-                <Icon icon={ChevronRight} size={13} />
+                <ChevronRight size={13} />
                 {t('report.interaction.title')}
               </summary>
               <div className={styles.interactionCostBody}>

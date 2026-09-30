@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createModal, Text } from '@lobehub/ui/base-ui';
 import { useResponsive } from 'antd-style';
 import { memo } from 'react';
@@ -51,7 +50,7 @@ export const openCheckRejectModal = (options: CheckRejectModalProps) => {
     footer: null,
     maskClosable: true,
     title: (
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         <Text strong style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>
           {modalTitle.title}
         </Text>
@@ -60,7 +59,7 @@ export const openCheckRejectModal = (options: CheckRejectModalProps) => {
             {modalTitle.description}
           </Text>
         )}
-      </Flexbox>
+      </div>
     ),
   });
 };

@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, type DropdownItem, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { FilePlusIcon, FolderPlusIcon, PlusIcon } from 'lucide-react';
@@ -32,13 +31,13 @@ const DocumentExplorerToolbar = memo<Props>(({ onCreateDocument, onCreateFolder 
   const createMenuItems = useMemo<DropdownItem[]>(
     () => [
       {
-        icon: <Icon icon={FilePlusIcon} />,
+        icon: <FilePlusIcon />,
         key: 'new-document',
         label: t('workingPanel.resources.tree.newDocument'),
         onClick: onCreateDocument,
       },
       {
-        icon: <Icon icon={FolderPlusIcon} />,
+        icon: <FolderPlusIcon />,
         key: 'new-folder',
         label: t('workingPanel.resources.tree.newFolder'),
         onClick: onCreateFolder,
@@ -48,7 +47,7 @@ const DocumentExplorerToolbar = memo<Props>(({ onCreateDocument, onCreateFolder 
   );
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.toolbar} distribution={'space-between'}>
+    <div className={`flex items-center justify-between ${styles.toolbar}`}>
       <Text className={styles.title} type={'secondary'}>
         {t('workingPanel.resources.filter.documents')}
       </Text>
@@ -59,7 +58,7 @@ const DocumentExplorerToolbar = memo<Props>(({ onCreateDocument, onCreateFolder 
           title={t('workingPanel.resources.tree.create')}
         />
       </DropdownMenu>
-    </Flexbox>
+    </div>
   );
 });
 

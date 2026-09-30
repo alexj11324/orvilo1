@@ -1,10 +1,10 @@
 'use client';
 
-import { Center, Flexbox, Tooltip } from '@lobehub/ui';
 import { Avatar, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -91,8 +91,11 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
     children,
   }) => {
     return (
-      <Flexbox className={styles.container}>
-        <Center className={styles.banner} style={{ background: cssVar.colorFillTertiary }}>
+      <div className={`flex flex-col ${styles.container}`}>
+        <div
+          className={`flex items-center justify-center ${styles.banner}`}
+          style={{ background: cssVar.colorFillTertiary }}
+        >
           <Avatar
             emojiScaleWithBackground
             avatar={avatar || DEFAULT_AVATAR}
@@ -101,9 +104,9 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
             shape={'square'}
             size={400}
           />
-        </Center>
+        </div>
 
-        <Flexbox className={styles.header} gap={8}>
+        <div className={`flex flex-col gap-2 ${styles.header}`}>
           <Avatar
             emojiScaleWithBackground
             avatar={avatar || DEFAULT_AVATAR}
@@ -114,8 +117,8 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
             style={{ border: `2px solid ${cssVar.colorBgElevated}` }}
             onClick={onHeaderClick}
           />
-          <Flexbox gap={2}>
-            <Flexbox horizontal align={'center'} justify={'space-between'}>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between">
               <Text
                 ellipsis
                 className={`${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`}
@@ -124,12 +127,19 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
                 {title}
               </Text>
               {headerAction}
-            </Flexbox>
+            </div>
             {description ? (
-              <Tooltip title={description}>
-                <Text className={styles.description} ellipsis={{ rows: 2 }}>
-                  {description}
-                </Text>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <Text className={styles.description} ellipsis={{ rows: 2 }}>
+                        {description}
+                      </Text>
+                    </span>
+                  }
+                />
+                <TooltipContent>{description}</TooltipContent>
               </Tooltip>
             ) : loading ? (
               <Skeleton.Text
@@ -138,11 +148,11 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
                 width={['100%', '60%']}
               />
             ) : null}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
         {children}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import {
   Background,
   Controls,
@@ -125,10 +124,10 @@ export function FlowCanvas({
     // Custom nodes render inside React Flow, not under its `children`, so the
     // anchor channel has to sit above the canvas to reach a group's toggle.
     <FlowAnchorContext value={anchor}>
-      <Flexbox
-        className={styles.canvas}
+      <div
+        className={`flex flex-col ${styles.canvas}`}
         ref={ref}
-        style={fullscreen ? { flex: 1, height: '100%', minHeight: 0 } : undefined}
+        style={{ ...(fullscreen ? { flex: 1, height: '100%', minHeight: 0 } : undefined) }}
       >
         <ReactFlow
           fitView
@@ -160,7 +159,7 @@ export function FlowCanvas({
           <Background bgColor="transparent" color={cssVar.colorBorderSecondary} gap={18} size={1} />
           <Controls position="bottom-right" showInteractive={false} />
         </ReactFlow>
-      </Flexbox>
+      </div>
     </FlowAnchorContext>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { type SkillResourceTreeNode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -88,11 +87,11 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
 
   if (isLoading) {
     return (
-      <Flexbox style={{ height: '100%', overflow: 'hidden' }}>
+      <div className="flex flex-col" style={{ height: '100%', overflow: 'hidden' }}>
         <div className={styles.meta}>
           <ArticleSkeleton rows={1} style={{ margin: 0 }} title={220} />
         </div>
-        <Flexbox horizontal style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="flex" style={{ flex: 1, overflow: 'hidden' }}>
           <div className={styles.left}>
             <FileTreeSkeleton rows={9} />
           </div>
@@ -100,8 +99,8 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
           <div className={styles.right}>
             <ArticleSkeleton rows={8} style={{ padding: 16 }} />
           </div>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
@@ -111,30 +110,30 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
   const sourceUrl = skillDetail?.manifest?.sourceUrl;
 
   return (
-    <Flexbox style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="flex flex-col" style={{ height: '100%', overflow: 'hidden' }}>
       {skillDetail && (
         <div className={styles.meta}>
-          <Flexbox horizontal align={'center'} gap={12}>
+          <div className="flex items-center gap-3">
             <SkillAvatar size={40} />
-            <Flexbox flex={1} gap={4} style={{ overflow: 'hidden' }}>
-              <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                <Flexbox horizontal align={'center'} className={styles.description} gap={4}>
+            <div className="flex flex-col flex-1 gap-1" style={{ overflow: 'hidden' }}>
+              <div className="flex items-center gap-2 justify-between">
+                <div className={`flex items-center gap-1 ${styles.description}`}>
                   <span className={styles.name}>{skillDetail.name}</span>
                   {version && (
                     <>
-                      <Icon icon={DotIcon} />
+                      <DotIcon />
                       <span>v{version}</span>
                     </>
                   )}
-                  <Icon icon={DotIcon} />
+                  <DotIcon />
                   {t('agentSkillDetail.updatedAt')}{' '}
                   <PublishedTime
                     date={new Date(skillDetail.updatedAt).toISOString()}
                     template={'MMM DD, YYYY'}
                   />
-                </Flexbox>
+                </div>
                 {(repository || sourceUrl) && (
-                  <Flexbox horizontal align={'center'} gap={2} style={{ flexShrink: 0 }}>
+                  <div className="flex items-center gap-0.5" style={{ flexShrink: 0 }}>
                     {repository && (
                       <a href={repository} rel="noreferrer" target={'_blank'}>
                         <ActionIcon
@@ -152,15 +151,15 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
                         />
                       </a>
                     )}
-                  </Flexbox>
+                  </div>
                 )}
-              </Flexbox>
+              </div>
               {description && <p className={styles.description}>{description}</p>}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </div>
       )}
-      <Flexbox horizontal style={{ flex: 1, overflow: 'hidden' }}>
+      <div className="flex" style={{ flex: 1, overflow: 'hidden' }}>
         <div className={styles.left}>
           <FileTree
             resourceTree={resourceTree || []}
@@ -176,8 +175,8 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
             skillDetail={skillDetail}
           />
         </div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

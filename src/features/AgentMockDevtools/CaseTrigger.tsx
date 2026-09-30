@@ -1,4 +1,4 @@
-import { Flexbox, Input, Popover, usePopoverContext } from '@lobehub/ui';
+import { Input, Popover, usePopoverContext } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { MockCase } from '@orvilo/agent-mock';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -163,7 +163,7 @@ const CasePanel = memo<CasePanelProps>(({ selectedCaseId, setSelectedCaseId }) =
         {totalVisible === 0 && <div className={styles.empty}>No cases match.</div>}
         {groups.map((group) =>
           group.items.length === 0 ? null : (
-            <Flexbox key={group.key} style={{ paddingBlockEnd: 4 }}>
+            <div className="flex flex-col" key={group.key} style={{ paddingBlockEnd: 4 }}>
               <div className={styles.group}>
                 {group.label} ({group.items.length})
               </div>
@@ -184,7 +184,7 @@ const CasePanel = memo<CasePanelProps>(({ selectedCaseId, setSelectedCaseId }) =
                   </div>
                 );
               })}
-            </Flexbox>
+            </div>
           ),
         )}
       </div>

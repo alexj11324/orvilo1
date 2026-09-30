@@ -1,13 +1,14 @@
 'use client';
 
-import { Center, Flexbox, Highlighter, Icon, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRight, FileText } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Loading from '@/components/Loading/BrandTextLoading';
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { useTextFileLoader } from '@/features/FileViewer/hooks/useTextFileLoader';
 import { getLanguageFromFilename } from '@/utils/fileLanguage';
 
@@ -270,14 +271,12 @@ export const CollapsibleMarkdownEvidence = memo<{
       {children}
     </Markdown>
   ) : (
-    <Highlighter
+    <CodeBlock
       wrap
+      code={children}
       language={getLanguageFromFilename(fileName)}
-      showLanguage={false}
-      variant={'borderless'}
-    >
-      {children}
-    </Highlighter>
+      variant={'ghost'}
+    />
   );
 
   if (!fold) {
@@ -291,7 +290,7 @@ export const CollapsibleMarkdownEvidence = memo<{
   }
 
   return (
-    <Flexbox className={styles.foldCard}>
+    <div className={`flex flex-col ${styles.foldCard}`}>
       <button
         aria-expanded={expanded}
         className={styles.foldHeader}
@@ -299,20 +298,19 @@ export const CollapsibleMarkdownEvidence = memo<{
         type={'button'}
         onClick={() => setExpanded(!expanded)}
       >
-        <Icon
-          className={cx(styles.foldChevron, expanded && styles.foldChevronOpen)}
-          icon={ChevronRight}
+        <ChevronRight
+          className="cx(styles.foldChevron, expanded && styles.foldChevronOpen)"
           size={14}
         />
         <span className={styles.fileCardIcon}>
-          <Icon icon={FileText} size={13} />
+          <FileText size={13} />
         </span>
         <span data-fold-title className={styles.foldTitle}>
           {foldTitle}
         </span>
       </button>
       {expanded && <div className={styles.foldBody}>{body}</div>}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -326,19 +324,19 @@ export const DocumentViewer = memo<{ fileName?: string | null; markdown?: boolea
 
     if (loading)
       return (
-        <Center flex={1} height={'100%'}>
+        <div className="flex items-center justify-center flex-1 h-full">
           <Loading debugId="verify-document-viewer" />
-        </Center>
+        </div>
       );
 
     if (error || fileData === null)
       return (
-        <Center flex={1} gap={8} height={'100%'}>
+        <div className="flex items-center justify-center flex-1 h-full" gap={8}>
           <Text type="secondary">{t('report.document.failed')}</Text>
           <a href={url} rel="noreferrer" target="_blank">
             {t('report.document.openOriginal')}
           </a>
-        </Center>
+        </div>
       );
 
     return (
@@ -348,14 +346,12 @@ export const DocumentViewer = memo<{ fileName?: string | null; markdown?: boolea
             {fileData}
           </Markdown>
         ) : (
-          <Highlighter
+          <CodeBlock
             wrap
+            code={fileData}
             language={getLanguageFromFilename(fileName || filenameFromUrl(url))}
-            showLanguage={false}
-            variant={'borderless'}
-          >
-            {fileData}
-          </Highlighter>
+            variant={'ghost'}
+          />
         )}
       </div>
     );
@@ -389,7 +385,7 @@ export const EvidenceFileCard = memo<{
         onClick={() => setOpen(true)}
       >
         <span className={styles.fileCardIcon}>
-          <Icon icon={FileText} size={13} />
+          <FileText size={13} />
         </span>
         <span className={styles.fileCardBody}>
           <span className={styles.fileCardName}>{name}</span>

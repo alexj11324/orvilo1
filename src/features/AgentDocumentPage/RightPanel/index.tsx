@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ChevronLeftIcon } from 'lucide-react';
@@ -90,22 +89,16 @@ const AgentDocumentSidebarContent = memo(() => {
   };
 
   const header = (
-    <Flexbox
-      horizontal
-      align={'center'}
-      flex={'none'}
-      justify={'space-between'}
-      padding={'8px 6px'}
-    >
+    <div className="flex items-center flex-none justify-between" style={{ padding: '8px 6px' }}>
       <a className={styles.backLink} href={agentPath} onClick={handleBack}>
-        <Icon icon={ChevronLeftIcon} size={14} />
+        <ChevronLeftIcon size={14} />
         {t('agentDocument.backToAgent', { name: agentTitle })}
       </a>
-    </Flexbox>
+    </div>
   );
 
   const body = (
-    <Flexbox className={styles.body} width={'100%'}>
+    <div className={`flex flex-col w-full ${styles.body}`}>
       <AgentDocumentsGroup
         activeFilter="documents"
         deviceId={remoteDeviceId}
@@ -115,7 +108,7 @@ const AgentDocumentSidebarContent = memo(() => {
         style={{ flex: 1, minHeight: 0 }}
         workingDirectory={workingDirectory}
       />
-    </Flexbox>
+    </div>
   );
 
   return <SideBarLayout body={body} header={header} />;

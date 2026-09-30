@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   Button,
   Checkbox,
@@ -97,7 +96,7 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
         : translate('acceptance.workspace.deleteConfirm.ok', { size });
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <Text fontSize={13} type={purge ? 'danger' : 'secondary'}>
         {purge
           ? translate('acceptance.workspace.deleteConfirm.purgeWarning')
@@ -134,15 +133,15 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
           <dd>{formatSize(preview.bytes)}</dd>
         </dl>
       )}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button disabled={pending} onClick={close}>
           {translate('actions.cancel')}
         </Button>
         <Button danger loading={pending} type={'primary'} onClick={() => void run()}>
           {okLabel}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { BadgeCheck } from 'lucide-react';
@@ -8,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Textarea } from '@/components/ui/textarea';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -100,13 +100,9 @@ const ReviewerApprovalBar = memo(() => {
     );
 
   return (
-    <Flexbox className={styles.card} gap={10}>
-      <Flexbox horizontal align={'center'} gap={8}>
-        <Icon
-          color={approvedCurrentRound ? cssVar.colorSuccess : undefined}
-          icon={BadgeCheck}
-          size={18}
-        />
+    <div className={`flex flex-col gap-2.5 ${styles.card}`}>
+      <div className="flex items-center gap-2">
+        <BadgeCheck color={approvedCurrentRound ? cssVar.colorSuccess : undefined} size={18} />
         <Text weight={600}>
           {mine
             ? mine.contextRoundIndex === null
@@ -114,7 +110,7 @@ const ReviewerApprovalBar = memo(() => {
               : t('acceptance.comments.youApproved', { round: mine.contextRoundIndex })
             : t('acceptance.comments.approve')}
         </Text>
-      </Flexbox>
+      </div>
       <span className={styles.description}>
         {approvedCurrentRound
           ? t('acceptance.comments.withdrawDescription')
@@ -129,10 +125,11 @@ const ReviewerApprovalBar = memo(() => {
           {t('acceptance.comments.withdraw')}
         </Button>
       ) : (
-        <Flexbox gap={8}>
-          <TextArea
-            autoSize={{ maxRows: 4, minRows: 1 }}
+        <div className="flex flex-col gap-2">
+          <Textarea
             placeholder={t('acceptance.comments.approveSummaryPlaceholder')}
+            rows={1}
+            style={{ maxHeight: '4lh' }}
             value={summary}
             onChange={(event) => setSummary(event.target.value)}
           />
@@ -144,9 +141,9 @@ const ReviewerApprovalBar = memo(() => {
           >
             {mine ? t('acceptance.comments.approveAgain') : t('acceptance.comments.approve')}
           </Button>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

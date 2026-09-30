@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
@@ -9,7 +8,7 @@ import {
   ListChecks,
   type LucideIcon,
 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import type { GoalGraphNodeKind } from '../Experiments/model';
 
@@ -72,8 +71,8 @@ export const MonoText = memo<{ children: React.ReactNode; title?: string }>(
 
 MonoText.displayName = 'GoalMonoText';
 
-export const KindIcon = memo<{ kind: GoalGraphNodeKind; size?: number }>(({ kind, size = 14 }) => (
-  <Icon color={KIND_COLOR[kind].line} icon={KIND_ICON[kind]} size={size} />
-));
+export const KindIcon = memo<{ kind: GoalGraphNodeKind; size?: number }>(({ kind, size = 14 }) =>
+  createElement(KIND_ICON[kind], { color: KIND_COLOR[kind].line, size }),
+);
 
 KindIcon.displayName = 'GoalKindIcon';

@@ -1,9 +1,11 @@
 'use client';
 
-import { CopyButton, Highlighter, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { type SkillItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
+
+import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   codeWrapper: css`
@@ -185,11 +187,7 @@ const ContentViewer = memo<ContentViewerProps>(
       const { frontmatter, body } = parseFrontmatter(displayContent);
       return (
         <div className={styles.docWrapper}>
-          {frontmatter && (
-            <Highlighter fullFeatured language={'yaml'} variant={'outlined'}>
-              {frontmatter}
-            </Highlighter>
-          )}
+          {frontmatter && <CodeBlock code={frontmatter} language={'yaml'} />}
           <Markdown variant={'chat'}>{body}</Markdown>
         </div>
       );
@@ -201,11 +199,7 @@ const ContentViewer = memo<ContentViewerProps>(
       const { frontmatter, body } = parseFrontmatter(content);
       return (
         <div className={styles.docWrapper}>
-          {frontmatter && (
-            <Highlighter fullFeatured language={'yaml'} variant={'outlined'}>
-              {frontmatter}
-            </Highlighter>
-          )}
+          {frontmatter && <CodeBlock code={frontmatter} language={'yaml'} />}
           <Markdown variant={'chat'}>{body}</Markdown>
         </div>
       );
@@ -213,18 +207,9 @@ const ContentViewer = memo<ContentViewerProps>(
 
     return (
       <div className={styles.codeWrapper}>
-        <CopyButton
-          content={content}
-          style={{ position: 'absolute', right: 8, top: 0, zIndex: 1 }}
-        />
-        <Highlighter
-          copyable={false}
-          language={getLanguage(selectedFile)}
-          showLanguage={false}
-          variant={'borderless'}
-        >
-          {content}
-        </Highlighter>
+        <CodeBlock wrap code={content} language={getLanguage(selectedFile)} variant={'ghost'}>
+          <CodeBlockCopyButton />
+        </CodeBlock>
       </div>
     );
   },

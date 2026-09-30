@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { type VListHandle } from 'virtua';
@@ -145,7 +144,7 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
   // Show empty state when no topics
   if (count === 0 && showLoadMoreError) {
     return (
-      <Flexbox padding={12}>
+      <div className="flex flex-col" style={{ padding: 12 }}>
         <AsyncError
           error={loadMoreError}
           variant={'block'}
@@ -153,7 +152,7 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
             void loadMoreTopics();
           }}
         />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -164,9 +163,9 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
   // Show loading when searching
   if (showSearchLoading) {
     return (
-      <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
+      <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1, paddingInline: 4 }}>
         <SkeletonList rows={5} />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -178,7 +177,7 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
       onScroll={handleScroll}
     >
       {activeTopicList?.map((topic) => (
-        <Flexbox gap={1} key={topic.id} paddingInline={4}>
+        <div className="flex flex-col gap-[1px]" key={topic.id} style={{ paddingInline: 4 }}>
           <TopicItem
             fav={topic.favorite}
             id={topic.id}
@@ -187,15 +186,15 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
             title={topic.title}
             userId={topic.userId}
           />
-        </Flexbox>
+        </div>
       ))}
       {showLoading && (
-        <Flexbox padding={'4px 8px'}>
+        <div className="flex flex-col" style={{ padding: '4px 8px' }}>
           <SkeletonList rows={3} />
-        </Flexbox>
+        </div>
       )}
       {showLoadMoreError && (
-        <Flexbox padding={'4px 8px'}>
+        <div className="flex flex-col" style={{ padding: '4px 8px' }}>
           <AsyncError
             error={loadMoreError}
             variant={'inline'}
@@ -203,7 +202,7 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
               void loadMoreTopics();
             }}
           />
-        </Flexbox>
+        </div>
       )}
     </VList>
   );

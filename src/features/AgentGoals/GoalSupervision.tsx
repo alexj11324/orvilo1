@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { PanelRightCloseIcon } from 'lucide-react';
@@ -38,7 +37,7 @@ export const GoalSupervision = ({ agentId, goalId, onCollapse, topicId }: GoalSu
 
   return (
     <GoalChatProvider agentId={agentId} goalId={goalId} initialTopicId={topicId}>
-      <Flexbox height={'100%'} style={{ overflow: 'hidden' }}>
+      <div className="flex flex-col h-full" style={{ overflow: 'hidden' }}>
         <NavHeader
           left={<Text ellipsis>{agentTitle || t('goalProcess.manager.title')}</Text>}
           showTogglePanelButton={false}
@@ -51,10 +50,10 @@ export const GoalSupervision = ({ agentId, goalId, onCollapse, topicId }: GoalSu
             />
           }
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
           <ChatList disableActionsBar itemContent={itemContent} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </GoalChatProvider>
   );
 };

@@ -1,5 +1,4 @@
 import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { confirmModal, toast, Upload } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { App } from 'antd';
@@ -129,7 +128,7 @@ export const useTopicActionsDropdownMenu = (
   return useCallback((): MenuProps['items'] => {
     const pageSizeOptions = [20, 40, 60, 100];
     const pageSizeItems = pageSizeOptions.map((size) => ({
-      icon: topicPageSize === size ? <Icon icon={LucideCheck} /> : <div />,
+      icon: topicPageSize === size ? <LucideCheck /> : <div />,
       key: `pageSize-${size}`,
       label: t('pageSizeItem', { count: size, ns: 'common' }),
       onClick: () => {
@@ -141,7 +140,7 @@ export const useTopicActionsDropdownMenu = (
       {
         children: pageSizeItems,
         extra: topicPageSize,
-        icon: <Icon icon={Hash} />,
+        icon: <Hash />,
         key: 'displayItems',
         label: t('displayItems'),
       },
@@ -150,7 +149,7 @@ export const useTopicActionsDropdownMenu = (
       },
       {
         disabled: !canCreateTopic,
-        icon: <Icon icon={Import} />,
+        icon: <Import />,
         key: 'import',
         label: (
           <Upload accept=".json" beforeUpload={handleImport} disabled={!canCreateTopic}>
@@ -165,7 +164,7 @@ export const useTopicActionsDropdownMenu = (
         ? [
             {
               disabled: !canCreateTopic || !activeAgentId,
-              icon: <Icon icon={HardDriveDownload} />,
+              icon: <HardDriveDownload />,
               key: 'importHeteroSessions',
               label: t('heteroImport.entry'),
               onClick: () => {
@@ -179,7 +178,7 @@ export const useTopicActionsDropdownMenu = (
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={Archive} />,
+        icon: <Archive />,
         key: 'archiveMergedPullRequests',
         label: t(
           activeWorkspaceId
@@ -193,7 +192,7 @@ export const useTopicActionsDropdownMenu = (
             { type: 'divider' as const },
             {
               disabled: !canEditTopic,
-              icon: <Icon icon={Archive} />,
+              icon: <Archive />,
               key: 'archiveMergedPullRequestsWorkspace',
               label: t('actions.archiveMergedPullRequestsWorkspace'),
               onClick: () => {
@@ -208,7 +207,7 @@ export const useTopicActionsDropdownMenu = (
             {
               danger: true,
               disabled: !canEditTopic,
-              icon: <Icon icon={Trash} />,
+              icon: <Trash />,
               key: 'deleteUnstarredWorkspace',
               label: t('actions.removeUnstarredWorkspace'),
               onClick: () => {
@@ -225,7 +224,7 @@ export const useTopicActionsDropdownMenu = (
             {
               danger: true,
               disabled: !canEditTopic,
-              icon: <Icon icon={Trash} />,
+              icon: <Trash />,
               key: 'deleteAllWorkspace',
               label: t('actions.removeAllWorkspace'),
               onClick: () => {

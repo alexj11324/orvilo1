@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Tabs, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ListChecks, MessagesSquare, Paperclip, Route } from 'lucide-react';
@@ -77,13 +76,13 @@ const AcceptanceTabs = ({
       items={tabs
         .filter((tab) => tab.key !== 'flow' || flowCount > 0)
         .map((tab) => ({
-          icon: <Icon icon={tab.icon} size={16} />,
+          icon: <tab.icon size={16} />,
           key: tab.key,
           label: (
-            <Flexbox horizontal align={'center'} gap={6}>
+            <div className="flex items-center gap-1.5">
               {tab.label}
               <Tag shape={'round'}>{tab.count}</Tag>
-            </Flexbox>
+            </div>
           ),
         }))}
       onChange={(key) => onChange(key as AcceptanceTabKey)}

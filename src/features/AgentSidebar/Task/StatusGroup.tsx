@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -41,21 +40,21 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
     <AccordionItem value={group.key}>
       <AccordionHeader>
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-          <Flexbox horizontal align="center" gap={8} height={24} style={{ overflow: 'hidden' }}>
-            <Center flex={'none'} height={24} width={24}>
-              <Icon color={meta.color} icon={meta.icon} size={{ size: 14, strokeWidth: 1.75 }} />
-            </Center>
+          <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
+            <div className="flex items-center justify-center flex-none h-[24px] w-[24px]">
+              <meta.icon color={meta.color} size={{ size: 14, strokeWidth: 1.75 }} />
+            </div>
             <Text ellipsis fontSize={13} style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
               {t(meta.titleKey as 'taskList.kanban.backlog')}
             </Text>
             <Text fontSize={11} type="secondary">
               {group.tasks.length}
             </Text>
-          </Flexbox>
+          </div>
         </AccordionTrigger>
       </AccordionHeader>
       <AccordionPanel contentStyle={{ padding: 0 }}>
-        <Flexbox gap={1} paddingBlock={1}>
+        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {group.tasks.map((task) => (
             <TaskItem
               active={taskId === task.identifier || taskId === task.id}
@@ -63,7 +62,7 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
               task={task}
             />
           ))}
-        </Flexbox>
+        </div>
       </AccordionPanel>
     </AccordionItem>
   );

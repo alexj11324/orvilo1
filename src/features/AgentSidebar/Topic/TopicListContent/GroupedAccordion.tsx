@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { AccordionRoot } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
@@ -87,7 +86,7 @@ const GroupedAccordion = memo<GroupedAccordionProps>(({ GroupItem }) => {
   const listRef = useScrollActiveTopicIntoView(activeTopicId, listReady);
 
   return (
-    <Flexbox gap={2} ref={listRef}>
+    <div className="flex flex-col gap-0.5" ref={listRef}>
       <AccordionRoot
         indicatorPlacement="inline"
         style={{ gap: 2 }}
@@ -102,7 +101,7 @@ const GroupedAccordion = memo<GroupedAccordionProps>(({ GroupItem }) => {
       {hasMore && !isExpandingPageSize && (
         <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -77,7 +76,7 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
   );
 
   const titleNode = (
-    <Flexbox horizontal align="center" gap={4}>
+    <div className="flex items-center gap-1">
       <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
         {t('tab.tasks')}
       </Text>
@@ -86,7 +85,7 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
           {totalTasks}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 
   const actionNode = (

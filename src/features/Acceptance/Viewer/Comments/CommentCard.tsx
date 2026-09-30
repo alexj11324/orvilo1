@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import type { DropdownItem } from '@lobehub/ui/base-ui';
 import {
   ActionIcon,
@@ -103,7 +102,7 @@ const CommentCard = memo<CommentCardProps>(
       ...(anchored
         ? [
             {
-              icon: <Icon icon={Link2} />,
+              icon: <Link2 />,
               key: 'copy-link',
               label: t('acceptance.comments.copyLink'),
               onClick: copyAnchor,
@@ -114,7 +113,7 @@ const CommentCard = memo<CommentCardProps>(
         ? [
             {
               danger: true,
-              icon: <Icon icon={Trash2} />,
+              icon: <Trash2 />,
               key: 'delete',
               // Taking down someone else's remark is a different act from
               // deleting your own, and the confirm says which one this is.
@@ -147,12 +146,8 @@ const CommentCard = memo<CommentCardProps>(
 
     return (
       <>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={variant === 'boxed' ? styles.boxHeader : undefined}
-          gap={8}
-          wrap={'wrap'}
+        <div
+          className={`flex items-center gap-2 flex-wrap ${variant === 'boxed' ? styles.boxHeader : undefined}`}
         >
           {variant === 'plain' && <CommentAvatar comment={comment} size={18} />}
           <Text
@@ -209,7 +204,7 @@ const CommentCard = memo<CommentCardProps>(
               </DropdownMenu>
             </div>
           )}
-        </Flexbox>
+        </div>
         <div className={variant === 'boxed' ? styles.body : styles.panelBody}>
           {comment.deletedAt ? (
             <span className={styles.deleted}>{t('acceptance.comments.deleted')}</span>

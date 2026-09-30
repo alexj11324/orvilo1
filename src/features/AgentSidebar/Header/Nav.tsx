@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { BotPromptIcon } from '@lobehub/ui/icons';
 import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -66,7 +65,7 @@ const Nav = memo(() => {
   };
 
   return (
-    <Flexbox gap={1} paddingInline={4}>
+    <div className="flex flex-col gap-[1px]" style={{ paddingInline: 4 }}>
       <NavItem
         disabled={!canCreateTopic || isNewTopicSendInFlight}
         icon={MessageSquarePlusIcon}
@@ -122,7 +121,7 @@ const Nav = memo(() => {
           router.push(urlJoin('/agent', agentId!, 'tasks'));
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

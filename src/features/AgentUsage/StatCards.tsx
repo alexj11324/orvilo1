@@ -1,6 +1,5 @@
 'use client';
 
-import { Grid } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -27,7 +26,10 @@ const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
   const suffix = ` · ${rangeLabel}`;
 
   return (
-    <Grid gap={8} maxItemWidth={240} rows={3}>
+    <div
+      className="grid"
+      style={{ gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}
+    >
       <StatisticCard
         loading={isLoading}
         title={t('usageStats.cards.cost') + suffix}
@@ -66,7 +68,7 @@ const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
           value: formatUsageValue(summary.totalTokens),
         }}
       />
-    </Grid>
+    </div>
   );
 });
 

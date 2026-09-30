@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { DropdownItem } from '@lobehub/ui/base-ui';
 import { DropdownMenu } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -52,9 +51,9 @@ const AcceptanceStatusPill = ({ menu, pending, size = 13, status }: AcceptanceSt
         pointerEvents: pending ? 'none' : undefined,
       }}
     >
-      <Icon icon={verdictMeta.icon} size={size} spin={verdictMeta.spin} />
+      <verdictMeta.icon className="animate-spin" size={size} />
       {verdictMeta.label}
-      {menu ? <Icon icon={ChevronDown} size={11} /> : null}
+      {menu ? <ChevronDown size={11} /> : null}
     </span>
   );
 

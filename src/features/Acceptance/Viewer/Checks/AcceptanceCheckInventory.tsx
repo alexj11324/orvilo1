@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Select, Text, toast } from '@lobehub/ui/base-ui';
 import { isDraftVerifyRun } from '@orvilo/const/verify';
 import { createStaticStyles } from 'antd-style';
@@ -214,15 +213,15 @@ const AcceptanceCheckInventory = ({
 
   return (
     <>
-      <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-        <Flexbox horizontal align={'center'} className={styles.toolbarHeading} flex={1} gap={8}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className={`flex items-center flex-1 gap-2 ${styles.toolbarHeading}`}>
           <Text strong style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
             {t('acceptance.checks.title')}
           </Text>
-          <Flexbox flex={1} />
+          <div className="flex flex-col flex-1" />
           {toolbar}
-        </Flexbox>
-        <Flexbox horizontal align={'center'} className={styles.filters} gap={8}>
+        </div>
+        <div className={`flex items-center gap-2 ${styles.filters}`}>
           <Select
             className={styles.filterSelect}
             value={filter}
@@ -279,8 +278,8 @@ const AcceptanceCheckInventory = ({
               }
             />
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {children}
       <CheckList
         canReview={canReview}

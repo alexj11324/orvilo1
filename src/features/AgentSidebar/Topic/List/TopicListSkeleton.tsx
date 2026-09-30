@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -14,7 +13,7 @@ const GROUPS = [
 ];
 
 const RowSkeleton = memo<{ width: string }>(({ width }) => (
-  <Flexbox horizontal align={'center'} gap={8} height={36} paddingInline={4}>
+  <div className="flex items-center gap-2 h-[36px]" style={{ paddingInline: 4 }}>
     <Skeleton
       style={{
         borderRadius: cssVar.borderRadiusSM,
@@ -24,7 +23,7 @@ const RowSkeleton = memo<{ width: string }>(({ width }) => (
         minWidth: 16,
       }}
     />
-    <Flexbox flex={1}>
+    <div className="flex flex-col flex-1">
       <Skeleton
         style={{
           borderRadius: cssVar.borderRadius,
@@ -36,17 +35,21 @@ const RowSkeleton = memo<{ width: string }>(({ width }) => (
           width,
         }}
       />
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 RowSkeleton.displayName = 'TopicRowSkeleton';
 
 const TopicListSkeleton = memo(() => (
-  <Flexbox gap={2}>
+  <div className="flex flex-col gap-0.5">
     {GROUPS.map((group, i) => (
-      <Flexbox gap={1} key={i} paddingBlock={4} paddingInline={'8px 4px'}>
-        <Flexbox horizontal align={'center'} height={24}>
+      <div
+        className="flex flex-col gap-[1px]"
+        key={i}
+        style={{ paddingBlock: 4, paddingInline: '8px 4px' }}
+      >
+        <div className="flex items-center h-[24px]">
           <Skeleton
             style={{
               borderRadius: cssVar.borderRadiusSM,
@@ -57,13 +60,13 @@ const TopicListSkeleton = memo(() => (
               opacity: 0.6,
             }}
           />
-        </Flexbox>
+        </div>
         {group.rows.map((width) => (
           <RowSkeleton key={width} width={width} />
         ))}
-      </Flexbox>
+      </div>
     ))}
-  </Flexbox>
+  </div>
 ));
 
 TopicListSkeleton.displayName = 'TopicListSkeleton';

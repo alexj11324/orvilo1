@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import React, { memo } from 'react';
@@ -21,9 +20,9 @@ const SearchResult = memo(() => {
 
   if (topics.length === 0)
     return (
-      <Center paddingBlock={12}>
+      <div className="flex items-center justify-center" style={{ paddingBlock: 12 }}>
         <Text type={'secondary'}>{t('searchResultEmpty')}</Text>
-      </Center>
+      </div>
     );
 
   return (

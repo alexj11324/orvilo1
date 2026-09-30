@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Empty, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { GoalStatus } from '@orvilo/const/goal';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -9,6 +8,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import GoalSkeleton from '@/components/Skeleton/Goal';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -117,7 +117,7 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
   };
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1 h-full">
       <NavHeader
         left={
           agentId ? (
@@ -141,8 +141,8 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
         {isLoading && !isInitialized ? (
           <GoalSkeleton chrome={'body'} />
         ) : error ? (
-          <Block padding={32} variant={'outlined'}>
-            <Flexbox align={'center'} gap={12}>
+          <div className="flex flex-col rounded-md border border-border" style={{ padding: 32 }}>
+            <div className="flex flex-col items-center gap-3">
               <Text weight={600}>{t('goalList.loadError')}</Text>
               <Text fontSize={13} type={'secondary'}>
                 {t('goalList.loadErrorDescription')}
@@ -154,57 +154,57 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
               >
                 {t('goalList.retry')}
               </Button>
-            </Flexbox>
-          </Block>
+            </div>
+          </div>
         ) : goals.length === 0 ? (
           <GoalEmptyState onCreate={openCreateGoal} />
         ) : (
           <>
-            <Flexbox className={styles.overview}>
-              <Flexbox horizontal align={'center'} gap={20} justify={'space-between'} wrap={'wrap'}>
-                <Flexbox gap={3}>
+            <div className={`flex flex-col ${styles.overview}`}>
+              <div className="flex items-center gap-5 justify-between flex-wrap">
+                <div className="flex flex-col gap-[3px]">
                   <Text fontSize={20} weight={600}>
                     {t('goalPage.title')}
                   </Text>
                   <Text type={'secondary'}>{t('goalPage.description')}</Text>
-                </Flexbox>
-                <Flexbox horizontal gap={20}>
-                  <Flexbox className={styles.metric} gap={2}>
+                </div>
+                <div className="flex gap-5">
+                  <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
                     <Text fontSize={20} weight={600}>
                       {summary.total}
                     </Text>
                     <Text fontSize={12} type={'secondary'}>
                       {t('goalPage.metrics.total')}
                     </Text>
-                  </Flexbox>
-                  <Flexbox className={styles.metric} gap={2}>
+                  </div>
+                  <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
                     <Text fontSize={20} weight={600}>
                       {summary.pursuing}
                     </Text>
                     <Text fontSize={12} type={'secondary'}>
                       {t('goalPage.metrics.pursuing')}
                     </Text>
-                  </Flexbox>
-                  <Flexbox className={styles.metric} gap={2}>
+                  </div>
+                  <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
                     <Text fontSize={20} weight={600}>
                       {summary.delivered}
                     </Text>
                     <Text fontSize={12} type={'secondary'}>
                       {t('goalPage.metrics.delivered')}
                     </Text>
-                  </Flexbox>
-                </Flexbox>
-              </Flexbox>
-            </Flexbox>
-            <Flexbox gap={10}>
-              <Flexbox horizontal align={'center'} justify={'space-between'}>
-                <Flexbox horizontal align={'center'} gap={8}>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <Text fontSize={16} weight={600}>
                     {t('goalPage.listTitle')}
                   </Text>
                   <span className={styles.countBadge}>{visibleGoalCount}</span>
-                </Flexbox>
-                <Flexbox horizontal align={'center'} gap={8}>
+                </div>
+                <div className="flex items-center gap-2">
                   <Segmented
                     size={'small'}
                     value={filter}
@@ -236,16 +236,23 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
                     variant={viewMode === 'card' ? 'filled' : 'borderless'}
                     onClick={() => setViewMode('card')}
                   />
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
               <div className={viewMode === 'card' ? styles.list : styles.listRows}>
                 {filteredGoals.length === 0 ? (
-                  <Block padding={32} variant={'outlined'}>
-                    <Empty
-                      description={t('goalPage.filteredEmptyDescription')}
-                      title={t('goalPage.filteredEmptyTitle')}
-                    />
-                  </Block>
+                  <div
+                    className="flex flex-col rounded-md border border-border"
+                    style={{ padding: 32 }}
+                  >
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyTitle>{t('goalPage.filteredEmptyTitle')}</EmptyTitle>
+                        <EmptyDescription>
+                          {t('goalPage.filteredEmptyDescription')}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  </div>
                 ) : (
                   filteredGoals
                     .slice(0, visibleLimit)
@@ -255,17 +262,17 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
                 )}
               </div>
               {visibleLimit < filteredGoals.length && (
-                <Flexbox align={'center'} paddingBlock={8}>
+                <div className="flex flex-col items-center" style={{ paddingBlock: 8 }}>
                   <Button size={'small'} onClick={loadMoreGoals}>
                     {t('goalPage.loadMore')}
                   </Button>
-                </Flexbox>
+                </div>
               )}
-            </Flexbox>
+            </div>
           </>
         )}
       </WideScreenContainer>
-    </Flexbox>
+    </div>
   );
 });
 

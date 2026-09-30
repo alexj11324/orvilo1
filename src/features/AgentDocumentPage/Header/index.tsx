@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
@@ -50,18 +49,17 @@ const Header = memo<HeaderProps>(
     return (
       <NavHeader
         left={
-          <Flexbox horizontal align={'center'} gap={4} style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-1" style={{ minWidth: 0 }}>
             {/* Breadcrumb: agent → document. The agent label returns to chat. */}
-            <Flexbox
-              horizontal
-              align={'center'}
+            <div
+              className="flex items-center"
               style={{ cursor: 'pointer', flexShrink: 0 }}
               onClick={onBack}
             >
               <Text style={{ color: cssVar.colorTextSecondary }}>
                 {agentDisplayName(meta, t('untitledAgent', { ns: 'chat' }))}
               </Text>
-            </Flexbox>
+            </div>
             <Text style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>/</Text>
             <Text
               className={cx(oneLineEllipsis)}
@@ -78,14 +76,14 @@ const Header = memo<HeaderProps>(
             >
               <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
             </DropdownMenu>
-          </Flexbox>
+          </div>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1">
             {documentId && <AutoSaveHint documentId={documentId} />}
             {documentId && <ShareButton documentId={documentId} />}
             <ToggleRightPanelButton hideWhenExpanded />
-          </Flexbox>
+          </div>
         }
       />
     );

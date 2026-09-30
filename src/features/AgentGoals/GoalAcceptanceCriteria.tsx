@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, confirmModal, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { PencilIcon, PlusIcon, XIcon } from 'lucide-react';
@@ -114,23 +113,26 @@ const GoalAcceptanceCriteria = memo<{ criteriaIds: string[]; goalId: string }>(
     // The section header (title + count + gate hint) belongs to the hosting
     // accordion row in ProcessControl — this renders the list body only.
     return (
-      <Block paddingBlock={4} paddingInline={16} variant={'outlined'}>
+      <div
+        className="flex flex-col rounded-md border border-border"
+        style={{ paddingBlock: 4, paddingInline: 16 }}
+      >
         {criteriaIds.length === 0 && (
-          <Flexbox className={styles.row}>
+          <div className={`flex flex-col ${styles.row}`}>
             <Text fontSize={13} type={'secondary'}>
               {t('goalAcceptance.empty')}
             </Text>
-          </Flexbox>
+          </div>
         )}
         {(criteria ?? []).map((item, index) => (
-          <Flexbox className={styles.row} gap={4} key={item.id}>
-            <Flexbox horizontal align={'center'} gap={10}>
+          <div className={`flex flex-col gap-1 ${styles.row}`} key={item.id}>
+            <div className="flex items-center gap-2.5">
               <span className={styles.seq}>C{index + 1}</span>
               <Text style={{ flex: 1, minWidth: 0 }} weight={500}>
                 {item.title}
               </Text>
               {canEdit && (
-                <Flexbox horizontal gap={2} style={{ flex: 'none' }}>
+                <div className="flex gap-0.5" style={{ flex: 'none' }}>
                   <ActionIcon
                     icon={PencilIcon}
                     size={'small'}
@@ -143,24 +145,19 @@ const GoalAcceptanceCriteria = memo<{ criteriaIds: string[]; goalId: string }>(
                     title={t('goalAcceptance.remove')}
                     onClick={() => handleRemove(item)}
                   />
-                </Flexbox>
+                </div>
               )}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ))}
         {canEdit && (
-          <Flexbox horizontal className={styles.row}>
-            <Button
-              icon={<Icon icon={PlusIcon} />}
-              size={'small'}
-              type={'text'}
-              onClick={() => openEdit()}
-            >
+          <div className={`flex ${styles.row}`}>
+            <Button icon={<PlusIcon />} size={'small'} type={'text'} onClick={() => openEdit()}>
               {t('goalAcceptance.add')}
             </Button>
-          </Flexbox>
+          </div>
         )}
-      </Block>
+      </div>
     );
   },
 );

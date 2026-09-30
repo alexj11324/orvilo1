@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
@@ -101,16 +100,10 @@ const ProposalCard = memo<ProposalCardProps>(
     const regions = proposal.annotations ?? [];
 
     return (
-      <Flexbox className={styles.card} gap={open ? 8 : 0}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.head}
-          gap={6}
-          onClick={() => onToggle(!open)}
-        >
-          <Icon icon={open ? ChevronDown : ChevronRight} size={12} />
-          <Icon icon={Sparkles} size={12} />
+      <div className={`flex flex-col ${styles.card}`} style={{ gap: open ? 8 : 0 }}>
+        <div className={`flex items-center gap-1.5 ${styles.head}`} onClick={() => onToggle(!open)}>
+          {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          <Sparkles size={12} />
           <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
             {t('acceptance.proposal.title')}
           </Text>
@@ -128,7 +121,7 @@ const ProposalCard = memo<ProposalCardProps>(
               {t('acceptance.proposal.regionCount', { count: regions.length })}
             </span>
           )}
-        </Flexbox>
+        </div>
 
         {open && (
           <>
@@ -136,17 +129,17 @@ const ProposalCard = memo<ProposalCardProps>(
 
             {/* Numbers match the badges now drawn on the evidence image below. */}
             {regions.map((region, index) => (
-              <Flexbox horizontal align={'flex-start'} gap={6} key={index}>
+              <div className="flex items-start gap-1.5" key={index}>
                 <span className={styles.regionIndex} style={{ marginBlockStart: 2 }}>
                   {index + 1}
                 </span>
                 <Text fontSize={12} type={'secondary'}>
                   {region.comment || t('acceptance.proposal.regionUnnamed')}
                 </Text>
-              </Flexbox>
+              </div>
             ))}
 
-            <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 disabled={pending || Boolean(busy)}
                 size={'small'}
@@ -172,10 +165,10 @@ const ProposalCard = memo<ProposalCardProps>(
               >
                 {t('acceptance.proposal.misidentified')}
               </Button>
-            </Flexbox>
+            </div>
           </>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

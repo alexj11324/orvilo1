@@ -45,13 +45,13 @@ const Connection = () => {
       >
         <Suspense
           fallback={
-            <div className="flex items-center justify-center" style={{ height: '100%' }}>
+            <div className="flex flex-col items-center justify-center" style={{ height: '100%' }}>
               <BrandTextLoading debugId="Connection" />
             </div>
           }
         >
           <div
-            className="flex items-center justify-center"
+            className="flex flex-col items-center justify-center"
             style={{ height: '100%', overflow: 'auto', padding: 24 }}
           >
             <div className="flex flex-col" style={{ maxWidth: 560, width: '100%' }}>

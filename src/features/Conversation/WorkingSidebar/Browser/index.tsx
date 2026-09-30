@@ -332,7 +332,10 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
 
   if (!isDesktop)
     return (
-      <div className="flex items-center justify-center" style={{ height: '100%', width: '100%' }}>
+      <div
+        className="flex flex-col items-center justify-center"
+        style={{ height: '100%', width: '100%' }}
+      >
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">

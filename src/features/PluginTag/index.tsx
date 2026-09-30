@@ -45,7 +45,7 @@ const PluginTag = memo<PluginTagProps>(({ plugins }) => {
 
           return {
             icon: (
-              <div className="flex items-center justify-center" style={{ minWidth: 24 }}>
+              <div className="flex flex-col items-center justify-center" style={{ minWidth: 24 }}>
                 <Avatar avatar={avatar} size={24} />
               </div>
             ),

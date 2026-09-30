@@ -56,7 +56,7 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center" style={{ height: 56 }}>
+      <div className="flex flex-col items-center justify-center" style={{ height: 56 }}>
         <NeuralNetworkLoading size={18} />
       </div>
     );

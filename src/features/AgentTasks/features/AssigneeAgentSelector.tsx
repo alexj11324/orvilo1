@@ -314,7 +314,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
                   onKeyDown={handleSearchKeyDown}
                 />
                 {flatOptions.length === 0 ? (
-                  <div className="flex items-center justify-center p-4">
+                  <div className="flex flex-col items-center justify-center p-4">
                     <Text fontSize={12} type={'secondary'}>
                       {t('taskList.assigneeSearch.agentEmpty', { ns: 'chat' })}
                     </Text>

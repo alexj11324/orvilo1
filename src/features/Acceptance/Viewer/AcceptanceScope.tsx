@@ -57,7 +57,7 @@ export const AcceptanceBundleGate = ({
 
   if (isLoading && !data) {
     return (
-      <div className="flex items-center justify-center" style={{ height }}>
+      <div className="flex flex-col items-center justify-center" style={{ height }}>
         <NeuralNetworkLoading size={48} />
       </div>
     );
@@ -71,7 +71,7 @@ export const AcceptanceBundleGate = ({
    */
   if (!data && isTrpcErrorCode(error, 'NOT_FOUND')) {
     return (
-      <div className="flex items-center justify-center" style={{ height }}>
+      <div className="flex flex-col items-center justify-center" style={{ height }}>
         <Empty>
           <EmptyHeader>
             <EmptyTitle>{t('acceptance.notFound.title')}</EmptyTitle>
@@ -84,7 +84,7 @@ export const AcceptanceBundleGate = ({
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center" style={{ height }}>
+      <div className="flex flex-col items-center justify-center" style={{ height }}>
         <Empty>
           <EmptyHeader>
             <EmptyTitle>{t('acceptance.error.title')}</EmptyTitle>

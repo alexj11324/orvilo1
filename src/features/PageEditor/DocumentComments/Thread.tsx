@@ -294,7 +294,7 @@ const Thread = memo<ThreadProps>(
               />
             ) : (
               replies.hasMore && (
-                <div className="flex items-center justify-center py-2">
+                <div className="flex flex-col items-center justify-center py-2">
                   <Button
                     loading={replies.isLoadingMore}
                     size={'small'}

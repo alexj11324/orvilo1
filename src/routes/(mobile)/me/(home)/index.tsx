@@ -10,7 +10,7 @@ const MeHomePage = () => {
     <>
       <UserBanner />
       <Category />
-      <div className="flex items-center justify-center p-4">
+      <div className="flex flex-col items-center justify-center p-4">
         <BrandWatermark />
       </div>
     </>

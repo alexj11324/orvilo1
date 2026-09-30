@@ -385,7 +385,7 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
   return (
     <div className={cn('flex flex-col', styles.card)}>
       <div className={cn('flex items-center gap-2.5', styles.header)}>
-        <div className={cn('flex items-center justify-center', styles.headerIcon)}>
+        <div className={cn('flex flex-col items-center justify-center', styles.headerIcon)}>
           <FilePenLineIcon size={20} />
         </div>
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>

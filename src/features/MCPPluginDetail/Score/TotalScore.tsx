@@ -241,7 +241,7 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
         </div>
         {isValidated && (
           <div
-            className={cn('flex items-center justify-center', styles.gradeBadge)}
+            className={cn('flex flex-col items-center justify-center', styles.gradeBadge)}
             style={{
               borderColor: getGradeColor(grade),
               color: getGradeColor(grade),

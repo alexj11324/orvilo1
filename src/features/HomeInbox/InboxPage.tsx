@@ -59,7 +59,7 @@ const InboxPage = memo(() => {
           inlineRail
           variant={'main'}
           emptyState={
-            <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center justify-center py-12">
               <Empty>
                 <EmptyHeader>
                   <EmptyTitle>{tHome('inbox.empty.title')}</EmptyTitle>

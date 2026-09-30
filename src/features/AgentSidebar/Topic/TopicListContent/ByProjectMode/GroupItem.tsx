@@ -277,7 +277,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
       <AccordionHeader className={'accordion-header'}>
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
           <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
-            <div className="flex items-center justify-center flex-none h-[24px] w-[28px]">
+            <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[28px]">
               <ProjectFolderIcon
                 color={cssVar.colorTextTertiary}
                 size={{ size: 15, strokeWidth: 1.5 }}

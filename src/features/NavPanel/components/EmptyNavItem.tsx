@@ -21,7 +21,7 @@ const EmptyNavItem = memo<EmptyStatusProps>(({ title, onClick, className, disabl
       )}
       onClick={disabled ? undefined : onClick}
     >
-      <div className="flex items-center justify-center flex-none h-[28px] w-[28px]">
+      <div className="flex flex-col items-center justify-center flex-none h-[28px] w-[28px]">
         <PlusIcon size={16} />
       </div>
       <Text align={'center'} type={'secondary'}>

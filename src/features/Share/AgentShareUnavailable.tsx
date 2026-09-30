@@ -25,7 +25,7 @@ const AgentShareUnavailable = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
 
   return (
-    <div className="flex items-center justify-center h-full p-12">
+    <div className="flex flex-col items-center justify-center h-full p-12">
       <NotFound
         desc={t('share.unavailable.desc')}
         status={404}

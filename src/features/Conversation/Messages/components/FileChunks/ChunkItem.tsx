@@ -41,7 +41,7 @@ const ChunkItem = memo<ChunkItemProps>(({ id, fileId, similarity, text, filename
               <TooltipTrigger
                 render={
                   <span style={{ display: 'inline-flex' }}>
-                    <div className={cn('flex items-center justify-center', styles.badge)}>
+                    <div className={cn('flex flex-col items-center justify-center', styles.badge)}>
                       {similarity.toFixed(1)}
                     </div>
                   </span>

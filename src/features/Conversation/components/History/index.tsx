@@ -46,7 +46,10 @@ const History = memo(() => {
       {enableCompressHistory && !!content && (
         <div className={cn('flex flex-col gap-2', styles.container)}>
           <div className="flex items-start gap-2">
-            <div className="flex items-center justify-center" style={{ height: 20, width: 20 }}>
+            <div
+              className="flex flex-col items-center justify-center"
+              style={{ height: 20, width: 20 }}
+            >
               <ScrollText size={16} style={{ color: cssVar.colorTextDescription }} />
             </div>
             <Text type={'secondary'}>{t('historySummary')}</Text>

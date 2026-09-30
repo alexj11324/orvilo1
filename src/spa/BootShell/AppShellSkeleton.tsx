@@ -129,7 +129,7 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
           }}
         />
         <div
-          className={`${containerStyles.outerContainer} flex`}
+          className={`${containerStyles.outerContainer} flex flex-col`}
           style={{
             height: '100%',
             padding: 8,
@@ -138,7 +138,7 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
           }}
         >
           <div
-            className={`${containerStyles.innerContainer} flex`}
+            className={`${containerStyles.innerContainer} flex flex-col`}
             style={{
               height: '100%',
               width: '100%',

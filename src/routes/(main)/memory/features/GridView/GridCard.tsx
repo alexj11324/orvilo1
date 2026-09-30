@@ -139,7 +139,7 @@ const GridCard = memo<GridCardProps>(
           >
             {badges}
           </div>
-          <div className="flex items-center justify-center" style={{ flex: 'none' }}>
+          <div className="flex flex-col items-center justify-center" style={{ flex: 'none' }}>
             <Text
               align={'center'}
               color={cateColor?.backgroundTextColor || cssVar.colorTextSecondary}

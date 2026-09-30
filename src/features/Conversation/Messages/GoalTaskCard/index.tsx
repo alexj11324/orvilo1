@@ -78,7 +78,7 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
         openGoal();
       }}
     >
-      <div className={cn('flex items-center justify-center', styles.icon)}>
+      <div className={cn('flex flex-col items-center justify-center', styles.icon)}>
         {isActive ? (
           <RingLoadingIcon
             ringColor={cssVar.colorBorder}

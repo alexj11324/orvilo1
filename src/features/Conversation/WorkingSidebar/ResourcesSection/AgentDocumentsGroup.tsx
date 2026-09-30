@@ -519,7 +519,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
 
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center flex-1 py-6">
+        <div className="flex flex-col items-center justify-center flex-1 py-6">
           <NeuralNetworkLoading size={32} />
         </div>
       );
@@ -527,7 +527,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
 
     if (error) {
       return (
-        <div className="flex items-center justify-center flex-1 py-6">
+        <div className="flex flex-col items-center justify-center flex-1 py-6">
           <AsyncError
             error={error}
             variant={'block'}
@@ -570,7 +570,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
       if (activeCount === 0) {
         if (showProjectSkills && projectSkillsError) {
           return (
-            <div className="flex items-center justify-center flex-1 py-6">
+            <div className="flex flex-col items-center justify-center flex-1 py-6">
               <AsyncError error={projectSkillsError} variant={'block'} />
             </div>
           );
@@ -581,13 +581,13 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
         // empty placeholder when there's nothing else to render yet.
         if (showProjectSkills && isProjectSkillsLoading) {
           return (
-            <div className="flex items-center justify-center flex-1 py-6">
+            <div className="flex flex-col items-center justify-center flex-1 py-6">
               <NeuralNetworkLoading size={32} />
             </div>
           );
         }
         return (
-          <div className="flex items-center justify-center flex-1 gap-2 py-6">
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
@@ -653,7 +653,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
     const renderWeb = () => {
       if (webData.length === 0) {
         return (
-          <div className="flex items-center justify-center flex-1 gap-2 py-6">
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">

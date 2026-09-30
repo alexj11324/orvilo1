@@ -23,7 +23,7 @@ const AgentScopedTaskDetailPage = memo<AgentScopedTaskDetailPageProps>(({ agentI
 
   return (
     <div className="flex flex-1" style={{ height: '100%', minHeight: 0, width: '100%' }}>
-      <div className="flex flex-1" style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
         <TaskDetailPage showTaskAgentPanelToggle={!isMobile} taskId={taskId} />
       </div>
       {isMobile ? (

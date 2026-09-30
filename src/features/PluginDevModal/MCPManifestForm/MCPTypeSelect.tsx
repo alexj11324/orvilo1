@@ -89,7 +89,7 @@ const styles = createStaticStyles(({ css }) => ({
 const FeatureItem = memo(({ children }: { children: React.ReactNode }) => {
   return (
     <div className={styles.featureItem}>
-      <div className={cn('flex items-center justify-center', styles.featureIcon)}>
+      <div className={cn('flex flex-col items-center justify-center', styles.featureIcon)}>
         <CheckIcon color={cssVar.colorSuccess} size={16} />
       </div>
       <div className={styles.featureText}>{children}</div>
@@ -142,14 +142,14 @@ const MCPTypeSelect = ({ value, onChange }: MCPTypeSelectProps) => {
             onClick={disabled ? undefined : () => handleSelect(itemValue)}
           >
             <div
-              className={cn('flex items-center justify-center', styles.checkIcon)}
+              className={cn('flex flex-col items-center justify-center', styles.checkIcon)}
               style={{ opacity: isActive ? 1 : 0 }}
             >
               <CheckIcon size={14} />
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex items-center justify-center" style={{ height: 22 }}>
+              <div className="flex flex-col items-center justify-center" style={{ height: 22 }}>
                 {createElement(icon, { style: { fontSize: 16 } })}
               </div>
               <div className="flex flex-col">

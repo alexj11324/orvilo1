@@ -89,7 +89,7 @@ const Agents = memo<AgentsProps>(({ inModal }) => {
   // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center gap-3 p-10">
+      <div className="flex flex-col items-center justify-center gap-3 p-10">
         <ServerCrash color={cssVar.colorTextDescription} size={80} />
         <Text type={'secondary'}>{t('mcp.details.agents.networkError')}</Text>
       </div>
@@ -99,7 +99,7 @@ const Agents = memo<AgentsProps>(({ inModal }) => {
   // Empty state
   if (isInitialized && items.length === 0) {
     return (
-      <div className="flex items-center justify-center gap-3 p-10">
+      <div className="flex flex-col items-center justify-center gap-3 p-10">
         <InboxIcon color={cssVar.colorTextDescription} size={80} />
         <Text type={'secondary'}>{t('mcp.details.agents.empty')}</Text>
       </div>

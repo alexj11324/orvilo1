@@ -91,14 +91,14 @@ const Body = memo<BodyProps>(({ children, emptyText, error, isEmpty, isLoading, 
   }
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-3">
+      <div className="flex flex-col items-center justify-center py-3">
         <NeuralNetworkLoading size={24} />
       </div>
     );
   }
   if (isEmpty) {
     return (
-      <div className="flex items-center justify-center py-2">
+      <div className="flex flex-col items-center justify-center py-2">
         <Text className={styles.empty}>{emptyText}</Text>
       </div>
     );

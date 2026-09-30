@@ -113,7 +113,7 @@ const PlanIcon = memo<PlanIconProps>(
 
     const iconContent = (
       <div
-        className={cx(styles.icon, 'flex items-center justify-center')}
+        className={cx(styles.icon, 'flex flex-col items-center justify-center')}
         style={{ height: size, width: size, ...iconStyle }}
         onClick={onClick}
       >

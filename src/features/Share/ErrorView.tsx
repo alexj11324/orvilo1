@@ -20,7 +20,7 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
 
   if (errorCode === 'UNAUTHORIZED') {
     return (
-      <div className="flex items-center justify-center h-full p-12">
+      <div className="flex flex-col items-center justify-center h-full p-12">
         <NotFound
           desc={t('sharePage.error.unauthorized.subtitle')}
           status={''}
@@ -50,7 +50,7 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
 
   if (errorCode === 'FORBIDDEN') {
     return (
-      <div className="flex items-center justify-center h-full p-12">
+      <div className="flex flex-col items-center justify-center h-full p-12">
         <NotFound
           desc={t('sharePage.error.forbidden.subtitle')}
           status={403}
@@ -61,7 +61,7 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
   }
 
   return (
-    <div className="flex items-center justify-center h-full p-12">
+    <div className="flex flex-col items-center justify-center h-full p-12">
       <NotFound
         desc={t('sharePage.error.notFound.subtitle')}
         title={t('sharePage.error.notFound.title')}

@@ -26,7 +26,7 @@ const AuthContainer: FC<PropsWithChildren> = ({ children }) => {
         </div>
       </header>
       <main className={styles.main}>
-        <div className="flex items-center justify-center w-full">{children}</div>
+        <div className="flex flex-col items-center justify-center w-full">{children}</div>
       </main>
       <footer className={styles.footer}>
         <AuthFooterLinks />

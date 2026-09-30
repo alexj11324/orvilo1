@@ -22,7 +22,7 @@ const MemoryEmpty = memo<MemoryEmptyProps>(({ search, title, children, ...rest }
   const { t } = useTranslation('memory');
   return (
     <div
-      className="flex items-center justify-center"
+      className="flex flex-col items-center justify-center"
       style={{ height: '100%', width: '100%', minHeight: '50vh' }}
     >
       <Empty style={{ maxWidth: 550 }} {...rest}>

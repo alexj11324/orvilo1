@@ -125,7 +125,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
     switch (importState) {
       case ImportStage.Preparing: {
         return (
-          <div className="flex items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <DataLoading />
             <p>{t('importModal.preparing')}</p>
           </div>
@@ -134,7 +134,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
 
       case ImportStage.Importing: {
         return (
-          <div className="flex items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <DataLoading />
             <p>{t('importModal.loading')}</p>
           </div>
@@ -143,7 +143,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
 
       case ImportStage.Uploading: {
         return (
-          <div className="flex items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <FileUploading
               progress={fileUploadingState?.progress}
               restTime={fileUploadingState?.restTime}
@@ -155,14 +155,14 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
 
       case ImportStage.Success: {
         return (
-          <div className="flex items-center justify-center gap-6 px-4">
+          <div className="flex flex-col items-center justify-center gap-6 px-4">
             <SuccessResult dataSource={dataSource} duration={duration} onClickFinish={closeModal} />
           </div>
         );
       }
       case ImportStage.Error: {
         return (
-          <div className="flex items-center justify-center gap-6 py-6 px-0">
+          <div className="flex flex-col items-center justify-center gap-6 py-6 px-0">
             <ImportError error={importError} onClick={closeModal} />
           </div>
         );
@@ -189,7 +189,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
         }}
       >
         {hasConfigError ? (
-          <div className="flex items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-10">
             <Upload
               accept={'application/json'}
               beforeUpload={handleBeforeUpload}

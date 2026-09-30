@@ -295,7 +295,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
             />
           ) : (
             threads.hasMore && (
-              <div className="flex items-center justify-center py-3">
+              <div className="flex flex-col items-center justify-center py-3">
                 <Button
                   loading={threads.isLoadingMore}
                   type={'text'}

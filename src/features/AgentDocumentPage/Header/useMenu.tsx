@@ -1,5 +1,4 @@
 import { useEditor } from '@lobehub/editor/react';
-import { Icon } from '@lobehub/ui';
 import type { DropdownItem } from '@lobehub/ui/base-ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { buildAgentDocumentUrl } from '@orvilo/builtin-tool-agent-documents';
@@ -115,7 +114,7 @@ export const useMenu = ({
         ? [
             {
               checked: wideScreen,
-              icon: <Icon icon={Maximize2} />,
+              icon: <Maximize2 />,
               key: 'full-width',
               label: t('viewMode.fullWidth', { ns: 'chat' }),
               onCheckedChange: toggleWideScreen,
@@ -125,7 +124,7 @@ export const useMenu = ({
           ]
         : []),
       {
-        icon: <Icon icon={Link2} />,
+        icon: <Link2 />,
         key: 'copy-link',
         label: t('pageEditor.menu.copyLink'),
         onClick: handleCopyLink,
@@ -138,14 +137,14 @@ export const useMenu = ({
             onClick: handleExportMarkdown,
           },
         ],
-        icon: <Icon icon={Download} />,
+        icon: <Download />,
         key: 'export',
         label: t('pageEditor.menu.export'),
       },
       {
         danger: true,
         disabled: !agentDocumentId,
-        icon: <Icon icon={Trash2} />,
+        icon: <Trash2 />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: handleDelete,

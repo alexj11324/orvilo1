@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Drawer, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -95,11 +94,10 @@ const EntryRow = memo<{
   ].filter(Boolean);
 
   return (
-    <Flexbox
-      className={cx(styles.row, entry.checkId && styles.clickable)}
-      gap={8}
+    <div
+      className={`flex flex-col gap-2 ${cx(styles.row, entry.checkId && styles.clickable)}`}
       role={entry.checkId ? 'button' : undefined}
-      style={entry.stale ? { opacity: 0.55 } : undefined}
+      style={{ ...(entry.stale ? { opacity: 0.55 } : undefined) }}
       tabIndex={entry.checkId ? 0 : undefined}
       onClick={entry.checkId ? () => onJumpToCheck(entry.checkId!) : undefined}
       onKeyDown={(event) => {
@@ -113,7 +111,7 @@ const EntryRow = memo<{
         }
       }}
     >
-      <Flexbox horizontal align={'center'} gap={6} wrap={'wrap'}>
+      <div className="flex items-center gap-1.5 flex-wrap">
         {isCheck ? (
           <>
             <span className={styles.seq}>C{entry.checkSeq}</span>
@@ -128,16 +126,16 @@ const EntryRow = memo<{
               : t('acceptance.feedback.global')}
           </Text>
         )}
-        <Flexbox flex={1} />
+        <div className="flex flex-col flex-1" />
         <span className={styles.meta}>{metaBits.join(' · ')}</span>
-      </Flexbox>
+      </div>
       {entry.comment && (
         <Text style={{ fontSize: 12 }} type={'secondary'}>
           {entry.comment}
         </Text>
       )}
       <AttachmentThumbs attachments={entry.attachments} />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -160,8 +158,8 @@ const FeedbackDrawer = memo<FeedbackDrawerProps>(({ entries, onClose, onJumpToCh
       width={'min(92vw, 440px)'}
       onClose={onClose}
     >
-      <Flexbox gap={20}>
-        <Flexbox gap={4}>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1">
           <Text className={styles.sectionTitle}>
             {t('acceptance.feedback.current', { count: active.length })}
           </Text>
@@ -170,25 +168,25 @@ const FeedbackDrawer = memo<FeedbackDrawerProps>(({ entries, onClose, onJumpToCh
               {t('acceptance.feedback.empty')}
             </Text>
           )}
-          <Flexbox>
+          <div className="flex flex-col">
             {active.map((entry, index) => (
               <EntryRow entry={entry} key={index} onJumpToCheck={onJumpToCheck} />
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {history.length > 0 && (
-          <Flexbox gap={4}>
+          <div className="flex flex-col gap-1">
             <Text className={styles.sectionTitle}>
               {t('acceptance.feedback.history', { count: history.length })}
             </Text>
-            <Flexbox>
+            <div className="flex flex-col">
               {history.map((entry, index) => (
                 <EntryRow entry={entry} key={index} onJumpToCheck={onJumpToCheck} />
               ))}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
-      </Flexbox>
+      </div>
     </Drawer>
   );
 });

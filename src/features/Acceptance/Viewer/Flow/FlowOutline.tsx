@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { Edge, Node } from '@xyflow/react';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -14,6 +13,7 @@ import {
   CircleX,
   CornerDownRight,
 } from 'lucide-react';
+import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { FlowGraphData } from './flowGraph';
@@ -97,14 +97,13 @@ export function FlowOutline({
         type={data.selected ? 'default' : 'text'}
         onClick={() => (group ? data.onToggle?.() : onSelect(node.id))}
       >
-        <Flexbox horizontal align="center" gap={10} width="100%">
-          {group && <Icon icon={data.collapsed ? ChevronRight : ChevronDown} size={14} />}
-          <Icon
-            aria-label={t(`flow.state.${data.state ?? 'pending'}`)}
-            icon={glyph}
-            size={18}
-            style={{ color: flowStateColor(data.state), flex: 'none' }}
-          />
+        <div className="flex items-center gap-2.5 w-full">
+          {group && (data.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />)}
+          {createElement(glyph, {
+            'aria-label': t(`flow.state.${data.state ?? 'pending'}`),
+            'size': 18,
+            'style': { color: flowStateColor(data.state), flex: 'none' },
+          })}
           <Text strong={group} style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
             {data.title}
           </Text>
@@ -113,9 +112,9 @@ export function FlowOutline({
               {data.passed}/{data.total}
             </Text>
           ) : (
-            <Icon icon={ChevronRight} size={16} />
+            <ChevronRight size={16} />
           )}
-        </Flexbox>
+        </div>
       </Button>
     );
   };
@@ -132,28 +131,28 @@ export function FlowOutline({
       >
         {/* Top-aligned: a caption that wraps keeps its glyph on the first line and
             its later lines under the text, not under the glyph. */}
-        <Flexbox horizontal align="flex-start" className={styles.branchContent} gap={6}>
-          <Icon
-            icon={reference ? ArrowRight : CornerDownRight}
-            size={12}
-            style={{ flex: 'none', marginBlockStart: 3 }}
-          />
+        <div className={`flex items-start gap-1.5 ${styles.branchContent}`}>
+          {reference ? (
+            <ArrowRight size={12} style={{ flex: 'none', marginBlockStart: 3 }} />
+          ) : (
+            <CornerDownRight size={12} style={{ flex: 'none', marginBlockStart: 3 }} />
+          )}
           <span>{reference ? `${label} → ${branch.target.data.title}` : label}</span>
-        </Flexbox>
+        </div>
       </Button>
     );
   };
   // A single continuation stays at the same level; a fork indents each path under its branch.
   const renderSequence = (step: OutlineStep): React.ReactNode[] => {
     const out: React.ReactNode[] = [
-      <Flexbox gap={2} key={step.node.id}>
+      <div className="flex flex-col gap-0.5" key={step.node.id}>
         {renderItem(step.node)}
         {step.node.type === 'flowGroup' && !step.node.data.collapsed && (
-          <Flexbox className={styles.nested} gap={2}>
+          <div className={`flex flex-col gap-0.5 ${styles.nested}`}>
             {step.members.flatMap(renderSequence)}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>,
+      </div>,
     ];
     const expanded = step.branches.filter((branch) => branch.step);
     for (const branch of step.branches) {
@@ -166,15 +165,17 @@ export function FlowOutline({
       if (expanded.length === 1) out.push(label, ...steps);
       else
         out.push(
-          <Flexbox gap={2} key={`branch:${branch.edge.id}`}>
+          <div className="flex flex-col gap-0.5" key={`branch:${branch.edge.id}`}>
             {label}
-            <Flexbox className={styles.nested} gap={2}>
-              {steps}
-            </Flexbox>
-          </Flexbox>,
+            <div className={`flex flex-col gap-0.5 ${styles.nested}`}>{steps}</div>
+          </div>,
         );
     }
     return out;
   };
-  return <Flexbox gap={2}>{buildOutlineTree(nodes, edges).flatMap(renderSequence)}</Flexbox>;
+  return (
+    <div className="flex flex-col gap-0.5">
+      {buildOutlineTree(nodes, edges).flatMap(renderSequence)}
+    </div>
+  );
 }

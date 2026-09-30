@@ -1,6 +1,6 @@
 'use client';
 
-import { ContextMenuTrigger, Flexbox, type MenuProps, Tooltip } from '@lobehub/ui';
+import { ContextMenuTrigger, type MenuProps, Tooltip } from '@lobehub/ui';
 import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
@@ -110,11 +110,8 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
 
   return (
     <ContextMenuTrigger items={getContextMenuItems}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.row}
-        gap={12}
+      <div
+        className={`flex items-center gap-3 ${styles.row}`}
         ref={setAnchor}
         onPointerEnter={activateMenu}
       >
@@ -124,10 +121,10 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
           to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
         >
           <AgentAvatar item={item} size={28} />
-          <Flexbox flex={1} style={{ minWidth: 0 }}>
+          <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
             {/* Single-line row (Linear-style density) — the description only
                 renders in card mode, where there is room to browse. */}
-            <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
+            <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
               <Text ellipsis className={'agent-row-title'} weight={500}>
                 {displayTitle}
               </Text>
@@ -136,30 +133,26 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
                   {roleTag}
                 </Tag>
               ) : null}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </WorkspaceLink>
         {/* Trailing cluster (Task-list-style): label pills + author avatar +
             update time as one tight right-aligned group. */}
-        <Flexbox
-          horizontal
-          align={'center'}
-          flex={'none'}
-          gap={8}
-          justify={'flex-end'}
+        <div
+          className="flex items-center flex-none gap-2 justify-end"
           style={{ maxWidth: 420, overflow: 'hidden' }}
         >
           <LabelTags labels={item.labels} />
           {showAuthor && (
             // The slot is reserved even without an author, so an unknown
             // author doesn't shift the row's label pills sideways.
-            <Flexbox flex={'none'} style={{ width: AUTHOR_COL_WIDTH }}>
+            <div className="flex flex-col flex-none" style={{ width: AUTHOR_COL_WIDTH }}>
               {author && (
                 <Tooltip title={author.name}>
                   <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={AUTHOR_COL_WIDTH} />
                 </Tooltip>
               )}
-            </Flexbox>
+            </div>
           )}
           <Text
             className={styles.updatedAt}
@@ -168,14 +161,8 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
           >
             {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
           </Text>
-        </Flexbox>
-        <Flexbox
-          horizontal
-          align={'center'}
-          flex={'none'}
-          gap={4}
-          style={{ width: ACTION_COL_WIDTH }}
-        >
+        </div>
+        <div className="flex items-center flex-none gap-1" style={{ width: ACTION_COL_WIDTH }}>
           {/* Visible "…" trigger AND right-click open the same menu — the
               context menu alone proved undiscoverable (users assumed rows had
               no actions). */}
@@ -185,8 +172,8 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
             item={item}
             onMenuReady={handleMenuReady}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </ContextMenuTrigger>
   );
 });

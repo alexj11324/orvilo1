@@ -1,12 +1,18 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Button, toast } from '@lobehub/ui/base-ui';
 import { FileTextIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { agentDocumentService } from '@/services/agentDocument';
 
@@ -50,23 +56,22 @@ const AgentDocumentsEmpty = memo(() => {
   };
 
   return (
-    <Center flex={1} height={'100%'} padding={24} width={'100%'}>
-      <Flexbox align={'center'} gap={16}>
-        <Empty
-          description={t('agentDocument.emptyDescription')}
-          icon={FileTextIcon}
-          title={t('agentDocument.emptyTitle')}
-        />
-        <Button
-          icon={<Icon icon={PlusIcon} />}
-          loading={creating}
-          type={'primary'}
-          onClick={handleCreate}
-        >
+    <div className="flex items-center justify-center flex-1 h-full w-full" style={{ padding: 24 }}>
+      <div className="flex flex-col items-center gap-4">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant={'icon'}>
+              <FileTextIcon />
+            </EmptyMedia>
+            <EmptyTitle>{t('agentDocument.emptyTitle')}</EmptyTitle>
+            <EmptyDescription>{t('agentDocument.emptyDescription')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+        <Button icon={<PlusIcon />} loading={creating} type={'primary'} onClick={handleCreate}>
           {t('workingPanel.resources.tree.newDocument')}
         </Button>
-      </Flexbox>
-    </Center>
+      </div>
+    </div>
   );
 });
 

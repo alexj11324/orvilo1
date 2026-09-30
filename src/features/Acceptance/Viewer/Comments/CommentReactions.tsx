@@ -2,14 +2,15 @@
 
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Popover, toast } from '@lobehub/ui/base-ui';
+import { toast } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentReaction } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
 
@@ -164,61 +165,70 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
       onEmojiSelect={(emoji: { native: string }) => pick(emoji.native)}
     />
   ) : (
-    <Flexbox horizontal gap={2} style={{ padding: 4 }} wrap={'wrap'}>
+    <div className="flex gap-0.5 flex-wrap" style={{ padding: 4 }}>
       {QUICK_REACTIONS.map((emoji) => (
         <div className={styles.emojiButton} key={emoji} onClick={() => pick(emoji)}>
           {emoji}
         </div>
       ))}
       <div className={styles.moreButton} onClick={() => setFull(true)}>
-        <Icon icon={PlusIcon} size={15} />
+        <PlusIcon size={15} />
       </div>
-    </Flexbox>
+    </div>
   );
 
   // The button leads and the emoji follow: it is the one fixed thing in this
   // row, so it stays where the reader last clicked it instead of sliding right
   // by one chip every time somebody reacts.
   return (
-    <Flexbox horizontal align={'center'} className={styles.bar} gap={6} wrap={'wrap'}>
+    <div className={`flex items-center gap-1.5 flex-wrap ${styles.bar}`}>
       {onReact && (
         <Popover
-          content={picker}
           open={open}
-          placement={'topLeft'}
-          styles={{ content: { padding: 0 } }}
-          trigger={'click'}
           onOpenChange={(visible) => {
             setOpen(visible);
             if (!visible) setFull(false);
           }}
         >
-          <span
-            data-comment-reaction-add
-            className={styles.trigger}
-            title={t('acceptance.comments.addReaction')}
-            {...(open ? { 'data-open': '' } : {})}
-          >
-            <Icon icon={SmilePlus} size={13} />
-          </span>
+          <PopoverTrigger
+            render={
+              <span
+                data-comment-reaction-add
+                className={styles.trigger}
+                title={t('acceptance.comments.addReaction')}
+                {...(open ? { 'data-open': '' } : {})}
+              >
+                <SmilePlus size={13} />
+              </span>
+            }
+          />
+          <PopoverContent align={'start'} className={'w-auto p-0'} side={'top'}>
+            {picker}
+          </PopoverContent>
         </Popover>
       )}
       {reactions.map((reaction) => (
-        <Tooltip
-          key={reaction.emoji}
-          title={reaction.authorNames.length > 0 ? reaction.authorNames.join('、') : reaction.emoji}
-        >
-          <span
-            className={cx(styles.chip, reaction.mine && styles.chipMine)}
-            style={onReact ? undefined : { cursor: 'default' }}
-            onClick={onReact ? () => void fire(reaction.emoji, !reaction.mine) : undefined}
-          >
-            <span>{reaction.emoji}</span>
-            <span className={styles.count}>{reaction.count}</span>
-          </span>
+        <Tooltip key={reaction.emoji}>
+          <TooltipTrigger
+            render={
+              <span>
+                <span
+                  className={cx(styles.chip, reaction.mine && styles.chipMine)}
+                  style={onReact ? undefined : { cursor: 'default' }}
+                  onClick={onReact ? () => void fire(reaction.emoji, !reaction.mine) : undefined}
+                >
+                  <span>{reaction.emoji}</span>
+                  <span className={styles.count}>{reaction.count}</span>
+                </span>
+              </span>
+            }
+          />
+          <TooltipContent>
+            {reaction.authorNames.length > 0 ? reaction.authorNames.join('、') : reaction.emoji}
+          </TooltipContent>
         </Tooltip>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

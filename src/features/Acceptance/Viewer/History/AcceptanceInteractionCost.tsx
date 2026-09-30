@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
@@ -63,7 +62,7 @@ const AcceptanceInteractionCost = memo<AcceptanceInteractionCostProps>(({ data }
   return (
     <>
       <Button
-        icon={<Icon className={styles.chevron} data-open={open} icon={ChevronRight} />}
+        icon={<ChevronRight className={styles.chevron} data-open={open} />}
         size={'small'}
         style={{ alignSelf: 'flex-start' }}
         type={'text'}

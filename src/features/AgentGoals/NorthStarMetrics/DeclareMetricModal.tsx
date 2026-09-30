@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
 import {
   Button,
   createModal,
@@ -15,6 +14,7 @@ import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { useGoalStore } from '@/store/goal';
 
 /**
@@ -56,8 +56,8 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
   };
 
   return (
-    <Flexbox gap={16} paddingBlock={'4px 8px'}>
-      <Flexbox gap={6}>
+    <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={13} weight={500}>
           {t('goalProcess.northStar.declare.keyLabel')}
         </Text>
@@ -67,8 +67,8 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
           value={key}
           onChange={(e) => setKey(e.target.value)}
         />
-      </Flexbox>
-      <Flexbox gap={6}>
+      </div>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={13} weight={500}>
           {t('goalProcess.northStar.declare.titleLabel')}
         </Text>
@@ -77,9 +77,9 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-      </Flexbox>
-      <Flexbox horizontal gap={12}>
-        <Flexbox flex={1} gap={6}>
+      </div>
+      <div className="flex gap-3">
+        <div className="flex flex-col flex-1 gap-1.5">
           <Text fontSize={13} weight={500}>
             {t('goalProcess.northStar.declare.opLabel')}
           </Text>
@@ -91,8 +91,8 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
             }))}
             onChange={(value) => setOp(value as GoalMetricComparison)}
           />
-        </Flexbox>
-        <Flexbox flex={1} gap={6}>
+        </div>
+        <div className="flex flex-col flex-1 gap-1.5">
           <Text fontSize={13} weight={500}>
             {t('goalProcess.northStar.declare.targetLabel')}
           </Text>
@@ -100,11 +100,13 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
             placeholder={'10000'}
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            onPressEnter={() => void submit()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') (() => void submit())(event);
+            }}
           />
-        </Flexbox>
-      </Flexbox>
-      <Flexbox horizontal justify={'flex-end'}>
+        </div>
+      </div>
+      <div className="flex justify-end">
         <Button
           disabled={!key.trim() || !Number.isFinite(Number(target)) || target.trim() === ''}
           loading={busy}
@@ -113,8 +115,8 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
         >
           {t('goalProcess.northStar.declare.submit')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

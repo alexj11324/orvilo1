@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { DraggablePanel, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { PanelRightOpen } from 'lucide-react';
@@ -132,16 +131,14 @@ const AcceptanceLedgerRail = () => {
   return (
     <>
       {!focused && !expand && (
-        <Flexbox
-          align={'center'}
-          className={styles.toggle}
-          gap={5}
+        <div
+          className={`flex flex-col items-center gap-[5px] ${styles.toggle}`}
           title={t('acceptance.ledger.expand')}
           onClick={() => onExpandChange(true)}
         >
-          <Icon icon={PanelRightOpen} size={14} />
+          <PanelRightOpen size={14} />
           <Text className={styles.chipCount}>{data.rounds.length}</Text>
-        </Flexbox>
+        </div>
       )}
       {isNarrowViewport ? (
         <AcceptanceDrawer
@@ -166,9 +163,16 @@ const AcceptanceLedgerRail = () => {
           style={{ flex: 'none', height: '100%' }}
           onExpandChange={onExpandChange}
         >
-          <Flexbox style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
-            {topic ?? <Flexbox style={{ height: '100%', overflow: 'auto' }}>{ledger}</Flexbox>}
-          </Flexbox>
+          <div
+            className="flex flex-col"
+            style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
+          >
+            {topic ?? (
+              <div className="flex flex-col" style={{ height: '100%', overflow: 'auto' }}>
+                {ledger}
+              </div>
+            )}
+          </div>
         </DraggablePanel>
       )}
       <AcceptanceDrawer
@@ -184,9 +188,9 @@ const AcceptanceLedgerRail = () => {
         onClose={() => openReport(null)}
       >
         {reportRound && (
-          <Flexbox style={{ height: '100%', position: 'relative' }}>
+          <div className="flex flex-col" style={{ height: '100%', position: 'relative' }}>
             <ReportViewer runId={reportRound.run.id} />
-          </Flexbox>
+          </div>
         )}
       </AcceptanceDrawer>
     </>

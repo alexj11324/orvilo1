@@ -1,5 +1,4 @@
 import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { confirmModal } from '@lobehub/ui/base-ui';
 import { PanelRight, PencilLine, Trash } from 'lucide-react';
 import { useCallback } from 'react';
@@ -30,7 +29,7 @@ export const useThreadItemDropdownMenu = ({
   return useCallback(() => {
     return [
       {
-        icon: <Icon icon={PanelRight} />,
+        icon: <PanelRight />,
         key: 'openOnRight',
         label: t('openOnRight', { ns: 'common' }),
         onClick: () => {
@@ -42,7 +41,7 @@ export const useThreadItemDropdownMenu = ({
       },
       {
         disabled: !canEditThread,
-        icon: <Icon icon={PencilLine} />,
+        icon: <PencilLine />,
         key: 'rename',
         label: t('rename', { ns: 'common' }),
         onClick: () => {
@@ -56,7 +55,7 @@ export const useThreadItemDropdownMenu = ({
       {
         danger: true,
         disabled: !canEditThread,
-        icon: <Icon icon={Trash} />,
+        icon: <Trash />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { ContextMenuTrigger, Flexbox } from '@lobehub/ui';
+import { ContextMenuTrigger } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -50,7 +50,7 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
       <ContextMenuTrigger items={dropdownMenu}>
         <AccordionHeader>
           <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-            <Flexbox horizontal align="center" gap={4}>
+            <div className="flex items-center gap-1">
               <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
                 {t('sidebar.title')}
               </Text>
@@ -60,7 +60,7 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
                 </Text>
               )}
               {isRevalidating && <NeuralNetworkLoading size={14} />}
-            </Flexbox>
+            </div>
           </AccordionTrigger>
           <div
             className={cx(
@@ -69,19 +69,19 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
               accordionStyles.actionBorderless,
             )}
           >
-            <Flexbox horizontal align="center" gap={2}>
+            <div className="flex items-center gap-0.5">
               <ToggleGroups />
               <Filter />
               <Actions />
-            </Flexbox>
+            </div>
           </div>
         </AccordionHeader>
       </ContextMenuTrigger>
       <AccordionPanel contentStyle={{ padding: 0 }}>
         <Suspense fallback={<SkeletonList />}>
-          <Flexbox gap={1} paddingBlock={1}>
+          <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
             <List />
-          </Flexbox>
+          </div>
         </Suspense>
       </AccordionPanel>
     </AccordionItem>

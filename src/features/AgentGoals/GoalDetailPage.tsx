@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { EyeIcon, PauseIcon, PlayIcon } from 'lucide-react';
@@ -82,14 +81,14 @@ const Metric = memo<{
   onClick: () => void;
   value: ReactNode;
 }>(({ label, onClick, value }) => (
-  <Flexbox className={styles.metric} gap={2} onClick={onClick}>
-    <Flexbox horizontal align={'center'} gap={7} style={{ minHeight: 26 }}>
+  <div className={`flex flex-col gap-0.5 ${styles.metric}`} onClick={onClick}>
+    <div className="flex items-center gap-[7px]" style={{ minHeight: 26 }}>
       {value}
-    </Flexbox>
+    </div>
     <Text fontSize={12} type={'secondary'}>
       {label}
     </Text>
-  </Flexbox>
+  </div>
 ));
 
 Metric.displayName = 'GoalHeaderMetric';
@@ -204,11 +203,11 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
         : t('goalProcess.metrics.uncapped');
 
   return (
-    <Flexbox horizontal flex={1} height={'100%'} style={{ overflow: 'hidden' }}>
-      <Flexbox flex={1} height={'100%'} style={{ minWidth: 0 }}>
+    <div className="flex flex-1 h-full" style={{ overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minWidth: 0 }}>
         <NavHeader
           left={
-            <Flexbox horizontal align={'center'} gap={4}>
+            <div className="flex items-center gap-1">
               {agentId ? (
                 <AgentBreadcrumb
                   agentId={agentId}
@@ -225,11 +224,11 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
               {/* Not nested under the breadcrumb: an agent-less goal still has to
                   be deletable, and this menu is the only place that can do it. */}
               <GoalDetailActions agentId={agentId} goalId={goal.id} projectId={goal.projectId} />
-            </Flexbox>
+            </div>
           }
           right={
             graphFullscreen ? undefined : (
-              <Flexbox horizontal align={'center'} gap={8}>
+              <div className="flex items-center gap-2">
                 {managerConversation && (
                   <Button
                     icon={EyeIcon}
@@ -249,17 +248,17 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                     onToggle={() => chat.setOpen(true)}
                   />
                 )}
-              </Flexbox>
+              </div>
             )
           }
         />
-        <Flexbox flex={1} style={{ overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ overflowY: 'auto' }}>
           <WideScreenContainer gap={20} paddingBlock={16}>
-            <Flexbox className={styles.header} gap={8}>
+            <div className={`flex flex-col gap-2 ${styles.header}`}>
               <Text as={'h1'} fontSize={22} weight={600}>
                 {goal.title}
               </Text>
-              <Flexbox horizontal className={styles.metrics} gap={8} wrap={'wrap'}>
+              <div className={`flex gap-2 flex-wrap ${styles.metrics}`}>
                 <Metric
                   label={t('goalProcess.metrics.status')}
                   value={
@@ -318,12 +317,12 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   value={<LivenessValue latest={liveness.latest} />}
                   onClick={open('liveness')}
                 />
-              </Flexbox>
+              </div>
               {/* Pause/resume above the requirement document — its reviewed
                   home. The status glyph keeps the "running" animation; this
                   button is only the control. */}
               {canPause && (
-                <Flexbox horizontal align={'center'} gap={10} paddingBlock={'8px 0'}>
+                <div className="flex items-center gap-2.5" style={{ paddingBlock: '8px 0' }}>
                   <Button
                     icon={paused ? PlayIcon : PauseIcon}
                     type={paused ? 'primary' : 'default'}
@@ -336,7 +335,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                       {t('goalProcess.paused')}
                     </Text>
                   )}
-                </Flexbox>
+                </div>
               )}
               {goal.requirement && (
                 <GoalRequirement goalId={goal.id} requirement={goal.requirement} />
@@ -346,7 +345,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   with it — not squeezed between the title and the execution
                   metrics (review feedback, r1). */}
               <NorthStarMetrics canEdit={canEdit} goalId={goalId} />
-            </Flexbox>
+            </div>
 
             <ProcessControl
               goalId={goal.id}
@@ -354,8 +353,8 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
               onGraphFullscreenChange={setGraphFullscreen}
             />
           </WideScreenContainer>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
       {/* Same Portal the conversation surface uses — the drill-down chain
           (metric / node → task detail → topic) rides its view stack, and the
@@ -393,7 +392,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
           />
         ) : null}
       </RightPanel>
-    </Flexbox>
+    </div>
   );
 });
 

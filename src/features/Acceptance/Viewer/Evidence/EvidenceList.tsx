@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Image } from '@lobehub/ui';
+import { Image } from '@lobehub/ui';
 import { useResponsive } from 'antd-style';
 import { memo } from 'react';
 
@@ -103,7 +103,7 @@ export const EvidenceList = memo<{
   const consumedScreenshotIds = new Set<string>();
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {sorted.map((item) => {
         if (consumedScreenshotIds.has(item.id)) return null;
         if (pairedIds.has(item.id) && (md || !onReviewEvidence)) {
@@ -125,18 +125,22 @@ export const EvidenceList = memo<{
         const caption = description && <span className={styles.caption}>{description}</span>;
         if (item.fileUrl && item.type === 'video')
           return (
-            <Flexbox gap={4} key={item.id} style={{ maxWidth: '100%', width: 'fit-content' }}>
+            <div
+              className="flex flex-col gap-1"
+              key={item.id}
+              style={{ maxWidth: '100%', width: 'fit-content' }}
+            >
               <video
                 controls
                 src={item.fileUrl}
                 style={{ borderRadius: 8, maxHeight: 360, maxWidth: '100%', width: 'auto' }}
               />
               {caption}
-            </Flexbox>
+            </div>
           );
         if (item.fileUrl && item.type === 'audio')
           return (
-            <Flexbox gap={4} key={item.id} width={'100%'}>
+            <div className="flex flex-col gap-1 w-full" key={item.id}>
               {/* The conversation's own waveform player — one audio dialect across
                   the product, with the download the reviewer needs to keep the clip. */}
               <AudioPlayer
@@ -146,7 +150,7 @@ export const EvidenceList = memo<{
                 url={item.fileUrl}
               />
               {caption}
-            </Flexbox>
+            </div>
           );
         if (!md && onReviewEvidence && item.fileUrl && IMAGE_EVIDENCE.has(item.type)) {
           return (
@@ -192,13 +196,10 @@ export const EvidenceList = memo<{
             consumedScreenshotIds.add(next.id);
           }
           return (
-            <Flexbox
-              horizontal
-              align={'flex-start'}
-              gap={12}
+            <div
+              className="flex items-start gap-3 flex-wrap"
               key={item.id}
               style={{ maxWidth: '100%' }}
-              wrap={'wrap'}
             >
               {run.map((shot) => {
                 const shotCaption = meaningfulEvidenceCaption(shot.description);
@@ -218,12 +219,16 @@ export const EvidenceList = memo<{
                   />
                 );
               })}
-            </Flexbox>
+            </div>
           );
         }
         if (item.fileUrl && IMAGE_EVIDENCE.has(item.type)) {
           return (
-            <Flexbox gap={4} key={item.id} style={{ maxWidth: '100%', width: 'fit-content' }}>
+            <div
+              className="flex flex-col gap-1"
+              key={item.id}
+              style={{ maxWidth: '100%', width: 'fit-content' }}
+            >
               {overlay?.length ? (
                 <AnnotatedImage
                   annotations={overlay}
@@ -236,13 +241,13 @@ export const EvidenceList = memo<{
                   }
                 />
               ) : (
-                <Flexbox
-                  className={styles.evidenceImage}
-                  style={
-                    item.fileWidth && item.fileHeight
+                <div
+                  className={`flex flex-col ${styles.evidenceImage}`}
+                  style={{
+                    ...(item.fileWidth && item.fileHeight
                       ? { aspectRatio: imageRatio(item), maxWidth: '100%', width: item.fileWidth }
-                      : undefined
-                  }
+                      : undefined),
+                  }}
                 >
                   <Image
                     alt={item.description ?? item.fileName ?? item.type}
@@ -255,10 +260,10 @@ export const EvidenceList = memo<{
                       width: item.fileWidth && item.fileHeight ? '100%' : undefined,
                     }}
                   />
-                </Flexbox>
+                </div>
               )}
               {caption}
-            </Flexbox>
+            </div>
           );
         }
         if (item.content && markdownTextEvidenceTypes.has(item.type))
@@ -276,10 +281,10 @@ export const EvidenceList = memo<{
           );
         if (item.content)
           return (
-            <Flexbox gap={4} key={item.id}>
+            <div className="flex flex-col gap-1" key={item.id}>
               <div className={styles.evidenceText}>{item.content}</div>
               {caption}
-            </Flexbox>
+            </div>
           );
         if (item.fileUrl && markdownTextEvidenceTypes.has(item.type))
           return (
@@ -293,6 +298,6 @@ export const EvidenceList = memo<{
           );
         return null;
       })}
-    </Flexbox>
+    </div>
   );
 });

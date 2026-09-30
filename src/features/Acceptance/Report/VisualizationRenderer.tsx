@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type {
   VerifyBarChartView,
@@ -260,10 +259,10 @@ const ViewCard = memo<{
   const { t } = useTranslation('verify');
   return (
     <div className={styles.card}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
-        <Icon icon={ChartNoAxesCombined} size={15} />
+      <div className={`flex items-center gap-2 ${styles.header}`}>
+        <ChartNoAxesCombined size={15} />
         <Text strong>{title ?? t('report.visualization.title')}</Text>
-      </Flexbox>
+      </div>
       {children}
       {context && <div className={styles.context}>{context}</div>}
     </div>
@@ -300,11 +299,11 @@ const MetricComparisonRenderer = memo<{
 
         return (
           <div className={styles.metric} key={`${stringCell(row, view.encoding.label)}-${index}`}>
-            <Flexbox gap={2}>
+            <div className="flex flex-col gap-0.5">
               <span className={styles.metricName}>
                 {stringCell(row, view.encoding.label) ?? t('report.visualization.unnamed')}
               </span>
-              <Flexbox horizontal gap={8}>
+              <div className="flex gap-2">
                 {view.encoding.statistic && (
                   <span className={styles.sample}>{stringCell(row, view.encoding.statistic)}</span>
                 )}
@@ -320,8 +319,8 @@ const MetricComparisonRenderer = memo<{
                       : '–'}
                   </span>
                 )}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
             <div className={styles.values}>
               {(
                 [
@@ -329,7 +328,7 @@ const MetricComparisonRenderer = memo<{
                   ['after', after, styles.barAfter],
                 ] as const
               ).map(([role, value, barClass]) => (
-                <Flexbox gap={5} key={role}>
+                <div className="flex flex-col gap-[5px]" key={role}>
                   <span className={styles.valueText}>
                     <span>{t(`report.visualization.${role}`)}</span>
                     <strong>{formatValue(value, unit)}</strong>
@@ -340,13 +339,13 @@ const MetricComparisonRenderer = memo<{
                       style={{ width: `${Math.max(3, (Math.abs(value) / maximum) * 100)}%` }}
                     />
                   </div>
-                </Flexbox>
+                </div>
               ))}
             </div>
-            <Flexbox align={'flex-end'} gap={2}>
+            <div className="flex flex-col items-end gap-0.5">
               {improvement !== null && (
                 <span className={cx(styles.delta, !improved && styles.deltaWorse)}>
-                  <Icon icon={DeltaIcon} size={13} />
+                  <DeltaIcon size={13} />
                   {Math.abs(improvement).toFixed(1)}%
                 </span>
               )}
@@ -360,7 +359,7 @@ const MetricComparisonRenderer = memo<{
                   )}
                 </span>
               )}
-            </Flexbox>
+            </div>
           </div>
         );
       })}
@@ -721,7 +720,7 @@ export const VisualizationDeltaBadge = memo<{
   const DeltaIcon = delta.after <= delta.before ? ArrowDownRight : ArrowUpRight;
   return (
     <span className={cx(styles.badge, !improved && styles.badgeWorse)}>
-      <Icon icon={DeltaIcon} size={11} />
+      <DeltaIcon size={11} />
       {Math.abs(delta.improvement).toFixed(1)}%
     </span>
   );
@@ -732,7 +731,7 @@ VisualizationDeltaBadge.displayName = 'VisualizationDeltaBadge';
 export const VisualizationRenderer = memo<{
   manifest: VerifyVisualizationManifest;
 }>(({ manifest }) => (
-  <Flexbox gap={12}>
+  <div className="flex flex-col gap-3">
     {manifest.views.map((view) => {
       const dataset = datasetForView(manifest, view);
       if (!dataset) return null;
@@ -757,7 +756,7 @@ export const VisualizationRenderer = memo<{
         }
       }
     })}
-  </Flexbox>
+  </div>
 ));
 
 VisualizationRenderer.displayName = 'VisualizationRenderer';

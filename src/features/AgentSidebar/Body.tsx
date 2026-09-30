@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { AccordionRoot } from '@lobehub/ui/base-ui';
 import React, { memo, useCallback, useMemo } from 'react';
 
@@ -43,7 +42,7 @@ const Body = memo(() => {
   );
 
   return (
-    <Flexbox paddingInline={4}>
+    <div className="flex flex-col" style={{ paddingInline: 4 }}>
       <AccordionRoot
         indicatorPlacement="inline"
         style={{ gap: 8 }}
@@ -55,7 +54,7 @@ const Body = memo(() => {
           itemKey={ChatSidebarKey.Topic}
         />
       </AccordionRoot>
-    </Flexbox>
+    </div>
   );
 });
 

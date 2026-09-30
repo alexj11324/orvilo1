@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Tag, toast } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentThread } from '@orvilo/types';
 import { cx } from 'antd-style';
@@ -67,15 +66,15 @@ const CommentThread = memo<CommentThreadProps>(
           type={'button'}
           onClick={() => setOpenOverride(true)}
         >
-          <Flexbox horizontal align={'center'} gap={6}>
-            <Icon icon={CheckCircle2} size={13} />
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 size={13} />
             <span>
               {t('acceptance.comments.resolvedSummary', {
                 count: replies.length + 1,
                 name: commentAuthorName(root.author),
               })}
             </span>
-          </Flexbox>
+          </div>
         </button>
       );
 
@@ -86,7 +85,7 @@ const CommentThread = memo<CommentThreadProps>(
     );
 
     return (
-      <Flexbox className={cx(resolved && styles.resolvedThread)}>
+      <div className={`flex flex-col ${cx(resolved && styles.resolvedThread)}`}>
         <CommentCard badges={badges} comment={root} variant={'plain'} onDelete={onDelete} />
         {replies.map((reply) => (
           <div className={styles.panelReply} key={reply.id}>
@@ -95,7 +94,7 @@ const CommentThread = memo<CommentThreadProps>(
         ))}
         {canComment &&
           (replying ? (
-            <Flexbox className={styles.panelActions}>
+            <div className={`flex flex-col ${styles.panelActions}`}>
               <CommentComposer
                 autoFocus
                 compact
@@ -107,9 +106,9 @@ const CommentThread = memo<CommentThreadProps>(
                   setReplying(false);
                 }}
               />
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox horizontal className={styles.panelActions} gap={2}>
+            <div className={`flex gap-0.5 ${styles.panelActions}`}>
               <Button outdent size={'small'} type={'text'} onClick={() => setReplying(true)}>
                 {t('acceptance.comments.reply')}
               </Button>
@@ -129,9 +128,9 @@ const CommentThread = memo<CommentThreadProps>(
                   {t('acceptance.comments.collapseThread')}
                 </Button>
               )}
-            </Flexbox>
+            </div>
           ))}
-      </Flexbox>
+      </div>
     );
   },
 );

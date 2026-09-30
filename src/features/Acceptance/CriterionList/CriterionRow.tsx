@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { HTMLAttributes, ReactNode } from 'react';
@@ -106,11 +105,8 @@ export const CriterionRow = ({
   title,
   ...rest
 }: CriterionRowProps) => (
-  <Flexbox
-    horizontal
-    align={'center'}
-    className={cx(styles.row, onOpen && styles.rowClickable, className)}
-    gap={10}
+  <div
+    className={`flex items-center gap-2.5 ${cx(styles.row, onOpen && styles.rowClickable, className)}`}
     role={onOpen ? 'button' : undefined}
     tabIndex={onOpen ? 0 : undefined}
     onClick={onOpen}
@@ -124,7 +120,7 @@ export const CriterionRow = ({
     </Text>
     {children}
     {actions}
-  </Flexbox>
+  </div>
 );
 
 interface CriterionListProps {
@@ -134,7 +130,7 @@ interface CriterionListProps {
 
 /** Outlined container that gives `CriterionRow` children their between-row borders. */
 export const CriterionList = ({ children, className }: CriterionListProps) => (
-  <Block className={cx(styles.list, className)} variant={'outlined'}>
+  <div className={`flex flex-col rounded-md border border-border ${cx(styles.list, className)}`}>
     {children}
-  </Block>
+  </div>
 );

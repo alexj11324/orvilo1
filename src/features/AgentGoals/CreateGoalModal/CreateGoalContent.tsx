@@ -1,12 +1,10 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { resolveGoalAttemptBudget, resolveGoalConcurrency } from '@orvilo/builtin-tool-goal';
 import type { CreateGoalParams, GoalCriterionDraft } from '@orvilo/builtin-tool-task';
 import { DEFAULT_GOAL_MAX_ROUNDS } from '@orvilo/const/verify';
-import { InputNumber } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ArrowLeft,
@@ -23,6 +21,13 @@ import { useTranslation } from 'react-i18next';
 
 import GeneratingBorder from '@/components/GeneratingBorder';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import {
+  NumberField,
+  NumberFieldDecrement,
+  NumberFieldGroup,
+  NumberFieldIncrement,
+  NumberFieldInput,
+} from '@/components/reui/number-field';
 import {
   CriterionList,
   CriterionRequiredChip,
@@ -424,11 +429,11 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
   }, []);
 
   return (
-    <Flexbox onKeyDown={handleKeyDown}>
-      <Flexbox horizontal className={styles.head}>
-        <Flexbox flex={1} gap={6}>
+    <div className="flex flex-col" onKeyDown={handleKeyDown}>
+      <div className={`flex ${styles.head}`}>
+        <div className="flex flex-col flex-1 gap-1.5">
           {step === 'review' && (
-            <Flexbox horizontal align={'center'} gap={8}>
+            <div className="flex items-center gap-2">
               <ActionIcon
                 icon={ArrowLeft}
                 size={'small'}
@@ -438,7 +443,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
               <Text fontSize={12} type={'secondary'}>
                 {t('createGoal.reviewStep')}
               </Text>
-            </Flexbox>
+            </div>
           )}
           {step === 'review' ? (
             <input
@@ -466,14 +471,10 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 />
               </GeneratingBorder>
               {step === 'preparing' ? (
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={styles.generatingStatus}
-                  gap={10}
-                  justify={'space-between'}
+                <div
+                  className={`flex items-center gap-2.5 justify-between ${styles.generatingStatus}`}
                 >
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div className="flex items-center gap-2">
                     <NeuralNetworkLoading size={18} />
                     <div
                       aria-label={t('createGoal.generating')}
@@ -491,7 +492,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                         ))}
                       </div>
                     </div>
-                  </Flexbox>
+                  </div>
                   <Text fontSize={12} type={'secondary'}>
                     {remainingSeconds > 0
                       ? t('createGoal.generatingCountdown', {
@@ -499,20 +500,20 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                         })
                       : t('createGoal.generatingAlmostDone')}
                   </Text>
-                </Flexbox>
+                </div>
               ) : (
                 <Text type={'secondary'}>{t('createGoal.describeHint')}</Text>
               )}
             </>
           )}
-        </Flexbox>
+        </div>
         <ActionIcon className={styles.close} icon={X} onClick={close} />
-      </Flexbox>
+      </div>
 
       {step === 'review' && (
-        <Flexbox className={styles.body}>
-          <Flexbox className={styles.reviewSection} gap={10}>
-            <Flexbox className={styles.instructionEditor}>
+        <div className={`flex flex-col ${styles.body}`}>
+          <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
+            <div className={`flex flex-col ${styles.instructionEditor}`}>
               <EditorCanvas
                 disabled={!canCreate}
                 editor={editor}
@@ -523,24 +524,24 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 style={{ fontSize: 13, minHeight: 32 }}
                 onContentChange={handleContentChange}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
 
-          <Flexbox className={styles.reviewSection} gap={10}>
-            <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-              <Flexbox horizontal align={'center'} gap={8}>
-                <Icon color={cssVar.colorTextTertiary} icon={ShieldCheck} size={16} />
+          <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck color={cssVar.colorTextTertiary} size={16} />
                 <Text fontSize={13} weight={600}>
                   {t('createGoal.criteriaTitle')}
                 </Text>
                 <Text className={styles.sectionHint} fontSize={12}>
                   {t('createGoal.criteriaHint')}
                 </Text>
-              </Flexbox>
+              </div>
               <Button icon={Plus} size={'small'} type={'text'} onClick={addCriterion}>
                 {t('createGoal.addCriterion')}
               </Button>
-            </Flexbox>
+            </div>
             {/* Draft rows keep the C{seq} anchor but no status icon — the pending
                 circle belongs to the post-creation check list, not to authoring. */}
             <CriterionList className={styles.criteriaList}>
@@ -584,31 +585,36 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 </CriterionRow>
               ))}
             </CriterionList>
-          </Flexbox>
+          </div>
 
-          <Flexbox className={styles.reviewSection} gap={10}>
+          <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
             <Text fontSize={13} weight={600}>
               {t('createGoal.budgetTitle')}
             </Text>
-            <Flexbox gap={12}>
+            <div className="flex flex-col gap-3">
               <div className={styles.budgetField}>
                 <Text fontSize={12} type={'secondary'}>
                   {t('createGoal.roundBudgetLabel')}
                 </Text>
-                <InputNumber
+                <NumberField
                   disabled={!canCreate}
                   min={2}
-                  size={'small'}
+                  size={'sm'}
                   style={{ width: '100%' }}
                   value={plan.maxIterations ?? undefined}
-                  variant={'filled'}
-                  suffix={
-                    <Text fontSize={12} type={'secondary'}>
-                      {t('createGoal.roundsUnit')}
-                    </Text>
+                  onValueChange={(value) =>
+                    setPlan((current) => ({ ...current, maxIterations: value }))
                   }
-                  onChange={(value) => setPlan((current) => ({ ...current, maxIterations: value }))}
-                />
+                >
+                  <NumberFieldGroup>
+                    <NumberFieldDecrement />
+                    <NumberFieldInput />
+                    <NumberFieldIncrement />
+                    <span className="text-muted-foreground pr-2 text-xs">
+                      {t('createGoal.roundsUnit')}
+                    </span>
+                  </NumberFieldGroup>
+                </NumberField>
                 <Text className={styles.sectionHint} fontSize={12}>
                   {t('createGoal.roundBudgetHint')}
                 </Text>
@@ -618,22 +624,21 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 <Text fontSize={12} type={'secondary'}>
                   {t('createGoal.costBudgetLabel')}
                 </Text>
-                <InputNumber
-                  controls={false}
+                <NumberField
                   disabled={!canCreate}
                   min={0}
-                  placeholder={t('createGoal.costBudgetPlaceholder')}
-                  size={'small'}
+                  size={'sm'}
                   style={{ width: '100%' }}
                   value={plan.maxTotalCost}
-                  variant={'filled'}
-                  prefix={
-                    <Text fontSize={12} type={'secondary'}>
-                      $
-                    </Text>
+                  onValueChange={(value) =>
+                    setPlan((current) => ({ ...current, maxTotalCost: value }))
                   }
-                  onChange={(value) => setPlan((current) => ({ ...current, maxTotalCost: value }))}
-                />
+                >
+                  <NumberFieldGroup>
+                    <span className="text-muted-foreground pl-2 text-xs">$</span>
+                    <NumberFieldInput placeholder={t('createGoal.costBudgetPlaceholder')} />
+                  </NumberFieldGroup>
+                </NumberField>
                 <Text className={styles.sectionHint} fontSize={12}>
                   {t('createGoal.costBudgetHint')}
                 </Text>
@@ -643,35 +648,37 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 <Text fontSize={12} type={'secondary'}>
                   {t('createGoal.parallelismLabel')}
                 </Text>
-                <InputNumber
+                <NumberField
                   disabled={!canCreate}
                   max={10}
                   min={1}
-                  placeholder={t('createGoal.parallelismPlaceholder')}
-                  size={'small'}
+                  size={'sm'}
                   style={{ width: '100%' }}
                   value={plan.maxConcurrentTasks ?? undefined}
-                  variant={'filled'}
-                  suffix={
-                    <Text fontSize={12} type={'secondary'}>
-                      {t('createGoal.parallelismUnit')}
-                    </Text>
-                  }
-                  onChange={(value) =>
+                  onValueChange={(value) =>
                     setPlan((current) => ({ ...current, maxConcurrentTasks: value }))
                   }
-                />
+                >
+                  <NumberFieldGroup>
+                    <NumberFieldDecrement />
+                    <NumberFieldInput placeholder={t('createGoal.parallelismPlaceholder')} />
+                    <NumberFieldIncrement />
+                    <span className="text-muted-foreground pr-2 text-xs">
+                      {t('createGoal.parallelismUnit')}
+                    </span>
+                  </NumberFieldGroup>
+                </NumberField>
                 <Text className={styles.sectionHint} fontSize={12}>
                   {t('createGoal.parallelismHint')}
                 </Text>
               </div>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
       )}
 
-      <Flexbox horizontal align={'center'} className={styles.footer} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+      <div className={`flex items-center justify-between ${styles.footer}`}>
+        <div className="flex items-center gap-2 flex-wrap">
           {step === 'review' && (
             <ActionIcon
               icon={Paperclip}
@@ -679,9 +686,9 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
               onClick={handleAttach}
             />
           )}
-        </Flexbox>
+        </div>
 
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           {step === 'describe' && (
             <Button
               disabled={!canCreate || isCreating}
@@ -717,9 +724,9 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 ? t('createGoal.next')
                 : t('createGoal.submit')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

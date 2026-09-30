@@ -1,10 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConversationStore } from '@/features/Conversation';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useAgentStore } from '@/store/agent';
@@ -51,16 +51,17 @@ const OpeningQuestions = memo<OpeningQuestionsProps>(({ questions }) => {
   return (
     <div className={styles.container}>
       <p className={styles.title}>{t('guide.questions.title')}</p>
-      <Flexbox horizontal gap={8} wrap={'wrap'}>
+      <div className="flex gap-2 flex-wrap">
         {questions.slice(0, 5).map((question) => {
           const card = (
-            <Block
-              className={cx(styles.card, !canUseResource && styles.cardDisabled)}
-              clickable={canUseResource}
+            <div
+              className={`flex flex-col cursor-pointer ${cx(styles.card, !canUseResource && styles.cardDisabled)}`}
               key={question}
-              paddingBlock={8}
-              paddingInline={12}
-              variant={'filled'}
+              style={{
+                paddingBlock: 8,
+                paddingInline: 12,
+                background: 'var(--ant-color-fill-secondary)',
+              }}
               onClick={
                 canUseResource
                   ? () => {
@@ -70,18 +71,19 @@ const OpeningQuestions = memo<OpeningQuestionsProps>(({ questions }) => {
               }
             >
               {question}
-            </Block>
+            </div>
           );
 
           return canUseResource ? (
             card
           ) : (
-            <Tooltip key={question} title={t('input.viewOnlyAgent', { ns: 'chat' })}>
-              {card}
+            <Tooltip key={question}>
+              <TooltipTrigger render={<span>{card}</span>} />
+              <TooltipContent>{t('input.viewOnlyAgent', { ns: 'chat' })}</TooltipContent>
             </Tooltip>
           );
         })}
-      </Flexbox>
+      </div>
     </div>
   );
 });

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
 import {
   Button,
   createModal,
@@ -15,6 +14,9 @@ import { t } from 'i18next';
 import { Check, CircleDashed, Plus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 import { useRubricCriteria, useRubrics } from '../../hooks';
 
@@ -65,10 +67,10 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
     mode === 'manual' ? Boolean(name.trim()) : Boolean(rubricId && selectedIds.size > 0);
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       {mode === 'manual' ? (
         <>
-          <Flexbox gap={6}>
+          <div className="flex flex-col gap-1.5">
             <Text fontSize={12} type={'secondary'}>
               {tv('acceptance.tray.editModal.nameLabel')}
             </Text>
@@ -77,29 +79,30 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
-          </Flexbox>
-          <Flexbox gap={6}>
+          </div>
+          <div className="flex flex-col gap-1.5">
             <Text fontSize={12} type={'secondary'}>
               {tv('acceptance.tray.editModal.methodLabel')}
             </Text>
-            <TextArea
-              autoSize={{ maxRows: 4, minRows: 2 }}
+            <Textarea
               placeholder={tv('acceptance.tray.editModal.methodPlaceholder')}
+              rows={2}
+              style={{ maxHeight: '4lh' }}
               value={method}
               onChange={(event) => setMethod(event.target.value)}
             />
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={2}>
+          </div>
+          <div className="flex items-center gap-0.5">
             <Text fontSize={12} type={'secondary'}>
               {tv('or', { ns: 'common' })}
             </Text>
             <Button size={'small'} type={'text'} onClick={() => setMode('rubric')}>
               {tv('acceptance.checkCreate.rubric')}
             </Button>
-          </Flexbox>
+          </div>
         </>
       ) : (
-        <Flexbox gap={12}>
+        <div className="flex flex-col gap-3">
           <Button
             size={'small'}
             style={{ alignSelf: 'flex-start' }}
@@ -119,7 +122,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
             }}
           />
           {rubricId && (
-            <Flexbox gap={4}>
+            <div className="flex flex-col gap-1">
               {criteriaLoading ? (
                 <Text type={'secondary'}>{tv('acceptance.checkCreate.loading')}</Text>
               ) : availableCriteria.length === 0 ? (
@@ -141,40 +144,40 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
                         })
                       }
                     >
-                      <Flexbox horizontal align={'flex-start'} gap={8}>
-                        <Icon icon={selected ? Check : Plus} size={14} />
-                        <Flexbox align={'flex-start'} gap={2}>
+                      <div className="flex items-start gap-2">
+                        {selected ? <Check size={14} /> : <Plus size={14} />}
+                        <div className="flex flex-col items-start gap-0.5">
                           <Text>{criterion.title}</Text>
                           {criterion.description && (
                             <Text fontSize={12} type={'secondary'}>
                               {criterion.description}
                             </Text>
                           )}
-                        </Flexbox>
-                      </Flexbox>
+                        </div>
+                      </div>
                     </Button>
                   );
                 })
               )}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
-      <Flexbox
-        gap={6}
-        padding={12}
+      <div
+        className="flex flex-col gap-1.5"
         style={{
+          padding: 12,
           background: cssVar.colorFillQuaternary,
           border: `1px solid ${cssVar.colorBorderSecondary}`,
           borderRadius: 8,
         }}
       >
-        <Flexbox horizontal align={'center'} gap={6}>
-          <Icon icon={CircleDashed} size={14} />
+        <div className="flex items-center gap-1.5">
+          <CircleDashed size={14} />
           <Text fontSize={12} type={'secondary'}>
             {tv('acceptance.checkCreate.previewState')}
           </Text>
-        </Flexbox>
+        </div>
         <Text strong>
           {mode === 'manual'
             ? name.trim() || tv('acceptance.checkCreate.previewTitle')
@@ -188,8 +191,8 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
         <Text fontSize={12} type={'secondary'}>
           {tv('acceptance.checkCreate.previewHint')}
         </Text>
-      </Flexbox>
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      </div>
+      <div className="flex gap-2 justify-end">
         <Button disabled={saving} onClick={close}>
           {tv('acceptance.actions.cancel')}
         </Button>
@@ -201,8 +204,8 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
         >
           {tv('acceptance.checkCreate.addToScope')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

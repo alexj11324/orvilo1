@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
 import { Button, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import type { CSSProperties } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import {
   AttachmentStrip,
@@ -83,19 +84,19 @@ const CommentComposer = memo<CommentComposerProps>(
     };
 
     return (
-      <Flexbox
-        className={minHeight ? styles.tall : undefined}
-        gap={8}
-        style={
-          minHeight
+      <div
+        className={`flex flex-col gap-2 ${minHeight ? styles.tall : undefined}`}
+        style={{
+          ...(minHeight
             ? ({ '--acceptance-composer-min-height': `${minHeight}px` } as CSSProperties)
-            : undefined
-        }
+            : undefined),
+        }}
       >
-        <TextArea
+        <Textarea
           autoFocus={autoFocus}
-          autoSize={{ maxRows: 20, minRows: compact ? 1 : 2 }}
           placeholder={placeholder}
+          rows={compact ? 1 : 2}
+          style={{ maxHeight: '20lh' }}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onPaste={handlePaste}
@@ -112,9 +113,9 @@ const CommentComposer = memo<CommentComposerProps>(
           uploading={uploading}
           onRemove={remove}
         />
-        <Flexbox horizontal align={'center'} gap={8} justify={'flex-end'}>
+        <div className="flex items-center gap-2 justify-end">
           <AttachmentUploadButton disabled={sending} onFiles={uploadFiles} />
-          <Flexbox flex={1} />
+          <div className="flex flex-col flex-1" />
           {onCancel && (
             <Button size={'small'} type={'text'} onClick={onCancel}>
               {t('cancel', { ns: 'common' })}
@@ -129,8 +130,8 @@ const CommentComposer = memo<CommentComposerProps>(
           >
             {submitLabel ?? t('acceptance.comments.send')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

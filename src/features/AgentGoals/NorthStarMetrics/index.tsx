@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Skeleton, Tag, Text, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -62,15 +61,15 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
         : t('goalProcess.northStar.lastObserved', { time: dayjs(card.latestAt).fromNow() });
 
     return (
-      <Flexbox className={styles.card} gap={6}>
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+      <div className={`flex flex-col gap-1.5 ${styles.card}`}>
+        <div className="flex items-center gap-2 justify-between">
           <Text ellipsis fontSize={12} type={'secondary'}>
             {card.label}
           </Text>
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1">
             {card.met && (
               <Tag color={'success'} size={'small'}>
-                <Icon icon={Check} size={11} /> {t('goalProcess.northStar.met')}
+                <Check size={11} /> {t('goalProcess.northStar.met')}
               </Tag>
             )}
             {/* Recording stays available after the target is met: the world
@@ -79,17 +78,17 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
             {canEdit && (
               <Tooltip title={t('goalProcess.northStar.record.title')}>
                 <Button
-                  icon={<Icon icon={Plus} size={13} />}
+                  icon={<Plus size={13} />}
                   size={'small'}
                   type={'text'}
                   onClick={() => openRecordObservationModal(goalId, card.key, card.label)}
                 />
               </Tooltip>
             )}
-          </Flexbox>
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-          <Flexbox horizontal align={'baseline'} gap={6}>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 justify-between">
+          <div className="flex items-baseline gap-1.5">
             <Text className={card.met ? styles.metValue : ''} fontSize={20} weight={700}>
               {formatMetricValue(card.current)}
             </Text>
@@ -97,9 +96,9 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
               {t(`goalProcess.northStar.op.${card.op}` as const)} {formatMetricValue(card.target)}
               {card.unit ? ` ${card.unit}` : ''}
             </Text>
-          </Flexbox>
+          </div>
           <Sparkline met={card.met} values={card.trend} />
-        </Flexbox>
+        </div>
         <div className={styles.track}>
           <div
             style={{
@@ -114,7 +113,7 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
           {freshness}
           {card.stale ? ` · ${t('goalProcess.northStar.staleWarning')}` : ''}
         </Text>
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -147,8 +146,8 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
 
   if (!criteria?.length)
     return (
-      <Flexbox horizontal align={'center'} gap={12} paddingBlock={4}>
-        <Icon color={cssVar.colorTextQuaternary} icon={Target} size={16} />
+      <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
+        <Target color={cssVar.colorTextQuaternary} size={16} />
         <Text fontSize={13} type={'secondary'}>
           {t('goalProcess.northStar.emptyHint')}
         </Text>
@@ -157,7 +156,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
             {t('goalProcess.northStar.declare.title')}
           </Button>
         )}
-      </Flexbox>
+      </div>
     );
 
   if (error && !series)
@@ -175,29 +174,29 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
   // "never measured" against an empty join — a false state, not feedback.
   if (!series && isLoading)
     return (
-      <Flexbox horizontal gap={10}>
+      <div className="flex gap-2.5">
         {criteria.map((criterion) => (
           <Skeleton height={96} key={criterion.key} width={236} />
         ))}
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Flexbox horizontal gap={10} wrap={'wrap'}>
+    <div className="flex gap-2.5 flex-wrap">
       {cards.map((card) => (
         <MetricCard canEdit={canEdit} card={card} goalId={goalId} key={card.key} />
       ))}
       {canEdit && (
         <Tooltip title={t('goalProcess.northStar.declare.title')}>
           <Button
-            icon={<Icon icon={Plus} size={14} />}
+            icon={<Plus size={14} />}
             style={{ alignSelf: 'center' }}
             type={'text'}
             onClick={() => openDeclareMetricModal(goalId)}
           />
         </Tooltip>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

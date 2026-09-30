@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { RefreshCw } from 'lucide-react';
@@ -36,9 +35,8 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
   }, [disabled, prompt, index, tracingId, mainInputEditor, markChipClicked]);
 
   return (
-    <Block
-      clickable={!disabled}
-      variant={'outlined'}
+    <div
+      className="flex flex-col cursor-pointer rounded-md border border-border"
       style={{
         borderRadius: cssVar.borderRadiusLG,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -46,15 +44,15 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
       }}
       onClick={handleClick}
     >
-      <Flexbox gap={4} paddingBlock={12} paddingInline={14}>
+      <div className="flex flex-col gap-1" style={{ paddingBlock: 12, paddingInline: 14 }}>
         <Text ellipsis fontSize={14} style={{ fontWeight: 500 }}>
           {title}
         </Text>
         <Text color={cssVar.colorTextTertiary} ellipsis={{ rows: 2 }} fontSize={12}>
           {prompt}
         </Text>
-      </Flexbox>
-    </Block>
+      </div>
+    </div>
   );
 });
 
@@ -64,12 +62,15 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
  * skeleton lines — minimising layout shift (CLS) when real chips arrive.
  */
 const ChipSkeleton = memo(() => (
-  <Block style={{ borderRadius: cssVar.borderRadiusLG }} variant={'outlined'}>
-    <Flexbox gap={8} paddingBlock={12} paddingInline={14}>
+  <div
+    className="flex flex-col rounded-md border border-border"
+    style={{ borderRadius: cssVar.borderRadiusLG }}
+  >
+    <div className="flex flex-col gap-2" style={{ paddingBlock: 12, paddingInline: 14 }}>
       <Skeleton.Text fontSize={14} width={96} />
       <Skeleton.Text rows={2} width={['100%', '60%']} />
-    </Flexbox>
-  </Block>
+    </div>
+  </div>
 ));
 
 interface SuggestionChipsProps {
@@ -112,19 +113,19 @@ const SuggestionChips = memo<SuggestionChipsProps>(
     // chip chrome and only loads the text, so there's near-zero layout shift.
     if (isLoading && suggestions.length === 0) {
       return (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           {Array.from({ length: count }).map((_, index) => (
             <ChipSkeleton key={index} />
           ))}
-        </Flexbox>
+        </div>
       );
     }
 
     // Dynamic, context-aware chips.
     if (suggestions.length > 0) {
       return (
-        <Flexbox gap={12}>
-          <Flexbox gap={8}>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {suggestions.map((item, index) => (
               <ChipItem
                 disabled={disabled}
@@ -135,11 +136,9 @@ const SuggestionChips = memo<SuggestionChipsProps>(
                 tracingId={tracingId}
               />
             ))}
-          </Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={4}
+          </div>
+          <div
+            className="flex items-center gap-1"
             style={{
               cursor: disabled ? 'not-allowed' : 'pointer',
               opacity: disabled ? 0.65 : undefined,
@@ -153,8 +152,8 @@ const SuggestionChips = memo<SuggestionChipsProps>(
             <Text color={cssVar.colorTextSecondary} fontSize={12}>
               {tCommon('switch')}
             </Text>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       );
     }
 

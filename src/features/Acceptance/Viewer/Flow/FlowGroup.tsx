@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { Handle, Position, useNodeId } from '@xyflow/react';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -13,7 +12,7 @@ import {
   CircleX,
   Maximize2,
 } from 'lucide-react';
-import { use } from 'react';
+import { createElement, use } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FlowAnchorContext } from './flowAnchor';
@@ -105,11 +104,8 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
       <Handle className={styles.handle} id="in" position={Position.Left} type="target" />
       <div className={styles.group}>
         {data.collapsed ? (
-          <Flexbox
-            horizontal
-            align="flex-start"
-            className={styles.collapsed}
-            gap={10}
+          <div
+            className={`flex items-start gap-2.5 ${styles.collapsed}`}
             role="button"
             onClick={toggle}
           >
@@ -122,17 +118,17 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
                 color: flowStateColor(data.state),
               }}
             >
-              <Icon icon={statusIcon} size={24} />
+              {createElement(statusIcon, { size: 24 })}
             </div>
-            <Flexbox flex={1} gap={3} style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1 gap-[3px]" style={{ minWidth: 0 }}>
               <span className={styles.title}>{data.title}</span>
               <span className={styles.summary}>
                 {`${data.passed}/${data.total} · ${t(`flow.state.${data.state ?? 'pending'}`)}`}
                 {Boolean(data.reviewed) &&
                   ` · ${t('flow.groupReviewed', { count: data.reviewed })}`}
               </span>
-            </Flexbox>
-            <Flexbox horizontal align="center" gap={2} style={{ flex: 'none' }}>
+            </div>
+            <div className="flex items-center gap-0.5" style={{ flex: 'none' }}>
               {data.onToggle && (
                 <Button
                   aria-label={t('flow.expandGroup', { title: data.title })}
@@ -141,7 +137,7 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
                   type="text"
                   onClick={toggle}
                 >
-                  <Icon icon={ChevronRight} size={16} />
+                  <ChevronRight size={16} />
                 </Button>
               )}
               {data.onEnter && (
@@ -155,13 +151,13 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
                     data.onEnter?.();
                   }}
                 >
-                  <Icon icon={Maximize2} size={14} />
+                  <Maximize2 size={14} />
                 </Button>
               )}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ) : (
-          <Flexbox horizontal align="center" className={styles.header} gap={8}>
+          <div className={`flex items-center gap-2 ${styles.header}`}>
             {data.onToggle && (
               <Button
                 aria-label={t('flow.collapseGroup', { title: data.title })}
@@ -170,10 +166,10 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
                 type="text"
                 onClick={toggle}
               >
-                <Icon icon={ChevronDown} size={16} />
+                <ChevronDown size={16} />
               </Button>
             )}
-            <Icon icon={statusIcon} size={18} style={{ color: flowStateColor(data.state) }} />
+            {createElement(statusIcon, { size: 18, style: { color: flowStateColor(data.state) } })}
             <Text ellipsis fontSize={13} style={{ flex: 1 }}>
               {data.title}
             </Text>
@@ -196,10 +192,10 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
                   data.onEnter?.();
                 }}
               >
-                <Icon icon={Maximize2} size={14} />
+                <Maximize2 size={14} />
               </Button>
             )}
-          </Flexbox>
+          </div>
         )}
       </div>
       <Handle className={styles.handle} id="stack-in" position={Position.Top} type="target" />

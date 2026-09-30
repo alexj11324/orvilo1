@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Accordion, type AccordionItemType, Tag, Text } from '@lobehub/ui/base-ui';
 import { experimentOwner } from '@orvilo/utils/goalGraph';
 import { createStaticStyles } from 'antd-style';
@@ -140,9 +139,9 @@ const ProcessControl = memo<ProcessControlProps>(
     );
 
     return (
-      <Flexbox gap={20}>
+      <div className="flex flex-col gap-5">
         {hasExperiments && map}
-        <Flexbox gap={12}>
+        <div className="flex flex-col gap-3">
           <Frontier
             actions={actions}
             canEdit={canAct}
@@ -150,7 +149,7 @@ const ProcessControl = memo<ProcessControlProps>(
             planning={planning}
             onSelect={select}
           />
-        </Flexbox>
+        </div>
 
         {!hasExperiments && map}
 
@@ -166,13 +165,13 @@ const ProcessControl = memo<ProcessControlProps>(
               // detail's 交付验收 section. Prose-only legacy goals have none.
               !!acceptanceConfig && {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <GoalAcceptanceCriteria criteriaIds={criteriaIds} goalId={goalId} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'acceptance',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div className="flex items-center gap-2">
                     <Text fontSize={14} weight={600}>
                       {t('goalAcceptance.title')}
                     </Text>
@@ -180,7 +179,7 @@ const ProcessControl = memo<ProcessControlProps>(
                     <Text fontSize={12} type={'secondary'}>
                       {t('goalAcceptance.gateHint')}
                     </Text>
-                  </Flexbox>
+                  </div>
                 ),
               },
               // Between the standard and the conclusions on purpose: 验收标准 says
@@ -188,57 +187,57 @@ const ProcessControl = memo<ProcessControlProps>(
               // believes about it. Findings routinely cite these artifacts.
               {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <Deliverables graph={graph} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'deliverables',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div className="flex items-center gap-2">
                     <Text fontSize={14} weight={600}>
                       {t('goalProcess.deliverables.title')}
                     </Text>
                     {graph.artifacts.length > 0 && (
                       <Tag size={'small'}>{graph.artifacts.length}</Tag>
                     )}
-                  </Flexbox>
+                  </div>
                 ),
               },
               {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <Findings graph={graph} onSelect={select} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'findings',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div className="flex items-center gap-2">
                     <Text fontSize={14} weight={600}>
                       {t('goalProcess.findings.title')}
                     </Text>
                     {graph.findings.length > 0 && <Tag size={'small'}>{graph.findings.length}</Tag>}
-                  </Flexbox>
+                  </div>
                 ),
               },
               {
                 children: (
-                  <Flexbox className={styles.section}>
+                  <div className={`flex flex-col ${styles.section}`}>
                     <Activity graph={graph} onSelect={select} />
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'activity',
                 title: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div className="flex items-center gap-2">
                     <Text fontSize={14} weight={600}>
                       {t('goalProcess.activity.title')}
                     </Text>
-                  </Flexbox>
+                  </div>
                 ),
               },
             ].filter(Boolean) as AccordionItemType[]
           }
         />
-      </Flexbox>
+      </div>
     );
   },
 );

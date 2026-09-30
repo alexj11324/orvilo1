@@ -2,7 +2,7 @@
 
 import '@xyflow/react/dist/style.css';
 
-import { Empty, Flexbox, useAppElement } from '@lobehub/ui';
+import { useAppElement } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Text } from '@lobehub/ui/base-ui';
 import { MarkerType, ReactFlowProvider } from '@xyflow/react';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
@@ -10,6 +10,8 @@ import { Maximize2, Minimize2 } from 'lucide-react';
 import { use, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
 import { acceptanceContentLayout } from '../layout';
@@ -142,7 +144,14 @@ export function AcceptanceFlow() {
     setFocus,
     focus,
   );
-  if (!views.length) return <Empty description={t('flow.empty')} />;
+  if (!views.length)
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyDescription>{t('flow.empty')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
   const edgeSelection = graph.transitions.get(selected ?? '');
   const checkSelection =
     graph.checks.get(selected ?? '') ??
@@ -188,33 +197,28 @@ export function AcceptanceFlow() {
     />
   ) : null;
   const stage = (
-    <Flexbox
-      className={fullscreen ? styles.stage : undefined}
-      flex={fullscreen ? 1 : undefined}
-      gap={16}
+    <div
+      className={`flex flex-col gap-4 ${fullscreen ? styles.stage : undefined}`}
+      style={{ flex: fullscreen ? 1 : undefined }}
     >
-      <Flexbox
-        horizontal
-        align="center"
-        className={styles.toolbar}
-        gap={8}
-        justify="space-between"
-        wrap="wrap"
+      <div
+        className={`flex items-center gap-2 justify-between ${styles.toolbar}`}
+        style={{ flexWrap: 'wrap' }}
       >
-        <Flexbox horizontal align="center" gap={4}>
+        <div className="flex items-center gap-1">
           <Button size="small" type="text" onClick={() => setFocus(undefined)}>
             {t('flow.allGroups')}
           </Button>
           {crumbs.map((crumb) => (
-            <Flexbox horizontal align="center" gap={4} key={crumb.id}>
+            <div className="flex items-center gap-1" key={crumb.id}>
               <Text type="secondary">/</Text>
               <Button size="small" type="text" onClick={() => setFocus(crumb.id)}>
                 {crumb.title}
               </Button>
-            </Flexbox>
+            </div>
           ))}
-        </Flexbox>
-        <Flexbox horizontal align="center" gap={8} wrap="wrap">
+        </div>
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
           <AcceptancePlanReview runId={candidates[0]?.run?.verifyRunId} />
           <Button
             size="small"
@@ -247,13 +251,13 @@ export function AcceptanceFlow() {
             title={t(fullscreen ? 'flow.exitFullscreen' : 'flow.fullscreen')}
             onClick={() => setFullscreen((value) => !value)}
           />
-        </Flexbox>
-      </Flexbox>
-      <Flexbox horizontal className={styles.workspace} flex={fullscreen ? 1 : undefined}>
+        </div>
+      </div>
+      <div className={`flex ${styles.workspace}`} style={{ flex: fullscreen ? 1 : undefined }}>
         {showOutline ? (
-          <Flexbox className={styles.outline} flex={1}>
+          <div className={`flex flex-col flex-1 ${styles.outline}`}>
             <FlowOutline edges={graphEdges} nodes={graph.nodes} onSelect={setSelected} />
-          </Flexbox>
+          </div>
         ) : (
           <ReactFlowProvider key={activeKey}>
             <FlowCanvas
@@ -267,15 +271,15 @@ export function AcceptanceFlow() {
           </ReactFlowProvider>
         )}
         {!fullscreen && results && panelHost && createPortal(results, panelHost)}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
   if (!fullscreen) return stage;
   return createPortal(
-    <Flexbox horizontal className={styles.fullscreen}>
+    <div className={`flex ${styles.fullscreen}`}>
       {stage}
-      {results && <Flexbox className={styles.details}>{results}</Flexbox>}
-    </Flexbox>,
+      {results && <div className={`flex flex-col ${styles.details}`}>{results}</div>}
+    </div>,
     appElement ?? document.body,
   );
 }

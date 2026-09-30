@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
+import { Input } from '@lobehub/ui';
 import { ActionIcon, Button, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { randomAgentName } from '@orvilo/const';
 import { cssVar } from 'antd-style';
@@ -22,11 +22,11 @@ interface FieldProps {
 }
 
 const Field = memo<FieldProps>(({ label, hint, children }) => (
-  <Flexbox gap={6}>
+  <div className="flex flex-col gap-1.5">
     <Text type={'secondary'}>{label}</Text>
     {children}
     {hint}
-  </Flexbox>
+  </div>
 ));
 
 interface AgentIdentityContentProps {
@@ -60,7 +60,7 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
   }, [agentId, locale, setName]);
 
   return (
-    <Flexbox gap={20} padding={20}>
+    <div className="flex flex-col gap-5" style={{ padding: 20 }}>
       <Field label={t('settingAgent.personalName.label', { ns: 'setting' })}>
         <Input
           autoFocus
@@ -123,7 +123,7 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
           />
         </Field>
       )}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button disabled={form.saving} onClick={() => close()}>
           {t('cancel', { ns: 'common' })}
         </Button>
@@ -137,8 +137,8 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
         >
           {t('save', { ns: 'common' })}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

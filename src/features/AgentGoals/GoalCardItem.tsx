@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowRightIcon } from 'lucide-react';
@@ -48,33 +47,30 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
   };
 
   return (
-    <Block
-      clickable
-      className={styles.card}
-      gap={12}
-      padding={16}
+    <div
+      className={`flex flex-col cursor-pointer gap-3 rounded-md border border-border ${styles.card}`}
       role={'link'}
+      style={{ padding: 16 }}
       tabIndex={0}
-      variant={'outlined'}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >
-      <Flexbox horizontal align={'flex-start'} gap={12} justify={'space-between'}>
-        <Flexbox gap={4} style={{ minWidth: 0 }}>
-          <Flexbox horizontal align={'center'} gap={7}>
+      <div className="flex items-start gap-3 justify-between">
+        <div className="flex flex-col gap-1" style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-[7px]">
             <GoalStatusGlyph size={13} status={goal.status} />
             <Text ellipsis fontSize={15} weight={600}>
               {goal.title}
             </Text>
-          </Flexbox>
+          </div>
           {goal.requirement && goal.requirement !== goal.title && (
             <Text ellipsis fontSize={12} type={'secondary'}>
               {goal.requirement}
             </Text>
           )}
-        </Flexbox>
-        <Icon color={cssVar.colorTextQuaternary} icon={ArrowRightIcon} size={16} />
-      </Flexbox>
+        </div>
+        <ArrowRightIcon color={cssVar.colorTextQuaternary} size={16} />
+      </div>
       <GoalProgress
         findingCount={item.findingCount}
         pendingDecisions={item.pendingDecisions}
@@ -83,7 +79,7 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
         totalRunCost={item.totalRunCost}
         totalRunDuration={item.totalRunDuration}
       />
-    </Block>
+    </div>
   );
 });
 

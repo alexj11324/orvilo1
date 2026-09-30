@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -77,14 +76,14 @@ export const GoalProgress = memo<GoalProgressProps>(
     return (
       <div className={styles.metrics}>
         {taskTotal > 0 ? (
-          <Flexbox horizontal align={'center'} className={styles.acceptance} gap={6}>
+          <div className={`flex items-center gap-1.5 ${styles.acceptance}`}>
             <div aria-hidden className={styles.progress}>
               <div className={styles.progressValue} style={{ width: `${progress}%` }} />
             </div>
             <Text ellipsis color={cssVar.colorTextTertiary} fontSize={12}>
               {t('goalList.taskProgress', { done: taskDone, total: taskTotal })}
             </Text>
-          </Flexbox>
+          </div>
         ) : (
           <Text ellipsis color={cssVar.colorTextTertiary} fontSize={12}>
             {t('goalList.noTasks')}

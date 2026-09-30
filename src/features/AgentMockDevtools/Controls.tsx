@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Pause, Play, Repeat, RotateCcw, SkipForward, Square } from 'lucide-react';
@@ -174,13 +173,13 @@ export const Controls = memo(() => {
 
   return (
     <div className={styles.controls}>
-      <Flexbox horizontal align={'center'} className={styles.selection} gap={8}>
+      <div className={`flex items-center gap-2 ${styles.selection}`}>
         <CaseTrigger placement={'topLeft'} />
         <span style={{ flex: 1 }} />
         <span className={styles.counter}>
           {playback ? `${playback.currentEventIndex}/${playback.totalEvents}` : '—'}
         </span>
-      </Flexbox>
+      </div>
       <div
         aria-valuemax={playback?.totalEvents ?? 0}
         aria-valuemin={0}
@@ -199,7 +198,7 @@ export const Controls = memo(() => {
           <div className={styles.progressFill} style={{ width: `${pct}%` }} />
         </div>
       </div>
-      <Flexbox horizontal align={'center'} className={styles.actions} gap={4}>
+      <div className={`flex items-center gap-1 ${styles.actions}`}>
         <ActionIcon
           disabled={disabled}
           icon={running ? Pause : Play}
@@ -239,7 +238,7 @@ export const Controls = memo(() => {
         />
         <span style={{ flex: 1 }} />
         <span className={styles.counter}>{selected ? selected.name : 'No case selected'}</span>
-      </Flexbox>
+      </div>
     </div>
   );
 });

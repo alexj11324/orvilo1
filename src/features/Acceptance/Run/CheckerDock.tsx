@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Input } from '@lobehub/ui';
 import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import type { VerifyCheckItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useThemeMode } from 'antd-style';
@@ -17,10 +16,11 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
+import { Input } from '@/components/ui/input';
 import type { VerifyCheckResultItem } from '@/database/schemas/verify';
 import { verifyService } from '@/services/verify';
 import { useChatStore } from '@/store/chat';
@@ -224,28 +224,23 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
             }
           />
         ) : (
-          <Icon color={cssVar[sIcon.color]} icon={sIcon.icon} size={16} spin={sIcon.spin} />
+          <sIcon.icon className="animate-spin" color={cssVar[sIcon.color]} size={16} />
         )}
-        <Flexbox style={{ minWidth: 0 }}>
+        <div className="flex flex-col" style={{ minWidth: 0 }}>
           <span className={styles.title} style={{ fontWeight: 600 }}>
             {item.title}
           </span>
           {evidence && <span className={styles.desc}>{evidence}</span>}
-        </Flexbox>
-        <Icon
-          className={styles.chevron}
-          icon={ChevronRight}
-          size={16}
-          style={{ marginBlockStart: 2 }}
-        />
+        </div>
+        <ChevronRight className={styles.chevron} size={16} style={{ marginBlockStart: 2 }} />
       </div>
     );
   };
 
   const renderEditor = () => (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {draftItems.map((item, index) => (
-        <Flexbox horizontal align="center" gap={7} key={item.id}>
+        <div className="flex items-center gap-[7px]" key={item.id}>
           <Input
             placeholder={t('editor.placeholder')}
             value={item.title}
@@ -260,7 +255,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
             size="small"
             onClick={() => setDraftItems(draftItems.filter((_, i) => i !== index))}
           />
-        </Flexbox>
+        </div>
       ))}
       <Button
         block
@@ -286,21 +281,21 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
       >
         {t('editor.add')}
       </Button>
-      <Flexbox horizontal gap={8}>
+      <div className="flex gap-2">
         <Button loading={busy} size="small" type="primary" onClick={saveEdit}>
           {t('editor.save')}
         </Button>
         <Button size="small" onClick={() => setEditing(false)}>
           {t('editor.cancel')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   const renderActions = () => {
     if (phase === 'draft')
       return (
-        <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap', marginTop: 12 }}>
+        <div className="flex gap-2" style={{ flexWrap: 'wrap', marginTop: 12 }}>
           <Button loading={busy} size="small" type="primary" onClick={onConfirm}>
             {t('dock.confirm')}
           </Button>
@@ -310,7 +305,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
           <Button size="small" onClick={onSkip}>
             {t('dock.skip')}
           </Button>
-        </Flexbox>
+        </div>
       );
     if (phase === 'repairing')
       return (
@@ -327,7 +322,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
         renderEditor()
       ) : (
         <>
-          <Flexbox gap={0}>{plan.map((item) => renderCheckRow(item))}</Flexbox>
+          <div className="flex flex-col gap-0">{plan.map((item) => renderCheckRow(item))}</div>
           {(() => {
             const actions = renderActions();
             return actions ? <div className={styles.actions}>{actions}</div> : null;
@@ -350,20 +345,20 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
   return (
     <div className={styles.dock}>
       <div className={styles.head} onClick={() => setExpanded((v) => !v)}>
-        <Flexbox horizontal align="center" gap={10} style={{ minWidth: 0 }}>
-          <Icon icon={headIcon} size={18} />
-          <Flexbox style={{ minWidth: 0 }}>
-            <Flexbox horizontal align="center" gap={8}>
+        <div className="flex items-center gap-2.5" style={{ minWidth: 0 }}>
+          {createElement(headIcon, { size: 18 })}
+          <div className="flex flex-col" style={{ minWidth: 0 }}>
+            <div className="flex items-center gap-2">
               <span className={styles.title}>{t('dock.title')}</span>
-            </Flexbox>
+            </div>
             <span className={styles.sub}>{subText}</span>
-          </Flexbox>
-        </Flexbox>
-        <Icon
-          color={cssVar.colorTextTertiary}
-          icon={expanded ? ChevronDown : ChevronUp}
-          size={16}
-        />
+          </div>
+        </div>
+        {expanded ? (
+          <ChevronDown color={cssVar.colorTextTertiary} size={16} />
+        ) : (
+          <ChevronUp color={cssVar.colorTextTertiary} size={16} />
+        )}
       </div>
       {expanded && body}
     </div>

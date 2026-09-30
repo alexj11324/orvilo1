@@ -1,12 +1,17 @@
 'use client';
 
-import { Block, DropdownMenu, Flexbox, Icon, stopPropagation } from '@lobehub/ui';
 import { ActionIcon, confirmModal } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Loader2, MoreVerticalIcon, Plus, Unplug } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
 
 import { itemStyles } from './style';
@@ -55,28 +60,30 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
 
   const renderIcon = () => {
     if (typeof icon === 'string') return <img alt={label} height={40} src={icon} width={40} />;
-    return <Icon fill={cssVar.colorText} icon={icon as any} size={40} />;
+    return React.createElement(icon as React.ComponentType<{ fill?: string; size?: number }>, {
+      fill: cssVar.colorText,
+      size: 40,
+    });
   };
 
   const renderAction = () => {
     if (isConnecting) return <ActionIcon loading icon={Loader2} />;
     if (isConnected) {
       return (
-        <DropdownMenu
-          nativeButton={false}
-          placement="bottomRight"
-          items={[
-            {
-              danger: true,
-              disabled: !canEdit,
-              icon: <Icon icon={Unplug} />,
-              key: 'disconnect',
-              label: t('tools.orviloSkill.disconnect'),
-              onClick: confirmDisconnect,
-            },
-          ]}
-        >
-          <ActionIcon disabled={!canEdit} icon={MoreVerticalIcon} />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<ActionIcon disabled={!canEdit} icon={MoreVerticalIcon} />}
+          />
+          <DropdownMenuContent align={'end'}>
+            <DropdownMenuItem
+              disabled={!canEdit}
+              variant={'destructive'}
+              onClick={confirmDisconnect}
+            >
+              <Unplug />
+              {t('tools.orviloSkill.disconnect')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
         </DropdownMenu>
       );
     }
@@ -94,22 +101,17 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
   };
 
   return (
-    <Block
-      horizontal
-      align={'center'}
-      className={styles.container}
-      gap={12}
-      paddingBlock={12}
-      paddingInline={12}
-      variant={'outlined'}
+    <div
+      className={`flex items-center gap-3 rounded-md border border-border ${styles.container}`}
+      style={{ paddingBlock: 12, paddingInline: 12 }}
     >
       {renderIcon()}
-      <Flexbox flex={1} gap={4} style={{ minWidth: 0, overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0, overflow: 'hidden' }}>
         <span className={styles.title}>{label}</span>
         {localizedDescription && <span className={styles.description}>{localizedDescription}</span>}
-      </Flexbox>
-      <div onClick={stopPropagation}>{renderAction()}</div>
-    </Block>
+      </div>
+      <div onClick={(event) => event.stopPropagation()}>{renderAction()}</div>
+    </div>
   );
 });
 

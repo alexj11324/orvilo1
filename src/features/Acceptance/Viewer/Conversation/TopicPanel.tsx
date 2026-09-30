@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { PanelRightClose } from 'lucide-react';
@@ -21,17 +20,18 @@ const TopicPanel = memo<OriginTopicPanelProps>(
     const { t } = useTranslation('verify');
 
     return (
-      <Flexbox
-        height={'100%'}
+      <div
+        className="flex flex-col h-full"
         style={{ background: cssVar.colorBgContainer, minHeight: 0, overflow: 'hidden' }}
       >
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          paddingBlock={12}
-          paddingInline={12}
-          style={{ borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`, flexShrink: 0 }}
+        <div
+          className="flex items-center gap-2"
+          style={{
+            paddingBlock: 12,
+            paddingInline: 12,
+            borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
+            flexShrink: 0,
+          }}
         >
           <Avatar
             avatar={agentAvatar ?? undefined}
@@ -47,16 +47,16 @@ const TopicPanel = memo<OriginTopicPanelProps>(
             title={t('acceptance.ledger.collapse')}
             onClick={onCollapse}
           />
-        </Flexbox>
-        <Flexbox flex={1} style={{ minHeight: 0, overflow: 'hidden' }}>
+        </div>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
           <TopicChatDrawerBody
             defaultInputExpanded
             disableInputCollapse
             agentId={agentId}
             topicId={topicId}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import DragUploadZone, { useUploadFiles } from '@/components/DragUploadZone';
@@ -39,13 +38,13 @@ const AgentBuilderConversation = memo<AgentBuilderConversationProps>(({ agentId 
       style={{ flex: 1, height: '100%' }}
       onUploadFiles={handleUploadFiles}
     >
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1 h-full">
         <TopicSelector agentId={agentId} disabled={!canCreate} />
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <ChatList welcome={<AgentBuilderWelcome disabled={!canCreate} />} />
-        </Flexbox>
+        </div>
         <ChatInput leftActions={actions} rightActions={rightActions} showControlBar={false} />
-      </Flexbox>
+      </div>
     </DragUploadZone>
   );
 });

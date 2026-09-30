@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Image } from '@lobehub/ui';
+import { Image } from '@lobehub/ui';
 import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
@@ -209,7 +209,7 @@ export const AttachmentStrip = memo<AttachmentStripProps>(
     const { t } = useTranslation('verify');
     if (attachments.length === 0 && !uploading) return null;
     return (
-      <Flexbox horizontal gap={8} wrap={'wrap'}>
+      <div className="flex gap-2 flex-wrap">
         {attachments.map((attachment) => (
           <div className={styles.thumb} key={attachment.id}>
             <Image alt={attachment.name ?? ''} preview={false} src={attachment.url} />
@@ -220,17 +220,17 @@ export const AttachmentStrip = memo<AttachmentStripProps>(
                 type={'button'}
                 onClick={() => onRemove(attachment.id)}
               >
-                <Icon icon={X} size={12} />
+                <X size={12} />
               </button>
             )}
           </div>
         ))}
         {uploading && (
           <div className={cx(styles.thumb, styles.thumbLoading)}>
-            <Icon spin icon={Loader2} size={16} />
+            <Loader2 className="animate-spin" size={16} />
           </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -262,7 +262,7 @@ export const AttachmentUploadButton = memo<AttachmentUploadButtonProps>(({ disab
     >
       <Button
         disabled={disabled}
-        icon={<Icon icon={ImagePlus} />}
+        icon={<ImagePlus />}
         style={{ alignSelf: 'flex-start', minHeight: md ? undefined : 44 }}
         type={'text'}
       >
@@ -288,10 +288,8 @@ export const AttachmentThumbs = memo<AttachmentThumbsProps>(({ attachments, size
     // Every host row is itself clickable (jump to the check), and that jump closes the
     // drawer this list often lives in — which would unmount the zoom viewer in the same
     // tick it opened. Zooming a thumbnail is its own action, so it stops here.
-    <Flexbox
-      horizontal
-      gap={6}
-      wrap={'wrap'}
+    <div
+      className="flex gap-1.5 flex-wrap"
       onClick={(event) => {
         event.stopPropagation();
       }}
@@ -304,7 +302,7 @@ export const AttachmentThumbs = memo<AttachmentThumbsProps>(({ attachments, size
           <Image alt={attachment.name ?? ''} src={attachment.url!} />
         </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

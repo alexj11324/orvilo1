@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ClipboardCheck, History, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Textarea } from '@/components/ui/textarea';
 import { type AcceptanceBundle, verifyService } from '@/services/verify';
 
 import { AttachmentThumbs } from '../Evidence/attachments';
@@ -71,7 +71,7 @@ function AttemptReview({
   const [comment, setComment] = useState(attempt.reviewComment ?? '');
   const [saving, setSaving] = useState(false);
   return (
-    <Flexbox className={styles.review} gap={10}>
+    <div className={`flex flex-col gap-2.5 ${styles.review}`}>
       {attempt.review && (
         <Text>
           {t(`flow.review.${attempt.review}`)}
@@ -123,12 +123,12 @@ function AttemptReview({
         </Button>
       ) : (
         <>
-          <TextArea
+          <Textarea
             placeholder={t('flow.comment')}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
           />
-          <Flexbox horizontal gap={8}>
+          <div className="flex gap-2">
             {(['accepted', 'rejected'] as const).map((review) => (
               <Button
                 disabled={saving}
@@ -157,10 +157,10 @@ function AttemptReview({
                 {t(`flow.review.${review}`)}
               </Button>
             ))}
-          </Flexbox>
+          </div>
         </>
       )}
-    </Flexbox>
+    </div>
   );
 }
 
@@ -200,29 +200,29 @@ export function FlowResults({
       annotation,
     ]);
   return (
-    <Flexbox className={styles.panel}>
-      <Flexbox horizontal align="center" className={styles.header} gap={12} justify="space-between">
-        <Flexbox horizontal align="center" gap={10} wrap="wrap">
+    <div className={`flex flex-col ${styles.panel}`}>
+      <div className={`flex items-center gap-3 justify-between ${styles.header}`}>
+        <div className="flex items-center gap-2.5" style={{ flexWrap: 'wrap' }}>
           <Text strong fontSize={16}>
             {node.title}
           </Text>
           {attempt && (
-            <Flexbox horizontal align="center" gap={4} style={{ flex: 'none' }}>
-              <Icon color={flowStateColor(attempt.verdict)} icon={ClipboardCheck} size={14} />
+            <div className="flex items-center gap-1" style={{ flex: 'none' }}>
+              <ClipboardCheck color={flowStateColor(attempt.verdict)} size={14} />
               <Text fontSize={12} style={{ color: flowStateColor(attempt.verdict) }}>
                 {t(`flow.state.${attempt.verdict}`)}
               </Text>
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
         <ActionIcon
           aria-label={t('flow.closeResults')}
           icon={X}
           title={t('flow.closeResults')}
           onClick={onClose}
         />
-      </Flexbox>
-      <Flexbox className={styles.body} gap={16}>
+      </div>
+      <div className={`flex flex-col gap-4 ${styles.body}`}>
         {selectedEdge && (
           <Text type="secondary">
             {selectedEdge.trigger}
@@ -231,13 +231,13 @@ export function FlowResults({
         )}
         {attempt ? (
           <>
-            <Flexbox gap={10}>
-              <Flexbox horizontal align="center" gap={6}>
-                <Icon icon={History} size={14} />
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-1.5">
+                <History size={14} />
                 <Text fontSize={12} type="secondary">
                   {t('flow.resultHistory', { count: attempts.length })}
                 </Text>
-              </Flexbox>
+              </div>
               <Select
                 value={attempt.id}
                 options={ordered.map((a, i) => ({
@@ -246,36 +246,36 @@ export function FlowResults({
                 }))}
                 onChange={(id) => setAttemptId(String(id))}
               />
-            </Flexbox>
-            <Flexbox gap={4}>
+            </div>
+            <div className="flex flex-col gap-1">
               <Text fontSize={12} type="secondary">
                 {t('flow.actual')}
               </Text>
               <Text className={styles.observation}>{attempt.observation}</Text>
-            </Flexbox>
+            </div>
           </>
         ) : (
           <Text type="secondary">{t('flow.unvisited')}</Text>
         )}
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           <Text fontSize={12} type="secondary">
             {t('flow.expected')}
           </Text>
           <Text>{node.expected}</Text>
-        </Flexbox>
+        </div>
         <details className={styles.plan} open={!attempt}>
           <summary>{t('flow.instruction')}</summary>
           <Text>{node.instruction}</Text>
         </details>
         {attempt && (
-          <Flexbox gap={10}>
+          <div className="flex flex-col gap-2.5">
             <Text strong>{t('flow.evidence')}</Text>
             {evidence.length ? (
               <EvidenceList evidence={evidence} overlays={overlays} />
             ) : (
               <Text type="secondary">{t('flow.noAttachments')}</Text>
             )}
-          </Flexbox>
+          </div>
         )}
         {attempt && canReview && (
           <AttemptReview
@@ -291,7 +291,7 @@ export function FlowResults({
             {attempt.reviewComment ? ` · ${attempt.reviewComment}` : ''}
           </Text>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 }

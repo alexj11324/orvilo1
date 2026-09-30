@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button, toast } from '@lobehub/ui/base-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,9 +37,9 @@ export function AcceptancePlanReview({ runId }: { runId: string | undefined }) {
   };
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {canComment && (
-        <Flexbox horizontal justify="flex-end">
+        <div className="flex justify-end">
           <Button
             disabled={pending}
             size="small"
@@ -64,8 +63,8 @@ export function AcceptancePlanReview({ runId }: { runId: string | undefined }) {
           >
             {t('flow.plan.requestChanges')}
           </Button>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 }

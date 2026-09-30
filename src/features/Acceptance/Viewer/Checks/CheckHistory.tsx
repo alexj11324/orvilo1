@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Image, Tooltip } from '@lobehub/ui';
+import { Image, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -27,14 +27,14 @@ export const AcceptedNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revi
   const { t } = useTranslation('verify');
   const hydrated = useIsHydrated();
   return (
-    <Flexbox horizontal align={'center'} gap={6}>
-      <Icon color={cssVar.colorTextQuaternary} icon={BadgeCheck} size={13} />
+    <div className="flex items-center gap-1.5">
+      <BadgeCheck color={cssVar.colorTextQuaternary} size={13} />
       <Text fontSize={12} type={'secondary'}>
         {t('acceptance.review.acceptedNote', {
           time: hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : '',
         })}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -42,14 +42,14 @@ export const IgnoredNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revie
   const { t } = useTranslation('verify');
   const hydrated = useIsHydrated();
   return (
-    <Flexbox horizontal align={'center'} gap={6}>
-      <Icon color={cssVar.colorTextQuaternary} icon={Ban} size={13} />
+    <div className="flex items-center gap-1.5">
+      <Ban color={cssVar.colorTextQuaternary} size={13} />
       <Text fontSize={12} type={'secondary'}>
         {t('acceptance.review.ignoredNote', {
           time: hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : '',
         })}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -78,16 +78,16 @@ export const FeedbackCard = memo<{
   }
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal align={'center'} gap={6}>
-        <Icon color={cssVar.colorError} icon={MessageSquareX} size={13} />
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1.5">
+        <MessageSquareX color={cssVar.colorError} size={13} />
         <Text style={{ color: cssVar.colorError, fontSize: 12 }}>
           {t('acceptance.review.feedbackLabel')}
         </Text>
         <Text fontSize={12} type={'secondary'}>
           {hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : null}
         </Text>
-      </Flexbox>
+      </div>
       {review.comment && <Text style={{ fontSize: 12 }}>{review.comment}</Text>}
       <AttachmentThumbs attachments={review.attachments} />
       {[...groups.entries()].map(([evidenceId, annotations]) => {
@@ -117,7 +117,7 @@ export const FeedbackCard = memo<{
           />
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -173,15 +173,15 @@ export const IterationTimeline = memo<{
     .reverse();
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       {merged.map((entry, index) => {
         const isCurrent = index === 0;
         const isLast = index === merged.length - 1;
 
         if (entry.kind === 'review')
           return (
-            <Flexbox horizontal gap={12} key={entry.key}>
-              <Flexbox align={'center'} style={{ flex: 'none', width: 9 }}>
+            <div className="flex gap-3" key={entry.key}>
+              <div className="flex flex-col items-center" style={{ flex: 'none', width: 9 }}>
                 <span
                   className={styles.stepDot}
                   style={{
@@ -194,11 +194,14 @@ export const IterationTimeline = memo<{
                   }}
                 />
                 {!isLast && <div className={styles.stepRail} />}
-              </Flexbox>
-              <Flexbox flex={1} gap={6} style={{ minWidth: 0, paddingBlockEnd: isLast ? 0 : 20 }}>
+              </div>
+              <div
+                className="flex flex-col flex-1 gap-1.5"
+                style={{ minWidth: 0, paddingBlockEnd: isLast ? 0 : 20 }}
+              >
                 <FeedbackCard evidenceById={evidenceById} review={entry.review} />
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           );
 
         const { step } = entry;
@@ -210,8 +213,8 @@ export const IterationTimeline = memo<{
           }[step.state as string] ?? cssVar.colorTextQuaternary;
 
         return (
-          <Flexbox horizontal gap={12} key={entry.key}>
-            <Flexbox align={'center'} style={{ flex: 'none', width: 9 }}>
+          <div className="flex gap-3" key={entry.key}>
+            <div className="flex flex-col items-center" style={{ flex: 'none', width: 9 }}>
               <span
                 className={styles.stepDot}
                 style={{
@@ -220,8 +223,11 @@ export const IterationTimeline = memo<{
                 }}
               />
               {!isLast && <div className={styles.stepRail} />}
-            </Flexbox>
-            <Flexbox flex={1} gap={6} style={{ minWidth: 0, paddingBlockEnd: isLast ? 0 : 20 }}>
+            </div>
+            <div
+              className="flex flex-col flex-1 gap-1.5"
+              style={{ minWidth: 0, paddingBlockEnd: isLast ? 0 : 20 }}
+            >
               {onRound ? (
                 <Tooltip title={t('acceptance.history.jump', { round: step.roundIndex })}>
                   <Text
@@ -239,10 +245,13 @@ export const IterationTimeline = memo<{
               )}
               <Text style={{ fontSize: 12 }}>{step.title}</Text>
               {step.evidence.length > 0 && (
-                <Flexbox horizontal gap={8} wrap={'wrap'}>
+                <div className="flex gap-2 flex-wrap">
                   {step.evidence.map((item) =>
                     item.fileUrl && IMAGE_EVIDENCE.has(item.type) ? (
-                      <Flexbox className={evidenceStyles.evidenceImage} key={item.id}>
+                      <div
+                        className={`flex flex-col ${evidenceStyles.evidenceImage}`}
+                        key={item.id}
+                      >
                         <Image
                           alt={item.description ?? item.type}
                           loading={'lazy'}
@@ -250,7 +259,7 @@ export const IterationTimeline = memo<{
                           style={{ borderRadius: 0, maxHeight: 160, maxWidth: 280, width: 'auto' }}
                           variant={'borderless'}
                         />
-                      </Flexbox>
+                      </div>
                     ) : item.fileUrl && item.type === 'video' ? (
                       // A player, never an <Image>: pointing an image box at an
                       // mp4 renders a broken thumbnail, not the clip.
@@ -279,22 +288,22 @@ export const IterationTimeline = memo<{
                       </div>
                     ) : null,
                   )}
-                </Flexbox>
+                </div>
               )}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         );
       })}
       {check.result?.suggestion && (
-        <Flexbox horizontal gap={12} style={{ marginBlockStart: 12 }}>
+        <div className="flex gap-3" style={{ marginBlockStart: 12 }}>
           <Text fontSize={12} style={{ flex: 'none', minWidth: 64 }} type={'secondary'}>
             {t('acceptance.detail.suggestion')}
           </Text>
           <Text fontSize={12} type={'secondary'}>
             {check.result.suggestion}
           </Text>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });

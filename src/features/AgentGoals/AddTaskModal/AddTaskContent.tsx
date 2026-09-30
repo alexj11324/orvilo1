@@ -1,9 +1,11 @@
 'use client';
 
-import { Flexbox, Input, TextArea } from '@lobehub/ui';
 import { Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * Add a Task to a running goal. A task the coordinator will spend rounds on
@@ -40,8 +42,8 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
   };
 
   return (
-    <Flexbox gap={16} paddingBlock={'4px 8px'}>
-      <Flexbox gap={6}>
+    <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={13} weight={500}>
           {t('goalProcess.addTask.titleLabel')}
         </Text>
@@ -50,21 +52,24 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
           placeholder={t('goalProcess.addTask.titlePlaceholder')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onPressEnter={() => void submit()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') (() => void submit())(event);
+          }}
         />
-      </Flexbox>
-      <Flexbox gap={6}>
+      </div>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={13} weight={500}>
           {t('goalProcess.addTask.descriptionLabel')}
         </Text>
-        <TextArea
-          autoSize={{ maxRows: 8, minRows: 3 }}
+        <Textarea
           placeholder={t('goalProcess.addTask.descriptionPlaceholder')}
+          rows={3}
+          style={{ maxHeight: '8lh' }}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-      </Flexbox>
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      </div>
+      <div className="flex gap-2 justify-end">
         <Button onClick={() => close()}>{t('cancel', { ns: 'common' })}</Button>
         <Button
           disabled={!title.trim()}
@@ -74,8 +79,8 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
         >
           {t('goalProcess.frontier.add')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -27,15 +26,15 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
     <AccordionItem value={id}>
       <AccordionHeader>
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Flexbox horizontal align="center" gap={6} height={24} style={{ overflow: 'hidden' }}>
+          <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
             <Text ellipsis fontSize={12} style={{ flex: 1 }} type={'secondary'} weight={500}>
               {title || timeTitle}
             </Text>
-          </Flexbox>
+          </div>
         </AccordionTrigger>
       </AccordionHeader>
       <AccordionPanel contentStyle={{ padding: 0 }}>
-        <Flexbox gap={1} paddingBlock={1}>
+        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               fav={topic.favorite}
@@ -47,7 +46,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
               userId={topic.userId}
             />
           ))}
-        </Flexbox>
+        </div>
       </AccordionPanel>
     </AccordionItem>
   );

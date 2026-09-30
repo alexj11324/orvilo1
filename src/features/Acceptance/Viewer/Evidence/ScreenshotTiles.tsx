@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Image } from '@lobehub/ui';
+import { Image } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Check, MessageSquare, X } from 'lucide-react';
@@ -282,7 +282,7 @@ const OverlayRect = memo<OverlayRectProps>(
             onClick={() => onToggle(index)}
           >
             {annotation.resolved ? (
-              <Icon icon={Check} size={10} />
+              <Check size={10} />
             ) : (
               <AnnotationFace
                 name={annotation.authorName}
@@ -322,7 +322,7 @@ const AnnotationFace = memo<{ name?: string; size?: number; src?: string | null 
           {initial.toUpperCase()}
         </span>
       );
-    return <Icon icon={MessageSquare} size={size < 16 ? 10 : 12} />;
+    return <MessageSquare size={size < 16 ? 10 : 12} />;
   },
 );
 
@@ -381,11 +381,11 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
           type={'button'}
           onClick={() => setOpenedNote(undefined)}
         >
-          <Icon icon={X} size={12} />
+          <X size={12} />
         </button>
         {opened.panel ?? (
-          <Flexbox gap={4}>
-            <Flexbox horizontal align={'center'} className={styles.noteFallbackHead} gap={6}>
+          <div className="flex flex-col gap-1">
+            <div className={`flex items-center gap-1.5 ${styles.noteFallbackHead}`}>
               <span
                 className={styles.swatch}
                 style={{ background: opened.color ?? cssVar.colorError }}
@@ -394,9 +394,9 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
                 {numbered ? `${opened.label ?? openedNote! + 1} · ` : ''}
                 {opened.authorName}
               </Text>
-            </Flexbox>
+            </div>
             <div className={styles.noteBody}>{opened.comment}</div>
-          </Flexbox>
+          </div>
         )}
       </div>
     );
@@ -419,7 +419,7 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
             onClick={() => toggleNote(index)}
           >
             {annotation.resolved ? (
-              <Icon icon={Check} size={12} />
+              <Check size={12} />
             ) : (
               <AnnotationFace name={annotation.authorName} src={annotation.authorAvatar} />
             )}
@@ -428,14 +428,14 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
       );
 
     const shell = (width: string | number, body: ReactNode) => (
-      <Flexbox gap={4} style={{ maxWidth: '100%', width }}>
+      <div className="flex flex-col gap-1" style={{ maxWidth: '100%', width }}>
         <div className={styles.stage}>
           {body}
           {pins}
           {note}
         </div>
         {caption}
-      </Flexbox>
+      </div>
     );
 
     if (!natural) {
@@ -461,7 +461,7 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
     if (slices) {
       return shell(
         '100%',
-        <Flexbox horizontal align={'flex-start'} gap={12} wrap={'wrap'}>
+        <div className="flex items-start gap-3 flex-wrap">
           {slices.map((slice) => {
             const local = annotations
               ?.map((annotation, index) => {
@@ -514,7 +514,7 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
               </div>
             );
           })}
-        </Flexbox>,
+        </div>,
       );
     }
 

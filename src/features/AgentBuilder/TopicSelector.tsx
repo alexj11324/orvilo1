@@ -1,5 +1,5 @@
 import { type DropdownMenuCheckboxItem } from '@lobehub/ui';
-import { DropdownMenu, Flexbox } from '@lobehub/ui';
+import { DropdownMenu } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
@@ -65,10 +65,10 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
           closeOnClick: true,
           key: topic.id,
           label: (
-            <Flexbox horizontal align="center" gap={4} justify="space-between" width="100%">
+            <div className="flex items-center gap-1 justify-between w-full">
               <span className={styles.title}>{topic.title}</span>
               <span className={styles.time}>{displayTime}</span>
-            </Flexbox>
+            </div>
           ),
           onCheckedChange: (checked) => {
             if (disabled) return;
@@ -79,7 +79,7 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
           type: 'checkbox',
         };
       }),
-    [topics, switchTopic, styles, activeTopicId],
+    [topics, switchTopic, activeTopicId, disabled],
   );
   const isEmpty = !topics || topics.length === 0;
 

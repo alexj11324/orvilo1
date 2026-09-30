@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { memo, useEffect } from 'react';
@@ -31,9 +30,12 @@ const AgentSkillStoreContent = memo<{ agentId: string }>(({ agentId }) => {
   }, [agentId, isInit, fetchAgentConnectors]);
 
   return (
-    <Flexbox gap={8} style={{ maxHeight: '75vh' }} width={'100%'}>
+    <div className="flex flex-col gap-2 w-full" style={{ maxHeight: '75vh' }}>
       {isComposioEnabled ? (
-        <Flexbox height={496} style={{ marginBlockEnd: -12, marginInline: -16, overflow: 'auto' }}>
+        <div
+          className="flex flex-col h-[496px]"
+          style={{ marginBlockEnd: -12, marginInline: -16, overflow: 'auto' }}
+        >
           <div className={gridStyles.grid}>
             {COMPOSIO_APP_TYPES.map((type) => (
               <Item
@@ -47,13 +49,13 @@ const AgentSkillStoreContent = memo<{ agentId: string }>(({ agentId }) => {
               />
             ))}
           </div>
-        </Flexbox>
+        </div>
       ) : (
         <Text style={{ padding: 24 }} type={'secondary'}>
           {t('settingAgent.agentTools.pickerEmpty')}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

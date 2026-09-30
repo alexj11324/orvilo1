@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
 import React, { memo, useMemo } from 'react';
@@ -42,7 +41,7 @@ const FlatMode = memo(() => {
   const listRef = useScrollActiveTopicIntoView(activeTopicId, renderedTopicIds);
 
   return (
-    <Flexbox gap={1} ref={listRef}>
+    <div className="flex flex-col gap-[1px]" ref={listRef}>
       {activeTopicList?.map((topic) => (
         <TopicItem
           fav={topic.favorite}
@@ -58,7 +57,7 @@ const FlatMode = memo(() => {
       {hasMore && !isExpandingPageSize && (
         <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

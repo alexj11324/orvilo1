@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronsDownUp, ChevronsUpDown, GitBranch, GitCommitHorizontal } from 'lucide-react';
@@ -98,12 +97,12 @@ const AcceptanceGoal = ({ editSlot }: AcceptanceGoalProps) => {
     : t('acceptance.requirementEmpty');
 
   return (
-    <Flexbox className={styles.card} gap={collapsed ? 0 : 6}>
+    <div className={`flex flex-col ${styles.card}`} style={{ gap: collapsed ? 0 : 6 }}>
       {/* No "Acceptance goal" label: the sentence under the title IS the goal,
           and naming it added a caption to a paragraph that reads fine alone.
           Its controls therefore ride the sentence's own row — a header strip
           with nothing left to say is just an empty band of space. */}
-      <Flexbox horizontal align={collapsed ? 'center' : 'flex-start'} gap={4}>
+      <div className="flex gap-1" style={{ alignItems: collapsed ? 'center' : 'flex-start' }}>
         <Text
           ellipsis={collapsed}
           title={collapsed ? (requirement ?? emptyLabel) : undefined}
@@ -125,26 +124,26 @@ const AcceptanceGoal = ({ editSlot }: AcceptanceGoalProps) => {
           title={t(collapsed ? 'acceptance.goalExpand' : 'acceptance.goalCollapse')}
           onClick={() => setCollapsed((value) => !value)}
         />
-      </Flexbox>
+      </div>
       {!collapsed && scope && (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           {scope && (
-            <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
+            <div className="flex items-center gap-4 flex-wrap">
               {scope.branch && (
-                <Flexbox horizontal align={'center'} className={styles.scopeChip} gap={4}>
-                  <Icon icon={GitBranch} size={13} /> {scope.branch}
-                </Flexbox>
+                <div className={`flex items-center gap-1 ${styles.scopeChip}`}>
+                  <GitBranch size={13} /> {scope.branch}
+                </div>
               )}
               {scope.commit && (
-                <Flexbox horizontal align={'center'} className={styles.scopeChip} gap={4}>
-                  <Icon icon={GitCommitHorizontal} size={13} /> {scope.commit.slice(0, 10)}
-                </Flexbox>
+                <div className={`flex items-center gap-1 ${styles.scopeChip}`}>
+                  <GitCommitHorizontal size={13} /> {scope.commit.slice(0, 10)}
+                </div>
               )}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

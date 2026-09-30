@@ -1,4 +1,3 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -34,20 +33,20 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
     <AccordionItem value={id}>
       <AccordionHeader>
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Flexbox horizontal align="center" gap={6} height={24} style={{ overflow: 'hidden' }}>
+          <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
             {statusIcon && (
-              <Center flex={'none'} height={16} width={16}>
-                <Icon color={statusIcon.color} icon={statusIcon.icon} size={{ size: 13 }} />
-              </Center>
+              <div className="flex items-center justify-center flex-none h-[16px] w-[16px]">
+                <statusIcon.icon color={statusIcon.color} size={{ size: 13 }} />
+              </div>
             )}
             <Text ellipsis fontSize={12} style={{ flex: 1 }} type={'secondary'} weight={500}>
               {title}
             </Text>
-          </Flexbox>
+          </div>
         </AccordionTrigger>
       </AccordionHeader>
       <AccordionPanel contentStyle={{ padding: 0 }}>
-        <Flexbox gap={1} paddingBlock={1}>
+        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               showWorkingDirectory
@@ -60,7 +59,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
               userId={topic.userId}
             />
           ))}
-        </Flexbox>
+        </div>
       </AccordionPanel>
     </AccordionItem>
   );

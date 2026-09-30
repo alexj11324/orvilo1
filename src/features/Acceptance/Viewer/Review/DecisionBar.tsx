@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
@@ -149,13 +148,12 @@ const ProgressRing = memo<{ done: number; total: number }>(({ done, total }) => 
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </svg>
-      <Flexbox
-        align={'center'}
-        justify={'center'}
+      <div
+        className="flex flex-col items-center justify-center"
         style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', inset: 0, position: 'absolute' }}
       >
         <span style={{ color: cssVar.colorTextSecondary, fontWeight: 600 }}>{done}</span>
-      </Flexbox>
+      </div>
     </div>
   );
 });
@@ -268,37 +266,34 @@ const DecisionBar = memo<DecisionBarProps>(
 
     return (
       <div className={styles.bar}>
-        <Flexbox horizontal align={'center'} className={styles.summary} gap={8}>
+        <div className={`flex items-center gap-2 ${styles.summary}`}>
           {stateMeta ? (
             // accepted / live / rejected — a plain coloured status mark.
-            <Icon
+            <stateMeta.icon
+              className="animate-spin"
               color={stateMeta.color}
-              icon={stateMeta.icon}
               size={22}
-              spin={state === 'live'}
               style={{ flex: 'none' }}
             />
           ) : allConfirmed ? (
             // Every check signed off — the same clean badge the accepted state carries.
-            <Icon
+            <BadgeCheck
               className={justCompleted ? styles.completePop : undefined}
               color={cssVar.colorSuccess}
-              icon={BadgeCheck}
               size={22}
               style={{ flex: 'none' }}
             />
           ) : settledNeedsFix ? (
-            <Icon
+            <CircleAlert
               className={justCompleted ? styles.completePop : undefined}
               color={cssVar.colorWarning}
-              icon={CircleAlert}
               size={22}
               style={{ flex: 'none' }}
             />
           ) : (
             <ProgressRing done={decidedCount} total={totalCount} />
           )}
-          <Flexbox gap={2} style={{ flex: '0 1 auto', minWidth: 0 }}>
+          <div className="flex flex-col gap-0.5" style={{ flex: '0 1 auto', minWidth: 0 }}>
             <Text ellipsis type={'secondary'}>
               {statusText}
             </Text>
@@ -307,14 +302,14 @@ const DecisionBar = memo<DecisionBarProps>(
                 {subText}
               </Text>
             )}
-          </Flexbox>
+          </div>
 
           {/* The clearing list — every note this round queues for the next one.
             Sits with the status reading on the left: it explains that reading,
             while the right side stays pure actions. */}
           {feedbackCount > 0 && (
             <Button
-              icon={<Icon icon={ListTodo} />}
+              icon={<ListTodo />}
               size={'small'}
               style={{ flex: 'none' }}
               type={'text'}
@@ -323,8 +318,8 @@ const DecisionBar = memo<DecisionBarProps>(
               {t('acceptance.bar.feedback', { count: feedbackCount })}
             </Button>
           )}
-        </Flexbox>
-        <Flexbox horizontal className={styles.actions} gap={8}>
+        </div>
+        <div className={`flex gap-2 ${styles.actions}`}>
           {/* A dispatched send-back (repairing) keeps the copy entry alive —
             the reviewer may still hand the prompt to another agent. Embedded,
             the composer beside it already receives the draft. */}
@@ -343,7 +338,7 @@ const DecisionBar = memo<DecisionBarProps>(
                   round reads, for what the queued per-check feedback missed. */}
                 <Button
                   disabled={pending}
-                  icon={<Icon icon={MessageSquarePlus} />}
+                  icon={<MessageSquarePlus />}
                   type={'fill'}
                   onClick={onAddComment}
                 >
@@ -381,7 +376,7 @@ const DecisionBar = memo<DecisionBarProps>(
                 </Button>
               </>
             ))}
-        </Flexbox>
+        </div>
       </div>
     );
   },

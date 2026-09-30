@@ -94,7 +94,6 @@ const Screenshot = memo<BrowserMcpRenderProps>(({ content, pluginState }) => {
             // `display: flex` also kills the inline-image baseline gap, which would
             // otherwise leave a sliver of background under the picture.
             style={{ alignSelf: 'flex-start', display: 'flex', overflow: 'hidden', padding: 0 }}
-            variant={'outlined'}
           >
             {/* A full-page capture of the sidebar browser is tall (e.g. 720×1620), so
                 bound the height and let the user click through to the preview for the

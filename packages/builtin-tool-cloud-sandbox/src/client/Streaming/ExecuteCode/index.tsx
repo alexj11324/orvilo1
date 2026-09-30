@@ -27,7 +27,6 @@ export const ExecuteCodeStreaming = memo<BuiltinStreamingProps<ExecuteCodeParams
 
   return (
     <CodeBlock
-      animated
       wrap
       code={code}
       language={displayLanguage}

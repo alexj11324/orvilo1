@@ -7,7 +7,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { copyToClipboard } from '@/utils/clipboard';

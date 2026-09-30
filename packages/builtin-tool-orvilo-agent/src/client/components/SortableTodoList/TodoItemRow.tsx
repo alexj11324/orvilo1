@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { SortableItemHandle } from '@/components/reui/sortable';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 
 import { useTodoListStore } from './store';
 
@@ -78,7 +79,7 @@ const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
   useEffect(() => {
     // Only restore cursor when focus changes TO this item (not on every cursorPosition change)
     if (focusedId === id && prevFocusedIdRef.current !== id) {
-      const input = inputRef.current?.input;
+      const input = inputRef.current;
       if (input) {
         input.focus();
         // Clamp cursor position to text length

@@ -18,6 +18,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAgentGroupStore } from '@/store/agentGroup';
@@ -154,10 +155,12 @@ const TaskEditor = memo<TaskEditorProps>(({ task, index, onChange, onDelete }) =
                 className={styles.timeoutInput}
                 max={120}
                 min={1}
-                suffix={t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
                 value={Math.round((task.timeout || DEFAULT_TIMEOUT) / 60_000)}
                 onChange={handleTimeoutChange}
               />
+              <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+                {t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
+              </span>
               <Trash2 className={styles.deleteButton} size={16} onClick={handleDelete} />
             </div>
           </div>

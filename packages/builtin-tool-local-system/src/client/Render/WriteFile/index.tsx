@@ -39,7 +39,14 @@ type WriteFileArgs = WriteLocalFileParams & {
 };
 
 const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
-  if (!args) return <Skeleton.Text rows={4} />;
+  if (!args)
+    return (
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton className="h-4" key={i} style={{ width: i === 3 ? '60%' : '100%' }} />
+        ))}
+      </div>
+    );
 
   const filePath = args.path || args.filePath || args.file_path || '';
   const { base, dir } = path.parse(filePath);

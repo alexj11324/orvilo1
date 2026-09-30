@@ -2,7 +2,7 @@ import type { UniformSearchResult } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useState } from 'react';
 
-import Avatar from '@/components/Avatar';
+import AvatarGroup from '@/components/Avatar/AvatarGroup';
 
 import { ENGINE_ICON_MAP } from '../../../../../const';
 import TitleExtra from './TitleExtra';
@@ -96,7 +96,7 @@ const VideoItem = memo<SearchResultProps>(
             <div className="flex flex-col flex-1 gap-2">
               <div className="flex flex-row items-center justify-between gap-3">
                 <div className="flex flex-row items-center gap-2">
-                  <Avatar.Group
+                  <AvatarGroup
                     shape={'circle'}
                     size={20}
                     items={engines.map((engine) => ({

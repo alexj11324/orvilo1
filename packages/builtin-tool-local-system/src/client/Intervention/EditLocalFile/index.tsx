@@ -65,7 +65,11 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
       </div>
 
       {isLoading ? (
-        <Skeleton.Text rows={3} />
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton className="h-4" key={i} style={{ width: i === 2 ? '60%' : '100%' }} />
+          ))}
+        </div>
       ) : (
         <div className="flex flex-col gap-2">
           {isAmbiguous ? (

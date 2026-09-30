@@ -187,7 +187,7 @@ const SearchBar = memo<SearchBarProps>(
               {t('search.searchTimeRange.title')}
             </div>
             <ToggleGroup
-              value={[time_range]}
+              value={time_range ? [time_range] : []}
               onValueChange={(value) => value[0] && setTimeRange(value[0] as any)}
             >
               <ToggleGroupItem value="anytime">

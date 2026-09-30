@@ -95,7 +95,10 @@ export const UpdateAgentPromptInspector = memo<
       {agent && !isSupervisor && (
         <>
           <Avatar avatar={agent.avatar ?? undefined} size={18} title={agent.title ?? undefined} />
-          <div className={cn('truncate', 'block', styles.agentName)} title={agent.title}>
+          <div
+            className={cn('truncate', 'block', styles.agentName)}
+            title={agent.title ?? undefined}
+          >
             {agent.title}
           </div>
         </>

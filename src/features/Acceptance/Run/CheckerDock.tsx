@@ -259,8 +259,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
         </div>
       ))}
       <Button
-        className="w-full"
-        className="border-dashed"
+        className="w-full border-dashed"
         size="sm"
         variant="outline"
         onClick={() =>

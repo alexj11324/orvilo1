@@ -179,7 +179,7 @@ export const CriterionEditor = ({
       <div className="flex items-center justify-between">
         {onDelete ? (
           <Button
-            variant="destructive"
+            className="text-destructive"
             variant="ghost"
             onClick={() => {
               onDelete();

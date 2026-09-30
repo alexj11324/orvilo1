@@ -111,6 +111,9 @@ const Footer = memo(() => {
     helpMenuItems: SidebarMenuItems;
     trackedMenuKeys: string[];
   }>(() => {
+    const billboardItems =
+      typeof billboardMenuItems === 'function' ? billboardMenuItems() : billboardMenuItems;
+
     const ownItems: FooterMenuItems = [
       ...(footer.showSettingsEntry && !isDevMode
         ? [
@@ -193,8 +196,8 @@ const Footer = memo(() => {
     return {
       helpMenuItems: [
         ...injectMenuTracking(ownItems, trackMenuClick),
-        ...(isHomeSidebar && billboardMenuItems && billboardMenuItems.length > 0
-          ? [{ type: 'divider' as const }, ...billboardMenuItems]
+        ...(isHomeSidebar && billboardItems !== undefined && billboardItems.length > 0
+          ? [{ type: 'divider' as const }, ...billboardItems]
           : []),
       ],
       trackedMenuKeys: collectMenuKeys(ownItems),
@@ -251,15 +254,12 @@ const Footer = memo(() => {
               </a>
             )}
             <UserPanel>
-              <div
-                className="flex flex-col items-center justify-center p-1"
-                className="cursor-pointer"
-              >
+              <div className="flex flex-col items-center justify-center p-1 cursor-pointer">
                 <UserAvatar size={20} />
               </div>
             </UserPanel>
           </div>
-          <ThemeButton placement={'topCenter'} size={16} />
+          <ThemeButton placement={'top'} size={16} />
         </div>
       ) : (
         // Linear's bottom bar: `?` help anchors the left; the right cluster is
@@ -287,10 +287,7 @@ const Footer = memo(() => {
               </WorkspaceLink>
             )}
             <UserPanel>
-              <div
-                className="flex flex-col items-center justify-center p-1"
-                className="cursor-pointer"
-              >
+              <div className="flex flex-col items-center justify-center p-1 cursor-pointer">
                 <UserAvatar size={20} />
               </div>
             </UserPanel>

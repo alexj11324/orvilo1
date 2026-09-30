@@ -4,7 +4,7 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 
 import { resolveAcceptanceVerdictMeta } from '../verdict';
 

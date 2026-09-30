@@ -3,11 +3,11 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { type SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 interface ActionProps {
-  dropdownMenu: SidebarMenuItemData[] | (() => SidebarMenuItemData[]);
+  dropdownMenu: SidebarMenuItems | (() => SidebarMenuItems);
 }
 
 const Actions = memo<ActionProps>(({ dropdownMenu }) => {

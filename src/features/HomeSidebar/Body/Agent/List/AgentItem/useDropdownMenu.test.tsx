@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { canGoNative } from '@/libs/contextMenu/canGoNative';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
 import { useAgentDropdownMenu } from './useDropdownMenu';
 
@@ -303,7 +304,7 @@ describe('useAgentDropdownMenu', () => {
       }),
     );
 
-    expect(canGoNative(result.current() ?? [])).toBe(true);
+    expect(canGoNative((result.current() ?? []) as NativeContextMenuItem[])).toBe(true);
   });
 
   it('groups display, organization, access, and destructive actions by intent', () => {

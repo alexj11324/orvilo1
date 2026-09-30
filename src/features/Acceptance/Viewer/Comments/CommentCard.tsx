@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
-import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
@@ -192,15 +192,11 @@ const CommentCard = memo<CommentCardProps>(
           {badges}
           {menuItems.length > 0 && (
             <div data-comment-actions className={styles.rowActions}>
-              <DropdownMenu
-                items={menuItems}
-                placement={'bottomRight'}
-                popupProps={{ style: { minWidth: 140 } }}
-              >
+              <DropdownMenu items={menuItems} placement={'bottomRight'} style={{ minWidth: 140 }}>
                 <ActionIcon
                   icon={MoreHorizontal}
                   loading={deleting}
-                  size="sm"
+                  size="small"
                   title={t('acceptance.comments.moreActions')}
                 />
               </DropdownMenu>

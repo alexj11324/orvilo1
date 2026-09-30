@@ -4,6 +4,8 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+
 const styles = createStaticStyles(({ css }) => ({
   list: css`
     overflow: hidden;
@@ -44,10 +46,9 @@ export const CriterionRequiredChip = ({ onToggle, required }: CriterionRequiredC
 
   return (
     <Badge
-      color={required ? 'info' : undefined}
       size="sm"
       style={onToggle ? { cursor: 'pointer' } : undefined}
-      variant="secondary"
+      variant={required ? 'info' : 'secondary'}
       onClick={
         onToggle
           ? (event) => {

@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { FileBox, type LucideIcon, Repeat2, ShieldCheck } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import { shinyTextStyles } from '@/styles';
@@ -301,44 +301,58 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
               </span>
             )}
             {chip && (
-              <Flexbox horizontal align={'center'} gap={5}>
+              <div className="flex items-center gap-[5px]">
                 {chip.icon ? (
-                  <Icon color={chip.color} icon={chip.icon} size={13} />
+                  <chip.icon color={chip.color} size={13} />
                 ) : (
                   <RunningGlyph size={13} />
                 )}
                 <span className={styles.chipText} style={{ color: chip.color }}>
                   {chip.text}
                 </span>
-              </Flexbox>
+              </div>
             )}
             {running && <RunningClock startedAt={view.startedAt} />}
             {view.humanTouches.length > 0 && (
-              <Tooltip title={t('goalProcess.node.humanTouched')}>
-                <span className={styles.human}>@</span>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <span className={styles.human}>@</span>
+                    </span>
+                  }
+                />
+                <TooltipContent>{t('goalProcess.node.humanTouched')}</TooltipContent>
               </Tooltip>
             )}
             {/* Top-right corner: this Task carries its own verifier. Icon only —
                 the word added nothing the hover hint doesn't say better. */}
             {isTask && node.taskId && (
-              <Tooltip title={t('goalProcess.node.verifierTooltip')}>
-                <span style={{ display: 'inline-flex', marginInlineStart: 'auto' }}>
-                  <Icon color={cssVar.colorTextTertiary} icon={ShieldCheck} size={13} />
-                </span>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <span style={{ display: 'inline-flex', marginInlineStart: 'auto' }}>
+                        <ShieldCheck color={cssVar.colorTextTertiary} size={13} />
+                      </span>
+                    </span>
+                  }
+                />
+                <TooltipContent>{t('goalProcess.node.verifierTooltip')}</TooltipContent>
               </Tooltip>
             )}
           </div>
         )}
         <div className={styles.head}>
           <div className={styles.glyph} style={{ background: palette.soft, color: palette.line }}>
-            <Icon icon={KIND_ICON[kind]} size={16} />
+            {createElement(KIND_ICON[kind], { size: 16 })}
           </div>
-          <Flexbox gap={2} style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex flex-col gap-0.5" style={{ flex: 1, minWidth: 0 }}>
             <span className={styles.title}>
               {coordinatorTitleKey ? t(coordinatorTitleKey as any) : node.title}
             </span>
             {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
-          </Flexbox>
+          </div>
         </div>
         {node.kind === 'experiment' && (
           <div className={styles.metrics}>
@@ -348,20 +362,36 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
         )}
         {isTask && (
           <div className={styles.metrics}>
-            <Tooltip title={t('goalProcess.node.attemptsTooltip', { count: attempts })}>
-              <span className={styles.metric}>
-                <Icon icon={Repeat2} size={13} />
-                {attempts}
-              </span>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span>
+                    <span className={styles.metric}>
+                      <Repeat2 size={13} />
+                      {attempts}
+                    </span>
+                  </span>
+                }
+              />
+              <TooltipContent>
+                {t('goalProcess.node.attemptsTooltip', { count: attempts })}
+              </TooltipContent>
             </Tooltip>
             {view.artifacts.length > 0 && (
-              <Tooltip
-                title={t('goalProcess.node.artifactsTooltip', { count: view.artifacts.length })}
-              >
-                <span className={styles.metric}>
-                  <Icon icon={FileBox} size={13} />
-                  {view.artifacts.length}
-                </span>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <span className={styles.metric}>
+                        <FileBox size={13} />
+                        {view.artifacts.length}
+                      </span>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t('goalProcess.node.artifactsTooltip', { count: view.artifacts.length })}
+                </TooltipContent>
               </Tooltip>
             )}
             {/* The same chip the task detail carries — the run's branch on its
@@ -410,15 +440,18 @@ export const GhostNodeView = memo(() => {
             className={styles.glyph}
             style={{ background: KIND_COLOR.task.soft, color: KIND_COLOR.task.line }}
           >
-            <Icon icon={KIND_ICON.task} size={16} />
+            <KIND_ICON.task size={16} />
           </div>
-          <Flexbox gap={7} style={{ flex: 1, minWidth: 0, paddingBlockStart: 1 }}>
+          <div
+            className="flex flex-col gap-[7px]"
+            style={{ flex: 1, minWidth: 0, paddingBlockStart: 1 }}
+          >
             <span className={cx(styles.title, shinyTextStyles.shinyText)}>
               {t('goalProcess.node.generating')}
             </span>
             <span className={styles.ghostBar} style={{ width: '84%' }} />
             <span className={styles.ghostBar} style={{ width: '56%' }} />
-          </Flexbox>
+          </div>
         </div>
       </div>
     </div>

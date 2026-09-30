@@ -1,11 +1,12 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { registerPendingHotkeyCard } from '@orvilo/shared-tool-ui/pending-hotkeys';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleStop, CornerDownLeft } from 'lucide-react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { useConversationResourceAccess } from '../../../../../hooks/useConversationResourceAccess';
 import { useConversationStore } from '../../../../../store';
@@ -319,7 +320,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
     if (!canUseResource) return null;
 
     return (
-      <Flexbox className={styles.container} ref={containerRef}>
+      <div className={cn('flex flex-col', styles.container)} ref={containerRef}>
         <div className={styles.optionList} role="radiogroup">
           {choices.map((c, index) => {
             if (c === 'reject') {
@@ -370,20 +371,19 @@ const ApprovalActions = memo<ApprovalActionsProps>(
         <div className={styles.footer}>
           <Button
             disabled={loading || isMessageCreating}
-            icon={CircleStop}
             loading={stopping}
-            size={'middle'}
-            type={'text'}
+            size="default"
+            variant="ghost"
             onClick={handleStop}
           >
-            {t('tool.intervention.stop')}
+            <CircleStop data-icon="inline-start" /> {t('tool.intervention.stop')}
           </Button>
           <Button
             className={styles.submitButton}
             disabled={isMessageCreating}
             loading={loading}
-            size={'middle'}
-            type={'primary'}
+            size="default"
+            variant="default"
             onClick={handleSubmit}
           >
             {t('tool.intervention.submit')}
@@ -392,7 +392,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
             </span>
           </Button>
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

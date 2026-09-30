@@ -1,20 +1,18 @@
 'use client';
 
-import { Flexbox, Icon, type MenuProps } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Crown, Sparkles, Users, UsersRound } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { parseAsString, useQueryState } from '@/hooks/useQueryParam';
 import AddGroupMemberModal from '@/routes/(main)/group/_layout/Sidebar/AddGroupMemberModal';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
-import { useGlobalStore } from '@/store/global';
-import { systemStatusSelectors } from '@/store/global/selectors';
 
 import AgentBuilderToggle from './AgentBuilderToggle';
 import { type ChromeTabItem } from './ChromeTabs';
@@ -59,7 +57,6 @@ const Header = memo(() => {
   const activeGroupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
   const addAgentsToGroup = useAgentGroupStore((s) => s.addAgentsToGroup);
   const createAgentInGroup = useAgentGroupStore((s) => s.createAgentInGroup);
-  const showLeftPanel = useGlobalStore(systemStatusSelectors.showLeftPanel);
 
   // Use URL query param for selected tab
   const [selectedTabId, setSelectedTabId] = useQueryState(
@@ -107,16 +104,16 @@ const Header = memo(() => {
     if (newAgentId) setSelectedTabId(newAgentId);
   };
 
-  const addMenuItems = useMemo<MenuProps['items']>(
+  const addMenuItems = useMemo<SidebarMenuItems>(
     () => [
       {
-        icon: <Icon icon={Sparkles} />,
+        icon: <Sparkles />,
         key: 'create-new',
         label: t('group.profile.addMember.createNew'),
         onClick: handleCreateMember,
       },
       {
-        icon: <Icon icon={UsersRound} />,
+        icon: <UsersRound />,
         key: 'add-existing',
         label: t('group.profile.addMember.addExisting'),
         onClick: () => setShowAddModal(true),
@@ -128,8 +125,7 @@ const Header = memo(() => {
 
   return (
     <>
-      <Flexbox horizontal align="center" className={styles.header} gap={4} justify="space-between">
-        {!showLeftPanel && <ToggleLeftPanelButton />}
+      <div className={cn('flex items-center gap-1 justify-between', styles.header)}>
         <div className={styles.tabsWrapper}>
           <ChromeTabs
             activeId={selectedTabId}
@@ -140,10 +136,10 @@ const Header = memo(() => {
             onChange={setSelectedTabId}
           />
         </div>
-        <Flexbox horizontal align="center" flex="none" gap={8} style={{ marginInlineStart: 12 }}>
+        <div className="flex items-center gap-2" style={{ flex: 'none', marginInlineStart: 12 }}>
           <AgentBuilderToggle />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {activeGroupId && (
         <AddGroupMemberModal
           existingMembers={existingMemberIds}

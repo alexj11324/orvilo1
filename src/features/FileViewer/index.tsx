@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { MARKDOWN_MIME_TYPES } from '@orvilo/const';
 import type { CSSProperties, JSXElementConstructor } from 'react';
 import { memo, useCallback, useEffect, useState } from 'react';
@@ -303,9 +302,9 @@ const FileViewer = memo<FileViewerProps>(({ id, style, fileType, url, name }) =>
   if (isPDF) {
     if (pdfRendererState.status === 'error')
       return (
-        <Center height={'100%'} width={'100%'}>
+        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
           <AsyncError error={pdfRendererState.error} variant={'block'} onRetry={retryPDFRenderer} />
-        </Center>
+        </div>
       );
 
     if (pdfRendererState.status === 'ready') {
@@ -314,9 +313,9 @@ const FileViewer = memo<FileViewerProps>(({ id, style, fileType, url, name }) =>
     }
 
     return (
-      <Center height={'100%'} width={'100%'}>
+      <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
         <NeuralNetworkLoading size={36} />
-      </Center>
+      </div>
     );
   }
 

@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { formatIntergerNumber } from '@/utils/format';
 
 import PageSizeSelect from './PageSizeSelect';
@@ -93,13 +93,7 @@ const TablePagination = memo<TablePaginationProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={cx(styles.root, className)}
-        gap={12}
-        justify={'space-between'}
-      >
+      <div className={cn('flex gap-3 items-center justify-between', cx(styles.root, className))}>
         <span className={styles.total}>
           {t('table.pagination.range', {
             from: formatIntergerNumber(from),
@@ -107,7 +101,7 @@ const TablePagination = memo<TablePaginationProps>(
             total: formatIntergerNumber(total),
           })}
         </span>
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className={'flex gap-1 items-center'}>
           <PageSizeSelect
             value={pageSize}
             options={pageSizeOptions.map((size) => ({
@@ -124,17 +118,19 @@ const TablePagination = memo<TablePaginationProps>(
           <Button
             aria-label={t('table.pagination.prev')}
             disabled={page <= 1}
-            icon={ChevronLeft}
-            size={'small'}
-            type={'text'}
+            size="icon-sm"
+            variant="ghost"
             onClick={() => goTo(page - 1)}
-          />
+          >
+            <ChevronLeft />
+          </Button>
           {getPageItems(page, totalPages).map((item) =>
             typeof item === 'number' ? (
               <Button
+                aria-current={item === page ? 'page' : undefined}
                 key={item}
-                size={'small'}
-                type={item === page ? 'fill' : 'text'}
+                size="icon-sm"
+                variant={item === page ? 'secondary' : 'ghost'}
                 onClick={() => goTo(item)}
               >
                 {item}
@@ -148,13 +144,14 @@ const TablePagination = memo<TablePaginationProps>(
           <Button
             aria-label={t('table.pagination.next')}
             disabled={page >= totalPages}
-            icon={ChevronRight}
-            size={'small'}
-            type={'text'}
+            size="icon-sm"
+            variant="ghost"
             onClick={() => goTo(page + 1)}
-          />
-        </Flexbox>
-      </Flexbox>
+          >
+            <ChevronRight />
+          </Button>
+        </div>
+      </div>
     );
   },
 );

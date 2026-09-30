@@ -164,7 +164,7 @@ export interface ProjectListDisplayOptions {
 export const DEFAULT_PROJECT_LIST_DISPLAY_OPTIONS: ProjectListDisplayOptions = {
   grouping: 'none',
   layout: 'list',
-  orderBy: 'manual',
+  orderBy: 'name',
   orderDirection: 'asc',
   properties: {
     completed: false,

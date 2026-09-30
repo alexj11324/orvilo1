@@ -1,10 +1,7 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
-import { memo } from 'react';
+import { type ComponentProps, memo } from 'react';
 
 import ThemeButton from '@/features/User/UserPanel/ThemeButton';
 import { useUserStore } from '@/store/user';
@@ -13,7 +10,7 @@ import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 import { type UserAvatarProps } from './UserAvatar';
 import UserAvatar from './UserAvatar';
 
-export interface UserInfoProps extends FlexboxProps {
+export interface UserInfoProps extends ComponentProps<'div'> {
   avatarProps?: Partial<UserAvatarProps>;
   onClick?: () => void;
 }
@@ -26,30 +23,22 @@ const UserInfo = memo<UserInfoProps>(({ avatarProps, onClick, ...rest }) => {
   ]);
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={12}
-      justify={'space-between'}
-      paddingBlock={12}
-      paddingInline={12}
-      {...rest}
-    >
-      <Flexbox horizontal align={'center'} gap={10} onClick={onClick}>
+    <div className="flex items-center gap-3 justify-between py-3 px-3" {...rest}>
+      <div className="flex items-center gap-2.5" onClick={onClick}>
         <UserAvatar background={cssVar.colorFill} size={36} {...(avatarProps as any)} />
-        <Flexbox flex={1}>
-          <Text style={{ lineHeight: 1.4 }} weight={'bold'}>
+        <div className="flex flex-col flex-1">
+          <div className="font-bold" style={{ lineHeight: 1.4 }}>
             {nickname}
-          </Text>
+          </div>
           {username && (
-            <Text fontSize={12} style={{ lineHeight: 1.4 }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.4 }}>
               {username}
-            </Text>
+            </div>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {isSignedIn && <ThemeButton placement={'right'} size={16} />}
-    </Flexbox>
+    </div>
   );
 });
 

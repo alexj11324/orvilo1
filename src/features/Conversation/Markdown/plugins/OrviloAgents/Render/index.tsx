@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowRight } from 'lucide-react';
 import { memo, useCallback } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { type MarkdownElementProps } from '../../type';
@@ -74,7 +74,7 @@ const Render = memo<OrviloAgentsProps>(
     if (!identifier) return null;
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.card} gap={12} onClick={handleClick}>
+      <div className={cn('flex items-center gap-3', styles.card)} onClick={handleClick}>
         <Avatar
           avatar={avatar || '🤖'}
           background={backgroundColor}
@@ -82,12 +82,12 @@ const Render = memo<OrviloAgentsProps>(
           size={40}
           title={title || undefined}
         />
-        <Flexbox className={styles.content} flex={1} gap={4}>
+        <div className={cn('flex flex-col flex-1 gap-1', styles.content)}>
           <span className={styles.title}>{title || identifier}</span>
           {description && <span className={styles.description}>{description}</span>}
-        </Flexbox>
+        </div>
         <ArrowRight className={styles.arrowIcon} size={16} />
-      </Flexbox>
+      </div>
     );
   },
 );

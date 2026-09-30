@@ -24,6 +24,11 @@ describe('HOTKEYS_REGISTRATION', () => {
 describe('Linear parity mappings', () => {
   const byId = (id: string) => HOTKEYS_REGISTRATION.find((item) => item.id === id);
 
+  it('does not advertise a main-sidebar collapse shortcut', () => {
+    expect(byId(HotkeyEnum.ToggleLeftPanel)).toBeUndefined();
+    expect(HOTKEYS_REGISTRATION.some((item) => item.keys === 'mod+bracketleft')).toBe(false);
+  });
+
   it('maps C to create task', () => {
     expect(byId(HotkeyEnum.CreateTask)).toMatchObject({
       group: HotkeyGroupEnum.Essential,

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
@@ -15,16 +14,16 @@ const SimilaritySearchList = memo(() => {
   return isSimilaritySearching ? (
     <SkeletonLoading />
   ) : (
-    <Flexbox flex={1}>
+    <div className="flex flex-col flex-1">
       <Virtuoso
         data={dataSource}
         itemContent={(index, item) => (
-          <Flexbox key={item.id} paddingInline={12}>
+          <div className="flex flex-col px-3" key={item.id}>
             <ChunkItem {...item} index={index} />
-          </Flexbox>
+          </div>
         )}
       />
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { FilePathDisplay } from '@orvilo/shared-tool-ui/components';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
@@ -31,9 +30,25 @@ export const ExportFileInspector = memo<BuiltinInspectorProps<ExportFileArgs, Ex
         {!isLoading && pluginState !== undefined && (
           <span style={{ marginInlineStart: 4 }}>
             {pluginState.success ? (
-              <Icon color={cssVar.colorSuccess} icon={Check} size={14} />
+              <span className="anticon" role="img">
+                <Check
+                  color={cssVar.colorSuccess}
+                  fill={'transparent'}
+                  height={14}
+                  size={14}
+                  width={14}
+                />
+              </span>
             ) : (
-              <Icon color={cssVar.colorError} icon={X} size={14} />
+              <span className="anticon" role="img">
+                <X
+                  color={cssVar.colorError}
+                  fill={'transparent'}
+                  height={14}
+                  size={14}
+                  width={14}
+                />
+              </span>
             )}
           </span>
         )}

@@ -1,12 +1,15 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
-import { Button, createModal, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { AcceptanceEvidence } from '../Checks/types';
 import { AnnotationCanvas } from '../Evidence/Annotation';
@@ -96,10 +99,10 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
     if (!active) return null;
 
     return (
-      <Flexbox gap={12} padding={16}>
+      <div className="flex flex-col gap-3" style={{ padding: 16 }}>
         <span className={styles.hint}>{t('acceptance.comments.regionHint')}</span>
         {images.length > 1 && (
-          <Flexbox horizontal gap={8} wrap={'wrap'}>
+          <div className="flex gap-2 flex-wrap">
             {images.map((item) => (
               <div
                 aria-pressed={item.id === active.id}
@@ -114,7 +117,7 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
                 <img alt={item.description ?? item.type} src={item.fileUrl!} />
               </div>
             ))}
-          </Flexbox>
+          </div>
         )}
         <div className={styles.stage}>
           <AnnotationCanvas
@@ -125,10 +128,11 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
             onUpdate={(_index, next) => setRect(next)}
           />
         </div>
-        <TextArea
+        <Textarea
           autoFocus
-          autoSize={{ maxRows: 6, minRows: 2 }}
           placeholder={t('acceptance.comments.placeholder')}
+          rows={2}
+          style={{ maxHeight: '6lh' }}
           value={content}
           onChange={(event) => setContent(event.target.value)}
           onKeyDown={(event) => {
@@ -138,22 +142,22 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
             }
           }}
         />
-        <Flexbox horizontal align={'center'} gap={8} justify={'flex-end'}>
+        <div className="flex items-center gap-2 justify-end">
           {!rect && (
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('acceptance.comments.regionMissing')}
-            </Text>
+            </div>
           )}
           <Button
             disabled={!rect || !trimmed}
             loading={submitting}
-            type={'primary'}
+            variant="outline"
             onClick={() => void submit()}
           >
             {t('acceptance.comments.send')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

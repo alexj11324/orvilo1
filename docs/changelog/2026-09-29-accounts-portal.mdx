@@ -1,0 +1,18 @@
+---
+title: accounts.aspectlylabs.com now served by the Orvilo worker
+description: >-
+  The hosted accounts portal — sign-in page, release contract, and health
+  probes — is shipped from the open-source repository's auth worker instead
+  of the retired Cordy auth-broker deployment.
+tags:
+  - Authentication
+---
+
+# accounts.aspectlylabs.com now served by the Orvilo worker
+
+The accounts portal (email + password sign-in, one-time passcode fallback, and Google sign-in through Clerk) moved onto the auth worker in this repository. Deploying the worker claims the accounts.aspectlylabs.com custom domain, replacing the retired Cordy auth-broker as the sign-in surface, and serves the `/v1/contract` release descriptor and `/healthz`/`/readyz` probes directly at the edge.
+
+## Improvements and fixes
+
+- **Sign-in keeps the same shape.** Email + password, one-time passcode, and Google OAuth render inside the full-screen two-column layout users already know from the previous portal.
+- **Release metadata is served at the edge.** `/v1/contract` answers JSON directly from the worker instead of relying on the SPA document, so desktop and tooling probes keep working through the cutover.

@@ -1,9 +1,10 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { EDITOR_DEBOUNCE_TIME, EDITOR_MAX_WAIT, isDesktop } from '@orvilo/const';
 import debug from 'debug';
 import { debounce } from 'es-toolkit/compat';
 import { type StateCreator } from 'zustand';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { type EditLockHealth } from '@/features/EditLock';
 import { useDocumentStore } from '@/store/document';
 import { getElectronStoreState } from '@/store/electron';

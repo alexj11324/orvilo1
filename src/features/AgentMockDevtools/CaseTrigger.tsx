@@ -1,9 +1,11 @@
-import { Flexbox, Input, Popover, usePopoverContext } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { MockCase } from '@orvilo/agent-mock';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown } from 'lucide-react';
-import { memo, type ReactNode, useMemo, useState } from 'react';
+import { isValidElement, memo, type ReactNode, useMemo, useState } from 'react';
+
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { useMockCases } from './hooks/useMockCases';
 import { useAgentMockStore } from './store/agentMockStore';
@@ -121,13 +123,14 @@ const sourceEvents = (c: MockCase) => {
 };
 
 interface CasePanelProps {
+  onClose: () => void;
   selectedCaseId: string | null;
   setSelectedCaseId: (id: string) => void;
 }
 
-const CasePanel = memo<CasePanelProps>(({ selectedCaseId, setSelectedCaseId }) => {
+const CasePanel = memo<CasePanelProps>(({ onClose, selectedCaseId, setSelectedCaseId }) => {
   const { builtins, snapshots, generated } = useMockCases();
-  const { close } = usePopoverContext();
+
   const [query, setQuery] = useState('');
 
   const groups = useMemo(() => {
@@ -145,7 +148,7 @@ const CasePanel = memo<CasePanelProps>(({ selectedCaseId, setSelectedCaseId }) =
 
   const handlePick = (id: string) => {
     setSelectedCaseId(id);
-    close();
+    onClose();
   };
 
   return (
@@ -154,7 +157,6 @@ const CasePanel = memo<CasePanelProps>(({ selectedCaseId, setSelectedCaseId }) =
         <Input
           autoFocus
           placeholder="Search cases…"
-          size="small"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -163,7 +165,7 @@ const CasePanel = memo<CasePanelProps>(({ selectedCaseId, setSelectedCaseId }) =
         {totalVisible === 0 && <div className={styles.empty}>No cases match.</div>}
         {groups.map((group) =>
           group.items.length === 0 ? null : (
-            <Flexbox key={group.key} style={{ paddingBlockEnd: 4 }}>
+            <div className="flex flex-col" key={group.key} style={{ paddingBlockEnd: 4 }}>
               <div className={styles.group}>
                 {group.label} ({group.items.length})
               </div>
@@ -184,7 +186,7 @@ const CasePanel = memo<CasePanelProps>(({ selectedCaseId, setSelectedCaseId }) =
                   </div>
                 );
               })}
-            </Flexbox>
+            </div>
           ),
         )}
       </div>
@@ -204,25 +206,39 @@ export const CaseTrigger = memo<CaseTriggerProps>(({ children, placement = 'bott
   const setSelectedCaseId = useAgentMockStore((s) => s.setSelectedCaseId);
   const { all } = useMockCases();
   const current = all.find((c) => c.id === selectedCaseId);
+  const [open, setOpen] = useState(false);
 
   return (
-    <Popover
-      arrow={false}
-      content={<CasePanel selectedCaseId={selectedCaseId} setSelectedCaseId={setSelectedCaseId} />}
-      placement={placement}
-      styles={{ content: { padding: 0 } }}
-      trigger={['click']}
-    >
-      {children ?? (
-        <span className={styles.trigger}>
-          {current ? (
-            <span className={styles.triggerName}>{current.name}</span>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          children === undefined ? (
+            <span className={styles.trigger}>
+              {current ? (
+                <span className={styles.triggerName}>{current.name}</span>
+              ) : (
+                <div className={cn(styles.triggerPlaceholder)}>Pick a case</div>
+              )}
+              <ChevronDown size={12} />
+            </span>
+          ) : isValidElement(children) ? (
+            children
           ) : (
-            <Text className={styles.triggerPlaceholder}>Pick a case</Text>
-          )}
-          <ChevronDown size={12} />
-        </span>
-      )}
+            <span>{children}</span>
+          )
+        }
+      />
+      <PopoverContent
+        align={placement.endsWith('Right') ? 'end' : 'start'}
+        side={placement.startsWith('top') ? 'top' : 'bottom'}
+        style={{ padding: 0 }}
+      >
+        <CasePanel
+          selectedCaseId={selectedCaseId}
+          setSelectedCaseId={setSelectedCaseId}
+          onClose={() => setOpen(false)}
+        />
+      </PopoverContent>
     </Popover>
   );
 });

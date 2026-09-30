@@ -1,7 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { ReplaceTextArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -57,15 +55,15 @@ export const ReplaceTextInspector = memo<BuiltinInspectorProps<ReplaceTextArgs, 
         {hasResult && (
           <>
             <span className={styles.from}>{from}</span>
-            <Icon className={styles.arrow} icon={ArrowRight} size={12} />
+            <ArrowRight className={styles.arrow} size={12} />
             <span className={highlightTextStyles.gold}>
               {to || t('builtins.orvilo-page-agent.apiName.replaceText.empty')}
             </span>
             {count > 0 && (
-              <Text code as={'span'} fontSize={12} type={'secondary'}>
+              <span className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
                 {' '}
                 ({t('builtins.orvilo-page-agent.apiName.replaceText.count', { count })})
-              </Text>
+              </span>
             )}
           </>
         )}

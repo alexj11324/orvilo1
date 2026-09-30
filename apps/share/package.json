@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build --config vite.config.spa.mts",
     "build:rr": "react-router build -c vite.config.rr.mts && node scripts/emit-static-css.mjs",
     "deploy": "bun scripts/deploy.ts",
-    "deploy:rr": "wrangler deploy --dry-run",
-    "dev": "vite --port 3016",
+    "deploy:rr": "cf deploy --prebuilt --dry-run",
+    "dev": "vite --config vite.config.spa.mts --port 3016",
     "dev:rr": "react-router dev -c vite.config.rr.mts",
     "preview:rr": "vite preview --config vite.config.rr.mts",
     "type-check": "tsc --noEmit"
@@ -17,8 +17,10 @@
     "@ant-design/cssinjs": "^2.1.2",
     "@cloudflare/vite-plugin": "^1.52.1",
     "@react-router/dev": "^8.3.0",
+    "cf": "1.0.0-beta.5",
     "isbot": "^5.1.32",
     "vite-tsconfig-paths": "^6.1.1",
     "wrangler": "^4.123.0"
-  }
+  },
+  "packageManager": "pnpm@12.4.1"
 }

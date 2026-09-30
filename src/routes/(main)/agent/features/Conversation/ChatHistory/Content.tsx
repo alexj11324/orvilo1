@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox, SearchBar } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 import { shallow } from 'zustand/shallow';
 
+import { Input } from '@/components/ui/input';
 import { useTopicNavigation } from '@/features/AgentSidebar/Topic/hooks/useTopicNavigation';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useFetchChatTopics } from '@/hooks/useFetchChatTopics';
@@ -118,18 +119,19 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
   const showLoading = isSearching ? isSearchLoading && !searchResults : isTopicsLoading;
 
   return (
-    <Flexbox className={styles.root} gap={4}>
-      <Flexbox paddingBlock={'8px 0'} paddingInline={8}>
-        <SearchBar
-          allowClear
+    <div className={cn('flex flex-col gap-1', styles.root)}>
+      <div className="flex flex-col px-2" style={{ paddingBlock: '8px 0' }}>
+        <Input
           autoFocus
           placeholder={t('chatHistory.title', { ns: 'chat' })}
           value={keyword}
-          variant={'filled'}
-          onInputChange={setKeyword}
+          onChange={(e) => setKeyword(e.target.value)}
         />
-      </Flexbox>
-      <Flexbox gap={2} padding={4} style={{ maxHeight: 320, minHeight: 0, overflowY: 'auto' }}>
+      </div>
+      <div
+        className="flex flex-col gap-0.5 p-1"
+        style={{ maxHeight: 320, minHeight: 0, overflowY: 'auto' }}
+      >
         {showLoading ? (
           <SkeletonList rows={3} />
         ) : rows && rows.length > 0 ? (
@@ -153,8 +155,8 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
               : t('chatHistory.empty', { ns: 'chat' })}
           </div>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

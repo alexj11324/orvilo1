@@ -1,12 +1,16 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
-import { ContextMenuTrigger, Icon } from '@lobehub/ui';
 import type { SkillResourceTreeNode } from '@orvilo/types';
-import { Input, type InputRef } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { ChevronDown, ChevronRight, File, FolderIcon, FolderOpenIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Input } from '@/components/ui/input';
+import {
+  renderSidebarMenuItems,
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   item: css`
@@ -51,22 +55,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     outline: none !important;
     box-shadow: none !important;
   `,
-  // Reset wrapper-level styles too; Ant applies some padding/radius on the semantic root.
-  // If only `input` is reset, the row can still shift by a few pixels.
-  editingInputRoot: css`
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-
-    background: transparent !important;
-    box-shadow: none !important;
-  `,
 }));
 
 interface FileTreeProps {
   editableFilePath?: string | null;
-  getFileContextMenuItems?: (file: { name: string; path: string }) => MenuProps['items'];
+  getFileContextMenuItems?: (file: { name: string; path: string }) => SidebarMenuItems;
   onCancelRenameFile?: () => void;
   onCommitRenameFile?: (
     file: { name: string; path: string },
@@ -85,7 +78,7 @@ const TreeNode = memo<{
   depth: number;
   editableFilePath?: string | null;
   expandedFolders: Set<string>;
-  getFileContextMenuItems?: (file: { name: string; path: string }) => MenuProps['items'];
+  getFileContextMenuItems?: (file: { name: string; path: string }) => SidebarMenuItems;
   node: SkillResourceTreeNode;
   onCancelRenameFile?: () => void;
   onCommitRenameFile?: (
@@ -113,7 +106,7 @@ const TreeNode = memo<{
     const isSelected = !isDir && selectedFile === node.path;
     const isEditing = !isDir && editableFilePath === node.path && !!onCommitRenameFile;
     const [editingName, setEditingName] = useState(node.name);
-    const inputRef = useRef<InputRef>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const isSubmittingRef = useRef(false);
 
     useEffect(() => {
@@ -179,15 +172,14 @@ const TreeNode = memo<{
         title={node.path}
         onClick={handleClick}
       >
-        {isDir && <Icon icon={isExpanded ? ChevronDown : ChevronRight} size={14} />}
+        {isDir && createElement(isExpanded ? ChevronDown : ChevronRight, { size: 14 })}
         {!isDir && <span style={{ flexShrink: 0, width: 14 }} />}
-        <Icon icon={isDir ? (isExpanded ? FolderOpenIcon : FolderIcon) : File} size={16} />
+        {createElement(isDir ? (isExpanded ? FolderOpenIcon : FolderIcon) : File, { size: 16 })}
         {isEditing ? (
           <Input
-            classNames={{ input: styles.editingInput, root: styles.editingInputRoot }}
+            className={styles.editingInput}
             ref={inputRef}
             value={editingName}
-            variant={'borderless'}
             onBlur={() => void handleCommitRename()}
             onChange={(e) => setEditingName(e.target.value)}
             onClick={(e) => e.stopPropagation()}
@@ -213,7 +205,12 @@ const TreeNode = memo<{
     return (
       <>
         {!isDir && contextMenuItems && contextMenuItems.length > 0 ? (
-          <ContextMenuTrigger items={contextMenuItems}>{nodeContent}</ContextMenuTrigger>
+          <ContextMenu>
+            <ContextMenuTrigger>{nodeContent}</ContextMenuTrigger>
+            <ContextMenuContent>
+              {renderSidebarMenuItems(contextMenuItems, [], 'context')}
+            </ContextMenuContent>
+          </ContextMenu>
         ) : (
           nodeContent
         )}
@@ -301,7 +298,7 @@ const FileTree = memo<FileTreeProps>(
         onClick={() => onSelectFile(rootFilePath)}
       >
         <span style={{ flexShrink: 0, width: 14 }} />
-        <Icon icon={File} size={16} />
+        <File size={16} />
         <span className={styles.label}>{rootFileLabel}</span>
       </div>
     );
@@ -309,9 +306,12 @@ const FileTree = memo<FileTreeProps>(
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {rootFileContent && rootFileContextMenuItems && rootFileContextMenuItems.length > 0 ? (
-          <ContextMenuTrigger items={rootFileContextMenuItems}>
-            {rootFileContent}
-          </ContextMenuTrigger>
+          <ContextMenu>
+            <ContextMenuTrigger>{rootFileContent}</ContextMenuTrigger>
+            <ContextMenuContent>
+              {renderSidebarMenuItems(rootFileContextMenuItems, [], 'context')}
+            </ContextMenuContent>
+          </ContextMenu>
         ) : (
           rootFileContent
         )}

@@ -77,7 +77,7 @@ class WorkService {
     projectId?: string | null;
     provider?: WorkSkillProvider;
     type?: WorkType | null;
-    visibility?: WorkVisibility;
+    visibility?: Exclude<WorkVisibility, 'team'>;
   }): Promise<WorkSummaryPage> =>
     lambdaClient.work.listByWorkspace.query({ ...params, includeFileWorks: true });
 

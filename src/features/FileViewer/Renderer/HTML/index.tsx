@@ -1,7 +1,6 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
 import { InlineHtmlPreview } from '@/components/HtmlPreview';
@@ -26,15 +25,15 @@ const HTMLViewer = memo<HTMLViewerProps>(({ url }) => {
   const { fileData, loading } = useTextFileLoader(url);
 
   return (
-    <Flexbox className={styles.page}>
+    <div className={cx('flex flex-col', styles.page)}>
       {!loading && fileData !== null ? (
         <InlineHtmlPreview content={fileData} />
       ) : (
-        <Center height={'100%'}>
+        <div className="flex flex-col items-center justify-center h-[100%]">
           <NeuralNetworkLoading size={36} />
-        </Center>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

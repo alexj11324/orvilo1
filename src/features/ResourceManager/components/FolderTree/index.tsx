@@ -1,12 +1,11 @@
 'use client';
 
-import { CaretDownFilled } from '@ant-design/icons';
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
-import { FolderIcon, FolderOpenIcon } from 'lucide-react';
+import { ChevronDown, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
-import { memo, useCallback } from 'react';
+import { createElement, memo, useCallback } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   folderHeader: css`
@@ -82,12 +81,13 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
     }, [item.id, item.slug, onFolderClick]);
 
     return (
-      <Flexbox gap={2}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={cx(styles.folderHeader, isActive && styles.folderHeaderActive)}
+      <div className="flex flex-col gap-0.5">
+        <div
           style={{ paddingInlineStart: level * 16 + 8 }}
+          className={cx(
+            'flex flex-row items-center',
+            cx(styles.folderHeader, isActive && styles.folderHeaderActive),
+          )}
           onClick={handleClick}
         >
           <m.div
@@ -95,7 +95,7 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
             <ActionIcon
-              icon={CaretDownFilled as any}
+              icon={ChevronDown}
               size={'small'}
               onClick={(e) => {
                 e.stopPropagation();
@@ -103,14 +103,18 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
               }}
             />
           </m.div>
-          <Flexbox
-            horizontal
-            align={'center'}
-            flex={1}
-            gap={8}
+          <div
+            className="flex flex-row items-center flex-1 gap-2"
             style={{ minHeight: 28, minWidth: 0 }}
           >
-            <Icon icon={isExpanded ? FolderOpenIcon : FolderIcon} size={16} />
+            <span className="anticon" role="img">
+              {createElement(isExpanded ? FolderOpenIcon : FolderIcon, {
+                size: 16,
+                width: 16,
+                height: 16,
+                fill: 'transparent',
+              })}
+            </span>
             <span
               style={{
                 flex: 1,
@@ -123,8 +127,8 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
             >
               {item.name}
             </span>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
         {isExpanded && item.children && item.children.length > 0 && (
           <m.div
@@ -133,7 +137,7 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
             style={{ overflow: 'hidden' }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
-            <Flexbox gap={2}>
+            <div className="flex flex-col gap-0.5">
               {item.children.map((child) => (
                 <FolderTreeItemComponent
                   expandedFolders={expandedFolders}
@@ -147,10 +151,10 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
                   onToggleFolder={onToggleFolder}
                 />
               ))}
-            </Flexbox>
+            </div>
           </m.div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -178,7 +182,7 @@ const FolderTree = memo<FolderTreeProps>(
     onFolderClick,
   }) => {
     return (
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         {items.map((item) => (
           <FolderTreeItemComponent
             expandedFolders={expandedFolders}
@@ -191,7 +195,7 @@ const FolderTree = memo<FolderTreeProps>(
             onToggleFolder={onToggleFolder}
           />
         ))}
-      </Flexbox>
+      </div>
     );
   },
 );

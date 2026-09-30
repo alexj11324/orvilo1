@@ -10,9 +10,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
-import type { TaskStatus, WorkQuerySortMode } from '@orvilo/types';
+import type { WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,8 +18,10 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { toast } from '@/components/toast';
 import {
-  applyWorkQueryStatusChange,
+  applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
   kanbanStatusMoveGroupBy,
   storeKanbanUsesWorkflowMove,
@@ -47,6 +47,7 @@ import {
   buildKanbanGroupQuery,
   canDropTaskIntoExternalColumn,
   canDropTaskIntoKanbanColumn,
+  COLUMN_I18N_KEYS,
   computeKanbanPosition,
   effectiveTaskPosition,
   externalKanbanColumnMoveScope,
@@ -62,6 +63,7 @@ import {
   kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
+  kanbanColumnPagingAction,
   kanbanCreateTaskProjectId,
   kanbanStatusColumnsExcludedBy,
   makeKanbanCollision,
@@ -72,11 +74,11 @@ import {
   resolveKanbanDropColumn,
   taskMatchesExternalColumn,
   taskMatchesKanbanColumn,
+  type TaskStatusChoice,
   type WorkQueryBoardGroupBy,
 } from './kanbanBoardModel';
 import KanbanColumn, {
   CollapsedKanbanColumn,
-  COLUMN_I18N_KEYS,
   COLUMN_STATUS_VISUAL,
   COLUMN_WIDTH,
 } from './KanbanColumn';
@@ -203,6 +205,7 @@ interface KanbanBoardProps {
    * to agents (active execution grant) — My Work's Delegated tab.
    */
   myTaskScope?: 'assigned' | 'created' | 'delegated';
+  onViewAll?: () => void;
   options: TaskListViewOptions;
   /** `null` narrows to tasks with no project — My Work's "No project" chip. */
   projectId?: string | null;
@@ -216,6 +219,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     emptyDescription,
     external,
     myTaskScope,
+    onViewAll,
     options,
     projectId,
     routeScope,
@@ -733,11 +737,11 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   }, [isDraggingRef, resetColumns]);
 
   const handleCardStatusChange = useCallback(
-    async (task: TaskListItem, status: TaskStatus) => {
-      const applied = await applyWorkQueryStatusChange({
+    async (task: TaskListItem, choice: TaskStatusChoice) => {
+      const applied = await applyWorkQueryStatusChoice({
         changeLocal: changeTaskStatus,
+        choice,
         groupBy: kanbanStatusMoveGroupBy(external?.queryGroupBy),
-        status,
         task,
       });
       if (!applied) return;
@@ -823,7 +827,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         }));
 
   const skeletonBoard = (
-    <Flexbox horizontal className={styles.board}>
+    <div className={styles.board}>
       {skeletonColumns.map((col) => (
         <KanbanColumn
           loading
@@ -836,13 +840,16 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           total={0}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 
   const emptyState = (
-    <Center height={'80vh'} width={'100%'}>
-      <Empty description={emptyDescription ?? t('taskList.empty')} icon={ClipboardCheckIcon} />
-    </Center>
+    <div className="flex h-[80vh] w-full items-center justify-center">
+      <SimpleEmpty
+        description={emptyDescription ?? t('taskList.empty')}
+        icon={ClipboardCheckIcon}
+      />
+    </div>
   );
 
   const board = (
@@ -873,6 +880,11 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           // A failed column page keeps its cards — the retry lives in that
           // column's footer where the load-more button would sit.
           const columnLoadError = external?.loadMoreGroupError?.(col.key);
+          const pagingAction = kanbanColumnPagingAction({
+            atLimit:
+              (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >= kanbanGroupLimitCap(groupBy),
+            external: Boolean(external),
+          });
           return (
             <KanbanColumn
               columnKey={col.key}
@@ -898,18 +910,19 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                   <button
                     data-no-board-pan
                     className={styles.loadMore}
+                    disabled={pagingAction === 'viewAll' && !onViewAll}
                     type="button"
-                    disabled={
-                      !external &&
-                      (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >=
-                        kanbanGroupLimitCap(groupBy)
-                    }
-                    onClick={() => loadMoreGroup(col.key)}
+                    onClick={pagingAction === 'viewAll' ? onViewAll : () => loadMoreGroup(col.key)}
                   >
-                    {t('taskList.kanban.loadMore', {
-                      shown: columnTasks.length,
-                      total: group.total,
-                    })}
+                    {t(
+                      pagingAction === 'viewAll'
+                        ? 'taskList.kanban.viewAllInList'
+                        : 'taskList.kanban.loadMore',
+                      {
+                        shown: columnTasks.length,
+                        total: group.total,
+                      },
+                    )}
                   </button>
                 ) : undefined
               }

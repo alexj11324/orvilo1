@@ -1,4 +1,3 @@
-import { Empty, Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { ParseKeys } from 'i18next';
 import {
@@ -17,6 +16,7 @@ import {
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -192,10 +192,10 @@ const GlobalSearchResults = ({
         {[1, 2, 3].map((i) => (
           <div className={styles.skeletonRow} key={`skeleton-${i}`}>
             <div className={styles.skeleton} style={{ height: 20, width: 20 }} />
-            <Flexbox flex={1} gap={6}>
+            <div className="flex flex-col flex-1 gap-1.5">
               <div className={styles.skeleton} style={{ width: `${55 + i * 10}%` }} />
               <div className={styles.skeleton} style={{ height: 10, width: `${35 + i * 5}%` }} />
-            </Flexbox>
+            </div>
           </div>
         ))}
       </div>
@@ -203,7 +203,16 @@ const GlobalSearchResults = ({
   }
 
   if (groups.length === 0) {
-    return <Empty description={t('globalSearch.empty', { query })} icon={SearchIcon} />;
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <SearchIcon />
+          </EmptyMedia>
+          <EmptyDescription>{t('globalSearch.empty', { query })}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
   }
 
   return (
@@ -222,10 +231,10 @@ const GlobalSearchResults = ({
                 onClick={() => handleSelect(result)}
               >
                 <span className={styles.rowIcon}>{TYPE_ICONS[group.type]}</span>
-                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+                <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
                   <span className={styles.rowTitle}>{resultTitle(result)}</span>
                   {subtitle && <span className={styles.rowSubtitle}>{subtitle}</span>}
-                </Flexbox>
+                </div>
               </button>
             );
           })}

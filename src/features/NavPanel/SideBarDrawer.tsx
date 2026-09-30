@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, DrawerPopup, DrawerPortal, DrawerRoot, Text } from '@lobehub/ui/base-ui';
+import { Dialog } from '@base-ui/react/dialog';
 import { createStaticStyles } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, Suspense, useEffect, useState } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 
 import SkeletonList from './components/SkeletonList';
@@ -27,14 +27,26 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     min-height: 0;
     background: ${cssVar.colorBgLayout};
   `,
-  panel: css`
-    border-inline: 1px solid ${cssVar.colorBorderSecondary};
-    background: ${cssVar.colorBgLayout};
-    box-shadow: 4px 0 8px -2px rgb(0 0 0 / 4%);
-  `,
   popup: css`
     position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    border-inline: 1px solid ${cssVar.colorBorderSecondary};
+
+    background: ${cssVar.colorBgLayout};
+    box-shadow: 4px 0 8px -2px rgb(0 0 0 / 4%);
+
+    transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      transform: translateX(-100%);
+    }
   `,
 }));
 
@@ -60,37 +72,30 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
 
     return (
       <OverlayContainerContext value={overlayContainer}>
-        <DrawerRoot
+        <Dialog.Root
           modal={false}
           open={open}
-          zIndex={DRAWER_Z_INDEX}
           onOpenChange={(nextOpen, eventDetails) => {
             if (nextOpen || eventDetails.reason === 'outside-press') return;
             onClose();
           }}
         >
-          <DrawerPortal container={portalContainer}>
-            <DrawerPopup
-              flush
+          <Dialog.Portal container={portalContainer}>
+            <Dialog.Popup
               className={styles.popup}
-              panelClassName={styles.panel}
-              placement={'left'}
               ref={setOverlayContainer}
-              width={width}
+              style={{ width, zIndex: DRAWER_Z_INDEX }}
             >
               <SideBarHeaderLayout
                 showBack={false}
-                showTogglePanelButton={false}
                 left={
                   typeof title === 'string' ? (
-                    <Text
-                      ellipsis
-                      fontSize={14}
+                    <div
+                      className="truncate text-[14px] font-[400]"
                       style={{ fontWeight: 600, paddingLeft: 8 }}
-                      weight={400}
                     >
                       {title}
-                    </Text>
+                    </div>
                   ) : (
                     title
                   )
@@ -111,17 +116,17 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
               <div className={styles.body}>
                 <Suspense
                   fallback={
-                    <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
+                    <div className="flex flex-col gap-[1px] py-[1px] px-1">
                       <SkeletonList rows={3} />
-                    </Flexbox>
+                    </div>
                   }
                 >
                   {children}
                 </Suspense>
               </div>
-            </DrawerPopup>
-          </DrawerPortal>
-        </DrawerRoot>
+            </Dialog.Popup>
+          </Dialog.Portal>
+        </Dialog.Root>
       </OverlayContainerContext>
     );
   },

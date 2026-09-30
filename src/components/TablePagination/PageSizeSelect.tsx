@@ -1,7 +1,8 @@
 'use client';
 
-import { Select } from '@lobehub/ui/base-ui';
 import { memo, type ReactNode } from 'react';
+
+import Select from '@/components/Select';
 
 interface PageSizeOption {
   label?: ReactNode;
@@ -24,7 +25,6 @@ const PageSizeSelect = memo<PageSizeSelectProps>(
       disabled={disabled}
       size={'small'}
       value={value}
-      variant={'filled'}
       options={options.map((option) => ({
         label: option.label ?? String(option.value),
         value: option.value,

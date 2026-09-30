@@ -1,7 +1,5 @@
 'use client';
 
-import { Grid } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,18 +14,17 @@ interface StatCardsProps {
   summary: AgentUsageStats['summary'];
 }
 
-const desc = (text: string) => (
-  <Text fontSize={12} type={'secondary'}>
-    {text}
-  </Text>
-);
+const desc = (text: string) => <div className="text-[12px] text-muted-foreground">{text}</div>;
 
 const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
   const { t } = useTranslation('spend');
   const suffix = ` · ${rangeLabel}`;
 
   return (
-    <Grid gap={8} maxItemWidth={240} rows={3}>
+    <div
+      className="grid"
+      style={{ gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}
+    >
       <StatisticCard
         loading={isLoading}
         title={t('usageStats.cards.cost') + suffix}
@@ -66,7 +63,7 @@ const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
           value: formatUsageValue(summary.totalTokens),
         }}
       />
-    </Grid>
+    </div>
   );
 });
 

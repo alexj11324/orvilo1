@@ -1,7 +1,8 @@
-import { Icon, Tooltip } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { CircleDotDashed, Database, ImagePlus, MessageSquareText, Mic, Video } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { createElement, memo, type ReactNode } from 'react';
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   chat: css`
@@ -54,8 +55,11 @@ const getIcon = (type: string) => {
 };
 
 const SpendType = memo<SpendTypeProps>(({ type, children }) => (
-  <Tooltip title={children}>
-    <Icon className={styles[type]} icon={getIcon(type)} size={16} />
+  <Tooltip>
+    <TooltipTrigger render={<span />}>
+      {createElement(getIcon(type), { size: 16, className: styles[type] })}
+    </TooltipTrigger>
+    <TooltipContent>{children}</TooltipContent>
   </Tooltip>
 ));
 

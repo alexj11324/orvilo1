@@ -1,17 +1,14 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
   AttachmentStrip,
@@ -60,32 +57,32 @@ const AcceptContent = memo<AcceptContentProps>(({ exceptions, onConfirm, subject
   };
 
   return (
-    <Flexbox gap={16}>
-      <Text>{translate('acceptance.accept.summary', { title: subjectTitle })}</Text>
+    <div className="flex flex-col gap-4">
+      <div>{translate('acceptance.accept.summary', { title: subjectTitle })}</div>
       {exceptions.length > 0 && (
-        <Flexbox className={styles.warning} gap={4}>
-          <Text strong fontSize={13}>
+        <div className={`flex flex-col gap-1 ${styles.warning}`}>
+          <div className="font-semibold text-[13px]">
             {translate('acceptance.accept.exceptionsTitle', { count: exceptions.length })}
-          </Text>
+          </div>
           {exceptions.map((title) => (
-            <Text fontSize={12} key={title} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" key={title}>
               · {title}
-            </Text>
+            </div>
           ))}
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {translate('acceptance.accept.exceptionsHint')}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
       )}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button disabled={loading} onClick={close}>
           {translate('acceptance.actions.cancel')}
         </Button>
-        <Button loading={loading} type={'primary'} onClick={handleConfirm}>
+        <Button loading={loading} variant="outline" onClick={handleConfirm}>
           {translate('acceptance.actions.confirmAccept')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -125,30 +122,31 @@ const RejectContent = memo<RejectContentProps>(({ onConfirm }) => {
   };
 
   return (
-    <Flexbox gap={16}>
-      <Text fontSize={13} type={'secondary'}>
+    <div className="flex flex-col gap-4">
+      <div className="text-[13px] text-muted-foreground">
         {translate('acceptance.reject.description')}
-      </Text>
-      <TextArea
-        autoSize={{ maxRows: 6, minRows: 3 }}
+      </div>
+      <Textarea
         placeholder={translate('acceptance.reject.placeholder')}
+        rows={3}
+        style={{ maxHeight: '6lh' }}
         value={comment}
         onChange={(event) => setComment(event.target.value)}
       />
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button disabled={loading} onClick={close}>
           {translate('acceptance.actions.cancel')}
         </Button>
         <Button
           disabled={!comment.trim()}
           loading={loading}
-          type={'primary'}
+          variant="outline"
           onClick={handleConfirm}
         >
           {translate('acceptance.actions.confirmReject')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -194,20 +192,21 @@ const GroupFeedbackContent = memo<GroupFeedbackContentProps>(
     };
 
     return (
-      <Flexbox gap={16}>
-        <Text fontSize={13} type={'secondary'}>
+      <div className="flex flex-col gap-4">
+        <div className="text-[13px] text-muted-foreground">
           {description ?? translate('acceptance.group.feedbackDescription', { label: groupLabel })}
-        </Text>
-        <Flexbox gap={8}>
-          <TextArea
-            autoSize={{ maxRows: 8, minRows: 3 }}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Textarea
             placeholder={translate('acceptance.group.feedbackPlaceholder')}
+            rows={3}
+            style={{ maxHeight: '8lh' }}
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             onPaste={handlePaste}
           />
           {/* One row hugging the input — attachments belong to the note. */}
-          <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+          <div className="flex items-center gap-2 flex-wrap">
             <AttachmentStrip
               attachments={attachments}
               disabled={loading}
@@ -215,22 +214,22 @@ const GroupFeedbackContent = memo<GroupFeedbackContentProps>(
               onRemove={remove}
             />
             <AttachmentUploadButton disabled={loading} onFiles={uploadFiles} />
-          </Flexbox>
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={8} justify={'flex-end'}>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 justify-end">
           <Button disabled={loading} onClick={close}>
             {translate('acceptance.actions.cancel')}
           </Button>
           <Button
             disabled={!comment.trim() || uploading}
             loading={loading}
-            type={'primary'}
+            variant="outline"
             onClick={handleConfirm}
           >
             {translate('acceptance.group.feedbackSubmit')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

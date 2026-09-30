@@ -1,5 +1,3 @@
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import {
   AGENT_DOCUMENT_CATEGORY,
@@ -8,6 +6,7 @@ import {
   EMPTY_ARRAY,
 } from '@orvilo/const';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import type { LucideIcon } from 'lucide-react';
@@ -17,9 +16,13 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import { withErrorBoundary } from '@/components/ErrorBoundary';
+import { confirmModal } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { toast } from '@/components/toast';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { buildAgentDocumentPath } from '@/features/AgentDocumentPage/navigation';
 import { DocumentExplorerTree } from '@/features/AgentDocumentsExplorer';
 import { startSkillDrag } from '@/features/ChatInput/InputEditor/ActionTag/skillDragData';
@@ -196,19 +199,17 @@ const DocumentItem = memo<DocumentItemProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'flex-start'}
-        className={`${styles.container} ${isActive ? styles.containerActive : ''}`}
-        gap={8}
+      <div
+        className={cn(
+          'flex items-start gap-2',
+          `${styles.container} ${isActive ? styles.containerActive : ''}`,
+        )}
         onClick={handleOpen}
       >
         <IconComponent size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-        <Flexbox gap={4} style={{ flex: 1, minWidth: 0 }}>
-          <Flexbox horizontal align={'center'} distribution={'space-between'}>
-            <Text ellipsis className={styles.title}>
-              {title}
-            </Text>
+        <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex items-center justify-between">
+            <div className={cn('truncate', styles.title)}>{title}</div>
             {!hideDelete && (
               <ActionIcon
                 icon={Trash2Icon}
@@ -218,15 +219,13 @@ const DocumentItem = memo<DocumentItemProps>(
                 onClick={handleDelete}
               />
             )}
-          </Flexbox>
+          </div>
           {description && (
-            <Text className={styles.description} ellipsis={{ rows: 2 }}>
-              {description}
-            </Text>
+            <div className={cn('line-clamp-2', styles.description)}>{description}</div>
           )}
-          {updatedAtLabel && <Text className={styles.meta}>{updatedAtLabel}</Text>}
-        </Flexbox>
-      </Flexbox>
+          {updatedAtLabel && <div className={styles.meta}>{updatedAtLabel}</div>}
+        </div>
+      </div>
     );
   },
 );
@@ -518,15 +517,15 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
 
     if (isLoading) {
       return (
-        <Center flex={1} paddingBlock={24}>
+        <div className="flex flex-col items-center justify-center flex-1 py-6">
           <NeuralNetworkLoading size={32} />
-        </Center>
+        </div>
       );
     }
 
     if (error) {
       return (
-        <Center flex={1} paddingBlock={24}>
+        <div className="flex flex-col items-center justify-center flex-1 py-6">
           <AsyncError
             error={error}
             variant={'block'}
@@ -534,7 +533,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
               void mutate();
             }}
           />
-        </Center>
+        </div>
       );
     }
 
@@ -569,9 +568,9 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
       if (activeCount === 0) {
         if (showProjectSkills && projectSkillsError) {
           return (
-            <Center flex={1} paddingBlock={24}>
+            <div className="flex flex-col items-center justify-center flex-1 py-6">
               <AsyncError error={projectSkillsError} variant={'block'} />
-            </Center>
+            </div>
           );
         }
 
@@ -580,22 +579,29 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
         // empty placeholder when there's nothing else to render yet.
         if (showProjectSkills && isProjectSkillsLoading) {
           return (
-            <Center flex={1} paddingBlock={24}>
+            <div className="flex flex-col items-center justify-center flex-1 py-6">
               <NeuralNetworkLoading size={32} />
-            </Center>
+            </div>
           );
         }
         return (
-          <Center flex={1} gap={8} paddingBlock={24}>
-            <Empty description={t('workingPanel.skills.empty')} icon={SkillsIcon} />
-          </Center>
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SkillsIcon />
+                </EmptyMedia>
+                <EmptyDescription>{t('workingPanel.skills.empty')}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
         );
       }
 
       const flat = activeCount === 1;
 
       return (
-        <Flexbox gap={16} style={{ paddingBottom: 16 }}>
+        <div className="flex flex-col gap-4" style={{ paddingBottom: 16 }}>
           {hasAgent &&
             (flat ? (
               renderAgentSkillsList()
@@ -624,14 +630,14 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
             />
           )}
           {hasUser && <UserLevelSkills hideHeader={flat} />}
-        </Flexbox>
+        </div>
       );
     };
 
     const renderDocuments = () => (
       // Always render the tree for the Documents tab even when empty, so the
       // toolbar (new folder / new doc) stays reachable.
-      <Flexbox flex={1} style={{ minHeight: 0 }}>
+      <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
         <DocumentExplorerTree
           agentId={agentId}
           data={documentsData}
@@ -639,19 +645,26 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
           style={{ height: '100%' }}
           onOpenDocument={openAgentDocument}
         />
-      </Flexbox>
+      </div>
     );
 
     const renderWeb = () => {
       if (webData.length === 0) {
         return (
-          <Center flex={1} gap={8} paddingBlock={24}>
-            <Empty description={t('workingPanel.resources.empty')} icon={GlobeIcon} />
-          </Center>
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GlobeIcon />
+                </EmptyMedia>
+                <EmptyDescription>{t('workingPanel.resources.empty')}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
         );
       }
       return (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           {webData.map((doc) => (
             <DocumentItem
               activeDocumentIdentifier={activeDocumentIdentifier}
@@ -663,14 +676,14 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
               onOpenDocument={openAgentDocument}
             />
           ))}
-        </Flexbox>
+        </div>
       );
     };
 
     return (
-      <Flexbox gap={12} style={style}>
+      <div className="flex flex-col gap-3" style={style}>
         {showFilterTabs && (
-          <Flexbox horizontal gap={4} role={'tablist'}>
+          <div className="flex gap-1" role={'tablist'}>
             {filterOptions.map((option) => {
               const active = activeFilter === option.value;
               return (
@@ -685,12 +698,12 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
                 </div>
               );
             })}
-          </Flexbox>
+          </div>
         )}
         {activeFilter === 'skills' && renderSkills()}
         {activeFilter === 'documents' && renderDocuments()}
         {activeFilter === 'web' && renderWeb()}
-      </Flexbox>
+      </div>
     );
   },
 );

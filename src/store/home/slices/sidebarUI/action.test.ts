@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { INBOX_SESSION_ID } from '@/const/session';
 import { agentService } from '@/services/agent';
 import { chatGroupService } from '@/services/chatGroup';
@@ -16,7 +16,7 @@ import { getSessionStoreState } from '@/store/session';
 import { useUserStore } from '@/store/user';
 
 // Mock dependencies
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   toast: {
     error: vi.fn(),

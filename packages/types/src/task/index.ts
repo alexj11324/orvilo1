@@ -62,7 +62,17 @@ export type TaskDispatchPhase =
   | 'canceled'
   | 'failed'
   | 'succeeded'
-  | 'outcome_unknown';
+  | 'outcome_unknown'
+  // Terminal: cancel retries exhausted — the remote writer's fate is unknown
+  // but the execution slot is released and the fence blocks late callbacks.
+  | 'abandoned';
+
+/**
+ * Execution-ownership transfer between agents. `cancel_and_restart` fences
+ * and confirms termination of the incumbent's run before the successor
+ * claims the next execution generation — two agents never share a worktree.
+ */
+export type TaskHandoffStrategy = 'cancel_and_restart';
 
 /**
  * Authoritative execution origin persisted on a dispatch row (SA05-B):
@@ -827,6 +837,8 @@ export interface TaskItem {
   deletedAt?: Date | null;
   description: string | null;
   domainRevision: number;
+  /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
+  dueDate: string | null;
   /**
    * Canonical task this row duplicates. Null unless triage marked it duplicate.
    * Never a hard-delete or merged execution history.
@@ -1244,6 +1256,8 @@ export interface TaskDetailData {
     workflowStateId?: string | null;
   }>;
   description?: string | null;
+  /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
+  dueDate?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;
   error?: string | null;

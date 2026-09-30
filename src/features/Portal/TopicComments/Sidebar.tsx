@@ -1,10 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ArrowLeft } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
@@ -45,19 +44,19 @@ const TopicCommentsSidebar = memo(() => {
   const isThread = view.type === PortalViewType.TopicCommentThread;
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox horizontal align={'center'} className={styles.subheader} gap={4}>
+    <div className={cx('flex flex-col', styles.container)}>
+      <div className={cx('flex flex-row items-center gap-1', styles.subheader)}>
         <ActionIcon
           icon={ArrowLeft}
           size={DESKTOP_HEADER_ICON_SMALL_SIZE}
           onClick={isThread ? goBack : () => openTopicComments(view.topicId)}
         />
-        <Text fontSize={13} weight={500}>
+        <div className="text-[13px] font-medium">
           {t(isThread ? 'topicComment.thread' : 'topicComment.messageComments')}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
       {isThread ? <ThreadBody /> : <Body />}
-    </Flexbox>
+    </div>
   );
 });
 

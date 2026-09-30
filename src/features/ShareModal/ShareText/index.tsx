@@ -1,19 +1,31 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { copyToClipboard, Flexbox, Form } from '@lobehub/ui';
-import { Button, Switch, toast } from '@lobehub/ui/base-ui';
 import { FORM_STYLE } from '@orvilo/const';
 import { exportFile } from '@orvilo/utils/client';
+import { cx } from 'antd-style';
 import { CopyIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormItemProps } from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useShareData } from '../ShareDataProvider';
 import { styles } from '../style';
 import Preview from './Preview';
 import { generateMarkdown } from './template';
 import { type FieldType } from './type';
+
+interface FieldSwitchProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+}
+
+const FieldSwitch = ({ checked, onChange }: FieldSwitchProps) => (
+  <Switch checked={checked} onCheckedChange={onChange} />
+);
 
 const DEFAULT_FIELD_VALUE: FieldType = {
   includeTool: true,
@@ -28,7 +40,7 @@ const ShareText = memo(() => {
 
   const settings: FormItemProps[] = [
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.withSystemRole'),
       layout: 'horizontal',
       minWidth: undefined,
@@ -36,7 +48,7 @@ const ShareText = memo(() => {
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.withRole'),
       layout: 'horizontal',
       minWidth: undefined,
@@ -44,7 +56,7 @@ const ShareText = memo(() => {
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.includeUser'),
       layout: 'horizontal',
       minWidth: undefined,
@@ -52,7 +64,7 @@ const ShareText = memo(() => {
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.includeTool'),
       layout: 'horizontal',
       minWidth: undefined,
@@ -74,20 +86,21 @@ const ShareText = memo(() => {
   const button = (
     <>
       <Button
-        block
-        icon={CopyIcon}
-        size={isMobile ? undefined : 'large'}
-        type={'primary'}
+        className="w-full"
+        size={isMobile ? undefined : 'lg'}
+        variant="default"
         onClick={async () => {
           await copyToClipboard(content);
           toast.success(t('copySuccess', { ns: 'common' }));
         }}
       >
+        <CopyIcon data-icon="inline-start" />
         {t('copy', { ns: 'common' })}
       </Button>
       <Button
-        block
-        size={isMobile ? undefined : 'large'}
+        className="w-full"
+        size={isMobile ? undefined : 'lg'}
+        variant="outline"
         onClick={() => {
           exportFile(content, `${title}.md`);
         }}
@@ -99,24 +112,21 @@ const ShareText = memo(() => {
 
   return (
     <>
-      <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
+      <div className={cx('flex flex-row gap-4', styles.body)}>
         <Preview content={content} />
-        <Flexbox className={styles.sidebar} gap={12}>
+        <div className={cx('flex flex-col gap-3', styles.sidebar)}>
           <Form
             initialValues={DEFAULT_FIELD_VALUE}
+            itemMinWidth={FORM_STYLE.itemMinWidth}
             items={settings}
             itemsType={'flat'}
+            style={FORM_STYLE.style}
             onValuesChange={(_, v) => setFieldValue(v)}
-            {...FORM_STYLE}
           />
           {!isMobile && button}
-        </Flexbox>
-      </Flexbox>
-      {isMobile && (
-        <Flexbox horizontal className={styles.footer} gap={8}>
-          {button}
-        </Flexbox>
-      )}
+        </div>
+      </div>
+      {isMobile && <div className={cx('flex flex-row gap-2', styles.footer)}>{button}</div>}
     </>
   );
 });

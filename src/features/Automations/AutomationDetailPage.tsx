@@ -1,15 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  confirmModal,
-  DropdownMenu,
-  Select,
-  Switch,
-  Tabs,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -20,7 +8,17 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
 import NotFound from '@/components/404';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { SelectOptionItems } from '@/components/SelectOptions';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -31,6 +29,11 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskDetailRunPauseAction from '../AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction';
+import {
+  TaskDetailScope,
+  useTaskDetailSelector,
+  useTaskDetailTaskId,
+} from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import TaskDetailSkeleton from '../AgentTasks/AgentTaskDetail/TaskDetailSkeleton';
 import TaskDetailTitleInput from '../AgentTasks/AgentTaskDetail/TaskDetailTitleInput';
 import TopicChatDrawer from '../AgentTasks/AgentTaskDetail/TopicChatDrawer';
@@ -51,9 +54,9 @@ dayjs.extend(relativeTime);
 const ProjectSelect = memo(() => {
   const { t } = useTranslation('automation');
   const { allowed: canEdit, reason } = usePermission('create_content');
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const projectId = useTaskStore(
-    (s) => (s.activeTaskId ? s.taskDetailMap[s.activeTaskId]?.projectId : undefined) ?? null,
+  const taskId = useTaskDetailTaskId();
+  const projectId = useTaskDetailSelector(
+    (s, scopedTaskId) => taskDetailSelectors.taskDetail(s, scopedTaskId)?.projectId ?? null,
   );
   const updateTask = useTaskStore((s) => s.updateTask);
   const projects = useCurrentProjectList();
@@ -68,50 +71,63 @@ const ProjectSelect = memo(() => {
   );
 
   return (
-    <Tooltip title={canEdit ? undefined : reason}>
-      <Select
-        disabled={!canEdit || !taskId}
-        options={options}
-        size={'small'}
-        style={{ maxWidth: 200 }}
-        value={projectId ?? ''}
-        onChange={(value) => {
-          if (!taskId || typeof value !== 'string') return;
-          void updateTask(taskId, { projectId: value || null });
-        }}
-      />
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              <Select
+                disabled={!canEdit || !taskId}
+                items={options}
+                value={projectId ?? ''}
+                onValueChange={(value) => {
+                  if (!taskId || typeof value !== 'string') return;
+                  void updateTask(taskId, { projectId: value || null });
+                }}
+              >
+                <SelectTrigger size="sm" style={{ maxWidth: 200 }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectOptionItems options={options} />
+                </SelectContent>
+              </Select>
+            </span>
+          }
+        />
+        <TooltipContent>{canEdit ? undefined : reason}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 
 const AutomationStatusSwitch = memo(() => {
   const { allowed: canEdit, reason } = usePermission('create_content');
-  const status = useTaskStore(taskDetailSelectors.activeTaskStatus);
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus);
+  const taskId = useTaskDetailTaskId();
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus);
   const active = status ? automationStatusOf(status) === 'active' : true;
 
   return (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-center gap-2" title={canEdit ? undefined : reason}>
       <Switch
         checked={active}
         disabled={!canEdit || !taskId || status === 'running'}
-        title={canEdit ? undefined : reason}
-        onChange={(checked) => {
+        onCheckedChange={(checked) => {
           if (!taskId) return;
           void updateTaskStatus(taskId, checked ? 'scheduled' : 'paused');
         }}
       />
       {status ? <AutomationStatusBadge status={automationStatusOf(status)} /> : null}
-    </Flexbox>
+    </div>
   );
 });
 
 const AgentChip = memo(() => {
   const { t } = useTranslation('automation');
-  const agentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
-  const taskIdentifier = useTaskStore(taskDetailSelectors.activeTaskId);
-  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
+  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const taskIdentifier = useTaskDetailTaskId();
+  const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const meta = useAgentDisplayMeta(agentId ?? undefined);
 
   return (
@@ -120,10 +136,8 @@ const AgentChip = memo(() => {
       taskIdentifier={taskIdentifier ?? undefined}
       taskVisibility={visibility}
     >
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
+      <div
+        className="flex items-center gap-2"
         style={{
           border: `1px solid ${cssVar.colorBorderSecondary}`,
           borderRadius: 8,
@@ -134,26 +148,26 @@ const AgentChip = memo(() => {
         }}
       >
         <AssigneeAvatar agentId={agentId ?? undefined} size={20} />
-        <Text fontSize={13}>
+        <div className="text-[13px]">
           {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
-        </Text>
-        <Icon color={cssVar.colorTextTertiary} icon={ChevronRightIcon} size={14} />
-      </Flexbox>
+        </div>
+        <ChevronRightIcon color={cssVar.colorTextTertiary} size={14} />
+      </div>
     </AssigneeAgentSelector>
   );
 });
 
 const CreatedByLabel = memo(() => {
   const { t } = useTranslation('automation');
-  const createdByUserId = useTaskStore(
-    (s) => (s.activeTaskId ? s.taskDetailMap[s.activeTaskId]?.createdByUserId : undefined) ?? null,
+  const createdByUserId = useTaskDetailSelector(
+    (s, scopedTaskId) => taskDetailSelectors.taskCreatedByUserId(s, scopedTaskId) ?? null,
   );
   const meta = useUserDisplayMeta(createdByUserId);
   if (!createdByUserId) return null;
   return (
-    <Text fontSize={12} type={'secondary'}>
+    <div className="text-[12px] text-muted-foreground">
       {t('detail.created_by', { name: meta?.title ?? '' })}
-    </Text>
+    </div>
   );
 });
 
@@ -162,8 +176,8 @@ const DetailHeaderActions = memo(() => {
   const { allowed: canEdit } = usePermission('create_content');
   const navigate = useWorkspaceAwareNavigate();
   const { remove } = useAutomationActions();
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const name = useTaskStore(taskDetailSelectors.activeTaskName);
+  const taskId = useTaskDetailTaskId();
+  const name = useTaskDetailSelector(taskDetailSelectors.taskName);
 
   const confirmDelete = useCallback(() => {
     if (!taskId) return;
@@ -185,13 +199,13 @@ const DetailHeaderActions = memo(() => {
   }, [taskId, name, navigate, remove, t]);
 
   return (
-    <Flexbox horizontal align={'center'} gap={6}>
+    <div className="flex items-center gap-1.5">
       <TaskDetailRunPauseAction />
       <DropdownMenu
         items={[
           {
             danger: true,
-            icon: <Icon icon={Trash2Icon} />,
+            icon: <Trash2Icon />,
             key: 'delete',
             label: t('actions.delete'),
             onClick: confirmDelete,
@@ -201,11 +215,11 @@ const DetailHeaderActions = memo(() => {
         <ActionIcon
           disabled={!canEdit}
           icon={MoreHorizontalIcon}
-          size={'small'}
+          size="small"
           title={t('detail.more_actions')}
         />
       </DropdownMenu>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -231,75 +245,75 @@ const AutomationDetailPage = memo(() => {
 
   if (error) {
     return (
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1 h-full">
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   if (isNotFound) {
     return (
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1 h-full">
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <NotFound
             desc={t('detail.not_found')}
             title={t('detail.not_found')}
             extra={
               <WorkspaceLink to={'/automations'}>
-                <Button type={'primary'}>{t('page.back_to_automations')}</Button>
+                <Button variant="outline">{t('page.back_to_automations')}</Button>
               </WorkspaceLink>
             }
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox flex={1} height={'100%'}>
-      <NavHeader
-        left={<AutomationBreadcrumb taskId={taskId} />}
-        right={<DetailHeaderActions />}
-        styles={{ left: { paddingLeft: 4 } }}
-      />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer>
-          {isInitialLoading ? (
-            <TaskDetailSkeleton chrome={'body'} />
-          ) : (
-            <Flexbox gap={8} paddingBlock={16}>
-              <TaskDetailTitleInput />
-              <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
-                <AutomationStatusSwitch />
-                <AgentChip />
-                <ProjectSelect />
-                <CreatedByLabel />
-              </Flexbox>
-              <Tabs
-                activeKey={tab}
-                items={[
-                  { key: 'settings', label: t('settings.tab_settings') },
-                  { key: 'runs', label: t('settings.tab_runs') },
-                ]}
-                onChange={setTab}
-              />
-              {tab === 'settings' ? <AutomationSettingsTab /> : <AutomationRunList />}
-            </Flexbox>
-          )}
-        </WideScreenContainer>
-      </Flexbox>
-      <TopicChatDrawer />
-    </Flexbox>
+    <TaskDetailScope taskId={taskId}>
+      <div className="flex flex-col flex-1 h-full">
+        <NavHeader
+          left={<AutomationBreadcrumb taskId={taskId} />}
+          right={<DetailHeaderActions />}
+          styles={{ left: { paddingLeft: 4 } }}
+        />
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
+          <WideScreenContainer>
+            {isInitialLoading ? (
+              <TaskDetailSkeleton chrome={'body'} />
+            ) : (
+              <div className="flex flex-col gap-2 py-4">
+                <TaskDetailTitleInput />
+                <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
+                  <AutomationStatusSwitch />
+                  <AgentChip />
+                  <ProjectSelect />
+                  <CreatedByLabel />
+                </div>
+                <Tabs value={tab} onValueChange={setTab}>
+                  <TabsList>
+                    <TabsTrigger value="settings">{t('settings.tab_settings')}</TabsTrigger>
+                    <TabsTrigger value="runs">{t('settings.tab_runs')}</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                {tab === 'settings' ? <AutomationSettingsTab /> : <AutomationRunList />}
+              </div>
+            )}
+          </WideScreenContainer>
+        </div>
+        <TopicChatDrawer />
+      </div>
+    </TaskDetailScope>
   );
 });
 

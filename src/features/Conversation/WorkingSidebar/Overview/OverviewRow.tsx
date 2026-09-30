@@ -1,7 +1,8 @@
-import { Flexbox, Icon, type IconProps } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
+import type { LucideProps } from 'lucide-react';
 import { ChevronRightIcon, ChevronsUpDownIcon } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { type ComponentType, createElement, memo, type ReactNode } from 'react';
 
 export const rowStyles = createStaticStyles(({ css, cssVar }) => ({
   changeAdditions: css`
@@ -86,7 +87,7 @@ export const rowStyles = createStaticStyles(({ css, cssVar }) => ({
 
 export interface OverviewRowProps {
   danger?: boolean;
-  icon?: IconProps['icon'];
+  icon?: ComponentType<LucideProps>;
   iconColor?: string;
   iconNode?: ReactNode;
   iconSize?: number;
@@ -112,22 +113,20 @@ export const OverviewRow = memo<OverviewRowProps>(
     value,
     weak,
   }) => (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(rowStyles.row, !onClick && !interactive && rowStyles.rowStatic)}
-      gap={10}
+    <div
       role={onClick || interactive ? 'button' : undefined}
+      className={cn(
+        'flex items-center gap-2.5',
+        cx(rowStyles.row, !onClick && !interactive && rowStyles.rowStatic),
+      )}
       onClick={onClick}
     >
-      {iconNode ?? (
-        <Icon
-          className={rowStyles.icon}
-          icon={icon!}
-          size={iconSize}
-          style={iconColor ? { color: iconColor } : undefined}
-        />
-      )}
+      {iconNode ??
+        createElement(icon!, {
+          className: rowStyles.icon,
+          size: iconSize,
+          style: iconColor ? { color: iconColor } : undefined,
+        })}
       <span
         title={title}
         className={cx(
@@ -139,15 +138,11 @@ export const OverviewRow = memo<OverviewRowProps>(
         {value}
       </span>
       {trailing ? <span className={rowStyles.rowTrailing}>{trailing}</span> : null}
-    </Flexbox>
+    </div>
   ),
 );
 
 OverviewRow.displayName = 'OverviewRow';
 
-export const PickerGlyph = () => (
-  <Icon icon={ChevronsUpDownIcon} size={13} style={{ opacity: 0.6 }} />
-);
-export const ChevronRight = () => (
-  <Icon icon={ChevronRightIcon} size={14} style={{ opacity: 0.6 }} />
-);
+export const PickerGlyph = () => <ChevronsUpDownIcon size={13} style={{ opacity: 0.6 }} />;
+export const ChevronRight = () => <ChevronRightIcon size={14} style={{ opacity: 0.6 }} />;

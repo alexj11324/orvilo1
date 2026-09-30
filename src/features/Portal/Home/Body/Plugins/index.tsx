@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,12 +7,10 @@ export const Artifacts = memo(() => {
   const { t } = useTranslation('portal');
 
   return (
-    <Flexbox gap={8}>
-      <Text as={'h5'} style={{ marginInline: 12 }}>
-        {t('Plugins')}
-      </Text>
+    <div className="flex flex-col gap-2">
+      <h5 style={{ marginInline: 12 }}>{t('Plugins')}</h5>
       <ArtifactList />
-    </Flexbox>
+    </div>
   );
 });
 

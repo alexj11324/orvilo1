@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { HeartPulseIcon, SearchIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,7 +51,7 @@ const Nav = memo(() => {
   );
 
   return (
-    <Flexbox gap={1} paddingInline={4}>
+    <div className="flex flex-col px-1" style={{ gap: 1 }}>
       {items.map((item) => {
         const url = item.url;
         if (!url) {
@@ -75,7 +74,7 @@ const Nav = memo(() => {
           </Link>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

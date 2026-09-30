@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { type ReactNode, useCallback } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 import type { WorkspaceListItem } from './useActiveWorkspace';
 
@@ -15,12 +15,12 @@ import type { WorkspaceListItem } from './useActiveWorkspace';
 export const useWorkspaceOptionLabel = (): ((workspace: WorkspaceListItem) => ReactNode) =>
   useCallback(
     (workspace: WorkspaceListItem) => (
-      <Flexbox horizontal align={'center'} gap={10} style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex items-center gap-2.5" style={{ flex: 1, minWidth: 0 }}>
         <Avatar avatar={workspace.avatar || DEFAULT_AVATAR} shape={'square'} size={24} />
-        <Text ellipsis style={{ flex: '0 1 auto', minWidth: 0 }}>
+        <div className="truncate min-w-0" style={{ flex: '0 1 auto', minWidth: 0 }}>
           {workspace.name}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
     ),
     [],
   );

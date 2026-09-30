@@ -167,6 +167,13 @@ export interface TaskMutationContext {
   /** External event/delivery id carried into planner diagnostics. */
   eventId?: string;
   /**
+   * Marks the assignee write as one step of an execution-ownership transfer
+   * (handoff, inbox-agent bootstrap) rather than a plain attribute edit.
+   * Only protocol implementations may set it: without it, reassigning a
+   * `running` task through `updateWithLog` throws `TaskHandoffRequiredError`.
+   */
+  executionTransfer?: boolean;
+  /**
    * When set, `moveToTeam` only writes if `domainRevision` still matches.
    * Inbound Linear sync omits this; the Team UI must send it.
    */
@@ -186,6 +193,23 @@ export class TaskRevisionConflictError extends Error {
   constructor() {
     super('TASK_REVISION_CONFLICT');
     this.name = 'TaskRevisionConflictError';
+  }
+}
+
+/**
+ * Thrown when a caller tries to change or clear `assigneeAgentId` on a
+ * `running` task through an ordinary update. Reassignment of a live
+ * execution is an execution-control operation and must go through
+ * `task.handoff` (fence/cancel the incumbent, then transfer) — a bare field
+ * write would split execution ownership between the stored assignee and the
+ * still-running dispatch.
+ */
+export class TaskHandoffRequiredError extends Error {
+  readonly code = 'HANDOFF_REQUIRED' as const;
+
+  constructor() {
+    super('HANDOFF_REQUIRED');
+    this.name = 'TaskHandoffRequiredError';
   }
 }
 
@@ -551,6 +575,12 @@ export class TaskModel {
 
   /** Only transaction-scoped models may hold this flag. Never set it on a shared model. */
   private dependencyLockHeld = false;
+  /**
+   * Marks a model that already performed the running-assignee guard read for
+   * this write — prevents `update()`'s guard branch from re-entering when it
+   * delegates to the transaction-scoped model.
+   */
+  private assigneeGuardHeld = false;
 
   /**
    * Graph edits and status writes share one short transaction lock per workspace
@@ -791,6 +821,40 @@ export class TaskModel {
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
+    if (
+      data.assigneeAgentId !== undefined &&
+      mutation.executionTransfer !== true &&
+      (data.status === undefined || data.status === 'running') &&
+      !this.assigneeGuardHeld
+    ) {
+      // Server-side invariant (execution ownership): a `running` task's
+      // agent assignee IS its incumbent executor, so it may only be changed
+      // by an ownership-transfer protocol that first fences the active
+      // dispatch. The check lives inside the row lock so a task cannot slip
+      // into `running` between a caller's own pre-read and this write, and
+      // on the lowest write path so service-level callers (Linear inbound
+      // sync, goal agent moves, …) cannot bypass it. `updateWithLog`
+      // repeats the same check for its activity diff; a write that also
+      // leaves `running` in the same statement is already consistent.
+      return this.db.transaction(async (tx) => {
+        const runner = tx as OrviloDatabase;
+        const scoped = new TaskModel(runner, this.userId, this.workspaceId);
+        await scoped.lockDependencyGraph();
+        scoped.dependencyLockHeld = true;
+        scoped.assigneeGuardHeld = true;
+        const [before] = await runner
+          .select({ assigneeAgentId: tasks.assigneeAgentId, status: tasks.status })
+          .from(tasks)
+          .where(and(eq(tasks.id, id), this.ownership()))
+          .for('update')
+          .limit(1);
+        if (!before) return null;
+        if (before.status === 'running' && data.assigneeAgentId !== before.assigneeAgentId) {
+          throw new TaskHandoffRequiredError();
+        }
+        return scoped.update(id, data, mutation);
+      });
+    }
     if (
       !this.dependencyLockHeld &&
       (data.status !== undefined ||
@@ -3844,6 +3908,20 @@ export class TaskModel {
         .for('update')
         .limit(1);
       if (!before) return null;
+
+      // Server-side invariant (execution ownership): a `running` task's
+      // agent assignee IS its incumbent executor, so it may only be changed
+      // by an ownership-transfer protocol that first fences the active
+      // dispatch. The check lives inside the row lock so a task cannot slip
+      // into `running` between a caller's own pre-read and this write.
+      if (
+        before.status === 'running' &&
+        data.assigneeAgentId !== undefined &&
+        data.assigneeAgentId !== before.assigneeAgentId &&
+        mutation.executionTransfer !== true
+      ) {
+        throw new TaskHandoffRequiredError();
+      }
 
       const source = actor.agentId ? 'agent' : actor.userId ? 'user' : 'system';
       const updated = await scoped.update(id, data, {

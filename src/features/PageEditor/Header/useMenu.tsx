@@ -1,6 +1,3 @@
-import type { DropdownItem } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { cssVar, useResponsive } from 'antd-style';
 import {
@@ -19,6 +16,9 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { type SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { usePermission } from '@/hooks/usePermission';
 import { useDocumentStore } from '@/store/document';
@@ -32,6 +32,8 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import { formatPageEditorInfoTime } from '../formatPageEditorInfoTime';
 import { usePageEditorStore, useStoreApi } from '../store';
+
+type DropdownItem = NonNullable<Extract<SidebarDropdownMenuProps['items'], unknown[]>>[number];
 
 /**
  * Action menu for the page editor.
@@ -191,7 +193,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
         ? [
             {
               checked: wideScreen,
-              icon: <Icon icon={Maximize2} />,
+              icon: <Maximize2 />,
               key: 'full-width',
               label: t('viewMode.fullWidth', { ns: 'chat' }),
               onCheckedChange: toggleWideScreen,
@@ -207,7 +209,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
             ...(canMakePrivate
               ? [
                   {
-                    icon: <Icon icon={EyeOffIcon} />,
+                    icon: <EyeOffIcon />,
                     key: 'make-private',
                     label: t('makePrivate', { ns: 'common' }),
                     onClick: handleMakePrivate,
@@ -219,13 +221,13 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
         : []),
       {
         disabled: !canCreatePage,
-        icon: <Icon icon={CopyPlus} />,
+        icon: <CopyPlus />,
         key: 'duplicate',
         label: t('pageList.duplicate'),
         onClick: handleDuplicate,
       },
       {
-        icon: <Icon icon={Link2} />,
+        icon: <Link2 />,
         key: 'copy-link',
         label: t('pageEditor.menu.copyLink'),
         onClick: () => {
@@ -238,7 +240,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
         },
       },
       {
-        icon: <Icon icon={Clock3Icon} />,
+        icon: <Clock3Icon />,
         key: 'version-history',
         label: t('pageEditor.history.title'),
         onClick: () => {
@@ -253,7 +255,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
       {
         danger: true,
         disabled: !canEditPage,
-        icon: <Icon icon={Trash2} />,
+        icon: <Trash2 />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: async () => {
@@ -269,7 +271,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
       ...(canPublish
         ? [
             {
-              icon: <Icon icon={UsersIcon} />,
+              icon: <UsersIcon />,
               key: 'publish-to-workspace',
               label: t('pageList.publishToWorkspace'),
               onClick: handlePublish,
@@ -284,7 +286,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
             onClick: handleExportMarkdown,
           },
         ],
-        icon: <Icon icon={Download} />,
+        icon: <Download />,
         key: 'export',
         label: t('pageEditor.menu.export'),
       },

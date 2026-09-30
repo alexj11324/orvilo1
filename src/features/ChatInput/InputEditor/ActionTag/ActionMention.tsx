@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { cx } from 'antd-style';
 import { TargetIcon, TerminalIcon, WrenchIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import type { FC, MouseEvent } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SimpleTooltip } from '../../SimpleTooltip';
 import { styles } from './style';
 import type { ActionTagCategory, ActionTagType } from './types';
 import { GOAL_COMMAND_TYPE } from './types';
@@ -93,26 +93,28 @@ export const ActionMention = memo<ActionMentionProps>(
       : undefined;
 
     return (
-      <Tooltip
+      <SimpleTooltip
         title={
-          <Flexbox gap={2}>
+          <div className="flex flex-col gap-0.5">
             <div style={{ fontWeight: 500 }}>{label}</div>
             <div style={{ opacity: 0.65 }}>{categoryLabel}</div>
             {tooltipDescription && <div>{tooltipDescription}</div>}
             {isClickable && (
               <div style={{ opacity: 0.65 }}>{t('actionTag.tooltip.clickToView')}</div>
             )}
-          </Flexbox>
+          </div>
         }
       >
         <span
           className={cx(styles.actionTag, styles[styleKey], isClickable && styles.clickable)}
           onClick={handleClick}
         >
-          <Icon icon={IconComponent} size={14} />
+          <span className="anticon" role="img">
+            <IconComponent fill={'transparent'} height={14} size={14} width={14} />
+          </span>
           <span className={styles.actionTagLabel}>{label}</span>
         </span>
-      </Tooltip>
+      </SimpleTooltip>
     );
   },
 );

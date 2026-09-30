@@ -9,6 +9,81 @@
   ],
   "community": [
     {
+      "id": "2026-09-29-team-resources-and-favorites-drag",
+      "date": "2026-09-29",
+      "versionRange": ["2.4.1"]
+    },
+    {
+      "id": "2026-09-29-issue-precise-workflow-state",
+      "date": "2026-09-29",
+      "versionRange": ["2.4.1"]
+    },
+    {
+      "id": "2026-09-29-issue-project-picker",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-29-issue-attachment-edit-lock",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-29-issue-menu-shortcut-guard",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-29-favorites-async-states",
+      "date": "2026-09-29",
+      "versionRange": ["2.4.1"]
+    },
+    {
+      "id": "2026-09-29-github-mcp-pat-fallback",
+      "date": "2026-09-29",
+      "versionRange": ["2.4.1"]
+    },
+    {
+      "id": "2026-09-29-oauth-session-terminal-states",
+      "date": "2026-09-29",
+      "versionRange": ["2.4.1"]
+    },
+    {
+      "id": "2026-09-29-task-status-picker-parity",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-27-drop-legacy-better-auth-cookie",
+      "date": "2026-09-27",
+      "versionRange": ["2.4.1"]
+    },
+    {
+      "id": "2026-09-29-issue-status-board-parity",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-29-agent-rename-and-issue-relations",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-29-mobile-duplicate-sessions",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-29-accounts-portal",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.1"]
+    },
+    {
+      "id": "2026-09-29-mobile-chat-tab-and-agent-dup-fixes",
+      "date": "2026-09-29",
+      "versionRange": ["2.3.0"]
+    },
+    {
       "id": "2026-09-28-mobile-router-shared-leaves",
       "date": "2026-09-28",
       "versionRange": ["2.3.0"]

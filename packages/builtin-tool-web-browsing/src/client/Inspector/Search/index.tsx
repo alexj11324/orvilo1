@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps, SearchQuery, UniformSearchResponse } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
 import { memo } from 'react';
@@ -38,14 +37,12 @@ export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSe
           (hasResults ? (
             <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
           ) : (
-            <Text
-              as={'span'}
-              color={cssVar.colorTextDescription}
-              fontSize={12}
-              style={{ marginInlineStart: 4 }}
+            <span
+              className="text-[12px]"
+              style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
             >
               ({t('builtins.orvilo-web-browsing.inspector.noResults')})
-            </Text>
+            </span>
           ))}
       </div>
     );

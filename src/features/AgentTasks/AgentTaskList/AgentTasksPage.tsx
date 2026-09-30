@@ -1,15 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  DropdownMenu,
-  Pagination,
-  TabsIndicator,
-  TabsList,
-  TabsRoot,
-  TabsTab,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, Plus, XIcon } from 'lucide-react';
@@ -19,6 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import TablePagination from '@/components/TablePagination';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import {
@@ -627,24 +620,24 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   });
 
   const headerLeft = (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-center gap-2">
       {headerVisibility.showBreadcrumb && <Breadcrumb />}
-      <TabsRoot size={'small'} value={collection} onValueChange={handleCollectionChange}>
+      <Tabs value={collection} onValueChange={handleCollectionChange}>
         <TabsList>
-          <TabsIndicator />
-          <TabsTab value={'tasks'}>{t('taskList.title')}</TabsTab>
-          <TabsTab value={'scheduled'}>{t('taskList.scheduled.title')}</TabsTab>
-          {showMineCollection && <TabsTab value={'mine'}>{t('taskList.mine.title')}</TabsTab>}
+          <TabsTrigger value={'tasks'}>{t('taskList.title')}</TabsTrigger>
+          <TabsTrigger value={'scheduled'}>{t('taskList.scheduled.title')}</TabsTrigger>
+          {showMineCollection && (
+            <TabsTrigger value={'mine'}>{t('taskList.mine.title')}</TabsTrigger>
+          )}
         </TabsList>
-      </TabsRoot>
+      </Tabs>
       {isMineCollection && (
-        <TabsRoot size={'small'} value={myTaskScope} onValueChange={handleMyTaskScopeChange}>
+        <Tabs value={myTaskScope} onValueChange={handleMyTaskScopeChange}>
           <TabsList>
-            <TabsIndicator />
-            <TabsTab value={'assigned'}>{t('taskList.mine.assigned')}</TabsTab>
-            <TabsTab value={'created'}>{t('taskList.mine.created')}</TabsTab>
+            <TabsTrigger value={'assigned'}>{t('taskList.mine.assigned')}</TabsTrigger>
+            <TabsTrigger value={'created'}>{t('taskList.mine.created')}</TabsTrigger>
           </TabsList>
-        </TabsRoot>
+        </Tabs>
       )}
       {isScheduledCollection && (
         <>
@@ -655,26 +648,26 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
           />
         </>
       )}
-    </Flexbox>
+    </div>
   );
 
   const pageHeader = (
     <NavHeader
       left={projectId ? undefined : headerLeft}
       right={
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           {milestoneFilterName && (
-            <Flexbox horizontal align={'center'} gap={2}>
-              <Text fontSize={12} type={'secondary'}>
+            <div className="flex items-center gap-0.5">
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskList.milestoneFilter', { name: milestoneFilterName })}
-              </Text>
+              </div>
               <ActionIcon
                 icon={XIcon}
                 size={'small'}
                 title={t('taskList.milestoneFilterClear')}
                 onClick={clearMilestoneFilter}
               />
-            </Flexbox>
+            </div>
           )}
           {projectId && (
             <DropdownMenu
@@ -691,7 +684,8 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 },
               ]}
             >
-              <Button icon={ChevronDownIcon} shape={'round'} size={'small'} type={'text'}>
+              <Button className="rounded-full" size="sm" variant="ghost">
+                <ChevronDownIcon data-icon="inline-start" />
                 {t(isScheduledCollection ? 'taskList.scheduled.title' : 'taskList.title')}
               </Button>
             </DropdownMenu>
@@ -738,7 +732,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               onToggle={() => toggleTaskAgentPanel()}
             />
           )}
-        </Flexbox>
+        </div>
       }
       styles={{
         left: {
@@ -768,10 +762,13 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             : undefined
         }
       >
-        <Flexbox flex={1} height={'100%'}>
+        <div className="flex h-full flex-1 flex-col">
           {projectId && projectToolbar ? createPortal(pageHeader, projectToolbar) : pageHeader}
           {isMineBoard ? (
-            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+            <div
+              className="flex flex-1 flex-col"
+              style={{ overflowX: 'auto', overflowY: 'hidden' }}
+            >
               <KanbanBoard
                 myTaskScope={myTaskScope}
                 options={viewOptions}
@@ -781,123 +778,120 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     ? 'taskList.mine.emptyCreated'
                     : 'taskList.mine.emptyAssigned',
                 )}
-              />
-            </Flexbox>
-          ) : isScheduledCollection ? (
-            <WideScreenContainer
-              fullWidth
-              gap={16}
-              paddingBlock={16}
-              paddingInline={16}
-              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-            >
-              <AutomationScheduleList
-                error={collectionSWR.error}
-                hasSettled={isCollectionListInit}
-                isFiltered={automationStatusFilter !== 'all'}
-                isLoading={!isCollectionListInit && !collectionSWR.error}
-                page={collectionPage}
-                tasks={collectionTasks}
-                total={collectionTasksTotal}
-                emptyContent={
-                  <Flexbox align={'center'} paddingBlock={48}>
-                    <Text type={'secondary'}>{t('taskList.scheduled.empty')}</Text>
-                  </Flexbox>
+                onViewAll={() =>
+                  updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
                 }
-                onPageChange={setCollectionPage}
-                onRefetch={() => collectionSWR.mutate()}
               />
+            </div>
+          ) : isScheduledCollection ? (
+            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+              <div className="flex flex-col gap-4 px-4 py-4">
+                <AutomationScheduleList
+                  error={collectionSWR.error}
+                  hasSettled={isCollectionListInit}
+                  isFiltered={automationStatusFilter !== 'all'}
+                  isLoading={!isCollectionListInit && !collectionSWR.error}
+                  page={collectionPage}
+                  tasks={collectionTasks}
+                  total={collectionTasksTotal}
+                  emptyContent={
+                    <div className="flex flex-col items-center py-12">
+                      <div className="text-muted-foreground">{t('taskList.scheduled.empty')}</div>
+                    </div>
+                  }
+                  onPageChange={setCollectionPage}
+                  onRefetch={() => collectionSWR.mutate()}
+                />
+              </div>
             </WideScreenContainer>
           ) : isMineCollection ? (
-            <WideScreenContainer
-              fullWidth
-              gap={16}
-              paddingBlock={16}
-              paddingInline={16}
-              wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-            >
-              <TaskList
-                data={isCollectionListInit || undefined}
-                error={collectionSWR.error}
-                items={collectionTasks}
-                options={myTaskViewOptions}
-                routeScope={routeScope}
-                emptyDescription={t(
-                  myTaskScope === 'created'
-                    ? 'taskList.mine.emptyCreated'
-                    : 'taskList.mine.emptyAssigned',
+            <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+              <div className="flex flex-col gap-4 px-4 py-4">
+                <TaskList
+                  data={isCollectionListInit || undefined}
+                  error={collectionSWR.error}
+                  items={collectionTasks}
+                  options={myTaskViewOptions}
+                  routeScope={routeScope}
+                  emptyDescription={t(
+                    myTaskScope === 'created'
+                      ? 'taskList.mine.emptyCreated'
+                      : 'taskList.mine.emptyAssigned',
+                  )}
+                  isLoading={
+                    collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
+                  }
+                  onRetry={() => collectionSWR.mutate()}
+                />
+                {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
+                  <div className="flex justify-center py-2">
+                    <TablePagination
+                      current={collectionPage}
+                      pageSize={COLLECTION_PAGE_SIZE}
+                      pageSizeOptions={[COLLECTION_PAGE_SIZE]}
+                      total={collectionTasksTotal}
+                      onChange={(page) => setCollectionPage(page)}
+                    />
+                  </div>
                 )}
-                isLoading={
-                  collectionSWR.isLoading || (!isCollectionListInit && !collectionSWR.error)
-                }
-                onRetry={() => collectionSWR.mutate()}
-              />
-              {(collectionTasksTotal > COLLECTION_PAGE_SIZE || collectionPage > 1) && (
-                <Flexbox horizontal justify={'center'} paddingBlock={8}>
-                  <Pagination
-                    current={collectionPage}
-                    pageSize={COLLECTION_PAGE_SIZE}
-                    showSizeChanger={false}
-                    total={collectionTasksTotal}
-                    onChange={setCollectionPage}
-                  />
-                </Flexbox>
-              )}
+              </div>
             </WideScreenContainer>
           ) : ordinarySurface === 'board' ? (
-            <Flexbox flex={1} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+            <div
+              className="flex flex-1 flex-col"
+              style={{ overflowX: 'auto', overflowY: 'hidden' }}
+            >
               <KanbanBoard
                 agentId={agentId}
                 options={viewOptions}
                 projectId={projectId}
                 routeScope={routeScope}
+                onViewAll={() =>
+                  updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
+                }
               />
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox horizontal flex={1} style={{ minHeight: 0, minWidth: 0 }}>
-              <WideScreenContainer
-                fullWidth
-                gap={16}
-                paddingBlock={16}
-                paddingInline={16}
-                wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-              >
-                {projectId && (
-                  <IssueFilterChips
-                    agentName={agentName}
-                    filters={issueFilters}
-                    labelName={labelName}
-                    memberName={memberName}
-                    onClearAll={() => updateIssueFilters([])}
-                    onRemove={(key) =>
-                      updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+            <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
+              <WideScreenContainer fullWidth wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+                <div className="flex flex-col gap-4 px-4 py-4">
+                  {projectId && (
+                    <IssueFilterChips
+                      agentName={agentName}
+                      filters={issueFilters}
+                      labelName={labelName}
+                      memberName={memberName}
+                      onClearAll={() => updateIssueFilters([])}
+                      onRemove={(key) =>
+                        updateIssueFilters(removeProjectIssueFilter(issueFilters, key))
+                      }
+                    />
+                  )}
+                  {!inlineCollapsed && (
+                    <CreateTaskInlineEntry
+                      agentId={agentId}
+                      lockAssignee={!!agentId}
+                      projectId={projectId}
+                    />
+                  )}
+                  <TaskList
+                    data={isTaskListInit || undefined}
+                    error={error}
+                    isLoading={isLoading || (!isTaskListInit && !error)}
+                    items={filteredIssueTasks}
+                    milestones={projectId ? projectMilestones : undefined}
+                    options={viewOptions}
+                    peekOnSelect={peekOnSelect}
+                    routeScope={routeScope}
+                    selectedIdentifier={selectedIdentifier ?? undefined}
+                    onRetry={() => mutate()}
+                    onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                    onShowHiddenCompleted={handleShowHiddenCompleted}
+                    onOpenTask={(task) =>
+                      navigate(taskDetailPath(task.identifier, undefined, task.name))
                     }
                   />
-                )}
-                {!inlineCollapsed && (
-                  <CreateTaskInlineEntry
-                    agentId={agentId}
-                    lockAssignee={!!agentId}
-                    projectId={projectId}
-                  />
-                )}
-                <TaskList
-                  data={isTaskListInit || undefined}
-                  error={error}
-                  isLoading={isLoading || (!isTaskListInit && !error)}
-                  items={filteredIssueTasks}
-                  milestones={projectId ? projectMilestones : undefined}
-                  options={viewOptions}
-                  peekOnSelect={peekOnSelect}
-                  routeScope={routeScope}
-                  selectedIdentifier={selectedIdentifier ?? undefined}
-                  onRetry={() => mutate()}
-                  onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                  onShowHiddenCompleted={handleShowHiddenCompleted}
-                  onOpenTask={(task) =>
-                    navigate(taskDetailPath(task.identifier, undefined, task.name))
-                  }
-                />
+                </div>
               </WideScreenContainer>
               {peekOnSelect && (
                 <div className={styles.detailPane}>
@@ -908,7 +902,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                   />
                 </div>
               )}
-            </Flexbox>
+            </div>
           )}
           <CollaborationOverlay />
           {projectId && viewFilterSeed && (
@@ -919,7 +913,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               onClose={() => setAdvancedFilterOpen(false)}
             />
           )}
-        </Flexbox>
+        </div>
       </LinearTaskSyncProvider>
     </CollaborationProvider>
   );

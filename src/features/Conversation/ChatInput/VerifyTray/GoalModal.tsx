@@ -1,16 +1,13 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 interface GoalContentProps {
   initialGoal?: string;
@@ -61,39 +58,40 @@ export const GoalContent = memo<GoalContentProps>(({ initialGoal, onDelete, onSu
   };
 
   return (
-    <Flexbox gap={16}>
-      <Text fontSize={13} type={'secondary'}>
+    <div className="flex flex-col gap-4">
+      <div className="text-[13px] text-muted-foreground">
         {tv('acceptance.tray.goalModal.hint')}
-      </Text>
-      <TextArea
-        autoSize={{ maxRows: 5, minRows: 3 }}
+      </div>
+      <Textarea
         placeholder={tv('acceptance.tray.goalModal.placeholder')}
+        rows={3}
+        style={{ maxHeight: '5lh' }}
         value={goal}
         onChange={(e) => setGoal(e.target.value)}
       />
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
+      <div className="flex items-center justify-between">
         {onDelete ? (
-          <Button danger disabled={busy} loading={deleting} type={'text'} onClick={handleDelete}>
+          <Button disabled={busy} loading={deleting} variant="destructive" onClick={handleDelete}>
             {tv('acceptance.tray.goalModal.delete')}
           </Button>
         ) : (
           <span />
         )}
-        <Flexbox horizontal gap={8}>
+        <div className="flex gap-2">
           <Button disabled={busy} onClick={close}>
             {tv('acceptance.actions.cancel')}
           </Button>
           <Button
             disabled={!goal.trim() || busy}
             loading={saving}
-            type={'primary'}
+            variant="default"
             onClick={handleSave}
           >
             {tv('acceptance.tray.goalModal.save')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

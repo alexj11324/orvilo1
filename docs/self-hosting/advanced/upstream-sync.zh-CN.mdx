@@ -54,7 +54,7 @@ Docker 部署版本的升级非常简单，只需要重新部署 Orvilo 的最�
   使用以下命令拉取 Orvilo 的最新 Docker 镜像：
 
   ```fish
-  docker pull alexj11324/orvilo1
+  docker pull ghcr.io/alexj11324/orvilo1
   ```
 
   ### 重新启动 Docker 容器
@@ -66,7 +66,7 @@ Docker 部署版本的升级非常简单，只需要重新部署 Orvilo 的最�
     -e OPENAI_API_KEY=sk-xxxx \
     -e OPENAI_PROXY_URL=https://api-proxy.com/v1 \
     --name orvilo \
-    alexj11324/orvilo1
+    ghcr.io/alexj11324/orvilo1
   ```
 </Steps>
 
@@ -101,7 +101,7 @@ Docker 部署版本的升级非常简单，只需要重新部署 Orvilo 的最�
   # export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7890
 
   # 拉取最新的镜像并将输出存储在变量中
-  output=$(docker pull alexj11324/orvilo1:latest 2>&1)
+  output=$(docker pull ghcr.io/alexj11324/orvilo1:latest 2>&1)
 
   # 检查拉取命令是否成功执行
   if [ $? -ne 0 ]; then
@@ -109,7 +109,7 @@ Docker 部署版本的升级非常简单，只需要重新部署 Orvilo 的最�
   fi
 
   # 检查输出中是否包含特定的字符串
-  echo "$output" | grep -q "Image is up to date for alexj11324/orvilo1:latest"
+  echo "$output" | grep -q "Image is up to date for ghcr.io/alexj11324/orvilo1:latest"
 
   # 如果镜像已经是最新的，则不执行任何操作
   if [ $? -eq 0 ]; then
@@ -122,14 +122,14 @@ Docker 部署版本的升级非常简单，只需要重新部署 Orvilo 的最�
   echo "Removed: $(docker rm -f orvilo)"
 
   # 运行新的容器(请将env配置文件地址改为你的实际地址)
-  echo "Started: $(docker run -d --network=host --env-file path/to/orvilo.env --name=orvilo --restart=always alexj11324/orvilo1)"
+  echo "Started: $(docker run -d --network=host --env-file path/to/orvilo.env --name=orvilo --restart=always ghcr.io/alexj11324/orvilo1)"
 
   # 打印更新的时间和版本
   echo "Update time: $(date)"
-  echo "Version: $(docker inspect alexj11324/orvilo1:latest | grep 'org.opencontainers.image.version' | awk -F'"' '{print $4}')"
+  echo "Version: $(docker inspect ghcr.io/alexj11324/orvilo1:latest | grep 'org.opencontainers.image.version' | awk -F'"' '{print $4}')"
 
   # 清理不再使用的镜像
-  docker images | grep 'alexj11324/orvilo1' | grep -v 'latest' | awk '{print $3}' | xargs -r docker rmi > /dev/null 2>&1
+  docker images | grep 'ghcr.io/alexj11324/orvilo1' | grep -v 'latest' | awk '{print $3}' | xargs -r docker rmi > /dev/null 2>&1
   echo "Removed old images."
   ```
 

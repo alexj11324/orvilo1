@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 
 import { isDesktop } from '@/const/version';
@@ -22,22 +21,28 @@ export const SideBarHeaderSkeleton = ({
 }: {
   variant?: SideBarHeaderVariant;
 }) => (
-  <Flexbox horizontal align={'center'} flex={'none'} padding={'8px 6px'}>
-    <Flexbox flex={1} height={headerContentHeight(variant)} justify={'center'} paddingInline={6}>
+  <div className={'flex items-center'} style={{ flex: 'none', padding: '8px 6px' }}>
+    <div
+      className={'flex flex-col justify-center flex-1'}
+      style={{ height: headerContentHeight(variant), paddingInline: 6 }}
+    >
       <SkeletonBar height={variant === 'title' ? 18 : 14} width={variant === 'title' ? 96 : 72} />
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 );
 
 const SkeletonNavItem = ({ width }: { width: string }) => (
-  <Flexbox horizontal align={'center'} flex={'none'} gap={8} height={36} paddingInline={4}>
-    <Center flex={'none'} height={28} width={28}>
+  <div className={'flex gap-2 items-center px-1'} style={{ flex: 'none' }}>
+    <div
+      className={'flex flex-col items-center justify-center'}
+      style={{ flex: 'none', height: 28, width: 28 }}
+    >
       <SkeletonBar height={18} radius={cssVar.borderRadiusSM} width={18} />
-    </Center>
-    <Flexbox flex={1}>
+    </div>
+    <div className={'flex flex-col flex-1'}>
       <SkeletonBar height={14} width={width} />
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 );
 
 const TITLE_WIDTHS = [56, 72, 48, 64];
@@ -54,11 +59,11 @@ const SkeletonRows = ({
   paddingBlock?: number;
   seed?: number;
 }) => (
-  <Flexbox gap={gap} paddingBlock={paddingBlock}>
+  <div className={'flex flex-col'} style={{ gap, paddingBlock }}>
     {Array.from({ length: count }).map((_, index) => (
       <SkeletonNavItem key={index} width={ITEM_WIDTHS[(seed * 3 + index) % ITEM_WIDTHS.length]} />
     ))}
-  </Flexbox>
+  </div>
 );
 
 export interface NavSkeletonShape {
@@ -87,50 +92,53 @@ export const NavSideBarSkeleton = ({
   const hasBody = search || leadingRows > 0 || !!groups?.length;
 
   return (
-    <Flexbox data-testid={'nav-sidebar-skeleton'} gap={1} style={{ height: '100%' }}>
+    <div
+      className={'flex flex-col'}
+      data-testid={'nav-sidebar-skeleton'}
+      style={{ gap: 1, height: '100%' }}
+    >
       <SideBarHeaderSkeleton variant={headerVariant} />
       {navRows > 0 && (
-        <Flexbox data-testid={'nav-sidebar-skeleton-nav'} flex={'none'} paddingInline={4}>
+        <div
+          className={'flex flex-col px-1'}
+          data-testid={'nav-sidebar-skeleton-nav'}
+          style={{ flex: 'none' }}
+        >
           <SkeletonRows count={navRows} gap={navGap} paddingBlock={0} />
-        </Flexbox>
+        </div>
       )}
       {hasBody && (
-        <Flexbox
-          gap={bodyGap}
-          paddingBlock={bodyPaddingBlock}
-          paddingInline={4}
-          style={{ overflow: 'hidden' }}
+        <div
+          className={'flex flex-col px-1'}
+          style={{ overflow: 'hidden', gap: bodyGap, paddingBlock: bodyPaddingBlock }}
         >
           {search && (
-            <Flexbox data-testid={'nav-sidebar-skeleton-search'} paddingInline={4}>
+            <div className={'flex flex-col px-1'} data-testid={'nav-sidebar-skeleton-search'}>
               <SkeletonBar height={36} />
-            </Flexbox>
+            </div>
           )}
           {leadingRows > 0 && <SkeletonRows count={leadingRows} paddingBlock={0} />}
           {!!groups?.length && (
-            <Flexbox gap={8}>
+            <div className={'flex flex-col gap-2'}>
               {groups.map((rows, groupIndex) => (
-                <Flexbox key={groupIndex}>
-                  <Flexbox
-                    flex={'none'}
-                    height={groupTitleHeight}
-                    justify={'center'}
-                    paddingBlock={4}
-                    paddingInline={'8px 4px'}
+                <div className={'flex flex-col'} key={groupIndex}>
+                  <div
+                    className={'flex flex-col justify-center py-1'}
+                    style={{ flex: 'none', height: groupTitleHeight, paddingInline: '8px 4px' }}
                   >
                     <SkeletonBar
                       height={12}
                       width={TITLE_WIDTHS[groupIndex % TITLE_WIDTHS.length]}
                     />
-                  </Flexbox>
+                  </div>
                   {rows > 0 && <SkeletonRows count={rows} seed={groupIndex} />}
-                </Flexbox>
+                </div>
               ))}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

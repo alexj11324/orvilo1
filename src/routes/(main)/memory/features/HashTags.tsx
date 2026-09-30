@@ -1,8 +1,8 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { HashIcon } from 'lucide-react';
 import { memo } from 'react';
+
+import { Badge } from '@/components/reui/badge';
 
 interface HashTagsProps {
   hashTags?: string[] | null;
@@ -13,12 +13,11 @@ const HashTags = memo<HashTagsProps>(({ hashTags }) => {
   return (
     hashTags &&
     hashTags.length > 0 && (
-      <Flexbox horizontal wrap="wrap">
+      <div className="flex flex-wrap">
         {hashTags.map((tag, index) => (
-          <Tag
-            icon={<Icon icon={HashIcon} />}
+          <Badge
             key={index}
-            variant={'borderless'}
+            variant="secondary"
             style={{
               color: cssVar.colorTextDescription,
               gap: 2,
@@ -26,10 +25,11 @@ const HashTags = memo<HashTagsProps>(({ hashTags }) => {
               paddingInline: 0,
             }}
           >
+            <HashIcon />
             {tag}
-          </Tag>
+          </Badge>
         ))}
-      </Flexbox>
+      </div>
     )
   );
 });

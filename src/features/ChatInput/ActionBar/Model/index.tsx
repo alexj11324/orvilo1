@@ -1,4 +1,3 @@
-import { Tooltip } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -9,6 +8,7 @@ import SelectorTrigger from '../../components/SelectorTrigger';
 import { useAgentId } from '../../hooks/useAgentId';
 import { useAgentModelSelection } from '../../hooks/useAgentModelSelection';
 import { useModelLockTooltip } from '../../hooks/useModelLockTooltip';
+import { SimpleTooltip } from '../../SimpleTooltip';
 
 // Read-only model chip — the user-managed model picker is retired. A topic's
 // pinned model still displays (top-level `topics.model` column) so the user can
@@ -43,7 +43,8 @@ const ModelSwitch = memo(() => {
 
   // Locked: say which model is pinned AND why it can't be changed here — the
   // bare model name used to leave the inert chip unexplained.
-  if (!canSelectModel) return <Tooltip title={lockTooltip ?? displayName}>{trigger}</Tooltip>;
+  if (!canSelectModel)
+    return <SimpleTooltip title={lockTooltip ?? displayName}>{trigger}</SimpleTooltip>;
 
   return trigger;
 });

@@ -378,8 +378,7 @@ export const createLambdaContext = async (request: NextRequest): Promise<LambdaC
   }
 
   // If OIDC is not enabled or validation fails, try the `orvilo_auth` web
-  // session cookie (minted by /api/auth/clerk; legacy better-auth cookies
-  // are also honored until they expire).
+  // session cookie (minted by /api/auth/clerk).
   log('Attempting cookie session authentication');
   try {
     const session = await resolveAuthSessionFromHeaders(await getServerDB(), request.headers);

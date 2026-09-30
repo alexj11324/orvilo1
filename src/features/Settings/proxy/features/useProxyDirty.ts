@@ -1,6 +1,8 @@
 import { type NetworkProxySettings } from '@orvilo/electron-client-ipc';
-import { Form as AntdForm, type FormInstance } from 'antd';
+import { type FormInstance } from 'antd';
 import { useMemo } from 'react';
+
+import AntdForm from '@/components/GroupForm';
 
 const WATCH_FIELDS: readonly (keyof NetworkProxySettings)[] = [
   'enableProxy',

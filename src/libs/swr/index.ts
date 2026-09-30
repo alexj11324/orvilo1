@@ -81,6 +81,22 @@ export const useOnlyFetchOnceSWR: SWRHook = (key, fetch, config) =>
   });
 
 /**
+ * Leading segment stamped onto every `useActionSWR` key so cache-wide
+ * broadcast revalidations (`mutate(() => true, { revalidate: true })`, e.g.
+ * the scope-reload in `GlobalProvider/Query.tsx`) can skip them. Action
+ * fetchers are mutations — replaying them would re-run creates server-side.
+ */
+const ACTION_SWR_KEY_PREFIX = 'action:';
+
+/** Whether a raw SWR key belongs to a `useActionSWR` hook. */
+export const isActionSWRKey = (key: unknown): boolean =>
+  Array.isArray(key) && key[0] === ACTION_SWR_KEY_PREFIX;
+
+/** Predicate matching every registered SWR key *except* action hooks — the
+ * matcher cache-wide revalidation broadcasts should use. */
+export const isDataSWRKey = (key: unknown): boolean => !isActionSWRKey(key);
+
+/**
  * This type of request method is for action triggers. Must use mutate to trigger the request.
  * Benefits: built-in loading/error states, easy to handle loading/error UI interactions.
  * Components with the same SWR key will automatically share loading state (e.g., create agent button and the + button in header).
@@ -88,10 +104,17 @@ export const useOnlyFetchOnceSWR: SWRHook = (key, fetch, config) =>
  *
  * Uses fallbackData as empty object so SWR thinks initial data exists.
  * Combined with revalidateOnMount: false, this prevents auto-fetch on mount.
+ *
+ * Error retry is disabled: action fetchers are mutations (createSession,
+ * openNewTopicOrSaveTopic, ...), and SWR's default `onErrorRetry` re-runs a
+ * failed fetcher forever (~5s exponential backoff, no cap). For a
+ * non-idempotent mutation each retry is another server-side insert — one
+ * dropped response turns a single tap into a stream of duplicate rows.
+ * Callers that genuinely want retry can still opt in via `config`.
  */
 // @ts-ignore
 export const useActionSWR: SWRHook = (key, fetch, config) =>
-  useSWR(key, fetch, {
+  useSWR(key ? [ACTION_SWR_KEY_PREFIX, ...(Array.isArray(key) ? key : [key])] : key, fetch, {
     // Use empty object as fallback to prevent auto-fetch when cache is empty
     // Combined with revalidateOnMount: false, SWR won't call fetcher on mount
     fallbackData: {},
@@ -104,6 +127,7 @@ export const useActionSWR: SWRHook = (key, fetch, config) =>
     revalidateOnFocus: false,
     revalidateOnMount: false,
     revalidateOnReconnect: false,
+    shouldRetryOnError: false,
     ...config,
   });
 

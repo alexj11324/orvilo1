@@ -1,14 +1,14 @@
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { UserRoundX } from 'lucide-react';
 import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type SidebarAgentItem } from '@/database/repositories/home';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -21,11 +21,19 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useTaskStore } from '@/store/task';
 
+import { SimpleTooltip } from './SimpleTooltip';
+
 interface AssigneeAgentSelectorProps {
   children: ReactNode;
   currentAgentId?: string | null;
   disabled?: boolean;
   onChange?: (agentId: string | null) => void;
+  /**
+   * Running-task mode: instead of a bare assignee update, the pick routes
+   * through `task.handoff` — an execution-ownership transfer that fences
+   * the incumbent's run. The user confirms the transfer first.
+   */
+  onHandoff?: (agentId: string | null) => Promise<void>;
   taskIdentifier?: string;
   taskVisibility?: 'private' | 'public' | null;
 }
@@ -78,10 +86,10 @@ const triggerStyle: CSSProperties = {
 };
 
 const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
-  ({ children, currentAgentId, disabled, onChange, taskIdentifier, taskVisibility }) => {
+  ({ children, currentAgentId, disabled, onChange, onHandoff, taskIdentifier, taskVisibility }) => {
     const { t } = useTranslation(['chat', 'common', 'topic']);
     const { allowed: canEditTask, reason } = usePermission('create_content');
-    const [key, setKey] = useState(0);
+    const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);
@@ -178,10 +186,23 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     const handleAgentChange = useCallback(
       (agentId: string | null, agent?: SidebarAgentItem) => {
         if (!canEditTask || agentId === (currentAgentId ?? null)) return;
-        setKey((value) => value + 1);
+        setOpen(false);
         setSearch('');
         if (onChange) {
           onChange(agentId);
+          return;
+        }
+        if (onHandoff) {
+          const next = agent
+            ? agentDisplayName(agent, t('untitledAgent', { ns: 'chat' }))
+            : unassignedLabel;
+          confirmModal({
+            cancelText: t('cancel', { ns: 'common' }),
+            content: t('taskDetail.handoff.confirm', { agent: next, ns: 'chat' }),
+            okText: t('taskDetail.handoff.transfer', { ns: 'chat' }),
+            title: t('taskDetail.handoff.title', { ns: 'chat' }),
+            onOk: () => onHandoff(agentId),
+          });
           return;
         }
         if (taskIdentifier)
@@ -204,7 +225,16 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
             },
           );
       },
-      [canEditTask, currentAgentId, onChange, taskIdentifier, updateTask],
+      [
+        canEditTask,
+        currentAgentId,
+        onChange,
+        onHandoff,
+        t,
+        taskIdentifier,
+        unassignedLabel,
+        updateTask,
+      ],
     );
 
     const handleSelect = useCallback(
@@ -261,12 +291,12 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
               agentTitle={agentDisplayName(option.agent, t('untitledAgent', { ns: 'chat' }))}
               avatar={option.agent.avatar}
               onAgentChange={() => handleSelect(option)}
-              onClose={() => setKey((value) => value + 1)}
+              onClose={() => setOpen(false)}
             />
           ) : (
             <NavItem
               active={active}
-              icon={<Icon color={cssVar.colorTextDescription} icon={UserRoundX} size={18} />}
+              icon={UserRoundX}
               style={{ flexShrink: 0 }}
               title={unassignedLabel}
               onClick={() => handleSelect(option)}
@@ -277,32 +307,32 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     };
 
     const blocked = disabled || !canEditTask;
-    const trigger = blocked ? (
-      <Tooltip title={disabled ? t('taskDetail.reassignDisabled', { ns: 'chat' }) : reason}>
-        <div
-          style={{ ...triggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <span style={{ pointerEvents: 'none' }}>{children}</span>
-        </div>
-      </Tooltip>
-    ) : (
-      <div style={triggerStyle} onClick={(event) => event.stopPropagation()}>
-        {children}
-      </div>
-    );
+
+    if (blocked)
+      return (
+        <SimpleTooltip title={disabled ? t('taskDetail.reassignDisabled', { ns: 'chat' }) : reason}>
+          <div
+            style={{ ...triggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span style={{ pointerEvents: 'none' }}>{children}</span>
+          </div>
+        </SimpleTooltip>
+      );
 
     return (
-      <Popover
-        disabled={blocked}
-        key={key}
-        placement={'bottomLeft'}
-        styles={{ content: { padding: 0, width: 260 } }}
-        trigger={'click'}
-        content={
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <div style={triggerStyle} onClick={(event) => event.stopPropagation()}>
+              {children}
+            </div>
+          }
+        />
+        <PopoverContent align="start" className="w-[260px] gap-0 p-0">
           <Suspense fallback={<SkeletonList rows={6} />}>
             {isAgentListInit ? (
-              <Flexbox onClick={(event) => event.stopPropagation()}>
+              <div className="flex flex-col" onClick={(event) => event.stopPropagation()}>
                 <input
                   autoFocus
                   className={styles.searchInput}
@@ -312,15 +342,14 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
                   onKeyDown={handleSearchKeyDown}
                 />
                 {flatOptions.length === 0 ? (
-                  <Flexbox align={'center'} justify={'center'} padding={16}>
-                    <Text fontSize={12} type={'secondary'}>
+                  <div className="flex flex-col items-center justify-center p-4">
+                    <div className="text-[12px] text-muted-foreground">
                       {t('taskList.assigneeSearch.agentEmpty', { ns: 'chat' })}
-                    </Text>
-                  </Flexbox>
+                    </div>
+                  </div>
                 ) : (
-                  <Flexbox
-                    gap={4}
-                    padding={8}
+                  <div
+                    className="flex flex-col gap-1 p-2"
                     ref={listRef}
                     style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
                   >
@@ -347,16 +376,14 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
                         )}
                       </>
                     )}
-                  </Flexbox>
+                  </div>
                 )}
-              </Flexbox>
+              </div>
             ) : (
               <SkeletonList rows={6} />
             )}
           </Suspense>
-        }
-      >
-        {trigger}
+        </PopoverContent>
       </Popover>
     );
   },

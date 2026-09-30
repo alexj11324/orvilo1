@@ -6,7 +6,7 @@ export type GithubWorkResourceType = 'github_issue' | 'github_pull_request';
 /** Every resource type backed by the unified `external` Work type. */
 export type ExternalWorkResourceType = GithubWorkResourceType | LinearWorkResourceType;
 export type WorkResourceType = 'document' | ExternalWorkResourceType | 'file' | 'task';
-export type WorkVisibility = 'private' | 'public';
+export type WorkVisibility = 'private' | 'public' | 'team';
 /**
  * How a version changed the Work. Not derivable from `version === 1`: updating
  * an external resource that was never registered before yields a v1 row with

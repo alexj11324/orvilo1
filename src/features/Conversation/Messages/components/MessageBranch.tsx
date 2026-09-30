@@ -1,5 +1,5 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 
@@ -80,27 +80,27 @@ const MessageBranch = memo<MessageBranchProps>(({ activeBranchIndex, count, mess
   const canGoNext = activeBranchIndex < count - 1;
 
   return (
-    <Flexbox horizontal className={styles.container}>
+    <div className={cn('flex', styles.container)}>
       <div
         className={cx(styles.button, !canGoPrevious && `${prefixCls}-disabled`)}
         role="button"
         tabIndex={canGoPrevious ? 0 : -1}
         onClick={handlePrevious}
       >
-        <Icon icon={ChevronLeft} size={16} />
+        <ChevronLeft size={16} />
       </div>
-      <Center className={styles.text}>
+      <div className={cn('flex flex-col items-center justify-center', styles.text)}>
         {activeBranchIndex + 1}/{count}
-      </Center>
+      </div>
       <div
         className={cx(styles.button, !canGoNext && `${prefixCls}-disabled`)}
         role="button"
         tabIndex={canGoNext ? 0 : -1}
         onClick={handleNext}
       >
-        <Icon icon={ChevronRight} size={16} />
+        <ChevronRight size={16} />
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

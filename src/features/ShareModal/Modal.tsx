@@ -1,14 +1,15 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { createModal, type ModalInstance, Tabs } from '@lobehub/ui/base-ui';
 import { type ConversationContext } from '@orvilo/types';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import type { ModalInstance } from '@/components/Modal';
+import { createModal } from '@/components/Modal';
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import ShareDataProvider, { useShareData } from './ShareDataProvider';
@@ -75,35 +76,33 @@ const ShareModalContent = memo(() => {
   );
 
   return (
-    <Flexbox
-      gap={isMobile ? 8 : 24}
-      height={'100%'}
-      style={{ overflow: 'hidden', position: 'relative' }}
+    <div
+      className="flex flex-col h-full"
+      style={{ gap: isMobile ? 8 : 24, overflow: 'hidden', position: 'relative' }}
     >
-      <Tabs
-        activeKey={tab}
-        items={tabItems}
-        variant="rounded"
-        styles={{
-          list: { display: 'flex', width: '100%' },
-          tab: { flex: 1 },
-        }}
-        onChange={(key) => setTab(key as ShareTab)}
-      />
+      <Tabs value={tab} onValueChange={(key) => setTab(key as ShareTab)}>
+        <TabsList className="flex w-full">
+          {tabItems.map((item) => (
+            <TabsTrigger className="flex-1" key={item.key} value={item.key}>
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       {isLoading && dbMessages.length === 0 ? (
-        <Flexbox gap={12} paddingBlock={8}>
+        <div className="flex flex-col gap-3 py-2">
           <ArticleSkeleton rows={8} />
-        </Flexbox>
+        </div>
       ) : rendererState.status === 'error' && rendererState.tab === tab ? (
         <AsyncError error={rendererState.error} variant={'block'} onRetry={retryRenderer} />
       ) : rendererState.status === 'ready' && rendererState.tab === tab ? (
         rendererState.render({ mobile: isMobile })
       ) : (
-        <Flexbox gap={12} paddingBlock={8}>
+        <div className="flex flex-col gap-3 py-2">
           <ArticleSkeleton rows={8} />
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

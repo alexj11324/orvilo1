@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, useCallback, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 
@@ -125,14 +124,8 @@ const AgentDocumentPage = memo<AgentDocumentPageProps>(({ documentId }) => {
     return <AsyncError error={itemError} variant={'page'} onRetry={() => void mutate()} />;
 
   return (
-    <Flexbox
-      horizontal
-      flex={1}
-      height={'100%'}
-      style={{ minHeight: 0, overflow: 'hidden' }}
-      width={'100%'}
-    >
-      <Flexbox flex={1} style={{ minHeight: 0 }} width={'100%'}>
+    <div className="flex flex-1 h-full w-full" style={{ minHeight: 0, overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1 w-full" style={{ minHeight: 0 }}>
         <PageEditor
           fullWidthHeader
           askCopilotTarget={askCopilotTarget}
@@ -151,10 +144,10 @@ const AgentDocumentPage = memo<AgentDocumentPageProps>(({ documentId }) => {
           // the new title after the shared page save persists it.
           onTitleChange={() => mutate()}
         />
-      </Flexbox>
+      </div>
       {chatAgentId && docChatTopicId && (
         <RightPanel expand defaultWidth={400} maxWidth={720} minWidth={320}>
-          <Flexbox flex={1} height={'100%'} justify={'flex-end'} style={{ minHeight: 0 }}>
+          <div className="flex flex-col flex-1 h-full justify-end" style={{ minHeight: 0 }}>
             <FloatingChatPanel
               agentDocumentId={item?.id}
               agentId={chatAgentId}
@@ -163,10 +156,10 @@ const AgentDocumentPage = memo<AgentDocumentPageProps>(({ documentId }) => {
               mode="embedded"
               topicId={docChatTopicId}
             />
-          </Flexbox>
+          </div>
         </RightPanel>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

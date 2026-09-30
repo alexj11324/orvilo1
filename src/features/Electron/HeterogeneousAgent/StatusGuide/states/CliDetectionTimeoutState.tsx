@@ -1,8 +1,8 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ClockAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -33,31 +33,27 @@ const CliDetectionTimeoutState = ({
         />
       }
       headerDescription={
-        <Text type="secondary">
+        <div className="text-muted-foreground">
           {t('cliDetectionTimeoutGuide.desc', { command: error?.command || config.title })}
-        </Text>
+        </div>
       }
     >
-      <Text style={{ fontSize: 12 }} type="secondary">
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('cliDetectionTimeoutGuide.hint')}
-      </Text>
+      </div>
 
       {rawErrorDetails && (
-        <Flexbox gap={6}>
-          <Text strong style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {t('cliDetectionTimeoutGuide.errorDetails')}
-          </Text>
-          <Highlighter
+          </div>
+          <CodeBlock
             wrap
-            actionIconSize={'small'}
-            language={'log'}
-            padding={0}
+            code={rawErrorDetails}
+            language="log"
             style={{ maxHeight: 160, overflow: 'auto' }}
-            variant={'outlined'}
-          >
-            {rawErrorDetails}
-          </Highlighter>
-        </Flexbox>
+          />
+        </div>
       )}
     </GuideShell>
   );

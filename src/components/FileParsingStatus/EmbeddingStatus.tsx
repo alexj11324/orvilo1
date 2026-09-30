@@ -1,10 +1,11 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { BoltIcon, RotateCwIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
 
@@ -33,83 +34,82 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
     switch (embeddingStatus) {
       case AsyncTaskStatus.Processing: {
         return (
-          <Flexbox horizontal>
-            <Tooltip
-              title={t('FileParsingStatus.chunks.embeddingStatus.processing')}
-              styles={{
-                root: { pointerEvents: 'none' },
-              }}
-            >
-              <Tag
-                className={cx('chunk-tag', className)}
-                color={'processing'}
-                icon={<Icon spin icon={BoltIcon} />}
-                style={{ cursor: 'pointer' }}
-                variant={'filled'}
-              >
-                {chunkCount}
-              </Tag>
+          <div className={'flex'}>
+            <Tooltip>
+              <TooltipTrigger render={<span />}>
+                <Badge
+                  className={cx('chunk-tag', className)}
+                  style={{ cursor: 'pointer' }}
+                  variant="info"
+                >
+                  {createElement(BoltIcon, { size: 16 })}
+                  {chunkCount}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('FileParsingStatus.chunks.embeddingStatus.processing')}
+              </TooltipContent>
             </Tooltip>
-          </Flexbox>
+          </div>
         );
       }
 
       case AsyncTaskStatus.Error: {
         return (
-          <Tooltip
-            styles={{
-              root: { maxWidth: 340, pointerEvents: 'none' },
-            }}
-            title={
-              <Flexbox gap={4}>
+          <Tooltip>
+            <TooltipTrigger render={<span />}>
+              <Badge className={className} variant="destructive">
+                {t('FileParsingStatus.chunks.embeddingStatus.error')}{' '}
+                <span
+                  style={{ cursor: 'pointer' }}
+                  title={t('retry', { ns: 'common' })}
+                  onClick={() => {
+                    onErrorClick?.('embedding');
+                  }}
+                >
+                  <RotateCwIcon size={16} />
+                </span>
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent style={{ maxWidth: 340 }}>
+              <div className={'flex flex-col gap-1'}>
                 {t('FileParsingStatus.chunks.embeddingStatus.errorResult')}
                 {embeddingError && (
-                  <Flexbox className={styles.errorReason}>
+                  <div className={cn('flex', styles.errorReason)}>
                     [{embeddingError.name}]:{' '}
                     {embeddingError.body && typeof embeddingError.body !== 'string'
                       ? embeddingError.body.detail
                       : embeddingError.body}
-                  </Flexbox>
+                  </div>
                 )}
-              </Flexbox>
-            }
-          >
-            <Tag className={className} color={'error'} variant={'filled'}>
-              {t('FileParsingStatus.chunks.embeddingStatus.error')}{' '}
-              <Icon
-                icon={RotateCwIcon}
-                style={{ cursor: 'pointer' }}
-                title={t('retry', { ns: 'common' })}
-                onClick={() => {
-                  onErrorClick?.('embedding');
-                }}
-              />
-            </Tag>
+              </div>
+            </TooltipContent>
           </Tooltip>
         );
       }
 
       case AsyncTaskStatus.Success: {
         return (
-          <Flexbox horizontal>
-            <Tooltip
-              styles={{ root: { pointerEvents: 'none' } }}
-              title={t('FileParsingStatus.chunks.embeddingStatus.success')}
-            >
-              <Tag
-                className={cx('chunk-tag', className)}
-                color={'purple'}
-                icon={<Icon icon={BoltIcon} />}
-                style={{ cursor: 'pointer' }}
-                variant={'filled'}
-                onClick={() => {
-                  onClick?.(AsyncTaskStatus.Success);
-                }}
-              >
-                {chunkCount}
-              </Tag>
+          <div className={'flex'}>
+            <Tooltip>
+              <TooltipTrigger render={<span />}>
+                <Badge
+                  className={cx('chunk-tag', className)}
+                  style={{ cursor: 'pointer' }}
+                  variant="info"
+                  onClick={() => {
+                    onClick?.(AsyncTaskStatus.Success);
+                  }}
+                >
+                  {createElement(BoltIcon, { size: 16 })}
+                  {chunkCount}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('FileParsingStatus.chunks.embeddingStatus.success')}
+              </TooltipContent>
             </Tooltip>
-          </Flexbox>
+          </div>
         );
       }
     }

@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -33,11 +33,11 @@ const MessageWorks = memo<MessageWorksProps>(({ rootOperationId }) => {
   if (data.length === 0) return null;
 
   return (
-    <Flexbox className={styles.container} gap={8}>
+    <div className={cn('flex flex-col gap-2', styles.container)}>
       {data.map((item) => (
         <WorkSummaryCard item={item} key={item.id} />
       ))}
-    </Flexbox>
+    </div>
   );
 }, isEqual);
 

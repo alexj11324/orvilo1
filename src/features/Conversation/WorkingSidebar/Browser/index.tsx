@@ -1,8 +1,7 @@
-import { Center, Empty, Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, Text, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import {
   Camera,
   ChevronLeft,
@@ -17,7 +16,12 @@ import {
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { BrowserIcon } from '@/components/BrowserIcon';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { electronBrowserSidebarService } from '@/services/electron/browserSidebar';
@@ -330,15 +334,25 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
 
   if (!isDesktop)
     return (
-      <Center height={'100%'} width={'100%'}>
-        <Empty description={t('workingPanel.browser.desktopOnly')} icon={Globe} />
-      </Center>
+      <div
+        className="flex flex-col items-center justify-center"
+        style={{ height: '100%', width: '100%' }}
+      >
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Globe />
+            </EmptyMedia>
+            <EmptyDescription>{t('workingPanel.browser.desktopOnly')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     );
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
-      <Flexbox horizontal align={'center'} className={styles.toolbar} gap={4}>
-        <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex flex-col" style={{ height: '100%', width: '100%' }}>
+      <div className={cn('flex items-center gap-1', styles.toolbar)}>
+        <div className="flex items-center gap-1">
           <ActionIcon
             disabled={!state.canGoBack}
             icon={ChevronLeft}
@@ -370,24 +384,25 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
               )
             }
           />
-        </Flexbox>
+        </div>
         <Input
           className={styles.address}
           placeholder={t('workingPanel.browser.addressPlaceholder')}
           value={address}
-          variant={'filled'}
           onBlur={() => setIsEditing(false)}
           onFocus={() => setIsEditing(true)}
           onChange={(event) => {
             setIsEditing(true);
             setAddress(event.target.value);
           }}
-          onPressEnter={() => {
-            setIsEditing(false);
-            openUrl(address);
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              setIsEditing(false);
+              openUrl(address);
+            }
           }}
         />
-        <Flexbox horizontal align={'center'} className={styles.toolbarActions} gap={4}>
+        <div className={cn('flex items-center gap-1', styles.toolbarActions)}>
           {isPicking ? (
             <ActionIcon
               active
@@ -424,7 +439,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
             title={t('workingPanel.browser.actions.capture')}
             onClick={() => void addScreenshotToInput()}
           />
-        </Flexbox>
+        </div>
         {/* Sits on the toolbar edge so loading feedback remains stable. */}
         {state.isLoading && (
           <div
@@ -434,23 +449,19 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
             role="progressbar"
           />
         )}
-      </Flexbox>
+      </div>
       {!isImportBannerDismissed && (
-        <Flexbox horizontal align={'center'} className={styles.importBanner} gap={12}>
+        <div className={cn('flex items-center gap-3', styles.importBanner)}>
           <BrowserIcon browser={'Chrome'} size={32} />
-          <Flexbox className={styles.importCopy} gap={0}>
-            <Text strong>{t('workingPanel.browser.import.title')}</Text>
-            <Text ellipsis type={'secondary'}>
+          <div className={cn('flex flex-col gap-0', styles.importCopy)}>
+            <div className="font-semibold">{t('workingPanel.browser.import.title')}</div>
+            <div className="truncate text-muted-foreground">
               {t('workingPanel.browser.import.desc')}
-            </Text>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} className={styles.importActions} gap={4}>
-            <Button
-              icon={<Icon icon={Import} />}
-              loading={isImporting}
-              onClick={handleImportChromeLoginData}
-            >
-              {t('workingPanel.browser.import.action')}
+            </div>
+          </div>
+          <div className={cn('flex items-center gap-1', styles.importActions)}>
+            <Button loading={isImporting} onClick={handleImportChromeLoginData}>
+              <Import /> {t('workingPanel.browser.import.action')}
             </Button>
             <ActionIcon
               icon={XCircle}
@@ -458,13 +469,13 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
               title={t('workingPanel.browser.import.dismiss')}
               onClick={() => setIsImportBannerDismissed(true)}
             />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
-      <Flexbox className={styles.container}>
+      <div className={cn('flex flex-col', styles.container)}>
         <div className={styles.viewport} ref={viewportRef} />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

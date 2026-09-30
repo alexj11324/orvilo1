@@ -1,11 +1,13 @@
-import { Tooltip } from '@lobehub/ui';
-import { Button, confirmModal, toast } from '@lobehub/ui/base-ui';
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { PencilIcon, RefreshCwIcon, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ConnectorToolPermission } from '@/database/schemas';
 import { ConnectorSourceType } from '@/database/schemas';
 import { useResourceManageable } from '@/hooks/useResourceManageable';
@@ -41,9 +43,12 @@ interface ConnectorDetailProps {
  */
 const ManageTooltip = ({ children, title }: { children: ReactNode; title?: string }) =>
   title ? (
-    <Tooltip title={title}>
-      <span style={{ display: 'inline-flex' }}>{children}</span>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{children}</span>} />
+        <TooltipContent>{title}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   ) : (
     children
   );
@@ -236,7 +241,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
             <ManageTooltip title={manageTooltip}>
               <Button
                 disabled={!canManage}
-                size="small"
+                size="sm"
                 onClick={async () => {
                   try {
                     await resetConnectorPermissions(connectorId);
@@ -250,25 +255,16 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
             </ManageTooltip>
             {/* Sync/Refresh: re-sync tool list from manifest */}
             <ManageTooltip title={canSync ? undefined : manageTooltip}>
-              <Button
-                disabled={!canSync}
-                icon={<RefreshCwIcon size={14} />}
-                loading={syncing}
-                size="small"
-                onClick={handleSync}
-              >
+              <Button disabled={!canSync} loading={syncing} size="sm" onClick={handleSync}>
+                <RefreshCwIcon data-icon="inline-start" size={14} />
                 {syncLabel}
               </Button>
             </ManageTooltip>
             {/* Edit button for custom MCP connectors — only http type has a server URL to edit */}
             {isMcpConnector && !isGitHubMcp && connector?.mcpConnectionType === 'http' && (
               <ManageTooltip title={manageTooltip}>
-                <Button
-                  disabled={!canManage}
-                  icon={<PencilIcon size={14} />}
-                  size="small"
-                  onClick={() => setCustomModalOpen(true)}
-                >
+                <Button disabled={!canManage} size="sm" onClick={() => setCustomModalOpen(true)}>
+                  <PencilIcon data-icon="inline-start" size={14} />
                   {t('connector.edit', 'Edit')}
                 </Button>
               </ManageTooltip>
@@ -282,9 +278,9 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
                   <>
                     <ManageTooltip title={manageTooltip}>
                       <Button
-                        danger
                         disabled={!canManage}
-                        size="small"
+                        size="sm"
+                        variant="destructive"
                         onClick={async () => {
                           try {
                             await disconnectConnector(connectorId);
@@ -298,10 +294,9 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
                     </ManageTooltip>
                     <ManageTooltip title={manageTooltip}>
                       <Button
-                        danger
                         disabled={!canManage}
-                        icon={<Trash2 size={14} />}
-                        size="small"
+                        size="sm"
+                        variant="destructive"
                         onClick={() => {
                           confirmModal({
                             content: deleteConfirmContent,
@@ -318,6 +313,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
                           });
                         }}
                       >
+                        <Trash2 data-icon="inline-start" size={14} />
                         {t('connector.delete', 'Delete')}
                       </Button>
                     </ManageTooltip>
@@ -327,12 +323,12 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
                 {(isBuiltin || isMarketplace) && (
                   <ManageTooltip title={manageTooltip}>
                     <Button
-                      danger
                       disabled={!canManage}
-                      icon={<Trash2 size={14} />}
-                      size="small"
+                      size="sm"
+                      variant="destructive"
                       onClick={handleUninstall}
                     >
+                      <Trash2 data-icon="inline-start" size={14} />
                       {t('connector.uninstall', 'Uninstall')}
                     </Button>
                   </ManageTooltip>

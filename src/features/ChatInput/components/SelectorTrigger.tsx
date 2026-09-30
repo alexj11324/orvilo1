@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDownIcon, ZapIcon } from 'lucide-react';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
@@ -81,14 +80,20 @@ const SelectorTrigger = memo<TriggerProps>(
   ({ ariaLabel, className, fast, leading, secondaryText, text, ...rest }) => (
     <div {...rest} aria-label={ariaLabel} className={cx(styles.trigger, className)}>
       {leading}
-      {fast && <Icon icon={ZapIcon} size={12} />}
+      {fast && (
+        <span className="anticon" role="img">
+          <ZapIcon fill={'transparent'} height={12} size={12} width={12} />
+        </span>
+      )}
       <span className={styles.label}>{text}</span>
       {secondaryText && (
         <span data-secondary className={styles.secondary}>
           {secondaryText}
         </span>
       )}
-      <Icon icon={ChevronDownIcon} size={12} />
+      <span className="anticon" role="img">
+        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+      </span>
     </div>
   ),
 );

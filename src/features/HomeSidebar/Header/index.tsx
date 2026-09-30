@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { HotkeyEnum } from '@orvilo/const/hotkeys';
 import { SearchIcon, SquarePenIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import SideBarHeaderLayout from '@/features/NavPanel/SideBarHeaderLayout';
 import { useGlobalStore } from '@/store/global';

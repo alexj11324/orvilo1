@@ -1,12 +1,17 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
-import { Accordion } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { ThreadStatus } from '@orvilo/types';
+import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo, useState } from 'react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -58,27 +63,13 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
   return (
     <Accordion
       keepMounted
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
+      multiple
       value={expanded ? [id] : []}
-      items={[
-        {
-          children: (
-            <Block gap={16} padding={12} style={{ marginBlock: 8 }} variant={'outlined'}>
-              {expanded && (
-                <TaskContent
-                  id={id}
-                  isError={isError}
-                  messages={tasks}
-                  status={status}
-                  taskDetail={taskDetail}
-                  threadId={threadId}
-                />
-              )}
-            </Block>
-          ),
-          key: id,
-          title: (
+      onValueChange={(value) => setExpanded(value.includes(id))}
+    >
+      <AccordionItem value={id}>
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+          {
             <TaskTitle
               metrics={metrics}
               status={status}
@@ -89,11 +80,33 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
                   : undefined
               }
             />
-          ),
-        },
-      ]}
-      onValueChange={(value) => setExpanded(value.includes(id))}
-    />
+          }
+        </AccordionTrigger>
+        <AccordionContent>
+          {
+            <div
+              className="flex flex-col gap-4 p-3"
+              style={{
+                border: `1px solid ${cssVar.colorBorder}`,
+                borderRadius: cssVar.borderRadiusLG,
+                marginBlock: 8,
+              }}
+            >
+              {expanded && (
+                <TaskContent
+                  id={id}
+                  isError={isError}
+                  messages={tasks}
+                  status={status}
+                  taskDetail={taskDetail}
+                  threadId={threadId}
+                />
+              )}
+            </div>
+          }
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }, isEqual);
 

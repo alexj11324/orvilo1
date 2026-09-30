@@ -1,8 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { BotPromptIcon } from '@lobehub/ui/icons';
-import { MessageSquarePlusIcon, SearchIcon } from 'lucide-react';
+import { BotMessageSquareIcon, MessageSquarePlusIcon, SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
@@ -34,7 +32,7 @@ const Nav = memo(() => {
   const switchToNewTopic = useAgentGroupStore((s) => s.switchToNewTopic);
 
   return (
-    <Flexbox gap={1} paddingInline={4}>
+    <div className="flex flex-col px-1" style={{ gap: 1 }}>
       <NavItem
         icon={MessageSquarePlusIcon}
         title={tTopic('actions.addNewTopic')}
@@ -43,7 +41,7 @@ const Nav = memo(() => {
       {isAgentEditable && isAccessResolved && canEditContent && canEditResource && (
         <NavItem
           active={isProfileActive}
-          icon={BotPromptIcon}
+          icon={BotMessageSquareIcon}
           title={t('tab.groupProfile')}
           onClick={() => {
             switchTopic(null, { skipRefreshMessage: true });
@@ -58,7 +56,7 @@ const Nav = memo(() => {
           toggleCommandMenu(true);
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,5 +1,4 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { VerifierType } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ListTree } from 'lucide-react';
@@ -7,6 +6,7 @@ import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import {
   useVerifierTracing,
   useVerifyInstruction,
@@ -92,10 +92,10 @@ const formatDuration = (started?: Date | string | null, completed?: Date | strin
 
 const Field = memo<{ children: ReactNode; label: string }>(({ label, children }) => {
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       <div className={styles.label}>{label}</div>
       {children}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -159,19 +159,14 @@ const Body = () => {
   };
 
   return (
-    <Flexbox
-      gap={16}
-      height={'100%'}
-      paddingBlock={'4px 16px'}
-      paddingInline={8}
-      style={{ overflow: 'auto' }}
+    <div
+      className="flex flex-col gap-4 h-[100%] px-2"
+      style={{ overflow: 'auto', paddingBlock: '4px 16px' }}
     >
       {ratio !== undefined && (
         <div className={styles.confidenceCard}>
-          <Flexbox
-            horizontal
-            align={'baseline'}
-            justify={'space-between'}
+          <div
+            className="flex flex-row items-baseline justify-between"
             style={{ marginBlockEnd: 8 }}
           >
             <span className={styles.label} style={{ marginBlockEnd: 0 }}>
@@ -183,7 +178,7 @@ const Body = () => {
             >
               {Math.round(ratio * 100)}%
             </span>
-          </Flexbox>
+          </div>
           <div className={styles.track}>
             <div
               className={styles.fill}
@@ -197,14 +192,14 @@ const Body = () => {
       )}
 
       {metaItems.length > 0 && (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           {metaItems.map((m) => (
             <div className={styles.metaRow} key={m.key}>
               <span className={styles.metaKey}>{m.key}</span>
               <span className={styles.metaValue}>{m.value}</span>
             </div>
           ))}
-        </Flexbox>
+        </div>
       )}
 
       {/* Original criteria — what this check verifies */}
@@ -223,12 +218,13 @@ const Body = () => {
       )}
 
       {canOpenTrace && (
-        <Button block icon={ListTree} onClick={openTrace}>
+        <Button className="w-full" variant="outline" onClick={openTrace}>
+          <ListTree data-icon="inline-start" />
           {t('detail.openTrace')}
         </Button>
       )}
 
-      {!result && <Text type={'secondary'}>{t('detail.pending')}</Text>}
+      {!result && <div className="text-muted-foreground">{t('detail.pending')}</div>}
 
       {/* Judgment outcome */}
       {sections.map((s) => (
@@ -238,7 +234,7 @@ const Body = () => {
           </Markdown>
         </Field>
       ))}
-    </Flexbox>
+    </div>
   );
 };
 

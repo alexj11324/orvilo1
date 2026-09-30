@@ -31,6 +31,7 @@ import { GoalGraphModel } from '@/database/models/goalGraph';
 import { MetricModel } from '@/database/models/metric';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
 import type { OrviloDatabase } from '@/database/type';
@@ -1031,10 +1032,29 @@ export class GoalService {
       // through the handoff still pointing at the previous agent.
       const graph = await this.requireGraph(goalId);
       const taskIds = graph.nodes.flatMap((node) => (node.taskId ? [node.taskId] : []));
-      for (const task of await this.taskModel.findByIds(taskIds)) {
-        if (task.status === 'completed' || task.status === 'canceled') continue;
-        if (task.assigneeAgentId === agentId) continue;
-        await this.taskModel.update(task.id, { assigneeAgentId: agentId });
+      const reassignable = (await this.taskModel.findByIds(taskIds)).filter(
+        (task) =>
+          task.status !== 'completed' &&
+          task.status !== 'canceled' &&
+          task.assigneeAgentId !== agentId,
+      );
+      const runningTaskIds = reassignable
+        .filter((task) => task.status === 'running')
+        .map((task) => task.id);
+      // Fence running incumbents BEFORE rewriting any assignee — the
+      // ownership-transfer ordering (never commit "stored owner B / running
+      // executor A"). The cancellation sweep then interrupts the remote
+      // writer and parks each task for the coordinator to re-dispatch under
+      // the new owner.
+      if (runningTaskIds.length > 0) {
+        await TaskDispatchModel.requestStopForTasks(this.db, runningTaskIds, 'goal_agent_change');
+      }
+      for (const task of reassignable) {
+        await this.taskModel.update(
+          task.id,
+          { assigneeAgentId: agentId },
+          task.status === 'running' ? { executionTransfer: true } : {},
+        );
         reassignedTaskIds.push(task.id);
       }
     }

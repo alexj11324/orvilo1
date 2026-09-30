@@ -1,28 +1,31 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import { Badge as Tag } from '@/components/reui/badge';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceSplit } from '@/features/WorkSurface';
-import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys, workAttentionKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
 import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
-import { mergeWorkQueryGroups } from '../MyWork/workQueryPaging';
+import { mergeWorkQueryGroups, mergeWorkQueryPage } from '../MyWork/workQueryPaging';
 import WorkQueryResults from '../MyWork/WorkQueryResults';
 import ConnectGitHubButton from './ConnectGitHubButton';
 import ReviewPullRequestPage from './ReviewPullRequestPage';
@@ -41,6 +44,7 @@ import {
   type ReviewsTab,
   reviewsTabDestination,
 } from './reviewsSurface';
+import { useScopedTailPager } from './scopedTailPager';
 
 const resolveTab = (value: string | null): ReviewsTab =>
   value === 'created' ? 'created' : 'for-me';
@@ -171,48 +175,42 @@ const PullRequestRow = memo<{
   returnTo: string;
 }>(({ active, detailPath, item, returnTo }) => {
   const { t } = useTranslation('common');
-  const navigate = useWorkspaceAwareNavigate();
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
+    <WorkspaceLink
       className={styles.row}
       data-active={active}
-      role={'link'}
-      tabIndex={0}
+      state={{ returnTo }}
       title={`${item.repository}#${item.number}${item.author ? ` · ${item.author}` : ''}`}
-      onClick={() => navigate(detailPath, { state: { returnTo } })}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') navigate(detailPath, { state: { returnTo } });
-      }}
+      to={detailPath}
     >
-      <Icon className={styles.prIcon} icon={GitPullRequestIcon} size={14} />
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
-        <Text ellipsis fontSize={13} weight={500}>
-          {item.title}
-        </Text>
-      </Flexbox>
+      <span className={cx('anticon', styles.prIcon)} role="img">
+        <GitPullRequestIcon fill={'transparent'} height={14} size={14} width={14} />
+      </span>
+      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+        <div className="truncate block text-[13px] font-medium">{item.title}</div>
+      </div>
       {item.isDraft ? (
-        <Icon
+        <span
           aria-label={t('reviews.state.draft')}
-          className={styles.draftIcon}
-          icon={SquarePenIcon}
-          size={14}
+          className={cx('anticon', styles.draftIcon)}
+          role="img"
           title={t('reviews.state.draft')}
-        />
+        >
+          <SquarePenIcon fill={'transparent'} height={14} size={14} width={14} />
+        </span>
       ) : null}
       {item.reviewDecision === 'APPROVED' ? (
-        <Tag color={'green'}>{t('reviews.decision.approved')}</Tag>
+        <Tag variant="success-light">{t('reviews.decision.approved')}</Tag>
       ) : null}
       {item.reviewDecision === 'CHANGES_REQUESTED' ? (
-        <Tag color={'red'}>{t('reviews.decision.changesRequested')}</Tag>
+        <Tag variant="destructive-light">{t('reviews.decision.changesRequested')}</Tag>
       ) : null}
       {item.updatedAt ? (
-        <Text className={styles.meta} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
+        <div className={cn(styles.meta)} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
           {reviewRelativeTime(item.updatedAt)}
-        </Text>
+        </div>
       ) : null}
-    </Flexbox>
+    </WorkspaceLink>
   );
 });
 
@@ -245,7 +243,7 @@ const QueueGroup = ({
 }) => {
   const regionId = useId();
   return (
-    <Flexbox gap={collapsed ? 0 : 4}>
+    <div className="flex flex-col" style={{ gap: collapsed ? 0 : 4 }}>
       <button
         aria-controls={regionId}
         aria-expanded={!collapsed}
@@ -257,19 +255,15 @@ const QueueGroup = ({
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
           size={14}
         />
-        <Text fontSize={12} weight={500}>
-          {label}
-        </Text>
+        <div className="text-[12px] font-medium">{label}</div>
         {typeof count === 'number' ? (
-          <Text fontSize={12} type={'secondary'}>
-            {count}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{count}</div>
         ) : null}
       </button>
       <div hidden={collapsed} id={regionId}>
         {children}
       </div>
-    </Flexbox>
+    </div>
   );
 };
 
@@ -300,47 +294,39 @@ const ReviewsPage = memo(() => {
   const notConnected = isTrpcErrorCode(queue.error, 'PRECONDITION_FAILED');
   const pullRequests: ReviewQueueItem[] = useMemo(() => queue.data?.data.items ?? [], [queue.data]);
   const queueTotal = queue.data?.data.total ?? null;
-  const [queueTail, setQueueTail] = useState<ReviewQueueItem[]>([]);
-  const [queueLoadingMore, setQueueLoadingMore] = useState(false);
-  // Cursor for the NEXT page — advanced by every load-more response; falls
-  // back to the first page's cursor before any tail has been fetched.
-  const [queuePaging, setQueuePaging] = useState<{
-    endCursor: string | null;
-    hasMore: boolean;
-  } | null>(null);
-  const queueHasMore = queuePaging?.hasMore ?? queue.data?.data.hasMore ?? false;
-  const queueEndCursor = queuePaging?.endCursor ?? queue.data?.data.endCursor ?? null;
-  const queueMore = usePagedLoadMore();
-  useEffect(() => {
-    setQueueTail([]);
-    setQueuePaging(null);
-    queueMore.resetLoadMoreError();
-  }, [queueMore.resetLoadMoreError, tab, workspaceId]);
-  const allPullRequests = useMemo(() => [...pullRequests, ...queueTail], [pullRequests, queueTail]);
+  // Identity of the queue query: a late tail response from a previous tab or
+  // workspace can never write back — the scope key binds first page, tail,
+  // cursor, errors and pending state to one query.
+  const queueScope = useMemo(
+    () => JSON.stringify([workspaceId ?? 'personal', tab]),
+    [tab, workspaceId],
+  );
+  const queuePager = useScopedTailPager<ReviewQueueItem>(queueScope, mergeWorkQueryPage);
+  const queueTail = queuePager.tailFor(queueScope);
+  const queueHasMore = queueTail?.hasMore ?? queue.data?.data.hasMore ?? false;
+  const allPullRequests = useMemo(
+    () => mergeWorkQueryPage(pullRequests, queueTail?.items ?? []),
+    [pullRequests, queueTail],
+  );
   const queueViewer = queue.data?.data.viewer ?? null;
   const queueGroups = useMemo(
     () => reviewQueueGroups(allPullRequests, { tab, viewer: queueViewer }),
     [allPullRequests, queueViewer, tab],
   );
-  // Errors surface through `queueMore` — an inline retry under the footer —
+  // Errors surface through the pager — an inline retry under the footer —
   // so a failed page never dies as a console-only silent stop.
-  const loadMoreQueue = useCallback(async () => {
-    if (!queueEndCursor) return;
-    setQueueLoadingMore(true);
-    try {
-      const next = await pullRequestService.queue(tab, queueEndCursor);
-      setQueueTail((current) => [
-        ...current,
-        ...((next?.data?.items as ReviewQueueItem[] | undefined) ?? []),
-      ]);
-      setQueuePaging({
-        endCursor: next?.data?.endCursor ?? null,
+  const loadMoreQueue = useCallback(() => {
+    const cursor = queueTail?.nextCursor ?? queue.data?.data.endCursor;
+    if (!cursor) return;
+    void queuePager.loadMore(queueScope, 'queue', async () => {
+      const next = await pullRequestService.queue(tab, cursor);
+      return {
         hasMore: next?.data?.hasMore ?? false,
-      });
-    } finally {
-      setQueueLoadingMore(false);
-    }
-  }, [queueEndCursor, tab]);
+        items: (next?.data?.items as ReviewQueueItem[] | undefined) ?? [],
+        nextCursor: next?.data?.endCursor ?? null,
+      };
+    });
+  }, [queue.data, queuePager, queueScope, queueTail, tab]);
 
   const { data, error, isLoading } = useClientDataSWR(
     workAttentionKeys.reviews(workspaceId, tab),
@@ -348,36 +334,55 @@ const ReviewsPage = memo(() => {
   );
   const firstGroups = data?.data.groups ?? [];
   const queryHash = data?.data.queryHash;
-  const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
-  const workMore = usePagedLoadMore();
-  useEffect(() => {
-    setGroupTail([]);
-    workMore.resetLoadMoreError();
-  }, [queryHash, tab, workMore.resetLoadMoreError, workspaceId]);
-  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
+  // Group tail identity carries the query hash too — a refetched snapshot
+  // rebinds the pager, so a stale tail or per-group cursor can never merge
+  // into a newer snapshot.
+  const groupScope = useMemo(
+    () => JSON.stringify([workspaceId ?? 'personal', tab, queryHash ?? 'pending']),
+    [queryHash, tab, workspaceId],
+  );
+  const groupPager = useScopedTailPager<(typeof firstGroups)[number]>(
+    groupScope,
+    mergeWorkQueryGroups,
+  );
+  const groups = mergeWorkQueryGroups(firstGroups, groupPager.tailFor(groupScope)?.items ?? []);
+  const loadMoreGroupErrors = useMemo(() => {
+    const errors: Record<string, unknown> = {};
+    for (const group of groups) {
+      const error = groupPager.errorFor(group.key);
+      if (error !== undefined) errors[group.key] = error;
+    }
+    return errors;
+  }, [groupPager, groups]);
 
   const refresh = useCallback(async () => {
-    setGroupTail([]);
+    // Bump both generations before the refetch: an in-flight tail request
+    // from the stale snapshot resolves into a dropped write and its cursor
+    // is never reused.
+    queuePager.reset();
+    groupPager.reset();
     await Promise.all([
       mutate(workAttentionKeys.reviews(workspaceId, tab)),
       mutate(pullRequestKeys.queue(workspaceId, tab)),
     ]);
-  }, [tab, workspaceId]);
+  }, [groupPager, queuePager, tab, workspaceId]);
 
   const loadMoreGroup = useCallback(
-    async (groupKey: string) => {
+    (groupKey: string) => {
       const column = groups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
       if (!last || !queryHash) return;
-      const next = await workAttentionService.reviews({
-        afterId: last.id,
-        groupKey,
-        queryHash,
-        tab,
+      void groupPager.loadMore(groupScope, groupKey, async () => {
+        const next = await workAttentionService.reviews({
+          afterId: last.id,
+          groupKey,
+          queryHash,
+          tab,
+        });
+        return { hasMore: false, items: next.data.groups ?? [], nextCursor: null };
       });
-      setGroupTail((current) => mergeWorkQueryGroups(current, next.data.groups ?? []));
     },
-    [groups, queryHash, tab],
+    [groupPager, groupScope, groups, queryHash, tab],
   );
 
   const tabs = useMemo(
@@ -425,26 +430,25 @@ const ReviewsPage = memo(() => {
       <div className={styles.listChrome}>
         <NavHeader
           left={
-            <Text fontSize={13} style={{ paddingInlineStart: 4 }} weight={500}>
+            <div className="text-[13px] font-medium" style={{ paddingInlineStart: 4 }}>
               {t('tab.reviews')}
-            </Text>
+            </div>
           }
         />
         <div className={styles.tabs}>
-          <TabsRoot value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
+          <Tabs value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
             <TabsList>
-              <TabsIndicator />
               {tabs.map((item) => (
-                <TabsTab key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
+                <TabsTrigger key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
                   {item.label}
-                </TabsTab>
+                </TabsTrigger>
               ))}
             </TabsList>
-          </TabsRoot>
+          </Tabs>
         </div>
       </div>
       <div className={styles.listBody}>
-        <Flexbox gap={16}>
+        <div className="flex flex-col gap-4">
           {queue.isLoading || notConnected || queue.error || allPullRequests.length === 0 ? (
             /* A single fallback group keeps the header visible — and
                collapsible — over loading / disconnected / error / empty
@@ -458,14 +462,14 @@ const ReviewsPage = memo(() => {
               {queue.isLoading ? (
                 <SkeletonList />
               ) : notConnected ? (
-                <Center gap={8} padding={24}>
-                  <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+                <div className="flex flex-col items-center justify-center gap-2 p-6">
+                  <SimpleEmpty description={t('reviews.connectGitHub')} icon={PlugIcon} />
                   <ConnectGitHubButton onConnected={refresh} />
-                </Center>
+                </div>
               ) : queue.error ? (
                 <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
               ) : (
-                <Empty
+                <SimpleEmpty
                   icon={GitPullRequestIcon}
                   description={t(
                     tab === 'created' ? 'reviews.queueEmptyCreated' : 'reviews.queueEmpty',
@@ -474,8 +478,8 @@ const ReviewsPage = memo(() => {
               )}
             </QueueGroup>
           ) : (
-            <Flexbox gap={4}>
-              <Flexbox gap={8}>
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 {queueGroups.map((group) => (
                   <QueueGroup
                     collapsed={collapsedGroups.has(group.key)}
@@ -488,7 +492,7 @@ const ReviewsPage = memo(() => {
                     }
                     onToggle={() => toggleQueueGroup(group.key)}
                   >
-                    <Flexbox>
+                    <div className="flex flex-col">
                       {group.items.map((item) => (
                         <PullRequestRow
                           active={selectedId === item.id}
@@ -498,40 +502,40 @@ const ReviewsPage = memo(() => {
                           returnTo={listPath}
                         />
                       ))}
-                    </Flexbox>
+                    </div>
                   </QueueGroup>
                 ))}
-              </Flexbox>
+              </div>
               {/* A partial queue is never presented as complete — the tail
                   counts stay visible and pages load on demand. */}
-              {queueMore.loadMoreError ? (
+              {queuePager.errorFor('queue') ? (
                 <AsyncError
-                  error={queueMore.loadMoreError}
+                  error={queuePager.errorFor('queue')}
                   variant={'inline'}
-                  onRetry={queueMore.retryLoadMore}
+                  onRetry={loadMoreQueue}
                 />
               ) : null}
-              {queueHasMore || queueTail.length > 0 ? (
-                <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
-                  <Text fontSize={12} type={'secondary'}>
+              {queueHasMore || (queueTail?.items.length ?? 0) > 0 ? (
+                <div className="flex flex-row items-center justify-between px-3">
+                  <div className="text-[12px] text-muted-foreground">
                     {t('reviews.loadedCount', {
                       loaded: allPullRequests.length,
                       total: queueTotal ?? '…',
                     })}
-                  </Text>
+                  </div>
                   {queueHasMore ? (
                     <Button
-                      loading={queueLoadingMore}
-                      size={'small'}
-                      type={'text'}
-                      onClick={() => queueMore.runLoadMore(loadMoreQueue)}
+                      loading={queuePager.isLoading('queue')}
+                      size="sm"
+                      variant="ghost"
+                      onClick={loadMoreQueue}
                     >
                       {t('myWork.loadMore')}
                     </Button>
                   ) : null}
-                </Flexbox>
+                </div>
               ) : null}
-            </Flexbox>
+            </div>
           )}
 
           <QueueGroup
@@ -553,20 +557,18 @@ const ReviewsPage = memo(() => {
                 groupBy={data?.data.groupBy}
                 groups={groups}
                 layout={'list'}
-                loadMoreError={workMore.loadMoreError}
-                loadMoreGroupErrors={workMore.loadMoreGroupErrors}
+                loadMoreGroupErrors={loadMoreGroupErrors}
                 loadMoreLabel={t('myWork.loadMore')}
                 loading={isLoading}
                 loadingLabel={t('myWork.loading')}
                 tasks={tasks}
                 total={data?.data.total}
-                onLoadMoreGroup={(key) => workMore.runLoadMoreGroup(key, () => loadMoreGroup(key))}
-                onRetryLoadMore={workMore.retryLoadMore}
-                onRetryLoadMoreGroup={workMore.retryLoadMoreGroup}
+                onLoadMoreGroup={loadMoreGroup}
+                onRetryLoadMoreGroup={loadMoreGroup}
               />
             )}
           </QueueGroup>
-        </Flexbox>
+        </div>
       </div>
     </div>
   );
@@ -574,25 +576,27 @@ const ReviewsPage = memo(() => {
   const detailPane = selectedId ? (
     <ReviewPullRequestPage embedded showBack={surface === 'detail'} />
   ) : queue.isLoading ? (
-    <SkeletonList padding={24} rows={5} />
+    <SkeletonList rows={5} style={{ padding: 24 }} />
   ) : notConnected ? (
-    <Center className={styles.detailEmpty} gap={8} padding={24}>
-      <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+    <div className={cx('flex flex-col items-center justify-center gap-2 p-6', styles.detailEmpty)}>
+      <SimpleEmpty description={t('reviews.connectGitHub')} icon={PlugIcon} />
       <ConnectGitHubButton onConnected={refresh} />
-    </Center>
+    </div>
   ) : queue.error ? (
-    <Center className={styles.detailEmpty} padding={24}>
+    <div className={cx('flex flex-col items-center justify-center p-6', styles.detailEmpty)}>
       <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
-    </Center>
+    </div>
   ) : (
     /* Reference shows a single `N reviews` line under the illustration —
        the queue total for the active tab is the closest count we own. */
-    <Center className={styles.detailEmpty} gap={8}>
-      <Icon icon={GitPullRequestIcon} size={44} />
-      <Text fontSize={13} type={'secondary'}>
+    <div className={cx('flex flex-col items-center justify-center gap-2', styles.detailEmpty)}>
+      <span className="anticon" role="img">
+        <GitPullRequestIcon fill={'transparent'} height={44} size={44} width={44} />
+      </span>
+      <div className="text-[13px] text-muted-foreground">
         {t('reviews.detailEmpty', { count: queueTotal ?? allPullRequests.length })}
-      </Text>
-    </Center>
+      </div>
+    </div>
   );
 
   return (

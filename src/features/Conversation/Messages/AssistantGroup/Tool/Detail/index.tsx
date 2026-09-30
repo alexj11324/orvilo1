@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { getBuiltinStreaming } from '@orvilo/builtin-tools/streamings';
 import { type ChatToolResult, type ToolIntervention } from '@orvilo/types';
 import { safeParsePartialJSON } from '@orvilo/utils';
@@ -107,7 +106,7 @@ const Render = memo<RenderProps>(
 
     return (
       <Suspense fallback={placeholder}>
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <ToolRender
             content={result.content || ''}
             messageId={toolMessageId}
@@ -121,7 +120,7 @@ const Render = memo<RenderProps>(
               type: type as any,
             }}
           />
-        </Flexbox>
+        </div>
       </Suspense>
     );
   },

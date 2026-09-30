@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { Fragment, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -144,7 +143,7 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
         right={compactHeaderExtra}
         styles={compactHeaderTitle ? { center: { alignItems: 'center' } } : undefined}
       >
-        {compactHeaderTitle && <Text weight={500}>{compactHeaderTitle}</Text>}
+        {compactHeaderTitle && <span style={{ fontWeight: 500 }}>{compactHeaderTitle}</span>}
       </NavHeader>
       <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
         {content}

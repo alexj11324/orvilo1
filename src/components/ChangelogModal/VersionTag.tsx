@@ -1,8 +1,9 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
+
+import { Badge } from '@/components/reui/badge';
 
 const styles = createStaticStyles(({ css, cssVar }) => {
   return {
@@ -18,7 +19,11 @@ const styles = createStaticStyles(({ css, cssVar }) => {
 });
 
 const VersionTag = memo<{ range: string[] }>(({ range }) => {
-  return <Tag className={styles.tag}>{range.map((v) => 'v' + v).join(' ~ ')}</Tag>;
+  return (
+    <Badge className={styles.tag} variant="secondary">
+      {range.map((v) => 'v' + v).join(' ~ ')}
+    </Badge>
+  );
 });
 
 export default VersionTag;

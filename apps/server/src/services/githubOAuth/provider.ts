@@ -5,6 +5,11 @@ import { githubAppEnv } from '@/envs/githubApp';
 
 export const GITHUB_CALLBACK_PATH = '/oauth/github/callback';
 
+export const isGitHubOAuthConfigured = () =>
+  Boolean(
+    githubAppEnv.GITHUB_APP_CLIENT_ID && githubAppEnv.GITHUB_APP_CLIENT_SECRET && appEnv.APP_URL,
+  );
+
 export const getConfig = () => {
   const clientId = githubAppEnv.GITHUB_APP_CLIENT_ID;
   const clientSecret = githubAppEnv.GITHUB_APP_CLIENT_SECRET;

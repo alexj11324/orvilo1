@@ -53,9 +53,8 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
-  ActionIcon: (props: Record<string, unknown>) => {
+vi.mock('@/components/ActionIcon', () => ({
+  default: (props: Record<string, unknown>) => {
     mocks.actionIconProps.all.push(props);
     return (
       <button type="button" onClick={props.onClick as () => void}>

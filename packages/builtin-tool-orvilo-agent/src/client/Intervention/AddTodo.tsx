@@ -1,7 +1,7 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
+import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,14 +33,20 @@ const AddTodoIntervention = memo<BuiltinInterventionProps<CreateTodosParams>>(
     );
 
     return (
-      <Block variant={'outlined'}>
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+        }}
+      >
         <SortableTodoList
           defaultItems={defaultItems}
           placeholder={t('orvilo-agent.addTodo.placeholder')}
           registerBeforeApprove={registerBeforeApprove}
           onSave={handleSave}
         />
-      </Block>
+      </div>
     );
   },
   isEqual,

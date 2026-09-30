@@ -1,10 +1,12 @@
 'use client';
 
-import { Avatar, type AvatarProps } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { useMemo } from 'react';
 
+import type { AvatarProps } from '@/components/Avatar';
+import Avatar from '@/components/Avatar';
+import { remoteAvatarSrc } from '@/components/Avatar/fallback';
 import { DEFAULT_USER_AVATAR_URL } from '@/const/meta';
 import { isDesktop } from '@/const/version';
 import { useElectronStore } from '@/store/electron';
@@ -101,9 +103,10 @@ const UserAvatar = ({
   return (
     <Avatar
       alt={altText}
-      avatar={avatarValue}
+      avatar={remoteAvatarSrc(avatarValue) ? (avatarValue ?? undefined) : undefined}
       background={background}
       className={clickable ? styles.clickable : className}
+      name={avatarValue ?? undefined}
       ref={ref}
       shape={'square'}
       size={size}

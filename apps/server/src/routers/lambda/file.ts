@@ -245,7 +245,10 @@ export const fileRouter = router({
         ? await resolveAccessibleParentDocument(ctx, input.parentId)
         : undefined;
       const resolvedParentId = parentDocument?.id;
-      const parentVisibility = parentDocument?.visibility;
+      // Files have creator/workspace visibility only. An attachment under a
+      // team Page stays creator-private instead of escaping the team's ACL.
+      const parentVisibility =
+        parentDocument?.visibility === 'team' ? 'private' : parentDocument?.visibility;
 
       let knowledgeBaseVisibility: 'private' | 'public' | undefined;
       if (ctx.workspaceId && input.knowledgeBaseId) {

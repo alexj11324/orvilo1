@@ -1,27 +1,25 @@
 'use client';
-
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { TeamItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import { type TeamHomeDestination, teamHomeDestinations } from '../teamHomeDestinations';
 import TeamIdentity from '../TeamIdentity';
 import type { TeamHomeMember } from './teamHomeMembersModel';
+import TeamResources from './TeamResources';
 
 const styles = createStaticStyles(({ css }) => ({
   description: css`
-    margin-block-start: 20px;
-    padding-inline: 12px;
+    margin-block-start: 28px;
 
     font-size: 15px;
     font-weight: 450;
@@ -29,14 +27,24 @@ const styles = createStaticStyles(({ css }) => ({
     white-space: pre-wrap;
   `,
   identity: css`
-    padding-inline: 12px;
+    min-width: 0;
+  `,
+  left: css`
+    display: flex;
+    grid-area: left;
+    flex-direction: column;
+    min-width: 0;
+
+    @container work-surface (max-width: 1000px) {
+      display: contents;
+    }
   `,
   main: css`
-    grid-area: main;
     min-width: 0;
     padding-block-start: 20px;
 
     @container work-surface (max-width: 1000px) {
+      order: 0;
       padding-block-start: 4px;
     }
   `,
@@ -89,7 +97,7 @@ const styles = createStaticStyles(({ css }) => ({
     width: fit-content;
     min-height: 32px;
     padding-block: 0;
-    padding-inline: 6px;
+    padding-inline: 0;
     border-radius: ${cssVar.borderRadius};
 
     color: ${cssVar.colorText};
@@ -103,41 +111,37 @@ const styles = createStaticStyles(({ css }) => ({
     display: flex;
     grid-area: rail;
     flex-direction: column;
-    gap: 12px;
+    gap: 23px;
 
     min-width: 0;
-    padding-block-start: 36px;
+    padding-block-start: 42px;
 
     @container work-surface (max-width: 1000px) {
       flex-flow: row wrap;
       gap: 4px;
       align-items: center;
+      order: 1;
+
       padding-block-start: 16px;
     }
   `,
   rest: css`
-    grid-area: rest;
     min-width: 0;
-  `,
-  resourcesCopy: css`
-    padding-inline: 12px;
-    font-size: 13px;
-    line-height: 20px;
-    color: ${cssVar.colorTextTertiary};
+
+    @container work-surface (max-width: 1000px) {
+      order: 2;
+    }
   `,
   root: css`
     display: grid;
-    grid-template-areas:
-      'main rail'
-      'rest rail';
-    grid-template-columns: minmax(0, 712px) 212px;
+    grid-template-areas: 'left rail';
+    grid-template-columns: minmax(0, 700px) 212px;
     column-gap: 48px;
 
     width: 100%;
 
-    /* Narrow reflow mirrors Linear: the member / Go-to rail slides inline
-       between the description and Team resources — the DOM order already
-       produces it, no order hack needed. */
+    /* On narrow surfaces the left wrapper becomes display: contents, so
+       the rail can move between the description and resources. */
     @container work-surface (max-width: 1000px) {
       display: flex;
       flex-direction: column;
@@ -145,7 +149,6 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   railTitle: css`
-    padding-inline: 12px;
     font-size: 13px;
     font-weight: 500;
     color: ${cssVar.colorTextDescription};
@@ -157,14 +160,8 @@ const styles = createStaticStyles(({ css }) => ({
   section: css`
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-block-start: 28px;
-  `,
-  sectionTitle: css`
-    padding-inline: 12px;
-    font-size: 18px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
+    gap: 14px;
+    margin-block-start: 32px;
   `,
 }));
 
@@ -197,10 +194,8 @@ interface TeamHomeOverviewProps {
 
 /**
  * Linear's Overview: identity + description, the Team resources section,
- * and the Members / Go to rail. Every block is
- * backed by a real source — resources stays an honest empty line until a team
- * documents/links domain exists, and the rail keeps the four real team
- * destinations (no channel integration or team-settings route exists yet).
+ * and the Members / Go to rail. Team resources reads the team's persisted
+ * sections and placements; the rail keeps the four real team destinations.
  */
 const TeamHomeOverview = memo<TeamHomeOverviewProps>(
   ({
@@ -219,38 +214,50 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
 
     return (
       <div className={styles.root}>
-        <div className={styles.main}>
-          <Flexbox horizontal align="center" className={styles.identity} gap={12}>
-            <TeamIdentity
-              color={team.color}
-              id={team.id}
-              letter={(team.key || team.name).slice(0, 1)}
-              size={36}
-            />
-            <h1 className={styles.name}>{team.name}</h1>
-          </Flexbox>
-          <Text className={styles.description} type="secondary">
-            {team.description || tProject('overview.descriptionEmpty')}
-          </Text>
+        <div className={styles.left}>
+          <div className={styles.main}>
+            <div className={cn('flex flex-row items-center gap-3', styles.identity)}>
+              <TeamIdentity
+                color={team.color}
+                id={team.id}
+                letter={(team.key || team.name).slice(0, 1)}
+                size={36}
+              />
+              <h1 className={styles.name}>{team.name}</h1>
+            </div>
+            <span className={cn('text-sm text-muted-foreground', styles.description)}>
+              {team.description || tProject('overview.descriptionEmpty')}
+            </span>
+          </div>
+
+          <div className={styles.rest}>
+            <div className={styles.section}>
+              <TeamResources teamId={teamId} />
+            </div>
+          </div>
         </div>
 
         <aside className={styles.rail}>
           <div className={styles.memberGroup}>
             <div className={styles.railTitle}>{t('teams.members')}</div>
             {membersLoading ? (
-              <SkeletonList aria-label={t('teams.loading')} rows={1} />
+              <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+                {Array.from({ length: 1 }, (_, index) => (
+                  <Skeleton className="h-10 w-full" key={index} />
+                ))}
+              </div>
             ) : membersError ? (
               <AsyncError error={membersError} variant="inline" onRetry={onMembersRetry} />
             ) : members.length === 0 ? (
-              <Text type="secondary">{t('teams.membersEmpty')}</Text>
+              <span className="text-sm text-muted-foreground">{t('teams.membersEmpty')}</span>
             ) : (
-              <Flexbox horizontal align="center" gap={4} wrap="wrap">
+              <div className="flex flex-row items-center gap-1 flex-wrap">
                 {members.map((member) => (
                   <span className={styles.member} key={member.userId} title={member.name}>
                     <Avatar avatar={member.avatar} name={member.name} size={26} />
                   </span>
                 ))}
-              </Flexbox>
+              </div>
             )}
           </div>
 
@@ -258,23 +265,15 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
             <div className={styles.railTitle}>{t('teams.quickLinks')}</div>
             {destinations.map(({ key, to }) => (
               <WorkspaceLink className={styles.navLink} key={key} to={to}>
-                <Icon icon={destinationIcons[key]} size={16} />
-                <Text fontSize={13} weight={500}>
-                  {t(destinationLabels[key])}
-                </Text>
+                {createElement(destinationIcons[key], {
+                  'aria-hidden': true,
+                  'className': 'size-4 shrink-0',
+                })}
+                <span className="text-[13px]">{t(destinationLabels[key])}</span>
               </WorkspaceLink>
             ))}
           </nav>
         </aside>
-
-        <div className={styles.rest}>
-          <section aria-label={t('teams.resources')} className={styles.section}>
-            <div className={styles.sectionTitle}>{t('teams.resources')}</div>
-            <Text className={styles.resourcesCopy} type="secondary">
-              {t('teams.resourcesEmpty')}
-            </Text>
-          </section>
-        </div>
       </div>
     );
   },

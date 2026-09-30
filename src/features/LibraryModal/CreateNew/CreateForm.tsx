@@ -1,8 +1,9 @@
-import { Flexbox, Input, TextArea } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useKnowledgeBaseStore } from '@/store/library';
 
@@ -69,26 +70,26 @@ const CreateForm = memo<CreateFormProps>(({ id, initialValues, onClose, onSucces
   };
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       <Input
         autoFocus
         placeholder={t('createNew.name.placeholder')}
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <label style={{ fontSize: 14 }}>{t('createNew.description.label')}</label>
-        <TextArea
+        <Textarea
           placeholder={t('createNew.description.placeholder')}
           style={{ minHeight: 120 }}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-      </Flexbox>
-      <Button block loading={loading} type={'primary'} onClick={handleSubmit}>
+      </div>
+      <Button className="w-full" loading={loading} variant="default" onClick={handleSubmit}>
         {isEditMode ? t('createNew.edit.confirm') : t('createNew.confirm')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 

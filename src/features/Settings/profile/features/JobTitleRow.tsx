@@ -1,10 +1,8 @@
 'use client';
-
-import { Input } from '@lobehub/ui';
-import type { InputRef } from 'antd';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { useUserStore } from '@/store/user';
 import { saveToast } from '@/store/utils/saveToast';
 
@@ -14,11 +12,11 @@ export const JobTitleRow = () => {
   const { t } = useTranslation('auth');
   const jobTitle = useUserStore((s) => s.user?.jobTitle ?? '');
   const updateJobTitle = useUserStore((s) => s.updateJobTitle);
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    const value = inputRef.current?.input?.value.trim() ?? '';
+    const value = inputRef.current?.value.trim() ?? '';
     if (saving || value === jobTitle) return;
     setSaving(true);
     try {
@@ -45,10 +43,13 @@ export const JobTitleRow = () => {
         maxLength={128}
         placeholder={t('profile.jobTitlePlaceholder')}
         ref={inputRef}
-        size={'small'}
         style={{ width: 180, maxWidth: '100%' }}
         onBlur={() => void save()}
-        onPressEnter={() => void save()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            void save();
+          }
+        }}
       />
     </ProfileRow>
   );

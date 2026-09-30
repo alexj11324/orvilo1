@@ -1,4 +1,3 @@
-import { confirmModal } from '@lobehub/ui/base-ui';
 import type {
   OrviloAgentConfig,
   WorkingDirConfig,
@@ -10,6 +9,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
+import { confirmModal } from '@/components/Modal';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { getHeteroSessionIdForWorkingDirectory } from '@/helpers/heteroSessionByWorkingDirectory';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';

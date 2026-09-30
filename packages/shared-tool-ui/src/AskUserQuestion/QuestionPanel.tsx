@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import { OptionCard } from '../components';
 import type { AskUserQuestionItem } from './types';
@@ -96,18 +97,16 @@ export const QuestionPanel = memo<QuestionPanelProps>(
       question.multiSelect ? Array.isArray(answer) && answer.includes(value) : answer === value;
 
     return (
-      <Flexbox gap={10}>
-        <Flexbox horizontal align="center" gap={8}>
-          {question.header && <Text type="secondary">{question.header}</Text>}
+      <div className="flex flex-col gap-[10px]">
+        <div className="flex items-center gap-2">
+          {question.header && <div className="text-muted-foreground">{question.header}</div>}
           {question.multiSelect && (
-            <Text fontSize={12} type="secondary">
-              {multiSelectTag}
-            </Text>
+            <div className="text-[12px] text-muted-foreground">{multiSelectTag}</div>
           )}
-        </Flexbox>
-        <Text strong>{question.question}</Text>
+        </div>
+        <div className="font-semibold">{question.question}</div>
 
-        <Flexbox gap={4} role="listbox">
+        <div className="flex flex-col gap-1" role="listbox">
           {question.options.map((opt, optIdx) => {
             const value = opt.id ?? opt.label;
             return (
@@ -126,15 +125,13 @@ export const QuestionPanel = memo<QuestionPanelProps>(
           })}
           {/* Last item: let the user write their own answer for this question.
               Numbered as the next option so it reads as one more choice. */}
-          <Flexbox horizontal align="center" className={styles.customRow} gap={12}>
+          <div className={cn('flex', 'items-center', 'gap-3', styles.customRow)}>
             <span className={styles.index}>{question.options.length + 1}</span>
-            <TextArea
-              autoSize={{ maxRows: 4, minRows: 1 }}
+            <Textarea
               disabled={disabled}
               placeholder={customPlaceholder}
               style={{ flex: 1 }}
               value={customValue}
-              variant="filled"
               onChange={(e) => onCustomChange(question, e.target.value)}
               onKeyDown={(e) => {
                 // The IME guard keeps CJK composition confirms from acting.
@@ -163,9 +160,9 @@ export const QuestionPanel = memo<QuestionPanelProps>(
                 onPressEnter();
               }}
             />
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
     );
   },
 );

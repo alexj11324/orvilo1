@@ -1,14 +1,18 @@
 'use client';
 
-import { Flexbox, Popover, Tooltip } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
 import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
+import {
+  SHELL9_SIDEBAR_COLLAPSED_WIDTH,
+  SHELL9_SIDEBAR_WIDTH,
+} from '@/features/ReUIShell/constants';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
@@ -32,22 +36,12 @@ const NAV_TOGGLE_ID = 'titlebar_toggle_left_panel_button';
 
 const navPanelSelector = (s: GlobalState) => {
   const showLeftPanel = systemStatusSelectors.showLeftPanel(s);
-  if (!showLeftPanel) return 0;
-  return systemStatusSelectors.leftPanelWidth(s);
+  return showLeftPanel ? SHELL9_SIDEBAR_WIDTH : SHELL9_SIDEBAR_COLLAPSED_WIDTH;
 };
 
 const useNavPanelWidth = () => {
   return useGlobalStore(navPanelSelector);
 };
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  clock: css`
-    &[data-popup-open] {
-      border-radius: ${cssVar.borderRadiusSM};
-      background-color: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
 
 const NavigationBar = memo(() => {
   useTrayMenuSync();
@@ -117,51 +111,71 @@ const NavigationBar = memo(() => {
   // Tooltip content for the clock button
   const tooltipContent = t('navigation.recentView');
 
-  const isLeftPanelVisible = leftPanelWidth > 0;
   const macTrafficLightPadding = getMacTrafficLightPadding(isMac, isWindowFullScreen);
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
+    <div
+      className={`flex items-center gap-2 ${isMac ? 'justify-between' : 'justify-end'}`}
       data-width={leftPanelWidth}
-      gap={8}
-      justify={isMac ? 'space-between' : 'end'}
       style={{
         paddingLeft: macTrafficLightPadding,
         paddingRight: 8,
-        // Expanded: span the sidebar width so the right group hugs its right edge.
-        // Collapsed (macOS): shrink to content so the controls cluster at the left edge.
-        width: isLeftPanelVisible ? `${leftPanelWidth - 12}px` : isMac ? 'auto' : '150px',
-        transition: !isLeftPanelVisible ? 'width 0.2s' : 'none',
+        // The collapsed toolbar must still fit traffic lights and history controls.
+        width:
+          leftPanelWidth === SHELL9_SIDEBAR_WIDTH
+            ? `${leftPanelWidth - 12}px`
+            : isMac
+              ? 'auto'
+              : '150px',
       }}
     >
       {/* The persistent panel toggle is macOS-only; other platforms keep the
           in-page toggles, so the titlebar shows just the navigation controls. */}
       {isMac && (
-        <Flexbox horizontal align="center" className={electronStylish.nodrag}>
+        <div className={`flex items-center ${electronStylish.nodrag}`}>
           <ToggleLeftPanelButton forceVisible id={NAV_TOGGLE_ID} size="small" />
-        </Flexbox>
+        </div>
       )}
-      <Flexbox horizontal align="center" className={electronStylish.nodrag} gap={2}>
-        <ActionIcon disabled={!canGoBack} icon={ArrowLeft} size="small" onClick={goBack} />
-        <ActionIcon disabled={!canGoForward} icon={ArrowRight} size="small" onClick={goForward} />
-        <Popover
-          content={<RecentlyViewed onClose={() => setHistoryOpen(false)} />}
-          open={historyOpen}
-          placement="bottomLeft"
-          styles={{ content: { padding: 0 } }}
-          trigger="click"
-          onOpenChange={setHistoryOpen}
+      <div className={`flex items-center gap-0.5 ${electronStylish.nodrag}`}>
+        <Button
+          aria-label={t('navigation.back')}
+          disabled={!canGoBack}
+          size="icon-sm"
+          variant="ghost"
+          onClick={goBack}
         >
-          <div className={styles.clock}>
-            <Tooltip open={historyOpen ? false : undefined} title={tooltipContent}>
-              <ActionIcon icon={Clock} size="small" />
+          <ArrowLeft aria-hidden />
+        </Button>
+        <Button
+          aria-label={t('navigation.forward')}
+          disabled={!canGoForward}
+          size="icon-sm"
+          variant="ghost"
+          onClick={goForward}
+        >
+          <ArrowRight aria-hidden />
+        </Button>
+        <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
+          <TooltipProvider>
+            <Tooltip open={historyOpen ? false : undefined}>
+              <TooltipTrigger
+                render={
+                  <PopoverTrigger
+                    render={<Button aria-label={tooltipContent} size="icon-sm" variant="ghost" />}
+                  />
+                }
+              >
+                <Clock aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent>{tooltipContent}</TooltipContent>
             </Tooltip>
-          </div>
+          </TooltipProvider>
+          <PopoverContent align="start">
+            <RecentlyViewed onClose={() => setHistoryOpen(false)} />
+          </PopoverContent>
         </Popover>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

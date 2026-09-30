@@ -54,6 +54,7 @@ describe('listSelectors — private/workspace buckets', () => {
       doc('pub-a', 'public'),
       doc('pub-b', null),
       doc('pub-c', undefined),
+      doc('team-a', 'team' as OrviloDocument['visibility']),
     ]);
   });
 
@@ -67,6 +68,15 @@ describe('listSelectors — private/workspace buckets', () => {
     // docs pre-dating the column stay visible to every member.
     const ids = listSelectors.getWorkspaceFilteredDocuments(state).map((d) => d.id);
     expect(ids.sort()).toEqual(['pub-a', 'pub-b', 'pub-c']);
+  });
+
+  it('keeps team documents out of workspace and private page buckets', () => {
+    expect(listSelectors.getPrivateFilteredDocuments(state).map((d) => d.id)).not.toContain(
+      'team-a',
+    );
+    expect(listSelectors.getWorkspaceFilteredDocuments(state).map((d) => d.id)).not.toContain(
+      'team-a',
+    );
   });
 
   it('exposes bucket counts', () => {

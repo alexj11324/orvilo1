@@ -1,4 +1,3 @@
-import { Popover } from '@lobehub/ui/base-ui';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
@@ -6,6 +5,7 @@ import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
@@ -48,12 +48,29 @@ const Agent = memo(() => {
   );
 
   return (
-    <Popover
-      open={open}
-      placement={dropdownPlacement ?? 'topRight'}
-      styles={{ content: { padding: 0, width: 280 } }}
-      trigger={'click'}
-      content={
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <SelectorTrigger
+            ariaLabel={title}
+            text={title}
+            leading={
+              <Avatar
+                avatar={meta.avatar || DEFAULT_AVATAR}
+                background={meta.backgroundColor}
+                name={title}
+                shape={'square'}
+                size={20}
+              />
+            }
+          />
+        }
+      />
+      <PopoverContent
+        align={(dropdownPlacement ?? 'topRight').endsWith('Right') ? 'end' : 'start'}
+        side={(dropdownPlacement ?? 'topRight').startsWith('top') ? 'top' : 'bottom'}
+        style={{ padding: 0, width: 280 }}
+      >
         <AgentList
           includeTaskAgent
           activeAgentId={agentId}
@@ -61,22 +78,7 @@ const Agent = memo(() => {
           onRetry={() => mutate()}
           onSelect={handleSelect}
         />
-      }
-      onOpenChange={setOpen}
-    >
-      <SelectorTrigger
-        ariaLabel={title}
-        text={title}
-        leading={
-          <Avatar
-            avatar={meta.avatar || DEFAULT_AVATAR}
-            background={meta.backgroundColor}
-            name={title}
-            shape={'square'}
-            size={20}
-          />
-        }
-      />
+      </PopoverContent>
     </Popover>
   );
 });

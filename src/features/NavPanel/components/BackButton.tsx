@@ -1,8 +1,9 @@
-import { ActionIcon, type ActionIconProps } from '@lobehub/ui/base-ui';
 import { ChevronLeftIcon } from 'lucide-react';
 import { memo, type MouseEvent } from 'react';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
+import { type ActionIconProps } from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { appNavigate } from '@/features/Electron/navigation/appNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';

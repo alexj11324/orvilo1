@@ -1,9 +1,16 @@
 'use client';
 
-import { FluentEmoji } from '@lobehub/ui';
-import { Result, Text } from '@lobehub/ui/base-ui';
+import { FrownIcon } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 
 interface ClientProps {
   error: {
@@ -26,20 +33,15 @@ const ConsentClientError = memo<ClientProps>(({ error }) => {
     : error.message;
 
   return (
-    <Result
-      icon={<FluentEmoji emoji={'🥵'} size={96} type={'anim'} />}
-      status={'error'}
-      subTitle={
-        <Text fontSize={16} type="secondary">
-          {message}
-        </Text>
-      }
-      title={
-        <Text fontSize={32} weight={'bold'}>
-          {title}
-        </Text>
-      }
-    />
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="default">{<FrownIcon size={96} />}</EmptyMedia>
+        <EmptyTitle>{<div className="text-[32px] font-bold">{title}</div>}</EmptyTitle>
+        <EmptyDescription>
+          {<div className="text-[16px] text-muted-foreground">{message}</div>}
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 });
 

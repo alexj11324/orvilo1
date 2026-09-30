@@ -1,8 +1,6 @@
 'use client';
-
-import { Center, Flexbox, Icon } from '@lobehub/ui';
-import { DropdownMenu, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowRightIcon, Link2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +10,9 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
@@ -68,7 +69,9 @@ const styles = createStaticStyles(({ css }) => ({
   `,
   page: css`
     box-sizing: border-box;
-    padding-block: 24px 32px;
+
+    /* Leave the same gap below the tabs as Linear's overview body. */
+    padding-block: 72px 32px;
 
     @media (width <= 720px) {
       margin-inline: 20px;
@@ -177,9 +180,9 @@ const ProjectWorkspace = memo(() => {
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
   if (isLoading || !detail)
     return (
-      <Center height={'100%'}>
+      <div className="flex flex-col items-center justify-center" style={{ height: '100%' }}>
         <NeuralNetworkLoading />
-      </Center>
+      </div>
     );
 
   const project = detail.project;
@@ -217,11 +220,11 @@ const ProjectWorkspace = memo(() => {
   }));
 
   return (
-    <Flexbox className={styles.shell} flex={1}>
+    <div className={cn('flex flex-col', styles.shell)} style={{ flex: 1 }}>
       <div className={styles.content}>
-        <Flexbox className={styles.page} gap={0}>
-          <Flexbox gap={20}>
-            <Flexbox gap={10}>
+        <div className={cn('flex flex-col', styles.page)} style={{ gap: 0 }}>
+          <div className="flex flex-col" style={{ gap: 20 }}>
+            <div className="flex flex-col" style={{ gap: 10 }}>
               <Avatar
                 avatar={project.avatar || undefined}
                 name={project.name}
@@ -229,7 +232,7 @@ const ProjectWorkspace = memo(() => {
                 size={44}
                 title={project.name}
               />
-              <Flexbox gap={2}>
+              <div className="flex flex-col" style={{ gap: 2 }}>
                 <ProjectOverviewField
                   key={`${project.id}:name`}
                   kind="name"
@@ -242,16 +245,26 @@ const ProjectWorkspace = memo(() => {
                   value={project.summary ?? ''}
                   onSave={(summary) => updateProject(project.id, { summary })}
                 />
-              </Flexbox>
-            </Flexbox>
-
-            <Flexbox horizontal align={'center'} gap={16}>
+              </div>
+            </div>
+            <div className="flex flex-row" style={{ alignItems: 'center', gap: 16 }}>
               {/* Label column: the reference sizes one shared grid column by
                   the widest label — "Resources" at 65.4766px (≈65.5). */}
-              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 65.5 }}>
+              <span
+                className="text-sm"
+                style={{
+                  color: SECTION_LABEL_PROPS.color,
+                  fontSize: SECTION_LABEL_PROPS.fontSize,
+                  fontWeight: SECTION_LABEL_PROPS.weight,
+                  minWidth: 65.5,
+                }}
+              >
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
-              </Text>
-              <Flexbox horizontal align={'center'} className={styles.properties} wrap={'wrap'}>
+              </span>
+              <div
+                className={cn('flex flex-row', styles.properties)}
+                style={{ alignItems: 'center', flexWrap: 'wrap' }}
+              >
                 <DropdownMenu items={statusItems}>
                   <button
                     aria-label={t('properties.status')}
@@ -270,7 +283,7 @@ const ProjectWorkspace = memo(() => {
                 <ProjectPriorityField inline project={project} />
                 <ProjectLeadField inline project={project} />
                 <ProjectDateField inline kind="startDate" project={project} />
-                <Icon aria-hidden icon={ArrowRightIcon} size={16} />
+                <ArrowRightIcon aria-hidden size={16} />
                 <ProjectDateField inline kind="targetDate" project={project} />
                 {teams.map((team) => (
                   <WorkspaceLink className={styles.teamChip} key={team.id} to={`/teams/${team.id}`}>
@@ -286,29 +299,34 @@ const ProjectWorkspace = memo(() => {
                 {membersEnabled && (
                   <ProjectMembersField projectId={project.id} query={membersSWR} />
                 )}
-              </Flexbox>
-            </Flexbox>
-
-            <Flexbox horizontal align={'center'} gap={16}>
-              <Text {...SECTION_LABEL_PROPS} style={{ minWidth: 65.5 }}>
+              </div>
+            </div>
+            <div className="flex flex-row" style={{ alignItems: 'center', gap: 16 }}>
+              <span
+                className="text-sm"
+                style={{
+                  color: SECTION_LABEL_PROPS.color,
+                  fontSize: SECTION_LABEL_PROPS.fontSize,
+                  fontWeight: SECTION_LABEL_PROPS.weight,
+                  minWidth: 65.5,
+                }}
+              >
                 {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
-              </Text>
-              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+              </span>
+              <div
+                className="flex flex-row"
+                style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+              >
                 {knowledgeBases.map((link) => (
-                  <Tag
-                    icon={<Icon icon={Link2Icon} size={12} />}
-                    key={link.knowledgeBase.id}
-                    shape={'round'}
-                    size={'small'}
-                  >
+                  <Badge key={link.knowledgeBase.id} radius="full" size="sm" variant="secondary">
+                    <Link2Icon size={12} />
                     {link.knowledgeBase.name}
-                  </Tag>
+                  </Badge>
                 ))}
                 <ProjectLinks ownerId={project.userId} projectId={project.id} />
-              </Flexbox>
-            </Flexbox>
-
-            <Flexbox gap={8}>
+              </div>
+            </div>
+            <div className="flex flex-col" style={{ gap: 8 }}>
               <ProjectUpdateComposer
                 emptyState={updatesEmpty}
                 projectId={project.id}
@@ -350,18 +368,18 @@ const ProjectWorkspace = memo(() => {
                   />
                 ),
               )}
-            </Flexbox>
+            </div>
             <ProjectDescription
               description={project.description}
               key={project.id}
               projectId={project.id}
               onSaved={() => void mutate()}
             />
-          </Flexbox>
+          </div>
           <ProjectDashboard detail={detail} projectId={project.id} />
-        </Flexbox>
+        </div>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

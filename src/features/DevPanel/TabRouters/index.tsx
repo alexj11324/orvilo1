@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
@@ -166,7 +165,7 @@ const TabRouters = memo(() => {
       : null;
 
   return (
-    <Flexbox className={devDockPanelStyles.root}>
+    <div className={cx(devDockPanelStyles.root, 'flex flex-col')}>
       <div className={styles.summary}>
         scope <b>{scopeKey}</b> · tabs <b>{rows.length}</b> · live routers{' '}
         <b className={liveCount > cap ? styles.drift : undefined}>
@@ -201,7 +200,7 @@ const TabRouters = memo(() => {
         matches the store url, or the diverging location when a hidden tab navigated. `lru` is the
         recency rank; `↓` marks the router evicted next. Click a row to activate that tab.
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

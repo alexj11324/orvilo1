@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -7,6 +5,7 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import { Button } from '@/components/ui/button';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
@@ -20,6 +19,7 @@ import Breadcrumb from '../shared/Breadcrumb';
 import IssueContent from './IssueContent';
 import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
+import { TaskDetailScope } from './TaskDetailScope';
 import TopicChatDrawer from './TopicChatDrawer';
 import { useActiveTaskDetail } from './useActiveTaskDetail';
 
@@ -30,7 +30,7 @@ interface TaskDetailPageProps {
 
 const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelToggle = true }) => {
   const { t } = useTranslation('chat');
-  const saveStatus = useTaskStore(taskDetailSelectors.taskSaveStatus);
+  const saveStatus = useTaskStore((s) => taskDetailSelectors.taskSaveStatusFor(s, taskId));
   const [showTaskAgentPanel, toggleTaskAgentPanel] = useGlobalStore((s) => [
     systemStatusSelectors.showTaskAgentPanel(s),
     s.toggleTaskAgentPanel,
@@ -43,82 +43,89 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
   // offer Reload instead of the terminal "task was deleted" dead-end below.
   if (error) {
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, position: 'relative' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   if (isNotFound) {
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, position: 'relative' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <NotFound
             desc={t('taskDetail.notFound.desc')}
             title={t('taskDetail.notFound.title')}
             extra={
               <Link to={'/tasks'}>
-                <Button type={'primary'}>{t('taskDetail.notFound.backToTasks')}</Button>
+                <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
               </Link>
             }
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <WorkSurface style={{ position: 'relative' }}>
-      <NavHeader
-        left={
-          <>
-            <Breadcrumb taskId={taskId} />
-            {/* Reference: the star and overflow sit inline right after the
+    <TaskDetailScope taskId={taskId}>
+      <WorkSurface style={{ position: 'relative' }}>
+        <NavHeader
+          left={
+            <>
+              <Breadcrumb taskId={taskId} />
+              {/* Reference: the star and overflow sit inline right after the
                 issue crumb; the copy buttons moved into the rail's round
                 action row (TaskRailActions), so the header's right side only
                 keeps the agent-panel toggle. */}
-            <WorkFavoriteButton icon={'star'} targetId={taskId} targetType="task" variant="icon" />
-            <TaskDetailHeaderActions />
-            {saveStatus === 'saving' || saveStatus === 'failed' ? (
-              <AutoSaveHint saveStatus={saveStatus} />
-            ) : undefined}
-          </>
-        }
-        right={
-          <>
-            {showTaskAgentPanelToggle ? (
-              <ToggleRightPanelButton
-                hideWhenExpanded
-                expand={showTaskAgentPanel}
-                onToggle={() => toggleTaskAgentPanel()}
+              <WorkFavoriteButton
+                icon={'star'}
+                targetId={taskId}
+                targetType="task"
+                variant="icon"
               />
-            ) : undefined}
-          </>
-        }
-        styles={{
-          left: {
-            paddingLeft: 4,
-            gap: 8,
-          },
-        }}
-      />
-      {/* The routed issue uses the page geometry; the split pane and Portal
+              <TaskDetailHeaderActions />
+              {saveStatus === 'saving' || saveStatus === 'failed' ? (
+                <AutoSaveHint saveStatus={saveStatus} />
+              ) : undefined}
+            </>
+          }
+          right={
+            <>
+              {showTaskAgentPanelToggle ? (
+                <ToggleRightPanelButton
+                  hideWhenExpanded
+                  expand={showTaskAgentPanel}
+                  onToggle={() => toggleTaskAgentPanel()}
+                />
+              ) : undefined}
+            </>
+          }
+          styles={{
+            left: {
+              paddingLeft: 4,
+              gap: 8,
+            },
+          }}
+        />
+        {/* The routed issue uses the page geometry; the split pane and Portal
           still mount IssueContent with their own container widths. */}
-      <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
-        <IssueContent detail={detail} taskId={taskId} />
-      </WorkSurfaceDocument>
-      <TopicChatDrawer />
-    </WorkSurface>
+        <WorkSurfaceDocument className={taskDetailFullPageStyles.document}>
+          <IssueContent detail={detail} taskId={taskId} />
+        </WorkSurfaceDocument>
+        <TopicChatDrawer />
+      </WorkSurface>
+    </TaskDetailScope>
   );
 });
 

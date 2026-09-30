@@ -833,6 +833,7 @@ export const linearSyncRouter = router({
   startOAuth: linearSyncWriteProcedure
     .input(
       z.object({
+        attempt: z.string().max(64).optional(),
         returnTo: z
           .string()
           .regex(/^\//, 'returnTo must be a relative application path')
@@ -847,6 +848,7 @@ export const linearSyncRouter = router({
         const { challenge, verifier } = createLinearPkcePair();
         await saveLinearOAuthState(state, {
           actor: 'app',
+          attempt: input.attempt,
           clientId: config.clientId,
           codeVerifier: verifier,
           lobeUserId: ctx.userId,

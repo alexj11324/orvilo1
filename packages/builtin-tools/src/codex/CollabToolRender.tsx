@@ -1,9 +1,8 @@
 'use client';
-
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -74,28 +73,28 @@ const CollabToolRender = memo<
   if (!prompt && agents.length === 0) return null;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {prompt && (
         <div>
-          <Text className={styles.sectionLabel}>
+          <div className={styles.sectionLabel}>
             {t('builtins.codex.collabTool.instruction', { defaultValue: 'Instruction' })}
-          </Text>
-          <Flexbox className={styles.promptBox}>
+          </div>
+          <div className={cn('flex', 'flex-col', styles.promptBox)}>
             <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
               {prompt}
             </Markdown>
-          </Flexbox>
+          </div>
         </div>
       )}
       {agents.length > 0 && (
         <div>
-          <Text className={styles.sectionLabel}>
+          <div className={styles.sectionLabel}>
             {t('builtins.codex.collabTool.agents', { defaultValue: 'Subagents' })}
-          </Text>
-          <Flexbox gap={8}>
+          </div>
+          <div className="flex flex-col gap-2">
             {agents.map((agent, index) => (
-              <Flexbox className={styles.agentRow} gap={4} key={agent.id}>
-                <Flexbox horizontal align={'center'} className={styles.agentHeader} gap={6}>
+              <div className={cn('flex', 'flex-col', 'gap-1', styles.agentRow)} key={agent.id}>
+                <div className={cn('flex', 'items-center', 'gap-[6px]', styles.agentHeader)}>
                   <span
                     className={cx(
                       styles.statusDot,
@@ -109,18 +108,18 @@ const CollabToolRender = memo<
                     })}
                   </span>
                   {agent.status && <span>· {formatCollabStatus(agent.status)}</span>}
-                </Flexbox>
+                </div>
                 {agent.message && (
                   <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                     {agent.message}
                   </Markdown>
                 )}
-              </Flexbox>
+              </div>
             ))}
-          </Flexbox>
+          </div>
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

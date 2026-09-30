@@ -1,10 +1,11 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import type { WebSearchArgs, WebSearchPluginState, WebSearchResult } from '../../../types';
 
@@ -98,15 +99,13 @@ const WebSearch = memo<BuiltinRenderProps<WebSearchArgs, WebSearchPluginState>>(
       if (!content) return null;
 
       return (
-        <Highlighter
+        <CodeBlock
           wrap
+          code={content}
           language={'text'}
-          showLanguage={false}
           style={{ maxHeight: 240, overflow: 'auto' }}
-          variant={'borderless'}
-        >
-          {content}
-        </Highlighter>
+          variant={'ghost'}
+        />
       );
     }
 
@@ -119,28 +118,31 @@ const WebSearch = memo<BuiltinRenderProps<WebSearchArgs, WebSearchPluginState>>(
         : undefined;
 
     return (
-      <Flexbox className={styles.root} gap={0}>
+      <div className={cx('flex flex-col gap-0', styles.root)}>
         {(query || duration) && (
-          <Flexbox horizontal className={styles.queryRow} gap={8}>
+          <div className={cx('flex flex-row gap-2', styles.queryRow)}>
             <span className={styles.metadata}>{query}</span>
             {duration && <span className={styles.metadata}>{duration}</span>}
-          </Flexbox>
+          </div>
         )}
         {results.map((result, index) => {
           const hostname = getWebSearchHostname(result.link);
           const title = result.title || hostname || result.link;
 
           return (
-            <Flexbox className={styles.resultItem} gap={3} key={`${result.link}-${index}`}>
+            <div
+              className={cx('flex flex-col gap-[3px]', styles.resultItem)}
+              key={`${result.link}-${index}`}
+            >
               <a href={result.link} rel={'noreferrer'} target={'_blank'}>
                 <span className={styles.title}>{title}</span>
               </a>
-              <Text className={styles.hostname}>{hostname || result.link}</Text>
-              {result.snippet && <Text className={styles.snippet}>{result.snippet}</Text>}
-            </Flexbox>
+              <div className={cn(styles.hostname)}>{hostname || result.link}</div>
+              {result.snippet && <div className={cn(styles.snippet)}>{result.snippet}</div>}
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
     );
   },
 );

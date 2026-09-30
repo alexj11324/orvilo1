@@ -1,8 +1,10 @@
-import { Icon, type IconProps } from '@lobehub/ui';
-import { type ContextMenuItem, ContextMenuTrigger } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import type { LucideProps } from 'lucide-react';
 import { PinIcon, XIcon } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { type ComponentType, createElement, memo, type ReactNode } from 'react';
+
+import type { DropdownItem as ContextMenuItem } from '@/components/ItemsMenu';
+import { ContextMenuTrigger } from '@/components/ItemsMenu';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   close: css`
@@ -115,7 +117,7 @@ interface WorkspaceTabProps {
   active: boolean;
   closeLabel?: string;
   contextMenuItems?: ContextMenuItem[];
-  icon: IconProps['icon'];
+  icon: ComponentType<LucideProps>;
   iconNode?: ReactNode;
   label: ReactNode;
   onClose?: () => void;
@@ -152,13 +154,13 @@ const WorkspaceTab = memo<WorkspaceTabProps>(
           onClick={onSelect}
         >
           <span className={styles.trigger}>
-            {iconNode ?? <Icon icon={icon} size={14} />}
+            {iconNode ?? createElement(icon, { size: 14 })}
             <span className={styles.label}>{label}</span>
           </span>
         </button>
         {pinned ? (
           <span aria-label={pinnedLabel} className={styles.pinned} role="img">
-            <Icon icon={PinIcon} size={12} />
+            <PinIcon size={12} />
           </span>
         ) : onClose ? (
           <button
@@ -168,7 +170,7 @@ const WorkspaceTab = memo<WorkspaceTabProps>(
             type="button"
             onClick={onClose}
           >
-            <Icon icon={XIcon} size={12} />
+            <XIcon size={12} />
           </button>
         ) : null}
       </div>

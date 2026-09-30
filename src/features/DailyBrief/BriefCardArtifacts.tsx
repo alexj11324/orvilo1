@@ -1,5 +1,3 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BriefArtifactDocument, BriefArtifacts } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRightIcon, FileTextIcon } from 'lucide-react';
@@ -26,35 +24,21 @@ const BriefArtifactCard = memo<{ doc: BriefArtifactDocument }>(({ doc }) => {
   const title = doc.title || 'Untitled';
 
   return (
-    <Block
-      clickable
-      horizontal
-      align={'center'}
-      gap={12}
-      paddingBlock={10}
-      paddingInline={12}
-      variant={'filled'}
+    <div
+      className="flex items-center gap-3 py-[10px] px-3 cursor-pointer hover:bg-[var(--ant-color-fill-secondary)]"
+      style={{ background: cssVar.colorFillTertiary, borderRadius: cssVar.borderRadius }}
       onClick={() => void openDocumentModal(doc.id)}
       onFocus={preloadDocumentModal}
       onPointerEnter={preloadDocumentModal}
     >
       <div className={styles.iconWrap}>
-        <Icon
-          color={cssVar.colorTextSecondary}
-          icon={FileTextIcon}
-          size={{ size: 20, strokeWidth: 1.5 }}
-        />
+        <FileTextIcon size={20} strokeWidth={1.5} style={{ color: cssVar.colorTextSecondary }} />
       </div>
-      <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+      <div className="truncate block font-medium" style={{ flex: 1, minWidth: 0 }}>
         {title}
-      </Text>
-      <Icon
-        color={cssVar.colorTextQuaternary}
-        icon={ChevronRightIcon}
-        size={16}
-        style={{ flexShrink: 0 }}
-      />
-    </Block>
+      </div>
+      <ChevronRightIcon size={16} style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }} />
+    </div>
   );
 });
 
@@ -67,11 +51,11 @@ const BriefCardArtifacts = memo<BriefCardArtifactsProps>(({ artifacts }) => {
   if (!docs?.length) return null;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {docs.map((doc) => (
         <BriefArtifactCard doc={doc} key={doc.id} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

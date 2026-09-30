@@ -1,11 +1,14 @@
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, toast } from '@lobehub/ui/base-ui';
-import { type FormInstance } from 'antd';
-import { Form } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { LucidePlus, LucideTrash } from 'lucide-react';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import Form from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   form: css`
@@ -71,8 +74,6 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
   const { t } = useTranslation(['tool', 'common']);
   const [form] = Form.useForm();
 
-  const formRef = useRef<FormInstance>(null);
-
   useEffect(() => {
     form.setFieldsValue({ items: recordToFormList(initialValue) });
   }, [initialValue, form]);
@@ -114,23 +115,21 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
       className={styles.form}
       form={form}
       initialValues={{ items: recordToFormList(initialValue) }}
-      ref={formRef}
     >
-      <Flexbox horizontal className={styles.title} gap={8}>
-        <Flexbox flex={1}>key</Flexbox>
-        <Flexbox flex={4}>value</Flexbox>
-      </Flexbox>
+      <div className={cn('flex gap-2', styles.title)}>
+        <div className="flex flex-col flex-1">key</div>
+        <div className="flex flex-col" style={{ flex: 4 }}>
+          value
+        </div>
+      </div>
       <Form.List name="items">
         {(fields, { add, remove }) => (
-          <Flexbox width={'100%'}>
+          <div className="flex flex-col" style={{ width: '100%' }}>
             {fields.map(({ key, name, ...restField }, index) => (
-              <Flexbox
-                horizontal
-                align="center"
-                className={styles.row}
-                gap={8}
+              <div
+                className={cn('flex items-center gap-2', styles.row)}
                 key={key}
-                width={'100%'}
+                style={{ width: '100%' }}
               >
                 <Form.Item
                   {...restField}
@@ -150,12 +149,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                     },
                   ]}
                 >
-                  <Input
-                    allowClear
-                    className={styles.input}
-                    placeholder={t('updateArgs.form.key')}
-                    variant={'filled'}
-                  />
+                  <Input className={styles.input} placeholder={t('updateArgs.form.key')} />
                 </Form.Item>
                 <Form.Item
                   {...restField}
@@ -163,12 +157,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                   name={[name, 'value']}
                   style={{ flex: 4 }}
                 >
-                  <Input
-                    allowClear
-                    className={styles.input}
-                    placeholder={t('updateArgs.form.value')}
-                    variant={'filled'}
-                  />
+                  <Input className={styles.input} placeholder={t('updateArgs.form.value')} />
                 </Form.Item>
                 <ActionIcon
                   icon={LucideTrash}
@@ -179,30 +168,29 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                   }}
                   onClick={() => remove(name)}
                 />
-              </Flexbox>
+              </div>
             ))}
             <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
-              <Flexbox horizontal gap={8} justify={'space-between'}>
+              <div className="flex gap-2 justify-between">
                 <Button
-                  icon={<Icon icon={LucidePlus} />}
-                  size={'small'}
-                  type="fill"
+                  size="sm"
+                  variant="secondary"
                   onClick={() => add({ id: `new-${Date.now()}`, key: '', value: '' })}
                 >
-                  {t('updateArgs.form.add')}
+                  <LucidePlus /> {t('updateArgs.form.add')}
                 </Button>
 
-                <Flexbox horizontal gap={8}>
-                  <Button size={'small'} onClick={handleCancel}>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleCancel}>
                     {t('cancel', { ns: 'common' })}
                   </Button>
-                  <Button loading={updating} size={'small'} type={'primary'} onClick={handleFinish}>
+                  <Button loading={updating} size="sm" variant="default" onClick={handleFinish}>
                     {t('save', { ns: 'common' })}
                   </Button>
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
             </Form.Item>
-          </Flexbox>
+          </div>
         )}
       </Form.List>
     </Form>

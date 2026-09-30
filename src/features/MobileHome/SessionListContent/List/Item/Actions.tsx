@@ -1,6 +1,3 @@
-import { DropdownMenu, Icon } from '@lobehub/ui';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
-import { type ItemType } from 'antd/es/menu/interface';
 import isEqual from 'fast-deep-equal';
 import {
   Check,
@@ -13,10 +10,18 @@ import {
   PinOff,
   Trash,
 } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/index';
+import type {
+  SidebarMenuInfo,
+  SidebarMenuItemData,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { useHomeStore } from '@/store/home';
@@ -68,7 +73,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
         [
           {
             disabled: !canEdit,
-            icon: <Icon icon={pin ? PinOff : Pin} />,
+            icon: createElement(pin ? PinOff : Pin, { size: 14 }),
             key: 'pin',
             label: t(pin ? 'pinOff' : 'pin'),
             title: editReason,
@@ -83,11 +88,11 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
           },
           {
             disabled: !canCreate,
-            icon: <Icon icon={LucideCopy} />,
+            icon: <LucideCopy size={14} />,
             key: 'duplicate',
             label: t('duplicate', { ns: 'common' }),
             title: createReason,
-            onClick: ({ domEvent }) => {
+            onClick: ({ domEvent }: SidebarMenuInfo) => {
               domEvent.stopPropagation();
               if (!canCreate) return;
 
@@ -97,10 +102,10 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
           ...(isDesktop
             ? [
                 {
-                  icon: <Icon icon={ExternalLink} />,
+                  icon: <ExternalLink size={14} />,
                   key: 'openInNewWindow',
                   label: t('openInNewWindow'),
-                  onClick: ({ domEvent }: { domEvent: Event }) => {
+                  onClick: ({ domEvent }: SidebarMenuInfo) => {
                     domEvent.stopPropagation();
                     openAgentInNewWindow(id);
                   },
@@ -114,7 +119,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
             children: [
               ...sessionCustomGroups.map(({ id: groupId, name }) => ({
                 disabled: !canEdit,
-                icon: group === groupId ? <Icon icon={Check} /> : <div />,
+                icon: group === groupId ? <Check size={14} /> : <div />,
                 key: groupId,
                 label: name,
                 title: editReason,
@@ -125,7 +130,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
               })),
               {
                 disabled: !canEdit,
-                icon: isDefault ? <Icon icon={Check} /> : <div />,
+                icon: isDefault ? <Check size={14} /> : <div />,
                 key: 'defaultList',
                 label: t('defaultList'),
                 title: editReason,
@@ -139,11 +144,11 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
               },
               {
                 disabled: !canCreate,
-                icon: <Icon icon={LucidePlus} />,
+                icon: <LucidePlus size={14} />,
                 key: 'createGroup',
                 label: <div>{t('sessionGroup.createGroup')}</div>,
                 title: createReason,
-                onClick: ({ domEvent }) => {
+                onClick: ({ domEvent }: SidebarMenuInfo) => {
                   domEvent.stopPropagation();
                   if (!canCreate) return;
                   openCreateGroupModal();
@@ -151,7 +156,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
               },
             ],
             disabled: !canEdit,
-            icon: <Icon icon={ListTree} />,
+            icon: <ListTree size={14} />,
             key: 'moveGroup',
             label: t('sessionGroup.moveGroup'),
             title: editReason,
@@ -162,11 +167,11 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
           {
             danger: true,
             disabled: !canEdit,
-            icon: <Icon icon={Trash} />,
+            icon: <Trash size={14} />,
             key: 'delete',
             label: t('delete', { ns: 'common' }),
             title: editReason,
-            onClick: ({ domEvent }) => {
+            onClick: ({ domEvent }: SidebarMenuInfo) => {
               domEvent.stopPropagation();
               if (!canEdit) return;
               confirmModal({
@@ -191,7 +196,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
               });
             },
           },
-        ] as ItemType[]
+        ] satisfies SidebarMenuItemData[]
       ).filter(Boolean),
     [
       canCreate,
@@ -218,7 +223,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
   );
 
   return (
-    <DropdownMenu items={items} onOpenChange={setOpen}>
+    <SidebarDropdownMenu items={items} onOpenChange={setOpen}>
       <ActionIcon
         icon={MoreVertical}
         size={{
@@ -226,7 +231,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
           size: 16,
         }}
       />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

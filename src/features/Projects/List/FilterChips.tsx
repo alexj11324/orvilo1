@@ -1,12 +1,12 @@
 'use client';
-
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { ParseKeys } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { type ProjectListFilter, projectListFilterKey } from './listFilters';
 
@@ -143,7 +143,10 @@ const ProjectListFilterChips = memo<ProjectListFilterChipsProps>(
     };
 
     return (
-      <Flexbox horizontal align="center" gap={6} style={{ flex: 'none', minWidth: 0 }}>
+      <div
+        className="flex flex-row"
+        style={{ alignItems: 'center', gap: 6, flex: 'none', minWidth: 0 }}
+      >
         {filters.map((filter) => {
           const key = projectListFilterKey(filter);
           const { label, value } = chipLabel(filter);
@@ -152,25 +155,30 @@ const ProjectListFilterChips = memo<ProjectListFilterChipsProps>(
               <span>
                 <span style={{ color: cssVar.colorTextTertiary }}>{label}:</span> {value}
               </span>
-              <Tooltip title={t('list.filter.removeChip')}>
-                <button
-                  aria-label={`${t('list.filter.removeChip')}: ${label}`}
-                  className={styles.chipRemove}
-                  type="button"
-                  onClick={() => onRemove(key)}
-                >
-                  <Icon icon={XIcon} size={10} />
-                </button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      aria-label={`${t('list.filter.removeChip')}: ${label}`}
+                      className={styles.chipRemove}
+                      type="button"
+                      onClick={() => onRemove(key)}
+                    >
+                      <XIcon size={10} />
+                    </button>
+                  }
+                />
+                <TooltipContent>{t('list.filter.removeChip')}</TooltipContent>
               </Tooltip>
             </span>
           );
         })}
         {filters.length > 1 ? (
-          <Button size="small" type="text" onClick={onClearAll}>
+          <Button size="sm" variant="ghost" onClick={onClearAll}>
             {t('list.filter.clearAll')}
           </Button>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -46,7 +44,7 @@ const ThreadEvidence = memo<ThreadEvidenceProps>(({ comment, evidence, roundInde
   if (!evidence.fileUrl || !comment.rect) return null;
 
   return (
-    <Flexbox className={styles.wrapper} gap={4}>
+    <div className={`flex flex-col gap-1 ${styles.wrapper}`}>
       <AnnotatedImage
         annotations={[{ color: authorColor(comment.authorUserId), rect: comment.rect }]}
         imageStyle={{ width: THUMBNAIL_WIDTH }}
@@ -59,11 +57,14 @@ const ThreadEvidence = memo<ThreadEvidenceProps>(({ comment, evidence, roundInde
           : t('acceptance.comments.evidenceThisRound')}
       </span>
       {evidence.description && (
-        <Text ellipsis fontSize={12} style={{ maxWidth: THUMBNAIL_WIDTH }} type={'secondary'}>
+        <div
+          className="truncate min-w-0 text-[12px] text-muted-foreground"
+          style={{ maxWidth: THUMBNAIL_WIDTH }}
+        >
           {evidence.description}
-        </Text>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,12 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Segmented, Switch, Text, toast } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Switch } from '@/components/ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { lambdaClient } from '@/libs/trpc/client';
 
 interface ShareToggleProps {
@@ -106,24 +107,24 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
   };
 
   return (
-    <Flexbox horizontal align={'center'} gap={8}>
-      <Text fontSize={12} type={'secondary'}>
-        {t('creds.share.toggle')}
-      </Text>
+    <div className="flex items-center gap-2">
+      <div className="text-[12px] text-muted-foreground">{t('creds.share.toggle')}</div>
       {shared && (
-        <Segmented
+        <ToggleGroup
           disabled={isPending}
-          size={'small'}
-          value={visibility}
-          options={[
-            { label: t('creds.share.visibility.private'), value: 'private' },
-            { label: t('creds.share.visibility.public'), value: 'public' },
-          ]}
-          onChange={handleVisibilityChange}
-        />
+          size="sm"
+          value={visibility ? [visibility] : []}
+          onValueChange={(value) => {
+            const next = value[0];
+            if (next === 'private' || next === 'public') handleVisibilityChange(next);
+          }}
+        >
+          <ToggleGroupItem value="private">{t('creds.share.visibility.private')}</ToggleGroupItem>
+          <ToggleGroupItem value="public">{t('creds.share.visibility.public')}</ToggleGroupItem>
+        </ToggleGroup>
       )}
-      <Switch checked={shared} loading={isPending} onChange={handleSwitchChange} />
-    </Flexbox>
+      <Switch checked={shared} disabled={isPending} onCheckedChange={handleSwitchChange} />
+    </div>
   );
 };
 

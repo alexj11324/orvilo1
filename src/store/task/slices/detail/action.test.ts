@@ -1,7 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toast } from '@/components/toast';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskService } from '@/services/task';
 import { workService } from '@/services/work';
@@ -16,7 +16,9 @@ vi.mock('@/services/task', () => ({
     addDependency: vi.fn(),
     create: vi.fn(),
     delete: vi.fn(),
+    find: vi.fn(),
     getDetail: vi.fn(),
+    handoff: vi.fn(),
     pinDocument: vi.fn(),
     removeDependency: vi.fn(),
     removeIssueRelation: vi.fn(),
@@ -37,7 +39,7 @@ vi.mock('@/libs/swr', () => ({
   useClientDataSWR: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));
@@ -97,6 +99,41 @@ describe('TaskDetailSliceAction', () => {
   });
 
   describe('createTask', () => {
+    it('ignores another submit while creation is in flight and allows the next create', async () => {
+      let finish!: (value: any) => void;
+      vi.mocked(taskService.create)
+        .mockResolvedValue({ data: { identifier: 'T-duplicate' } } as any)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finish = resolve;
+            }),
+        );
+      const first = useTaskStore.getState().createTask({ instruction: 'Same draft' });
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Same draft' }),
+      ).resolves.toBeNull();
+      expect(taskService.create).toHaveBeenCalledTimes(1);
+      expect(useTaskStore.getState().isCreatingTask).toBe(true);
+      finish({ data: { identifier: 'T-1' }, success: true });
+      await first;
+      vi.mocked(taskService.create).mockResolvedValueOnce({ data: { identifier: 'T-2' } } as any);
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Next draft' }),
+      ).resolves.toMatchObject({ identifier: 'T-2' });
+    });
+
+    it('allows retrying the same draft after creation fails', async () => {
+      vi.mocked(taskService.create).mockRejectedValueOnce(new Error('offline'));
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Retry draft' }),
+      ).rejects.toThrow('offline');
+      vi.mocked(taskService.create).mockResolvedValueOnce({ data: { identifier: 'T-1' } } as any);
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Retry draft' }),
+      ).resolves.toMatchObject({ identifier: 'T-1' });
+    });
+
     it('should call service and return identifier', async () => {
       vi.mocked(taskService.create).mockResolvedValue({
         data: { identifier: 'T-1' },
@@ -287,6 +324,21 @@ describe('TaskDetailSliceAction', () => {
       await pending;
     });
 
+    it('attaches the row domainRevision as the CAS on assignee updates', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 7, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.update).mockResolvedValue({ success: true } as any);
+
+      await useTaskStore.getState().updateTask('T-1', { assigneeAgentId: 'agt_1' });
+
+      expect(taskService.find).toHaveBeenCalledWith('T-1');
+      expect(taskService.update).toHaveBeenCalledWith(
+        'T-1',
+        expect.objectContaining({ assigneeAgentId: 'agt_1', expectedDomainRevision: 7 }),
+      );
+    });
+
     it('should clear stale editorData for instruction-only optimistic updates', async () => {
       useTaskStore.setState({
         activeTaskId: 'T-1',
@@ -397,7 +449,7 @@ describe('TaskDetailSliceAction', () => {
 
     it('should propagate error, mark saveStatus failed, refresh, and toast on failure', async () => {
       const { mutate } = await import('@/libs/swr');
-      const { toast } = await import('@lobehub/ui/base-ui');
+      const { toast } = await import('@/components/toast');
       useTaskStore.setState({
         taskDetailMap: {
           'T-1': { identifier: 'T-1', instruction: 'Test', status: 'backlog' },
@@ -419,7 +471,7 @@ describe('TaskDetailSliceAction', () => {
 
     it('should reload retry content after an editor autosave failure rolls back', async () => {
       const { mutate } = await import('@/libs/swr');
-      const { toast } = await import('@lobehub/ui/base-ui');
+      const { toast } = await import('@/components/toast');
       useTaskStore.setState({
         activeTaskId: 'T-1',
         taskDetailMap: {
@@ -623,6 +675,80 @@ describe('TaskDetailSliceAction', () => {
       // Returning to T-1 still reflects its own failed save.
       useTaskStore.getState().setActiveTaskId('T-1');
       expect(taskDetailSelectors.taskSaveStatus(useTaskStore.getState())).toBe('failed');
+    });
+  });
+
+  describe('handoffTask', () => {
+    it('reports and rejects a failed ownership lookup so confirmation can retry', async () => {
+      const error = new Error('offline');
+      vi.mocked(taskService.find).mockRejectedValue(error);
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow('offline');
+      expect(toast.error).toHaveBeenCalled();
+      expect(taskService.handoff).not.toHaveBeenCalled();
+    });
+
+    it('reports a missing task instead of silently resolving the transfer', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({ data: null } as any);
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow();
+      expect(toast.error).toHaveBeenCalled();
+      expect(taskService.handoff).not.toHaveBeenCalled();
+    });
+
+    it('forwards the row id and domainRevision to taskService.handoff, then refreshes', async () => {
+      useTaskStore.setState({
+        taskDetailMap: {
+          'T-1': {
+            agentId: 'agt_A',
+            identifier: 'T-1',
+            instruction: 'x',
+            status: 'running',
+          },
+        },
+      });
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 9, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.handoff).mockResolvedValue({} as any);
+
+      await useTaskStore.getState().handoffTask('T-1', 'agt_B');
+
+      expect(taskService.handoff).toHaveBeenCalledWith({
+        expectedDomainRevision: 9,
+        fromAgentId: 'agt_A',
+        taskId: 'task-uuid-1',
+        toAgentId: 'agt_B',
+      });
+      const { mutate } = await import('@/libs/swr');
+      expect(mutate).toHaveBeenCalled();
+    });
+
+    it('resolves the incumbent agent from the row when the detail record is not loaded', async () => {
+      // Subtask-row selectors hand off while only the parent's detail is in
+      // the map — fromAgentId must come from the fetched row, not null.
+      useTaskStore.setState({ taskDetailMap: {} });
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { assigneeAgentId: 'agt_incumbent', domainRevision: 4, id: 'task-uuid-2' },
+      } as any);
+      vi.mocked(taskService.handoff).mockResolvedValue({} as any);
+
+      await useTaskStore.getState().handoffTask('T-sub', 'agt_B');
+
+      expect(taskService.handoff).toHaveBeenCalledWith(
+        expect.objectContaining({ fromAgentId: 'agt_incumbent' }),
+      );
+    });
+
+    it('rejects without refreshing when the handoff CAS is rejected', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 3, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.handoff).mockRejectedValue(new Error('TASK_REVISION_CONFLICT'));
+
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow(
+        'TASK_REVISION_CONFLICT',
+      );
+      const { mutate } = await import('@/libs/swr');
+      expect(mutate).not.toHaveBeenCalled();
     });
   });
 

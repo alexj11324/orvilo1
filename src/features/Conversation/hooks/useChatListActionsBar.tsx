@@ -1,4 +1,3 @@
-import { type ActionIconGroupItemType } from '@lobehub/ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { css, cx } from 'antd-style';
 import {
@@ -19,6 +18,7 @@ import {
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { type ActionIconGroupItemType } from '@/components/ItemsMenu';
 import { localeOptions } from '@/locales/resources';
 
 const translateStyle = css`

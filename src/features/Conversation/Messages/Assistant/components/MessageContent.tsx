@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { LOADING_FLAT } from '@orvilo/const';
 import { type UIChatMessage } from '@orvilo/types';
 import { memo } from 'react';
@@ -36,7 +35,7 @@ const MessageContent = memo<UIChatMessage>(
     if (isCollapsed) return <CollapsedMessage content={content} id={id} />;
 
     return (
-      <Flexbox gap={8} id={id}>
+      <div className="flex flex-col gap-2" id={id}>
         {drawer}
         {showSearch && (
           <SearchGrounding
@@ -59,7 +58,7 @@ const MessageContent = memo<UIChatMessage>(
           tempDisplayContent={metadata?.tempDisplayContent}
         />
         {showImageItems && <ImageFileListViewer items={imageList} />}
-      </Flexbox>
+      </div>
     );
   },
 );

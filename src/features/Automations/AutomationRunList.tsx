@@ -1,5 +1,3 @@
-import { Empty, Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
@@ -8,9 +6,12 @@ import { BotMessageSquare, MessageSquareIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors } from '@/store/task/selectors';
 
+import { useTaskDetailSelector } from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import RunStatusBadge from './RunStatusBadge';
 import { runDuration, runTriggerLabel } from './shared';
 
@@ -64,24 +65,22 @@ const RunRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
 
   return (
     <div className={styles.row} onClick={open}>
-      <Text ellipsis fontSize={13} weight={500}>
+      <div className="truncate min-w-0 text-[13px] font-medium">
         {activity.title || t(`run_source.${runTriggerLabel(activity.trigger)}`)}
-      </Text>
-      <Text fontSize={12} type={'secondary'}>
+      </div>
+      <div className="text-[12px] text-muted-foreground">
         {t(`run_source.${runTriggerLabel(activity.trigger)}`)}
-      </Text>
-      <Text
-        ellipsis
-        fontSize={12}
+      </div>
+      <div
+        className="truncate min-w-0 text-[12px] text-muted-foreground"
         title={activity.time ? dayjs(activity.time).format('LLL') : undefined}
-        type={'secondary'}
       >
         {activity.time ? dayjs(activity.time).fromNow() : '—'}
-      </Text>
+      </div>
       <RunStatusBadge status={activity.status} />
-      <Text fontSize={12} type={'secondary'}>
+      <div className="text-[12px] text-muted-foreground">
         {runDuration(activity.time, activity.completedAt)}
-      </Text>
+      </div>
       <ActionIcon
         icon={MessageSquareIcon}
         size={'small'}
@@ -98,7 +97,7 @@ const RunRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
 /** Run-history table for one automation — the detail page's "Runs" tab. */
 const AutomationRunList = memo(() => {
   const { t } = useTranslation('automation');
-  const activities = useTaskStore(taskActivitySelectors.activeTaskActivities);
+  const activities = useTaskDetailSelector(taskActivitySelectors.taskActivities);
 
   const runs = useMemo(
     () =>
@@ -114,16 +113,19 @@ const AutomationRunList = memo(() => {
 
   if (runs.length === 0) {
     return (
-      <Empty
-        description={t('run_history.no_matches')}
-        icon={BotMessageSquare}
-        style={{ marginTop: 16 }}
-      />
+      <Empty style={{ marginTop: 16 }}>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <BotMessageSquare />
+          </EmptyMedia>
+          <EmptyDescription>{t('run_history.no_matches')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
   return (
-    <Flexbox paddingBlock={8}>
+    <div className="flex flex-col py-2">
       <div className={styles.headerRow}>
         <span>{t('run_history.automation')}</span>
         <span>{t('run_history.trigger')}</span>
@@ -135,7 +137,7 @@ const AutomationRunList = memo(() => {
       {runs.map((activity) => (
         <RunRow activity={activity} key={activity.id} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

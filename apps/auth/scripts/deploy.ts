@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 
 const authRoot = resolve(__dirname, '..');
 const repoRoot = resolve(authRoot, '../..');
+const cloudflareRoot = resolve(authRoot, 'cf');
 const assetsDir = resolve(authRoot, 'build/client/assets');
 
 // A host repo that builds this app from a submodule keeps its own .env; it
@@ -30,9 +31,16 @@ async function main() {
 
   if (!existsSync(assetsDir)) throw new Error(`Build output not found at ${assetsDir}`);
 
-  console.log('\n=== Step 2: Deploy worker ===');
-  execSync('node_modules/.bin/wrangler deploy', {
-    cwd: authRoot,
+  console.log('\n=== Step 2: Build Cloudflare output ===');
+  execFileSync('node_modules/.bin/cf', ['build'], {
+    cwd: cloudflareRoot,
+    env: { ...process.env, NODE_ENV: 'production' },
+    stdio: 'inherit',
+  });
+
+  console.log('\n=== Step 3: Deploy worker ===');
+  execFileSync('node_modules/.bin/cf', ['deploy', '--prebuilt'], {
+    cwd: cloudflareRoot,
     stdio: 'inherit',
   });
 

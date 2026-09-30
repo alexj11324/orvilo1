@@ -1,27 +1,24 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button as BaseButton,
-  Button,
-  createModal,
-  Select,
-  Tag,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import {
   HETEROGENEOUS_TYPE_LABELS,
   type RemoteHeterogeneousAgentType,
 } from '@orvilo/heterogeneous-agents';
 import type { HeterogeneousProviderConfig } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { t as i18nT } from 'i18next';
 import { BotIcon, CheckCircle2, MonitorSmartphone, RefreshCw, XCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
+import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { Button as BaseButton, Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { deviceService } from '@/services/device';
 import { useAgentStore } from '@/store/agent';
@@ -121,6 +118,20 @@ const ChangeDeviceContent = memo<ChangeDeviceContentProps>(
         d.online && (!isWorkspaceAgent || (d.scope === 'workspace' && d.visibility === 'public')),
     );
 
+    const deviceOptions = onlineDevices.map((d) => ({
+      label: (
+        <div className={styles.deviceItem}>
+          <BotIcon size={14} />
+          <span>{d.hostname}</span>
+          <Badge style={{ marginInlineEnd: 0 }} variant="success-light">
+            {t('platformAgentConfig.device.online')}
+          </Badge>
+        </div>
+      ),
+      title: d.hostname || d.deviceId,
+      value: d.deviceId,
+    }));
+
     const checkCapability = useCallback(
       async (deviceId: string) => {
         setCheckingCapability(true);
@@ -141,7 +152,8 @@ const ChangeDeviceContent = memo<ChangeDeviceContentProps>(
     );
 
     const handleDeviceSelect = useCallback(
-      (dId: string) => {
+      (dId: string | null) => {
+        if (dId === null) return;
         setSelectedDeviceId(dId);
         void checkCapability(dId);
       },
@@ -163,63 +175,58 @@ const ChangeDeviceContent = memo<ChangeDeviceContentProps>(
     const capabilityBad = capabilityResult?.available === false;
 
     return (
-      <Flexbox gap={16}>
-        <Flexbox gap={12} paddingBlock={'12px 4px'}>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3" style={{ paddingBlock: '12px 4px' }}>
           <Select
-            loading={loadingDevices}
-            placeholder={t('platformAgentConfig.selectDevice')}
-            style={{ width: '100%' }}
+            disabled={loadingDevices}
+            items={selectItems(deviceOptions)}
             value={selectedDeviceId}
-            options={onlineDevices.map((d) => ({
-              label: (
-                <div className={styles.deviceItem}>
-                  <Icon icon={BotIcon} size={14} />
-                  <span>{d.hostname}</span>
-                  <Tag color="success" style={{ marginInlineEnd: 0 }}>
-                    {t('platformAgentConfig.device.online')}
-                  </Tag>
-                </div>
-              ),
-              value: d.deviceId,
-            }))}
-            onChange={handleDeviceSelect}
-          />
+            onValueChange={(value) => {
+              if (value) handleDeviceSelect(value);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t('platformAgentConfig.selectDevice')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectOptionItems options={deviceOptions} />
+            </SelectContent>
+          </Select>
           {checkingCapability && (
-            <Tag style={{ marginInlineEnd: 0 }}>
+            <Badge style={{ marginInlineEnd: 0 }} variant="primary-light">
               {t('platformAgentConfig.availability.checking')}
-            </Tag>
+            </Badge>
           )}
           {capabilityOk && (
-            <Flexbox horizontal align="center" gap={4}>
-              <Icon color="var(--ant-color-success)" icon={CheckCircle2} size={14} />
-              <Tag color="success" style={{ marginInlineEnd: 0 }}>
+            <div className="flex items-center gap-1">
+              <CheckCircle2 color="var(--ant-color-success)" size={14} />
+              <Badge style={{ marginInlineEnd: 0 }} variant="success-light">
                 {capabilityResult?.version ?? t('platformAgentConfig.availability.available')}
-              </Tag>
-            </Flexbox>
+              </Badge>
+            </div>
           )}
           {capabilityBad && (
-            <Flexbox horizontal align="center" gap={4}>
-              <Icon color="var(--ant-color-error)" icon={XCircle} size={14} />
-              <Tag color="error" style={{ marginInlineEnd: 0 }}>
+            <div className="flex items-center gap-1">
+              <XCircle color="var(--ant-color-error)" size={14} />
+              <Badge style={{ marginInlineEnd: 0 }} variant="destructive-light">
                 {t('platformAgentConfig.availability.notInstalled')}
-              </Tag>
-            </Flexbox>
+              </Badge>
+            </div>
           )}
-        </Flexbox>
-        <Flexbox horizontal gap={8} justify={'flex-end'}>
-          <BaseButton disabled={saving} onClick={close}>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <BaseButton disabled={saving} variant="outline" onClick={close}>
             {t('cancel', { ns: 'common' })}
           </BaseButton>
           <BaseButton
             disabled={!selectedDeviceId || checkingCapability || capabilityBad}
             loading={saving}
-            type={'primary'}
             onClick={handleSave}
           >
             {t('platformAgentConfig.changeDevice')}
           </BaseButton>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -321,107 +328,123 @@ const RemoteAgentConfigCard = memo<RemoteAgentConfigCardProps>(
     const renderAvailability = () => {
       if (!boundDeviceId) {
         return (
-          <Tag style={{ marginInlineEnd: 0 }}>{t('platformAgentConfig.availability.noDevice')}</Tag>
+          <Badge style={{ marginInlineEnd: 0 }} variant="primary-light">
+            {t('platformAgentConfig.availability.noDevice')}
+          </Badge>
         );
       }
       if (!boundDevice?.online) {
         return (
-          <Tag color="warning" style={{ marginInlineEnd: 0 }}>
+          <Badge style={{ marginInlineEnd: 0 }} variant="warning-light">
             {t('platformAgentConfig.device.offline')}
-          </Tag>
+          </Badge>
         );
       }
       if (checkingCapability) {
         return (
-          <Tag style={{ marginInlineEnd: 0 }}>{t('platformAgentConfig.availability.checking')}</Tag>
+          <Badge style={{ marginInlineEnd: 0 }} variant="primary-light">
+            {t('platformAgentConfig.availability.checking')}
+          </Badge>
         );
       }
       if (!capabilityResult) return null;
       if (capabilityResult.available) {
         return (
-          <Flexbox horizontal align="center" gap={4}>
-            <Icon color="var(--ant-color-success)" icon={CheckCircle2} size={14} />
-            <Tag color="success" style={{ marginInlineEnd: 0 }}>
+          <div className="flex items-center gap-1">
+            <CheckCircle2 color="var(--ant-color-success)" size={14} />
+            <Badge style={{ marginInlineEnd: 0 }} variant="success-light">
               {capabilityResult.version ?? t('platformAgentConfig.availability.available')}
-            </Tag>
-          </Flexbox>
+            </Badge>
+          </div>
         );
       }
       return (
-        <Flexbox horizontal align="center" gap={4}>
-          <Icon color="var(--ant-color-error)" icon={XCircle} size={14} />
-          <Tag color="error" style={{ marginInlineEnd: 0 }}>
+        <div className="flex items-center gap-1">
+          <XCircle color="var(--ant-color-error)" size={14} />
+          <Badge style={{ marginInlineEnd: 0 }} variant="destructive-light">
             {t('platformAgentConfig.availability.notInstalled')}
-          </Tag>
-        </Flexbox>
+          </Badge>
+        </div>
       );
     };
 
     return (
-      <Flexbox className={styles.card} gap={0}>
+      <div className={cn('flex flex-col gap-0', styles.card)}>
         <div className={styles.cardHeader}>
-          <Flexbox horizontal align="center" gap={8}>
-            <Icon icon={MonitorSmartphone} size={16} />
-            <Text strong className={styles.title}>
+          <div className="flex items-center gap-2">
+            <MonitorSmartphone size={16} />
+            <div className={cn('font-semibold', styles.title)}>
               {t('platformAgentConfig.title')}
-            </Text>
-          </Flexbox>
-          <Tooltip title={t('platformAgentConfig.redetect')}>
-            <ActionIcon
-              aria-label={t('platformAgentConfig.redetect')}
-              disabled={!boundDeviceId || checkingCapability}
-              icon={RefreshCw}
-              loading={checkingCapability}
-              size="small"
-              onClick={() => boundDeviceId && void checkCapability(boundDeviceId)}
-            />
-          </Tooltip>
+            </div>
+          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <ActionIcon
+                      aria-label={t('platformAgentConfig.redetect')}
+                      disabled={!boundDeviceId || checkingCapability}
+                      icon={RefreshCw}
+                      loading={checkingCapability}
+                      size="small"
+                      onClick={() => boundDeviceId && void checkCapability(boundDeviceId)}
+                    />
+                  </span>
+                }
+              />
+              <TooltipContent>{t('platformAgentConfig.redetect')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div className={styles.detailList}>
           <div className={styles.detailRow}>
-            <Text className={styles.detailLabel}>{t('platformAgentConfig.platform.label')}</Text>
+            <div className={styles.detailLabel}>{t('platformAgentConfig.platform.label')}</div>
             <div className={styles.detailContent}>
-              <Tag style={{ marginInlineEnd: 0 }}>{platformName}</Tag>
+              <Badge style={{ marginInlineEnd: 0 }} variant="primary-light">
+                {platformName}
+              </Badge>
             </div>
           </div>
           <div className={styles.detailRow}>
-            <Text className={styles.detailLabel}>{t('platformAgentConfig.device.label')}</Text>
+            <div className={styles.detailLabel}>{t('platformAgentConfig.device.label')}</div>
             <div className={styles.detailContent}>
               {boundDevice ? (
-                <Flexbox horizontal align="center" gap={6}>
-                  <Text ellipsis style={{ fontSize: 14 }}>
+                <div className="flex items-center gap-1.5">
+                  <div className="truncate" style={{ fontSize: 14 }}>
                     {boundDevice.hostname}
-                  </Text>
-                  <Tag
+                  </div>
+                  <Badge
                     color={boundDevice.online ? 'success' : 'default'}
                     style={{ marginInlineEnd: 0 }}
+                    variant="primary-light"
                   >
                     {boundDevice.online
                       ? t('platformAgentConfig.device.online')
                       : t('platformAgentConfig.device.offline')}
-                  </Tag>
-                </Flexbox>
+                  </Badge>
+                </div>
               ) : (
-                <Tag style={{ marginInlineEnd: 0 }}>{t('platformAgentConfig.device.none')}</Tag>
+                <Badge style={{ marginInlineEnd: 0 }} variant="primary-light">
+                  {t('platformAgentConfig.device.none')}
+                </Badge>
               )}
             </div>
           </div>
           <div className={styles.detailRow}>
-            <Text className={styles.detailLabel}>
-              {t('platformAgentConfig.availability.label')}
-            </Text>
+            <div className={styles.detailLabel}>{t('platformAgentConfig.availability.label')}</div>
             <div className={styles.detailContent}>{renderAvailability()}</div>
           </div>
           <div className={styles.detailRow}>
             <div className={styles.detailLabel} />
             <div className={styles.detailContent}>
-              <Button size="small" onClick={handleOpenChangeDevice}>
+              <Button size="sm" variant="outline" onClick={handleOpenChangeDevice}>
                 {t('platformAgentConfig.changeDevice')}
               </Button>
             </div>
           </div>
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

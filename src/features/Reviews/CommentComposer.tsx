@@ -1,8 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 
-import TextArea from '@/components/TextArea';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { WriteOutcome } from './types';
 
@@ -20,24 +19,22 @@ const CommentComposer = memo<{
   // retry replays the same intent-derived operationId instead of double-posting.
   const [unconfirmed, setUnconfirmed] = useState(false);
   return (
-    <Flexbox gap={8}>
-      <TextArea
+    <div className="flex flex-col gap-2">
+      <Textarea
         disabled={disabled}
         placeholder={placeholder}
         rows={3}
         value={body}
-        onChange={setBody}
+        onChange={(e) => setBody(e.target.value)}
       />
       {unconfirmed && unknownHint ? (
-        <Text fontSize={12} type={'warning'}>
-          {unknownHint}
-        </Text>
+        <div className="text-[12px] text-warning">{unknownHint}</div>
       ) : null}
-      <Flexbox horizontal justify={'flex-end'}>
+      <div className="flex justify-end">
         <Button
           disabled={disabled || !body.trim()}
           loading={submitting}
-          size={'small'}
+          size="sm"
           onClick={async () => {
             setSubmitting(true);
             const outcome = await onSubmit(body.trim());
@@ -48,8 +45,8 @@ const CommentComposer = memo<{
         >
           {submitLabel}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -1,11 +1,18 @@
 'use client';
 
-import { Accordion, AccordionItem, Flexbox, Tooltip } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { highlightTextStyles } from '@/styles';
 
 import type { MemoryEntity } from './memoryArgs';
@@ -91,16 +98,15 @@ interface MemorySectionProps {
 
 /** A labelled block below the header, e.g. `Description`, `Narrative`, `Evidence`. */
 export const MemorySection = memo<MemorySectionProps>(({ children, title, tone = 'primary' }) => (
-  <Flexbox
-    className={memoryCardStyles.section}
-    gap={8}
+  <div
+    className={cn('flex', 'flex-col', 'gap-2', memoryCardStyles.section)}
     style={{ paddingBlock: 16, paddingInline: 12 }}
   >
-    <Text fontSize={12} weight={500}>
+    <div className="text-[12px] font-medium">
       <span className={highlightTextStyles[tone]}>{title}</span>
-    </Text>
+    </div>
     {children}
-  </Flexbox>
+  </div>
 ));
 
 MemorySection.displayName = 'MemorySection';
@@ -111,26 +117,27 @@ interface EntityChipsProps {
 
 /** People, places, and things involved in a memory, as compact chips. */
 export const EntityChips = memo<EntityChipsProps>(({ entities }) => (
-  <Flexbox horizontal gap={8} wrap={'wrap'}>
+  <div className="flex gap-2 flex-wrap">
     {entities.map((entity, index) => {
       const chip = (
-        <Flexbox horizontal align={'center'} className={memoryCardStyles.chip} gap={6} key={index}>
+        <div className={cn('flex', 'items-center', 'gap-[6px]', memoryCardStyles.chip)} key={index}>
           <span>{(entity.type && ENTITY_ICONS[entity.type]) || FALLBACK_ENTITY_ICON}</span>
           <span>{entity.name}</span>
           {entity.type && <span className={memoryCardStyles.chipType}>{entity.type}</span>}
-        </Flexbox>
+        </div>
       );
 
       // `extra` is raw JSON metadata — keep it out of the chip, on hover only
       return entity.extra ? (
-        <Tooltip key={index} title={entity.extra}>
-          {chip}
+        <Tooltip key={index}>
+          <TooltipTrigger render={chip} />
+          <TooltipContent>{entity.extra}</TooltipContent>
         </Tooltip>
       ) : (
         chip
       );
     })}
-  </Flexbox>
+  </div>
 ));
 
 EntityChips.displayName = 'EntityChips';
@@ -149,31 +156,24 @@ export const SummaryAccordion = memo<SummaryAccordionProps>(({ details, summary,
   if (!summary && tags.length === 0) return null;
 
   return (
-    <Accordion gap={0}>
-      <AccordionItem
-        itemKey="summary"
-        paddingBlock={8}
-        paddingInline={8}
-        styles={{
-          base: { marginBlock: 4, marginInline: 4 },
-        }}
-        title={
-          <Text fontSize={12} type={'secondary'} weight={500}>
-            Summary
-          </Text>
-        }
-      >
-        <Flexbox gap={8} paddingBlock={'8px 12px'} paddingInline={8}>
-          {summary && <div className={memoryCardStyles.summary}>{summary}</div>}
-          {details && <div className={memoryCardStyles.detail}>{details}</div>}
-          {tags.length > 0 && (
-            <Flexbox horizontal className={memoryCardStyles.tags} gap={8} wrap={'wrap'}>
-              {tags.map((tag, index) => (
-                <Tag key={index}>{tag}</Tag>
-              ))}
-            </Flexbox>
-          )}
-        </Flexbox>
+    <Accordion>
+      <AccordionItem value="summary">
+        <AccordionTrigger>
+          <div className="text-[12px] text-muted-foreground font-medium">Summary</div>
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="flex flex-col gap-2 px-2" style={{ paddingBlock: '8px 12px' }}>
+            {summary && <div className={memoryCardStyles.summary}>{summary}</div>}
+            {details && <div className={memoryCardStyles.detail}>{details}</div>}
+            {tags.length > 0 && (
+              <div className={cn('flex', 'gap-2', 'flex-wrap', memoryCardStyles.tags)}>
+                {tags.map((tag, index) => (
+                  <Badge key={index}>{tag}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </AccordionContent>
       </AccordionItem>
     </Accordion>
   );

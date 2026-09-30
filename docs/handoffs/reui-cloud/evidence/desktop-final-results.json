@@ -1,0 +1,24 @@
+{
+  "collapsedPersistsReload": true,
+  "drawers": [
+    {
+      "desktopExpanded": true,
+      "openCloseReopen": true,
+      "settingsContent": true,
+      "restored": true
+    },
+    {
+      "desktopExpanded": false,
+      "openCloseReopen": true,
+      "settingsContent": true,
+      "restored": true
+    }
+  ],
+  "keyboardExpandFocusType": true,
+  "platform": "desktop",
+  "revision": "15466979a6320f531071a6eca272bae4962d3d90",
+  "url": "app://renderer/settings/profile",
+  "workspaceMenu": "Organizations\nA\nAgent Testing User's workspace\nAccount\nAccount\nDocumentation\nWorkspace Settings\nmod\ncomma\nGet App\nTheme\nSign Out",
+  "workspaceReloadRoute": "app://renderer/settings/profile",
+  "workspaceSelectedRoute": "app://renderer/settings/profile"
+}

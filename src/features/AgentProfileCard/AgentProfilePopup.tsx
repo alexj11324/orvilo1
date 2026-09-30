@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Popover } from '@lobehub/ui';
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
+import { PreviewCard } from '@base-ui/react/preview-card';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName, type AgentItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -10,8 +9,12 @@ import { memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import ActionIcon from '@/components/ActionIcon';
 import { ModelIcon } from '@/components/OrviloIcons';
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -114,45 +117,43 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
     const footerLoading = canConfigure && !groupId && isLoading && !fetched;
 
     const modelSection = footerLoading ? (
-      <Flexbox horizontal align={'center'} className={styles.footer} gap={14}>
-        <Skeleton height={16} width={90} />
-        <Skeleton height={16} width={60} />
-      </Flexbox>
+      <div className={`flex items-center gap-3.5 ${styles.footer}`}>
+        <Skeleton style={{ height: 16, width: 90 }} />
+        <Skeleton style={{ height: 16, width: 60 }} />
+      </div>
     ) : canConfigure && (merged.model || hasStats) ? (
-      <Flexbox horizontal align={'center'} className={styles.footer} gap={14} wrap={'wrap'}>
+      <div className={`flex items-center gap-3.5 flex-wrap ${styles.footer}`}>
         {merged.model && (
-          <Flexbox horizontal align={'center'} className={styles.statItem} gap={6}>
+          <div className={`flex items-center gap-1.5 ${styles.statItem}`}>
             <ModelIcon model={merged.model} size={14} />
-            <Text fontSize={12} type={'secondary'}>
-              {merged.model}
-            </Text>
-          </Flexbox>
+            <div className="text-[12px] text-muted-foreground">{merged.model}</div>
+          </div>
         )}
         {pluginCount > 0 && (
-          <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
-            <Icon icon={SkillsIcon} size={13} />
-            <Text fontSize={12} type={'secondary'}>
+          <div className={`flex items-center gap-1 ${styles.statItem}`}>
+            <SkillsIcon size={13} />
+            <div className="text-[12px] text-muted-foreground">
               {t('agentProfile.skills', { count: pluginCount })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         )}
         {knowledgeCount > 0 && (
-          <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
-            <Icon icon={BookOpen} size={13} />
-            <Text fontSize={12} type={'secondary'}>
+          <div className={`flex items-center gap-1 ${styles.statItem}`}>
+            <BookOpen size={13} />
+            <div className="text-[12px] text-muted-foreground">
               {t('agentProfile.knowledgeBases', { count: knowledgeCount })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         )}
         {fileCount > 0 && (
-          <Flexbox horizontal align={'center'} className={styles.statItem} gap={4}>
-            <Icon icon={FileText} size={13} />
-            <Text fontSize={12} type={'secondary'}>
+          <div className={`flex items-center gap-1 ${styles.statItem}`}>
+            <FileText size={13} />
+            <div className="text-[12px] text-muted-foreground">
               {t('agentProfile.files', { count: fileCount })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         )}
-      </Flexbox>
+      </div>
     ) : null;
 
     const content = showSkeleton ? (
@@ -168,14 +169,14 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         title={agentDisplayName(merged, t('defaultSession', { ns: 'common' }))}
         headerAction={
           groupId && canConfigure ? (
-            <Flexbox horizontal align="center" justify="flex-end" style={{ paddingBlockStart: 0 }}>
+            <div className="flex items-center justify-end" style={{ paddingBlockStart: 0 }}>
               <ActionIcon
                 icon={Settings}
                 size="small"
                 title={t('groupSidebar.agentProfile.settings')}
                 onClick={handleSettings}
               />
-            </Flexbox>
+            </div>
           ) : undefined
         }
         onHeaderClick={canConfigure ? handleHeaderClick : undefined}
@@ -184,20 +185,30 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
       </AgentProfileCard>
     );
 
+    if (trigger === 'hover')
+      return (
+        <PreviewCard.Root open={open} onOpenChange={setOpen}>
+          <PreviewCard.Trigger render={<span>{children}</span>} />
+          <PreviewCard.Portal>
+            <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
+              <PreviewCard.Popup
+                className={
+                  'w-auto overflow-hidden rounded-xl bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
+                }
+              >
+                {content}
+              </PreviewCard.Popup>
+            </PreviewCard.Positioner>
+          </PreviewCard.Portal>
+        </PreviewCard.Root>
+      );
+
     return (
-      <Popover
-        classNames={trigger === 'click' ? { trigger: styles.trigger } : undefined}
-        content={content}
-        nativeButton={false}
-        open={open}
-        placement={trigger === 'hover' ? 'top' : 'right'}
-        trigger={trigger}
-        styles={{
-          content: { borderRadius: 12, overflow: 'hidden', padding: 0 },
-        }}
-        onOpenChange={setOpen}
-      >
-        {children}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger render={<span className={styles.trigger}>{children}</span>} />
+        <PopoverContent className={'w-auto overflow-hidden rounded-xl p-0'} side={'right'}>
+          {content}
+        </PopoverContent>
       </Popover>
     );
   },

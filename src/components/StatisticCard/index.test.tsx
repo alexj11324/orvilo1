@@ -1,29 +1,9 @@
-import type { BlockProps } from '@lobehub/ui';
 import { render, screen } from '@testing-library/react';
-import type { ComponentType } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import StatisticCard from './index';
 
-const blockPropsSpy = vi.hoisted(() => vi.fn());
-
-vi.mock('@lobehub/ui', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  const ActualBlock = actual.Block as ComponentType<BlockProps>;
-  return {
-    ...actual,
-    Block: (props: BlockProps) => {
-      blockPropsSpy(props);
-      return <ActualBlock {...props} />;
-    },
-  };
-});
-
 describe('StatisticCard', () => {
-  beforeEach(() => {
-    blockPropsSpy.mockClear();
-  });
-
   it('renders title and formatted value with prefix, suffix and precision', () => {
     render(
       <StatisticCard
@@ -87,8 +67,8 @@ describe('StatisticCard', () => {
     });
   });
 
-  it('passes variant and padding props through to Block', () => {
-    render(
+  it('applies variant and padding styles to the root', () => {
+    const { container } = render(
       <StatisticCard
         padding={24}
         paddingBlock={8}
@@ -98,19 +78,16 @@ describe('StatisticCard', () => {
       />,
     );
 
-    expect(blockPropsSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        padding: 24,
-        paddingBlock: 8,
-        paddingInline: 16,
-        variant: 'outlined',
-      }),
-    );
+    const root = container.firstElementChild as HTMLElement;
+    expect(root).toHaveStyle({ padding: '24px' });
+    expect(root.style.paddingBlock).toBe('8px');
+    expect(root.style.paddingInline).toBe('16px');
+    expect(root.style.border).not.toBe('');
   });
 
   it('defaults to the borderless variant', () => {
-    render(<StatisticCard title="T" />);
+    const { container } = render(<StatisticCard title="T" />);
 
-    expect(blockPropsSpy).toHaveBeenCalledWith(expect.objectContaining({ variant: 'borderless' }));
+    expect((container.firstElementChild as HTMLElement).style.border).toBe('');
   });
 });

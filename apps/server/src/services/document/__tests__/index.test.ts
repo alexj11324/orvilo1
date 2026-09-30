@@ -13,7 +13,9 @@ import { publishResourceEvent } from '../../resourceEvents';
 import { DocumentHistoryService } from '../history';
 import { DocumentService } from '../index';
 
-vi.mock('@/server/modules/AgentExecution/redis', () => ({ getAgentRuntimeRedisClient: () => null }));
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
+  getAgentRuntimeRedisClient: () => null,
+}));
 vi.mock('@/database/models/document');
 vi.mock('@/database/models/file');
 vi.mock('@/database/models/knowledgeBase');
@@ -112,6 +114,7 @@ describe('DocumentService', () => {
       query: vi.fn(),
       update: vi.fn(),
     };
+    mockDocumentModel.findWritableById = vi.fn((id: string) => mockDocumentModel.findById(id));
 
     mockDocumentHistoryService = {
       compareDocumentHistoryItems: vi.fn(),
@@ -1323,6 +1326,29 @@ describe('DocumentService', () => {
         visibility: 'public',
         workspaceId: 'ws-1',
       });
+    });
+
+    it('does not grant an edit lock for a readable team Page without team write access', async () => {
+      const wsService = new DocumentService(mockDb, userId, 'ws-1');
+      mockDocumentModel.findById.mockResolvedValue({
+        id: 'doc-1',
+        teamId: 'team-1',
+        visibility: 'team',
+        workspaceId: 'ws-1',
+      });
+      mockDocumentModel.findWritableById.mockResolvedValue(undefined);
+      const acquireSpy = vi.spyOn(EditLockService.prototype, 'acquire');
+
+      await expect(wsService.acquireDocumentLock('doc-1')).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(wsService.getDocumentLock('doc-1')).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(wsService.runWithDocumentLock('doc-1', vi.fn())).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      expect(acquireSpy).not.toHaveBeenCalled();
     });
 
     it('acquireDocumentLock reports unlocked for private-visibility documents', async () => {

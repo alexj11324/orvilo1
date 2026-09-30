@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -31,12 +31,9 @@ export const RefreshError = memo<RefreshErrorProps>(({ error, onRetry, retrying 
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
+    <div
       aria-live={'polite'}
-      className={styles.row}
-      justify={'center'}
+      className={cn('flex items-center justify-center', styles.row)}
       role={'status'}
     >
       <AsyncError
@@ -46,7 +43,7 @@ export const RefreshError = memo<RefreshErrorProps>(({ error, onRetry, retrying 
         variant={'inline'}
         onRetry={onRetry}
       />
-    </Flexbox>
+    </div>
   );
 });
 

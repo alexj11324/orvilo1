@@ -51,6 +51,10 @@ pnpm --filter @orvilo/server dev
 `dev:spa` 启动后终端会打印一个 **Debug Proxy** URL。打开它会把你的本地开发服务器
 加载进线上环境，从而在真实服务端配置下获得 HMR。
 
+Cloudflare 账户操作是可选流程。新版 `cf` CLI 需要 Node.js 22 或更高版本；使用
+`npm install --global cf` 安装，再运行 `cf auth login` 登录。此仓库当前的发布流程见
+[Cloudflare Worker 部署说明](docs/environments.md)。
+
 ### 质量检查
 
 ```bash

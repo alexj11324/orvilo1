@@ -1,0 +1,22 @@
+---
+title: OAuth Connections Now Converge to a Terminal State
+description: >-
+  Every OAuth popup flow — GitHub, custom connectors, and Linear — now settles
+  into an explicit success, failure, timed-out, or cancelled state, correlates
+  each result to the exact authorization attempt, and re-checks the server when
+  a result message is lost.
+tags:
+  - Connectors
+  - Linear
+---
+
+# OAuth Connections Now Converge to a Terminal State
+
+Connecting GitHub, a custom MCP connector, or a Linear workspace could leave the UI spinning forever: a two-minute timer only stopped polling, a closed popup sometimes left the button stuck on "connecting", and a late or foreign result message could settle the wrong attempt. Every authorization flow now shares one session protocol with an explicit terminal state, per-attempt identity, and a server status re-check.
+
+## Fixes
+
+- **Timeouts end the wait instead of hiding it.** When the authorization deadline passes, the Connect button exits "connecting", shows a timed-out warning, and turns into a "Check status" / retry action. The GitHub flow previously only cleared its poll interval and could stay stuck indefinitely.
+- **Results are bound to their attempt.** Each authorization mints a nonce that travels through the start call, the server's OAuth state, and the callback's postMessage. Messages without that attempt — stale results from an older try, or foreign postMessage traffic — are ignored instead of settling the session.
+- **A lost message no longer means a lost grant.** If the result postMessage never arrives (popup closed early or deadline hit), the app asks the server whether the authorization actually completed before declaring failure, so a finished connection still lands.
+- **One shared session protocol.** The GitHub connector, the custom-connector modal, the add-connector modal, and the Linear workspace install/import flows all use the same settle-once helper with popup source validation, cancellation, and listener/timer cleanup — the duplicated popup helpers are gone.

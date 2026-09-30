@@ -1,12 +1,11 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { PinIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
@@ -52,11 +51,9 @@ interface AgentListProps {
 
 // Same spec as the agent-detail SwitchPanel's section header.
 const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
-  <Flexbox className={styles.sectionHeader}>
-    <Text fontSize={12} type={'secondary'} weight={500}>
-      {children}
-    </Text>
-  </Flexbox>
+  <div className={cx(styles.sectionHeader, 'flex flex-col')}>
+    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
+  </div>
 ));
 
 const AgentList = memo<AgentListProps>(
@@ -72,14 +69,12 @@ const AgentList = memo<AgentListProps>(
       const isActive = row.id === activeAgentId;
 
       return (
-        <Block
-          clickable
-          horizontal
-          align={'center'}
-          className={`${styles.item} ${isActive ? styles.active : ''}`}
-          gap={8}
+        <div
           key={row.id}
-          variant={'borderless'}
+          className={cx(
+            `${styles.item} ${isActive ? styles.active : ''}`,
+            'flex items-center gap-2 cursor-pointer hover:bg-[var(--ant-color-fill-tertiary)]',
+          )}
           onClick={() => onSelect(row.id)}
         >
           <Avatar
@@ -89,18 +84,16 @@ const AgentList = memo<AgentListProps>(
             shape={'square'}
             size={24}
           />
-          <Text
-            ellipsis
-            color={isActive ? cssVar.colorText : cssVar.colorTextSecondary}
-            style={{ flex: 1 }}
-            weight={isActive ? 600 : 500}
+          <div
+            className="truncate font-[isActive ? 600 : 500]"
+            style={{ flex: 1, color: isActive ? cssVar.colorText : cssVar.colorTextSecondary }}
           >
             {row.title}
-          </Text>
+          </div>
           {row.pinned && (
             <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
           )}
-        </Block>
+        </div>
       );
     };
 
@@ -115,9 +108,8 @@ const AgentList = memo<AgentListProps>(
         loading={<SkeletonList rows={6} style={{ padding: 8 }} />}
         onRetry={onRetry}
       >
-        <Flexbox
-          className={styles.list}
-          gap={2}
+        <div
+          className={cx(styles.list, 'flex flex-col gap-0.5')}
           style={{ maxHeight: 360, overflowY: 'auto', width: '100%' }}
         >
           {showPrivateSection ? (
@@ -130,7 +122,7 @@ const AgentList = memo<AgentListProps>(
           ) : (
             [...workspaceRows, ...privateRows].map(renderRow)
           )}
-        </Flexbox>
+        </div>
       </AsyncBoundary>
     );
   },

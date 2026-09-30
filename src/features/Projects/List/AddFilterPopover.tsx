@@ -1,10 +1,8 @@
 'use client';
-
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, Popover, Text, Tooltip } from '@lobehub/ui/base-ui';
 import type { ProjectHealth, ProjectStatus } from '@orvilo/types';
 import { PROJECT_HEALTH_STATES, PROJECT_STATUSES } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { ParseKeys } from 'i18next';
 import {
   ALargeSmallIcon,
@@ -26,12 +24,16 @@ import {
   UsersRoundIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useMemo, useState } from 'react';
+import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
@@ -309,18 +311,18 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
     };
 
     const pickerShell = (title: string, children: ReactNode, onBack?: () => void) => (
-      <Flexbox className={styles.pickerPane} gap={2}>
+      <div className={cn('flex flex-col', styles.pickerPane)} style={{ gap: 2 }}>
         <button
           className={styles.backButton}
           type="button"
           onClick={onBack ?? (() => setView({ kind: 'menu' }))}
         >
-          <Icon icon={ArrowLeftIcon} size={14} />
+          <ArrowLeftIcon size={14} />
           {t('list.filter.back')}
         </button>
         <span className={styles.groupTitle}>{title}</span>
         {children}
-      </Flexbox>
+      </div>
     );
 
     const checkRow = (
@@ -337,9 +339,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
         type="button"
         onClick={onToggle}
       >
-        <span className={styles.rowCheck}>
-          {checked ? <Icon icon={CheckIcon} size={14} /> : null}
-        </span>
+        <span className={styles.rowCheck}>{checked ? <CheckIcon size={14} /> : null}</span>
         {icon}
         <span className={styles.menuRowLabel}>{label}</span>
       </button>
@@ -360,7 +360,6 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
             autoFocus
             aria-label={t('list.filter.searchMembers')}
             placeholder={t('list.filter.searchMembers')}
-            size="small"
             value={memberKeyword}
             onChange={(event) => setMemberKeyword(event.target.value)}
           />
@@ -368,17 +367,26 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
             toggleValues((values) => ({ type: kind, values }), selected, null),
           )}
           {membersLoading ? (
-            <Text fontSize={12} style={{ padding: '4px 8px' }} type="secondary">
+            <span
+              className="text-sm text-muted-foreground"
+              style={{ fontSize: 12, padding: '4px 8px' }}
+            >
               {t('list.lead.loading')}
-            </Text>
+            </span>
           ) : membersError ? (
-            <Text fontSize={12} style={{ padding: '4px 8px' }} type="secondary">
+            <span
+              className="text-sm text-muted-foreground"
+              style={{ fontSize: 12, padding: '4px 8px' }}
+            >
               {t('list.filter.membersError')}
-            </Text>
+            </span>
           ) : visible.length === 0 ? (
-            <Text fontSize={12} style={{ padding: '4px 8px' }} type="secondary">
+            <span
+              className="text-sm text-muted-foreground"
+              style={{ fontSize: 12, padding: '4px 8px' }}
+            >
               {t('list.lead.noMatches')}
-            </Text>
+            </span>
           ) : (
             visible.map((member) =>
               checkRow(
@@ -493,7 +501,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                       </span>
                     ) : null}
                   </span>
-                  <Icon color={cssVar.colorTextQuaternary} icon={ChevronRightIcon} size={14} />
+                  <ChevronRightIcon color={cssVar.colorTextQuaternary} size={14} />
                 </button>
               );
             }),
@@ -502,12 +510,11 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
         case 'text': {
           return pickerShell(
             t('list.filter.group.text'),
-            <Flexbox gap={8}>
+            <div className="flex flex-col" style={{ gap: 8 }}>
               <Input
                 autoFocus
                 aria-label={t('list.filter.textPlaceholder')}
                 placeholder={t('list.filter.textPlaceholder')}
-                size="small"
                 value={textDraft}
                 onChange={(event) => setTextDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -517,11 +524,11 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                   }
                 }}
               />
-              <Flexbox horizontal justify="flex-end">
+              <div className="flex flex-row" style={{ justifyContent: 'flex-end' }}>
                 <Button
                   disabled={!textDraft.trim()}
-                  size="small"
-                  type="primary"
+                  size="sm"
+                  variant="default"
                   onClick={() => {
                     applyFilter({ query: textDraft, type: 'text' });
                     setOpen(false);
@@ -529,8 +536,8 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                 >
                   {t('list.filter.apply')}
                 </Button>
-              </Flexbox>
-            </Flexbox>,
+              </div>
+            </div>,
           );
         }
         case 'projects': {
@@ -556,7 +563,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
     const pane = (() => {
       if (view.kind === 'ai') {
         return (
-          <Flexbox className={styles.aiPane} gap={8}>
+          <div className={cn('flex flex-col', styles.aiPane)} style={{ gap: 8 }}>
             <button
               className={styles.backButton}
               type="button"
@@ -565,15 +572,14 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                 setAiError(false);
               }}
             >
-              <Icon icon={ArrowLeftIcon} size={14} />
+              <ArrowLeftIcon size={14} />
               {t('list.filter.back')}
             </button>
             <Input
               autoFocus
+              aria-invalid={(aiError ? 'error' : undefined) === 'error' || undefined}
               aria-label={t('list.filter.aiPlaceholder')}
               placeholder={t('list.filter.aiPlaceholder')}
-              size="small"
-              status={aiError ? 'error' : undefined}
               value={aiText}
               onChange={(event) => {
                 setAiText(event.target.value);
@@ -583,10 +589,10 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                 if (event.key === 'Enter') submitAi();
               }}
             />
-            <Text fontSize={12} type="secondary">
+            <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
               {aiError ? t('list.filter.aiNoMatch') : t('list.filter.aiHint')}
-            </Text>
-          </Flexbox>
+            </span>
+          </div>
         );
       }
       if (view.kind === 'dateField') {
@@ -624,13 +630,12 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
         keyword ? t(`list.filter.group.${group.id}`).toLocaleLowerCase().includes(keyword) : true,
       );
       return (
-        <Flexbox className={styles.menu} gap={2}>
+        <div className={cn('flex flex-col', styles.menu)} style={{ gap: 2 }}>
           <div className={styles.searchWrap}>
             <Input
               autoFocus
               aria-label={t('list.filter.searchPlaceholder')}
               placeholder={t('list.filter.searchPlaceholder')}
-              size="small"
               value={menuKeyword}
               onChange={(event) => setMenuKeyword(event.target.value)}
             />
@@ -649,7 +654,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                 }
               }}
             >
-              <Icon color={cssVar.colorTextSecondary} icon={entry.icon} size={14} />
+              <entry.icon color={cssVar.colorTextSecondary} size={14} />
               <span className={styles.menuRowLabel}>{entry.label}</span>
             </button>
           ))}
@@ -662,37 +667,40 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                 type="button"
                 onClick={() => openGroup(group.id)}
               >
-                <Icon color={cssVar.colorTextSecondary} icon={GROUP_ICONS[group.id]} size={14} />
+                {createElement(GROUP_ICONS[group.id], {
+                  color: cssVar.colorTextSecondary,
+                  size: 14,
+                })}
                 <span className={styles.menuRowLabel}>{t(`list.filter.group.${group.id}`)}</span>
                 {group.supported ? (
-                  <Icon color={cssVar.colorTextQuaternary} icon={ChevronRightIcon} size={14} />
+                  <ChevronRightIcon color={cssVar.colorTextQuaternary} size={14} />
                 ) : null}
               </button>
             );
             return group.supported ? (
               row
             ) : (
-              <Tooltip key={group.id} title={t('list.filter.unavailable')}>
-                {/* Tooltip needs a mouse-event-capable child — disabled buttons swallow them. */}
-                <span style={{ display: 'flex' }}>{row}</span>
+              <Tooltip key={group.id}>
+                <TooltipTrigger render={<span style={{ display: 'flex' }}>{row}</span>} />
+                <TooltipContent>{t('list.filter.unavailable')}</TooltipContent>
               </Tooltip>
             );
           })}
           {groups.length === 0 && topEntries.length === 0 ? (
-            <Text fontSize={12} style={{ padding: '4px 8px' }} type="secondary">
+            <span
+              className="text-sm text-muted-foreground"
+              style={{ fontSize: 12, padding: '4px 8px' }}
+            >
               {t('list.filter.noMenuMatches')}
-            </Text>
+            </span>
           ) : null}
-        </Flexbox>
+        </div>
       );
     })();
 
     return (
       <Popover
-        content={pane}
         open={open}
-        placement="bottomRight"
-        trigger="click"
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen);
           if (!nextOpen) {
@@ -704,13 +712,23 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
           }
         }}
       >
-        <ActionIcon
-          active={filters.length > 0}
-          aria-label={t('list.filter.add')}
-          icon={FilterIcon}
-          size="small"
-          title={t('list.filter.add')}
+        <PopoverTrigger
+          render={
+            <Button
+              aria-label={t('list.filter.add')}
+              aria-pressed={filters.length > 0}
+              className={cn(filters.length > 0 && 'bg-muted', undefined)}
+              size="icon-sm"
+              title={t('list.filter.add')}
+              variant="ghost"
+            >
+              {createElement(FilterIcon, { 'size': 16, 'aria-hidden': true })}
+            </Button>
+          }
         />
+        <PopoverContent align="end" side="bottom">
+          {pane}
+        </PopoverContent>
       </Popover>
     );
   },

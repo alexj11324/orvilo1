@@ -16,6 +16,21 @@ const effectiveAccessMock = vi.hoisted(() => vi.fn());
 const explicitAccessMock = vi.hoisted(() => vi.fn());
 
 const grantedLevelMock = vi.hoisted(() => vi.fn());
+const teamReadMock = vi.hoisted(() => vi.fn());
+const teamWriteMock = vi.hoisted(() => vi.fn());
+const teamAdminMock = vi.hoisted(() => vi.fn());
+const activeWorkspaceMemberMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/database/models/team', () => ({
+  TeamModel: class {
+    hasAdminAccess = teamAdminMock;
+    hasReadAccess = teamReadMock;
+    hasWriteAccess = teamWriteMock;
+  },
+}));
+vi.mock('@/database/models/workspace', () => ({
+  hasActiveWorkspaceMembership: activeWorkspaceMemberMock,
+}));
 
 vi.mock('@/database/models/resourcePermission', () => ({
   ResourcePermissionModel: class {
@@ -57,6 +72,70 @@ describe('canPerformResourceAction', () => {
     resolveGrantsMock.mockResolvedValue(['ai_model:invoke:all']);
     explicitAccessMock.mockResolvedValue(null);
     grantedLevelMock.mockResolvedValue(null);
+    activeWorkspaceMemberMock.mockResolvedValue(true);
+    teamReadMock.mockResolvedValue(false);
+    teamWriteMock.mockResolvedValue(false);
+    teamAdminMock.mockResolvedValue(false);
+  });
+
+  it('grants team Page viewing and editing only through current team access and document RBAC', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    teamReadMock.mockResolvedValue(true);
+    teamWriteMock.mockResolvedValue(true);
+    const teamMeta = {
+      teamId: 'team-1',
+      userId: 'creator',
+      visibility: 'team',
+      workspaceId: 'ws-1',
+    };
+
+    await expect(
+      canPerformResourceAction({
+        action: 'view',
+        db,
+        meta: teamMeta,
+        resourceId: 'page-1',
+        resourceType: 'document',
+        userId: 'member',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      canPerformResourceAction({
+        action: 'edit',
+        db,
+        meta: teamMeta,
+        resourceId: 'page-1',
+        resourceType: 'document',
+        userId: 'member',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(true);
+
+    teamWriteMock.mockResolvedValue(false);
+    await expect(
+      canPerformResourceAction({
+        action: 'edit',
+        db,
+        meta: teamMeta,
+        resourceId: 'page-1',
+        resourceType: 'document',
+        userId: 'creator',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(false);
+    activeWorkspaceMemberMock.mockResolvedValue(false);
+    await expect(
+      canPerformResourceAction({
+        action: 'view',
+        db,
+        meta: teamMeta,
+        resourceId: 'page-1',
+        resourceType: 'document',
+        userId: 'member',
+        workspaceId: 'ws-1',
+      }),
+    ).resolves.toBe(false);
   });
 
   it('lets a Workspace admin bypass view-only Member Permissions', async () => {

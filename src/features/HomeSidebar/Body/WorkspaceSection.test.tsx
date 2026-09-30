@@ -1,7 +1,8 @@
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 import WorkspaceSection from './WorkspaceSection';
 
@@ -19,10 +20,12 @@ const mocks = vi.hoisted(() => ({
   openCustomizeSidebarModal: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ContextMenuTrigger: ({ children }: { children: React.ReactNode }) => children,
-  DropdownMenu: ({ children, items }: { children: React.ReactNode; items: CapturedItem[] }) => {
+vi.mock('@/features/NavPanel/components/SidebarContextMenu', () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({ children, items }: { children: React.ReactNode; items: CapturedItem[] }) => {
     mocks.dropdownItems = items;
     return <div>{children}</div>;
   },
@@ -40,8 +43,8 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
   useActiveWorkspaceSlug: () => null,
 }));
 
-vi.mock('@/features/NavPanel/components/NavItem', () => ({
-  default: ({ title }: { title: string }) => <span>{title}</span>,
+vi.mock('@/features/NavPanel/components/SidebarNavItem', () => ({
+  default: ({ title }: { title: string }) => <li>{title}</li>,
 }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
@@ -68,9 +71,9 @@ vi.mock('./CustomizeSidebarModal', () => ({
 const renderSection = () =>
   render(
     <MemoryRouter>
-      <AccordionRoot value={['workspace']}>
+      <SidebarProvider>
         <WorkspaceSection itemKey="workspace" />
-      </AccordionRoot>
+      </SidebarProvider>
     </MemoryRouter>,
   );
 

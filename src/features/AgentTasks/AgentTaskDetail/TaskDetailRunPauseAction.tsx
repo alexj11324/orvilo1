@@ -1,10 +1,11 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, confirmModal, SplitButton, Text } from '@lobehub/ui/base-ui';
-import { CalendarOffIcon, PlayIcon, RotateCcwIcon } from 'lucide-react';
+import { CalendarOffIcon, ChevronDownIcon, PlayIcon, RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
 import StopLoadingIcon from '@/components/StopLoading';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentStore } from '@/store/agent';
@@ -13,6 +14,7 @@ import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { nextHeartbeatFiring, nextScheduleFiring } from './scheduler/helpers';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const padTime = (n: number) => String(n).padStart(2, '0');
 
@@ -46,18 +48,18 @@ export const shouldPersistFallbackAssignee = (
 const TaskDetailRunPauseAction = memo(() => {
   const { t } = useTranslation('chat');
   const { allowed: canEditTask, reason } = usePermission('create_content');
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const canRun = useTaskStore(taskDetailSelectors.canRunActiveTask);
-  const isBlocked = useTaskStore(taskDetailSelectors.isActiveTaskBlocked);
-  const canPause = useTaskStore(taskDetailSelectors.canPauseActiveTask);
-  const status = useTaskStore(taskDetailSelectors.activeTaskStatus);
-  const detail = useTaskStore(taskDetailSelectors.activeTaskDetail);
-  const automationMode = useTaskStore(taskDetailSelectors.activeTaskAutomationMode);
-  const interval = useTaskStore(taskDetailSelectors.activeTaskPeriodicInterval);
-  const schedulePattern = useTaskStore(taskDetailSelectors.activeTaskSchedulePattern);
-  const scheduleTimezone = useTaskStore(taskDetailSelectors.activeTaskScheduleTimezone);
-  const assigneeAgentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
-  const assigneeUserId = useTaskStore(taskDetailSelectors.activeTaskAssigneeUserId);
+  const taskId = useTaskDetailTaskId();
+  const canRun = useTaskDetailSelector(taskDetailSelectors.canRunTask);
+  const isBlocked = useTaskDetailSelector(taskDetailSelectors.isTaskBlocked);
+  const canPause = useTaskDetailSelector(taskDetailSelectors.canPauseTask);
+  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus);
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const automationMode = useTaskDetailSelector(taskDetailSelectors.taskAutomationMode);
+  const interval = useTaskDetailSelector(taskDetailSelectors.taskPeriodicInterval);
+  const schedulePattern = useTaskDetailSelector(taskDetailSelectors.taskSchedulePattern);
+  const scheduleTimezone = useTaskDetailSelector(taskDetailSelectors.taskScheduleTimezone);
+  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const isRerun = status === 'completed';
   const runTask = useTaskStore((s) => s.runTask);
@@ -180,37 +182,47 @@ const TaskDetailRunPauseAction = memo(() => {
 
   if (isScheduled) {
     return (
-      <Flexbox horizontal align={'center'} gap={12}>
-        <SplitButton disabled={!canEditTask || isCancellingSchedule} loading={isRunningNow}>
-          <SplitButton.Main
-            disabled={!canEditTask || isRunningNow}
-            icon={CalendarOffIcon}
-            loading={isCancellingSchedule}
+      <div className="flex items-center gap-3">
+        <div className="inline-flex">
+          <Button
+            className="rounded-r-none"
+            disabled={!canEditTask || isCancellingSchedule || isRunningNow}
+            loading={isCancellingSchedule || isRunningNow}
             title={canEditTask ? undefined : reason}
+            variant="default"
             onClick={handleCancelSchedule}
           >
+            <CalendarOffIcon data-icon="inline-start" />
             {t('taskDetail.cancelSchedule')}
-          </SplitButton.Main>
-          <SplitButton.Menu
+          </Button>
+          <DropdownMenu
             items={[
               {
                 disabled: !canEditTask || isBlocked || isRunningNow || isCancellingSchedule,
-                icon: PlayIcon,
+                icon: <PlayIcon size="1em" />,
                 key: 'runNow',
                 label: t('taskDetail.runNow'),
                 onClick: handleRunNow,
               },
             ]}
-          />
-        </SplitButton>
+          >
+            <Button
+              className="rounded-l-none border-l-0"
+              disabled={!canEditTask || isCancellingSchedule || isRunningNow}
+              variant="default"
+            >
+              <ChevronDownIcon size={14} />
+            </Button>
+          </DropdownMenu>
+        </div>
         {countdownText && (
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {countdownText.type === 'days'
               ? t('taskDetail.nextRunCountdownDays', countdownText)
               : t('taskDetail.nextRunCountdown', countdownText)}
-          </Text>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   }
 
@@ -225,7 +237,7 @@ const TaskDetailRunPauseAction = memo(() => {
   if (isStarting) {
     const pendingLabel = isRerun ? t('taskDetail.rerunTask') : t('taskDetail.runTask');
     return (
-      <Button disabled loading type={'primary'}>
+      <Button disabled loading variant="default">
         {pendingLabel}
       </Button>
     );
@@ -233,28 +245,24 @@ const TaskDetailRunPauseAction = memo(() => {
 
   if (canPause) {
     return (
-      <Button
-        disabled={!canEditTask}
-        icon={StopLoadingIcon}
-        title={reason}
-        onClick={handleRunOrPause}
-      >
+      <Button disabled={!canEditTask} title={reason} onClick={handleRunOrPause}>
+        <StopLoadingIcon data-icon="inline-start" />
         {t('taskDetail.stopTask')}
       </Button>
     );
   }
 
   const runLabel = isRerun ? t('taskDetail.rerunTask') : t('taskDetail.runTask');
-  const runIcon = isRerun ? RotateCcwIcon : PlayIcon;
+  const RunIcon = isRerun ? RotateCcwIcon : PlayIcon;
 
   return (
     <Button
       disabled={!canEditTask || isBlocked}
-      icon={runIcon}
       title={!canEditTask ? reason : isBlocked ? t('taskDetail.prerequisites.blocked') : undefined}
-      type={'primary'}
+      variant="default"
       onClick={handleRunOrPause}
     >
+      <RunIcon data-icon="inline-start" />
       {runLabel}
     </Button>
   );

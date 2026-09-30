@@ -43,6 +43,7 @@ interface ProjectStore {
   pendingProjectLinkKeys: string[];
   projectDetails: Record<string, Record<string, ProjectDetail>>;
   projectLists: Record<string, ProjectListItem[]>;
+  refreshProjectDetail: (id: string) => Promise<void>;
   refreshProjectList: () => Promise<void>;
   removeProjectLink: (
     id: string,
@@ -216,6 +217,9 @@ export const useProjectStore = createWithEqualityFn<ProjectStore>()(
     },
     projectDetails: {},
     projectLists: {},
+    refreshProjectDetail: async (id) => {
+      await mutate(detailKey(getCacheScope(), id));
+    },
     refreshProjectList: async () => mutate(listKey(getCacheScope())),
     updateProjectOrchestrationPolicy: async ({ id, ...input }) => {
       const response = await projectService.updateOrchestrationPolicy(id, input);

@@ -1,10 +1,8 @@
 'use client';
-
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Flexbox, type MenuProps } from '@lobehub/ui';
-import { Alert } from '@lobehub/ui/base-ui';
 import { type VoiceMessageRecording } from '@orvilo/types';
+import { Info, X } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,8 +11,11 @@ import {
   getBusinessChatInputSendAreaPrefix,
   useBusinessChatInputAlerts,
 } from '@/business/client/hooks/useBusinessChatInputSendAreaPrefix';
+import ActionIcon from '@/components/ActionIcon';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
+import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import {
   type SendButtonHandler,
   type SendButtonProps,
@@ -153,7 +154,7 @@ export interface ChatInputProps {
   /**
    * Send menu configuration (for send options like Enter/Cmd+Enter, Add AI/User message)
    */
-  sendMenu?: MenuProps;
+  sendMenu?: ActionDropdownMenu;
   /**
    * Whether to show the control bar (Local/Cloud/Auto Approve)
    */
@@ -453,18 +454,25 @@ const ChatInput = memo<ChatInputProps>(
             unmounting would wipe the Lexical editor's in-memory document. */}
         <div style={{ display: hasPendingInterventions ? 'none' : 'contents' }}>
           {sendMessageErrorMsg && (
-            <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
-              <Alert
-                closable
-                title={t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}
-                type={'secondary'}
-                onClose={clearSendMessageError}
-              />
-            </Flexbox>
+            <div className="flex flex-col px-3" style={{ paddingBlock: '0 6px' }}>
+              <Alert variant="default">
+                <Info />
+                <AlertTitle>{t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}</AlertTitle>
+                <AlertAction>
+                  <ActionIcon
+                    icon={X}
+                    size={'small'}
+                    onClick={() => {
+                      clearSendMessageError?.();
+                    }}
+                  />
+                </AlertAction>
+              </Alert>
+            </div>
           )}
           {businessAlerts}
-          <Flexbox
-            paddingInline={12}
+          <div
+            className="flex flex-col px-3"
             ref={overlayRef}
             style={{
               bottom: '100%',
@@ -481,7 +489,7 @@ const ChatInput = memo<ChatInputProps>(
             <GoalTray
               topAttached={(!disableQueue && hasQueuedMessages) || hasTodos || hasOpStatus}
             />
-          </Flexbox>
+          </div>
           {/* Append the armed-goal chip to every composer's action bar. While armed,
               the next message becomes the goal and the placeholder explains that state. */}
           <DesktopChatInput

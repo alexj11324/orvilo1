@@ -1,6 +1,7 @@
 import { MCP } from '@lobehub/icons';
-import { Tag } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
+
+import { Badge } from '@/components/reui/badge';
 
 interface MCPTagProps {
   showIcon?: boolean;
@@ -9,9 +10,10 @@ interface MCPTagProps {
 
 const MCPTag = memo<MCPTagProps>(({ showIcon = true, showText = true }) => {
   return (
-    <Tag icon={showIcon && <MCP />} size={'small'}>
+    <Badge size="sm" variant="secondary">
+      {showIcon && <MCP />}
       {showText && 'Model Context Protocol'}
-    </Tag>
+    </Badge>
   );
 });
 

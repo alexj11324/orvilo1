@@ -62,11 +62,15 @@ on the main SPA's 404. Then drop the routes from `desktopRouter.config.tsx` /
 App layout (`apps/<name>/`):
 
 ```
-app/            # RR framework mode: root.tsx, routes.ts, entry.server.tsx, routes/, lib/, stubs/
-workers/app.ts  # worker entry: API reverse proxy + createRequestHandler
-src/            # app-owned features/shell (may coexist with a legacy SPA entry)
+app/                 # RR framework mode: root.tsx, routes.ts, entry.server.tsx, routes/, lib/, stubs/
+workers/app.ts       # worker entry: API reverse proxy + createRequestHandler
+src/                 # app-owned features/shell (may coexist with a legacy SPA entry)
 vite.config.rr.mts   # RR pipeline; legacy vite.config.ts can coexist (RR CLI: -c vite.config.rr.mts)
-wrangler.jsonc  # name, account_id, nodejs_compat, vars (API base / app home)
+vite.config.ts       # cf build entry; composes the RR config and bridges its client manifest
+vite.config.spa.mts  # Share/Workbench legacy SPA build and dev config
+cloudflare.config.ts # Share/Workbench cf CLI Worker config at the app root
+apps/auth/cf/        # Auth-only Vite Worker project for its prerendered client assets
+wrangler.jsonc       # Share/Workbench Vite plugin v1 runtime config
 staticCssOptions.mjs # ONE source for static-css hrefTemplate (vite plugin + emit + dev middleware)
 ```
 
@@ -75,6 +79,21 @@ Reuse main-src code via `@/*` deep imports + Vite 8 native `resolve.tsconfigPath
 tsconfig `include` must cover `app/`). Stack: `@react-router/dev@8` + `@cloudflare/vite-plugin`
 
 - repo Vite 8 (rolldown) — officially compatible.
+
+**Cloudflare CLI boundary:** use the new `cf` CLI for Cloudflare API operations, production Worker
+releases and PR preview versions. Discover commands with `cf cli search "<generic task description>"`;
+never include account or resource identifiers in the query. Share and Workbench keep their
+`cloudflare.config.ts` at the app root; release scripts run `cf build` and `cf deploy --prebuilt`
+there. Auth keeps a separate Vite Worker project at `apps/auth/cf/` so it can package the
+already-prerendered `build/client` assets.
+
+Keep the existing React Router build on Cloudflare Vite plugin v1 for now. A v2 trial put the client
+manifest under `.cloudflare/output/.../assets/.vite/manifest.json` after React Router had resolved
+`build/client/.vite/manifest.json`; changing `build.outDir` does not fix that ordering. Auth also uses
+SPA mode and prerendering, which Cloudflare's React Router guide does not support in its Vite plugin.
+Share and Workbench's root `vite.config.ts` adds a small manifest bridge for `cf build` while keeping
+the existing React Router pipeline. Wrangler remains a required peer of their Cloudflare Vite plugin;
+release and preview upload commands use `cf`.
 
 **SSR bundle weight is the whole battle.** Main-src imports drag the app universe
 (store web → chat/agent/electron). Tools and cuts, in order:
@@ -98,8 +117,10 @@ and resolve to an older copy whose base-ui lacks components the app renders → 
 Alert`), and a `*.client` module needs its own SSR-env stub so the hydration gate does not drag
 the gated tree into the worker anyway.
 
-Products: `build/client` (assets → CDN), `build/server` (worker; deploy with
-`wrangler deploy --config build/server/wrangler.json`). Budget: worker gzip ≤ 10MB paid.
+The `build:rr` command produces `build/client` and `build/server`. Share and Workbench releases use
+one app-root `cf build` and publish its `.cloudflare/output/v0/workers/default` output; Auth builds
+its Worker from `apps/auth/cf/`. Emit static CSS into the same output before upload.
+Budget: worker gzip ≤ 10MB paid.
 
 **CI affected-detection**: build emits `build-inputs.txt` (module-graph file list, gitignored);
 the deploy workflow diffs changed files against the manifest from the **last successful run's
@@ -110,9 +131,10 @@ the one manual rule. See `apps/workbench/scripts/should-build.mjs` +
 `scripts/shouldBuildShare.ts` + `.github/workflows/deploy-share.yml` (§1b).
 
 **PR-time verify is a separate workflow per repo that can change the artifact** — deploy
-ownership (§1b) does not decide verify ownership. Each verify builds the worker, uploads a
-non-deployed preview **version** (`wrangler versions upload --preview-alias`, dry-run when
-secrets are absent), enforces the 8MB-gzip guard, and comments the preview URL behind an HTML
+ownership (§1b) does not decide verify ownership. Each verify sets `CF_WORKER_NAME` to select
+the sibling preview Worker and runs `cf build`, then uploads a non-deployed preview **version**
+(`cf workers versions create --prebuilt --preview-alias`, dry-run when secrets are absent), enforces
+the 8MB-gzip guard, and comments the preview URL behind an HTML
 marker (never `--edit-last` — other workflows comment as the same bot). Workbench: one repo,
 one `verify-workbench.yml`. Share: **both** repos, because either side's change flows into the
 deployed worker — OSS `verify-share.yml` + cloud `verify-share.yml`.
@@ -120,13 +142,12 @@ deployed worker — OSS `verify-share.yml` + cloud `verify-share.yml`.
 **Previews upload to a sibling Worker, never to the production script.** Cloudflare only rolls
 back to the **100 most recently uploaded versions** of a script, and preview uploads count: at
 share's PR rate (10 uploads in under an hour on a busy day) every real deployment left the
-window within a day, which broke the gateway admin's (鳥居番) rollback list. So every verify
-passes `--name orvilo-<name>-preview`, and the production script's version list holds only
-deployments. Two consequences: the preview Worker must exist before the first upload
-(`wrangler versions upload` refuses a never-deployed script — bootstrap it once with
-`wrangler deploy --name orvilo-<name>-preview` from any stub; the next upload replaces it),
-and the preview API token must be allowed to edit the `-preview` name. Preview URLs are then
-`https://<alias>-orvilo-<name>-preview.orvilo-objects-tg.workers.dev`, and `VITE_CDN_BASE` must
+window within a day, which broke the gateway admin's (鳥居番) rollback list. Share and Workbench
+read `CF_WORKER_NAME` to select `orvilo-<name>-preview`; their workflows run `cf build` with that
+variable set, then upload with `cf workers versions create --prebuilt --preview-alias <alias>`.
+The production script's version list holds only deployments. The preview API token must be allowed
+to edit the `-preview` name. Preview URLs are then
+`https://<alias>-orvilo-<name>-preview.<workers-subdomain>.workers.dev`, and `VITE_CDN_BASE` must
 point at that same origin. Alias namespaces must not collide on the shared preview worker: OSS
 uses `pr<N>`, cloud uses `cloudpr<N>`. Manifest source
 differs by what the repo can read: cloud verify borrows the deploy's `share-deploy-state`
@@ -170,23 +191,13 @@ Cloud-only file.
 orvilo-cloud (`.github/workflows/deploy-share.yml`), not OSS. Never add a deploy workflow to a
 repo that can only produce the fallback.
 
-**OSS PRs can still verify with the real overlay.** Same-repo OSS PRs clone the overlay repo @
-HEAD via `.github/actions/business-overlay` (the clone+overlay step extracted from
-`desktop-build-setup`: overlay files land in `$GITHUB_WORKSPACE/..`, which works because the
-repo is named `orvilo` so the checkout already sits at the submodule path), then
-`cd .. && pnpm install` and run the overlay repo's own `bun run build:share` — the tsconfig /
-stub knowledge stays over there. **The OSS workflow never hardcodes the private repo
-name**: it comes from the Actions repository variable `OVERLAY_REPOSITORY`; the token reuses
-the pre-existing `ORVILO_CLOUD_TOKEN` secret (deliberately not renamed — the desktop release
-workflows already reference it, and a rename would mean reconfiguring the org secret). When
-either is unset (fork PRs always), the workflow falls back to the
-OSS-stub build + wrangler dry-run as a pure compile/size guard. Keep new public-facing CI
-wording on the neutral "business overlay" vocabulary — the older desktop release workflows
-still leak the internal naming and are the known remaining exception. One trap: an overlay
-build's `build-inputs.txt` is overlay-root-relative (`repoRoot =
-dirname(SHARE_TSCONFIG_PROJECT)`), so OSS files appear as `aspectlylabs/src/...` — strip that
-prefix before exact-matching against the OSS repo's own diff (`sed 's#^aspectlylabs/##'` in the
-verify workflow); the meta triggers already match both spellings.
+**The private overlay mechanism has been removed from OSS CI.** The repository is a single
+OSS codebase — no `OVERLAY_REPOSITORY` variable, no `ORVILO_CLOUD_TOKEN`, and no
+`.github/actions/business-overlay` action. `verify-share.yml` and the `release-desktop-*` /
+`*-build-desktop` workflows always build with the open-source business stubs; same-repo PRs
+upload a share preview version, fork PRs dry-run the upload as a compile/size guard. If an
+overlay repo ever comes back, the build call sites must be re-added explicitly — do not
+hardcode a private repo name in OSS workflows.
 
 **Cloud affected-detection needs submodule history**: a bump is a single `orvilo` entry in the
 host diff, so the workflow runs `git -C orvilo fetch --unshallow` and compares the previous
@@ -207,8 +218,10 @@ incremental and immutable. The prefix axis is the **app**, nothing else: do not 
 `<name>-oss` / `<name>-cloud` variants to separate build origins — hashed filenames already make
 one prefix safe for all of them. `ASSET_S3_PUBLIC_DOMAIN` is an origin; any path segment belongs
 on `ASSET_BASE_URL` instead. `bun run deploy` (see `apps/workbench/scripts/deploy.ts`) =
-build with CDN base → upload `build/client/assets` to R2 (`web-assets` bucket, Orvilo
-account) → `wrangler deploy`. R2 creds: 1Password Shared vault item "CI R2 - web-assets".
+one `cf build` with CDN base → emit static CSS into its output → upload that output's `assets/assets`
+to R2 (`web-assets`
+bucket, Orvilo account) → `cf deploy --prebuilt`. R2 creds: 1Password Shared vault item
+"CI R2 - web-assets".
 CI injects repo secrets `ASSET_S3_*` (`ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `BUCKET`,
 `ENDPOINT`, `REGION`, `PUBLIC_DOMAIN`). Local `bun run deploy` can fall back to `MOBILE_S3_*`.
 Never echo values.
@@ -331,7 +344,7 @@ and swaps a `window.__SERVER_CONFIG__` placeholder for the deployment's config.
   dev module runner on inlined CJS (`module is not defined`, then `require is not defined`) —
   and leaving it off leaves `react-router dev` 500ing on that same directory import. **Known
   gap:** `apps/auth`'s dev server does not run; the working local loop is
-  `bun run build && wrangler dev`.
+  `bun run build && bun run preview` (`cf dev`).
 
 RR v8 gotchas (docs/templates still say v7):
 
@@ -345,10 +358,10 @@ RR v8 gotchas (docs/templates still say v7):
 ## 4. SEO
 
 One shared builder (`app/lib/seo.ts` → `buildPageMeta`): title, description, robots,
-og:title/description/type/site\_name/locale (underscore form)/image(+alt), twitter card set.
+og:title/description/type/site_name/locale (underscore form)/image(+alt), twitter card set.
 Rules: leaf `meta` **fully replaces** root meta — every leaf returns the whole set;
 `og:image` must be an **absolute URL** (reuse landing's `https://orvilo.aspectlylabs.com/assets/cao-og.webp`);
-dynamic title/description come from the route loader (subject title · BRANDING\_NAME,
+dynamic title/description come from the route loader (subject title · BRANDING_NAME,
 requirement text truncated \~200 chars).
 
 ## 5. Gateway Routing (torii, `../orvilo-gateway`)
@@ -364,8 +377,9 @@ To add a micro app:
    Leave `/trpc` unruled: it falls to `default` (app) so browser API calls stay same-origin
    authenticated. `.data` suffix is normalized before matching.
 4. Validate: `bun run test` in the gateway repo (invariant suite reads the mirror).
-5. Staging: `bun scripts/torii.ts push --env staging --expect <fp>` (needs TORII\_ACCESS\_\*),
-   or poke staging KV directly (`wrangler kv key put --namespace-id <staging CONFIG ns>`) —
+5. Staging: `bun scripts/torii.ts push --env staging --expect <fp>` (needs TORII_ACCESS\_\*),
+   or poke staging KV directly with
+   `cf kv keys put <encoded-key> --namespace-id <staging CONFIG ns> --body <value>` —
    README-sanctioned. Prod writes only via the Toriiban (鳥居番) admin **Promote** button:
    `torii.ts promote` prints the exact delta and refuses to write, and
    `push --env prod --confirm-prod` exists but bypasses a deliberate human gate — don't.
@@ -410,7 +424,7 @@ protocol affinity for the landing pair; it consults `resolveRule` and lets other
 Build success proves nothing about what rendered. Each of these produced a real defect that a
 green build hid: the overlay resolving to OSS stubs, the dev shell answering 200 with the wrong
 app, an edit that silently no-op'd because the anchor string had drifted (deployed a 500 —
-so: build → local `wrangler dev` → browser → _then_ deploy), and a "fix" asserted from the
+so: build → local `cf dev` → browser → _then_ deploy), and a "fix" asserted from the
 source instead of the page. Prove the Docker chain by running `build:spa:<name>` +
 `<NAME>_REQUIRED=1 build:spa:copy` and asserting every asset the generated template references
 exists under `public/`; prove the SSR page by viewing source, not by reading the loader.

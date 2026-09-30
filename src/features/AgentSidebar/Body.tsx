@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import React, { memo, useCallback, useMemo } from 'react';
 
+import { Accordion } from '@/components/ui/accordion';
 import { useAgentStore } from '@/store/agent';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -43,10 +42,10 @@ const Body = memo(() => {
   );
 
   return (
-    <Flexbox paddingInline={4}>
-      <AccordionRoot
-        indicatorPlacement="inline"
-        style={{ gap: 8 }}
+    <div className="flex flex-col" style={{ paddingInline: 4 }}>
+      <Accordion
+        multiple
+        style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
         value={expandedKeys}
         onValueChange={(next) => handleExpandedChange(next as string[])}
       >
@@ -54,8 +53,8 @@ const Body = memo(() => {
           expanded={expandedKeys.includes(ChatSidebarKey.Topic)}
           itemKey={ChatSidebarKey.Topic}
         />
-      </AccordionRoot>
-    </Flexbox>
+      </Accordion>
+    </div>
   );
 });
 

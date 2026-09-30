@@ -1,13 +1,14 @@
 'use client';
 
-import { type IconProps } from '@lobehub/ui';
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
+
 import { type TaskDetail } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import type { LucideProps } from 'lucide-react';
 import { Footprints, Timer, Wrench } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { type ComponentType, createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
 
 import Markdown from '../../../Markdown';
 import { formatCost, formatDuration } from './utils';
@@ -37,20 +38,21 @@ interface CompletedStateProps {
 }
 
 interface MetricItemProps {
-  icon?: IconProps['icon'];
+  icon?: ComponentType<LucideProps>;
   label?: string;
   value: string | number;
 }
 
 export const MetricItem = memo<MetricItemProps>(({ icon, label, value }) => (
-  <Tag
-    icon={<Icon icon={icon} />}
+  <Badge
+    className="bg-transparent border-transparent"
     style={{ color: cssVar.colorTextDescription, padding: 0 }}
-    variant={'borderless'}
+    variant="secondary"
   >
+    {icon && createElement(icon)}
     {value}
     {label}
-  </Tag>
+  </Badge>
 ));
 
 MetricItem.displayName = 'MetricItem';
@@ -67,7 +69,7 @@ const MetricsRow = memo<MetricsRowProps>(
   ({ formattedDuration, formattedCost, totalSteps, totalToolCalls, variant }) => {
     const { t } = useTranslation('chat');
 
-    const metrics: Array<{ icon?: IconProps['icon']; label?: string; value: string | number }> = [];
+    const metrics: Array<{ icon?: ComponentType<LucideProps>; label?: string; value: string | number }> = [];
 
     // Build metrics array in order
     if (totalSteps !== undefined && totalSteps > 0) {
@@ -95,14 +97,14 @@ const MetricsRow = memo<MetricsRowProps>(
 
     if (variant === 'detail') {
       return (
-        <Flexbox horizontal align="center" gap={12} justify="space-between" paddingBlock={'8px 0'}>
+        <div className="flex items-center gap-3 justify-between" style={{paddingBlock: '8px 0'}}>
           {/* Left: Duration */}
-          <Flexbox horizontal align="center" gap={12}>
+          <div className="flex items-center gap-3">
             {formattedDuration && <MetricItem icon={Timer} value={formattedDuration} />}
-          </Flexbox>
+          </div>
 
           {/* Right: Steps, Tool Calls, Cost */}
-          <Flexbox horizontal align="center" gap={12}>
+          <div className="flex items-center gap-3">
             {metrics.map((metric, index) => (
               <MetricItem
                 icon={metric.icon}
@@ -111,29 +113,29 @@ const MetricsRow = memo<MetricsRowProps>(
                 value={metric.value}
               />
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       );
     }
 
     // Compact variant
     return (
-      <Flexbox horizontal align="center" gap={12} justify="space-between" wrap="wrap">
+      <div className="flex items-center gap-3 justify-between flex-wrap">
         {/* Left: Duration */}
-        <Flexbox horizontal align="center" gap={8}>
+        <div className="flex items-center gap-2">
           {formattedDuration && <MetricItem icon={Timer} value={formattedDuration} />}
-        </Flexbox>
+        </div>
 
         {/* Right: Steps, Tool Calls, Cost */}
-        <Flexbox horizontal align="center" gap={12}>
+        <div className="flex items-center gap-3">
           {metrics.map((metric, index) => (
-            <Flexbox horizontal align="center" gap={12} key={index}>
+            <div className="flex items-center gap-3" key={index}>
               {index > 0 && <div className={styles.separator} />}
               <MetricItem icon={metric.icon} label={metric.label} value={metric.value} />
-            </Flexbox>
+            </div>
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

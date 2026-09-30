@@ -1,11 +1,11 @@
 'use client';
 
-import { Icon, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { TargetIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
@@ -91,19 +91,24 @@ const GoalArmedChip = memo(() => {
   if (!enabled || !agentId || topicId || armedAt === undefined) return null;
 
   return (
-    <Tooltip title={t('acceptance.tray.goalDisarm')}>
-      <div className={styles.chip} onClick={() => disarm(agentId)}>
-        <span className={styles.iconSlot}>
-          <Icon
-            className={cx('goal-armed-target', styles.iconTarget)}
-            icon={TargetIcon}
-            size={14}
-          />
-          <Icon className={cx('goal-armed-close', styles.iconClose)} icon={XIcon} size={14} />
-        </span>
-        <span>{t('acceptance.tray.goalLabel')}</span>
-      </div>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span style={{ display: 'inline-flex' }}>
+              <div className={styles.chip} onClick={() => disarm(agentId)}>
+                <span className={styles.iconSlot}>
+                  <TargetIcon className={cx('goal-armed-target', styles.iconTarget)} size={14} />
+                  <XIcon className={cx('goal-armed-close', styles.iconClose)} size={14} />
+                </span>
+                <span>{t('acceptance.tray.goalLabel')}</span>
+              </div>
+            </span>
+          }
+        />
+        <TooltipContent>{t('acceptance.tray.goalDisarm')}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

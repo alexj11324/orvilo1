@@ -1,12 +1,12 @@
-import type { SwitchProps } from '@lobehub/ui/base-ui';
-import { Switch } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
+
+import { Switch } from '@/components/ui/switch';
 
 interface InstantSwitchProps {
   disabled?: boolean;
   enabled: boolean;
   onChange: (enabled: boolean) => Promise<void>;
-  size?: SwitchProps['size'];
+  size?: 'default' | 'sm';
 }
 
 const InstantSwitch = memo<InstantSwitchProps>(({ disabled, enabled, onChange, size }) => {
@@ -14,11 +14,10 @@ const InstantSwitch = memo<InstantSwitchProps>(({ disabled, enabled, onChange, s
   const [loading, setLoading] = useState(false);
   return (
     <Switch
-      disabled={disabled}
-      loading={loading}
+      checked={value}
+      disabled={disabled || loading}
       size={size}
-      value={value}
-      onChange={async (enabled) => {
+      onCheckedChange={async (enabled) => {
         setLoading(true);
         setValue(enabled);
         await onChange(enabled);

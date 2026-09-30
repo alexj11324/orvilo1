@@ -1,5 +1,4 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
@@ -26,10 +25,10 @@ const HighlightedContent = memo<HighlightedContentProps>(({ title, children }) =
   if (!title) return content;
 
   return (
-    <Flexbox gap={8}>
-      <Text weight={500}>{title}</Text>
+    <div className="flex flex-col gap-2">
+      <div className="font-medium">{title}</div>
       {content}
-    </Flexbox>
+    </div>
   );
 });
 

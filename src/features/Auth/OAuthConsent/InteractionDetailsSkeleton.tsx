@@ -1,44 +1,43 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import AuthCard from '@/features/AuthCard';
 
 const InteractionDetailsSkeleton = memo(() => (
-  <Flexbox gap={16} width={'min(100%,400px)'}>
-    <Flexbox horizontal align={'center'} justify={'center'} width={'100%'}>
-      <Skeleton.Avatar shape={'square'} size={72} />
-    </Flexbox>
+  <div className="flex flex-col gap-4" style={{ width: 'min(100%,400px)' }}>
+    <div className="flex items-center justify-center w-full">
+      <Skeleton className="size-[72px] rounded-full" />
+    </div>
     <AuthCard
-      title={<Skeleton height={40} />}
+      title={<Skeleton style={{ height: 40 }} />}
       footer={
-        <Flexbox gap={12} width={'100%'}>
-          <Skeleton height={36} />
-          <Skeleton height={36} />
-        </Flexbox>
+        <div className="flex flex-col gap-3 w-full">
+          <Skeleton style={{ height: 36 }} />
+          <Skeleton style={{ height: 36 }} />
+        </div>
       }
       subtitle={
-        <Flexbox gap={8} width={'100%'}>
-          <Skeleton height={22} />
-          <Skeleton height={22} width={'72%'} />
-        </Flexbox>
+        <div className="flex flex-col gap-2 w-full">
+          <Skeleton style={{ height: 22 }} />
+          <Skeleton style={{ height: 22, width: '72%' }} />
+        </div>
       }
     >
-      <Flexbox gap={12} width={'100%'}>
-        <Skeleton height={22} width={'54%'} />
-        <Flexbox gap={8} width={'100%'}>
-          <Block padding={16} variant={'filled'}>
-            <Skeleton height={36} />
-          </Block>
-          <Block padding={16} variant={'filled'}>
-            <Skeleton width={'68%'} />
-          </Block>
-        </Flexbox>
-      </Flexbox>
+      <div className="flex flex-col gap-3 w-full">
+        <Skeleton style={{ height: 22, width: '54%' }} />
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-col p-4">
+            <Skeleton style={{ height: 36 }} />
+          </div>
+          <div className="flex flex-col p-4">
+            <Skeleton style={{ width: '68%' }} />
+          </div>
+        </div>
+      </div>
     </AuthCard>
-  </Flexbox>
+  </div>
 ));
 
 InteractionDetailsSkeleton.displayName = 'OAuthInteractionDetailsSkeleton';

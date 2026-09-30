@@ -1,6 +1,4 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   CheckCircle2Icon,
   CircleDashedIcon,
@@ -8,7 +6,7 @@ import {
   ExternalLinkIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { memo, useEffect } from 'react';
+import { createElement, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
@@ -100,38 +98,37 @@ const ReviewChecksPanel = memo<{
   const summary = checks.summary;
   const visual = checkSummaryVisual(summary.state);
   return (
-    <Flexbox className={styles.card}>
-      <Flexbox horizontal align={'center'} className={styles.cardHeader} gap={8}>
-        <Text weight={500}>{t('reviews.checks')}</Text>
-        <Text fontSize={12} type={'secondary'}>
+    <div className={cx('flex flex-col', styles.card)}>
+      <div className={cx('flex items-center gap-2', styles.cardHeader)}>
+        <div className="font-medium">{t('reviews.checks')}</div>
+        <div className="text-[12px] text-muted-foreground">
           {t(visual.labelKey as never, { count: summary.failing })}
-        </Text>
-        <Flexbox flex={1} />
-        <Text fontSize={12} type={'secondary'}>
+        </div>
+        <div className="flex-1" />
+        <div className="text-[12px] text-muted-foreground">
           {checks.loaded}
           {checks.total !== null ? `/${checks.total}` : ''}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
       {checks.items.map((check, index) => {
         const icon = checkStatusVisual(check.status);
         return (
-          <Flexbox className={styles.checkRow} key={`${check.name}-${index}`}>
-            <Icon color={icon.color} icon={icon.icon} size={14} />
-            <Text fontSize={13}>{check.name}</Text>
-            <Text fontSize={12} type={'secondary'}>
+          <div className={styles.checkRow} key={`${check.name}-${index}`}>
+            {createElement(icon.icon, { color: icon.color, size: 14 })}
+            <div className="text-[13px]">{check.name}</div>
+            <div className="text-[12px] text-muted-foreground">
               {check.rawConclusion ?? check.rawStatus ?? ''}
-            </Text>
+            </div>
             {check.detailsUrl ? (
-              <Text
-                fontSize={12}
+              <div
+                className="text-[12px] text-muted-foreground"
                 style={{ cursor: 'pointer' }}
-                type={'secondary'}
                 onClick={() => window.open(check.detailsUrl!, '_blank', 'noopener,noreferrer')}
               >
-                <Icon icon={ExternalLinkIcon} size={12} />
-              </Text>
+                <ExternalLinkIcon size={12} />
+              </div>
             ) : null}
-          </Flexbox>
+          </div>
         );
       })}
       <CollectionFooter
@@ -146,7 +143,7 @@ const ReviewChecksPanel = memo<{
             : undefined
         }
       />
-    </Flexbox>
+    </div>
   );
 });
 

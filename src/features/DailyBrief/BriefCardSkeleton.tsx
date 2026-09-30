@@ -1,45 +1,53 @@
-import { Block, Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /** Loading placeholder for {@link BriefCard}. */
 const BriefCardSkeleton = memo(() => {
   return (
-    <Block
-      gap={12}
-      padding={12}
-      style={{ borderRadius: cssVar.borderRadiusLG }}
-      variant={'outlined'}
+    <div
+      className="flex flex-col gap-3 p-3"
+      style={{
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+      }}
     >
-      <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
+      <div className="flex items-center gap-4 justify-between">
+        <div
+          className="flex items-center gap-2"
           style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
         >
-          <Skeleton.Avatar
-            shape={'square'}
-            size={28}
-            style={{ borderRadius: cssVar.borderRadius, flex: 'none' }}
+          <Skeleton
+            className="rounded-md shrink-0"
+            style={{ borderRadius: cssVar.borderRadius, flex: 'none', width: 28, height: 28 }}
           />
-          <Skeleton height={20} width={200} />
-          <Skeleton height={14} width={72} />
-        </Flexbox>
-        <Skeleton.Avatar shape={'circle'} size={'small'} style={{ flex: 'none' }} />
-      </Flexbox>
+          <Skeleton style={{ height: 20, width: 200 }} />
+          <Skeleton style={{ height: 14, width: 72 }} />
+        </div>
+        <Skeleton
+          className="rounded-full shrink-0"
+          style={{ flex: 'none', width: 24, height: 24 }}
+        />
+      </div>
 
-      <Divider dashed style={{ marginBlock: 0 }} />
+      <Separator
+        className="bg-transparent border-t border-dashed border-border"
+        style={{ marginBlock: 0 }}
+      />
 
-      <Skeleton.Text fontSize={14} rows={3} style={{ marginBottom: 0 }} />
+      <div className="flex flex-col gap-2" style={{ marginBottom: 0 }}>
+        <Skeleton className="h-3.5" />
+        <Skeleton className="h-3.5" />
+        <Skeleton className="h-3.5 w-[60%]" />
+      </div>
 
-      <Flexbox horizontal gap={8} style={{ alignSelf: 'flex-end' }}>
-        <Skeleton height={32} width={100} />
-        <Skeleton height={32} width={80} />
-      </Flexbox>
-    </Block>
+      <div className="flex gap-2" style={{ alignSelf: 'flex-end' }}>
+        <Skeleton style={{ height: 32, width: 100 }} />
+        <Skeleton style={{ height: 32, width: 80 }} />
+      </div>
+    </div>
   );
 });
 

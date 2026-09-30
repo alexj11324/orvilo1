@@ -1,10 +1,10 @@
 'use client';
 
-import { Center, Flexbox, ScrollArea } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { changelogKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 
@@ -19,13 +19,18 @@ const ChangelogModalContent = memo(() => {
   );
 
   return (
-    <ScrollArea scrollFade style={{ height: SCROLL_HEIGHT }}>
+    <ScrollArea style={{ height: SCROLL_HEIGHT }}>
       {isLoading || !data || data.length === 0 ? (
-        <Center style={{ height: SCROLL_HEIGHT }}>{t('loading')}</Center>
+        <div
+          className={'flex flex-col items-center justify-center'}
+          style={{ height: SCROLL_HEIGHT }}
+        >
+          {t('loading')}
+        </div>
       ) : (
-        <Flexbox gap={16} padding={16} style={{ width: '100%' }}>
+        <div className={'flex flex-col gap-4 p-4'} style={{ width: '100%' }}>
           <ChangelogContent data={data} />
-        </Flexbox>
+        </div>
       )}
     </ScrollArea>
   );

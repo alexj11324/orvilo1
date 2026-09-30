@@ -1,14 +1,14 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import type { ImperativeModalProps, ModalInstance } from '@lobehub/ui/base-ui';
-import { Button, createModal, ModalFooter } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import debug from 'debug';
 import { AlertCircle, LogIn } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ImperativeModalProps, ModalInstance } from '@/components/Modal';
+import { createModal, ModalFooter } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { sessionAuthEvents } from '@/layout/AuthProvider/SessionAuth/events';
 import { useElectronStore } from '@/store/electron';
 import { buildOnboardingRedirectUrl } from '@/utils/onboardingRedirect';
@@ -66,8 +66,8 @@ const AuthRequiredFooter = memo<FooterProps>(({ isSigningIn, onSignIn }) => {
   const { t } = useTranslation('auth');
   return (
     <ModalFooter>
-      <Button icon={<Icon icon={LogIn} />} loading={isSigningIn} type="primary" onClick={onSignIn}>
-        {isSigningIn ? t('authModal.signingIn') : t('authModal.signIn')}
+      <Button loading={isSigningIn} variant="default" onClick={onSignIn}>
+        <LogIn /> {isSigningIn ? t('authModal.signingIn') : t('authModal.signIn')}
       </Button>
     </ModalFooter>
   );
@@ -78,10 +78,10 @@ const AuthRequiredModalTitle = memo(() => {
   const { t } = useTranslation('auth');
 
   return (
-    <Flexbox horizontal align="center" gap={8}>
-      <Icon icon={AlertCircle} />
+    <div className="flex items-center gap-2">
+      <AlertCircle />
       {t('authModal.title')}
-    </Flexbox>
+    </div>
   );
 });
 AuthRequiredModalTitle.displayName = 'AuthRequiredModalTitle';
@@ -187,7 +187,8 @@ const AuthRequiredModal = memo(() => {
       // live" from "never signed in" — boot-time 401 probes fire inside this
       // window. Drop them (same gate the broadcast path above already uses);
       // a genuinely expired session keeps emitting 401s after init resolves.
-      if (!isInitRemoteServerConfig) {
+      // A deliberate sign-in must remain available even if config loading failed.
+      if (!isInitRemoteServerConfig && source !== 'user-action') {
         log(
           'session-auth-expired ignored (remote server config not initialized). source=%s reason=%s',
           source,
@@ -202,7 +203,7 @@ const AuthRequiredModal = memo(() => {
       // to the login surface instead of an expiry modal. `/onboarding`
       // renders LoginStep on signed-out desktop; the current location is
       // threaded as the post-login callback.
-      if (!dataSyncConfig?.active) {
+      if (!isInitRemoteServerConfig || !dataSyncConfig?.active) {
         log(
           'session-auth-expired with no live session — redirecting to login. source=%s reason=%s',
           source,

@@ -1,9 +1,8 @@
 import type { IconType } from '@lobehub/icons';
-import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -12,10 +11,18 @@ import {
   PRIORITY_LEVELS,
   resolvePriorityLevel,
 } from '@/components/PriorityIcon';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
-import { useTaskStore } from '@/store/task';
 
 import { renderMenuExtra } from './menuExtra';
+import { SimpleTooltip } from './SimpleTooltip';
+import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
+import { useTaskPriorityChange } from './useTaskPriorityChange';
 
 interface PriorityMeta {
   icon: IconType;
@@ -98,16 +105,19 @@ interface TaskPriorityTagProps {
 
 const TaskPriorityTag = memo<TaskPriorityTagProps>(
   ({ children, disableDropdown, onChange, size = 16, priority, taskIdentifier }) => {
-    const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
-    const updateTask = useTaskStore((s) => s.updateTask);
-    const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
 
     const currentLevel = resolvePriorityLevel(priority);
     const meta = PRIORITY_META[currentLevel];
+    const { apply: handlePriorityChange, pending: loading } = useTaskPriorityChange({
+      canEdit: canEditTask,
+      currentPriority: currentLevel,
+      onChange,
+      taskIdentifier,
+    });
 
     // Same search-header contract as the status menu — letters filter,
     // digits remain menu accelerators.
@@ -128,64 +138,14 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       if (!open) setQuery('');
     }, [open]);
 
-    const handlePriorityChange = useCallback(
-      async (nextPriority: number) => {
-        if (!canEditTask) return;
-        if (nextPriority === currentLevel) return;
-        if (onChange) {
-          onChange(nextPriority);
-          return;
-        }
-        if (!taskIdentifier) return;
-        setLoading(true);
-        await updateTask(taskIdentifier, { priority: nextPriority });
-        await refreshTaskList();
-        setLoading(false);
-      },
-      [canEditTask, currentLevel, onChange, refreshTaskList, taskIdentifier, updateTask],
-    );
-
-    const handlePriorityChangeRef = useRef(handlePriorityChange);
-    handlePriorityChangeRef.current = handlePriorityChange;
-    const filteredLevelsRef = useRef(filteredLevels);
-    filteredLevelsRef.current = filteredLevels;
-
-    useEffect(() => {
-      if (!open) return;
-      const onKeyDown = (event: KeyboardEvent) => {
-        const num = Number.parseInt(event.key, 10);
-        if (Number.isNaN(num)) return;
-        const levels = filteredLevelsRef.current;
-        const idx = num - 1;
-        if (idx < 0 || idx >= levels.length) return;
-        event.preventDefault();
-        event.stopPropagation();
-        void handlePriorityChangeRef.current(levels[idx]);
+    useMenuDigitShortcuts({
+      items: filteredLevels,
+      open,
+      onPick: (level) => {
+        void handlePriorityChange(level);
         setOpen(false);
-      };
-      document.addEventListener('keydown', onKeyDown, true);
-      return () => document.removeEventListener('keydown', onKeyDown, true);
-    }, [open]);
-
-    const menuItems = useMemo<DropdownItem[]>(
-      () =>
-        filteredLevels.map((level, index) => {
-          const value = PRIORITY_META[level];
-          const IconRender = value.icon;
-          const isCurrent = level === currentLevel;
-          return {
-            extra: renderMenuExtra(String(index + 1), isCurrent),
-            icon: <IconRender color={getPriorityIconColor(level)} size={16} />,
-            key: String(level),
-            label: levelLabel(level),
-            onClick: ({ domEvent }: MenuInfo) => {
-              domEvent.stopPropagation();
-              void handlePriorityChange(level);
-            },
-          };
-        }),
-      [currentLevel, filteredLevels, handlePriorityChange, levelLabel],
-    );
+      },
+    });
 
     const IconRender = meta.icon;
     const isUrgent = currentLevel === 1;
@@ -193,24 +153,31 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
     const triggerNode =
       children ||
       (loading ? (
-        <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+        <span className={styles.trigger}>
+          <Loader2Icon
+            className="animate-spin"
+            size={size}
+            style={{ color: cssVar.colorTextDescription }}
+          />
+        </span>
       ) : (
-        <Tooltip title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}>
-          <span
-            className={isUrgent ? styles.triggerUrgent : styles.trigger}
-            data-row-control={'priority'}
-            onClick={(e) => e.stopPropagation()}
+        <span
+          className={isUrgent ? styles.triggerUrgent : styles.trigger}
+          data-row-control={'priority'}
+        >
+          <SimpleTooltip
+            title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}
           >
             <IconRender color={getPriorityIconColor(currentLevel)} size={size} />
-          </span>
-        </Tooltip>
+          </SimpleTooltip>
+        </span>
       ));
 
     if (disableDropdown) return <>{triggerNode}</>;
 
     if (!canEditTask)
       return (
-        <Tooltip title={reason}>
+        <SimpleTooltip title={reason}>
           <span
             className={styles.triggerDisabled}
             style={{ display: 'inline-flex' }}
@@ -218,41 +185,52 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
           >
             {triggerNode}
           </span>
-        </Tooltip>
+        </SimpleTooltip>
       );
 
     return (
-      <DropdownMenu
-        items={menuItems}
-        open={open}
-        header={
-          <>
-            <input
-              autoFocus
-              className={styles.searchInput}
-              value={query}
-              aria-label={t('taskDetail.changePriorityPlaceholder', {
-                defaultValue: 'Change priority…',
-              })}
-              placeholder={t('taskDetail.changePriorityPlaceholder', {
-                defaultValue: 'Change priority…',
-              })}
-              onChange={(event) => setQuery(event.target.value)}
-              onClick={(event) => event.stopPropagation()}
-            />
-            <div className={styles.showingCaption}>
-              {query.trim()
-                ? t('taskDetail.showingItems', {
-                    count: filteredLevels.length,
-                    defaultValue: 'Showing {{count}} items',
-                  })
-                : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
-            </div>
-          </>
-        }
-        onOpenChange={setOpen}
-      >
-        {triggerNode}
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuContent className="min-w-52">
+          <input
+            autoFocus
+            className={styles.searchInput}
+            value={query}
+            aria-label={t('taskDetail.changePriorityPlaceholder', {
+              defaultValue: 'Change priority…',
+            })}
+            placeholder={t('taskDetail.changePriorityPlaceholder', {
+              defaultValue: 'Change priority…',
+            })}
+            onChange={(event) => setQuery(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          />
+          <div className={styles.showingCaption}>
+            {query.trim()
+              ? t('taskDetail.showingItems', {
+                  count: filteredLevels.length,
+                  defaultValue: 'Showing {{count}} items',
+                })
+              : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
+          </div>
+          {filteredLevels.map((level, index) => {
+            const ItemIcon = PRIORITY_META[level].icon;
+            return (
+              <DropdownMenuItem
+                key={level}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handlePriorityChange(level);
+                }}
+              >
+                <ItemIcon color={getPriorityIconColor(level)} size={16} />
+                <span className="flex-1">{levelLabel(level)}</span>
+                {renderMenuExtra(String(index + 1), level === currentLevel)}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
       </DropdownMenu>
     );
   },

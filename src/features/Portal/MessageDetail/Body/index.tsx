@@ -1,4 +1,4 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { css, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { useEffect } from 'react';
@@ -31,13 +31,13 @@ const MessageDetailBody = () => {
   }, [message]);
 
   return (
-    <Flexbox height={'100%'} paddingBlock={'0 12px'} paddingInline={8}>
+    <div className="flex flex-col h-[100%] px-2" style={{ paddingBlock: '0 12px' }}>
       {!!content && (
         <Markdown className={cx(md)} variant={'chat'}>
           {content}
         </Markdown>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

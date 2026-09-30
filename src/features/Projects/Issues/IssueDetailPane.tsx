@@ -1,13 +1,11 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowUpRightIcon, XIcon } from 'lucide-react';
-import { lazy, memo, Suspense } from 'react';
+import { createElement, lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const LazyIssueContent = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssueContent })),
@@ -60,36 +58,58 @@ const IssueDetailPane = memo<IssueDetailPaneProps>(({ identifier, onClose, onOpe
   return (
     <>
       <div className={styles.paneHeader}>
-        <Text fontSize={13} weight={500}>
+        <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
           {identifier ?? t('taskList.details.open')}
-        </Text>
-        <Flexbox horizontal flex={1} gap={4} justify="flex-end">
+        </span>
+        <div className="flex flex-row" style={{ justifyContent: 'flex-end', gap: 4, flex: 1 }}>
           {identifier && (
-            <ActionIcon
-              icon={ArrowUpRightIcon}
-              size={'small'}
+            <Button
+              aria-label={t('taskList.detail.openFullPage')}
+              size="icon-sm"
               title={t('taskList.detail.openFullPage')}
+              variant="ghost"
               onClick={onOpen}
-            />
+            >
+              {createElement(ArrowUpRightIcon, { 'size': 16, 'aria-hidden': true })}
+            </Button>
           )}
-          <ActionIcon
-            icon={XIcon}
-            size={'small'}
+          <Button
+            aria-label={t('taskList.detail.close')}
+            size="icon-sm"
             title={t('taskList.detail.close')}
+            variant="ghost"
             onClick={onClose}
-          />
-        </Flexbox>
+          >
+            {createElement(XIcon, { 'size': 16, 'aria-hidden': true })}
+          </Button>
+        </div>
       </div>
       {identifier ? (
-        <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
+        <Suspense
+          fallback={
+            <div
+              aria-busy="true"
+              className="flex flex-col gap-2"
+              role="status"
+              style={{ padding: 8 }}
+            >
+              {Array.from({ length: 4 }, (_, index) => (
+                <Skeleton className="h-8 w-full" key={index} />
+              ))}
+            </div>
+          }
+        >
           <LazyIssueContent taskId={identifier} />
         </Suspense>
       ) : (
-        <Flexbox align="center" paddingBlock={48} paddingInline={16}>
-          <Text fontSize={12} type="secondary">
+        <div
+          className="flex flex-col"
+          style={{ alignItems: 'center', paddingBlock: 48, paddingInline: 16 }}
+        >
+          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             {t('taskList.details.selectIssue')}
-          </Text>
-        </Flexbox>
+          </span>
+        </div>
       )}
     </>
   );

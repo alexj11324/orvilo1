@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -44,23 +44,23 @@ const SelectedAgentList = memo<SelectedAgentListProps>(({ agents }) => {
 
   if (selectedAgents.length === 0) {
     return (
-      <Flexbox className={styles.container} flex={1}>
+      <div className={cn('flex flex-col flex-1', styles.container)}>
         <AgentSelectionEmpty variant="noSelected" />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.container} gap={4}>
+    <div className={cn('flex flex-col gap-1', styles.container)}>
       <div className={styles.title}>
         {t('memberSelection.selectedAgents', { count: selectedAgents.length })}
       </div>
-      <Flexbox>
+      <div className="flex flex-col">
         {selectedAgents.map((agent) => (
           <AgentItem showRemove agent={agent} defaultTitle={defaultTitle} key={agent.id} />
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

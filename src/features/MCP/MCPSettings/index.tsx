@@ -1,13 +1,15 @@
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
-import { Form as AForm } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { EditIcon, LinkIcon, Settings2Icon, TerminalIcon } from 'lucide-react';
 import { useImperativeHandle, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import ArgsInput from '@/features/PluginDevModal/MCPManifestForm/ArgsInput';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
@@ -165,8 +167,8 @@ const Settings = ({
   hideFooter,
 }: SettingsProps & { ref?: React.RefObject<SettingsRef | null> }) => {
   const { t } = useTranslation(['plugin', 'common']);
-  const [connectionForm] = AForm.useForm();
-  const [envForm] = AForm.useForm();
+  const [connectionForm] = Form.useForm();
+  const [envForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [isEditingConnection, setIsEditingConnection] = useState(false);
@@ -235,20 +237,20 @@ const Settings = ({
   };
 
   return (
-    <Flexbox paddingBlock={8} paddingInline={12}>
-      <Flexbox gap={24}>
-        <Flexbox gap={24}>
+    <div className="flex flex-col py-2 px-3">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <div className={styles.sectionTitle}>
             <LinkIcon size={16} />
             {t('settings.connection.title')}
             {!isEditingConnection && (
               <Button
                 className={styles.editButton}
-                icon={<EditIcon size={12} />}
-                size="small"
-                type="text"
+                size="sm"
+                variant="ghost"
                 onClick={() => setIsEditingConnection(true)}
               >
+                <EditIcon data-icon="inline-start" size={12} />
                 {t('settings.edit')}
               </Button>
             )}
@@ -256,15 +258,15 @@ const Settings = ({
 
           {!isEditingConnection ? (
             // Preview mode
-            <Flexbox paddingInline={8}>
+            <div className="flex flex-col px-2">
               <div className={styles.previewItem}>
                 <span className={styles.previewLabel}>{t('settings.connection.type')}</span>
-                <Flexbox horizontal>
-                  <Icon icon={TerminalIcon} />
-                  <Text className={styles.previewValue}>
+                <div className="flex">
+                  <TerminalIcon />
+                  <span className={styles.previewValue}>
                     {customParams?.type?.toUpperCase() || 'Unknown'}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
               </div>
 
               {customParams?.type === 'http' && customParams?.url && (
@@ -293,11 +295,11 @@ const Settings = ({
                   )}
                 </>
               )}
-            </Flexbox>
+            </div>
           ) : (
             // Edit mode
             <div className={styles.connectionForm}>
-              <AForm
+              <Form
                 className={styles.compactForm}
                 form={connectionForm}
                 initialValues={customParams}
@@ -305,18 +307,18 @@ const Settings = ({
                 onFinish={handleConnectionSubmit}
               >
                 {customParams?.type === 'http' && (
-                  <AForm.Item
+                  <Form.Item
                     label={t('settings.connection.url')}
                     name={'url'}
                     rules={[{ message: t('settings.rules.urlRequired'), required: true }]}
                   >
-                    <Input placeholder="https://mcp.example.com/server" size="small" />
-                  </AForm.Item>
+                    <Input placeholder="https://mcp.example.com/server" />
+                  </Form.Item>
                 )}
 
                 {customParams?.type === 'stdio' && (
                   <>
-                    <AForm.Item
+                    <Form.Item
                       label={t('settings.connection.command')}
                       name={'command'}
                       rules={[{ message: t('settings.rules.commandRequired'), required: true }]}
@@ -331,60 +333,60 @@ const Settings = ({
                           ]);
                         }}
                       />
-                    </AForm.Item>
+                    </Form.Item>
 
-                    <AForm.Item
+                    <Form.Item
                       label={t('settings.connection.args')}
                       name={'args'}
                       rules={[{ message: t('settings.rules.argsRequired'), required: true }]}
                     >
                       <ArgsInput placeholder="e.g: mcp-hello-world" />
-                    </AForm.Item>
+                    </Form.Item>
                   </>
                 )}
-                <Flexbox horizontal className={styles.footer} gap={8}>
-                  <Button htmlType="submit" loading={connectionLoading} type="primary">
+                <div className={cn('flex gap-2', styles.footer)}>
+                  <Button loading={connectionLoading} type="submit" variant="default">
                     {t('common:save')}
                   </Button>
                   <Button onClick={handleCancelEdit}>{t('common:cancel')}</Button>
-                </Flexbox>
-              </AForm>
+                </div>
+              </Form>
             </div>
           )}
-        </Flexbox>
+        </div>
 
         {/* Environment variable configuration (stdio type only) */}
         {isStdioType && (
-          <Flexbox gap={12}>
+          <div className="flex flex-col gap-3">
             <div className={styles.sectionTitle}>
               <Settings2Icon size={16} />
               {t('settings.configuration.title')}
             </div>
-            <Text style={{ fontSize: 12 }} type="secondary">
+            <div className="text-[12px] text-muted-foreground">
               {t('settings.envConfigDescription')}
-            </Text>
-            <AForm
+            </div>
+            <Form
               form={envForm}
               initialValues={{ env: pluginSettings }}
               layout="vertical"
               onFinish={handleEnvSubmit}
             >
-              <AForm.Item name="env" style={{ marginBottom: 0 }}>
+              <Form.Item name="env" style={{ marginBottom: 0 }}>
                 <KeyValueEditor
                   addButtonText={t('dev.mcp.env.add')}
                   keyPlaceholder="VARIABLE_NAME"
                 />
-              </AForm.Item>
+              </Form.Item>
               {!hideFooter && (
-                <Flexbox horizontal className={styles.footer} gap={8}>
-                  <Button htmlType="submit" loading={loading} type="primary">
+                <div className={cn('flex gap-2', styles.footer)}>
+                  <Button loading={loading} type="submit" variant="default">
                     {t('common:save')}
                   </Button>
                   <Button onClick={() => envForm.resetFields()}>{t('common:reset')}</Button>
-                </Flexbox>
+                </div>
               )}
-            </AForm>
-          </Flexbox>
+            </Form>
+          </div>
         )}
 
         {/* HTTP type notice */}
@@ -395,12 +397,12 @@ const Settings = ({
               {t('settings.configuration.title')}
             </div>
             <div className={styles.emptyState}>
-              <Text type="secondary">{t('settings.httpTypeNotice')}</Text>
+              <span className="text-muted-foreground">{t('settings.httpTypeNotice')}</span>
             </div>
           </div>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

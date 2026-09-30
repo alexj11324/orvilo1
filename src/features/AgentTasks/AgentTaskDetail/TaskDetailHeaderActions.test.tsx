@@ -35,16 +35,14 @@ const mocks = vi.hoisted(() => ({
   updateTaskVisibility: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  DropdownMenu: ({ children, items }: { children?: ReactNode; items: MenuItem[] }) => {
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({ children, items }: { children?: ReactNode; items: MenuItem[] }) => {
     mocks.dropdownItems = items;
     return <>{children}</>;
   },
-  copyToClipboard: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: (opts: unknown) => mocks.confirmModal(opts),
 }));

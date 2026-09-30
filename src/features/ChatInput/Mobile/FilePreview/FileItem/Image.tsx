@@ -1,10 +1,10 @@
-import { Flexbox, Image } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
+import { Image } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { RotateCw, Trash } from 'lucide-react';
 import { memo } from 'react';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
+import ActionIcon from '@/components/ActionIcon';
 
 import { MIN_IMAGE_SIZE } from './style';
 
@@ -54,12 +54,11 @@ const FileItem = memo<FileItemProps>(
         src={src}
         width={64}
         actions={
-          <Flexbox horizontal>
+          <div className="flex flex-row">
             {error && errorCode ? (
               <FileUploadErrorActions compact code={errorCode} />
             ) : error ? (
               <ActionIcon
-                glass
                 className={styles.deleteButton}
                 icon={RotateCw}
                 size={'small'}
@@ -70,7 +69,6 @@ const FileItem = memo<FileItemProps>(
               />
             ) : null}
             <ActionIcon
-              glass
               className={styles.deleteButton}
               icon={Trash}
               size={'small'}
@@ -79,7 +77,7 @@ const FileItem = memo<FileItemProps>(
                 onRemove?.();
               }}
             />
-          </Flexbox>
+          </div>
         }
       />
     );

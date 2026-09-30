@@ -1,7 +1,19 @@
-import { act, renderHook } from '@testing-library/react';
+/**
+ * @vitest-environment happy-dom
+ */
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ModalHost } from '@/components/Modal';
 import { canGoNative } from '@/libs/contextMenu/canGoNative';
 
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
@@ -12,7 +24,11 @@ const mocks = vi.hoisted(() => ({
   deleteTask: vi.fn(),
   messageSuccess: vi.fn(),
   modalConfirm: vi.fn(),
+  getReminder: vi.fn(),
+  moveWorkflow: vi.fn(),
   refreshTaskList: vi.fn(),
+  setReminder: vi.fn(),
+  toastError: vi.fn(),
   runTask: vi.fn(),
   transferItems: [
     { key: 'transfer-task', label: 'Move to…' },
@@ -22,13 +38,24 @@ const mocks = vi.hoisted(() => ({
   updateTaskStatus: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  copyToClipboard: mocks.copyToClipboard,
-}));
-
 vi.mock('@/libs/contextMenu', () => ({
   closeContextMenu: mocks.closeContextMenu,
+}));
+
+vi.mock('@/services/task', () => ({
+  taskService: {
+    getReminder: mocks.getReminder,
+    setReminder: mocks.setReminder,
+  },
+}));
+
+vi.mock('@/components/toast', async (importOriginal) => {
+  const original = await importOriginal<{ toast: Record<string, unknown> }>();
+  return { ...original, toast: { ...original.toast, error: mocks.toastError } };
+});
+
+vi.mock('@/components/ui/calendar', () => ({
+  Calendar: () => <div data-testid="calendar" />,
 }));
 
 vi.mock('antd', async (importOriginal) => ({
@@ -43,6 +70,10 @@ vi.mock('antd', async (importOriginal) => ({
 
 vi.mock('@/business/client/hooks/useTaskTransferMenuItem', () => ({
   useTaskTransferMenuItem: () => mocks.transferItems,
+}));
+
+vi.mock('./useIssueStatusMove', () => ({
+  useIssueStatusMove: () => mocks.moveWorkflow,
 }));
 
 vi.mock('@/hooks/useAppOrigin', () => ({
@@ -81,6 +112,7 @@ vi.mock('@/store/task', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
+    i18n: { language: 'en' },
     t: (key: string, options?: { defaultValue?: ReactNode; ns?: string }) =>
       options?.defaultValue ?? key,
   }),
@@ -89,6 +121,10 @@ vi.mock('react-i18next', () => ({
 describe('useTaskItemContextMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: mocks.copyToClipboard },
+    });
   });
 
   it('does not render adjacent dividers around transfer actions', () => {
@@ -185,6 +221,75 @@ describe('useTaskItemContextMenu', () => {
 
     expect(mocks.closeContextMenu).toHaveBeenCalledTimes(1);
   });
+
+  it('offers the board columns in order — triage shown but unreachable for an unlinked task', () => {
+    const { result } = renderHook(() =>
+      useTaskItemContextMenu({
+        identifier: 'T-1',
+        priority: 0,
+        status: 'backlog',
+      }),
+    );
+
+    const statusItem = result.current.items.find(
+      (item) => item && typeof item === 'object' && 'key' in item && item.key === 'status',
+    ) as { children: Array<{ disabled?: boolean; key: string; label?: string }> };
+    const children = statusItem.children;
+
+    // The Kanban board's columns, 1:1 — triage leads, never dropped.
+    expect(children.map((child) => child.key)).toEqual([
+      'status-triage',
+      'status-backlog',
+      'status-todo',
+      'status-running',
+      'status-needsInput',
+      'status-done',
+      'status-canceled',
+    ]);
+    expect(children[0].label).toBe('taskList.kanban.triage');
+    // The workflow-only columns stay visible but disabled, matching the
+    // reachability a board drop obeys for a task without workflow state.
+    expect(children.map((child) => Boolean(child.disabled))).toEqual([
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('lets a workflow-linked task pick triage — written as workflowCategory', async () => {
+    const { result } = renderHook(() =>
+      useTaskItemContextMenu({
+        identifier: 'T-1',
+        priority: 0,
+        status: 'backlog',
+        workflowCategory: 'backlog',
+        workflowStateId: 'ls-1',
+      }),
+    );
+
+    const statusItem = result.current.items.find(
+      (item) => item && typeof item === 'object' && 'key' in item && item.key === 'status',
+    ) as {
+      children: Array<{ disabled?: boolean; key: string; onClick: (info: unknown) => void }>;
+    };
+    expect(statusItem.children.every((child) => !child.disabled)).toBe(true);
+
+    const triage = statusItem.children.find((child) => child.key === 'status-triage');
+    await triage?.onClick({ domEvent: { stopPropagation: vi.fn() } });
+
+    // A workflow pick commits through the shared Issue status command — the
+    // same CAS move the detail/list tags and the boards write — never a raw
+    // category patch.
+    expect(mocks.moveWorkflow).toHaveBeenCalledWith({
+      taskIdentifier: 'T-1',
+      target: { category: 'triage', workflowStateRefId: undefined },
+    });
+    expect(mocks.updateTask).not.toHaveBeenCalled();
+  });
 });
 
 describe('menu ownership', () => {
@@ -206,5 +311,74 @@ describe('menu ownership', () => {
       menu: 'AgentTasks/taskItem',
       native: canGoNative(result.current.items),
     }).toMatchSnapshot();
+  });
+});
+
+describe('schedule dialog error feedback', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  // Opens the real dialog through the public path — the context-menu item
+  // calls openTaskScheduleDialog → createModal → the mounted ModalHost.
+  const openScheduleDialog = async () => {
+    render(<ModalHost />);
+    const { result } = renderHook(() =>
+      useTaskItemContextMenu({ identifier: 'T-1', priority: 0, status: 'backlog' }),
+    );
+    const remindMeItem = result.current.items.find(
+      (item) => item && typeof item === 'object' && 'key' in item && item.key === 'remindMe',
+    ) as { onClick: (info: unknown) => void } | undefined;
+
+    if (!remindMeItem) throw new Error('Expected a Remind me menu item');
+    await act(async () => {
+      remindMeItem.onClick({ domEvent: { stopPropagation: vi.fn() } });
+    });
+  };
+
+  it('toasts when the reminder load fails and still unlocks the preset rows', async () => {
+    mocks.getReminder.mockRejectedValue(new Error('offline'));
+
+    await openScheduleDialog();
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith('taskList.schedule.loadFailed'),
+    );
+    // reminderLoaded still resolves — the rows must not stay disabled forever.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'hour' })).not.toBeDisabled());
+  });
+
+  it('toasts on a failed due-date save and keeps the dialog interactive for retry', async () => {
+    mocks.getReminder.mockResolvedValue({ data: { remindAt: null } });
+    mocks.updateTask.mockRejectedValue(new Error('conflict'));
+
+    await openScheduleDialog();
+    await waitFor(() => expect(mocks.getReminder).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /Today/ }));
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith('taskList.schedule.saveFailed'),
+    );
+    expect(mocks.updateTask).toHaveBeenCalledWith('T-1', { dueDate: expect.any(String) });
+    // busy is released so a second click retries instead of dead-ending.
+    await waitFor(() => expect(screen.getByRole('button', { name: /Today/ })).not.toBeDisabled());
+  });
+
+  it('toasts on a failed reminder save and keeps the preset enabled for retry', async () => {
+    mocks.getReminder.mockResolvedValue({ data: { remindAt: null } });
+    mocks.setReminder.mockRejectedValue(new Error('offline'));
+
+    await openScheduleDialog();
+
+    const preset = screen.getByRole('button', { name: 'hour' });
+    await waitFor(() => expect(preset).not.toBeDisabled());
+    fireEvent.click(preset);
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith('taskList.schedule.saveFailed'),
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'hour' })).not.toBeDisabled());
   });
 });

@@ -1,62 +1,56 @@
-import { Flexbox, Highlighter, Snippet } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
-import { Steps } from 'antd';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { readableColor } from 'polished';
-import React, { memo, useMemo } from 'react';
+import { createStaticStyles } from 'antd-style';
+import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { ProviderCombine } from '@/components/OrviloIcons';
+import {
+  Stepper,
+  StepperDescription,
+  StepperIndicator,
+  StepperItem,
+  StepperNav,
+  StepperSeparator,
+  StepperTitle,
+} from '@/components/reui/stepper';
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockLanguage,
+  CodeBlockTitle,
+} from '@/components/ui/code-block';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
+const styles = createStaticStyles(({ css }) => ({
   steps: css`
     margin-block-start: 32px;
-    &.${prefixCls}-steps-small .${prefixCls}-steps-item-title {
-      margin-block-end: 16px;
-      font-size: 16px;
-      font-weight: bold;
-    }
-
-    .${prefixCls}-steps-item-description {
-      margin-block-end: 24px;
-    }
-
-    .${prefixCls}-steps-icon {
-      color: var(--steps-icon-color, ${cssVar.colorText}) !important;
-    }
   `,
 }));
 
 const SetupGuide = memo(() => {
-  const iconColor = useMemo(() => {
-    if (typeof window === 'undefined') return '#fff';
-
-    const variableExpression = cssVar.colorPrimary;
-    const variableName = variableExpression.match(/var\((--[^),\s]+)/)?.[1];
-    const computedColor = variableName
-      ? getComputedStyle(document.documentElement).getPropertyValue(variableName).trim()
-      : variableExpression;
-
-    return readableColor(computedColor || '#1677ff');
-  }, []);
   const { t } = useTranslation('components');
+
   return (
     <>
       <ProviderCombine provider={'ollama'} size={30} style={{ marginBottom: -8, marginLeft: 4 }} />
-      <Tabs
-        items={[
-          {
-            children: (
-              <Steps
-                className={styles.steps}
-                direction={'vertical'}
-                size={'small'}
-                style={{ '--steps-icon-color': iconColor } as React.CSSProperties}
-                items={[
-                  {
-                    description: (
+      <Tabs defaultValue={'macos'} style={{ width: '500px' }}>
+        <TabsList>
+          <TabsTrigger value={'macos'}>macOS</TabsTrigger>
+          <TabsTrigger value={'windows'}>{t('OllamaSetupGuide.install.windowsTab')}</TabsTrigger>
+          <TabsTrigger value={'linux'}>Linux</TabsTrigger>
+          <TabsTrigger value={'docker'}>Docker</TabsTrigger>
+        </TabsList>
+        <TabsContent value="macos">
+          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+            <StepperNav>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{1}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.install.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
                       <Trans
                         i18nKey={'OllamaSetupGuide.install.description'}
                         ns={'components'}
@@ -70,44 +64,52 @@ const SetupGuide = memo(() => {
                           />,
                         ]}
                       />
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.install.title'),
-                  },
-                  {
-                    description: (
-                      <Flexbox gap={8}>
+                    </StepperDescription>
+                  </div>
+                </div>
+                <StepperSeparator />
+              </StepperItem>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{2}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.cors.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
+                      <div className="flex flex-col gap-2">
                         {t('OllamaSetupGuide.cors.description')}
 
-                        <Flexbox gap={8}>
+                        <div className="flex flex-col gap-2">
                           {t('OllamaSetupGuide.cors.macos')}
-                          <Snippet language={'bash'}>
-                            {}
-                            launchctl setenv OLLAMA_ORIGINS "*"
-                          </Snippet>
+                          <CodeBlock
+                            wrap
+                            code={'launchctl setenv OLLAMA_ORIGINS "*"'}
+                            language={'bash'}
+                          >
+                            <CodeBlockCopyButton />
+                          </CodeBlock>
                           {t('OllamaSetupGuide.cors.reboot')}
-                        </Flexbox>
-                      </Flexbox>
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.cors.title'),
-                  },
-                ]}
-              />
-            ),
-            key: 'macos',
-            label: 'macOS',
-          },
-          {
-            children: (
-              <Steps
-                className={styles.steps}
-                direction={'vertical'}
-                size={'small'}
-                style={{ '--steps-icon-color': iconColor } as React.CSSProperties}
-                items={[
-                  {
-                    description: (
+                        </div>
+                      </div>
+                    </StepperDescription>
+                  </div>
+                </div>
+              </StepperItem>
+            </StepperNav>
+          </Stepper>
+        </TabsContent>
+        <TabsContent value="windows">
+          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+            <StepperNav>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{1}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.install.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
                       <Trans
                         i18nKey={'OllamaSetupGuide.install.description'}
                         ns={'components'}
@@ -121,42 +123,51 @@ const SetupGuide = memo(() => {
                           />,
                         ]}
                       />
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.install.title'),
-                  },
-                  {
-                    description: (
-                      <Flexbox gap={8}>
+                    </StepperDescription>
+                  </div>
+                </div>
+                <StepperSeparator />
+              </StepperItem>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{2}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.cors.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
+                      <div className="flex flex-col gap-2">
                         {t('OllamaSetupGuide.cors.description')}
                         <div>{t('OllamaSetupGuide.cors.windows')}</div>
                         <div>{t('OllamaSetupGuide.cors.reboot')}</div>
-                      </Flexbox>
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.cors.title'),
-                  },
-                ]}
-              />
-            ),
-            key: 'windows',
-            label: t('OllamaSetupGuide.install.windowsTab'),
-          },
-          {
-            children: (
-              <Steps
-                className={styles.steps}
-                direction={'vertical'}
-                size={'small'}
-                style={{ '--steps-icon-color': iconColor } as React.CSSProperties}
-                items={[
-                  {
-                    description: (
-                      <Flexbox gap={8}>
+                      </div>
+                    </StepperDescription>
+                  </div>
+                </div>
+              </StepperItem>
+            </StepperNav>
+          </Stepper>
+        </TabsContent>
+        <TabsContent value="linux">
+          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+            <StepperNav>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{1}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.install.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
+                      <div className="flex flex-col gap-2">
                         {t('OllamaSetupGuide.install.linux.command')}
-                        <Snippet language={'bash'}>
-                          curl -fsSL https://ollama.com/install.sh | sh
-                        </Snippet>
+                        <CodeBlock
+                          wrap
+                          code={'curl -fsSL https://ollama.com/install.sh | sh'}
+                          language={'bash'}
+                        >
+                          <CodeBlockCopyButton />
+                        </CodeBlock>
                         <div>
                           <Trans
                             i18nKey={'OllamaSetupGuide.install.linux.manual'}
@@ -172,90 +183,107 @@ const SetupGuide = memo(() => {
                             ]}
                           />
                         </div>
-                      </Flexbox>
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.install.title'),
-                  },
-                  {
-                    description: (
-                      <Flexbox gap={8}>
+                      </div>
+                    </StepperDescription>
+                  </div>
+                </div>
+                <StepperSeparator />
+              </StepperItem>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{2}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.cors.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
+                      <div className="flex flex-col gap-2">
                         <div>{t('OllamaSetupGuide.cors.description')}</div>
 
                         <div>{t('OllamaSetupGuide.cors.linux.systemd')}</div>
                         {}
-                        <Snippet language={'bash'}> sudo systemctl edit ollama.service</Snippet>
-                        {t('OllamaSetupGuide.cors.linux.env')}
-                        <Highlighter
-                          fullFeatured
-                          showLanguage
-                          fileName={'ollama.service'}
-                          language={'bash'}
-                          children={`[Service]
-
-Environment="OLLAMA_ORIGINS=*"`}
-                        />
-                        {t('OllamaSetupGuide.cors.linux.reboot')}
-                      </Flexbox>
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.cors.title'),
-                  },
-                ]}
-              />
-            ),
-            key: 'linux',
-            label: 'Linux',
-          },
-          {
-            children: (
-              <Steps
-                className={styles.steps}
-                direction={'vertical'}
-                size={'small'}
-                style={{ '--steps-icon-color': iconColor } as React.CSSProperties}
-                items={[
-                  {
-                    description: (
-                      <Flexbox gap={8}>
-                        {t('OllamaSetupGuide.install.description')}
-                        <div>{t('OllamaSetupGuide.install.docker')}</div>
-                        <Snippet language={'bash'}>docker pull ollama/ollama</Snippet>
-                      </Flexbox>
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.install.title'),
-                  },
-                  {
-                    description: (
-                      <Flexbox gap={8}>
-                        {t('OllamaSetupGuide.cors.description')}
-                        <Highlighter
-                          fullFeatured
-                          showLanguage
-                          fileName={'ollama.service'}
+                        <CodeBlock
+                          wrap
+                          code={'sudo systemctl edit ollama.service'}
                           language={'bash'}
                         >
-                          {}
-                          docker run -d --gpus=all -v ollama:/root/.ollama -e OLLAMA_ORIGINS="*" -p
-                          11434:11434 --name ollama ollama/ollama
-                        </Highlighter>
-                      </Flexbox>
-                    ),
-                    status: 'process',
-                    title: t('OllamaSetupGuide.cors.title'),
-                  },
-                ]}
-              />
-            ),
-            key: 'docker',
-            label: 'Docker',
-          },
-        ]}
-        style={{
-          width: '500px',
-        }}
-      />
+                          <CodeBlockCopyButton />
+                        </CodeBlock>
+                        {t('OllamaSetupGuide.cors.linux.env')}
+                        <CodeBlock
+                          code={'[Service]\n\nEnvironment="OLLAMA_ORIGINS=*"'}
+                          language={'bash'}
+                        >
+                          <CodeBlockHeader>
+                            <CodeBlockTitle>{'ollama.service'}</CodeBlockTitle>
+                            <CodeBlockLanguage />
+                            <CodeBlockCopyButton />
+                          </CodeBlockHeader>
+                        </CodeBlock>
+                        {t('OllamaSetupGuide.cors.linux.reboot')}
+                      </div>
+                    </StepperDescription>
+                  </div>
+                </div>
+              </StepperItem>
+            </StepperNav>
+          </Stepper>
+        </TabsContent>
+        <TabsContent value="docker">
+          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+            <StepperNav>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{1}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.install.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
+                      <div className="flex flex-col gap-2">
+                        {t('OllamaSetupGuide.install.description')}
+                        <div>{t('OllamaSetupGuide.install.docker')}</div>
+                        <CodeBlock wrap code={'docker pull ollama/ollama'} language={'bash'}>
+                          <CodeBlockCopyButton />
+                        </CodeBlock>
+                      </div>
+                    </StepperDescription>
+                  </div>
+                </div>
+                <StepperSeparator />
+              </StepperItem>
+              <StepperItem step={1}>
+                <div className="flex items-start gap-2">
+                  <StepperIndicator>{2}</StepperIndicator>
+                  <div className={'flex flex-col'}>
+                    <StepperTitle className="mb-4 text-base font-bold">
+                      {t('OllamaSetupGuide.cors.title')}
+                    </StepperTitle>
+                    <StepperDescription className="mb-6">
+                      <div className="flex flex-col gap-2">
+                        {t('OllamaSetupGuide.cors.description')}
+                        <CodeBlock
+                          wrap
+                          language={'bash'}
+                          code={
+                            'docker run -d --gpus=all -v ollama:/root/.ollama -e OLLAMA_ORIGINS="*" -p 11434:11434 --name ollama ollama/ollama'
+                          }
+                        >
+                          <CodeBlockHeader>
+                            <CodeBlockTitle>{'ollama.service'}</CodeBlockTitle>
+                            <CodeBlockLanguage />
+                            <CodeBlockCopyButton />
+                          </CodeBlockHeader>
+                        </CodeBlock>
+                      </div>
+                    </StepperDescription>
+                  </div>
+                </div>
+              </StepperItem>
+            </StepperNav>
+          </Stepper>
+        </TabsContent>
+      </Tabs>
     </>
   );
 });

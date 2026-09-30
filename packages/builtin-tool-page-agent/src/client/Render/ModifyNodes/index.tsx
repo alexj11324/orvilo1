@@ -1,12 +1,10 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { ModifyNodesArgs, ModifyOperation } from '@orvilo/editor-runtime';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Check, DiffIcon, Minus, Plus, X } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import type { ModifyNodesState } from '../../../types';
 
@@ -90,7 +88,14 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
     const results = pluginState?.results ?? [];
 
     return (
-      <Block variant={'outlined'} width={'100%'}>
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
+      >
         {operations.map((op, index) => {
           const meta = actionMeta[op.action];
           const details = getOperationDetails(op);
@@ -101,30 +106,25 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
           return (
             <div className={styles.row} key={index}>
               <span className={styles.index}>{index + 1}.</span>
-              <Icon icon={meta.icon} size={14} style={{ color: meta.color, flexShrink: 0 }} />
+              {createElement(meta.icon, {
+                size: 14,
+                style: { color: meta.color, flexShrink: 0 },
+              })}
               {details.position && <span className={styles.position}>{details.position}</span>}
               {details.content && <span className={styles.content}>{details.content}</span>}
-              {success && (
-                <Icon
-                  icon={Check}
-                  size={14}
-                  style={{ color: cssVar.colorSuccess, flexShrink: 0 }}
-                />
-              )}
+              {success && <Check size={14} style={{ color: cssVar.colorSuccess, flexShrink: 0 }} />}
               {failed && (
                 <>
-                  <Icon icon={X} size={14} style={{ color: cssVar.colorError, flexShrink: 0 }} />
+                  <X size={14} style={{ color: cssVar.colorError, flexShrink: 0 }} />
                   {result?.error && (
-                    <Text as={'span'} fontSize={11} type={'danger'}>
-                      {result.error}
-                    </Text>
+                    <span className="text-[11px] text-destructive">{result.error}</span>
                   )}
                 </>
               )}
             </div>
           );
         })}
-      </Block>
+      </div>
     );
   },
 );

@@ -1,13 +1,22 @@
 'use client';
 
-import { Flexbox, Form, FormGroup, highlighterThemes, mermaidThemes } from '@lobehub/ui';
-import { Select, Switch, Tabs } from '@lobehub/ui/base-ui';
+import { highlighterThemes, mermaidThemes } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import Form, { FormGroup } from '@/components/GroupForm';
 import { SettingsSectionSkeleton } from '@/components/Skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { useSaveState } from '@/hooks/useSaveState';
 import { useUserStore } from '@/store/user';
@@ -46,27 +55,37 @@ const ChatAppearance = memo(() => {
         title={t('settingChatAppearance.transitionMode.title')}
         variant={'filled'}
         extra={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
             {renderSaveHint('transitionMode')}
             <Tabs
-              activeKey={general.transitionMode}
-              items={[
-                {
-                  key: 'none',
-                  label: t('settingChatAppearance.transitionMode.options.none.value'),
-                },
-                {
-                  key: 'fadeIn',
-                  label: t('settingChatAppearance.transitionMode.options.fadeIn'),
-                },
-                {
-                  key: 'smooth',
-                  label: t('settingChatAppearance.transitionMode.options.smooth'),
-                },
-              ]}
-              onChange={(key) => handleChange('transitionMode', key)}
-            />
-          </Flexbox>
+              value={general.transitionMode}
+              onValueChange={(key) => handleChange('transitionMode', key)}
+            >
+              <TabsList>
+                {[
+                  {
+                    key: 'none',
+                    label: t('settingChatAppearance.transitionMode.options.none.value'),
+                  },
+                  {
+                    key: 'fadeIn',
+                    label: t('settingChatAppearance.transitionMode.options.fadeIn'),
+                  },
+                  {
+                    key: 'smooth',
+                    label: t('settingChatAppearance.transitionMode.options.smooth'),
+                  },
+                ].map((item) => (
+                  <TabsTrigger key={item.key} value={item.key}>
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
         }
       >
         <ChatTransitionPreview key={general.transitionMode} mode={general.transitionMode} />
@@ -81,39 +100,52 @@ const ChatAppearance = memo(() => {
             children: [
               {
                 children: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div
+                    className={'flex min-w-0'}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  >
                     {renderSaveHint('enableAutoScrollOnStreaming')}
                     <Switch
                       checked={general.enableAutoScrollOnStreaming ?? true}
-                      onChange={(checked) => handleChange('enableAutoScrollOnStreaming', checked)}
+                      onCheckedChange={(checked) =>
+                        handleChange('enableAutoScrollOnStreaming', checked)
+                      }
                     />
-                  </Flexbox>
+                  </div>
                 ),
                 label: t('settingChatAppearance.autoScrollOnStreaming.title'),
                 minWidth: undefined,
               },
               {
                 children: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div
+                    className={'flex min-w-0'}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  >
                     {renderSaveHint('expandWorkflowWhileStreaming')}
                     <Switch
                       checked={general.expandWorkflowWhileStreaming ?? false}
-                      onChange={(checked) => handleChange('expandWorkflowWhileStreaming', checked)}
+                      onCheckedChange={(checked) =>
+                        handleChange('expandWorkflowWhileStreaming', checked)
+                      }
                     />
-                  </Flexbox>
+                  </div>
                 ),
                 label: t('settingChatAppearance.workflowStreamingExpand.title'),
                 minWidth: undefined,
               },
               {
                 children: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div
+                    className={'flex min-w-0'}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  >
                     {renderSaveHint('enableMessageLinkIcon')}
                     <Switch
                       checked={general.enableMessageLinkIcon ?? true}
-                      onChange={(checked) => handleChange('enableMessageLinkIcon', checked)}
+                      onCheckedChange={(checked) => handleChange('enableMessageLinkIcon', checked)}
                     />
-                  </Flexbox>
+                  </div>
                 ),
                 desc: <LinkIconPreview />,
                 label: t('settingChatAppearance.linkIcon.title'),
@@ -132,23 +164,45 @@ const ChatAppearance = memo(() => {
         title={t('settingChatAppearance.highlighterTheme.title')}
         variant={'filled'}
         extra={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
             {renderSaveHint('highlighterTheme')}
             <Select
               value={general.highlighterTheme}
-              options={highlighterThemes.map((item) => ({
+              items={highlighterThemes.map((item) => ({
                 label: item.displayName,
                 value: item.id,
               }))}
-              style={{
-                width: 240,
+              onValueChange={(value) => {
+                if (value !== null) ((value) => handleChange('highlighterTheme', value))(value);
               }}
-              onChange={(value) => handleChange('highlighterTheme', value)}
-            />
-          </Flexbox>
+            >
+              <SelectTrigger
+                style={{
+                  width: 240,
+                }}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {highlighterThemes
+                  .map((item) => ({
+                    label: item.displayName,
+                    value: item.id,
+                  }))
+                  .map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       >
-        <HighlighterPreview key={general.highlighterTheme} theme={general.highlighterTheme} />
+        <HighlighterPreview key={general.highlighterTheme} />
       </FormGroup>
 
       <FormGroup
@@ -156,20 +210,42 @@ const ChatAppearance = memo(() => {
         title={t('settingChatAppearance.mermaidTheme.title')}
         variant={'filled'}
         extra={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
             {renderSaveHint('mermaidTheme')}
             <Select
               value={general.mermaidTheme}
-              options={mermaidThemes.map((item) => ({
+              items={mermaidThemes.map((item) => ({
                 label: item.displayName,
                 value: item.id,
               }))}
-              style={{
-                width: 240,
+              onValueChange={(value) => {
+                if (value !== null) ((value) => handleChange('mermaidTheme', value))(value);
               }}
-              onChange={(value) => handleChange('mermaidTheme', value)}
-            />
-          </Flexbox>
+            >
+              <SelectTrigger
+                style={{
+                  width: 240,
+                }}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {mermaidThemes
+                  .map((item) => ({
+                    label: item.displayName,
+                    value: item.id,
+                  }))
+                  .map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       >
         <MermaidPreview key={general.mermaidTheme} theme={general.mermaidTheme} />

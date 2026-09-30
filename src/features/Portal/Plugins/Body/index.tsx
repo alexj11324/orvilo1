@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 
 import { useChatStore } from '@/store/chat';
@@ -23,9 +22,9 @@ const ToolUI = () => {
   if (!args) return;
 
   return (
-    <Flexbox flex={1} height={'100%'} paddingInline={12} style={{ overflow: 'auto' }}>
+    <div className="flex flex-col flex-1 h-[100%] px-3" style={{ overflow: 'auto' }}>
       <ToolRender />
-    </Flexbox>
+    </div>
   );
 };
 

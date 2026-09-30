@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,15 +25,15 @@ const Body = memo(() => {
   if (!taskId) return null;
   if (error)
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
         <AsyncError error={error} variant={'page'} onRetry={onRetry} />
-      </Flexbox>
+      </div>
     );
   if (isNotFound)
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
         <NotFound desc={t('taskDetail.notFound.desc')} title={t('taskDetail.notFound.title')} />
-      </Flexbox>
+      </div>
     );
 
   // While the run is in flight there is no report yet — the thing to read is
@@ -42,23 +41,19 @@ const Body = memo(() => {
   // while the run is live, so the panel turns into the report once it settles.
   if (!isInitialLoading && liveRun)
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
         <TopicChatDrawerBody
           agentId={liveRun.agentId}
           key={liveRun.topicId}
           runningOperation={liveRun.activity.runningOperation}
           topicId={liveRun.topicId}
         />
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Flexbox
-      flex={1}
-      gap={24}
-      height={'100%'}
-      paddingBlock={20}
-      paddingInline={16}
+    <div
+      className="flex flex-col flex-1 gap-6 h-[100%] py-5 px-4"
       style={{ minHeight: 0, overflowY: 'auto' }}
     >
       {isInitialLoading ? (
@@ -75,7 +70,7 @@ const Body = memo(() => {
         </>
       )}
       <TopicChatDrawer />
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,5 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { RenameLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { ArrowRight, ChevronRight } from 'lucide-react';
@@ -15,19 +13,23 @@ const RenameLocalFile = memo<BuiltinInterventionProps<RenameLocalFileParams>>(({
   const { base, dir } = path.parse(filePath || '');
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={[filePath]} />
-      <Flexbox horizontal>
+      <div className="flex flex-row">
         <LocalFolder path={dir} />
-        <Icon icon={ChevronRight} />
+        <span className="anticon" role="img">
+          <ChevronRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
         <LocalFile name={base} path={filePath} />
-      </Flexbox>
-      <Flexbox horizontal align="center" gap={8}>
-        <Text type="secondary">{base}</Text>
-        <Icon icon={ArrowRight} />
-        <Text>{newName}</Text>
-      </Flexbox>
-    </Flexbox>
+      </div>
+      <div className="flex flex-row items-center gap-2">
+        <div className="text-muted-foreground">{base}</div>
+        <span className="anticon" role="img">
+          <ArrowRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
+        <div>{newName}</div>
+      </div>
+    </div>
   );
 });
 

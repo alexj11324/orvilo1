@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { ItemType } from 'antd/es/menu/interface';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { DropdownItem } from '@/components/ItemsMenu';
 
 import FileListItemActions, { appendTransferMenuItemsBeforeDelete } from './FileListItemActions';
 
@@ -24,8 +25,8 @@ describe('appendTransferMenuItemsBeforeDelete', () => {
       { key: 'download' },
       { type: 'divider' },
       { key: 'delete' },
-    ] as ItemType[];
-    const transferItems = [{ key: 'transfer' }, { key: 'copy' }] as ItemType[];
+    ] as DropdownItem[];
+    const transferItems = [{ key: 'transfer' }, { key: 'copy' }] as DropdownItem[];
 
     const result = appendTransferMenuItemsBeforeDelete(baseItems, transferItems);
 

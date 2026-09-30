@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,16 +19,16 @@ const MoveLocalFiles = memo<BuiltinRenderProps<MoveFilesArgs>>(({ args }) => {
   }));
 
   return (
-    <Flexbox gap={8}>
-      <Text type="secondary">
+    <div className="flex flex-col gap-2">
+      <div className="text-muted-foreground">
         {t('localFiles.moveFiles.itemsMoved', { count: moveItems.length })}
-      </Text>
-      <Flexbox gap={6}>
+      </div>
+      <div className="flex flex-col gap-1.5">
         {moveItems.map((item, index) => (
           <MoveFileItem key={index} newPath={item.newPath} oldPath={item.oldPath} />
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

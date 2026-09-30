@@ -1,13 +1,14 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
+import { Button } from '@/components/ui/button';
 
+import { TaskDetailScope } from './TaskDetailScope';
 import TaskDetailSections from './TaskDetailSections';
 import TaskDetailSkeleton from './TaskDetailSkeleton';
 import { type ActiveTaskDetailState, useActiveTaskDetail } from './useActiveTaskDetail';
@@ -45,7 +46,7 @@ const IssueContentBody = memo<Required<Pick<IssueContentProps, 'detail'>>>(({ de
         title={t('taskDetail.notFound.title')}
         extra={
           <Link to={'/tasks'}>
-            <Button type={'primary'}>{t('taskDetail.notFound.backToTasks')}</Button>
+            <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
           </Link>
         }
       />
@@ -65,9 +66,11 @@ IssueContentBody.displayName = 'IssueContentBody';
  * pane must NOT wrap it in another scroll host level of its own — mount it
  * directly in the pane's scroll owner.
  */
-const IssueContent = memo<IssueContentProps>(({ detail, taskId }) =>
-  detail ? <IssueContentBody detail={detail} /> : <IssueContentOwned taskId={taskId} />,
-);
+const IssueContent = memo<IssueContentProps>(({ detail, taskId }) => (
+  <TaskDetailScope taskId={taskId}>
+    {detail ? <IssueContentBody detail={detail} /> : <IssueContentOwned taskId={taskId} />}
+  </TaskDetailScope>
+));
 
 IssueContent.displayName = 'IssueContent';
 

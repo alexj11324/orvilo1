@@ -1,10 +1,11 @@
-import { Flexbox } from '@lobehub/ui';
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
+import { Info } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 
 import { dataSelectors, useConversationStore } from '../../store';
@@ -33,17 +34,19 @@ const ToolMessage = memo<ToolMessageProps>(({ disableEditing, id, index }) => {
   };
 
   return (
-    <Flexbox gap={4} paddingBlock={12}>
+    <div className="flex flex-col gap-1 py-3">
       {canEdit && !disableEditing && (
-        <Alert
-          title={t('inspector.orphanedToolCall')}
-          type={'secondary'}
-          action={
-            <Button loading={loading} size={'small'} type={'primary'} onClick={handleDelete}>
-              {t('inspector.delete')}
-            </Button>
-          }
-        />
+        <Alert variant="default">
+          <Info />
+          <AlertTitle>{t('inspector.orphanedToolCall')}</AlertTitle>
+          <AlertAction>
+            {
+              <Button loading={loading} size="sm" variant="default" onClick={handleDelete}>
+                {t('inspector.delete')}
+              </Button>
+            }
+          </AlertAction>
+        </Alert>
       )}
       {item.plugin && (
         <Tool
@@ -54,7 +57,7 @@ const ToolMessage = memo<ToolMessageProps>(({ disableEditing, id, index }) => {
           toolCallId={item.tool_call_id!}
         />
       )}
-    </Flexbox>
+    </div>
   );
 }, isEqual);
 

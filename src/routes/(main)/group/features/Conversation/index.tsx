@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import DragUploadZone, { useUploadFiles } from '@/components/DragUploadZone';
@@ -17,10 +16,13 @@ const ChatConversation = memo(() => {
 
   return (
     <DragUploadZone style={{ height: '100%', width: '100%' }} onUploadFiles={handleUploadFiles}>
-      <Flexbox height={'100%'} style={{ overflow: 'hidden', position: 'relative' }} width={'100%'}>
+      <div
+        className="flex flex-col"
+        style={{ height: '100%', width: '100%', overflow: 'hidden', position: 'relative' }}
+      >
         <ChatHeader />
         <ConversationArea />
-      </Flexbox>
+      </div>
     </DragUploadZone>
   );
 });

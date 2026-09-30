@@ -4,7 +4,6 @@ import { getServerDB } from '@/database/core/db-adaptor';
 import {
   AUTH_SESSION_COOKIE,
   AuthSessionModel,
-  legacySessionCookieName,
   readAuthSessionTokenFromHeaders,
 } from '@/database/models/authSession';
 import { authEnv } from '@/envs/auth';
@@ -18,10 +17,7 @@ import { authSessionCookieOptions } from '@/server/services/auth';
  * the upstream Clerk session ends too.
  */
 export const POST = async (request: Request) => {
-  const token = readAuthSessionTokenFromHeaders(
-    request.headers,
-    authEnv.AUTH_COOKIE_PREFIX || 'better-auth',
-  );
+  const token = readAuthSessionTokenFromHeaders(request.headers);
 
   if (token) {
     const db = await getServerDB();
@@ -31,7 +27,6 @@ export const POST = async (request: Request) => {
   const response = NextResponse.json({ ok: true });
   const clearOptions = { ...authSessionCookieOptions(), expires: new Date(0) };
   response.cookies.set(AUTH_SESSION_COOKIE, '', clearOptions);
-  response.cookies.set(legacySessionCookieName(authEnv.AUTH_COOKIE_PREFIX), '', clearOptions);
 
   return response;
 };

@@ -1,8 +1,7 @@
 'use client';
-
-import { Block, Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { Markdown } from '@lobehub/ui';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -48,27 +47,28 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
   const hasContext = !!plan.context;
 
   return (
-    <Block gap={8} padding={12} style={{ overflow: 'hidden' }} variant={'outlined'}>
+    <div
+      className="flex flex-col gap-2 p-3"
+      style={{
+        overflow: 'hidden',
+        background: cssVar.colorBgContainer,
+        border: `1px solid ${cssVar.colorBorderSecondary}`,
+        borderRadius: cssVar.borderRadius,
+      }}
+    >
       {/* Header - clickable to open document */}
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.header}
-        gap={8}
+      <div
+        className={cn('flex', 'items-center', 'gap-2', styles.header)}
         style={{ overflow: 'hidden' }}
         onClick={handleHeaderClick}
       >
-        <Icon icon={ListChecksIcon} size={18} />
-        <Text ellipsis fontSize={16} weight={500}>
-          {plan.goal}
-        </Text>
-      </Flexbox>
+        <ListChecksIcon size={18} />
+        <div className="truncate text-[16px] font-medium">{plan.goal}</div>
+      </div>
 
       {/* Description */}
       {plan.description && (
-        <Text ellipsis={{ rows: 2 }} fontSize={14} type={'secondary'}>
-          {plan.description}
-        </Text>
+        <div className="line-clamp-2 text-[14px] text-muted-foreground">{plan.description}</div>
       )}
 
       {/* Context content */}
@@ -79,7 +79,7 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
           </Markdown>
         </div>
       )}
-    </Block>
+    </div>
   );
 });
 

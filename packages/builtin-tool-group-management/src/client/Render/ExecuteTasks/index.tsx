@@ -1,13 +1,20 @@
 'use client';
 
-import { Accordion, AccordionItem, Block, Flexbox, Markdown } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, useTheme } from 'antd-style';
+import { createStaticStyles, cssVar, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -86,16 +93,18 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
     if (!tasksWithAgents.length && !resultContent) return null;
 
     return (
-      <Flexbox className={styles.container} gap={12}>
+      <div className={cn('flex', 'flex-col', 'gap-3', styles.container)}>
         {!!tasksWithAgents.length && (
-          <Accordion defaultExpandedKeys={[]} gap={0} variant={'borderless'}>
+          <Accordion>
             {tasksWithAgents.map((task, index) => (
-              <AccordionItem
-                itemKey={task.agentId || String(index)}
-                key={task.agentId || index}
-                paddingBlock={8}
-                paddingInline={4}
-                action={
+              <AccordionItem key={task.agentId || index} value={task.agentId || String(index)}>
+                <AccordionTrigger>
+                  <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+                    <span className={styles.index}>{index + 1}.</span>
+                    <div className={cn('font-medium', styles.taskTitle)}>
+                      {task.title || 'Task'}
+                    </div>
+                  </div>
                   <div className={styles.assignee}>
                     <Avatar
                       avatar={task.agent?.avatar || DEFAULT_AVATAR}
@@ -105,39 +114,42 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
                     />
                     <span>{task.agent?.title}</span>
                   </div>
-                }
-                title={
-                  <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-                    <span className={styles.index}>{index + 1}.</span>
-                    <Text className={styles.taskTitle} weight={500}>
-                      {task.title || 'Task'}
-                    </Text>
-                  </Flexbox>
-                }
-              >
-                {task.instruction && (
-                  <Block padding={12} style={{ marginTop: 8 }} variant={'filled'}>
-                    <Text className={styles.instruction}>{task.instruction}</Text>
-                  </Block>
-                )}
+                </AccordionTrigger>
+                <AccordionContent>
+                  {task.instruction && (
+                    <div
+                      className="p-3"
+                      style={{
+                        marginTop: 8,
+                        background: cssVar.colorFillTertiary,
+                        borderRadius: cssVar.borderRadius,
+                      }}
+                    >
+                      <div className={cn(styles.instruction)}>{task.instruction}</div>
+                    </div>
+                  )}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
         )}
 
         {resultContent && (
-          <Flexbox gap={4}>
-            <Text className={styles.resultLabel}>
+          <div className="flex flex-col gap-1">
+            <div className={cn(styles.resultLabel)}>
               {t('agentGroupManagement.executeTasks.results')}
-            </Text>
-            <Block className={styles.resultBox} padding={12} variant={'filled'}>
+            </div>
+            <div
+              className={cn('p-3', styles.resultBox)}
+              style={{ background: cssVar.colorFillTertiary, borderRadius: cssVar.borderRadius }}
+            >
               <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                 {resultContent}
               </Markdown>
-            </Block>
-          </Flexbox>
+            </div>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

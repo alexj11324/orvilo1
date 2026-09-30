@@ -1,12 +1,11 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useNavigate } from 'react-router';
 
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { Button } from '@/components/ui/button';
 
 import { useWorkspaceFromSlug } from './useWorkspaceFromSlug';
 
@@ -32,12 +31,12 @@ const WorkspaceSlugBoundary: FC = () => {
 
   if (result.status === 'not-found') {
     return (
-      <Center gap={16} height={'100%'} style={{ flexDirection: 'column' }} width={'100%'}>
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4">
         <div style={{ fontSize: 48 }}>🔍</div>
         <div style={{ fontWeight: 600, fontSize: 20 }}>{t('notFound.title')}</div>
         <div style={{ opacity: 0.6 }}>{t('notFound.check')}</div>
         <Button onClick={() => navigate('/')}>{t('notFound.backHome')}</Button>
-      </Center>
+      </div>
     );
   }
 

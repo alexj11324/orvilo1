@@ -3,6 +3,7 @@
  */
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import { fireEvent, render } from '@testing-library/react';
+import { type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Render from './index';
@@ -19,23 +20,44 @@ vi.mock('@orvilo/const', async (importOriginal) => ({
   },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/ActionIcon', async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
-  ActionIcon: ({ icon: _icon, onClick, title, ...rest }: any) => (
+  default: ({ icon: _icon, onClick, title, ...rest }: any) => (
     <button {...rest} aria-label={title} type="button" onClick={onClick} />
   ),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  // Keep content mounted after dismissal to model the popover's exit animation.
-  Popover: ({ children, content, onOpenChange }: any) => (
-    <div onMouseEnter={() => onOpenChange?.(true)} onMouseLeave={() => onOpenChange?.(false)}>
-      {children}
-      {content}
-    </div>
-  ),
-}));
+vi.mock('@/components/ui/popover', async () => {
+  const { createContext, use } = await import('react');
+  const OpenContext = createContext(false);
+  return {
+    // Keep content mounted after dismissal to model the popover's exit
+    // animation, but keep it out of the a11y tree while closed like a real
+    // popover.
+    Popover: ({
+      children,
+      onOpenChange,
+      open,
+    }: {
+      children?: ReactNode;
+      onOpenChange?: (open: boolean) => void;
+      open?: boolean;
+    }) => (
+      <OpenContext value={!!open}>
+        <div onMouseEnter={() => onOpenChange?.(true)} onMouseLeave={() => onOpenChange?.(false)}>
+          {children}
+        </div>
+      </OpenContext>
+    ),
+    PopoverContent: ({ children }: { children?: ReactNode }) => {
+      const open = use(OpenContext);
+      return <div aria-hidden={!open}>{children}</div>;
+    },
+    PopoverTrigger: ({ children, render }: { children?: ReactNode; render?: ReactNode }) => (
+      <>{render ?? children}</>
+    ),
+  };
+});
 
 // `enableMessageLinkIcon` is read via useUserStore(selector). We drive the
 // selector's return value through this module-level flag so each case can flip

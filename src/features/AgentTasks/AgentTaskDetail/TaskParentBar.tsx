@@ -1,12 +1,11 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailData, TaskDetailSubtask, TaskWorkflowCategory } from '@orvilo/types';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { taskService } from '@/services/task';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskStatusIcon from '../features/TaskStatusIcon';
@@ -14,6 +13,7 @@ import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
+import { useTaskDetailSelector } from './TaskDetailScope';
 
 const TASK_STATUS_SET = new Set([
   'backlog',
@@ -32,8 +32,8 @@ const toTaskStatus = (status?: string): TaskStatus =>
 const TaskParentBar = memo(() => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
-  const parent = useTaskStore(taskDetailSelectors.activeTaskParent);
-  const currentIdentifier = useTaskStore(taskDetailSelectors.activeTaskDetail)?.identifier;
+  const parent = useTaskDetailSelector(taskDetailSelectors.taskParent);
+  const currentIdentifier = useTaskDetailSelector(taskDetailSelectors.taskDetail)?.identifier;
 
   const [fetchedParentAgent, setFetchedParentAgent] = useState<
     { agentId?: string | null; identifier: string } | undefined
@@ -88,41 +88,50 @@ const TaskParentBar = memo(() => {
       : parent.agentId;
 
   return (
-    <Flexbox horizontal align="center" gap={8} style={{ maxWidth: '100%', minWidth: 0 }}>
-      <Text fontSize={RAIL_VALUE_FONT_SIZE} style={{ flex: 'none' }} type={'secondary'}>
+    <div className="flex items-center gap-2" style={{ maxWidth: '100%', minWidth: 0 }}>
+      <div
+        className="text-muted-foreground"
+        style={{ flex: 'none', fontSize: RAIL_VALUE_FONT_SIZE }}
+      >
         {t('taskDetail.subIssueOf')}
-      </Text>
+      </div>
       <Button
-        size={'small'}
+        size="sm"
         style={{ maxWidth: '100%', minWidth: 0 }}
-        type={'text'}
-        icon={
-          workflowGlyph ? (
-            <Tooltip title={workflowGlyph.label}>
-              <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={16} />
-            </Tooltip>
-          ) : (
-            <TaskStatusIcon size={16} status={parentStatus} />
-          )
-        }
+        variant="ghost"
         onClick={() =>
           navigate(taskDetailPath(parent.identifier, parentAgentId ?? undefined, parent.name))
         }
       >
+        {workflowGlyph ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <workflowGlyph.icon color={workflowGlyph.color} size={16} />
+                  </span>
+                }
+              />
+              <TooltipContent>{workflowGlyph.label}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <TaskStatusIcon size={16} status={parentStatus} />
+        )}
         {/* Reference form: `◐ ORV-117 Handoff: …` — the identifier stays
             visible even when the name truncates. */}
-        <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }}>
-          <Text as={'span'} fontSize={RAIL_VALUE_FONT_SIZE} type={'secondary'}>
+        <div className="truncate block" style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}>
+          <span className="text-muted-foreground" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
             {parent.identifier}
-          </Text>
+          </span>
           {parent.name ? (
-            <Text
-              as={'span'}
-              fontSize={RAIL_VALUE_FONT_SIZE}
-              weight={500}
-            >{` ${parent.name}`}</Text>
+            <span
+              className="font-medium"
+              style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
+            >{` ${parent.name}`}</span>
           ) : undefined}
-        </Text>
+        </div>
       </Button>
       {parentSubtasks.length > 0 && (
         <span style={{ flex: 'none' }}>
@@ -135,7 +144,7 @@ const TaskParentBar = memo(() => {
           />
         </span>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

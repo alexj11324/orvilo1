@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox, Popover } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useChatStore } from '@/store/chat';
 import { threadSelectors } from '@/store/chat/selectors';
 
@@ -98,9 +98,8 @@ const ThreadSwitcher = memo<ThreadSwitcherProps>(({ title }) => {
   };
 
   const content = (
-    <Flexbox
-      gap={2}
-      padding={4}
+    <div
+      className="flex flex-col gap-0.5 p-1"
       style={{
         maxHeight: '50vh',
         maxWidth: 360,
@@ -117,20 +116,21 @@ const ThreadSwitcher = memo<ThreadSwitcherProps>(({ title }) => {
           {thread.title || t('thread.title')}
         </div>
       ))}
-    </Flexbox>
+    </div>
   );
 
   return (
-    <Popover
-      arrow={false}
-      classNames={{ trigger: styles.trigger }}
-      content={content}
-      nativeButton={false}
-      placement={'bottomLeft'}
-      styles={{ content: { padding: 4 } }}
-      trigger={'click'}
-    >
-      {title}
+    <Popover>
+      <PopoverTrigger
+        render={
+          <span className={styles.trigger} style={{ display: 'inline-flex' }}>
+            {title}
+          </span>
+        }
+      />
+      <PopoverContent align="start" side="bottom" style={{ padding: 4 }}>
+        {content}
+      </PopoverContent>
     </Popover>
   );
 });

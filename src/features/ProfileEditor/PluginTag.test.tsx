@@ -40,18 +40,20 @@ vi.mock('antd-style', async (importOriginal) => ({
 vi.mock('@orvilo/const', () => ({ resolveConnectorCatalogItem: () => undefined }));
 vi.mock('@lobehub/ui/icons', () => ({ McpIcon: () => null }));
 vi.mock('@/components/Plugins/PluginAvatar', () => ({ default: () => null }));
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Avatar: ({ title }: { title?: string }) => <span data-testid="author-avatar">{title}</span>,
+vi.mock('@/components/Avatar', () => ({
+  default: ({ title }: { title?: string }) => <span data-testid="author-avatar">{title}</span>,
 }));
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Avatar: ({ title }: { title?: string }) => <span data-testid="author-avatar">{title}</span>,
-  Tooltip: ({ children, title }: { children: ReactNode; title?: string }) => (
-    <div data-testid="author-tooltip" data-title={title}>
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: ReactNode }) => (
+    <div
+      data-testid="author-tooltip"
+      data-title={typeof children === 'string' ? children : undefined}
+    >
       {children}
     </div>
   ),
+  TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 // Run selectors against controlled state (the mocked selectors ignore state).

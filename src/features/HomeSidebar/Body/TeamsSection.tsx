@@ -1,21 +1,6 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
-import { ContextMenuTrigger, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionRoot,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
-import { createStaticStyles, cx } from 'antd-style';
-import {
-  ArrowRight,
   EyeOffIcon,
   House,
   InboxIcon,
@@ -24,13 +9,40 @@ import {
   MoreHorizontalIcon,
   SlidersHorizontalIcon,
 } from 'lucide-react';
-import { memo, type MouseEvent, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import NavItem from '@/features/NavPanel/components/NavItem';
+import { toast } from '@/components/toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
+import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -51,22 +63,6 @@ import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
 import { buildTeamMenuEntries } from './teamMenu';
 import { useWorkFavoriteToggle } from './useWorkFavoriteToggle';
 
-const styles = createStaticStyles(({ css }) => ({
-  teamHeader: css`
-    margin-inline: 8px;
-  `,
-  teamTrigger: css`
-    height: 28px;
-    padding-block: 0;
-    padding-inline: 4px;
-  `,
-  teamName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
-
 /** Linear's per-team sub-navigation. Every entry lands on a real surface of
  * the team page — the `tab` query selects which section renders. */
 const TEAM_SUB_ITEMS = [
@@ -84,6 +80,8 @@ const TEAM_SUB_ITEMS = [
 
 interface TeamsSectionProps {
   itemKey: string;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
 }
 
 /** Row of `team.teams` as consumed by the sidebar (joined flag included). */
@@ -94,6 +92,8 @@ type SidebarTeam = NonNullable<
 interface TeamItemProps {
   /** Tab of the team page currently shown — `null` when the user is elsewhere. */
   activeTab: string | null;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
   team: SidebarTeam;
 }
 
@@ -103,8 +103,9 @@ interface TeamItemProps {
  * goes through the favorites API (the pinned team then renders under
  * Favorites), copy link writes the workspace-aware team URL.
  */
-const TeamItem = memo<TeamItemProps>(({ team, activeTab }) => {
+const TeamItem = memo<TeamItemProps>(({ team, activeTab, open, onOpenChange }) => {
   const { t } = useTranslation('common');
+  const { state: sidebarState } = useSidebar();
   const workspaceSlug = useActiveWorkspaceSlug();
   const appOrigin = useAppOrigin();
   const { pinned, toggle } = useWorkFavoriteToggle('team', team.id);
@@ -119,58 +120,97 @@ const TeamItem = memo<TeamItemProps>(({ team, activeTab }) => {
     }
   }, [appOrigin, t, team.id, workspaceSlug]);
 
-  const menu = useMemo<MenuProps['items']>(
+  const menu = useMemo<SidebarMenuItems>(
     () =>
       buildTeamMenuEntries(pinned).map((entry) => ({
-        icon: <Icon icon={entry.icon} size={14} />,
+        icon: <entry.icon size={14} />,
         key: entry.key,
         label: t(entry.labelKey),
         onClick: entry.key === 'favorite' ? () => void toggle() : () => void copyLink(),
       })),
     [copyLink, pinned, t, toggle],
   );
+  const subItems = TEAM_SUB_ITEMS.filter(
+    (sub) => sub.key !== 'triage' || team.orchestrationPolicy?.triageEnabled !== false,
+  );
+  const pathFor = (subTab: string) =>
+    subTab === 'home' ? `/teams/${team.id}` : `/teams/${team.id}?tab=${subTab}`;
 
-  return (
-    <AccordionItem value={teamAccordionKey(team.id)}>
-      <AccordionHeader className={styles.teamHeader}>
-        <AccordionTrigger className={styles.teamTrigger}>
+  return sidebarState === 'collapsed' ? (
+    <SidebarMenuItem>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<SidebarMenuButton aria-label={team.name} tooltip={team.name} />}
+        >
           <TeamIdentity
             color={team.color}
             id={team.id}
             letter={(team.key || team.name).slice(0, 1)}
           />
-          <span className={styles.teamName}>{team.name}</span>
-        </AccordionTrigger>
-        <Flexbox
-          horizontal
-          align="center"
-          gap={2}
-          className={cx(
-            'accordion-action',
-            accordionStyles.action,
-            accordionStyles.actionBorderless,
-          )}
-        >
-          <DropdownMenu items={menu}>
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} title={t('teams.menu')} />
-          </DropdownMenu>
-        </Flexbox>
-      </AccordionHeader>
-      <AccordionPanel>
-        <Flexbox gap={1} paddingBlock={1} style={{ paddingInlineStart: 20 }}>
-          {TEAM_SUB_ITEMS.filter(
-            (sub) => sub.key !== 'triage' || team.orchestrationPolicy?.triageEnabled !== false,
-          ).map((sub) => (
-            <WorkspaceLink
-              key={sub.key}
-              to={sub.tab === 'home' ? `/teams/${team.id}` : `/teams/${team.id}?tab=${sub.tab}`}
-            >
-              <NavItem active={activeTab === sub.tab} icon={sub.icon} title={t(sub.titleKey)} />
-            </WorkspaceLink>
+          <span>{team.name}</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-48" side="right" sideOffset={8}>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{team.name}</DropdownMenuLabel>
+            {subItems.map((sub) => (
+              <DropdownMenuItem
+                key={sub.key}
+                render={<WorkspaceLink style={{ color: 'inherit' }} to={pathFor(sub.tab)} />}
+              >
+                {t(sub.titleKey)}
+              </DropdownMenuItem>
+            ))}
+            {buildTeamMenuEntries(pinned).map((entry) => (
+              <DropdownMenuItem
+                key={entry.key}
+                onClick={entry.key === 'favorite' ? () => void toggle() : () => void copyLink()}
+              >
+                <entry.icon aria-hidden="true" />
+                {t(entry.labelKey)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarMenuItem>
+  ) : (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        aria-controls={`team-subnav-${team.id}`}
+        aria-expanded={open}
+        className="gap-1.5"
+        tooltip={team.name}
+        onClick={() => onOpenChange(!open)}
+      >
+        <TeamIdentity
+          color={team.color}
+          id={team.id}
+          letter={(team.key || team.name).slice(0, 1)}
+        />
+        <span className="truncate">{team.name}</span>
+        <SidebarCollapseIcon open={open} />
+      </SidebarMenuButton>
+      <SidebarDropdownMenu items={menu}>
+        <SidebarMenuAction showOnHover aria-label={t('teams.menu')}>
+          <MoreHorizontalIcon />
+        </SidebarMenuAction>
+      </SidebarDropdownMenu>
+      {open && (
+        <SidebarMenuSub id={`team-subnav-${team.id}`}>
+          {subItems.map((sub) => (
+            <SidebarMenuSubItem key={sub.key}>
+              <SidebarMenuSubButton
+                isActive={activeTab === sub.tab}
+                render={<WorkspaceLink style={{ color: 'inherit' }} to={pathFor(sub.tab)} />}
+              >
+                <sub.icon aria-hidden="true" />
+                <span>{t(sub.titleKey)}</span>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
           ))}
-        </Flexbox>
-      </AccordionPanel>
-    </AccordionItem>
+        </SidebarMenuSub>
+      )}
+    </SidebarMenuItem>
   );
 });
 
@@ -182,8 +222,9 @@ TeamItem.displayName = 'TeamItem';
  * its Home child navigates to the team page. The sub-navigation starts OPEN — the only
  * state worth persisting is the team the user folded away.
  */
-const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
+const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChange }) => {
   const { t } = useTranslation('common');
+  const { state: sidebarState } = useSidebar();
   const tab = useActiveTabKey();
   const pathname = usePathname();
   const [searchParams] = useSearchParams();
@@ -212,7 +253,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
   const contextMenu = useMemo(() => {
     const items: NativeContextMenuItem[] = [
       {
-        icon: <Icon icon={EyeOffIcon} />,
+        icon: <EyeOffIcon />,
         key: 'hideSection',
         label: t('navPanel.hideSection'),
         onClick: () => updateSystemStatus({ hiddenSidebarSections: [...hiddenSections, itemKey] }),
@@ -220,22 +261,28 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
       },
       { type: 'divider' as const },
       {
-        icon: <Icon icon={SlidersHorizontalIcon} />,
+        icon: <SlidersHorizontalIcon />,
         key: 'customizeSidebar',
         label: t('navPanel.customizeSidebar'),
         onClick: () => openCustomizeSidebarModal(),
         sfSymbol: 'gearshape',
       },
     ];
-    return items as MenuProps['items'];
+    return items as SidebarMenuItems;
   }, [t, hiddenSections, itemKey, updateSystemStatus]);
 
-  const handleViewAll = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation();
-      navigate('/teams');
-    },
-    [navigate],
+  const sectionMenu = useMemo<SidebarMenuItems>(
+    () => [
+      {
+        icon: <Layers />,
+        key: 'viewAllTeams',
+        label: t('navPanel.viewAllTeams'),
+        onClick: () => navigate('/teams'),
+      },
+      { type: 'divider' },
+      ...(contextMenu ?? []),
+    ],
+    [contextMenu, navigate, t],
   );
 
   const activeTeamTab = useCallback(
@@ -251,51 +298,63 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey }) => {
   // workspace has been provisioned (activeWorkspaceId still null) it shows
   // the single "Teams" row that deep-links to /teams.
   return (
-    <AccordionItem value={itemKey}>
-      <ContextMenuTrigger items={contextMenu}>
-        <AccordionHeader>
-          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-            <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-              {t('navPanel.yourTeams')}
-            </Text>
-          </AccordionTrigger>
-          <Flexbox
-            horizontal
-            align="center"
-            gap={2}
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-            )}
-          >
-            <ActionIcon
-              icon={ArrowRight}
-              size={'small'}
-              title={t('navPanel.viewAllTeams')}
-              onClick={handleViewAll}
+    <SidebarGroup className="group/section">
+      <SidebarContextMenu items={contextMenu}>
+        <SidebarGroupLabel
+          className="focus-visible:ring-sidebar-ring w-full cursor-pointer gap-0.5 whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none group-data-[collapsible=icon]:hidden"
+          render={
+            <button
+              aria-controls={`sidebar-section-${itemKey}`}
+              aria-expanded={open}
+              onClick={() => onOpenChange?.(!open)}
             />
-          </Flexbox>
-        </AccordionHeader>
-      </ContextMenuTrigger>
-      <AccordionPanel>
-        <AccordionRoot
-          indicatorPlacement="start"
-          style={{ gap: 1 }}
-          value={expandedTeamKeys}
-          onValueChange={setExpandedTeamKeys}
+          }
         >
-          {teams.map((team) => (
-            <TeamItem activeTab={activeTeamTab(team.id)} key={team.id} team={team} />
-          ))}
-        </AccordionRoot>
-        {teams.length === 0 && (
-          <WorkspaceLink to="/teams">
-            <NavItem active={tab === 'teams'} icon={Layers} title={t('tab.teams')} />
-          </WorkspaceLink>
-        )}
-      </AccordionPanel>
-    </AccordionItem>
+          {t('navPanel.yourTeams')}
+          <SidebarCollapseIcon open={open} />
+        </SidebarGroupLabel>
+      </SidebarContextMenu>
+      <SidebarDropdownMenu items={sectionMenu}>
+        <SidebarGroupAction
+          aria-label={t('navPanel.more')}
+          className="opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100"
+        >
+          <MoreHorizontalIcon />
+        </SidebarGroupAction>
+      </SidebarDropdownMenu>
+      {(open || sidebarState === 'collapsed') && (
+        <SidebarGroupContent id={`sidebar-section-${itemKey}`}>
+          <SidebarMenu className="gap-0.25">
+            {teams.map((team) => {
+              const key = teamAccordionKey(team.id);
+              return (
+                <TeamItem
+                  activeTab={activeTeamTab(team.id)}
+                  key={team.id}
+                  open={expandedTeamKeys.includes(key)}
+                  team={team}
+                  onOpenChange={(next) =>
+                    setExpandedTeamKeys(
+                      next
+                        ? [...expandedTeamKeys, key]
+                        : expandedTeamKeys.filter((expanded) => expanded !== key),
+                    )
+                  }
+                />
+              );
+            })}
+            {teams.length === 0 && (
+              <SidebarNavItem
+                active={tab === 'teams'}
+                icon={Layers}
+                render={<WorkspaceLink to="/teams" />}
+                title={t('tab.teams')}
+              />
+            )}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      )}
+    </SidebarGroup>
   );
 });
 

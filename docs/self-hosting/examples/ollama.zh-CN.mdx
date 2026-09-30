@@ -25,7 +25,7 @@ Ollama 是一款强大的本地运行大型语言模型（LLM）的框架，支�
 假设你已经在本地 `11434` 端口启动了 Ollama 服务。运行以下 Docker 命令行，在本地启动 Orvilo：
 
 ```bash
-docker run -d -p 3210:3210 -e OLLAMA_PROXY_URL=http://host.docker.internal:11434 alexj11324/orvilo1
+docker run -d -p 3210:3210 -e OLLAMA_PROXY_URL=http://host.docker.internal:11434 ghcr.io/alexj11324/orvilo1
 ```
 
 接下来，你就可以使用 Orvilo 与本地 LLM 对话了。

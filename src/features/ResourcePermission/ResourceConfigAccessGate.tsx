@@ -1,11 +1,11 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import { memo, type ReactNode, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { toast } from '@/components/toast';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 

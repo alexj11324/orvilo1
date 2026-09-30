@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { memo, Suspense } from 'react';
 
 import DebugNode from '@/components/DebugNode';
@@ -16,16 +14,11 @@ const ToolItem = memo<CheckboxItemProps>(({ id, onUpdate, label, checked, disabl
         hasPadding={false}
         id={id}
         label={
-          <Flexbox allowShrink horizontal align={'center'} gap={8}>
-            <Text
-              style={{ lineHeight: 1.4, paddingBlock: 1 }}
-              ellipsis={{
-                tooltipWhenOverflow: true,
-              }}
-            >
+          <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
+            <div className="truncate" style={{ lineHeight: 1.4, paddingBlock: 1 }}>
               {label || id}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         }
         onUpdate={onUpdate}
       />

@@ -1,8 +1,6 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { DnaIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +9,13 @@ import urlJoin from 'url-join';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import Loading from '@/components/Loading/BrandTextLoading';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -50,7 +55,7 @@ const ExperienceList = memo(() => {
       : undefined;
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <div className="flex flex-col h-full w-full">
       <NavHeader
         styles={{ left: { paddingInlineStart: 24 } }}
         left={
@@ -70,7 +75,7 @@ const ExperienceList = memo(() => {
           ) : null
         }
       />
-      <Flexbox className={styles.body} flex={1} width={'100%'}>
+      <div className={cx(styles.body, 'flex flex-col flex-1 w-full')}>
         <WideScreenContainer>
           <AsyncBoundary
             data={data}
@@ -80,27 +85,37 @@ const ExperienceList = memo(() => {
             isLoading={isLoading}
             loading={<Loading debugId={'SelfLearningExperience'} />}
             empty={
-              <Center height={'100%'} style={{ minHeight: '50vh' }} width={'100%'}>
-                <Empty icon={DnaIcon} title={t('experience.notFound')} />
-              </Center>
+              <div
+                className="flex flex-col items-center justify-center h-full w-full"
+                style={{ minHeight: '50vh' }}
+              >
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <DnaIcon />
+                    </EmptyMedia>
+                    <EmptyTitle>{t('experience.notFound')}</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
+              </div>
             }
             onRetry={() => mutate()}
           >
             {domain && activeAgentId && (
-              <Flexbox gap={20} paddingBlock={'22px 64px'}>
-                <Flexbox gap={4}>
-                  <Text fontSize={26} weight={700}>
-                    {t('experience.title')}
-                  </Text>
-                  <Text type={'secondary'}>
+              <div className="flex flex-col gap-5" style={{ paddingBlock: '22px 64px' }}>
+                <div className="flex flex-col gap-1">
+                  <div className="text-[26px] font-bold">{t('experience.title')}</div>
+                  <div className="text-muted-foreground">
                     {t('experience.subtitle', { count: habits.length, name: domain.title })}
-                  </Text>
-                </Flexbox>
+                  </div>
+                </div>
                 {habits.length === 0 ? (
-                  <Empty
-                    description={t('experience.emptyDesc')}
-                    title={t('experience.emptyTitle')}
-                  />
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyTitle>{t('experience.emptyTitle')}</EmptyTitle>
+                      <EmptyDescription>{t('experience.emptyDesc')}</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   <HabitList
                     agentId={activeAgentId}
@@ -108,12 +123,12 @@ const ExperienceList = memo(() => {
                     onChanged={() => void mutate()}
                   />
                 )}
-              </Flexbox>
+              </div>
             )}
           </AsyncBoundary>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

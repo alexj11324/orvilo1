@@ -1,17 +1,10 @@
-import { ContextMenuTrigger, Flexbox, Icon } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { type SidebarGroup } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { HashIcon, Loader2 } from 'lucide-react';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import { useHomeStore } from '@/store/home';
 
 import { useCreateMenuItems } from '../../../../hooks';
@@ -51,44 +44,40 @@ const GroupItem = memo<SidebarGroup>(({ items, id, name, visibility }) => {
 
   const groupIcon = useMemo(() => {
     if (isUpdating) {
-      return <Icon spin icon={Loader2} style={{ opacity: 0.5 }} />;
+      return <Loader2 className="animate-spin" size={16} style={{ opacity: 0.5 }} />;
     }
-    return <Icon icon={HashIcon} style={{ opacity: 0.5 }} />;
+    return <HashIcon size={16} style={{ opacity: 0.5 }} />;
   }, [isUpdating]);
 
   return (
     <AccordionItem disabled={isUpdating} key={id} value={id}>
-      <ContextMenuTrigger items={dropdownMenu}>
+      <SidebarContextMenu items={dropdownMenu}>
         <div ref={setAnchor}>
-          <AccordionHeader>
-            <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-              <Flexbox horizontal align="center" gap={6} style={{ overflow: 'hidden' }}>
-                {groupIcon}
-                <Text ellipsis fontSize={12} style={{ flex: 1 }} type={'secondary'} weight={500}>
-                  {name}
-                </Text>
-              </Flexbox>
-            </AccordionTrigger>
-            <div
-              className={cx(
-                'accordion-action',
-                accordionStyles.action,
-                accordionStyles.actionBorderless,
-              )}
-            >
+          <div className="flex items-center">
+            <div className="min-w-0 flex-1">
+              <AccordionTrigger>
+                <div className="flex items-center gap-[6px]" style={{ overflow: 'hidden' }}>
+                  {groupIcon}
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                    {name}
+                  </span>
+                </div>
+              </AccordionTrigger>
+            </div>
+            <div className="flex shrink-0 items-center">
               <Actions dropdownMenu={dropdownMenu} isLoading={isLoading} />
             </div>
-          </AccordionHeader>
+          </div>
         </div>
-      </ContextMenuTrigger>
-      <AccordionPanel>
+      </SidebarContextMenu>
+      <AccordionContent>
         <SessionList
           dataSource={items}
           groupId={id}
           itemClassName={styles.item}
           visibility={visibility}
         />
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

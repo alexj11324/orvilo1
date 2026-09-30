@@ -191,6 +191,9 @@ export default defineConfig({
         test: {
           name: 'server',
           environment: 'node',
+          // DB-backed suites run migrations inside beforeEach; the default 10s
+          // hook budget is too tight on a cold CI Postgres.
+          hookTimeout: 30_000,
           include: ['**/apps/server/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
         },
       },

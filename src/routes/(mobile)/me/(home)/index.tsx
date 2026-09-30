@@ -1,7 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
-
 import BrandWatermark from '@/components/BrandWatermark';
 
 import Category from './features/Category';
@@ -12,9 +10,9 @@ const MeHomePage = () => {
     <>
       <UserBanner />
       <Category />
-      <Center padding={16}>
+      <div className="flex flex-col items-center justify-center p-4">
         <BrandWatermark />
-      </Center>
+      </div>
     </>
   );
 };

@@ -18,10 +18,6 @@ vi.mock('@/libs/contextMenu', () => ({
   showContextMenu,
 }));
 
-vi.mock('@lobehub/ui/icons', () => ({
-  SkillsIcon: () => null,
-}));
-
 vi.mock('antd', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   App: {

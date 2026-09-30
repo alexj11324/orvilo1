@@ -1,10 +1,11 @@
 'use client';
 
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
 import { Plus, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { toast } from '@/components/toast';
 import { verifyService } from '@/services/verify';
 
 import { useAcceptanceScope } from '../AcceptanceScope';

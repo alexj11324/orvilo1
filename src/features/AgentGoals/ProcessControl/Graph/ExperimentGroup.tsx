@@ -1,9 +1,10 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, FlaskConical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { experimentStatusVisual } from './experimentStatus';
 import type { GraphNodeData } from './GraphNode';
@@ -48,18 +49,12 @@ const ExperimentGroup = ({ data }: NodeProps) => {
   return (
     <div className={styles.frame}>
       <Handle position={Position.Top} type={'target'} />
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.header}
-        gap={12}
-        justify={'space-between'}
-      >
+      <div className={`flex items-center gap-3 justify-between ${styles.header}`}>
         <Button
           aria-expanded
           aria-label={t('goalExperiment.collapseNamed', { title: view.node.title })}
-          className={'nodrag'}
-          size={'small'}
+          className={cn('nodrag')}
+          size="sm"
           style={{ minWidth: 0 }}
           title={view.node.title}
           onClick={(event) => {
@@ -67,16 +62,16 @@ const ExperimentGroup = ({ data }: NodeProps) => {
             onToggle();
           }}
         >
-          <Icon icon={ChevronDown} size={14} />
-          <Icon icon={FlaskConical} size={14} />
+          <ChevronDown size={14} />
+          <FlaskConical size={14} />
           <span className={styles.title}>
             {t('goalExperiment.number', { number: view.seq })} · {view.node.title}
           </span>
         </Button>
-        <Flexbox horizontal gap={4} style={{ flexShrink: 0 }}>
+        <div className="flex gap-1" style={{ flexShrink: 0 }}>
           <Button
-            className={'nodrag'}
-            size={'small'}
+            className={cn('nodrag')}
+            size="sm"
             onClick={(event) => {
               event.stopPropagation();
               onInspect();
@@ -86,8 +81,8 @@ const ExperimentGroup = ({ data }: NodeProps) => {
           </Button>
           <Button
             aria-label={t('goalExperiment.drillNamed', { title: view.node.title })}
-            className={'nodrag'}
-            size={'small'}
+            className={cn('nodrag')}
+            size="sm"
             onClick={(event) => {
               event.stopPropagation();
               onEnter();
@@ -95,19 +90,19 @@ const ExperimentGroup = ({ data }: NodeProps) => {
           >
             {t('goalExperiment.drill')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-      <Flexbox horizontal gap={12} paddingBlock={6} paddingInline={16}>
-        <Flexbox horizontal align={'center'} gap={5}>
-          <Icon color={status.color} icon={status.icon} size={13} />
-          <Text fontSize={12} style={{ color: status.color }}>
+        </div>
+      </div>
+      <div className="flex gap-3" style={{ paddingBlock: 6, paddingInline: 16 }}>
+        <div className="flex items-center gap-[5px]">
+          <status.icon color={status.color} size={13} />
+          <div className="text-[12px]" style={{ color: status.color }}>
             {t(`goalExperiment.status.${view.node.status}`)}
-          </Text>
-        </Flexbox>
-        <Text fontSize={12} type={'secondary'}>
+          </div>
+        </div>
+        <div className="text-[12px] text-muted-foreground">
           {t('goalExperiment.members', { count: memberCount ?? 0 })}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
       <Handle position={Position.Bottom} type={'source'} />
     </div>
   );

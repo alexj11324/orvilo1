@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useEffect, useRef } from 'react';
 
@@ -137,18 +135,15 @@ const ApiList = memo<ApiListProps>(({ apis, activeApiName, onSelect }) => {
   return (
     <aside className={styles.column}>
       <div className={devDockPanelStyles.paneHeader}>
-        <Text fontSize={12} type={'secondary'} weight={600}>
-          APIs · {apis.length}
-        </Text>
+        <div className="text-[12px] text-muted-foreground font-semibold">APIs · {apis.length}</div>
       </div>
-      <Flexbox className={styles.list} ref={listRef}>
+      <div className={cx(styles.list, 'flex flex-col')} ref={listRef}>
         {apis.map((api) => {
           const active = api.apiName === activeApiName;
           const { head, tail } = splitName(api.apiName);
           return (
-            <Flexbox
-              horizontal
-              className={cx(styles.item, active && styles.itemActive)}
+            <div
+              className={cx(cx(styles.item, active && styles.itemActive), 'flex')}
               data-api={api.apiName}
               key={api.apiName}
               title={api.apiName}
@@ -159,10 +154,10 @@ const ApiList = memo<ApiListProps>(({ apis, activeApiName, onSelect }) => {
                 {head && <span className={styles.labelHead}>{head}</span>}
                 <span className={styles.labelTail}>{tail}</span>
               </span>
-            </Flexbox>
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
     </aside>
   );
 });

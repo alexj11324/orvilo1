@@ -1,7 +1,4 @@
 'use client';
-
-import { Icon, Tooltip } from '@lobehub/ui';
-import { Button, Select, Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -12,6 +9,15 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { ProjectActiveStatusIcon } from '@/features/Projects/ProjectActiveStatusIcon';
@@ -294,10 +300,15 @@ const TimelineHealthIcon = memo<{ health?: null | string }>(({ health }) => {
   const valid = health && health in PROJECT_HEALTH_META ? (health as ProjectHealth) : null;
   const label = valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates');
   return (
-    <Tooltip title={label}>
-      <span aria-label={label} role="img">
-        <ProjectHealthIcon health={valid} size={12} />
-      </span>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span aria-label={label} role="img">
+            <ProjectHealthIcon health={valid} size={12} />
+          </span>
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 });
@@ -485,24 +496,34 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
     const controls = (
       <div className={styles.controls}>
         <Button
-          size="small"
-          type="text"
+          size="sm"
+          variant="ghost"
           onClick={() => axis.todayOffset !== null && scrollToOffset(axis.todayOffset)}
         >
           {t('list.timeline.today')}
         </Button>
         <Select
-          aria-label={t('list.timeline.yearJump')}
           defaultValue={now.year()}
-          options={axis.years.map((year) => ({ label: String(year), value: year }))}
-          size="small"
-          style={{ width: 84 }}
-          onChange={(value) => {
+          items={axis.years.map((year) => ({ label: String(year), value: year }))}
+          onValueChange={(value) => {
             if (typeof value !== 'number') return;
             const january = dayjs().year(value).startOf('year');
             scrollToOffset(january.diff(range.start, 'day') * TIMELINE_DAY_WIDTH);
           }}
-        />
+        >
+          <SelectTrigger aria-label={t('list.timeline.yearJump')} size="sm" style={{ width: 84 }}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {axis.years
+              .map((year) => ({ label: String(year), value: year }))
+              .map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
       </div>
     );
 
@@ -547,13 +568,16 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                         <ProjectIcon color={cssVar.colorTextTertiary} size={16} />
                       )}
                       {options.properties.id ? (
-                        <Text fontSize={11} type="secondary">
+                        <span className="text-sm text-muted-foreground" style={{ fontSize: 11 }}>
                           {project.identifier}
-                        </Text>
+                        </span>
                       ) : null}
-                      <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }} weight={500}>
+                      <span
+                        className="text-sm truncate"
+                        style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0 }}
+                      >
                         {project.name}
-                      </Text>
+                      </span>
                       <span className={styles.cellIcons}>
                         {options.properties.status ? (
                           status === 'active' ? (
@@ -562,10 +586,9 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                               percent={progress ?? 0}
                             />
                           ) : (
-                            <Icon
+                            <statusVisual.icon
                               aria-label={t(`status.${status}`)}
                               color={statusVisual.color}
-                              icon={statusVisual.icon}
                               size={14}
                             />
                           )

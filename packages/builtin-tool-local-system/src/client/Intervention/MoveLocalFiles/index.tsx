@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { MoveLocalFilesParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo, useMemo } from 'react';
@@ -16,15 +14,17 @@ const MoveLocalFiles = memo<BuiltinInterventionProps<MoveLocalFilesParams>>(({ a
   const allPaths = useMemo(() => items.flatMap((item) => [item.oldPath, item.newPath]), [items]);
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <OutOfScopeWarning paths={allPaths} />
-      <Text type="secondary">{t('localFiles.moveFiles.itemsToMove', { count: items.length })}</Text>
-      <Flexbox gap={6}>
+      <div className="text-muted-foreground">
+        {t('localFiles.moveFiles.itemsToMove', { count: items.length })}
+      </div>
+      <div className="flex flex-col gap-1.5">
         {items.map((item, index) => (
           <MoveFileItem key={index} newPath={item.newPath} oldPath={item.oldPath} />
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

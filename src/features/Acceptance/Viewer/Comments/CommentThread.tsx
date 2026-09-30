@@ -1,12 +1,14 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tag, toast } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentThread } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { CheckCircle2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 
 import CommentCard, { commentAuthorName } from './CommentCard';
 import CommentComposer from './CommentComposer';
@@ -67,26 +69,26 @@ const CommentThread = memo<CommentThreadProps>(
           type={'button'}
           onClick={() => setOpenOverride(true)}
         >
-          <Flexbox horizontal align={'center'} gap={6}>
-            <Icon icon={CheckCircle2} size={13} />
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 size={13} />
             <span>
               {t('acceptance.comments.resolvedSummary', {
                 count: replies.length + 1,
                 name: commentAuthorName(root.author),
               })}
             </span>
-          </Flexbox>
+          </div>
         </button>
       );
 
     const badges = root.contextRoundIndex !== null && (
-      <Tag size={'small'}>
+      <Badge size="sm" variant="secondary">
         {t('acceptance.comments.roundContext', { round: root.contextRoundIndex })}
-      </Tag>
+      </Badge>
     );
 
     return (
-      <Flexbox className={cx(resolved && styles.resolvedThread)}>
+      <div className={`flex flex-col ${cx(resolved && styles.resolvedThread)}`}>
         <CommentCard badges={badges} comment={root} variant={'plain'} onDelete={onDelete} />
         {replies.map((reply) => (
           <div className={styles.panelReply} key={reply.id}>
@@ -95,7 +97,7 @@ const CommentThread = memo<CommentThreadProps>(
         ))}
         {canComment &&
           (replying ? (
-            <Flexbox className={styles.panelActions}>
+            <div className={`flex flex-col ${styles.panelActions}`}>
               <CommentComposer
                 autoFocus
                 compact
@@ -107,31 +109,41 @@ const CommentThread = memo<CommentThreadProps>(
                   setReplying(false);
                 }}
               />
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox horizontal className={styles.panelActions} gap={2}>
-              <Button outdent size={'small'} type={'text'} onClick={() => setReplying(true)}>
+            <div className={`flex gap-0.5 ${styles.panelActions}`}>
+              <Button
+                className="-mx-2.5"
+                size="sm"
+                variant="ghost"
+                onClick={() => setReplying(true)}
+              >
                 {t('acceptance.comments.reply')}
               </Button>
               {canResolve && (
                 <Button
-                  outdent
+                  className="-mx-2.5"
                   loading={resolving}
-                  size={'small'}
-                  type={'text'}
+                  size="sm"
+                  variant="ghost"
                   onClick={() => void toggleResolved()}
                 >
                   {resolved ? t('acceptance.comments.reopen') : t('acceptance.comments.resolve')}
                 </Button>
               )}
               {resolved && (
-                <Button outdent size={'small'} type={'text'} onClick={() => setOpenOverride(false)}>
+                <Button
+                  className="-mx-2.5"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setOpenOverride(false)}
+                >
                   {t('acceptance.comments.collapseThread')}
                 </Button>
               )}
-            </Flexbox>
+            </div>
           ))}
-      </Flexbox>
+      </div>
     );
   },
 );

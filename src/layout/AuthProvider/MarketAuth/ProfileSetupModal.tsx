@@ -1,15 +1,19 @@
 'use client';
 
-import { Center, Flexbox, Icon, Input, TextArea, Tooltip } from '@lobehub/ui';
-import { confirmModal, Text, toast, Upload } from '@lobehub/ui/base-ui';
-import { Form } from 'antd';
 import { cssVar } from 'antd-style';
 import { CircleHelp, Globe, ImagePlus, Trash2 } from 'lucide-react';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import EmojiPicker from '@/components/EmojiPicker';
+import Form from '@/components/GroupForm';
 import ImperativeModal from '@/components/ImperativeModal';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Upload } from '@/components/Upload';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
@@ -46,6 +50,69 @@ interface ProfileSetupModalProps {
    */
   userProfile?: MarketUserProfile | null;
 }
+
+interface CountedControlProps {
+  maxLength?: number;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  prefix?: ReactNode;
+  rows?: number;
+  value?: string;
+}
+
+/** antd Form.Item injects value/onChange into this wrapper, which forwards them to the ReUI input. */
+const CountedInput = ({ maxLength, prefix, ...rest }: CountedControlProps) => (
+  <div className="relative">
+    {prefix && (
+      <span
+        style={{
+          color: cssVar.colorTextSecondary,
+          left: 8,
+          position: 'absolute',
+          top: '50%',
+          transform: 'translateY(-50%)',
+        }}
+      >
+        {prefix}
+      </span>
+    )}
+    <Input className={prefix ? 'pl-7' : undefined} maxLength={maxLength} {...rest} />
+    {maxLength !== undefined && (
+      <span
+        style={{
+          color: cssVar.colorTextSecondary,
+          fontSize: 12,
+          position: 'absolute',
+          right: 8,
+          top: '50%',
+          transform: 'translateY(-50%)',
+        }}
+      >
+        {rest.value?.length ?? 0}/{maxLength}
+      </span>
+    )}
+  </div>
+);
+
+const CountedTextArea = ({ maxLength, prefix: _prefix, ...rest }: CountedControlProps) => (
+  <div className="relative">
+    <Textarea maxLength={maxLength} rows={rest.rows} {...rest} />
+    {maxLength !== undefined && (
+      <span
+        style={{
+          color: cssVar.colorTextSecondary,
+          fontSize: 12,
+          position: 'absolute',
+          right: 8,
+          top: '50%',
+          transform: 'translateY(-50%)',
+        }}
+      >
+        {rest.value?.length ?? 0}/{maxLength}
+      </span>
+    )}
+  </div>
+);
 
 interface FormValues {
   description?: string;
@@ -332,23 +399,23 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
         open={open}
         width={640}
         title={
-          <Flexbox gap={4}>
-            <Text strong fontSize={16} lineHeight={1.4}>
+          <div className="flex flex-col gap-1">
+            <div className="font-semibold text-[16px]" style={{ lineHeight: 1.4 }}>
               {isFirstTimeSetup ? t('profileSetup.titleFirstTime') : t('profileSetup.titleEdit')}
-            </Text>
-            <Text fontSize={13} lineHeight={1.4} type="secondary">
+            </div>
+            <div className="text-[13px] text-muted-foreground" style={{ lineHeight: 1.4 }}>
               {isFirstTimeSetup
                 ? t('profileSetup.descriptionFirstTime')
                 : t('profileSetup.descriptionEdit')}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         }
         onCancel={handleCancel}
         onOk={handleSubmit}
       >
         <Form form={form} layout="vertical">
-          <Flexbox horizontal gap={24}>
-            <Flexbox flex={1}>
+          <div className="flex gap-6">
+            <div className="flex flex-1 flex-col">
               <Form.Item
                 label={t('profileSetup.fields.displayName.label')}
                 name="displayName"
@@ -360,8 +427,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                   },
                 ]}
               >
-                <Input
-                  showCount
+                <CountedInput
                   maxLength={50}
                   placeholder={t('profileSetup.fields.displayName.placeholder')}
                 />
@@ -369,12 +435,17 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
               <Form.Item
                 name="userName"
                 label={
-                  <Flexbox horizontal align="center" gap={4}>
+                  <div className="flex items-center gap-1">
                     {t('profileSetup.fields.userName.label')}
-                    <Tooltip title={t('profileSetup.fields.userName.tooltip')}>
-                      <CircleHelp size={14} style={{ cursor: 'help', opacity: 0.5 }} />
-                    </Tooltip>
-                  </Flexbox>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={<CircleHelp size={14} style={{ cursor: 'help', opacity: 0.5 }} />}
+                        />
+                        <TooltipContent>{t('profileSetup.fields.userName.tooltip')}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 }
                 rules={[
                   { message: t('profileSetup.fields.userName.required'), required: true },
@@ -392,14 +463,13 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                   },
                 ]}
               >
-                <Input
-                  showCount
+                <CountedInput
                   maxLength={32}
                   placeholder={t('profileSetup.fields.userName.placeholder')}
                   prefix="@"
                 />
               </Form.Item>
-            </Flexbox>
+            </div>
             {/* Avatar Section */}
             <Form.Item>
               <EmojiPicker
@@ -417,7 +487,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                 onUpload={handleAvatarUpload}
               />
             </Form.Item>
-          </Flexbox>
+          </div>
           <Form.Item
             label={t('profileSetup.fields.description.label')}
             name="description"
@@ -428,8 +498,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
               },
             ]}
           >
-            <TextArea
-              showCount
+            <CountedTextArea
               maxLength={200}
               placeholder={t('profileSetup.fields.description.placeholder')}
               rows={3}
@@ -442,15 +511,22 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
               {/* Banner Upload Section */}
               <Form.Item
                 label={
-                  <Flexbox horizontal align="center" gap={4}>
+                  <div className="flex items-center gap-1">
                     {t('profileSetup.fields.bannerUrl.label')}
-                    <Tooltip title={t('profileSetup.fields.bannerUrl.tooltip')}>
-                      <CircleHelp size={14} style={{ cursor: 'help', opacity: 0.5 }} />
-                    </Tooltip>
-                  </Flexbox>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={<CircleHelp size={14} style={{ cursor: 'help', opacity: 0.5 }} />}
+                        />
+                        <TooltipContent>
+                          {t('profileSetup.fields.bannerUrl.tooltip')}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 }
               >
-                <Flexbox gap={8} width="100%">
+                <div className="flex w-full flex-col gap-2">
                   <Upload
                     accept="image/*"
                     beforeUpload={handleBannerUpload}
@@ -471,7 +547,8 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                         width: '100%',
                       }}
                     >
-                      <Center
+                      <div
+                        className="flex flex-col items-center justify-center"
                         style={{
                           background: bannerUrl ? 'rgba(0,0,0,0.4)' : 'transparent',
                           height: '100%',
@@ -486,12 +563,12 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                           if (bannerUrl) e.currentTarget.style.opacity = '0';
                         }}
                       >
-                        <Flexbox align="center" gap={8}>
+                        <div className="flex flex-col items-center gap-2">
                           <ImagePlus
                             size={24}
                             style={{ color: bannerUrl ? '#fff' : cssVar.colorTextSecondary }}
                           />
-                          <Text
+                          <div
                             style={{
                               color: bannerUrl ? '#fff' : cssVar.colorTextSecondary,
                               fontSize: 12,
@@ -500,14 +577,14 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                             {bannerUploading
                               ? t('profileSetup.fields.bannerUrl.uploading')
                               : t('profileSetup.fields.bannerUrl.clickToUpload')}
-                          </Text>
-                        </Flexbox>
-                      </Center>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </Upload>
                   {bannerUrl && (
-                    <Flexbox horizontal align="center" gap={8} justify="flex-end">
-                      <Text
+                    <div className="flex items-center justify-end gap-2">
+                      <div
                         style={{
                           color: cssVar.colorError,
                           cursor: 'pointer',
@@ -518,22 +595,22 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                           handleBannerDelete();
                         }}
                       >
-                        <Flexbox horizontal align="center" gap={4}>
+                        <div className="flex items-center gap-1">
                           <Trash2 size={12} />
                           {t('profileSetup.fields.bannerUrl.remove')}
-                        </Flexbox>
-                      </Text>
-                    </Flexbox>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </Flexbox>
+                </div>
               </Form.Item>
 
-              <Text style={{ display: 'block', marginBottom: 12 }} type="secondary">
+              <div className="text-muted-foreground" style={{ display: 'block', marginBottom: 12 }}>
                 {t('profileSetup.socialLinks.title')}
-              </Text>
+              </div>
 
               {/* GitHub OAuth Connect Button */}
-              <Flexbox gap={12} style={{ marginBottom: 16 }}>
+              <div className="flex flex-col gap-3" style={{ marginBottom: 16 }}>
                 <SocialConnectButton
                   disabled={isLoadingSocialProfiles}
                   isConnecting={githubConnect.isConnecting}
@@ -554,7 +631,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                   onConnect={twitterConnect.connect}
                   onDisconnect={twitterConnect.disconnect}
                 />
-              </Flexbox>
+              </div>
 
               {/* Website - Manual Input */}
               <Form.Item
@@ -566,15 +643,9 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                   },
                 ]}
               >
-                <Input
+                <CountedInput
                   placeholder={t('profileSetup.fields.website.placeholder')}
-                  prefix={
-                    <Icon
-                      color={cssVar.colorTextSecondary}
-                      icon={Globe}
-                      style={{ marginRight: 8 }}
-                    />
-                  }
+                  prefix={<Globe size={14} />}
                 />
               </Form.Item>
             </>

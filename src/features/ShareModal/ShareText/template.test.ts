@@ -89,7 +89,7 @@ describe('generateMarkdown', () => {
     });
 
     expect(result).toContain('##### User:');
-    expect(result).toContain('##### Assistant:');
+    expect(result).toContain('##### Agent:');
   });
 
   it('should not add role labels when withRole is false', () => {
@@ -99,7 +99,7 @@ describe('generateMarkdown', () => {
     });
 
     expect(result).not.toContain('##### User:');
-    expect(result).not.toContain('##### Assistant:');
+    expect(result).not.toContain('##### Agent:');
   });
 
   it('should include tool messages when includeTool is true', () => {

@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type {
   TaskDetailActivityAuthor,
   TaskDetailData,
@@ -11,6 +10,7 @@ import type {
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { isTaskListKey, isWorkQueryTaskRowsKey, taskKeys } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
@@ -48,7 +48,14 @@ export interface TaskUpdatePayload {
   assigneeUserId?: string | null;
   beforeId?: string | null;
   description?: string;
+  /** `YYYY-MM-DD` calendar date or `null` to clear. */
+  dueDate?: string | null;
   editorData?: unknown;
+  /**
+   * Optimistic-concurrency CAS — the server requires it whenever assignee
+   * fields change. The action resolves it from the task row when omitted.
+   */
+  expectedDomainRevision?: number;
   instruction?: string;
   /** The dropped column's membership fields — server-side scope geometry. */
   moveScope?: TaskMoveScope;
@@ -309,6 +316,8 @@ export class TaskDetailSliceActionImpl {
     visibility?: 'private' | 'public';
     workflowCategory?: TaskWorkflowCategory;
   }): Promise<CreatedTask | null> => {
+    // Guard the action itself: keyboard submit can bypass a disabled button.
+    if (this.#get().isCreatingTask) return null;
     this.#set({ isCreatingTask: true }, false, 'createTask/start');
     try {
       const result = await taskService.create(params);
@@ -552,7 +561,9 @@ export class TaskDetailSliceActionImpl {
       ...(reviewerUserId !== undefined ? { reviewerUserId } : {}),
       ...(optimisticActivities.length > 0 || priorityRow ? { activities } : {}),
     };
-    const payload = options?.actorAgentId ? { ...data, actorAgentId: options.actorAgentId } : data;
+    const payload = options?.actorAgentId
+      ? { ...data, actorAgentId: options.actorAgentId }
+      : { ...data };
 
     // Snapshot every map entry the optimistic patch will touch BEFORE dispatch.
     // activeTaskId can change mid-flight, and the patch can mutate a parent's
@@ -573,6 +584,19 @@ export class TaskDetailSliceActionImpl {
       { id, type: 'updateTaskDetail', value: optimistic },
       options?.source === 'editor' ? undefined : { instructionSource: 'external' },
     );
+
+    // Assignee writes must carry the revision CAS — the detail record does not
+    // keep `domainRevision`, so re-read the row the write is based on. Runs
+    // after the optimistic dispatch so the assignee chip stays synchronous.
+    if (
+      (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
+      payload.expectedDomainRevision === undefined
+    ) {
+      const revision = await Promise.resolve(taskService.find(id))
+        .then((res) => res?.data?.domainRevision)
+        .catch(() => undefined);
+      if (revision !== undefined) payload.expectedDomainRevision = revision;
+    }
 
     await runMutation(this.#set, this.#get, {
       mutate: () => taskService.update(id, payload),
@@ -601,6 +625,10 @@ export class TaskDetailSliceActionImpl {
       assigneeUserId !== undefined ||
       data.parentTaskId !== undefined ||
       data.priority !== undefined ||
+      // A project move re-files the task across scopes (team visibility,
+      // milestone catalog) — the detail, its list row and the project's task
+      // catalog all have to reconcile.
+      data.projectId !== undefined ||
       // Status writes stamp `completedAt` and append a status activity row
       // server-side — the cached detail has to reconcile, not just the list.
       data.status !== undefined ||
@@ -608,6 +636,46 @@ export class TaskDetailSliceActionImpl {
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
     }
+  };
+
+  /**
+   * First-class execution-ownership transfer for a running task — the only
+   * sanctioned way to change its agent. Resolves `taskId`/`domainRevision`
+   * from the row itself so the CAS lands on what the UI showed, then
+   * refetches: the fence/settle/successor-dispatch side effects live
+   * server-side, nothing here is optimistic.
+   */
+  handoffTask = async (id: string, toAgentId: string | null): Promise<void> => {
+    try {
+      const current = this.#get().taskDetailMap[id];
+      let taskId = current?.id;
+      let domainRevision: number | undefined;
+      let fromAgentId = current?.agentId;
+      // Lookup failures must remain failures so the confirmation stays open.
+      // Preserve the incumbent shown in loaded details; unloaded subtask rows
+      // resolve their incumbent from the same read as the revision CAS.
+      if (!taskId || domainRevision === undefined || fromAgentId === undefined) {
+        const found = await taskService.find(id);
+        taskId ??= found?.data?.id;
+        domainRevision ??= found?.data?.domainRevision;
+        fromAgentId ??= found?.data?.assigneeAgentId;
+      }
+      if (!taskId || domainRevision === undefined) {
+        throw new Error(t('operationFailed', { ns: 'common' }));
+      }
+      await taskService.handoff({
+        expectedDomainRevision: domainRevision,
+        fromAgentId,
+        taskId,
+        toAgentId,
+      });
+    } catch (error) {
+      saveToast(error);
+      throw error;
+    }
+    await Promise.all([this.#get().refreshTaskList(), this.internal_refreshTaskDetail(id)]).catch(
+      () => {},
+    );
   };
 
   /**

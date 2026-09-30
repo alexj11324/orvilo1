@@ -3,7 +3,7 @@
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { Flexbox } from '@lobehub/ui';
+import { cx } from 'antd-style';
 import { Fragment, memo, useCallback, useState } from 'react';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
@@ -55,13 +55,11 @@ const PDFViewer = memo<PDFViewerProps>(({ url, fileId }) => {
   const dataSource = data?.pages.flatMap((page) => page.items) || [];
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox
-        align={'center'}
-        className={styles.documentContainer}
-        justify={isLoaded ? undefined : 'center'}
-        padding={24}
+    <div className={cx('flex flex-col', styles.container)}>
+      <div
+        className={cx('flex flex-col items-center p-6', styles.documentContainer)}
         ref={setContainerRef}
+        style={{ justifyContent: isLoaded ? undefined : 'center' }}
       >
         <Document
           className={styles.document}
@@ -82,8 +80,8 @@ const PDFViewer = memo<PDFViewerProps>(({ url, fileId }) => {
             );
           })}
         </Document>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

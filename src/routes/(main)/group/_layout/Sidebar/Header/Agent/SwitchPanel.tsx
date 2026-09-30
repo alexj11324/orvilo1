@@ -1,7 +1,6 @@
-import { Flexbox, Popover } from '@lobehub/ui';
-import { type PropsWithChildren } from 'react';
-import React, { memo, Suspense } from 'react';
+import React, { memo, type PropsWithChildren, type ReactElement, Suspense } from 'react';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import List from '@/features/HomeSidebar/Body/Agent/List';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -10,33 +9,23 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 const SwitchPanel = memo<PropsWithChildren>(({ children }) => {
   const navigate = useWorkspaceAwareNavigate();
   return (
-    <Popover
-      placement="bottomLeft"
-      trigger="click"
-      content={
+    <Popover>
+      <PopoverTrigger render={children as ReactElement} />
+      <PopoverContent align="start" className="p-0" side="bottom" style={{ width: 240 }}>
         <Suspense fallback={<SkeletonList rows={6} />}>
           <AgentModalProvider>
-            <Flexbox
-              gap={4}
-              padding={8}
+            <div
+              className="flex flex-col gap-1 p-2"
               style={{
                 maxHeight: '50vh',
                 overflowY: 'auto',
               }}
             >
               <List onMoreClick={() => navigate('/')} />
-            </Flexbox>
+            </div>
           </AgentModalProvider>
         </Suspense>
-      }
-      styles={{
-        content: {
-          padding: 0,
-          width: 240,
-        },
-      }}
-    >
-      {children}
+      </PopoverContent>
     </Popover>
   );
 });

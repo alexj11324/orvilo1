@@ -1,10 +1,10 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { SearchQuery, UniformSearchResponse } from '@orvilo/types';
 import { uniq } from 'es-toolkit/compat';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useChatStore } from '@/store/chat';
 import { chatToolSelectors } from '@/store/chat/selectors';
 

@@ -1,10 +1,10 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { CodeBlock } from '@/components/ui/code-block';
 import { type MCPErrorInfoMetadata } from '@/types/plugins';
 
 const ErrorDetails = memo<{
@@ -14,14 +14,14 @@ const ErrorDetails = memo<{
   const { t } = useTranslation('plugin');
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <m.div
         animate={{ height: 'auto', opacity: 1 }}
         initial={{ height: 0, opacity: 0 }}
         style={{ overflow: 'hidden' }}
       >
-        <Flexbox
-          gap={8}
+        <div
+          className="flex flex-col gap-2"
           style={{
             backgroundColor: cssVar.colorFillQuaternary,
             borderRadius: 8,
@@ -31,11 +31,9 @@ const ErrorDetails = memo<{
           }}
         >
           {errorInfo.params && (
-            <Flexbox gap={4}>
+            <div className="flex flex-col gap-1">
               <div>
-                <Tag color="blue" variant={'filled'}>
-                  {t('mcpInstall.errorDetails.connectionParams')}
-                </Tag>
+                <Badge variant="info-light">{t('mcpInstall.errorDetails.connectionParams')}</Badge>
               </div>
               <div style={{ marginTop: 4, wordBreak: 'break-all' }}>
                 {errorInfo.params.command && (
@@ -49,37 +47,36 @@ const ErrorDetails = memo<{
                   </div>
                 )}
               </div>
-            </Flexbox>
+            </div>
           )}
 
           {errorInfo.errorLog && (
-            <Flexbox gap={4}>
+            <div className="flex flex-col gap-1">
               <div>
-                <Tag color="red" variant={'filled'}>
+                <Badge variant="destructive-light">
                   {t('mcpInstall.errorDetails.errorOutput')}
-                </Tag>
+                </Badge>
               </div>
-              <Highlighter
-                language={'log'}
+              <CodeBlock
+                code={errorInfo.errorLog}
+                language="log"
                 style={{
                   maxHeight: 200,
                   overflow: 'auto',
                 }}
-              >
-                {errorInfo.errorLog}
-              </Highlighter>
-            </Flexbox>
+              />
+            </div>
           )}
 
           {errorInfo.originalError && errorInfo.originalError !== errorMessage && (
             <div>
-              <Tag color="orange">{t('mcpInstall.errorDetails.originalError')}</Tag>
+              <Badge variant="warning-light">{t('mcpInstall.errorDetails.originalError')}</Badge>
               <div style={{ marginTop: 4, wordBreak: 'break-all' }}>{errorInfo.originalError}</div>
             </div>
           )}
-        </Flexbox>
+        </div>
       </m.div>
-    </Flexbox>
+    </div>
   );
 });
 

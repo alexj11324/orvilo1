@@ -143,7 +143,11 @@ When('用户授权该设备', async function (this: CustomWorld) {
   );
 
   await expect(authorizeButton).toBeVisible();
+  const devicePost = this.page.waitForRequest(
+    (request) => request.method() === 'POST' && new URL(request.url()).pathname === '/oidc/device',
+  );
   await authorizeButton.click();
+  await devicePost;
   await expect(this.page).toHaveURL(/\/oauth\/consent\/[^/?]+/);
 });
 

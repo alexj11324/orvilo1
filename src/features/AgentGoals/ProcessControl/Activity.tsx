@@ -1,12 +1,12 @@
 'use client';
 
-import { Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { BotMessageSquare, ChevronRight } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useActivityTime } from '@/hooks/useActivityTime';
 
 import { coordinatorNodeTitleKey } from './coordinatorCopy';
@@ -111,9 +111,9 @@ const RunningClock = memo<{ startedAt?: Date }>(({ startedAt }) => {
   const elapsed = useElapsed(startedAt);
   if (!elapsed) return null;
   return (
-    <Text className={styles.mono} fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} style={{ flex: 'none' }}>
       {t('goalProcess.running.elapsed', { duration: elapsed })}
-    </Text>
+    </div>
   );
 });
 
@@ -129,88 +129,81 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
     const coordinatorTitleKey = coordinatorNodeTitleKey(view);
 
     return (
-      <Flexbox gap={0}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.row}
-          gap={8}
+      <div className="flex flex-col gap-0">
+        <div
+          className={`flex items-center gap-2 ${styles.row}`}
           onClick={() => (hasDetail ? setOpen(!open) : onSelect(view.node.id))}
         >
-          <Icon
+          <ChevronRight
             className={cx(styles.arrow, open && styles.arrowOpen)}
-            icon={ChevronRight}
             size={14}
             style={{ opacity: hasDetail ? 1 : 0 }}
           />
           <KindDot kind={view.node.kind} />
-          <Text ellipsis style={{ flexShrink: 1, minWidth: 0 }} weight={500}>
+          <div className="truncate min-w-0 font-medium" style={{ flexShrink: 1, minWidth: 0 }}>
             {coordinatorTitleKey ? t(coordinatorTitleKey as any) : view.node.title}
-          </Text>
-          <Text ellipsis fontSize={14} style={{ flexShrink: 1, minWidth: 0 }} type={'secondary'}>
+          </div>
+          <div
+            className="truncate min-w-0 text-[14px] text-muted-foreground"
+            style={{ flexShrink: 1, minWidth: 0 }}
+          >
             {summarize(view)}
-          </Text>
+          </div>
           {view.startedAt && <RunningClock startedAt={view.startedAt} />}
-          <Text
-            className={cx(styles.time, styles.mono)}
-            fontSize={12}
+          <div
+            className={cn('text-[12px] text-muted-foreground', cx(styles.time, styles.mono))}
             title={title}
-            type={'secondary'}
           >
             {text}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
         {open && (
-          <Flexbox className={styles.body} gap={10}>
+          <div className={`flex flex-col gap-2.5 ${styles.body}`}>
             {view.attempts.length > 0 && (
-              <Flexbox gap={0}>
+              <div className="flex flex-col gap-0">
                 {view.attempts.map((attempt) => (
-                  <Flexbox className={styles.attempt} gap={2} key={attempt.index}>
-                    <Flexbox horizontal align={'center'} gap={8}>
-                      <Text fontSize={12} style={{ flex: 'none' }} weight={600}>
+                  <div className={`flex flex-col gap-0.5 ${styles.attempt}`} key={attempt.index}>
+                    <div className="flex items-center gap-2">
+                      <div className="text-[12px] font-semibold" style={{ flex: 'none' }}>
                         {t('goalProcess.attempts.nth', { index: attempt.index })}
-                      </Text>
-                      <Text
-                        fontSize={12}
+                      </div>
+                      <div
                         style={{ flex: 'none' }}
-                        type={
+                        className={cn(
+                          'text-[12px]',
                           attempt.outcome === 'passed'
-                            ? 'success'
+                            ? 'text-success'
                             : attempt.outcome === 'failed'
-                              ? 'danger'
-                              : 'secondary'
-                        }
+                              ? 'text-destructive'
+                              : 'text-muted-foreground',
+                        )}
                       >
                         {t(`goalProcess.attempts.${attempt.outcome}` as const)}
-                      </Text>
-                    </Flexbox>
+                      </div>
+                    </div>
                     {attempt.reason && (
-                      <Text fontSize={12} type={'secondary'}>
-                        {attempt.reason}
-                      </Text>
+                      <div className="text-[12px] text-muted-foreground">{attempt.reason}</div>
                     )}
-                  </Flexbox>
+                  </div>
                 ))}
-              </Flexbox>
+              </div>
             )}
             {view.findings.map((finding) => (
-              <Flexbox
-                horizontal
-                align={'center'}
-                gap={6}
+              <div
+                className="flex items-center gap-1.5"
                 key={finding.id}
                 style={{ cursor: 'pointer' }}
                 onClick={() => onSelect(finding.id)}
               >
                 <KindDot kind={'finding'} />
-                <Text fontSize={13}>
+                <div className="text-[13px]">
                   {t('goalProcess.activity.finding', { title: finding.title })}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
             ))}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -230,14 +223,23 @@ const Activity = memo<{ graph: GoalGraphView; onSelect: (nodeId: string) => void
       .sort((a, b) => lastTouch(b).getTime() - lastTouch(a).getTime());
 
     if (rows.length === 0)
-      return <Empty description={t('goalProcess.activity.empty')} icon={BotMessageSquare} />;
+      return (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant={'icon'}>
+              <BotMessageSquare />
+            </EmptyMedia>
+            <EmptyDescription>{t('goalProcess.activity.empty')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      );
 
     return (
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         {rows.map((view) => (
           <ActivityRow key={view.node.id} view={view} onSelect={onSelect} />
         ))}
-      </Flexbox>
+      </div>
     );
   },
 );

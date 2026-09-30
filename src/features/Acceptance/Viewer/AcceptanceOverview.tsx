@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { useState } from 'react';
 import { useLocation } from 'react-router';
@@ -86,8 +85,8 @@ export const AcceptanceOverview = ({
 
   return (
     <>
-      <Flexbox className={styles.headerBand}>
-        <Flexbox className={styles.column} gap={12}>
+      <div className={`flex flex-col ${styles.headerBand}`}>
+        <div className={`flex flex-col gap-3 ${styles.column}`}>
           <AcceptanceIdentity
             statusSlot={<AcceptanceStatusControl />}
             topicSlot={<AcceptanceOriginTopic />}
@@ -96,7 +95,7 @@ export const AcceptanceOverview = ({
           {/* The requirement needs room to land before the tabs start a new
               thought — at the band's uniform gap it read as another row of
               the same list. */}
-          <Flexbox style={{ paddingBlockStart: 16 }}>
+          <div className="flex flex-col" style={{ paddingBlockStart: 16 }}>
             <AcceptanceTabs
               active={tab}
               checkCount={checks.length}
@@ -105,15 +104,13 @@ export const AcceptanceOverview = ({
               resourceCount={resourceCount}
               onChange={setTab}
             />
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
 
-      <Flexbox
-        className={styles.column}
-        gap={16}
-        paddingBlock={20}
-        style={tab === 'flow' ? { maxWidth: 1500 } : undefined}
+      <div
+        className={`flex flex-col gap-4 ${styles.column}`}
+        style={{ paddingBlock: 20, ...(tab === 'flow' ? { maxWidth: 1500 } : undefined) }}
       >
         {/* Deciding belongs where the evidence is. The discussion is a
             conversation; ending one there put the closing act under a thread
@@ -137,7 +134,7 @@ export const AcceptanceOverview = ({
         ) : (
           <AcceptanceResources />
         )}
-      </Flexbox>
+      </div>
     </>
   );
 };

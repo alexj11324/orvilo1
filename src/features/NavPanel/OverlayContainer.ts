@@ -1,13 +1,14 @@
-import type { DropdownMenuProps, PopoverProps } from '@lobehub/ui';
 import { createContext, useContext, useMemo } from 'react';
 
 import { useServerConfigStore } from '@/store/serverConfig';
 
 export const OverlayContainerContext = createContext<HTMLDivElement | null>(null);
 
-interface OverlayPopoverPortalProps extends NonNullable<PopoverProps['portalProps']> {
+interface OverlayPortalProps {
   container?: HTMLElement | null;
 }
+
+type OverlayPopoverPortalProps = OverlayPortalProps;
 
 export const useOverlayContainer = () => {
   return useContext(OverlayContainerContext);
@@ -24,7 +25,7 @@ const useMobileOverlayContainer = () => {
   }, [container, mobile]);
 };
 
-export const useOverlayDropdownPortalProps = (): DropdownMenuProps['portalProps'] => {
+export const useOverlayDropdownPortalProps = (): OverlayPortalProps | undefined => {
   const container = useMobileOverlayContainer();
 
   return useMemo(() => {

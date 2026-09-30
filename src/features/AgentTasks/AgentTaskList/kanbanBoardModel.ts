@@ -4,10 +4,18 @@ import type {
   TaskMoveScope,
   TaskStatus,
   TaskWorkflowCategory,
+  TeamWorkflowStateItem,
   WorkQuerySortMode,
 } from '@orvilo/types';
 import { WORK_QUERY_STATUS_COLUMNS, WORK_QUERY_WORKFLOW_COLUMNS } from '@orvilo/types';
+import { cssVar } from 'antd-style';
+import { CircleAlert, OctagonAlert } from 'lucide-react';
 
+import {
+  type StatusVisual,
+  TASK_STATUS_VISUALS,
+  WORKFLOW_CATEGORY_VISUALS,
+} from '@/components/ExecutionStatus';
 import type {
   TaskGroupItem,
   TaskKanbanGroupBy,
@@ -188,7 +196,15 @@ export const buildKanbanGroupQuery = ({
   // A project filter (id or `null` = "No project") composes with the "My
   // tasks" scope — My Work's chip narrows the caller's slice, not the board.
   if (myTaskScope) return { excludeStatuses, groupBy, projectId, scope: myTaskScope };
-  if (projectId) return { automated: false, excludeStatuses, groupBy, projectId };
+  // `projectId` is a three-state filter: `undefined` = unscoped, `null` =
+  // the "No project" chip, a string = that project. The test is `!== undefined`,
+  // not truthiness — `null` must reach the fetch (it keys the no-project list)
+  // instead of silently widening the query to the agent / all-agents scope.
+  // The project filter takes precedence over `agentId` here too, matching how
+  // `useFetchTaskGroupList` derives its list key.
+  if (projectId !== undefined) {
+    return { automated: false, excludeStatuses, groupBy, projectId };
+  }
   if (agentId) return { agentId, automated: false, excludeStatuses, groupBy };
 
   return { allAgents: true, automated: false, excludeStatuses, groupBy };
@@ -279,6 +295,81 @@ export const kanbanBoardCapabilities = (input: {
 
 export const externalKanbanColumns = (groupBy: WorkQueryBoardGroupBy): KanbanColumnDefinition[] =>
   groupBy === 'workflowCategory' ? WORKFLOW_KANBAN_COLUMNS : RAW_STATUS_KANBAN_COLUMNS;
+
+export const COLUMN_I18N_KEYS: Record<string, string> = {
+  'backlog': 'taskList.kanban.backlog',
+  'blocking': 'taskList.attention.blocking',
+  'canceled': 'taskList.kanban.canceled',
+  'completed': 'taskList.kanban.done',
+  'done': 'taskList.kanban.done',
+  'failed': 'taskList.kanban.failed',
+  'in_progress': 'taskList.kanban.inProgress',
+  'in_review': 'taskList.kanban.inReview',
+  'needsInput': 'taskList.kanban.needsInput',
+  'paused': 'taskList.kanban.paused',
+  'running': 'taskList.kanban.running',
+  'scheduled': 'taskList.kanban.scheduled',
+  'st:backlog': 'taskList.kanban.backlog',
+  'st:canceled': 'taskList.kanban.canceled',
+  'st:completed': 'taskList.kanban.done',
+  'st:failed': 'taskList.kanban.failed',
+  'st:paused': 'taskList.kanban.paused',
+  'st:running': 'taskList.kanban.running',
+  'st:scheduled': 'taskList.kanban.scheduled',
+  'todo': 'taskList.kanban.todo',
+  'triage': 'taskList.kanban.triage',
+  'urgent': 'taskList.attention.urgent',
+  'wf:backlog': 'taskList.kanban.backlog',
+  'wf:canceled': 'taskList.kanban.canceled',
+  'wf:done': 'taskList.kanban.done',
+  'wf:in_progress': 'taskList.kanban.inProgress',
+  'wf:in_review': 'taskList.kanban.inReview',
+  'wf:todo': 'taskList.kanban.todo',
+  'wf:triage': 'taskList.kanban.triage',
+};
+
+/**
+ * Per-column header glyphs. Workflow-category columns — the merged status
+ * board's buckets and the `wf:` work-query columns — read
+ * `WORKFLOW_CATEGORY_VISUALS` so a header never disagrees with the category
+ * badge on its cards. `st:` keys keep the raw execution-status family for
+ * status-grouped surfaces; attention buckets (`urgent`/`blocking`) are not
+ * statuses and keep their own marks.
+ */
+export const COLUMN_STATUS_VISUAL: Record<string, StatusVisual> = {
+  // Attention buckets (Linear My issues) are not execution statuses — urgent
+  // keeps the app's urgent glyph, blocking the stop-marked one.
+  'blocking': { color: cssVar.colorError, icon: OctagonAlert },
+  'urgent': { color: cssVar.orange, icon: CircleAlert },
+  // The merged status board's columns are Linear's workflow categories —
+  // every STATUS_KANBAN_COLUMNS entry carries `targetWorkflowCategory`, with
+  // `status` only the write fallback for tasks that lack workflow state — so
+  // the header reads the same canonical map the card's category badge uses.
+  'backlog': WORKFLOW_CATEGORY_VISUALS.backlog,
+  'canceled': WORKFLOW_CATEGORY_VISUALS.canceled,
+  'done': WORKFLOW_CATEGORY_VISUALS.done,
+  'needsInput': WORKFLOW_CATEGORY_VISUALS.in_review,
+  'running': WORKFLOW_CATEGORY_VISUALS.in_progress,
+  'todo': WORKFLOW_CATEGORY_VISUALS.todo,
+  'triage': WORKFLOW_CATEGORY_VISUALS.triage,
+  // Raw execution-status columns (`st:`) — each run state keeps its own
+  // glyph instead of merging into a shared column.
+  'st:backlog': TASK_STATUS_VISUALS.backlog,
+  'st:canceled': TASK_STATUS_VISUALS.canceled,
+  'st:completed': TASK_STATUS_VISUALS.completed,
+  'st:failed': TASK_STATUS_VISUALS.failed,
+  'st:paused': TASK_STATUS_VISUALS.paused,
+  'st:running': TASK_STATUS_VISUALS.running,
+  'st:scheduled': TASK_STATUS_VISUALS.scheduled,
+  // Work-query workflow columns (`wf:`) — same canonical map.
+  'wf:backlog': WORKFLOW_CATEGORY_VISUALS.backlog,
+  'wf:canceled': WORKFLOW_CATEGORY_VISUALS.canceled,
+  'wf:done': WORKFLOW_CATEGORY_VISUALS.done,
+  'wf:in_progress': WORKFLOW_CATEGORY_VISUALS.in_progress,
+  'wf:in_review': WORKFLOW_CATEGORY_VISUALS.in_review,
+  'wf:todo': WORKFLOW_CATEGORY_VISUALS.todo,
+  'wf:triage': WORKFLOW_CATEGORY_VISUALS.triage,
+};
 
 /**
  * Linear parity: a work-query board hides a column whose group is empty —
@@ -406,7 +497,7 @@ export const getKanbanAssigneeUpdate = (
 export const getKanbanTaskPatch = (
   groupBy: TaskKanbanGroupBy,
   column: KanbanColumnDefinition,
-  task?: TaskListItem,
+  task?: { workflowStateId?: string | null },
 ): Partial<TaskListItem> | undefined => {
   if (groupBy === 'assignee' && column.groupMeta?.groupBy === 'assignee') {
     return { assigneeAgentId: column.groupMeta.assigneeId ?? null };
@@ -530,6 +621,93 @@ export const taskMatchesKanbanColumn = (
   groupBy: TaskKanbanGroupBy,
   columnKey: string,
 ): boolean => taskKanbanColumnKey(task, groupBy) === columnKey;
+
+/**
+ * One pickable status row a board-driven menu renders — the board's column
+ * plus the patch a pick on it commits, identical to the one
+ * {@link getKanbanTaskPatch} produces for a status-board drop. A column with
+ * neither field is one the board could not take this task either (an
+ * unlinked task can't reach the workflow-only columns such as triage); menus
+ * render it disabled, never hidden, so the list stays 1:1 with the board.
+ *
+ * `state` upgrades the row to the shared Issue status model — an exact
+ * `team_workflow_states` entry. A pick then commits `{category,
+ * workflowStateRefId}` through the same CAS command a board drop uses
+ * instead of the category-only write, so two custom states inside one
+ * category stay individually selectable.
+ */
+export interface TaskStatusChoice {
+  column: KanbanColumnDefinition;
+  state?: TeamWorkflowStateItem;
+  status?: TaskStatus;
+  workflowCategory?: TaskWorkflowCategory;
+}
+
+/**
+ * A team's own workflow states as menu choices — the Issue status model
+ * (`{teamId, workflowStateRefId, category, name, color}`; color/glyph read
+ * from the state's category). Rows keep the board's category order then the
+ * catalog's position, and carry the category's `wf:` column so a pick
+ * resolves the same `targetKey` a category drop would — the precise ref
+ * travels on the choice itself.
+ */
+export const issueWorkflowStateChoices = (
+  states: readonly TeamWorkflowStateItem[],
+): TaskStatusChoice[] =>
+  WORK_QUERY_WORKFLOW_COLUMNS.flatMap((category) => {
+    const column = WORKFLOW_KANBAN_COLUMNS.find((item) => item.targetWorkflowCategory === category);
+    return states
+      .filter((state) => state.category === category)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .map((state) => ({ column: column!, state, workflowCategory: category }));
+  });
+
+/**
+ * Does a pick on `choice` land the task exactly where it already sits?
+ * Precise-state rows compare the live ref (or the provider id it mirrors);
+ * column rows compare against the task's board bucket. A second state inside
+ * the task's own category is never a noop — it writes the ref swap.
+ */
+export const taskStatusChoiceIsCurrent = (
+  task: {
+    workflowStateId?: string | null;
+    workflowStateRefId?: string | null;
+  },
+  choice: TaskStatusChoice,
+  currentColumnKey: string,
+): boolean => {
+  if (!choice.state) return choice.column.key === currentColumnKey;
+  return (
+    choice.state.id === task.workflowStateRefId ||
+    choice.state.remoteStateId === (task.workflowStateId ?? undefined)
+  );
+};
+
+/** The board's status columns as menu choices, in board order. */
+export const taskStatusChoices = (task: { workflowStateId?: string | null }): TaskStatusChoice[] =>
+  STATUS_KANBAN_COLUMNS.map((column) => {
+    const patch = getKanbanTaskPatch('status', column, task);
+    return {
+      column,
+      status: patch?.status as TaskStatus | undefined,
+      workflowCategory: patch?.workflowCategory ?? undefined,
+    };
+  });
+
+/**
+ * The board column a task sits in on a status board — the row a board-driven
+ * menu check-marks. Workflow-linked tasks bucket by category, everything else
+ * by execution status (the same rule {@link taskKanbanColumnKey} applies for
+ * `status` grouping).
+ */
+export const taskStatusBoardColumnKey = (task: {
+  status: string;
+  workflowCategory?: TaskWorkflowCategory | null;
+  workflowStateId?: string | null;
+}): string =>
+  task.workflowStateId
+    ? (KANBAN_WORKFLOW_COLUMN_KEY[task.workflowCategory ?? 'backlog'] ?? 'backlog')
+    : (KANBAN_STATUS_COLUMN_KEY[task.status as TaskStatus] ?? 'backlog');
 
 /**
  * Column map for the board's local drag mirror: column key → ordered task
@@ -703,3 +881,11 @@ export const preserveKanbanColumnOrder = (
       .filter((key) => key in refreshed)
       .map((key) => [key, refreshed[key]!]),
   );
+
+export const kanbanColumnPagingAction = ({
+  atLimit,
+  external,
+}: {
+  atLimit: boolean;
+  external: boolean;
+}): 'loadMore' | 'viewAll' => (atLimit && !external ? 'viewAll' : 'loadMore');

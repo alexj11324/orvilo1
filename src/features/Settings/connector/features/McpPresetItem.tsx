@@ -1,17 +1,19 @@
 'use client';
 
-import { Center, Icon, Tooltip } from '@lobehub/ui';
-import { Avatar, Button, toast } from '@lobehub/ui/base-ui';
 import { isDesktop, matchMcpPresetByConnector, type McpPresetConnector } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { CircleCheck, Loader2, SquareArrowOutUpRight } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
   getActiveWorkspaceId,
   useActiveWorkspaceId,
 } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePermission } from '@/hooks/usePermission';
 import { useResourceManageable } from '@/hooks/useResourceManageable';
@@ -37,6 +39,13 @@ interface McpPresetItemProps {
   onSelect: () => void;
   preset: McpPresetConnector;
   providerConnected?: boolean;
+  /** A pending authorization attempt hit its deadline — Connect acts as re-check. */
+  timedOut?: boolean;
+  /**
+   * The deployment lacks the managed OAuth path — Connect becomes a PAT
+   * "Set up token" entry that opens the preset's credential form.
+   */
+  tokenSetup?: boolean;
 }
 
 /**
@@ -45,7 +54,17 @@ interface McpPresetItemProps {
  * existing GitHub App grant. Other presets retain the custom connector form.
  */
 const McpPresetItem = memo<McpPresetItemProps>(
-  ({ preset, connector, connecting, isSelected, onAdd, onSelect, providerConnected }) => {
+  ({
+    preset,
+    connector,
+    connecting,
+    isSelected,
+    onAdd,
+    onSelect,
+    providerConnected,
+    timedOut,
+    tokenSetup,
+  }) => {
     const { t } = useTranslation('setting');
     const { t: tt } = useTranslation('tool');
     const { allowed: canCreate, reason: createReason } = usePermission('create_content');
@@ -85,6 +104,13 @@ const McpPresetItem = memo<McpPresetItemProps>(
       setIsConnecting(true);
       try {
         const result = await connectLinearMcpPreset(preset, currentConnector?.id, {
+          checkStatus: async (connectorId) => {
+            await fetchConnectors();
+            return (
+              connectorSelectors.connectorById(connectorId)(useToolStore.getState())?.status ===
+              'connected'
+            );
+          },
           createConnector,
           fetchConnectors,
           ...(isDesktop && {
@@ -106,7 +132,9 @@ const McpPresetItem = memo<McpPresetItemProps>(
               reason: result.error || t('tools.mcpPreset.unknownError'),
             }),
           );
-        } else if (result.status === 'dismissed') {
+        } else if (result.status === 'timed-out') {
+          toast.warning(t('tools.mcpPreset.timedOut'));
+        } else if (result.status === 'dismissed' || result.status === 'cancelled') {
           toast.warning(t('tools.mcpPreset.cancelled'));
         }
       } catch (error) {
@@ -123,35 +151,68 @@ const McpPresetItem = memo<McpPresetItemProps>(
     const renderNavExtra = () => {
       if (isConnected) {
         return (
-          <Tooltip title={t('tools.orviloSkill.connected', { defaultValue: 'Connected' })}>
-            <Center width={20}>
-              <Icon icon={CircleCheck} size={16} style={{ color: cssVar.colorSuccess }} />
-            </Center>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex min-w-0">
+                  <div
+                    className={'flex min-w-0'}
+                    style={{
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 20,
+                    }}
+                  >
+                    {createElement(CircleCheck, {
+                      size: 16,
+                      style: { color: cssVar.colorSuccess },
+                    })}
+                  </div>
+                </span>
+              }
+            />
+            <TooltipContent side="top">
+              {t('tools.orviloSkill.connected', { defaultValue: 'Connected' })}
+            </TooltipContent>
           </Tooltip>
         );
       }
       return (
-        <Tooltip
-          title={
-            !canManage ? tt('connector.manageOnlyCreator') : !canCreate ? createReason : editReason
-          }
-        >
-          <Button
-            size="small"
-            type="text"
-            disabled={
-              !canConnect || (preset.id === 'linear' && !isListReady) || isConnecting || connecting
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex min-w-0">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={
+                    !canConnect ||
+                    (preset.id === 'linear' && !isListReady) ||
+                    isConnecting ||
+                    connecting
+                  }
+                  onClick={handleConnect}
+                >
+                  {createElement(isConnecting || connecting ? Loader2 : SquareArrowOutUpRight, {
+                    className: isConnecting || connecting ? 'animate-spin' : undefined,
+                  })}
+                  {timedOut
+                    ? t('tools.mcpPreset.checkStatus', 'Check status')
+                    : tokenSetup
+                      ? t('tools.mcpPreset.tokenSetup', 'Set up token')
+                      : t('tools.orviloSkill.connect')}
+                </Button>
+              </span>
             }
-            icon={
-              <Icon
-                icon={isConnecting || connecting ? Loader2 : SquareArrowOutUpRight}
-                spin={isConnecting || connecting}
-              />
-            }
-            onClick={handleConnect}
-          >
-            {t('tools.orviloSkill.connect')}
-          </Button>
+          />
+          <TooltipContent side="top">
+            {!canManage
+              ? tt('connector.manageOnlyCreator')
+              : !canCreate
+                ? createReason
+                : editReason}
+          </TooltipContent>
         </Tooltip>
       );
     };
@@ -159,7 +220,7 @@ const McpPresetItem = memo<McpPresetItemProps>(
     const renderNavIcon = () => {
       const { icon, label } = preset;
       if (typeof icon === 'string') return <Avatar alt={label} avatar={icon} size={18} />;
-      return <Icon fill={cssVar.colorText} icon={icon} size={18} />;
+      return createElement(icon, { fill: cssVar.colorText, size: 18 });
     };
 
     return (

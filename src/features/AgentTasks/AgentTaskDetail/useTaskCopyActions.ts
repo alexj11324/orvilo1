@@ -1,15 +1,14 @@
-import { copyToClipboard } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { toast } from '@/components/toast';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { taskDetailPath } from '../shared/taskDetailPath';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 /**
  * Clipboard actions for the active task. Shared by the rail's round quick
@@ -21,21 +20,23 @@ export const useTaskCopyActions = () => {
 
   const appOrigin = useAppOrigin();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskId);
-  const taskAgentId = useTaskStore(taskDetailSelectors.activeTaskAgentId);
-  const taskTitle = useTaskStore(taskDetailSelectors.activeTaskName);
-  const taskIdentifier = useTaskStore((s) => taskDetailSelectors.activeTaskDetail(s)?.identifier);
+  const taskId = useTaskDetailTaskId();
+  const taskAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const taskTitle = useTaskDetailSelector(taskDetailSelectors.taskName);
+  const taskIdentifier = useTaskDetailSelector(
+    (s, scopedTaskId) => taskDetailSelectors.taskDetail(s, scopedTaskId)?.identifier,
+  );
   // A task only gets a `task/<identifier>` branch when it is bound to a repo
   // workspace — the runner provisions a worktree there. Without the binding
   // there is no branch to copy, so the action hides rather than inventing one.
-  const hasBranch = useTaskStore(
-    (s) => !!taskDetailSelectors.activeTaskDetail(s)?.config?.workspace,
+  const hasBranch = useTaskDetailSelector(
+    (s, scopedTaskId) => !!taskDetailSelectors.taskDetail(s, scopedTaskId)?.config?.workspace,
   );
 
   const copyId = useCallback(async () => {
     if (!taskId) return;
 
-    await copyToClipboard(taskId);
+    await navigator.clipboard.writeText(taskId);
     toast.success(t('taskList.contextMenu.copyIdSuccess'));
   }, [taskId, t]);
 
@@ -48,7 +49,7 @@ export const useTaskCopyActions = () => {
       activeWorkspaceSlug,
     )}`;
 
-    await copyToClipboard(taskUrl);
+    await navigator.clipboard.writeText(taskUrl);
     toast.success(t('taskList.contextMenu.copyLinkSuccess'));
   }, [taskId, taskAgentId, taskTitle, appOrigin, activeWorkspaceSlug, t]);
 
@@ -57,7 +58,7 @@ export const useTaskCopyActions = () => {
   const copyBranch = useCallback(async () => {
     if (!taskIdentifier) return;
 
-    await copyToClipboard(`task/${taskIdentifier}`);
+    await navigator.clipboard.writeText(`task/${taskIdentifier}`);
     toast.success(t('taskDetail.copyBranchSuccess'));
   }, [taskIdentifier, t]);
 

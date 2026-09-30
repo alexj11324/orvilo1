@@ -1,11 +1,12 @@
 'use client';
 
-import { Empty, Flexbox, SearchBar } from '@lobehub/ui';
 import type { NavigationFavorite, NavigationFavoriteTargetType } from '@orvilo/types';
 import { SearchIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
+import { SidebarMenu, SidebarProvider } from '@/components/ui/sidebar';
 import SideBarDrawer from '@/features/NavPanel/SideBarDrawer';
 
 import { favoriteLabel } from './favoriteLabel';
@@ -40,44 +41,45 @@ const AllFavoritesDrawer = memo<AllFavoritesDrawerProps>(
         title={t('tab.favorites')}
         width={320}
         subHeader={
-          <Flexbox paddingBlock={'0 8px'} paddingInline={8}>
-            <SearchBar
-              allowClear
-              defaultValue={searchKeyword}
+          <div className="px-2 pb-2">
+            <Input
+              aria-label={t('navPanel.searchFavorites')}
               placeholder={t('navPanel.searchFavorites')}
-              onSearch={(keyword) => setSearchKeyword(keyword)}
-              onInputChange={(keyword) => {
-                setSearchKeyword(keyword);
-              }}
+              type="search"
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
             />
-          </Flexbox>
+          </div>
         }
         onClose={onClose}
       >
-        <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
-          {filteredItems.length === 0 && isSearching ? (
-            <Empty
-              description={t('navPanel.searchResultEmpty')}
-              icon={SearchIcon}
-              style={{ paddingBlock: 24 }}
-            />
-          ) : (
-            filteredItems.map((item) => {
-              const index = items.indexOf(item);
-              return (
-                <FavoriteRow
-                  index={index}
-                  item={item}
-                  itemCount={items.length}
-                  key={`${item.targetType}:${item.targetId}`}
-                  showReorder={!isSearching}
-                  onMove={onMove}
-                  onUnpin={onUnpin}
-                />
-              );
-            })
-          )}
-        </Flexbox>
+        <SidebarProvider open style={{ display: 'contents' }}>
+          <div className="px-1 py-1">
+            {filteredItems.length === 0 && isSearching ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-sm text-muted-foreground">
+                <SearchIcon aria-hidden />
+                <p>{t('navPanel.searchResultEmpty')}</p>
+              </div>
+            ) : (
+              <SidebarMenu className="gap-0.25">
+                {filteredItems.map((item) => {
+                  const index = items.indexOf(item);
+                  return (
+                    <FavoriteRow
+                      index={index}
+                      item={item}
+                      itemCount={items.length}
+                      key={`${item.targetType}:${item.targetId}`}
+                      showReorder={!isSearching}
+                      onMove={onMove}
+                      onUnpin={onUnpin}
+                    />
+                  );
+                })}
+              </SidebarMenu>
+            )}
+          </div>
+        </SidebarProvider>
       </SideBarDrawer>
     );
   },

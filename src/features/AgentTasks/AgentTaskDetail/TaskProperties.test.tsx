@@ -1,0 +1,132 @@
+/**
+ * @vitest-environment happy-dom
+ */
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import TaskProperties from './TaskProperties';
+
+const mocks = vi.hoisted(() => ({
+  activeWorkspaceId: 'workspace-1' as string | undefined,
+  changeTaskStatus: vi.fn(),
+  taskState: {
+    activeTaskId: 'T-1',
+    taskDetailMap: {
+      'T-1': {
+        identifier: 'T-1',
+        labels: [],
+        priority: 0,
+        status: 'backlog',
+        visibility: 'public',
+      },
+    },
+    taskInstructionRevisionMap: {},
+    taskSaveStatusMap: {},
+    updateTask: vi.fn(),
+  } as Record<string, unknown>,
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    i18n: { language: 'en-US' },
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+  }),
+}));
+
+vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useActiveWorkspaceId: () => mocks.activeWorkspaceId,
+}));
+
+vi.mock('@/store/task', () => ({
+  useTaskStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector(mocks.taskState),
+}));
+
+vi.mock('antd-style', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  cssVar: {
+    colorTextDescription: '#999',
+    colorTextSecondary: '#666',
+  },
+}));
+
+vi.mock('@/features/Labels/LabelChips', () => ({
+  default: () => <span>labels</span>,
+}));
+
+vi.mock('../features/AssigneeMemberSelector', () => ({
+  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('../features/AssigneeUserAvatar', () => ({
+  default: () => <span>member assignee</span>,
+}));
+
+vi.mock('../features/TaskLabelSelector', () => ({
+  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('../features/TaskPriorityTag', () => ({
+  default: () => <span>priority</span>,
+}));
+
+vi.mock('../features/TaskTriggerTag', () => ({
+  default: () => <span>trigger</span>,
+}));
+
+vi.mock('../features/UnassignedAssigneeIcon', () => ({
+  UnassignedAssigneeIcon: () => <span>unassigned</span>,
+}));
+
+vi.mock('../features/useTaskStatusChange', () => ({
+  useTaskStatusChange: () => mocks.changeTaskStatus,
+}));
+
+vi.mock('../shared/useUserDisplayMeta', () => ({
+  useUserDisplayMeta: () => undefined,
+}));
+
+vi.mock('./TaskAcceptanceStateRow', () => ({
+  default: () => <div>acceptance</div>,
+}));
+
+vi.mock('./TaskScheduleConfig', () => ({
+  default: () => <div>schedule</div>,
+}));
+
+describe('TaskProperties', () => {
+  beforeEach(() => {
+    mocks.activeWorkspaceId = 'workspace-1';
+    mocks.changeTaskStatus.mockClear();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  // The status chip is the menu's trigger element — a wrapper that swallows
+  // the props the menu clones on (e.g. a title-less Tooltip) leaves a dead
+  // chip. Clicking it must open the board-driven menu.
+  it('opens the board-driven status menu when the status chip is clicked', async () => {
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByText('taskDetail.status.backlog'));
+
+    await waitFor(() => {
+      expect(screen.getByText('taskList.kanban.triage')).toBeTruthy();
+    });
+
+    const columnLabels = screen.getAllByText(/^taskList\.kanban\./).map((node) => node.textContent);
+    expect(columnLabels).toEqual([
+      'taskList.kanban.triage',
+      'taskList.kanban.backlog',
+      'taskList.kanban.todo',
+      'taskList.kanban.running',
+      'taskList.kanban.needsInput',
+      'taskList.kanban.done',
+      'taskList.kanban.canceled',
+    ]);
+  });
+});

@@ -1,17 +1,18 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { MessageCircle, MessagesSquare } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useTaskStore } from '@/store/task';
-import { taskDetailSelectors } from '@/store/task/selectors';
 
 import RunReplyEditor from './RunReplyEditor';
+import { useTaskDetailTaskId } from './TaskDetailScope';
 
 /**
  * What the agent reported for this task, presented as a report.
@@ -38,7 +39,7 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
   const { t } = useTranslation('chat');
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const addComment = useTaskStore((s) => s.addComment);
-  const activeTaskId = useTaskStore(taskDetailSelectors.activeTaskId);
+  const activeTaskId = useTaskDetailTaskId();
   const [commenting, setCommenting] = useState(false);
 
   // A descendant run belongs to `sourceTaskId`, not the open parent.
@@ -58,13 +59,15 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
   if (!body) return null;
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       {/* Who is reporting, at the top where a report names its author — not a
           footnote under the text it wrote. */}
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex items-center gap-2">
         <Avatar avatar={activity.author?.avatar || DEFAULT_AVATAR} size={24} />
-        <Text weight={500}>{activity.author?.name ?? t('taskDetail.reportedByAgent')}</Text>
-      </Flexbox>
+        <div className="font-medium">
+          {activity.author?.name ?? t('taskDetail.reportedByAgent')}
+        </div>
+      </div>
       <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
         {body}
       </Markdown>
@@ -79,7 +82,7 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
           }}
         />
       ) : (
-        <Flexbox horizontal align={'center'} gap={4} justify={'flex-end'}>
+        <div className="flex items-center justify-end gap-1">
           <ActionIcon
             icon={MessagesSquare}
             size={'small'}
@@ -94,9 +97,9 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
               onClick={() => setCommenting(true)}
             />
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

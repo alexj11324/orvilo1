@@ -1,8 +1,8 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
+import type { CSSProperties, HTMLAttributes } from 'react';
 
 import { CONVERSATION_MIN_WIDTH } from '@/const/layoutTokens';
 import { useGlobalStore } from '@/store/global';
@@ -21,22 +21,30 @@ const ConversationSkeletonContainer = ({
   flex,
   height,
   ...rest
-}: FlexboxProps) => {
+}: HTMLAttributes<HTMLDivElement> & {
+  flex?: CSSProperties['flex'];
+  height?: CSSProperties['height'];
+}) => {
   const wideScreen = useGlobalStore(systemStatusSelectors.wideScreen);
 
   return (
-    <Flexbox aria-busy flex={flex} height={height} style={{ minHeight: 0 }} width={'100%'}>
-      <Flexbox
-        className={cx(styles.container, className)}
-        flex={flex}
-        height={height}
-        paddingInline={16}
-        width={wideScreen ? '100%' : `min(${CONVERSATION_MIN_WIDTH}px, 100%)`}
+    <div
+      aria-busy
+      className={'flex flex-col'}
+      style={{ flex, height, minHeight: 0, width: '100%' }}
+    >
+      <div
+        className={cn('flex px-4', cx(styles.container, className))}
+        style={{
+          flex,
+          height,
+          width: wideScreen ? '100%' : `min(${CONVERSATION_MIN_WIDTH}px, 100%)`,
+        }}
         {...rest}
       >
         {children}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

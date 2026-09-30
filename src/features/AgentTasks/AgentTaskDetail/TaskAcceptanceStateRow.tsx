@@ -1,7 +1,5 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import {
   AlertTriangle,
@@ -18,11 +16,11 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAcceptanceBySubject } from '@/features/Acceptance';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
+import { useTaskDetailSelector } from './TaskDetailScope';
 import { useOpenAcceptanceInPanel } from './useOpenAcceptanceInPanel';
 
 /**
@@ -99,7 +97,7 @@ const resolveState = (status: string, latestRunStatus?: string | null): StateKey
 const TaskAcceptanceStateRow = memo(() => {
   const { t } = useTranslation('chat');
   const openAcceptanceInPanel = useOpenAcceptanceInPanel();
-  const taskDatabaseId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+  const taskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const { data: acceptance } = useAcceptanceBySubject('task', taskDatabaseId ?? null);
 
   // No aggregate yet (verify not configured / never ran) — the row simply
@@ -113,32 +111,30 @@ const TaskAcceptanceStateRow = memo(() => {
   const label = t(`taskDetail.acceptanceState.${meta.labelKey}`);
 
   return (
-    <Block
-      clickable
-      horizontal
-      align={'center'}
-      className={styles.propertyItem}
-      gap={8}
+    <div
+      className={`flex items-center gap-2 ${styles.propertyItem}`}
+      style={{ cursor: 'pointer' }}
       // The label may be truncated below, so the hover title carries it in
       // full ahead of the "click to review" hint.
       title={`${label} · ${t('taskDetail.acceptanceState.hint')}`}
-      variant={'borderless'}
       onClick={() => openAcceptanceInPanel(acceptance.id)}
     >
-      <Icon
+      <meta.icon
+        className={'spin' in meta && meta.spin ? 'animate-spin' : undefined}
         color={meta.color}
-        icon={meta.icon}
         size={16}
-        spin={'spin' in meta && meta.spin}
         style={{ flex: 'none' }}
       />
       {/* The sidebar form is narrower than several labels; one line with an
           ellipsis keeps every row the same height, and the `title` above
           still carries the full label and hint on hover. */}
-      <Text ellipsis fontSize={RAIL_VALUE_FONT_SIZE} style={{ minWidth: 0 }} weight={500}>
+      <div
+        className="truncate block font-medium"
+        style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+      >
         {label}
-      </Text>
-    </Block>
+      </div>
+    </div>
   );
 });
 

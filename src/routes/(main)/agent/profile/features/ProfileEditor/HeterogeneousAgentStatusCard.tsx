@@ -1,7 +1,5 @@
 'use client';
 
-import { CopyButton, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { type BinaryStatus, type ClaudeAuthStatus } from '@orvilo/electron-client-ipc';
 import {
@@ -10,10 +8,15 @@ import {
 } from '@orvilo/heterogeneous-agents/client';
 import type { HeterogeneousProviderConfig } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2Icon, PencilLine, RefreshCw, XCircle } from 'lucide-react';
+import { cn } from 'cn';
+import { Copy, Loader2Icon, PencilLine, RefreshCw, XCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
 import {
   isBuiltinEngineType,
@@ -22,6 +25,7 @@ import {
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { binaryService } from '@/services/electron/binary';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const COMMAND_LINE_HEIGHT = 28;
 
@@ -71,7 +75,7 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     min-width: 0;
-    max-width: 100%;
+    max-width: '100%';
   `,
   detailList: css`
     margin-block-start: 4px;
@@ -116,7 +120,7 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   commandInput: css`
-    width: 100%;
+    width: '100%';
     font-family: ${cssVar.fontFamilyCode};
 
     &,
@@ -168,7 +172,7 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     width: min(320px, 100%);
-    max-width: 100%;
+    max-width: '100%';
     height: ${COMMAND_LINE_HEIGHT}px;
   `,
   commandDisplay: css`
@@ -176,7 +180,7 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     box-sizing: border-box;
-    max-width: 100%;
+    max-width: '100%';
     height: ${COMMAND_LINE_HEIGHT}px;
     padding-block: 0;
     padding-inline: 12px;
@@ -369,75 +373,91 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const renderStatusTag = () => {
       if (detecting) {
         return (
-          <Tag color="default" style={{ marginInlineEnd: 0 }}>
+          <Badge style={{ marginInlineEnd: 0 }} variant="secondary">
             {t('settingSystemTools.detecting')}
-          </Tag>
+          </Badge>
         );
       }
 
       if (!status || !status.available) {
         return (
-          <Tag color="error" style={{ marginInlineEnd: 0 }}>
+          <Badge style={{ marginInlineEnd: 0 }} variant="destructive-light">
             {t('settingSystemTools.status.unavailable')}
-          </Tag>
+          </Badge>
         );
       }
 
       return (
-        <Tag color="success" style={{ marginInlineEnd: 0 }}>
+        <Badge style={{ marginInlineEnd: 0 }} variant="success-light">
           {t('settingSystemTools.status.available')}
-        </Tag>
+        </Badge>
       );
     };
 
     const renderStatusMeta = () => {
       if (detecting) {
         return (
-          <Flexbox horizontal align="center" gap={8}>
-            <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.6 }} />
-            <Text className={styles.metaText}>
+          <div className="flex items-center gap-2">
+            <Loader2Icon className="animate-spin" size={16} style={{ opacity: 0.6 }} />
+            <div className={styles.metaText}>
               {t('heterogeneousStatus.detecting', { name: displayName })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         );
       }
 
       if (!status || !status.available) {
         return (
-          <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
-            <Icon color="var(--ant-color-error)" icon={XCircle} size={16} />
-            <Text className={styles.unavailableText}>
+          <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+            <XCircle color="var(--ant-color-error)" size={16} />
+            <div className={styles.unavailableText}>
               {t('heterogeneousStatus.unavailable', { name: displayName })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         );
       }
 
       return (
-        <Flexbox horizontal align="center" className={styles.metaRow} gap={8}>
+        <div className={cn('flex items-center gap-2', styles.metaRow)}>
           {status.version && (
-            <Tag color="processing" style={{ marginInlineEnd: 0 }}>
+            <Badge style={{ marginInlineEnd: 0 }} variant="info-light">
               {status.version}
-            </Tag>
+            </Badge>
           )}
           {status.path && (
-            <Tooltip title={status.path}>
-              <Flexbox horizontal align="center" className={styles.pathWrap} gap={4}>
-                <Text ellipsis className={styles.path}>
-                  {status.path}
-                </Text>
-                <CopyButton content={status.path} size="small" />
-              </Flexbox>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <div className={cn('flex items-center gap-1', styles.pathWrap)}>
+                        <div className={cn('truncate', styles.path)}>{status.path}</div>
+                        <button
+                          className="inline-flex items-center"
+                          style={{ opacity: 0.6 }}
+                          type="button"
+                          onClick={() => {
+                            if (status.path) void copyToClipboard(status.path);
+                          }}
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
+                    </span>
+                  }
+                />
+                <TooltipContent>{status.path}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-        </Flexbox>
+        </div>
       );
     };
 
     const renderCommandEditor = () => {
       return (
         <div className={`${styles.detailRow} ${styles.commandField}`}>
-          <Text className={styles.detailLabel}>{t('heterogeneousStatus.command.label')}</Text>
+          <div className={styles.detailLabel}>{t('heterogeneousStatus.command.label')}</div>
           <div className={styles.detailContent}>
             {isEditingCommand ? (
               <div className={styles.commandInputWrap}>
@@ -469,22 +489,29 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
               </div>
             ) : (
               <div className={styles.commandDisplay}>
-                <Text ellipsis className={styles.commandText}>
-                  {resolvedCommand}
-                </Text>
+                <div className={cn('truncate', styles.commandText)}>{resolvedCommand}</div>
               </div>
             )}
             {!isEditingCommand && !savingCommand && (
-              <Tooltip title={t('heterogeneousStatus.command.edit')}>
-                <ActionIcon
-                  aria-label={t('heterogeneousStatus.command.edit')}
-                  className={`command-edit-button ${styles.commandEditButton}`}
-                  disabled={!canEdit}
-                  icon={PencilLine}
-                  size="small"
-                  onClick={startEditingCommand}
-                />
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <ActionIcon
+                          aria-label={t('heterogeneousStatus.command.edit')}
+                          className={`command-edit-button ${styles.commandEditButton}`}
+                          disabled={!canEdit}
+                          icon={PencilLine}
+                          size="small"
+                          onClick={startEditingCommand}
+                        />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{t('heterogeneousStatus.command.edit')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
@@ -498,21 +525,19 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       return (
         <>
           <div className={styles.detailRow}>
-            <Text className={styles.detailLabel}>{t('heterogeneousStatus.account.label')}</Text>
-            <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
+            <div className={styles.detailLabel}>{t('heterogeneousStatus.account.label')}</div>
+            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
               {auth.email && (
-                <Text ellipsis className={styles.accountValue}>
-                  {auth.email}
-                </Text>
+                <div className={cn('truncate', styles.accountValue)}>{auth.email}</div>
               )}
-            </Flexbox>
+            </div>
           </div>
           {auth.subscriptionType && (
             <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.plan.label')}</Text>
-              <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
-                <Text className={styles.accountValue}>{auth.subscriptionType.toUpperCase()}</Text>
-              </Flexbox>
+              <div className={styles.detailLabel}>{t('heterogeneousStatus.plan.label')}</div>
+              <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                <div className={styles.accountValue}>{auth.subscriptionType.toUpperCase()}</div>
+              </div>
             </div>
           )}
         </>
@@ -520,28 +545,37 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     };
 
     return (
-      <Flexbox className={styles.card} gap={12}>
+      <div className={cn('flex flex-col gap-3', styles.card)}>
         <div className={styles.cardHeader}>
           <div className={styles.cardTitleWrap}>
             <div className={styles.cardTitle}>
               {AgentIcon && <AgentIcon size={16} />}
-              <Text strong>{`${displayName} CLI`}</Text>
+              <div className="font-semibold">{`${displayName} CLI`}</div>
             </div>
             <div className={styles.metaRow}>
               {renderStatusTag()}
               {renderStatusMeta()}
             </div>
           </div>
-          <Tooltip title={t('heterogeneousStatus.redetect')}>
-            <ActionIcon
-              aria-label={t('heterogeneousStatus.redetect')}
-              disabled={detecting}
-              icon={RefreshCw}
-              loading={detecting}
-              size="small"
-              onClick={detect}
-            />
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <ActionIcon
+                      aria-label={t('heterogeneousStatus.redetect')}
+                      disabled={detecting}
+                      icon={RefreshCw}
+                      loading={detecting}
+                      size="small"
+                      onClick={detect}
+                    />
+                  </span>
+                }
+              />
+              <TooltipContent>{t('heterogeneousStatus.redetect')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div className={styles.detailList}>
           {renderCommandEditor()}
@@ -554,7 +588,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
             onOpenSystemTools={() => navigate('/settings/system-tools')}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

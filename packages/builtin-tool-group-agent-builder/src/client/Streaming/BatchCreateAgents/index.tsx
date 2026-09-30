@@ -1,12 +1,13 @@
 'use client';
 
-import { Block, Flexbox, Markdown } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { Divider } from 'antd';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Separator } from '@/components/ui/separator';
 import ToolTag from '@/features/ToolTag';
 
 import type { BatchCreateAgentsParams } from '../../../types';
@@ -63,9 +64,16 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
     if (!agents || agents.length === 0) return null;
 
     return (
-      <Block variant={'outlined'} width="100%">
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
+      >
         {agents.map((agent, index) => (
-          <Flexbox horizontal align={'flex-start'} className={styles.item} gap={8} key={index}>
+          <div className={cn('flex', 'items-start', 'gap-2', styles.item)} key={index}>
             <div className={styles.index}>{index + 1}.</div>
             <Avatar
               avatar={agent.avatar}
@@ -73,17 +81,17 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
               style={{ flexShrink: 0, marginTop: 4 }}
               title={agent.title}
             />
-            <Flexbox flex={1} gap={4} style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0, overflow: 'hidden' }}>
               <span className={styles.title}>{agent.title}</span>
               {agent.description && <span className={styles.description}>{agent.description}</span>}
               {agent.tools && agent.tools.length > 0 && (
-                <Flexbox horizontal gap={4} style={{ marginTop: 8 }} wrap={'wrap'}>
+                <div className="flex gap-1 flex-wrap" style={{ marginTop: 8 }}>
                   {agent.tools.map((tool) => (
                     <ToolTag identifier={tool} key={tool} />
                   ))}
-                </Flexbox>
+                </div>
               )}
-              <Divider />
+              <Separator />
               {agent.systemRole && (
                 <div className={styles.systemRole}>
                   <Markdown animated variant={'chat'}>
@@ -91,10 +99,10 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
                   </Markdown>
                 </div>
               )}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ))}
-      </Block>
+      </div>
     );
   },
 );

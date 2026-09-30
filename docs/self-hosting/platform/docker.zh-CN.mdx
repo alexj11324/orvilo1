@@ -11,11 +11,7 @@ tags:
 # 使用 Docker 部署 Orvilo
 
 <div style={{display:"flex", gap: 4}}>
-  [![][docker-release-shield]][docker-release-link]
-
-  [![][docker-size-shield]][docker-size-link]
-
-  [![][docker-pulls-shield]][docker-pulls-link]
+  [![][ghcr-shield]][ghcr-link]
 </div>
 
 <Callout type="info">
@@ -44,7 +40,7 @@ tags:
   上述指令会创建一个名为 `my-postgres`，并且网络为 `pg` 的 Postgres 实例，其中 `paradedb/paradedb:latest-pg17` 是一个 Postgres 17 的镜像，且默认安装并启用了 `pgvector` 和 `pg_search` 插件。
 
   <Callout type="info">
-    ParadeDB 镜像包含了 pgvector（向量搜索）和 pg\_search（全文搜索）插件，是 Orvilo 实现 RAG 和知识库搜索的重要构件。
+    ParadeDB 镜像包含了 pgvector（向量搜索）和 pg_search（全文搜索）插件，是 Orvilo 实现 RAG 和知识库搜索的重要构件。
   </Callout>
 
   <Callout type="warning">
@@ -94,7 +90,7 @@ tags:
   ### 启动 orvilo docker 镜像
 
   ```sh
-  docker run -it -d -p 3210:3210 --network pg --env-file orvilo.env --name orvilo alexj11324/orvilo1
+  docker run -it -d -p 3210:3210 --network pg --env-file orvilo.env --name orvilo ghcr.io/alexj11324/orvilo1
   ```
 
   你可以使用下述指令检查日志：
@@ -144,7 +140,7 @@ $ docker run -it -d --name orvilo -p 3210:3210 \
   -e S3_SECRET_ACCESS_KEY=xxxxxxxxxx \
   -e S3_ENDPOINT=https://xxxxxxxxxx.r2.cloudflarestorage.com \
   -e S3_BUCKET=Orvilo \
-  alexj11324/orvilo1
+  ghcr.io/alexj11324/orvilo1
 ```
 
 <Callout type="tip">
@@ -152,9 +148,5 @@ $ docker run -it -d --name orvilo -p 3210:3210 \
   ，将会走到自身容器的 `localhost`，此时请尝试用 `host.docker.internal` 替代 `localhost`
 </Callout>
 
-[docker-pulls-link]: https://hub.docker.com/r/alexj11324/orvilo1
-[docker-pulls-shield]: https://img.shields.io/docker/pulls/alexj11324/orvilo1?color=45cc11&labelColor=black&style=flat-square
-[docker-release-link]: https://hub.docker.com/r/alexj11324/orvilo1
-[docker-release-shield]: https://img.shields.io/docker/v/alexj11324/orvilo1?color=369eff&label=docker&labelColor=black&logo=docker&logoColor=white&style=flat-square&sort=semver
-[docker-size-link]: https://hub.docker.com/r/alexj11324/orvilo1
-[docker-size-shield]: https://img.shields.io/docker/image-size/alexj11324/orvilo1?color=369eff&labelColor=black&style=flat-square&sort=semver
+[ghcr-link]: https://github.com/alexj11324/orvilo1/pkgs/container/orvilo1
+[ghcr-shield]: https://img.shields.io/badge/ghcr.io-alexj11324%2Forvilo1-369eff?style=flat-square&logo=docker&logoColor=white

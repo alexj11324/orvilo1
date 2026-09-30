@@ -184,6 +184,33 @@ describe('workQueryMovePlan', () => {
       }),
     ).toEqual({ type: 'noop' });
   });
+
+  it('still writes a precise pick into a sibling state of the same category', () => {
+    expect(
+      workQueryMovePlan({
+        groupBy: 'workflowCategory',
+        targetKey: 'todo',
+        targetWorkflowStateRefId: 'tws_todo_b',
+        task: { ...boardTask, workflowCategory: 'todo', workflowStateRefId: 'tws_todo_a' },
+      }),
+    ).toEqual({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'todo',
+      type: 'local',
+    });
+  });
+
+  it('stays a noop when the precise pick is already the current state', () => {
+    expect(
+      workQueryMovePlan({
+        groupBy: 'workflowCategory',
+        targetKey: 'todo',
+        targetWorkflowStateRefId: 'tws_todo_a',
+        task: { ...boardTask, workflowCategory: 'todo', workflowStateRefId: 'tws_todo_a' },
+      }),
+    ).toEqual({ type: 'noop' });
+  });
 });
 
 describe('cascadeStatusForBoardKey', () => {

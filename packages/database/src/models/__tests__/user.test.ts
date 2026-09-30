@@ -4,18 +4,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import {
+  documentHistories,
+  documents,
   messages,
   nextauthAccounts,
   projects,
   tasks,
+  teamMembers,
+  teams,
   topics,
   users,
   userSettings,
+  works,
+  workspaceMembers,
   workspaces,
+  workVersions,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import { DocumentModel } from '../document';
+import { DocumentHistoryModel } from '../documentHistory';
 import type { ListUsersForMemoryExtractorCursor } from '../user';
 import { UserModel, UserNotFoundError } from '../user';
+import { WorkModel } from '../work';
 
 const userId = 'user-model-test';
 const otherUserId = 'other-user-test';
@@ -716,6 +726,89 @@ describe('UserModel', () => {
         });
         expect(surviving).toBeDefined();
         expect(surviving?.userId).toBeNull();
+      });
+
+      it('keeps a team Page when its non-owner creator account is deleted', async () => {
+        const [workspace] = await serverDB
+          .insert(workspaces)
+          .values({
+            name: 'delete-user-team-page',
+            primaryOwnerId: otherUserId,
+            slug: 'delete-user-team-page',
+          })
+          .returning();
+        await serverDB.insert(workspaceMembers).values([
+          { role: 'owner', userId: otherUserId, workspaceId: workspace.id },
+          { role: 'member', userId, workspaceId: workspace.id },
+        ]);
+        const [team] = await serverDB
+          .insert(teams)
+          .values({
+            createdByUserId: userId,
+            key: 'DEL',
+            name: 'Retained team',
+            visibility: 'private',
+            workspaceId: workspace.id,
+          })
+          .returning();
+        await serverDB.insert(teamMembers).values({
+          teamId: team.id,
+          userId,
+          workspaceId: workspace.id,
+        });
+        const page = await new DocumentModel(serverDB, userId, workspace.id).create({
+          content: 'Team-owned content',
+          editorData: {},
+          fileType: 'custom/document',
+          source: 'document',
+          sourceType: 'api',
+          teamId: team.id,
+          title: 'Retained team Page',
+          totalCharCount: 18,
+          totalLineCount: 1,
+          visibility: 'team',
+        });
+        const history = await new DocumentHistoryModel(serverDB, userId, workspace.id).create({
+          documentId: page.id,
+          editorData: { type: 'doc' },
+          saveSource: 'manual',
+          savedAt: new Date('2026-09-26T00:00:00.000Z'),
+        });
+        const work = await new WorkModel(serverDB, userId, workspace.id).registerDocument({
+          changeType: 'created',
+          documentId: page.id,
+          rootOperationId: 'op-delete-user-team-page',
+          toolCallId: 'call-delete-user-team-page',
+          toolIdentifier: 'orvilo-notebook',
+          toolName: 'createDocument',
+        });
+        expect(work).not.toBeNull();
+
+        await UserModel.deleteUser(serverDB, userId);
+
+        await expect(
+          serverDB.query.documents.findFirst({ where: eq(documents.id, page.id) }),
+        ).resolves.toMatchObject({
+          id: page.id,
+          teamId: team.id,
+          userId: otherUserId,
+          visibility: 'team',
+          workspaceId: workspace.id,
+        });
+        await expect(
+          new DocumentModel(serverDB, otherUserId, workspace.id).findById(page.id),
+        ).resolves.toMatchObject({ id: page.id });
+        await expect(
+          serverDB.query.documentHistories.findFirst({
+            where: eq(documentHistories.id, history.id),
+          }),
+        ).resolves.toMatchObject({ documentId: page.id, userId: otherUserId });
+        await expect(
+          serverDB.query.works.findFirst({ where: eq(works.id, work!.id) }),
+        ).resolves.toMatchObject({ resourceId: page.id, userId: otherUserId });
+        await expect(
+          serverDB.query.workVersions.findMany({ where: eq(workVersions.workId, work!.id) }),
+        ).resolves.toHaveLength(1);
       });
 
       it('purges share-visitor topics and messages when the visitor is deleted', async () => {

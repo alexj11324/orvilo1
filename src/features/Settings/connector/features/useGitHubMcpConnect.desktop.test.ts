@@ -9,7 +9,7 @@ const { connectGitHubMcp, remoteServerUrl, status } = vi.hoisted(() => ({
   status: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({ toast: { error: vi.fn() } }));
+vi.mock('@/components/toast', () => ({ toast: { error: vi.fn() } }));
 vi.mock('@orvilo/const', () => ({ isDesktop: true }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/services/githubOAuth', () => ({ githubOAuthService: { status } }));
@@ -55,7 +55,10 @@ describe('useGitHubMcpConnect desktop', () => {
     });
 
     expect(connectGitHubMcp).toHaveBeenCalledOnce();
-    expect(open).toHaveBeenCalledWith('https://orvilo.test/oauth/github/start', '_blank');
+    expect(open).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/orvilo\.test\/oauth\/github\/start\?attempt=[0-9a-f-]+$/),
+      '_blank',
+    );
     expect(result.current.connecting).toBe(true);
   });
 });

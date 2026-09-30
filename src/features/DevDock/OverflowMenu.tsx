@@ -1,9 +1,12 @@
 'use client';
 
-import { type DropdownItem, DropdownMenu } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import type { LucideIcon } from 'lucide-react';
 import { Ellipsis, Pin } from 'lucide-react';
 import { memo } from 'react';
+
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
 
 import {
   type DevDockItem,
@@ -14,6 +17,8 @@ import {
 import { useDevDockStore } from './store';
 
 const PIN_CLASS = 'devdock-pin';
+
+const itemIcon = (Icon: LucideIcon) => <Icon size={14} />;
 
 const styles = createStaticStyles(({ css }) => ({
   pinButton: css`
@@ -124,7 +129,7 @@ const buildSelectSubmenu = (item: DevDockSelectItem): DropdownItem => ({
     },
     type: 'checkbox' as const,
   })),
-  icon: item.icon,
+  icon: itemIcon(item.icon),
   key: item.id,
   label: (
     <span className={styles.submenuLabel}>
@@ -151,7 +156,7 @@ const OverflowMenu = memo(() => {
       groups.push({
         children: panels.map((item) => ({
           extra: <PinToggle item={item} />,
-          icon: item.icon,
+          icon: itemIcon(item.icon),
           key: item.id,
           label: item.label,
           onClick: () => togglePanel(item.id),
@@ -167,7 +172,7 @@ const OverflowMenu = memo(() => {
           closeOnClick: false,
           defaultChecked: item.getChecked(),
           extra: <PinToggle item={item} />,
-          icon: item.icon,
+          icon: itemIcon(item.icon),
           key: item.id,
           label: item.label,
           onCheckedChange: item.onToggle,
@@ -182,7 +187,7 @@ const OverflowMenu = memo(() => {
       groups.push({
         children: actions.map((item) => ({
           extra: <PinToggle item={item} />,
-          icon: item.icon,
+          icon: itemIcon(item.icon),
           key: item.id,
           label: item.label,
           onClick: item.onTrigger,
@@ -197,7 +202,7 @@ const OverflowMenu = memo(() => {
         children: readouts.map((item) => ({
           closeOnClick: false,
           extra: <PinToggle item={item} />,
-          icon: item.icon,
+          icon: itemIcon(item.icon),
           key: item.id,
           label: item.label,
           onClick: () => setPinned(item.id, !pinned(item)),
@@ -215,11 +220,7 @@ const OverflowMenu = memo(() => {
   };
 
   return (
-    <DropdownMenu
-      items={buildItems}
-      placement={'topRight'}
-      popupProps={{ className: styles.popup }}
-    >
+    <DropdownMenu items={buildItems} placement={'topRight'} popupClassName={styles.popup}>
       <span className={styles.trigger} title={'More tools'}>
         <Ellipsis size={13} />
       </span>

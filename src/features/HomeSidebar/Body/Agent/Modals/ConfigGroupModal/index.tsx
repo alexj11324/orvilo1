@@ -1,19 +1,33 @@
-import { type ModalProps, SortableList } from '@lobehub/ui';
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Plus } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import type { SessionGroupItemBase } from '@/types/session';
 
-import GroupItem from './GroupItem';
+import GroupItem, { GroupItemDragContext } from './GroupItem';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -28,9 +42,31 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-interface ConfigGroupModalProps extends ModalProps {
+interface ConfigGroupModalProps {
+  onCancel?: () => void;
+  open?: boolean;
   scope?: 'private' | 'public';
 }
+
+const SortableRow = ({ children, id }: { children: ReactNode; id: string }) => {
+  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
+    id,
+  });
+  return (
+    <div
+      className={`${styles.container} flex items-center justify-between gap-1`}
+      ref={setNodeRef}
+      style={{
+        opacity: isDragging ? 0.6 : 1,
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      {...attributes}
+    >
+      <GroupItemDragContext value={listeners}>{children}</GroupItemDragContext>
+    </div>
+  );
+};
 
 const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, scope = 'public' }) => {
   const { t } = useTranslation('chat');
@@ -50,6 +86,7 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, scope = 
   ) as SessionGroupItemBase[];
   const [addGroup, updateGroupSort] = useHomeStore((s) => [s.addGroup, s.updateGroupSort]);
   const [loading, setLoading] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
   return (
     <ImperativeModal
@@ -60,32 +97,34 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, scope = 
       width={400}
       onCancel={onCancel}
     >
-      <Flexbox>
-        <SortableList
-          items={sessionGroupItems}
-          renderItem={(item: SessionGroupItemBase) => (
-            <SortableList.Item
-              horizontal
-              align={'center'}
-              className={styles.container}
-              gap={4}
-              id={item.id}
-              justify={'space-between'}
-            >
-              <GroupItem {...item} disabled={!canEdit} />
-            </SortableList.Item>
-          )}
-          onChange={(items: SessionGroupItemBase[]) => {
-            if (!canEdit) return;
+      <div className="flex flex-col">
+        <DndContext
+          collisionDetection={closestCenter}
+          sensors={sensors}
+          onDragEnd={({ active, over }) => {
+            if (!canEdit || !over || active.id === over.id) return;
+            const oldIndex = sessionGroupItems.findIndex((item) => item.id === active.id);
+            const newIndex = sessionGroupItems.findIndex((item) => item.id === over.id);
+            if (oldIndex < 0 || newIndex < 0) return;
 
-            updateGroupSort(items);
+            updateGroupSort(arrayMove(sessionGroupItems, oldIndex, newIndex));
           }}
-        />
+        >
+          <SortableContext
+            items={sessionGroupItems.map((item) => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {sessionGroupItems.map((item: SessionGroupItemBase) => (
+              <SortableRow id={item.id} key={item.id}>
+                <GroupItem {...item} disabled={!canEdit} />
+              </SortableRow>
+            ))}
+          </SortableContext>
+        </DndContext>
         <Button
-          block
-          disabled={!canEdit}
-          icon={<Icon icon={Plus} />}
-          loading={loading}
+          aria-busy={loading}
+          className="w-full"
+          disabled={!canEdit || loading}
           onClick={async () => {
             if (!canEdit) return;
 
@@ -94,9 +133,10 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, scope = 
             setLoading(false);
           }}
         >
+          {loading ? <Spinner /> : <Plus />}
           {t('sessionGroup.createGroup')}
         </Button>
-      </Flexbox>
+      </div>
     </ImperativeModal>
   );
 });

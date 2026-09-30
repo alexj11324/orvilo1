@@ -4,6 +4,8 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
+import { TeamModel } from '@/database/models/team';
+import { hasActiveWorkspaceMembership } from '@/database/models/workspace';
 import type { PermissionResourceType, ResourceAccessLevel } from '@/database/schemas';
 import {
   agents,
@@ -24,6 +26,7 @@ import { isWorkspaceScopedMeta } from './scopeMeta';
 export interface ResourceMeta {
   /** Only agents carry a slug; with `virtual` it identifies a provisioned builtin. */
   slug?: string | null;
+  teamId?: string | null;
   userId: string;
   /**
    * Only agents carry this. Builtin provisioning always writes `virtual: true`
@@ -42,14 +45,14 @@ export interface ResourcePermissionState {
   creatorId: string;
   /** @deprecated Compatibility value returned for released clients. */
   generalAccess: 'editor' | 'viewer';
-  visibility: 'private' | 'public';
+  visibility: 'private' | 'public' | 'team';
 }
 
 export const buildResourcePermissionState = (params: {
   accessLevel: ResourceAccessLevel;
   canManage: boolean;
   creatorId: string;
-  visibility: 'private' | 'public';
+  visibility: 'private' | 'public' | 'team';
 }): ResourcePermissionState => ({
   ...params,
   generalAccess: params.accessLevel === 'edit' ? 'editor' : 'viewer',
@@ -119,6 +122,20 @@ export const getResourceMeta = async (
   const table = { agentGroup: chatGroups, document: documents, knowledgeBase: knowledgeBases }[
     resourceType
   ];
+
+  if (resourceType === 'document') {
+    const [row] = await db
+      .select({
+        teamId: documents.teamId,
+        userId: documents.userId,
+        visibility: documents.visibility,
+        workspaceId: documents.workspaceId,
+      })
+      .from(documents)
+      .where(eq(documents.id, resourceId))
+      .limit(1);
+    return row ?? null;
+  }
 
   const [row] = await db
     .select({ userId: table.userId, visibility: table.visibility, workspaceId: table.workspaceId })
@@ -238,6 +255,30 @@ export const canPerformResourceAction = async (params: {
     workspaceId,
   } = params;
   if (!isWorkspaceScopedMeta(meta, workspaceId, userId)) return false;
+
+  if (resourceType === 'document' && meta.visibility === 'team') {
+    if (!meta.teamId || !meta.workspaceId || meta.workspaceId !== workspaceId) return false;
+    if (!(await hasActiveWorkspaceMembership(db, { userId, workspaceId }))) return false;
+    const teamModel = new TeamModel(db, userId, workspaceId);
+    const teamAllowed =
+      action === 'view'
+        ? await teamModel.hasReadAccess(meta.teamId)
+        : await teamModel.hasWriteAccess(meta.teamId);
+    if (!teamAllowed) return false;
+    const { hasAllScope, hasOwnerScope } = await getWorkspaceScopedPermissionMatches({
+      action: getRbacAction(resourceType, action),
+      db,
+      grantedPermissions,
+      userId,
+      workspaceId,
+    });
+    if (!hasAllScope && !hasOwnerScope) return false;
+    if (action === 'changeVisibility' || action === 'transfer') return meta.userId === userId;
+    if (action === 'delete' || action === 'manage') {
+      return meta.userId === userId || (await teamModel.hasAdminAccess(meta.teamId));
+    }
+    return true;
+  }
 
   const isCreator = meta.userId === userId;
   const isPrivate = meta.visibility === 'private';
@@ -394,6 +435,18 @@ export const isResourceAuthorOrAdmin = async (params: {
 }): Promise<boolean> => {
   const { db, grantedPermissions, meta, resourceType, userId, workspaceId } = params;
   if (!isWorkspaceScopedMeta(meta, workspaceId, userId)) return false;
+  if (resourceType === 'document' && meta.visibility === 'team') {
+    return canPerformResourceAction({
+      action: 'manage',
+      db,
+      grantedPermissions,
+      meta,
+      resourceId: '',
+      resourceType,
+      userId,
+      workspaceId,
+    });
+  }
   if (meta.userId === userId) return true;
   if (meta.visibility === 'private') return false;
 

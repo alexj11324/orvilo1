@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { useSize } from 'ahooks';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useRef } from 'react';
 import { Outlet } from 'react-router';
 
@@ -35,40 +35,35 @@ const ChatLayout = memo(() => {
   return (
     <HeaderSlot.Provider>
       <OverviewSlot.Provider>
-        <Flexbox
-          flex={1}
-          height={'100%'}
-          style={{ minHeight: 0, overflow: 'hidden' }}
-          width={'100%'}
+        <div
+          className="flex flex-col flex-1"
+          style={{ height: '100%', width: '100%', minHeight: 0, overflow: 'hidden' }}
         >
-          <Flexbox
-            horizontal
-            flex={1}
+          <div
+            className="flex flex-1"
             ref={rowRef}
-            style={{ minHeight: 0, overflow: 'hidden', position: 'relative' }}
-            width={'100%'}
+            style={{ width: '100%', minHeight: 0, overflow: 'hidden', position: 'relative' }}
           >
-            <Flexbox
-              className={styles.conversationColumn}
-              flex={1}
+            <div
+              className={cn('flex flex-col flex-1', styles.conversationColumn)}
               style={{ minHeight: 0, minWidth: 0 }}
             >
               <ChatHeader />
-              <Flexbox horizontal flex={1} style={{ minHeight: 0, minWidth: 0 }}>
-                <Flexbox flex={1} style={{ minHeight: 0, minWidth: 0 }}>
+              <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
+                <div className="flex flex-col flex-1" style={{ minHeight: 0, minWidth: 0 }}>
                   <Outlet />
-                </Flexbox>
+                </div>
                 <OverviewSlot.Outlet />
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
             <Portal />
             <AgentWorkingSidebar availableWidth={rowSize?.width} />
             {/* Shared bottom-right `Chat history` control — opens the same
                 history menu as the header title trigger. */}
             <ChatHistoryUtilityRow />
-          </Flexbox>
+          </div>
           <ChatTerminalPanel />
-        </Flexbox>
+        </div>
       </OverviewSlot.Provider>
     </HeaderSlot.Provider>
   );

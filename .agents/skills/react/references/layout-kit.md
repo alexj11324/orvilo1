@@ -1,100 +1,48 @@
-# Flexbox Layout Components Guide
+# Flex Layout Guide (Tailwind)
 
-`@lobehub/ui` provides `Flexbox` and `Center` components for creating flexible layouts.
+Layouts are plain `<div>` + Tailwind flex utilities. The old lobehub `Flexbox`/`Center` props map mechanically — lobehub's **default direction is `column`**; only `horizontal` made a row.
 
-## Flexbox Component
+## Prop → class mapping
 
-Flexbox is the most commonly used layout component, similar to CSS `display: flex`.
+| lobehub                   | Tailwind                                                     |
+| ------------------------- | ------------------------------------------------------------ |
+| `<Flexbox>` (default)     | `flex flex-col`                                              |
+| `<Flexbox horizontal>`    | `flex` (row)                                                 |
+| `<Center>`                | `flex items-center justify-center` (plus `flex-col` intent)  |
+| `gap={n}`                 | `gap-[n/4]` (4px per unit: 4→`gap-1`, 8→`gap-2`, 16→`gap-4`) |
+| `align="center"`          | `items-center` (`start`→`items-start`, `end`→`items-end`)    |
+| `justify="space-between"` | `justify-between`                                            |
+| `flex={1}`                | `flex-1` (`flex="none"` → `flex-none`)                       |
+| `width={280}`             | `w-[280px]` or keep in `style` if dynamic                    |
+| `height={44}`             | `h-11` / `h-[44px]`                                          |
+| `padding`/`paddingInline` | `p-*` / `px-*`                                               |
+| `inline`                  | `inline-flex`                                                |
+| `wrap`                    | `flex-wrap`                                                  |
+| `distribution`/`align`    | matching `items-*`/`justify-*`                               |
+| anything dynamic          | keep `style={{...}}`                                         |
 
-### Basic Usage
-
-```jsx
-import { Flexbox } from '@lobehub/ui';
-
-// Default vertical layout
-<Flexbox>
-  <div>Child 1</div>
-  <div>Child 2</div>
-</Flexbox>
-
-// Horizontal layout
-<Flexbox horizontal>
-  <div>Left</div>
-  <div>Right</div>
-</Flexbox>
-```
-
-### Common Props
-
-- `horizontal`: Boolean, set horizontal direction layout
-- `flex`: Number or string, controls flex property
-- `gap`: Number, spacing between children
-- `align`: Alignment like 'center', 'flex-start', etc.
-- `justify`: Main axis alignment like 'space-between', 'center', etc.
-- `padding`: Padding value
-- `paddingInline`: Horizontal padding
-- `paddingBlock`: Vertical padding
-- `width/height`: Set dimensions, typically '100%' or specific pixels
-- `style`: Custom style object
-
-### Layout Example
+## Example
 
 ```jsx
-// Classic three-column layout
-<Flexbox horizontal height={'100%'} width={'100%'}>
-  {/* Left sidebar */}
-  <Flexbox
-    width={260}
-    style={{
-      borderRight: `1px solid ${theme.colorBorderSecondary}`,
-      height: '100%',
-      overflowY: 'auto',
-    }}
-  >
+// was <Flexbox horizontal height={'100%'} width={'100%'}>
+<div className="flex h-full w-full">
+  <div className="flex w-[260px] flex-col overflow-y-auto border-r">
     <SidebarContent />
-  </Flexbox>
-
-  {/* Center content */}
-  <Flexbox flex={1} style={{ height: '100%' }}>
-    <Flexbox flex={1} padding={24} style={{ overflowY: 'auto' }}>
+  </div>
+  <div className="flex flex-1 flex-col">
+    <div className="flex-1 overflow-y-auto p-6">
       <MainContent />
-    </Flexbox>
-
-    {/* Footer */}
-    <Flexbox
-      style={{
-        borderTop: `1px solid ${theme.colorBorderSecondary}`,
-        padding: '16px 24px',
-      }}
-    >
+    </div>
+    <div className="border-t px-6 py-4">
       <Footer />
-    </Flexbox>
-  </Flexbox>
-</Flexbox>
+    </div>
+  </div>
+</div>
 ```
 
-## Center Component
+## Best practices
 
-Center wraps Flexbox with horizontal and vertical centering.
-
-```jsx
-import { Center } from '@lobehub/ui';
-
-<Center width={'100%'} height={'100%'}>
-  <Content />
-</Center>
-
-// Icon centered
-<Center className={styles.icon} flex={'none'} height={40} width={40}>
-  <Icon icon={icon} size={24} />
-</Center>
-```
-
-## Best Practices
-
-- Use `flex={1}` to fill available space
-- Use `gap` instead of margin for spacing
-- Nest Flexbox for complex layouts
-- Set `overflow: 'auto'` for scrollable content
-- Use `horizontal` for horizontal layout (default is vertical)
-- Combine with `useTheme` hook for theme-responsive layouts
+- `flex-1` to fill available space; `min-h-0`/`min-w-0` on children that must shrink to scroll
+- `gap-*` instead of margin for spacing
+- Nest flex containers for complex layouts
+- Plain divs must never carry lobehub props (`gap=`, `align=`, `horizontal=`)

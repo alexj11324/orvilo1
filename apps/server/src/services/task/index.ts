@@ -11,6 +11,7 @@ import type {
   TaskDetailData,
   TaskDetailSubtask,
   TaskDetailWorkspaceNode,
+  TaskHandoffStrategy,
   TaskItem,
   TaskSchedulerContext,
   TaskStatus,
@@ -37,6 +38,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
+import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 
 import { AiAgentService } from '../aiAgent';
@@ -1257,13 +1259,13 @@ export class TaskService {
     actor: { agentId?: string | null; userId?: string | null } = {},
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
-    const invalidatesActiveRun = [
-      'automationMode',
-      'config',
-      'heartbeatInterval',
-      'schedulePattern',
-      'scheduleTimezone',
-    ].some((key) => Object.hasOwn(data, key));
+    const invalidatesActiveRun =
+      // An execution-transfer assignee write only happens after the incumbent
+      // was fenced — its run reservation must not block the successor.
+      mutation.executionTransfer === true ||
+      ['automationMode', 'config', 'heartbeatInterval', 'schedulePattern', 'scheduleTimezone'].some(
+        (key) => Object.hasOwn(data, key),
+      );
     const guardedData = invalidatesActiveRun
       ? { ...data, runReservationExpiresAt: null, runReservationId: null }
       : data;
@@ -1276,6 +1278,210 @@ export class TaskService {
         mutation,
       ),
     );
+  }
+
+  /**
+   * First-class execution-ownership transfer between agents.
+   *
+   * A plain assignee write only edits a field; a handoff is a saga that moves
+   * execution authority itself:
+   *
+   *   1. fence every live dispatch behind the incumbent (requestStop),
+   *   2. confirm the remote operation is actually interrupted,
+   *   3. flip `assigneeAgentId` to the successor under CAS — the durable
+   *      "A + pending(B)" state, incumbent fenced but successor not yet live,
+   *   4. settle the incumbent's dispatch 'canceled' (contract now stale →
+   *      the task parks at 'paused'),
+   *   5. dispatch the successor's run (`cancel_and_restart`), or leave the
+   *      task parked when `toAgentId` is null.
+   *
+   * Interrupt precedes the flip so a failed/unconfirmed cancel aborts the
+   * transfer with the incumbent still owning the task — the persisted
+   * `cancel_requested` row keeps the watchdog working on it. Two agents are
+   * never live on the same worktree.
+   */
+  async handoffTask(input: {
+    expectedDomainRevision: number;
+    /** Caller-asserted incumbent; rejected when the row disagrees. */
+    fromAgentId?: string | null;
+    strategy?: TaskHandoffStrategy;
+    taskId: string;
+    /** Successor agent; `null` fences the incumbent and parks the task. */
+    toAgentId: string | null;
+  }): Promise<{ state: 'assigned' | 'parked' | 'restarted'; task: TaskItem }> {
+    const task = await this.resolveOrThrow(input.taskId);
+
+    if (input.fromAgentId !== undefined && task.assigneeAgentId !== input.fromAgentId) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Task assignee changed; reload before handing off.',
+      });
+    }
+    if (task.assigneeAgentId === input.toAgentId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Task is already assigned to this agent.',
+      });
+    }
+
+    // A non-running task has no incumbent execution to fence — the transfer
+    // is an ordinary (but CAS'd) assignment. The running-assignee guard stays
+    // armed: if the row flipped to 'running' between resolve and write, the
+    // caller gets HANDOFF_REQUIRED and retries through this saga.
+    if (task.status !== 'running') {
+      const updated = await this.updateTaskWithAssigneeLock(
+        task.id,
+        { assigneeAgentId: input.toAgentId },
+        { userId: this.userId },
+        {
+          expectedDomainRevision: input.expectedDomainRevision,
+          source: 'user',
+        },
+      );
+      if (!updated) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      return { state: 'assigned', task: updated };
+    }
+
+    const successorAgentInfo = input.toAgentId
+      ? await this.agentModel.getAgentSnapshotForTaskCreate(input.toAgentId)
+      : null;
+    if (input.toAgentId !== null) {
+      await this.assertAssigneeAgentBelongsToUser(input.toAgentId);
+      this.assertAgentVisibilityCompat(task.visibility, successorAgentInfo?.visibility ?? null);
+    }
+
+    const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
+    const aiAgentService = new AiAgentService(this.db, this.userId, {
+      workspaceId: this.workspaceId,
+    });
+
+    // Fence the incumbent: every running topic's dispatch is stop-requested
+    // and its remote operation interrupted BEFORE the assignee moves.
+    const stoppedDispatches = new Map<string, TaskDispatchItem>();
+    const runningTopics = (await this.taskTopicModel.findByTaskId(task.id)).filter(
+      (topic) => topic.status === 'running' && topic.topicId,
+    );
+    for (const topic of runningTopics) {
+      if (
+        topic.dispatchId &&
+        topic.dispatchFence !== null &&
+        topic.executionGeneration !== null &&
+        !stoppedDispatches.has(topic.dispatchId)
+      ) {
+        const stoppingDispatch = await dispatchModel.requestStop({
+          dispatchId: topic.dispatchId,
+          fence: topic.dispatchFence,
+          generation: topic.executionGeneration,
+          operationId: topic.operationId,
+          reason: 'handoff',
+        });
+        if (!stoppingDispatch) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Task execution changed before the handoff could be fenced.',
+          });
+        }
+        stoppedDispatches.set(stoppingDispatch.id, stoppingDispatch);
+      }
+      if (topic.operationId) {
+        await this.interruptTaskOperation(aiAgentService, topic.operationId);
+      }
+      await this.taskTopicModel.cancelIfRunning(task.id, topic.topicId!);
+    }
+
+    // A dispatch can be active without a running topic yet (requested →
+    // provisioning, waiting on admission): fence it too or the successor
+    // would collide with it later.
+    const activeDispatch = await dispatchModel.findActiveByTaskId(task.id);
+    if (activeDispatch && !stoppedDispatches.has(activeDispatch.id)) {
+      let stoppingDispatch = activeDispatch;
+      if (activeDispatch.phase !== 'cancel_requested') {
+        const stopped = await dispatchModel.requestStop({
+          dispatchId: activeDispatch.id,
+          fence: activeDispatch.fence,
+          generation: activeDispatch.generation,
+          operationId: activeDispatch.operationId ?? undefined,
+          reason: 'handoff',
+        });
+        if (!stopped) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Task execution changed before the handoff could be fenced.',
+          });
+        }
+        stoppingDispatch = stopped;
+      }
+      const interruptHandledByTopic = runningTopics.some(
+        (topic) => topic.operationId && topic.operationId === activeDispatch.operationId,
+      );
+      if (activeDispatch.operationId && !interruptHandledByTopic) {
+        await this.interruptTaskOperation(aiAgentService, activeDispatch.operationId);
+      }
+      stoppedDispatches.set(activeDispatch.id, stoppingDispatch);
+    }
+
+    // Flip ownership under CAS while the incumbent is fenced but not yet
+    // settled — the durable A + pending(B) state. `executionTransfer` is the
+    // protocol's explicit opt-out from the running-assignee guard; the CAS
+    // on domainRevision rejects a caller working off a stale snapshot.
+    const successorConfig = successorAgentInfo?.snapshot
+      ? { ...(task.config as Record<string, unknown> | null), ...successorAgentInfo.snapshot }
+      : undefined;
+    const transferred = await this.updateTaskWithAssigneeLock(
+      task.id,
+      {
+        assigneeAgentId: input.toAgentId,
+        ...(successorConfig ? { config: successorConfig } : {}),
+      },
+      { userId: this.userId },
+      {
+        expectedDomainRevision: input.expectedDomainRevision,
+        executionTransfer: true,
+        source: 'user',
+      },
+    );
+    if (!transferred) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Task changed while the handoff was in flight.',
+      });
+    }
+
+    // Settle the incumbent's dispatch. The assignee snapshot is now stale by
+    // construction, so the park transition lands ('paused') and the active
+    // slot is released for the successor.
+    for (const stoppingDispatch of stoppedDispatches.values()) {
+      const settled = await dispatchModel.settle({
+        dispatchId: stoppingDispatch.id,
+        expected: ['cancel_requested'],
+        fence: stoppingDispatch.fence,
+        generation: stoppingDispatch.generation,
+        operationId: stoppingDispatch.operationId ?? undefined,
+        phase: 'canceled',
+      });
+      if (!settled) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Task execution changed before the handoff could settle.',
+        });
+      }
+    }
+
+    if (input.toAgentId === null) {
+      // Deterministic park: `settle` skips the park when the manual-assignee
+      // carve-out keeps the contract live, which would leave a running row
+      // with no executor. The transfer's own intent — nobody next — is a
+      // stronger signal than that carve-out.
+      const parked = await this.taskModel.updateStatus(task.id, 'paused', {
+        error: 'Execution stopped by handoff; no successor assigned.',
+      });
+      return { state: 'parked', task: parked ?? transferred };
+    }
+
+    const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
+    await runner.runTask({ taskId: task.id, trigger: 'manual' });
+    const restarted = await this.taskModel.resolve(task.id);
+    return { state: 'restarted', task: restarted ?? transferred };
   }
 
   private async resolveOrThrow(idOrIdentifier: string): Promise<TaskItem> {
@@ -1741,6 +1947,7 @@ export class TaskService {
         };
       }),
       description: task.description,
+      dueDate: task.dueDate,
       editorData: task.editorData ?? undefined,
       error: task.error,
       files: taskFiles.length > 0 ? taskFiles : undefined,

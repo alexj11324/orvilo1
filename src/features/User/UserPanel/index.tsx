@@ -1,10 +1,9 @@
 'use client';
 
-import { Popover } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
-import { type PropsWithChildren } from 'react';
-import { memo, Suspense, useState } from 'react';
+import { memo, type PropsWithChildren, type ReactElement, Suspense, useState } from 'react';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { isDesktop } from '@/const/version';
 
 import PanelContent from './PanelContent';
@@ -32,23 +31,13 @@ const UserPanel = memo<PropsWithChildren>(({ children }) => {
   return (
     <Suspense fallback={children}>
       <UpgradeBadge showBadge={hasNewVersion}>
-        <Popover
-          arrow={false}
-          open={open}
-          placement="topLeft"
-          trigger="click"
-          classNames={{
-            root: styles.popover,
-            content: styles.popoverContent,
-          }}
-          content={
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger render={children as ReactElement} />
+          <PopoverContent align="start" className={styles.popoverContent} side="top">
             <Suspense fallback={<PanelContentSkeleton />}>
               <PanelContent closePopover={() => setOpen(false)} />
             </Suspense>
-          }
-          onOpenChange={setOpen}
-        >
-          {children}
+          </PopoverContent>
         </Popover>
       </UpgradeBadge>
     </Suspense>

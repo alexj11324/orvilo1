@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, keyframes } from 'antd-style';
+import { cn } from 'cn';
 import { FileText, FolderPlus, Search, X } from 'lucide-react';
-import { memo, useEffect, useState } from 'react';
+import { createElement, memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useConversationStore } from '@/features/Conversation/store';
 import { useGlobalStore } from '@/store/global';
 
@@ -140,8 +140,8 @@ const ExamplePrompts = memo(() => {
     // The composer card sits 16px in from the 744px landing group (via
     // WideScreenContainer's paddingInline) — the same inset keeps the
     // examples row flush with the card edges (712px, like the reference).
-    <Flexbox className={styles.root} data-testid="inbox-agent-examples" gap={8} paddingInline={16}>
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
+    <div className={cn('flex flex-col gap-2 px-4', styles.root)} data-testid="inbox-agent-examples">
+      <div className="flex items-center justify-between">
         <span className={styles.header}>{t('examples.title')}</span>
         <ActionIcon
           aria-label={t('examples.dismiss')}
@@ -151,8 +151,8 @@ const ExamplePrompts = memo(() => {
           variant={'borderless'}
           onClick={() => updateSystemStatus({ inboxAgentExamplesDismissed: true })}
         />
-      </Flexbox>
-      <Flexbox horizontal gap={8} style={{ alignItems: 'stretch' }}>
+      </div>
+      <div className="flex gap-2" style={{ alignItems: 'stretch' }}>
         {EXAMPLES.map(({ icon, key, titleKey, descKey }) => (
           <button
             className={styles.card}
@@ -161,13 +161,13 @@ const ExamplePrompts = memo(() => {
             type={'button'}
             onClick={() => fillInputMessage(t(titleKey))}
           >
-            <Icon className={styles.icon} icon={icon} size={16} />
+            {createElement(icon, { className: styles.icon, size: 16 })}
             <span className={styles.cardTitle}>{t(titleKey)}</span>
             <span className={styles.cardDesc}>{t(descKey)}</span>
           </button>
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

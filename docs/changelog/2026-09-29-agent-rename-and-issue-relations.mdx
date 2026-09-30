@@ -1,0 +1,21 @@
+---
+title: Agents, consistently — and a leaner issue sidebar
+description: >-
+  Every "assistant" in the product now reads "Agent" (智能体 in Chinese), and the
+  task detail rail no longer offers a manual "relate issue" control — the
+  section keeps only blocking prerequisites that gate runs.
+tags:
+  - Agents
+  - Issues
+---
+
+# Agents, consistently — and a leaner issue sidebar
+
+The product used to mix three words for the same thing: "assistant", "agent", and "智能体". Every user-facing label, button, tooltip, empty state, and CLI message now says one thing — Agent in English, 智能体 in Chinese — including shared-chat exports and integration descriptions.
+
+On the task detail page, the "Related" rail's manual relate control is gone. There's no more identifier input or "Add related" button: issue relations are meant to come from mentions, references, sync, and agent tooling rather than manual curation. The section — now titled "Prerequisite tasks" — keeps listing only the blocking dependencies that actually gate a task's runs, and you can still remove a stale blocker from there.
+
+## Improvements and fixes
+
+- **One term everywhere.** Renamed every user-facing "assistant" / "助理" string to "Agent" / "智能体" across the app, onboarding, settings, and the CLI.
+- **Simpler issue sidebar.** Removed the manual "relate issue" affordances from the detail rail; the remaining "Prerequisite tasks" section shows only blocking dependencies, with the same empty, blocked, and ready hints.

@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Button, confirmModal, Tabs, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { LogOut, UserPlus } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -10,6 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AgentsPanel,
   InvitationsPanel,
@@ -83,59 +86,63 @@ const WorkspaceMembers = memo(() => {
 
   if (!workspace) {
     return (
-      <Flexbox className={styles.page} gap={16}>
-        <Text fontSize={14} type="secondary">
+      <div className={`${styles.page} flex flex-col gap-4`}>
+        <div className="text-[14px] text-muted-foreground">
           {t('workspaceSetting.members.noWorkspace')}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.page} gap={8}>
+    <div className={`${styles.page} flex flex-col gap-2`}>
       <div className={styles.header}>
-        <Text fontSize={16} weight={600}>
-          {t('workspaceSetting.members.title')}
-        </Text>
-        <Flexbox horizontal align="center" gap={8}>
+        <div className="text-[16px] font-semibold">{t('workspaceSetting.members.title')}</div>
+        <div className="flex items-center gap-2">
           {(capabilities.canLeave || capabilities.isOwner) && (
-            <Tooltip
-              title={
-                capabilities.isOwner ? t('workspaceSetting.members.leaveOwnerHint') : undefined
-              }
-            >
-              <Button
-                danger
-                disabled={!capabilities.canLeave}
-                icon={<Icon icon={LogOut} size={16} />}
-                onClick={handleLeave}
-              >
-                {t('workspaceSetting.members.leave')}
-              </Button>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <Button
+                        disabled={!capabilities.canLeave}
+                        variant="destructive"
+                        onClick={handleLeave}
+                      >
+                        <LogOut size={16} />
+                        {t('workspaceSetting.members.leave')}
+                      </Button>
+                    </span>
+                  }
+                />
+                {capabilities.isOwner && (
+                  <TooltipContent>{t('workspaceSetting.members.leaveOwnerHint')}</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )}
           {capabilities.canInvite && (
-            <Button
-              icon={<Icon icon={UserPlus} size={16} />}
-              type="primary"
-              onClick={() => openInviteTeammateModal()}
-            >
+            <Button variant="default" onClick={() => openInviteTeammateModal()}>
+              <UserPlus size={16} />
               {t('workspaceSetting.members.inviteButton')}
             </Button>
           )}
-        </Flexbox>
+        </div>
       </div>
-      <Tabs
-        activeKey={tab}
-        items={tabs}
-        size="small"
-        variant="square"
-        onChange={(key) => setTab(key as TabKey)}
-      />
+      <Tabs value={tab} onValueChange={(key) => setTab(key as TabKey)}>
+        <TabsList>
+          {tabs.map((item) => (
+            <TabsTrigger key={item.key} value={item.key}>
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       {tab === 'members' && <MembersPanel />}
       {tab === 'invitations' && capabilities.canInvite && <InvitationsPanel />}
       {tab === 'agents' && <AgentsPanel />}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -30,19 +30,27 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  DropdownMenu: ({
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: ReactNode }) => <div data-testid="tooltip">{children}</div>,
+  TooltipContent: ({ children }: { children: ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
+  TooltipProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ render }: { render: ReactNode }) => <>{render}</>,
+}));
+
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({
     children,
     items,
   }: {
     children: ReactNode;
-    items: { icon?: ReactNode; key: string; label: ReactNode; onClick?: () => void }[];
+    items?: { icon?: ReactNode; key: string; label: ReactNode; onClick?: () => void }[];
   }) => (
     <div data-testid="dropdown-root">
       <div data-testid="dropdown-trigger">{children}</div>
       <ul data-testid="dropdown-items">
-        {items.map((item) => (
+        {items?.map((item) => (
           <li
             data-item-id={item.key}
             data-testid={`dropdown-item-${item.key}`}
@@ -54,20 +62,6 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
           </li>
         ))}
       </ul>
-    </div>
-  ),
-  Icon: ({ icon: IconComp, size }: { icon: unknown; size?: number }) => (
-    <span data-icon-size={size} data-testid="ui-icon">
-      {typeof IconComp === 'function'
-        ? ((IconComp as { displayName?: string; name?: string }).displayName ??
-          (IconComp as { displayName?: string; name?: string }).name ??
-          'icon')
-        : 'icon'}
-    </span>
-  ),
-  Tooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
-    <div data-testid="tooltip" data-title={typeof title === 'string' ? title : ''}>
-      {children}
     </div>
   ),
 }));
@@ -168,7 +162,7 @@ describe('<OpenInAppButton />', () => {
 
     const leftButton = screen.getByLabelText(/tooltip/);
     expect(leftButton.querySelector('img')).toBeNull();
-    expect(leftButton.querySelector('[data-testid="ui-icon"]')).not.toBeNull();
+    expect(leftButton.querySelector('svg')).not.toBeNull();
   });
 
   it('renders base64 icon for dropdown items when available', () => {
@@ -194,6 +188,6 @@ describe('<OpenInAppButton />', () => {
       'data:image/png;base64,VSCODE',
     );
     expect(finderItem.querySelector('img')).toBeNull();
-    expect(finderItem.querySelector('[data-testid="ui-icon"]')).not.toBeNull();
+    expect(finderItem.querySelector('svg')).not.toBeNull();
   });
 });

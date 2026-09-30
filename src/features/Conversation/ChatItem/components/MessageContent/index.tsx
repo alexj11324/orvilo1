@@ -1,10 +1,10 @@
-import { Flexbox } from '@lobehub/ui';
-import { type ModalInstance } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
 import {
   dataSelectors,
   messageStateSelectors,
@@ -130,20 +130,22 @@ const MessageContent = memo<MessageContentProps>(
     }, [editing]);
 
     return (
-      <Flexbox
-        gap={16}
-        className={cx(
-          MSG_CONTENT_CLASSNAME,
-          styles.message,
-          variant === 'bubble' && styles.bubble,
-          disabled && styles.disabled,
-          className,
+      <div
+        className={cn(
+          'flex flex-col gap-4',
+          cx(
+            MSG_CONTENT_CLASSNAME,
+            styles.message,
+            variant === 'bubble' && styles.bubble,
+            disabled && styles.disabled,
+            className,
+          ),
         )}
         onDoubleClick={onDoubleClick}
       >
         {children || message}
         {messageExtra}
-      </Flexbox>
+      </div>
     );
   },
 );

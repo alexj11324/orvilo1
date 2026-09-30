@@ -1,11 +1,11 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
-import { ExternalLinkIcon } from 'lucide-react';
+import { ExternalLinkIcon, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ThirdPartyNoticeProps {
   developerName?: string;
@@ -18,20 +18,23 @@ const ThirdPartyNotice = memo<ThirdPartyNoticeProps>(({ developerName, policyUri
   const developer = developerName || t('consent.thirdParty.unknownDeveloper');
 
   return (
-    <Flexbox gap={8} width={'100%'}>
-      <Text type={'secondary'}>
+    <div className="flex flex-col gap-2 w-full">
+      <div className="text-muted-foreground">
         {t('consent.thirdParty.developedBy', { developerName: developer })}
-      </Text>
-      <Alert showIcon description={t('consent.thirdParty.notice')} type={'warning'} />
+      </div>
+      <Alert variant="warning">
+        <TriangleAlert />
+        <AlertDescription>{t('consent.thirdParty.notice')}</AlertDescription>
+      </Alert>
       {policyUri && (
         <a href={policyUri} rel={'noreferrer'} target={'_blank'}>
-          <Flexbox horizontal align={'center'} gap={4}>
-            <Text style={{ color: cssVar.colorLink }}>{t('consent.thirdParty.privacyPolicy')}</Text>
-            <Icon icon={ExternalLinkIcon} style={{ color: cssVar.colorLink, fontSize: 14 }} />
-          </Flexbox>
+          <div className="flex items-center gap-1">
+            <div style={{ color: cssVar.colorLink }}>{t('consent.thirdParty.privacyPolicy')}</div>
+            <ExternalLinkIcon style={{ color: cssVar.colorLink, fontSize: 14 }} />
+          </div>
         </a>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

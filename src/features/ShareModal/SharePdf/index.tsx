@@ -1,13 +1,13 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { Flexbox, Form } from '@lobehub/ui';
-import { Button, Switch, toast } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { DownloadIcon, FileText } from 'lucide-react';
-import { memo, useState } from 'react';
+import { cloneElement, memo, type ReactElement, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { FORM_STYLE } from '@/const/layoutTokens';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -19,6 +19,23 @@ import { type FieldType } from '../ShareText/type';
 import { containerStyles, styles } from '../style';
 import PdfPreview from './PdfPreview';
 import { usePdfGeneration } from './usePdfGeneration';
+
+interface FieldSwitchProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+}
+
+const FieldSwitch = ({ checked, onChange }: FieldSwitchProps) => (
+  <Switch checked={checked} onCheckedChange={onChange} />
+);
+
+interface ShareFormItem {
+  children: ReactElement<Record<string, unknown>>;
+  label: ReactNode;
+  layout?: 'horizontal' | 'vertical';
+  name: keyof FieldType;
+  valuePropName?: 'checked' | 'activeKey';
+}
 
 const DEFAULT_FIELD_VALUE: FieldType = {
   includeTool: true,
@@ -34,36 +51,32 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
   const { message: outerMessage } = props;
   const isMobile = useIsMobile();
 
-  const settings: FormItemProps[] = [
+  const settings: ShareFormItem[] = [
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.withSystemRole'),
       layout: 'horizontal',
-      minWidth: undefined,
       name: 'withSystemRole',
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.withRole'),
       layout: 'horizontal',
-      minWidth: undefined,
       name: 'withRole',
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.includeUser'),
       layout: 'horizontal',
-      minWidth: undefined,
       name: 'includeUser',
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.includeTool'),
       layout: 'horizontal',
-      minWidth: undefined,
       name: 'includeTool',
       valuePropName: 'checked',
     },
@@ -97,11 +110,6 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
     }
   };
 
-  // Update configuration when form changes
-  const handleConfigChange = (_changedValues: any, allValues: FieldType) => {
-    setFieldValue(allValues);
-  };
-
   const handleDownload = async () => {
     if (pdfData) {
       try {
@@ -115,14 +123,14 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   const generateButton = (
     <Button
-      block
+      className="w-full"
       disabled={loading}
-      icon={loading ? undefined : FileText}
       loading={loading}
-      size={isMobile ? undefined : 'large'}
-      type="primary"
+      size={isMobile ? undefined : 'lg'}
+      variant="default"
       onClick={handleGeneratePdf}
     >
+      {loading ? undefined : <FileText data-icon="inline-start" />}
       {loading
         ? t('shareModal.generatingPdf')
         : pdfData
@@ -133,19 +141,22 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   const downloadButton = pdfData ? (
     <Button
-      block
-      icon={DownloadIcon}
-      size={isMobile ? undefined : 'large'}
-      type="default"
+      className="w-full"
+      size={isMobile ? undefined : 'lg'}
+      variant="default"
       onClick={handleDownload}
     >
+      <DownloadIcon data-icon="inline-start" />
       {t('shareModal.downloadPdf')}
     </Button>
   ) : null;
 
   if (error) {
     return (
-      <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
+      <div
+        className={cx(styles.body, 'flex flex-col gap-4')}
+        style={{ flexDirection: !isMobile ? 'row' : 'column' }}
+      >
         <div
           className={cx(containerStyles.preview, containerStyles.previewWide)}
           style={{ padding: 12 }}
@@ -154,36 +165,65 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
             {t('shareModal.pdfGenerationError')}: {error}
           </div>
         </div>
-        <Flexbox className={styles.sidebar} gap={12}>
+        <div className={cx(styles.sidebar, 'flex flex-col gap-3')}>
           <div>{t('shareModal.pdfErrorDescription')}</div>
-          <Form
-            initialValues={DEFAULT_FIELD_VALUE}
-            items={settings}
-            itemsType={'flat'}
-            onValuesChange={handleConfigChange}
-            {...FORM_STYLE}
-          />
+          <FieldGroup>
+            {settings.map((item) => (
+              <Field
+                key={String(item.name)}
+                orientation={item.layout === 'vertical' ? 'vertical' : 'horizontal'}
+              >
+                <FieldLabel>{item.label}</FieldLabel>
+                {item.valuePropName
+                  ? cloneElement(item.children, {
+                      [item.valuePropName]: fieldValue[item.name],
+                      onChange: (v: unknown) => {
+                        setFieldValue((prev) => ({ ...prev, [item.name]: v }) as typeof prev);
+                        const onChange = item.children.props['onChange'];
+                        if (typeof onChange === 'function') onChange(v);
+                      },
+                    })
+                  : item.children}
+              </Field>
+            ))}
+          </FieldGroup>
           {generateButton}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
+    <div
+      className={cx(styles.body, 'flex flex-col gap-4')}
+      style={{ flexDirection: !isMobile ? 'row' : 'column' }}
+    >
       <PdfPreview loading={loading} pdfData={pdfData} onGeneratePdf={handleGeneratePdf} />
-      <Flexbox className={styles.sidebar} gap={12}>
-        <Form
-          initialValues={DEFAULT_FIELD_VALUE}
-          items={settings}
-          itemsType={'flat'}
-          onValuesChange={handleConfigChange}
-          {...FORM_STYLE}
-        />
+      <div className={cx(styles.sidebar, 'flex flex-col gap-3')}>
+        <FieldGroup>
+          {settings.map((item) => (
+            <Field
+              key={String(item.name)}
+              orientation={item.layout === 'vertical' ? 'vertical' : 'horizontal'}
+            >
+              <FieldLabel>{item.label}</FieldLabel>
+              {item.valuePropName
+                ? cloneElement(item.children, {
+                    [item.valuePropName]: fieldValue[item.name],
+                    onChange: (v: unknown) => {
+                      setFieldValue((prev) => ({ ...prev, [item.name]: v }) as typeof prev);
+                      const onChange = item.children.props['onChange'];
+                      if (typeof onChange === 'function') onChange(v);
+                    },
+                  })
+                : item.children}
+            </Field>
+          ))}
+        </FieldGroup>
         {pdfData && generateButton}
         {downloadButton}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

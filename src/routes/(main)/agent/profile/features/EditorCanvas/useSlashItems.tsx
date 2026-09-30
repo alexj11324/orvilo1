@@ -8,7 +8,6 @@ import {
   INSERT_TABLE_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
 } from '@lobehub/editor';
-import { Text } from '@lobehub/ui/base-ui';
 import {
   Heading1Icon,
   Heading2Icon,
@@ -126,9 +125,9 @@ export const useSlashItems = (): SlashOptions['items'] => {
       return {
         ...item,
         extra: (
-          <Text code fontSize={12} type={'secondary'}>
+          <div className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
             {item.key}
-          </Text>
+          </div>
         ),
         style: {
           minWidth: 200,

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +20,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const AuthFooterLinks = memo(() => {
   const { t } = useTranslation('auth');
   return (
-    <Text align={'center'} fontSize={13} type={'secondary'}>
+    <div className="text-center text-[13px] text-muted-foreground">
       <a className={styles.link} href={TERMS_URL} rel="noopener noreferrer" target="_blank">
         {t('footer.terms')}
       </a>
@@ -29,7 +28,7 @@ const AuthFooterLinks = memo(() => {
       <a className={styles.link} href={PRIVACY_URL} rel="noopener noreferrer" target="_blank">
         {t('footer.privacy')}
       </a>
-    </Text>
+    </div>
   );
 });
 

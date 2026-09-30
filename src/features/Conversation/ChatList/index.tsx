@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { UIChatMessage } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo } from 'react';
@@ -265,10 +264,10 @@ const ChatList = memo<ChatListProps>(
       // The header is chrome, not async content: dropping it here blanks a
       // server-rendered title the moment the list mounts to fetch.
       return (
-        <Flexbox height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
           {headerSlot && <WideScreenContainer>{headerSlot}</WideScreenContainer>}
           <SkeletonList />
-        </Flexbox>
+        </div>
       );
     }
 
@@ -300,7 +299,7 @@ const ChatList = memo<ChatListProps>(
       );
 
     return (
-      <Flexbox style={{ height: '100%', minHeight: 0 }}>
+      <div className="flex flex-col" style={{ height: '100%', minHeight: 0 }}>
         {messageAuthorAgentIds.map((agentId) => (
           <MessageAuthorConfigLoader
             agentId={agentId}
@@ -308,9 +307,9 @@ const ChatList = memo<ChatListProps>(
             key={agentId}
           />
         ))}
-        <Flexbox flex={1} style={{ minHeight: 0 }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
           {content}
-        </Flexbox>
+        </div>
         {feedback.showBackgroundError && (
           <RefreshError
             error={refreshError.error}
@@ -318,7 +317,7 @@ const ChatList = memo<ChatListProps>(
             onRetry={refreshError.retry}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

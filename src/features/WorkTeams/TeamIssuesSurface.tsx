@@ -1,16 +1,17 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory, WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { PlusIcon, UsersIcon } from 'lucide-react';
+import { cn } from 'cn';
+import { PlusIcon, UsersIcon, XIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
@@ -429,10 +430,10 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
       }).map((section) => ({
         ...section,
         icon: (
-          <Icon
+          <PROJECT_ENTITY_ICON
+            aria-hidden
+            className="size-4 shrink-0"
             color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
-            icon={PROJECT_ENTITY_ICON}
-            size={14}
           />
         ),
       }));
@@ -473,11 +474,12 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
       const name = task.projectId ? projectNameById.get(task.projectId) : undefined;
       if (!name) return null;
       return (
-        <Flexbox flex="none">
-          <Tag icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />} size="small" variant="outlined">
+        <div className="flex flex-col shrink-0">
+          <Badge variant="secondary">
+            <PROJECT_ENTITY_ICON aria-hidden className="size-4 shrink-0" />
             {name}
-          </Tag>
-        </Flexbox>
+          </Badge>
+        </div>
       );
     },
     [projectNameById],
@@ -546,23 +548,47 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
 
   const chipsRow =
     noProject || activeFilterCount > 0 || cycleId !== ALL_TEAM_CYCLES ? (
-      <Flexbox horizontal align="center" className={styles.filterChips} gap={8}>
+      <div className={cn('flex flex-row items-center gap-2', styles.filterChips)}>
         {cycleId !== ALL_TEAM_CYCLES ? (
-          <Tag closable size="small" onClose={() => updateParams({ cycleId: ALL_TEAM_CYCLES })}>
+          <Badge variant="secondary">
             {t('teams.cycle')}: {cycleNameById.get(cycleId) ?? cycleId}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => updateParams({ cycleId: ALL_TEAM_CYCLES })}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
         {noProject ? (
-          <Tag closable size="small" onClose={() => updateParams({ noProject: false })}>
+          <Badge variant="secondary">
             {t('teams.noProject')}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => updateParams({ noProject: false })}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
         {activeFilterCount > 0 ? (
-          <Tag closable size="small" onClose={() => setBuilder(EMPTY_FILTER_BUILDER)}>
+          <Badge variant="secondary">
             {t('myWork.filtersActive', { count: activeFilterCount })}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => setBuilder(EMPTY_FILTER_BUILDER)}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
-      </Flexbox>
+      </div>
     ) : null;
 
   const results =
@@ -604,6 +630,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               ? teamTasksData.data.total
               : undefined
           }
+          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
           onCreateInGroup={createInGroup}
           onLoadMore={teamGroups.length === 0 ? () => runLoadMore(loadMore) : undefined}
           onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreGroup(key))}
@@ -612,7 +639,6 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           onRetryLoadMore={retryLoadMore}
           onRetryLoadMoreGroup={retryLoadMoreGroup}
           onSelectTask={(task) => setSelected(task)}
-          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
         />
       </>
     );
@@ -621,7 +647,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     <WorkSurface>
       <NavHeader
         left={
-          <Flexbox horizontal align={'center'} gap={8} style={{ paddingInlineStart: 4 }}>
+          <div className="flex flex-row items-center gap-2" style={{ paddingInlineStart: 4 }}>
             {team ? (
               <TeamIdentity
                 color={team.color}
@@ -629,23 +655,26 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
                 letter={(team.key || team.name).slice(0, 1)}
               />
             ) : null}
-            {team ? <Text type="secondary">{team.name}</Text> : null}
+            {team ? <span className="text-sm text-muted-foreground">{team.name}</span> : null}
             <span aria-hidden className={styles.separator}>
               ›
             </span>
-            <Text weight={500}>{t('teams.navIssues')}</Text>
-          </Flexbox>
+            <span className="text-sm font-medium">{t('teams.navIssues')}</span>
+          </div>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-row items-center gap-2">
             <WorkFavoriteButton targetId={teamId} targetType="team" />
-          </Flexbox>
+          </div>
         }
       />
       {!workspaceId ? (
-        <Center flex={1}>
-          <Empty description={t('teams.personal')} icon={UsersIcon} />
-        </Center>
+        <div className="flex flex-col items-center justify-center flex-1">
+          <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+            <UsersIcon aria-hidden className="size-8" />
+            <p>{t('teams.personal')}</p>
+          </div>
+        </div>
       ) : teamError ? (
         <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
       ) : (
@@ -681,28 +710,30 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
                 />
               }
             >
-              <Segmented
-                size="small"
+              <Tabs
                 value={issueScope}
-                options={ISSUE_SCOPES.map((scope) => ({
-                  // Linear labels the unfiltered scope "All issues".
-                  label: scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`),
-                  value: scope,
-                }))}
-                onChange={(value) =>
+                onValueChange={(value) =>
                   setSearchParams(
                     ...nextTeamIssueScopeNavigation(searchParams, value as TeamIssueScope),
                   )
                 }
-              />
+              >
+                <TabsList>
+                  {ISSUE_SCOPES.map((scope) => ({
+                    // Linear labels the unfiltered scope "All issues".
+                    label: scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`),
+                    value: scope,
+                  })).map((option) => (
+                    <TabsTrigger key={option.value} value={option.value}>
+                      {option.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
               {/* "Add new view" opens the shared view builder scoped to this
                   team — same contract as the Projects tab's button. */}
-              <Button
-                icon={PlusIcon}
-                size="small"
-                type="text"
-                onClick={() => setViewBuilderOpen(true)}
-              >
+              <Button variant="ghost" onClick={() => setViewBuilderOpen(true)}>
+                <PlusIcon aria-hidden className="size-4" />
                 {t('savedViews.newView')}
               </Button>
             </WorkSurfaceToolbar>

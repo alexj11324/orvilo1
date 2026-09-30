@@ -1,9 +1,10 @@
-import { Flexbox } from '@lobehub/ui';
-import { Slider } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import useMergeState from 'use-merge-value';
+
+import { Slider } from '@/components/ui/slider';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   label: css`
@@ -156,19 +157,20 @@ function LevelSlider<T extends string = string>({
         ].join(' ')
       : 'minmax(0, 1fr)';
 
-  const handleChange = (index: number) => {
+  const handleChange = (index: number | readonly number[]) => {
     if (disabled) return;
+    const next = Array.isArray(index) ? index[0] : index;
+    if (typeof next !== 'number') return;
 
-    const newLevel = levels[index];
+    const newLevel = levels[next];
     if (newLevel !== undefined) {
       setCurrentLevel(newLevel);
     }
   };
 
   return (
-    <Flexbox
-      className={styles.root}
-      gap={8}
+    <div
+      className={cn('flex flex-col gap-2', styles.root)}
       style={{
         ...restStyle,
         minWidth: getMinimumWidth(levels.length, customMinWidth),
@@ -182,7 +184,7 @@ function LevelSlider<T extends string = string>({
           min={0}
           step={1}
           value={sliderValue}
-          onChange={handleChange}
+          onValueChange={handleChange}
         />
       </div>
       <div className={styles.labels} style={{ gridTemplateColumns }}>
@@ -210,7 +212,7 @@ function LevelSlider<T extends string = string>({
           );
         })}
       </div>
-    </Flexbox>
+    </div>
   );
 }
 

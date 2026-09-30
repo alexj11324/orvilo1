@@ -1,12 +1,11 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { SkeletonItem } from '@/features/NavPanel/components/SkeletonList';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import SupervisorAvatar from '@/routes/(main)/group/features/GroupAvatar';
@@ -30,22 +29,17 @@ const Agent = memo<PropsWithChildren>(() => {
 
   return (
     <SwitchPanel>
-      <Block
-        clickable
-        horizontal
-        align={'center'}
-        gap={8}
-        padding={2}
-        variant={'borderless'}
+      <div
+        className="flex items-center gap-2 p-0.5"
         style={{
+          cursor: 'pointer',
+
           minWidth: 32,
           overflow: 'hidden',
         }}
       >
         <SupervisorAvatar size={28} />
-        <Text ellipsis weight={500}>
-          {displayTitle}
-        </Text>
+        <div className="truncate font-medium">{displayTitle}</div>
         <ActionIcon
           icon={ChevronsUpDownIcon}
           size={{
@@ -56,7 +50,7 @@ const Agent = memo<PropsWithChildren>(() => {
             width: 24,
           }}
         />
-      </Block>
+      </div>
     </SwitchPanel>
   );
 });

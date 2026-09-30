@@ -27,7 +27,11 @@ describe('connectLinearMcpPreset', () => {
       return popup;
     });
     const fetchConnectors = vi.fn().mockResolvedValue(undefined);
-    const startConnectorOAuth = vi.fn().mockResolvedValue('https://linear.app/oauth/authorize');
+    let attempt = '';
+    const startConnectorOAuth = vi.fn().mockImplementation((_id: string, oauthAttempt?: string) => {
+      attempt = oauthAttempt ?? '';
+      return Promise.resolve('https://linear.app/oauth/authorize');
+    });
 
     const result = connectLinearMcpPreset(linear, undefined, {
       createConnector,
@@ -42,18 +46,20 @@ describe('connectLinearMcpPreset', () => {
         oidcConfig: { scheme: 'dcr' },
       }),
     );
+    expect(startConnectorOAuth).toHaveBeenCalledWith('connector-1', expect.any(String));
 
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: {
-          connectorId: 'connector-1',
-          success: true,
-          synced: true,
-          type: 'orvilo-connector-oauth',
-        },
-        origin: window.location.origin,
-      }),
-    );
+    const event = new MessageEvent('message', {
+      data: {
+        attempt,
+        connectorId: 'connector-1',
+        success: true,
+        synced: true,
+        type: 'orvilo-connector-oauth',
+      },
+      origin: window.location.origin,
+    });
+    Object.defineProperty(event, 'source', { configurable: true, value: popup });
+    window.dispatchEvent(event);
     await expect(result).resolves.toEqual({ status: 'success', synced: true });
     expect(fetchConnectors).toHaveBeenCalledOnce();
   });
@@ -79,24 +85,29 @@ describe('connectLinearMcpPreset', () => {
     vi.spyOn(window, 'open').mockReturnValue(popup);
     const fetchConnectors = vi.fn().mockRejectedValue(new Error('refresh failed'));
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let attempt = '';
 
     const result = connectLinearMcpPreset(linear, 'connector-1', {
       createConnector: vi.fn(),
       fetchConnectors,
-      startConnectorOAuth: vi.fn().mockResolvedValue('https://linear.app/oauth/authorize'),
+      startConnectorOAuth: vi.fn().mockImplementation((_id: string, oauthAttempt?: string) => {
+        attempt = oauthAttempt ?? '';
+        return Promise.resolve('https://linear.app/oauth/authorize');
+      }),
     });
     await vi.waitFor(() => expect(popup.location.href).toBe('https://linear.app/oauth/authorize'));
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: {
-          connectorId: 'connector-1',
-          success: true,
-          synced: true,
-          type: 'orvilo-connector-oauth',
-        },
-        origin: window.location.origin,
-      }),
-    );
+    const event = new MessageEvent('message', {
+      data: {
+        attempt,
+        connectorId: 'connector-1',
+        success: true,
+        synced: true,
+        type: 'orvilo-connector-oauth',
+      },
+      origin: window.location.origin,
+    });
+    Object.defineProperty(event, 'source', { configurable: true, value: popup });
+    window.dispatchEvent(event);
 
     await expect(result).resolves.toEqual({
       refreshFailed: true,

@@ -1,12 +1,18 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { BotPromptIcon } from '@lobehub/ui/icons';
-import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
-import { memo } from 'react';
+import {
+  BotMessageSquareIcon,
+  DnaIcon,
+  ListTodoIcon,
+  MessageSquarePlusIcon,
+  SearchIcon,
+  TargetIcon,
+} from 'lucide-react';
+import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { toast } from '@/components/toast';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
@@ -54,21 +60,41 @@ const Nav = memo(() => {
   const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   const { mutate } = useActionSWR(topicActionKeys.openNewOrSave(), openNewTopicOrSaveTopic);
-  const handleNewTopic = () => {
-    if (!canCreateTopic || isNewTopicSendInFlight) return;
-    // Always navigate to the bare agent chat URL — drops any sub-route
-    // (/profile, /channel, /page, /cron/:cronId, …) and any `:topicId`
-    // segment so the new topic isn't conflated with the previous URL.
-    if (agentId) {
-      router.push(urlJoin('/agent', agentId));
+  const latestPathname = useRef(pathname);
+  latestPathname.current = pathname;
+  const newTopicPending = useRef(false);
+  const [isOpeningTopic, setIsOpeningTopic] = useState(false);
+  const handleNewTopic = async () => {
+    if (!canCreateTopic || isNewTopicSendInFlight || newTopicPending.current) return;
+    newTopicPending.current = true;
+    setIsOpeningTopic(true);
+    try {
+      // Execute against the source conversation before the route clears its
+      // activeTopicId. Passing the action promise also propagates failures;
+      // SWR revalidation alone resolves even when its fetcher fails.
+      await mutate(openNewTopicOrSaveTopic(), { revalidate: false });
+      // switchTopic's route subscriber can expose the blank composer before
+      // revalidation finishes. A newer send/navigation owns the destination;
+      // this late continuation must not send it back to the blank topic.
+      if (
+        agentId &&
+        latestPathname.current === pathname &&
+        !useChatStore.getState().activeTopicId
+      ) {
+        router.push(urlJoin('/agent', agentId));
+      }
+    } catch {
+      toast.error(t('unknownError', { ns: 'common' }));
+    } finally {
+      newTopicPending.current = false;
+      setIsOpeningTopic(false);
     }
-    mutate();
   };
 
   return (
-    <Flexbox gap={1} paddingInline={4}>
+    <div className="flex flex-col gap-[1px]" style={{ paddingInline: 4 }}>
       <NavItem
-        disabled={!canCreateTopic || isNewTopicSendInFlight}
+        disabled={!canCreateTopic || isNewTopicSendInFlight || isOpeningTopic}
         icon={MessageSquarePlusIcon}
         title={tTopic('actions.addNewTopic')}
         onClick={handleNewTopic}
@@ -83,7 +109,7 @@ const Nav = memo(() => {
       {!hideProfile && (
         <NavItem
           active={isProfileActive}
-          icon={BotPromptIcon}
+          icon={BotMessageSquareIcon}
           title={t('tab.profile')}
           onClick={() => {
             switchTopic(null, { skipRefreshMessage: true });
@@ -122,7 +148,7 @@ const Nav = memo(() => {
           router.push(urlJoin('/agent', agentId!, 'tasks'));
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

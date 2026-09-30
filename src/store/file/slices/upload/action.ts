@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { ORVILO_CLOUD } from '@orvilo/business-const';
 import { t } from 'i18next';
 
 import { handleFileUploadError } from '@/business/client/handleFileUploadError';
+import { toast } from '@/components/toast';
 import { fileService } from '@/services/file';
 import { hashFile } from '@/services/hashFile';
 import { uploadService } from '@/services/upload';

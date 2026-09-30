@@ -1,7 +1,6 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { cssVar, cx } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,19 +23,19 @@ interface DomainListProps {
 const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
   const { t } = useTranslation('selfLearning');
   return (
-    <Flexbox gap={8}>
-      <Text fontSize={12} type={'secondary'}>
+    <div className="flex flex-col gap-2">
+      <div className="text-[12px] text-muted-foreground">
         {t('domains.title')} {domains.length}
-      </Text>
-      <Block padding={0} variant={'outlined'}>
+      </div>
+      <div
+        className="flex flex-col p-0 border"
+        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+      >
         {domains.map((d) => (
-          <Flexbox
-            horizontal
-            align={'center'}
-            as={'button'}
-            className={styles.row}
-            gap={12}
+          <button
+            className={cx(styles.row, 'flex items-center gap-3')}
             key={d.id}
+            type={'button'}
             style={{
               background: 'transparent',
               color: 'inherit',
@@ -45,17 +44,17 @@ const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
             }}
             onClick={() => onOpen(d.id)}
           >
-            <Text style={{ flex: 'none', width: 140 }} weight={500}>
+            <div className="font-medium" style={{ flex: 'none', width: 140 }}>
               {d.title}
-            </Text>
-            <Text fontSize={12.5} style={{ flex: 1 }} type={'secondary'}>
+            </div>
+            <div className="text-muted-foreground" style={{ fontSize: 12.5, flex: 1 }}>
               {t('domains.meta', { habits: d.lessons.length, runs: d.runCount })}
-            </Text>
-            <Icon icon={ChevronRightIcon} size={13} style={{ flex: 'none', opacity: 0.4 }} />
-          </Flexbox>
+            </div>
+            <ChevronRightIcon size={13} style={{ flex: 'none', opacity: 0.4 }} />
+          </button>
         ))}
-      </Block>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

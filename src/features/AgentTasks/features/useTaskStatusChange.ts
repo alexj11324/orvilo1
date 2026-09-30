@@ -1,11 +1,11 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import { UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import type { TaskStatus } from '@orvilo/types';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 

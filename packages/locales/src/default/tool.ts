@@ -77,6 +77,13 @@ export default {
   'codeInterpreter.output': 'Output:',
   'codeInterpreter.returnValue': 'Return Value:',
   'connector.actionFailed': 'Operation failed, please try again',
+  'connector.add.timedOut': 'Authorization timed out. Check the connector status or retry.',
+  'connector.authTimedOut':
+    'Authorization timed out. Click Connect to retry or re-check the status.',
+  'connector.githubPatFallback':
+    'GitHub App OAuth is not configured on this deployment. Connect with a personal access token instead.',
+  'connector.githubNotConfigurable':
+    'GitHub App OAuth is not configured here and you cannot add a token yourself. Ask a workspace admin to configure GitHub.',
   'connector.add.title': 'Add Custom Connector',
   'connector.deleteAccountConfirmContent':
     'This removes the connector and its authorization from your account. Any agent that uses it will need to be re-authorized afterwards.',

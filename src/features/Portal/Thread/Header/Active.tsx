@@ -1,11 +1,12 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { resolveCCSubagentType } from '@orvilo/builtin-tool-claude-code/client';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import BubblesLoading from '@/components/BubblesLoading';
+import { Badge } from '@/components/reui/badge';
 import { LOADING_FLAT } from '@/const/message';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -25,35 +26,37 @@ const Active = memo(() => {
   const subagentTypeInfo = resolveCCSubagentType(currentThread.metadata?.subagentType);
 
   return (
-    <Flexbox horizontal align={'center'} gap={8} style={{ marginInlineStart: 4 }}>
+    <div className="flex flex-row items-center gap-2" style={{ marginInlineStart: 4 }}>
       <Avatar {...agentMeta} size={24} />
-      <Text
-        className={oneLineEllipsis}
-        ellipsis={true}
+      <div
+        className={cn('truncate min-w-0', oneLineEllipsis)}
         style={{ color: cssVar.colorTextSecondary, fontSize: 14 }}
       >
         {currentThread.title === LOADING_FLAT ? (
-          <Flexbox flex={1} height={30} justify={'center'}>
+          <div className="flex flex-col flex-1 h-[30px] justify-center">
             <BubblesLoading />
-          </Flexbox>
+          </div>
         ) : (
           currentThread.title
         )}
-      </Text>
+      </div>
       {subagentTypeInfo && (
-        <Tag
-          icon={<Icon icon={subagentTypeInfo.icon} />}
-          size={'small'}
+        <Badge
+          size="sm"
+          variant="secondary"
           style={{
             color: cssVar.colorTextDescription,
             flexShrink: 0,
             fontSize: 11,
           }}
         >
+          <span className="anticon" role="img">
+            <subagentTypeInfo.icon className={'anticon'} size={12} />
+          </span>
           {subagentTypeInfo.label}
-        </Tag>
+        </Badge>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

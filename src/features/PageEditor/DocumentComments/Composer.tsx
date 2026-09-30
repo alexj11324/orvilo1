@@ -1,12 +1,13 @@
 import { ChatInput, ChatInputActionBar, SendButton, useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, toast } from '@lobehub/ui/base-ui';
 import type { DocumentCommentJson } from '@orvilo/types';
+import { cn } from 'cn';
 import { nanoid } from 'nanoid';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
 import { AttachmentMenu } from '@/features/AttachmentInput';
 import { TypoBar } from '@/features/EditorCanvas';
 import {
@@ -107,10 +108,10 @@ const Composer = memo<ComposerProps>(({ documentId, onSubmit, onSuccess, parentC
   const attachmentState = getEditorAttachmentStateFromJson(draft.editorData);
 
   return (
-    <Flexbox horizontal align={'flex-start'} gap={12}>
-      <Flexbox className={styles.composerAvatar}>
+    <div className="flex items-start gap-3">
+      <div className={cn('flex flex-col', styles.composerAvatar)}>
         <Avatar avatar={avatar} size={parentCommentId ? 28 : 32} />
-      </Flexbox>
+      </div>
       <ChatInput
         className={styles.composer}
         flex={1}
@@ -178,7 +179,7 @@ const Composer = memo<ComposerProps>(({ documentId, onSubmit, onSuccess, parentC
           }}
         />
       </ChatInput>
-    </Flexbox>
+    </div>
   );
 });
 

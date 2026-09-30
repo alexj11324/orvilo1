@@ -1,7 +1,6 @@
-import { Center, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { WorkVersionItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -56,21 +55,21 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
 
   if (isLoading) {
     return (
-      <Center height={56}>
+      <div className="flex flex-col items-center justify-center" style={{ height: 56 }}>
         <NeuralNetworkLoading size={18} />
-      </Center>
+      </div>
     );
   }
 
   if (error) {
-    return <Text className={styles.error}>{t('workingPanel.works.versionError')}</Text>;
+    return <div className={styles.error}>{t('workingPanel.works.versionError')}</div>;
   }
 
   if (data.length === 0) {
     return (
-      <Flexbox className={styles.versionList}>
-        <Text type={'secondary'}>{t('workingPanel.works.emptyVersions')}</Text>
-      </Flexbox>
+      <div className={cn('flex flex-col', styles.versionList)}>
+        <div className="text-muted-foreground">{t('workingPanel.works.emptyVersions')}</div>
+      </div>
     );
   }
 
@@ -79,7 +78,7 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
   const costDeltas = computeWorkVersionCostDeltas(data);
 
   return (
-    <Flexbox className={styles.versionList}>
+    <div className={cn('flex flex-col', styles.versionList)}>
       {data.map((version) => {
         const cost = formatWorkVersionCost(costDeltas.get(version.id));
         const time = formatTaskItemDate(version.createdAt, {
@@ -89,38 +88,35 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
         });
 
         return (
-          <Flexbox className={styles.versionRow} gap={4} key={version.id}>
-            <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-              <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-                <Text code fontSize={12}>
+          <div className={cn('flex flex-col gap-1', styles.versionRow)} key={version.id}>
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+                <div className="font-mono rounded bg-muted px-1 text-[12px]">
                   v{version.version}
-                </Text>
-                <Text ellipsis className={styles.versionTitle}>
+                </div>
+                <div className={cn('truncate', styles.versionTitle)}>
                   {t(`workingPanel.works.changeType.${version.changeType}` as never)}
-                </Text>
-              </Flexbox>
-              <Flexbox horizontal align={'center'} gap={8} style={{ flexShrink: 0 }}>
+                </div>
+              </div>
+              <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                 {cost && (
-                  <Text
-                    code
-                    className={styles.versionCost}
-                    fontSize={12}
+                  <div
                     title={t('workingPanel.works.versionCost', { cost })}
+                    className={cn(
+                      'font-mono rounded bg-muted px-1 text-[12px]',
+                      styles.versionCost,
+                    )}
                   >
                     {cost}
-                  </Text>
+                  </div>
                 )}
-                {time && (
-                  <Text className={styles.context} type={'secondary'}>
-                    {time}
-                  </Text>
-                )}
-              </Flexbox>
-            </Flexbox>
-          </Flexbox>
+                {time && <div className={cn('text-muted-foreground', styles.context)}>{time}</div>}
+              </div>
+            </div>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

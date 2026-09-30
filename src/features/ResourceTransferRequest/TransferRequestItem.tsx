@@ -1,11 +1,13 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Avatar, Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, GROUP_CHAT_URL } from '@orvilo/const';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { formatNotificationRelativeTime } from '@/features/ResourceTransferRequest/formatNotificationRelativeTime';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useClientDataSWR } from '@/libs/swr';
@@ -186,18 +188,12 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
     };
 
     return (
-      <Block
-        aria-label={resourceTitle}
-        gap={4}
-        paddingBlock={12}
-        paddingInline={20}
-        variant="borderless"
-      >
+      <div aria-label={resourceTitle} className="flex flex-col gap-1 py-3 px-5">
         {/* No unread dot: it is not clearable by clicking (a pending item is
             "unread" until acted on), and a dot that ignores clicks reads as
             broken. The Pending badge and the action buttons carry the
             "awaiting you" signal. */}
-        <Flexbox horizontal align="flex-start" gap={12}>
+        <div className="flex flex-row items-start gap-3">
           <Avatar
             avatar={request.resource?.avatar || undefined}
             background={request.resource?.backgroundColor || undefined}
@@ -206,30 +202,27 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
             style={{ flex: 'none' }}
             title={resourceTitle}
           />
-          <Flexbox flex={1} gap={2} style={{ minWidth: 0, overflow: 'hidden' }}>
-            <Flexbox
-              horizontal
-              align="center"
-              gap={6}
-              justify="space-between"
+          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div
+              className="flex flex-row items-center gap-1.5 justify-between"
               style={{ minWidth: 0 }}
             >
-              <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+              <div className="truncate min-w-0 font-medium" style={{ minWidth: 0 }}>
                 {resourceTitle}
-              </Text>
+              </div>
               {typeLabelKey && (
-                <Tag size="small" style={{ flexShrink: 0 }}>
+                <Badge size="sm" style={{ flexShrink: 0 }}>
                   {t(typeLabelKey as never)}
-                </Tag>
+                </Badge>
               )}
-            </Flexbox>
-            <Text ellipsis fontSize={12} type="secondary">
+            </div>
+            <div className="truncate min-w-0 text-[12px] text-muted-foreground">
               {isRecipient
                 ? t('transferRequest.itemIncoming', { name: counterpartLabel })
                 : t('transferRequest.itemOutgoing', { name: counterpartLabel })}
-            </Text>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
         {isRecipient && (
           // The transfer's impact summary: what arrives disabled (bots, cron
           // jobs), what resets (device binding), what detaches (others' task
@@ -250,16 +243,16 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
             }
           />
         )}
-        <Flexbox horizontal align="center" gap={8} justify="space-between">
-          <Text fontSize={12} style={{ marginInlineStart: 44 }} type="secondary">
+        <div className="flex flex-row items-center gap-2 justify-between">
+          <div className="text-[12px] text-muted-foreground" style={{ marginInlineStart: 44 }}>
             {formatNotificationRelativeTime(request.createdAt, dateLocale)}
-          </Text>
-          <Flexbox horizontal gap={8}>
+          </div>
+          <div className="flex flex-row gap-2">
             {isRecipient ? (
               <>
                 <Button
                   disabled={acting}
-                  size="small"
+                  size="sm"
                   onClick={() =>
                     run(() => resourceTransferRequestService.decline(request.id), {
                       description: t('transferRequest.declinedToastDesc', { name: resourceTitle }),
@@ -272,8 +265,7 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
                 <Button
                   disabled={acting || !manifestReady}
                   loading={acting}
-                  size="small"
-                  type="primary"
+                  size="sm"
                   onClick={() =>
                     run(
                       () => resourceTransferRequestService.accept(request.id),
@@ -294,7 +286,7 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
               <Button
                 disabled={acting}
                 loading={acting}
-                size="small"
+                size="sm"
                 onClick={() =>
                   run(() => resourceTransferRequestService.cancel(request.id), {
                     title: t('transferRequest.withdrawnToast'),
@@ -304,9 +296,9 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
                 {t('transferRequest.withdraw')}
               </Button>
             )}
-          </Flexbox>
-        </Flexbox>
-      </Block>
+          </div>
+        </div>
+      </div>
     );
   },
 );

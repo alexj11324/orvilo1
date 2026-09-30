@@ -296,6 +296,8 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   taskLabel: rw('agent:read', 'agent:write'),
   taskTemplate: rw('agent:read', 'agent:write'),
   team: rw('agent:read', 'agent:write'),
+  // team-owned Documents/links/sections — same domain as document/notebook
+  teamResource: rw('knowledge:read', 'knowledge:write'),
   thread: rw('chat:read', 'chat:write'),
   topUp: 'blocked',
   topic: rw('chat:read', 'chat:write'),

@@ -1,7 +1,7 @@
 import { type EmojiPickerProps } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { lazy, memo, Suspense } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
 
@@ -14,7 +14,7 @@ export const EmojiPicker = memo<EmojiPickerProps>(({ shape = 'square', ...rest }
   const size = rest.size ?? 40;
 
   return (
-    <Suspense fallback={<Skeleton height={size} width={size} />}>
+    <Suspense fallback={<Skeleton style={{ height: size, width: size }} />}>
       <OrviloEmojiPicker shape={shape} {...rest} defaultAvatar={null as any} locale={locale} />
     </Suspense>
   );

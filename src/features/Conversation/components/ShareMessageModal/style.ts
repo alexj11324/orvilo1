@@ -1,5 +1,4 @@
-import { lobeStaticStylish } from '@lobehub/ui';
-import { createStaticStyles, cx , responsive } from 'antd-style';
+import { createStaticStyles, responsive } from 'antd-style';
 
 export const styles = createStaticStyles(({ css, cssVar }) => ({
   body: css`
@@ -20,32 +19,35 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
       background: ${cssVar.colorBgContainer};
     }
   `,
-  preview: cx(
-    lobeStaticStylish.noScrollbar,
-    css`
-      overflow: hidden scroll;
+  preview: css`
+    scrollbar-width: none;
 
-      width: 100%;
-      max-height: 70dvh;
-      border: 1px solid ${cssVar.colorBorder};
-      border-radius: ${cssVar.borderRadiusLG};
+    overflow: hidden scroll;
 
-      background: ${cssVar.colorBgLayout};
+    width: 100%;
+    max-height: 70dvh;
+    border: 1px solid ${cssVar.colorBorder};
+    border-radius: ${cssVar.borderRadiusLG};
 
-      * {
-        pointer-events: none;
+    background: ${cssVar.colorBgLayout};
 
-        ::-webkit-scrollbar {
-          width: 0 !important;
-          height: 0 !important;
-        }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    * {
+      pointer-events: none;
+
+      ::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
       }
+    }
 
-      ${responsive.sm} {
-        max-height: 40dvh;
-      }
-    `,
-  ),
+    ${responsive.sm} {
+      max-height: 40dvh;
+    }
+  `,
   sidebar: css`
     flex: none;
     width: max(240px, 25%);

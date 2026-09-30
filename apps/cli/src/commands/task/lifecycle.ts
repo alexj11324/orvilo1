@@ -44,9 +44,14 @@ export function registerLifecycleCommands(task: Command) {
         // Auto-run unless --no-run
         if (options.run === false) return;
 
-        // Default agent to inbox if not assigned
+        // Default agent to inbox if not assigned. Assignee writes must carry
+        // the revision CAS — reuse the row read above.
         if (!taskDetail.data.assigneeAgentId) {
-          await client.task.update.mutate({ assigneeAgentId: 'inbox', id });
+          await client.task.update.mutate({
+            assigneeAgentId: 'inbox',
+            expectedDomainRevision: taskDetail.data.domainRevision,
+            id,
+          });
           log.info(`Assigned default agent: ${pc.dim('inbox')}`);
         }
 

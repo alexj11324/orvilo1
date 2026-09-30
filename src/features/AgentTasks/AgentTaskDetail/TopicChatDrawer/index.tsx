@@ -1,23 +1,34 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui';
-import { copyToClipboard, DropdownMenu, Flexbox, Freeze } from '@lobehub/ui';
-import { ActionIcon, confirmModal, FloatingPanel, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Freeze } from '@lobehub/ui';
+import { FloatingPanel } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import {
   Copy,
   ExternalLink,
+  type LucideIcon,
   Maximize2,
   Minimize2,
   MoreHorizontal,
   Share2,
   Trash,
 } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import ChatList from '@/features/Conversation/ChatList';
 import { ConversationProvider } from '@/features/Conversation/ConversationProvider';
 import { TaskCardScopeProvider } from '@/features/Conversation/Markdown/plugins/Task';
@@ -38,10 +49,12 @@ import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
 import AssigneeAvatar from '../../features/AssigneeAvatar';
 import RunIntegrationTag from '../RunIntegrationTag';
+import { useTaskDetailTaskId } from '../TaskDetailScope';
 import FeedbackInput from './FeedbackInput';
 
 const SHARE_ICON_SIZE = { blockSize: 32, size: 16 } as const;
@@ -107,17 +120,17 @@ export const TopicChatDrawerBody = memo<TopicChatDrawerBodyProps>(
         }}
       >
         <TaskCardScopeProvider value={true}>
-          <Flexbox height={'100%'} style={{ overflow: 'hidden' }}>
-            <Flexbox flex={1} style={{ minHeight: 0, overflow: 'hidden' }}>
+          <div className="flex h-full flex-col" style={{ overflow: 'hidden' }}>
+            <div className="flex flex-1 flex-col" style={{ minHeight: 0, overflow: 'hidden' }}>
               <ChatList disableActionsBar itemContent={itemContent} />
-            </Flexbox>
-            <Flexbox paddingBlock={'0 12px'} paddingInline={12} style={{ flexShrink: 0 }}>
+            </div>
+            <div className="px-3 pt-0 pb-3" style={{ flexShrink: 0 }}>
               <FeedbackInput
                 defaultExpanded={defaultInputExpanded}
                 disableCollapse={disableInputCollapse}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </TaskCardScopeProvider>
       </ConversationProvider>
     );
@@ -145,9 +158,11 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   const navigate = useWorkspaceAwareNavigate();
   const [expanded, setExpanded] = useState(false);
   const topicId = useTaskStore(taskDetailSelectors.activeTopicDrawerTopicId);
-  const activeTaskId = useTaskStore((s) => s.activeTaskId);
+  const activeTaskId = useTaskDetailTaskId();
   const drawerTaskId = useTaskStore((s) => s.activeTopicDrawerTaskId);
-  const agentId = useTaskStore(taskDetailSelectors.topicDrawerAgentId);
+  const agentId = useTaskStore((s) =>
+    taskDetailSelectors.topicDrawerAgentId(s, drawerTaskId ?? activeTaskId),
+  );
   const drawerTitle = useTaskStore(taskDetailSelectors.topicDrawerTitle);
   const activity = useTaskStore(taskActivitySelectors.activeDrawerTopicActivity);
   const closeTopicDrawer = useTaskStore((s) => s.closeTopicDrawer);
@@ -216,7 +231,17 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
     });
   }, [closeTopicDrawer, deleteTopic, t, topicId]);
 
-  const menuItems = useMemo<DropdownItem[]>(
+  interface TopicMenuItem {
+    danger?: boolean;
+    disabled?: boolean;
+    icon?: LucideIcon;
+    key?: string;
+    label?: string;
+    onClick?: () => void;
+    type?: 'divider';
+  }
+
+  const menuItems = useMemo<TopicMenuItem[]>(
     () => [
       {
         disabled: !agentId || !topicId,
@@ -272,17 +297,14 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   );
 
   const title = (
-    <Flexbox
-      horizontal
-      align={'center'}
-      flex={1}
-      gap={8}
+    <div
+      className="flex flex-1 items-center gap-2"
       style={{ maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}
     >
       <AssigneeAvatar agentId={agentId} size={20} />
       {activity?.sourceTaskIdentifier && (
         <Tag
-          size={'small'}
+          size="sm"
           style={{ flex: 'none' }}
           title={t('taskDetail.topicSource', {
             identifier: activity.sourceTaskIdentifier,
@@ -291,23 +313,40 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
           {activity.sourceTaskIdentifier}
         </Tag>
       )}
-      <Text ellipsis style={{ flex: '0 1 auto', minWidth: 0 }} weight={500}>
+      <div className="truncate block font-medium" style={{ flex: '0 1 auto', minWidth: 0 }}>
         {activity?.title || drawerTitle || t('taskDetail.topicDrawer.untitled')}
-      </Text>
+      </div>
       {activity?.seq != null && (
-        <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
           #{activity.seq}
-        </Text>
+        </div>
       )}
       <RunIntegrationTag
         integration={activity?.integration}
         taskId={drawerTaskId ?? activeTaskId}
         topicId={topicId}
       />
-      <DropdownMenu items={menuItems}>
-        <ActionIcon icon={MoreHorizontal} size={'small'} />
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+        <DropdownMenuContent align={'end'} className="min-w-40">
+          {menuItems.map((item, index) =>
+            item.type === 'divider' ? (
+              <DropdownMenuSeparator key={`divider-${index}`} />
+            ) : (
+              <DropdownMenuItem
+                disabled={item.disabled}
+                key={item.key}
+                variant={item.danger ? 'destructive' : 'default'}
+                onClick={item.onClick}
+              >
+                {item.icon && createElement(item.icon, { size: 16 })}
+                <span className="flex-1">{item.label}</span>
+              </DropdownMenuItem>
+            ),
+          )}
+        </DropdownMenuContent>
       </DropdownMenu>
-    </Flexbox>
+    </div>
   );
 
   const shareIcon = (
@@ -321,7 +360,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   );
 
   const actions = !topicId ? null : (
-    <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex items-center gap-1">
       <ActionIcon
         icon={expanded ? Minimize2 : Maximize2}
         size={SHARE_ICON_SIZE}
@@ -335,7 +374,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
       ) : (
         shareIcon
       )}
-    </Flexbox>
+    </div>
   );
 
   // A tree that already mounts the app-wide host owns the panel; this

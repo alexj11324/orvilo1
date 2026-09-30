@@ -1,20 +1,11 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import {
-  confirmModal,
-  TabsIndicator,
-  TabsList,
-  TabsRoot,
-  TabsTab,
-  Tag,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { type MyWorkMode, type TaskStatus, type WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
+import { XIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useSearchParams } from 'react-router';
 import useSWR from 'swr';
@@ -23,11 +14,14 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import IssueRowChip from '@/components/IssueRowChip';
+import { confirmModal } from '@/components/Modal';
 import { PriorityIcon } from '@/components/PriorityIcon';
-import {
-  COLUMN_I18N_KEYS,
-  COLUMN_STATUS_VISUAL,
-} from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Tabs as TabsRoot, TabsList, TabsTrigger as TabsTab } from '@/components/ui/tabs';
+import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
@@ -568,7 +562,11 @@ const MyWorkPage = memo(() => {
   const bulkSetAssignee = useCallback(
     (userId: string | null) =>
       void runBulk(
-        (task) => taskService.update(task.id, { assigneeUserId: userId }),
+        (task) =>
+          taskService.update(task.id, {
+            assigneeUserId: userId,
+            expectedDomainRevision: task.domainRevision,
+          }),
         'myWork.bulk.updated',
       ),
     [runBulk],
@@ -751,13 +749,10 @@ const MyWorkPage = memo(() => {
             key === null ? t('myWork.noProject') : (projectNameById.get(key) ?? key),
         }).map((section) => ({
           ...section,
-          icon: (
-            <Icon
-              color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
-              icon={PROJECT_ENTITY_ICON}
-              size={14}
-            />
-          ),
+          icon: createElement(PROJECT_ENTITY_ICON, {
+            className: 'size-4 shrink-0',
+            color: section.key === 'none' ? cssVar.colorTextQuaternary : undefined,
+          }),
         }));
       }
       if (field === 'assignee') {
@@ -787,7 +782,9 @@ const MyWorkPage = memo(() => {
         icon: (() => {
           const visual =
             COLUMN_STATUS_VISUAL[`st:${section.key}`] ?? COLUMN_STATUS_VISUAL[section.key];
-          return visual ? <Icon color={visual.color} icon={visual.icon} size={14} /> : undefined;
+          return visual
+            ? createElement(visual.icon, { className: 'size-4 shrink-0', color: visual.color })
+            : undefined;
         })(),
       }));
     },
@@ -835,7 +832,9 @@ const MyWorkPage = memo(() => {
       const name = task.projectId ? projectNameById.get(task.projectId) : undefined;
       if (!name) return null;
       return (
-        <IssueRowChip icon={<Icon icon={PROJECT_ENTITY_ICON} size={14} />}>{name}</IssueRowChip>
+        <IssueRowChip icon={createElement(PROJECT_ENTITY_ICON, { className: 'size-4 shrink-0' })}>
+          {name}
+        </IssueRowChip>
       );
     },
     [display.properties.project, projectNameById],
@@ -961,23 +960,50 @@ const MyWorkPage = memo(() => {
 
   const chipsRow =
     noProject || delegated || activeFilterCount > 0 ? (
-      <Flexbox horizontal align="center" className={styles.filterChips} gap={8}>
+      <div
+        className={cn('flex flex-row', styles.filterChips)}
+        style={{ alignItems: 'center', gap: 8 }}
+      >
         {noProject ? (
-          <Tag closable size="small" onClose={() => writeParams({ noProject: false })}>
+          <Badge variant="secondary">
             {t('myWork.noProject')}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => writeParams({ noProject: false })}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
         {delegated ? (
-          <Tag closable size="small" onClose={() => writeParams({ delegated: false })}>
+          <Badge variant="secondary">
             {t('myWork.delegated')}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => writeParams({ delegated: false })}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
         {activeFilterCount > 0 ? (
-          <Tag closable size="small" onClose={() => setBuilder(EMPTY_FILTER_BUILDER)}>
+          <Badge variant="secondary">
             {t('myWork.filtersActive', { count: activeFilterCount })}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => setBuilder(EMPTY_FILTER_BUILDER)}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
-      </Flexbox>
+      </div>
     ) : null;
 
   const results =
@@ -1044,9 +1070,9 @@ const MyWorkPage = memo(() => {
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
             {t('tab.myWork')}
-          </Text>
+          </span>
         }
       />
       <WorkSurfaceCollection
@@ -1085,9 +1111,13 @@ const MyWorkPage = memo(() => {
               />
             }
           >
-            <TabsRoot value={mode} onValueChange={(value) => writeParams({ tab: value })}>
+            <TabsRoot
+              value={mode}
+              onValueChange={(value) => {
+                if (typeof value === 'string') writeParams({ tab: value });
+              }}
+            >
               <TabsList>
-                <TabsIndicator />
                 {tabs.map((item) => (
                   <TabsTab key={item.key} value={item.key}>
                     {item.label}

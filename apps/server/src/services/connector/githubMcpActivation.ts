@@ -6,6 +6,7 @@ import {
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { getGitHubOAuthGrantIdentity, startGitHubOAuth } from '@/server/services/githubOAuth';
+import { isGitHubOAuthConfigured } from '@/server/services/githubOAuth/provider';
 
 import { GITHUB_MCP_CONNECTOR_IDENTIFIER, GITHUB_MCP_SERVER_URL } from './githubMcp';
 import {
@@ -25,20 +26,26 @@ interface GitHubMcpActivationContext extends ConnectorToolSyncContext {
  * grant is present. No token material is written to `user_connectors`.
  */
 export const activateGitHubMcpConnector = async (input: {
+  attempt?: string;
   ctx: GitHubMcpActivationContext;
   existing: DecryptedConnector | null;
   userId: string;
 }): Promise<
   | { authorizationUrl: string; status: 'authorization_required' }
   | { connectorId: string; status: 'connected'; toolCount: number }
+  | { status: 'pat_available' }
 > => {
   const identity = await getGitHubOAuthGrantIdentity({
     db: input.ctx.serverDB,
     userId: input.userId,
   });
   if (!identity) {
+    // Self-hosted installs without GitHub App OAuth env vars can still
+    // connect the hosted MCP server with a personal access token instead of
+    // dying on a generic internal error.
+    if (!isGitHubOAuthConfigured()) return { status: 'pat_available' };
     return {
-      authorizationUrl: await startGitHubOAuth(input.userId),
+      authorizationUrl: await startGitHubOAuth(input.userId, input.attempt),
       status: 'authorization_required',
     };
   }

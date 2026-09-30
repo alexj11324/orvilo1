@@ -1,0 +1,9 @@
+---
+title: 自托管部署的 GitHub MCP 令牌回退
+date: 2026-09-29
+versionRange: ['2.4.1']
+---
+
+# 修复
+
+- 在缺少 GitHub App OAuth 凭据（`GITHUB_APP_CLIENT_ID`、`GITHUB_APP_CLIENT_SECRET`、`APP_URL`）的自托管部署上，恢复了受支持的 GitHub MCP 连接路径。服务端现在返回连接器能力（`app_oauth_configured` / `pat_available` / `not_configurable`），`connectGitHubMcp` 返回 `pat_available` 而不是泛化内部错误；Connect 按钮变为 "设置令牌" 入口，打开预设的 bearer 令牌表单。同时缺少连接器写权限的成员会看到明确的不可配置状态，而不是打不开的弹窗。

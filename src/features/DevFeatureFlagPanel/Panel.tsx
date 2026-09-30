@@ -1,12 +1,13 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import { Button, Switch, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { snakeCase } from 'es-toolkit/compat';
 import { ListRestartIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
 import { useServerConfigStore } from '@/store/serverConfig';
 import {
@@ -94,20 +95,17 @@ const Panel = memo(() => {
     <div className={devDockPanelStyles.root}>
       <div className={styles.toolbar}>
         <Input
-          allowClear
           className={devDockPanelStyles.searchInput}
           placeholder={'Search flag name…'}
-          size={'small'}
           value={search}
-          variant={'borderless'}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Flexbox horizontal className={styles.toolbarFilter}>
-          <Switch checked={overriddenOnly} size={'small'} onChange={setOverriddenOnly} />
-          <Text style={{ fontSize: 12, whiteSpace: 'nowrap' }} type={'secondary'}>
+        <div className={`${styles.toolbarFilter} flex`}>
+          <Switch checked={overriddenOnly} size="sm" onCheckedChange={setOverriddenOnly} />
+          <div className="text-muted-foreground" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
             overridden only
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
       </div>
 
       <div className={styles.body}>
@@ -119,16 +117,12 @@ const Panel = memo(() => {
       </div>
 
       <div className={styles.footer}>
-        <Text style={{ fontSize: 11 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
           {overrideCount} active override{overrideCount === 1 ? '' : 's'} · client-side ·
           localStorage persisted
-        </Text>
-        <Button
-          disabled={overrideCount === 0}
-          icon={ListRestartIcon}
-          size={'small'}
-          onClick={resetFlagOverrides}
-        >
+        </div>
+        <Button disabled={overrideCount === 0} size="sm" onClick={resetFlagOverrides}>
+          <ListRestartIcon data-icon="inline-start" />
           Reset all
         </Button>
       </div>

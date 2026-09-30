@@ -9,9 +9,10 @@ const modalContext = vi.hoisted(() => ({
   setCanDismissByClickOutside: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', () => ({ toast: { error: toastError } }));
+
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  toast: { error: toastError },
   useModalContext: () => modalContext,
 }));
 

@@ -1,7 +1,7 @@
-import { Flexbox, Snippet } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -30,7 +30,7 @@ const CliInstallState = ({
 
   return (
     <GuideShell
-      headerDescription={<Text type="secondary">{tKey('desc')}</Text>}
+      headerDescription={<div className="text-muted-foreground">{tKey('desc')}</div>}
       icon={<config.icon size={24} />}
       title={tKey('title')}
       variant={variant}
@@ -45,32 +45,32 @@ const CliInstallState = ({
       }
     >
       {showErrorReason && (
-        <Text style={{ fontSize: 12 }} type="secondary">
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {tKey('reason', { message: error?.message })}
-        </Text>
+        </div>
       )}
 
       {recommendedCommand && (
-        <Flexbox gap={6}>
-          <Text strong style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {tKey('installWithNpm')}
-          </Text>
-          <Snippet language={'bash'}>{recommendedCommand}</Snippet>
-        </Flexbox>
+          </div>
+          <CodeBlock wrap code={recommendedCommand} language="bash" variant="ghost" />
+        </div>
       )}
 
       {alternativeCommand && (
-        <Flexbox gap={6}>
-          <Text strong style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {tKey('installWithBrew')}
-          </Text>
-          <Snippet language={'bash'}>{alternativeCommand}</Snippet>
-        </Flexbox>
+          </div>
+          <CodeBlock wrap code={alternativeCommand} language="bash" variant="ghost" />
+        </div>
       )}
 
-      <Text style={{ fontSize: 12 }} type="secondary">
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {tKey('afterInstall')}
-      </Text>
+      </div>
     </GuideShell>
   );
 };

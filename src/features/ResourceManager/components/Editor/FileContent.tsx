@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import FileViewer from '@/features/FileViewer';
@@ -20,11 +19,11 @@ const FilePreviewer = memo<FilePreviewerProps>(({ fileId }) => {
   if (!fileId || !displayFile) return null;
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
-      <Flexbox flex={1} height={'100%'} style={{ overflow: 'auto' }}>
+    <div className="flex flex-col h-[100%] w-[100%]">
+      <div className="flex flex-col flex-1 h-[100%]" style={{ overflow: 'auto' }}>
         <FileViewer {...displayFile} />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

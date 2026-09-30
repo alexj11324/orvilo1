@@ -1,14 +1,12 @@
 'use client';
-
-import { Block, Flexbox, Icon, Input } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { InterestAreaKey } from '@orvilo/const';
 import { normalizeInterestsForStorage, resolveInterestAreaKey } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { BriefcaseIcon } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { INTEREST_AREAS } from '@/features/Onboarding/config';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -81,84 +79,60 @@ const InterestsRow = () => {
 
   return (
     <ProfileRow anchor={'profile-interests'} label={t('profile.interests')}>
-      <Flexbox gap={12}>
-        <Flexbox horizontal align="center" gap={8} wrap="wrap">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {areas.map((item) => {
             const isSelected = normalizedInterests.includes(item.key);
             return (
-              <Block
-                clickable
-                horizontal
-                gap={8}
+              <Button
+                aria-pressed={isSelected}
+                className={isSelected ? 'bg-muted' : undefined}
                 key={item.key}
-                padding={8}
-                variant="outlined"
-                style={
-                  isSelected
-                    ? {
-                        background: cssVar.colorFillSecondary,
-                        borderColor: cssVar.colorFillSecondary,
-                      }
-                    : undefined
-                }
+                type="button"
+                variant="outline"
                 onClick={() => toggleInterest(item.key)}
               >
-                <Icon color={cssVar.colorTextSecondary} icon={item.icon} size={14} />
-                <Text fontSize={13} weight={500}>
-                  {item.label}
-                </Text>
-              </Block>
+                <item.icon className="shrink-0" size={14} />
+                <span>{item.label}</span>
+              </Button>
             );
           })}
           {normalizedInterests
             .filter((i) => !resolveInterestAreaKey(i))
             .map((interest) => (
-              <Block
-                clickable
+              <Button
                 key={interest}
-                padding={8}
-                variant="outlined"
-                style={{
-                  background: cssVar.colorFillSecondary,
-                  borderColor: cssVar.colorFillSecondary,
-                }}
+                type="button"
+                variant="outline"
                 onClick={() => removeCustomInterest(interest)}
               >
-                <Text fontSize={13} weight={500}>
-                  {interest}
-                </Text>
-              </Block>
+                <span>{interest}</span>
+              </Button>
             ))}
-          <Block
-            clickable
-            horizontal
-            gap={8}
-            padding={8}
-            variant="outlined"
-            style={
-              showCustomInput
-                ? { background: cssVar.colorFillSecondary, borderColor: cssVar.colorFillSecondary }
-                : {}
-            }
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => setShowCustomInput(!showCustomInput)}
           >
-            <Icon color={cssVar.colorTextSecondary} icon={BriefcaseIcon} size={14} />
-            <Text fontSize={13} weight={500}>
-              {tOnboarding('interests.area.other')}
-            </Text>
-          </Block>
-        </Flexbox>
+            <BriefcaseIcon className="shrink-0" size={14} />
+            <span>{tOnboarding('interests.area.other')}</span>
+          </Button>
+        </div>
         {showCustomInput && (
           <Input
             placeholder={tOnboarding('interests.placeholder')}
-            size="small"
             style={{ width: 200 }}
+
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
-            onPressEnter={handleAddCustom}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                handleAddCustom();
+              }
+            }}
           />
         )}
-      </Flexbox>
+      </div>
     </ProfileRow>
   );
 };

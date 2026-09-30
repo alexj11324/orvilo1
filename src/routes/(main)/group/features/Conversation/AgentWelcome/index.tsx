@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,28 +61,27 @@ const InboxWelcome = memo(() => {
 
   return (
     <>
-      <Flexbox flex={1} />
-      <Flexbox
-        gap={12}
-        width={'100%'}
+      <div className="flex flex-col flex-1" />
+      <div
+        className="flex flex-col gap-3"
         style={{
+          width: '100%',
+
           paddingBottom: 'max(10vh, 32px)',
         }}
       >
         <SupervisorAvatar size={78} />
-        <Text fontSize={32} weight={'bold'}>
-          {displayTitle}
-        </Text>
-        <Flexbox width={'min(100%, 640px)'}>
+        <div className="text-[32px] font-bold">{displayTitle}</div>
+        <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
           <Markdown fontSize={fontSize} variant={'chat'}>
             {isInbox ? t('guide.defaultMessageWithoutCreate', { appName: 'Orvilo AI' }) : message}
           </Markdown>
-        </Flexbox>
+        </div>
         {openingQuestions.length > 0 && (
           <OpeningQuestions mobile={mobile} questions={openingQuestions} />
         )}
         <ToolAuthAlert />
-      </Flexbox>
+      </div>
     </>
   );
 });

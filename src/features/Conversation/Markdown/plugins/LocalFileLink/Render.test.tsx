@@ -1,7 +1,6 @@
 /**
  * @vitest-environment happy-dom
  */
-import type { TooltipProps } from '@lobehub/ui';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentType } from 'react';
@@ -46,15 +45,25 @@ vi.mock('@/components/FileIcon', () => ({
 }));
 
 const tooltipPropsSpy = vi.hoisted(() => vi.fn());
+const tooltipProviderSpy = vi.hoisted(() => vi.fn());
 
-vi.mock('@lobehub/ui', async (importOriginal) => {
+vi.mock('@/components/ui/tooltip', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  const ActualTooltip = actual.Tooltip as ComponentType<TooltipProps>;
+  const ActualProvider = actual.TooltipProvider as ComponentType<{ delay?: number }>;
+  const ActualContent = actual.TooltipContent as ComponentType<{
+    align?: string;
+    children?: unknown;
+    side?: string;
+  }>;
   return {
     ...actual,
-    Tooltip: (props: TooltipProps) => {
+    TooltipContent: (props: { align?: string; children?: unknown; side?: string }) => {
       tooltipPropsSpy(props);
-      return <ActualTooltip {...props} />;
+      return <ActualContent {...props} />;
+    },
+    TooltipProvider: (props: { delay?: number }) => {
+      tooltipProviderSpy(props);
+      return <ActualProvider {...props} />;
     },
   };
 });
@@ -123,11 +132,12 @@ describe('LocalFileLink Render', () => {
 
     const link = screen.getByRole('link', { name: 'Group.tsx' });
 
+    expect(tooltipProviderSpy).toHaveBeenCalledWith(expect.objectContaining({ delay: 100 }));
     expect(tooltipPropsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        mouseEnterDelay: 0.1,
-        placement: 'topLeft',
-        title: '/Users/me/project/src/Group.tsx (line 265)',
+        align: 'start',
+        children: '/Users/me/project/src/Group.tsx (line 265)',
+        side: 'top',
       }),
     );
 

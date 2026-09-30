@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { memo, type ReactNode, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -54,11 +52,14 @@ const SharedMessageList = memo<SharedMessageListProps>((props) => {
         headerSlot={headerSlot}
         itemContent={itemContent}
         footerSlot={
-          <Flexbox align={'center'} paddingBlock={'16px 80px'} paddingInline={24}>
-            <Text fontSize={12} style={{ maxWidth: 480, textAlign: 'center' }} type={'secondary'}>
+          <div className="flex flex-col items-center px-6" style={{ paddingBlock: '16px 80px' }}>
+            <div
+              className="text-[12px] text-muted-foreground"
+              style={{ maxWidth: 480, textAlign: 'center' }}
+            >
               {t('sharePageDisclaimer')}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         }
       />
     </ConversationProvider>

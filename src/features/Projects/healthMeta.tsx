@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { useTheme } from 'antd-style';
 import { CircleDashedIcon, CircleIcon } from 'lucide-react';
@@ -39,12 +38,10 @@ export const ProjectHealthIcon = memo<{ health?: null | ProjectHealth; size?: nu
   ({ health, size = 12 }) => {
     const theme = useTheme();
     if (!health || !(health in PROJECT_HEALTH_META)) {
-      return (
-        <Icon aria-hidden color={theme.colorTextQuaternary} icon={CircleDashedIcon} size={size} />
-      );
+      return <CircleDashedIcon aria-hidden color={theme.colorTextQuaternary} size={size} />;
     }
     const color = theme[PROJECT_HEALTH_META[health].color];
-    return <Icon aria-hidden color={color} fill={color} icon={CircleIcon} size={size} />;
+    return <CircleIcon aria-hidden color={color} fill={color} size={size} />;
   },
 );
 

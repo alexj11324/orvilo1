@@ -1,15 +1,19 @@
 'use client';
-
-import { Flexbox, Icon, Markdown, ScrollShadow } from '@lobehub/ui';
-import { ActionIcon, confirmModal, Tabs, type TabsItem } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { CompressionGroupMetadata, UIChatMessage } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp, History, Sparkles, Undo2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
 import StreamingMarkdown from '@/components/StreamingMarkdown';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 import { shinyTextStyles } from '@/styles/loading';
@@ -17,6 +21,14 @@ import { shinyTextStyles } from '@/styles/loading';
 import { dataSelectors, useConversationStore } from '../../store';
 import CompressedMessageItem from './CompressedMessageItem';
 import { isCompressionSummaryGenerating, shouldShowCompressedGroupPanel } from './logic';
+
+type TabItem = {
+  children?: ReactNode;
+  disabled?: boolean;
+  icon?: ReactNode;
+  key: string;
+  label?: ReactNode;
+};
 
 const STORAGE_KEY_PREFIX = 'compressed-group-tab:';
 
@@ -112,15 +124,15 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
     isGeneratingSummary,
   });
 
-  const tabItems: TabsItem[] = useMemo(
+  const tabItems: TabItem[] = useMemo(
     () => [
       {
-        icon: <Icon icon={Sparkles} size={14} />,
+        icon: <Sparkles size={14} />,
         key: 'summary',
         label: t('compression.summary'),
       },
       {
-        icon: <Icon icon={History} size={14} />,
+        icon: <History size={14} />,
         key: 'history',
         label: t('compression.history'),
       },
@@ -129,27 +141,42 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
   );
 
   return (
-    <Flexbox className={styles.container} gap={8}>
+    <div className={cn('flex flex-col gap-2', styles.container)}>
       {isGeneratingSummary ? (
         <>
-          <Flexbox horizontal>
-            {/*<Icon icon={FolderArchive} size={14} />*/}
+          <div className="flex">
+            {/*<FolderArchive size={14} />*/}
             <span className={cx(isGeneratingSummary ? shinyTextStyles.shinyText : '')}>
               {t('compressedHistory')}
             </span>
-          </Flexbox>
+          </div>
           <StreamingMarkdown>{content}</StreamingMarkdown>
         </>
       ) : (
-        <Flexbox horizontal align={'center'} distribution={'space-between'} width={'100%'}>
+        <div className="flex items-center justify-between" style={{ width: '100%' }}>
           <Tabs
-            activeKey={isGeneratingSummary ? 'summary' : activeTab}
             className={styles.header}
-            items={tabItems}
-            variant={'rounded'}
-            onChange={handleTabChange}
-          />
-          <Flexbox horizontal gap={4}>
+            value={isGeneratingSummary ? 'summary' : activeTab}
+            onValueChange={handleTabChange}
+          >
+            <TabsList>
+              {tabItems.map((item) => (
+                <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                  {item.icon}
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {(tabItems as { children?: ReactNode; key: string }[]).map(
+              (item) =>
+                item.children != null && (
+                  <TabsContent key={item.key} value={item.key}>
+                    {item.children}
+                  </TabsContent>
+                ),
+            )}
+          </Tabs>
+          <div className="flex gap-1">
             <ActionIcon
               icon={Undo2}
               size={'small'}
@@ -161,25 +188,25 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
               size={'small'}
               onClick={() => toggleCompressedGroupExpanded(id)}
             />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
       {!showPanelContent ? null : activeTab === 'summary' ? (
-        <ScrollShadow className={styles.contentScroll} offset={12} size={12}>
+        <ScrollArea className={styles.contentScroll}>
           <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
             {content}
           </Markdown>
-        </ScrollShadow>
+        </ScrollArea>
       ) : (
-        <ScrollShadow className={styles.contentScroll} offset={12} size={12}>
-          <Flexbox className={styles.messagesContainer} gap={4}>
+        <ScrollArea className={styles.contentScroll}>
+          <div className={cn('flex flex-col gap-1', styles.messagesContainer)}>
             {compressedMessages?.map((msg) => (
               <CompressedMessageItem key={msg.id} message={msg} />
             ))}
-          </Flexbox>
-        </ScrollShadow>
+          </div>
+        </ScrollArea>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

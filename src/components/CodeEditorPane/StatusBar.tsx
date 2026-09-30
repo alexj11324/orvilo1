@@ -1,8 +1,10 @@
 'use client';
 
-import { Flexbox, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { IndentStyle } from './indent';
 
@@ -79,11 +81,11 @@ const StatusBar = ({
   const { t } = useTranslation('components');
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
-      <Flexbox horizontal align={'center'}>
+    <div className={cn('flex items-center justify-between', styles.bar)}>
+      <div className={'flex items-center'}>
         {readOnly && <span className={styles.readOnly}>{t('CodeEditorPane.readOnly')}</span>}
-      </Flexbox>
-      <Flexbox horizontal align={'center'}>
+      </div>
+      <div className={'flex items-center'}>
         {cursor && (
           <span className={styles.item}>
             {t('CodeEditorPane.cursor', { column: cursor.column, line: cursor.line })}
@@ -96,19 +98,22 @@ const StatusBar = ({
             size: indent.size,
           })}
         </span>
-        <Tooltip title={t('CodeEditorPane.toggleWordWrap')}>
-          <button
-            aria-pressed={lineWrapping}
-            className={styles.button}
-            type={'button'}
-            onClick={() => onLineWrappingChange(!lineWrapping)}
-          >
-            {t(lineWrapping ? 'CodeEditorPane.wrapOn' : 'CodeEditorPane.wrapOff')}
-          </button>
+        <Tooltip>
+          <TooltipTrigger render={<span />}>
+            <button
+              aria-pressed={lineWrapping}
+              className={styles.button}
+              type={'button'}
+              onClick={() => onLineWrappingChange(!lineWrapping)}
+            >
+              {t(lineWrapping ? 'CodeEditorPane.wrapOn' : 'CodeEditorPane.wrapOff')}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('CodeEditorPane.toggleWordWrap')}</TooltipContent>
         </Tooltip>
         <span className={styles.item}>{languageLabel}</span>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

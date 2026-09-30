@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import {
   AGENT_CHAT_TOPIC_PAGE_URL,
   AGENT_CHAT_TOPIC_URL,
@@ -13,6 +11,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import NavHeader from '@/features/NavHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useChatStore } from '@/store/chat';
@@ -42,7 +41,7 @@ const Header = memo<{
       showTogglePanelButton={false}
       style={{ paddingBlock: 8, paddingInline, width: '100%' }}
       left={
-        <Flexbox horizontal align="center" flex={1} gap={4} style={{ minWidth: 0 }}>
+        <div className="flex flex-row items-center flex-1 gap-1" style={{ minWidth: 0 }}>
           {canGoBack && (
             <ActionIcon
               aria-label={t('back')}
@@ -53,7 +52,7 @@ const Header = memo<{
             />
           )}
           {title}
-        </Flexbox>
+        </div>
       }
       right={
         <Fragment>

@@ -1,0 +1,17 @@
+---
+title: 退役 Better Auth 遗留会话 Cookie
+description: >-
+  不再读取或清理迁移前的 `better-auth.session_token` cookie；`orvilo_auth`（由
+  Clerk 交换签发）成为唯一的 Web 会话凭证。
+tags:
+  - Authentication
+---
+
+# 退役 Better Auth 遗留会话 Cookie
+
+Better Auth → Clerk 迁移收官：服务端不再双读遗留的 `better-auth.session_token` cookie。`orvilo_auth`（由 `POST /api/auth/clerk` 签发）成为 middleware、tRPC context、会话探测和登出链路中唯一的 Web 会话凭证。过渡用的 `AUTH_COOKIE_PREFIX` 环境变量也一并移除。
+
+## 改进与修复
+
+- **单一会话凭证。** `packages/database` 的 cookie 读取器以及签发 / 清除会话的路由（`/api/auth/clerk`、`/api/auth/signout`）都只处理 `orvilo_auth`。
+- **遗留用户自然重新登录。** 仍只携带旧 cookie 的浏览器会回落到 accounts 门户登录页，登录后签发新的 `orvilo_auth` 会话。

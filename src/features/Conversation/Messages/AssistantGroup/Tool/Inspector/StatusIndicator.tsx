@@ -1,4 +1,3 @@
-import { Block, Icon, Tooltip } from '@lobehub/ui';
 import { type ToolIntervention } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import {
@@ -11,10 +10,11 @@ import {
   PauseIcon,
   X,
 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LOADING_FLAT } from '@/const/message';
 
 interface StatusIndicatorProps {
@@ -53,50 +53,76 @@ const StatusIndicator = memo<StatusIndicatorProps>(
 
     if (isAbort) {
       icon = (
-        <Tooltip title={t('tool.intervention.toolAbort')}>
-          <Icon color={cssVar.colorTextTertiary} icon={PauseIcon} />
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <PauseIcon color={cssVar.colorTextTertiary} />
+                </span>
+              }
+            />
+            <TooltipContent>{t('tool.intervention.toolAbort')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     } else if (isReject) {
       // A user skip (e.g. AskUserQuestion) is a normal outcome, not a denial —
       // keep the glyph and copy neutral instead of the rejection ban sign.
       icon = intervention?.skipped ? (
-        <Tooltip title={t('tool.intervention.toolSkipped')}>
-          <Icon color={cssVar.colorTextTertiary} icon={CornerUpRight} />
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <CornerUpRight color={cssVar.colorTextTertiary} />
+                </span>
+              }
+            />
+            <TooltipContent>{t('tool.intervention.toolSkipped')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ) : (
-        <Tooltip title={t('tool.intervention.toolRejected')}>
-          <Icon color={cssVar.colorTextTertiary} icon={Ban} />
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <Ban color={cssVar.colorTextTertiary} />
+                </span>
+              }
+            />
+            <TooltipContent>{t('tool.intervention.toolRejected')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     } else if (hasError) {
-      icon = <Icon color={cssVar.colorError} icon={X} />;
+      icon = <X color={cssVar.colorError} />;
     } else if (isPending) {
-      icon = <Icon color={cssVar.colorInfo} icon={HandIcon} />;
+      icon = <HandIcon color={cssVar.colorInfo} />;
     } else if (hasSuccessResult && !hasError && successVariant === 'warning') {
-      icon = <Icon color={cssVar.colorWarning} icon={AlertTriangle} />;
+      icon = <AlertTriangle color={cssVar.colorWarning} />;
     } else if (hasResult || isToolComplete) {
-      icon = <Icon color={cssVar.colorSuccess} icon={successIcon ?? Check} />;
+      icon = createElement(successIcon ?? Check, { color: cssVar.colorSuccess });
     } else {
       icon = <NeuralNetworkLoading size={16} />;
     }
 
     return (
-      <Block
-        horizontal
-        align={'center'}
-        flex={'none'}
-        gap={4}
-        height={24}
-        justify={'center'}
-        variant={'outlined'}
-        width={24}
+      <div
+        className="flex items-center gap-1 justify-center"
         style={{
+          flex: 'none',
+          height: 24,
+          border: `1px solid ${cssVar.colorBorder}`,
+          borderRadius: cssVar.borderRadiusLG,
+          width: 24,
+
           fontSize: 12,
         }}
       >
         {icon}
-      </Block>
+      </div>
     );
   },
 );

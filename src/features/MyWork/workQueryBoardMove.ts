@@ -1,13 +1,14 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { WORKFLOW_STATE_REQUIRED } from '@orvilo/types';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import {
   type KanbanColumnDefinition,
   kanbanColumnForSelectableStatus,
+  type TaskStatusChoice,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { createTaskStatusCascadeModal } from '@/features/AgentTasks/features/TaskStatusCascadeModal';
 import { getOpenSubtasks } from '@/features/AgentTasks/features/useTaskStatusChange';
@@ -38,6 +39,13 @@ export const moveBoardMaybePickingState = async (input: {
   expectedDomainRevision: number;
   groupBy: 'status' | 'workflowCategory';
   targetKey: string;
+  /**
+   * Precise `team_workflow_states` ref from the shared Issue status model —
+   * an exact pick commits straight through the CAS write and never opens
+   * the picker. Omit it for category-level targets, where a
+   * WORKFLOW_STATE_REQUIRED reply still picks.
+   */
+  targetWorkflowStateRefId?: string;
   taskId: string;
   teamId?: string | null;
 }): Promise<boolean> => {
@@ -46,6 +54,7 @@ export const moveBoardMaybePickingState = async (input: {
       expectedDomainRevision: input.expectedDomainRevision,
       groupBy: input.groupBy,
       targetKey: input.targetKey,
+      targetWorkflowStateRefId: input.targetWorkflowStateRefId,
       taskId: input.taskId,
     });
     return true;
@@ -129,6 +138,8 @@ const toastWorkQueryBoardMoveError = (error: unknown) => {
 export const commitWorkQueryBoardMove = async (input: {
   column: Pick<KanbanColumnDefinition, 'key' | 'targetStatus' | 'targetWorkflowCategory'>;
   groupBy: 'status' | 'workflowCategory';
+  /** Exact workflow-state ref a precise pick carries into the CAS write. */
+  targetWorkflowStateRefId?: string;
   task: WorkQueryBoardTask;
 }): Promise<boolean> => {
   const groupBy = workQueryMoveGroupBy(input.groupBy, input.task);
@@ -137,6 +148,7 @@ export const commitWorkQueryBoardMove = async (input: {
   const plan = workQueryMovePlan({
     groupBy,
     targetKey,
+    targetWorkflowStateRefId: input.targetWorkflowStateRefId,
     task: input.task,
   });
   try {
@@ -156,6 +168,7 @@ export const commitWorkQueryBoardMove = async (input: {
         expectedDomainRevision: revision,
         groupBy: 'workflowCategory',
         targetKey,
+        targetWorkflowStateRefId: input.targetWorkflowStateRefId,
         taskId: plan.task.id,
         teamId: plan.task.teamId,
       });
@@ -164,6 +177,7 @@ export const commitWorkQueryBoardMove = async (input: {
       expectedDomainRevision: plan.expectedDomainRevision,
       groupBy: plan.groupBy,
       targetKey: plan.targetKey,
+      targetWorkflowStateRefId: input.targetWorkflowStateRefId,
       taskId: input.task.id,
       teamId: input.task.teamId,
     });
@@ -221,4 +235,41 @@ export const applyWorkQueryStatusChange = async (input: {
   if (result === 'cancelled') return false;
   if (result === 'local') return input.changeLocal(input.task.identifier, input.status);
   return true;
+};
+
+/**
+ * A pick from the board-driven status menu (list glyph, card context menu):
+ * a workflow column routes through the board's own drop path — `moveBoard`
+ * CAS + exact-state picker; a status column keeps the status write.
+ */
+export const applyWorkQueryStatusChoice = async (input: {
+  changeLocal: (identifier: string, status: TaskStatus) => Promise<boolean>;
+  choice: TaskStatusChoice;
+  groupBy: 'status' | 'workflowCategory';
+  task: WorkQueryBoardTask;
+}): Promise<boolean> => {
+  // An exact-state row commits the precise ref through the same CAS write —
+  // the picker's multi-candidate ambiguity never applies to a named state.
+  if (input.choice.state) {
+    return commitWorkQueryBoardMove({
+      column: input.choice.column,
+      groupBy: 'workflowCategory',
+      targetWorkflowStateRefId: input.choice.state.id,
+      task: input.task,
+    });
+  }
+  if (input.choice.workflowCategory) {
+    return commitWorkQueryBoardMove({
+      column: input.choice.column,
+      groupBy: 'workflowCategory',
+      task: input.task,
+    });
+  }
+  if (!input.choice.status) return false;
+  return applyWorkQueryStatusChange({
+    changeLocal: input.changeLocal,
+    groupBy: input.groupBy,
+    status: input.choice.status,
+    task: input.task,
+  });
 };

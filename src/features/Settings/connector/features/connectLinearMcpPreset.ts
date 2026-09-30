@@ -2,11 +2,14 @@ import { getMcpPresetConnectorIdentifier, type McpPresetConnector } from '@orvil
 
 import { ConnectorSourceType } from '@/database/schemas';
 import {
-  type OAuthPopupResult,
-  waitForOAuthPopup,
-} from '@/features/Connectors/CustomConnectorModal/oauthPopup';
+  newOAuthAttempt,
+  type OAuthSessionResult,
+  waitForOAuthSession,
+} from '@/features/Connectors/oauthSession';
 
 interface ConnectorOAuthActions {
+  /** Server-side truth re-check used when the popup's result message is lost. */
+  checkStatus?: (connectorId: string) => Promise<boolean>;
   createConnector: (params: {
     identifier: string;
     mcpConnectionType: 'http';
@@ -17,7 +20,7 @@ interface ConnectorOAuthActions {
   }) => Promise<{ id: string; isNew: boolean }>;
   fetchConnectors: () => Promise<void>;
   openExternalLink?: (url: string) => Promise<void>;
-  startConnectorOAuth: (id: string) => Promise<string>;
+  startConnectorOAuth: (id: string, attempt?: string) => Promise<string>;
 }
 
 /** Called directly from the click handler so the web popup opens before any await. */
@@ -26,7 +29,7 @@ export const connectLinearMcpPreset = async (
   existingConnectorId: string | undefined,
   actions: ConnectorOAuthActions,
 ): Promise<
-  (OAuthPopupResult & { refreshFailed?: boolean }) | { status: 'blocked' | 'external' }
+  (OAuthSessionResult & { refreshFailed?: boolean }) | { status: 'blocked' | 'external' }
 > => {
   const popup = actions.openExternalLink
     ? null
@@ -46,14 +49,22 @@ export const connectLinearMcpPreset = async (
           sourceType: ConnectorSourceType.custom,
         })
       ).id;
-    const authorizationUrl = await actions.startConnectorOAuth(id);
+    const attempt = newOAuthAttempt();
+    const authorizationUrl = await actions.startConnectorOAuth(id, attempt);
     if (actions.openExternalLink) {
       await actions.openExternalLink(authorizationUrl);
       return { status: 'external' };
     }
 
+    const { checkStatus } = actions;
     popup!.location.href = authorizationUrl;
-    const result = await waitForOAuthPopup(popup!, id);
+    const result = await waitForOAuthSession({
+      attempt,
+      checkStatus: checkStatus && (() => checkStatus(id)),
+      connectorId: id,
+      messageType: 'orvilo-connector-oauth',
+      popup: popup!,
+    });
     try {
       await actions.fetchConnectors();
     } catch (error) {

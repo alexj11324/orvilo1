@@ -1,4 +1,3 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
@@ -25,6 +24,7 @@ import {
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { usePermission } from '@/hooks/usePermission';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';

@@ -23,7 +23,7 @@ export interface SessionAuthExpiredEvent {
   /** Why the session is considered expired (log-grade detail). */
   reason: string;
   /** Which transport layer spotted the failure. */
-  source: 'desktop-proxy' | 'trpc';
+  source: 'desktop-proxy' | 'trpc' | 'user-action';
   timestamp: number;
 }
 

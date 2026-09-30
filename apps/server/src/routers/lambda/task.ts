@@ -17,9 +17,14 @@ import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceA
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
-import { TaskModel } from '@/database/models/task';
+import {
+  TaskHandoffRequiredError,
+  TaskModel,
+  TaskRevisionConflictError,
+} from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
+import { TaskReminderModel } from '@/database/models/taskReminder';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
@@ -76,6 +81,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       taskIntegration: new TaskIntegrationService(ctx.serverDB, ctx.userId, wsId),
       taskLifecycle: new TaskLifecycleService(ctx.serverDB, ctx.userId, wsId),
       taskModel: new TaskModel(ctx.serverDB, ctx.userId, wsId),
+      taskReminderModel: new TaskReminderModel(ctx.serverDB, ctx.userId, wsId),
       teamModel: new TeamModel(ctx.serverDB, ctx.userId, wsId ?? ''),
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
       taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, wsId),
@@ -177,7 +183,18 @@ const updateSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
   description: z.string().optional(),
+  /** Issue deadline as `YYYY-MM-DD`; `null` clears it. */
+  dueDate: z.iso.date().nullish(),
   editorData: z.unknown().optional(),
+  /**
+   * Optimistic-concurrency guard for domain-critical mutations (assignee,
+   * status, requirements, policy). When supplied, the write only lands while
+   * `tasks.domain_revision` still equals this value — a stale caller that
+   * missed a concurrent reassignment gets TASK_REVISION_CONFLICT instead of
+   * silently overwriting it. Reassigning a `running` task is rejected
+   * outright (`HANDOFF_REQUIRED`): use `task.handoff`.
+   */
+  expectedDomainRevision: z.number().int().min(1).optional(),
   // 0 clears the interval (disables heartbeat); any positive value must be
   // ≥600s (10 min) to match the UI minimum and prevent sub-minute ticks if an
   // LLM calls setTaskSchedule with a tiny number.
@@ -1298,6 +1315,51 @@ export const taskRouter = router({
     }
   }),
 
+  /**
+   * First-class execution-ownership transfer. Reassigning a `running` task
+   * through `task.update` is rejected with HANDOFF_REQUIRED — the incumbent
+   * agent's dispatch is fenced and confirmed stopped, then the assignee flips
+   * under `expectedDomainRevision` CAS, then the successor's run dispatches
+   * (`cancel_and_restart`). `toAgentId: null` stops the incumbent and parks
+   * the task at 'paused' with no successor.
+   */
+  handoff: taskProcedureWrite
+    .input(
+      z.object({
+        expectedDomainRevision: z.number().int().min(1),
+        /** Optional caller-asserted incumbent — conflicts when the row disagrees. */
+        fromAgentId: z.string().nullish(),
+        strategy: z.enum(['cancel_and_restart']).default('cancel_and_restart'),
+        taskId: z.string().min(1),
+        /** Successor agent, or `null` to stop the incumbent and park the task. */
+        toAgentId: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const result = await ctx.taskService.handoffTask(input);
+        return { data: result, message: 'Task handed off', success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskRevisionConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        if (error instanceof TaskHandoffRequiredError) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'Cannot change the agent assignee of a running task. Transfer execution with task.handoff instead.',
+          });
+        }
+        console.error('[task:handoff]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to hand off task',
+        });
+      }
+    }),
+
   groupList: taskProcedure.input(groupListSchema).query(async ({ input, ctx }) => {
     try {
       const model = ctx.taskModel;
@@ -1870,9 +1932,31 @@ export const taskRouter = router({
   update: taskProcedureWrite
     .input(idInput.merge(updateSchema).extend({ actorAgentId: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
-      const { actorAgentId, afterId, beforeId, id, moveScope, parentTaskId, status, ...data } =
-        input;
+      const {
+        actorAgentId,
+        afterId,
+        beforeId,
+        expectedDomainRevision,
+        id,
+        moveScope,
+        parentTaskId,
+        status,
+        ...data
+      } = input;
       try {
+        // Assignee edits are domain-critical: without a revision CAS a stale
+        // client silently overwrites a concurrent reassignment (lost update).
+        // Every first-party caller resolves `expectedDomainRevision` before
+        // writing; anything else must fetch the task and retry.
+        if (
+          (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
+          expectedDomainRevision === undefined
+        ) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'expectedDomainRevision is required when changing a task assignee',
+          });
+        }
         const model = ctx.taskModel;
         const actor = await resolveActivityActor(ctx, actorAgentId);
         await assertAssigneeAgentBelongsToUser(
@@ -2062,13 +2146,16 @@ export const taskRouter = router({
                 resolved.id,
                 finalUpdateData,
                 actor,
+                { expectedDomainRevision },
               );
               if (!updated) return null;
 
               const result = await taskService.updateStatus({ id: resolved.id, status }, actor);
               return result.task;
             })
-          : await ctx.taskService.updateTaskWithAssigneeLock(resolved.id, finalUpdateData, actor);
+          : await ctx.taskService.updateTaskWithAssigneeLock(resolved.id, finalUpdateData, actor, {
+              expectedDomainRevision,
+            });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         // Only an actual assignee change notifies — re-saving the same assignee
         // stays silent (self-assignment is filtered inside the helper).
@@ -2080,6 +2167,16 @@ export const taskRouter = router({
         if (error instanceof TRPCError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
+        if (error instanceof TaskRevisionConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        if (error instanceof TaskHandoffRequiredError) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'Cannot change the agent assignee of a running task. Transfer execution with task.handoff instead.',
+          });
         }
         console.error('[task:update]', error);
         throw new TRPCError({
@@ -2204,6 +2301,42 @@ export const taskRouter = router({
         });
       }
     }),
+
+  /**
+   * Linear's "Remind me" — a per-user reminder on a task. Read ACL (not the
+   * write gate) is the right floor: a reminder changes only the caller's own
+   * row, never the task, so viewers may arm one for themselves. `remindAt`
+   * `null` clears the caller's reminder.
+   */
+  setReminder: taskProcedure
+    .input(idInput.merge(z.object({ remindAt: z.coerce.date().nullable() })))
+    .mutation(async ({ input, ctx }) => {
+      const resolved = await resolveOrThrow(ctx.taskModel, input.id);
+      const remindAt = input.remindAt ?? null;
+      if (remindAt && remindAt.getTime() <= Date.now()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'remindAt must be in the future',
+        });
+      }
+      if (remindAt === null) {
+        await ctx.taskReminderModel.clearReminder(resolved.id);
+        return { data: { remindAt: null }, message: 'Reminder cleared', success: true };
+      }
+      const row = await ctx.taskReminderModel.setReminder(resolved.id, remindAt);
+      return {
+        data: { remindAt: row.remindAt },
+        message: 'Reminder set',
+        success: true,
+      };
+    }),
+
+  /** The caller's own reminder on a task — feeds the menu/rail checked state. */
+  getReminder: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
+    const resolved = await resolveOrThrow(ctx.taskModel, input.id);
+    const row = await ctx.taskReminderModel.getReminder(resolved.id);
+    return { data: row ? { remindAt: row.remindAt } : null, success: true };
+  }),
 
   acquireTaskLock: taskProcedureWrite.input(idInput).mutation(async ({ ctx, input }) => {
     if (!ctx.workspaceId) return { expiresAt: null, holderId: null, lockedByOther: false };

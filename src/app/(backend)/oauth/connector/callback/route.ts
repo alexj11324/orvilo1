@@ -44,6 +44,8 @@ const jsonForScript = (value: unknown): string =>
 
 /** Auto-closing popup page that reports the result back to the opener window. */
 const renderResultPage = (result: {
+  /** Attempt nonce from the opener; echoes so the client can correlate the result to one authorization attempt. */
+  attempt?: string;
   connectorId?: string;
   error?: string;
   success: boolean;
@@ -88,11 +90,15 @@ export const GET = async (req: NextRequest) => {
     return renderResultPage({ error: 'missing_code_or_state', success: false });
   }
 
+  // Echo the attempt + connector identity on every result after the state is
+  // known so the opener's authorization session can match them (errors included).
+  let identity: { attempt?: string; connectorId?: string } = {};
   try {
     const payload = await consumeConnectorOAuthState(state);
     if (!payload) {
       return renderResultPage({ error: 'invalid_or_expired_state', success: false });
     }
+    identity = { attempt: payload.attempt, connectorId: payload.connectorId };
 
     const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
     const connectorModel = new ConnectorModel(
@@ -104,7 +110,7 @@ export const GET = async (req: NextRequest) => {
 
     const connector = await connectorModel.findById(payload.connectorId);
     if (!connector) {
-      return renderResultPage({ error: 'connector_not_found', success: false });
+      return renderResultPage({ ...identity, error: 'connector_not_found', success: false });
     }
 
     // State is short-lived, but the initiator's workspace role can change while
@@ -122,17 +128,17 @@ export const GET = async (req: NextRequest) => {
       return member.role === 'owner' || connector.userId === payload.orviloUserId;
     };
     if (!(await canManageConnector())) {
-      return renderResultPage({ error: 'workspace_access_denied', success: false });
+      return renderResultPage({ ...identity, error: 'workspace_access_denied', success: false });
     }
 
     const oidc = payload.oidcConfig;
     if (!oidc.clientId || !oidc.redirectUri) {
-      return renderResultPage({ error: 'connector_missing_client', success: false });
+      return renderResultPage({ ...identity, error: 'connector_missing_client', success: false });
     }
 
     const metadata = await discoverAuthorizationServerMetadata(payload.authorizationServerUrl);
     if (!metadata) {
-      return renderResultPage({ error: 'metadata_discovery_failed', success: false });
+      return renderResultPage({ ...identity, error: 'metadata_discovery_failed', success: false });
     }
 
     const tokens = await exchangeConnectorCode({
@@ -156,7 +162,7 @@ export const GET = async (req: NextRequest) => {
     // Re-check after the provider exchange so a removal or downgrade that
     // happened while the request was off-server cannot persist a token.
     if (!(await canManageConnector())) {
-      return renderResultPage({ error: 'workspace_access_denied', success: false });
+      return renderResultPage({ ...identity, error: 'workspace_access_denied', success: false });
     }
 
     // Re-authorization (or first authorization) rotates the grant epoch —
@@ -193,10 +199,10 @@ export const GET = async (req: NextRequest) => {
       log('post-OAuth tool sync failed for connector=%s: %O', payload.connectorId, err);
     }
 
-    return renderResultPage({ connectorId: payload.connectorId, success: true, synced });
+    return renderResultPage({ ...identity, success: true, synced });
   } catch (err) {
     log('connector OAuth callback error: %O', err);
     const message = err instanceof Error ? err.message : 'internal_error';
-    return renderResultPage({ error: message, success: false });
+    return renderResultPage({ ...identity, error: message, success: false });
   }
 };

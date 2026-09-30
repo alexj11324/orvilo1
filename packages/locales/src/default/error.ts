@@ -1,4 +1,9 @@
 export default {
+  'asyncState.signIn': 'Sign in again',
+  'asyncState.signInDesc':
+    'Your session could not authenticate this request. Sign in again to continue on this page.',
+  'asyncState.signInRequired': 'Sign-in required',
+
   'asyncState.desc': 'Something went wrong while loading. Please try again.',
   'asyncState.metricLabel': 'Failed to load',
   'asyncState.title': 'Failed to load',

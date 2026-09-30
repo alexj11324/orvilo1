@@ -1,14 +1,17 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
-import { getMcpPresetConnectorIdentifier, type McpPresetConnector } from '@orvilo/const';
+import {
+  getMcpPresetConnectorIdentifier,
+  MCP_PRESET_CONNECTORS,
+  type McpPresetConnector,
+} from '@orvilo/const';
 import { type OrviloToolCustomPlugin } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Grid2x2Plus } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { CustomConnectorModal } from '@/features/Connectors';
 
 import { type ConnectorDetailType } from './ConnectorDetail';
@@ -74,11 +77,21 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
     (identifier: string) => onSelect(identifier, 'mcp-connector'),
     [onSelect],
   );
+  const openPresetForm = useCallback((preset: McpPresetConnector) => {
+    setPresetPlugin(presetToPluginValue(preset));
+    setShowAddConnector(true);
+  }, []);
+  const githubPreset = MCP_PRESET_CONNECTORS.find((preset) => preset.id === 'github');
   const {
+    capability: githubCapability,
     connect: connectGitHub,
     connecting: githubConnecting,
     grantConnected: githubGrantConnected,
-  } = useGitHubMcpConnect(selectGitHub);
+    timedOut: githubTimedOut,
+  } = useGitHubMcpConnect(
+    selectGitHub,
+    githubPreset ? () => openPresetForm(githubPreset) : undefined,
+  );
 
   const closeModal = () => {
     setShowAddConnector(false);
@@ -89,34 +102,43 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, selectedIdentifier }) => {
     <>
       <div className={styles.root}>
         <div className={styles.header}>
-          <Text strong style={{ fontSize: 14 }}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>
             {t('skillView.connectors', 'Connectors')}
-          </Text>
+          </span>
 
-          <Flexbox horizontal gap={6} onClick={(e) => e.stopPropagation()}>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', gap: 6 }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Single action: add a custom OAuth connector. */}
             <Button
-              icon={Grid2x2Plus}
-              size="small"
+              size="sm"
+              variant="outline"
               title={t('connector.add.title', {
                 defaultValue: 'Add Custom Connector',
                 ns: 'tool',
               })}
               onClick={() => setShowAddConnector(true)}
-            />
-          </Flexbox>
+            >
+              {createElement(Grid2x2Plus)}
+            </Button>
+          </div>
         </div>
 
         <div className={styles.body}>
           <ConnectorList
             githubConnecting={githubConnecting}
             githubGrantConnected={githubGrantConnected}
+            githubTimedOut={githubTimedOut}
             selectedIdentifier={selectedIdentifier}
+            githubCapability={
+              githubCapability === 'app_oauth_configured' ? undefined : githubCapability
+            }
             onConnectGitHub={() => void connectGitHub()}
             onSelect={onSelect}
             onAddPreset={(preset) => {
-              setPresetPlugin(presetToPluginValue(preset));
-              setShowAddConnector(true);
+              openPresetForm(preset);
             }}
           />
         </div>

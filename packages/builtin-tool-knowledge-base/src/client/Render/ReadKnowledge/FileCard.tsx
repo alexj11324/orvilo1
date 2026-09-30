@@ -1,10 +1,11 @@
 'use client';
 
-import { Flexbox, MaterialFileTypeIcon } from '@lobehub/ui';
-import { Alert, Text } from '@lobehub/ui/base-ui';
-import { Descriptions } from 'antd';
-import { createStaticStyles } from 'antd-style';
+import { MaterialFileTypeIcon } from '@lobehub/ui';
+import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import type { FileContentDetail } from '../../../types';
 
@@ -70,9 +71,9 @@ interface FileCardProps {
 const FileCard = memo<FileCardProps>(({ file }) => {
   if (file.error) {
     return (
-      <Flexbox className={styles.container} gap={8}>
-        <Flexbox className={styles.cardBody} gap={8}>
-          <Flexbox horizontal align={'center'} className={styles.titleRow} gap={8}>
+      <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className={cx('flex flex-col gap-2', styles.cardBody)}>
+          <div className={cx('flex flex-row items-center gap-2', styles.titleRow)}>
             <MaterialFileTypeIcon
               filename={file.filename}
               size={16}
@@ -80,56 +81,54 @@ const FileCard = memo<FileCardProps>(({ file }) => {
               variant={'raw'}
             />
             <div className={styles.title}>{file.filename}</div>
-          </Flexbox>
-        </Flexbox>
-        <div className={styles.footer}>
-          <Alert message={file.error} type={'error'} variant={'borderless'} />
+          </div>
         </div>
-      </Flexbox>
+        <div className={styles.footer}>
+          <Alert variant="destructive">
+            <AlertDescription>{file.error}</AlertDescription>
+          </Alert>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.container} justify={'space-between'}>
-      <Flexbox className={styles.cardBody} gap={8}>
-        <Flexbox horizontal align={'center'} className={styles.titleRow} gap={8}>
+    <div className={cx('flex flex-col justify-between', styles.container)}>
+      <div className={cx('flex flex-col gap-2', styles.cardBody)}>
+        <div className={cx('flex flex-row items-center gap-2', styles.titleRow)}>
           <MaterialFileTypeIcon filename={file.filename} size={16} type={'file'} variant={'raw'} />
           <div className={styles.title}>{file.filename}</div>
-        </Flexbox>
+        </div>
         {file.preview && (
-          <Text
-            code
-            as={'span'}
-            className={styles.preview}
-            ellipsis={{ rows: 4 }}
-            fontSize={12}
-            type={'secondary'}
+          <span
+            className={cn(
+              'font-mono',
+              'rounded',
+              'bg-muted',
+              'px-1',
+              'line-clamp-4',
+              'text-[12px]',
+              'text-muted-foreground',
+              styles.preview,
+            )}
           >
             {file.preview}...
-          </Text>
+          </span>
         )}
-      </Flexbox>
-      <div className={styles.footer}>
-        <Descriptions
-          column={2}
-          size="small"
-          classNames={{
-            content: styles.footerText,
-            label: styles.footerText,
-          }}
-          items={[
-            {
-              children: file.totalCharCount?.toLocaleString(),
-              label: 'Chars',
-            },
-            {
-              children: file.totalLineCount?.toLocaleString(),
-              label: 'Lines',
-            },
-          ]}
-        />
       </div>
-    </Flexbox>
+      <div className={styles.footer}>
+        <div className="flex gap-6">
+          <div className={cx('flex gap-1', styles.footerText)}>
+            <span>Chars</span>
+            <span>{file.totalCharCount?.toLocaleString()}</span>
+          </div>
+          <div className={cx('flex gap-1', styles.footerText)}>
+            <span>Lines</span>
+            <span>{file.totalLineCount?.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 });
 

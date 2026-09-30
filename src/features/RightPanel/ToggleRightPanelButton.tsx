@@ -1,12 +1,13 @@
 'use client';
 
-import { ActionIcon, type ActionIconProps } from '@lobehub/ui/base-ui';
 import { HotkeyEnum } from '@orvilo/const/hotkeys';
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { type ActionIconProps } from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';

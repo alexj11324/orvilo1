@@ -1,13 +1,13 @@
 'use client';
-
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form, HotkeyInput, Icon } from '@lobehub/ui';
-import { Skeleton, toast } from '@lobehub/ui/base-ui';
+import { HotkeyInput } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { Loader2Icon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DESKTOP_HOTKEYS_REGISTRATION } from '@/const/desktopGlobalShortcuts';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -15,6 +15,7 @@ import { useElectronStore } from '@/store/electron';
 import { desktopHotkeysSelectors } from '@/store/electron/selectors';
 import { type DesktopHotkeyItem } from '@/types/hotkey';
 
+import { desktopHotkeyDisplay } from './desktopHotkeyDisplay';
 import { hotkeyFormStyles } from './styles';
 
 const HotkeySetting = memo(() => {
@@ -33,7 +34,14 @@ const HotkeySetting = memo(() => {
 
   const [loading, setLoading] = useState(false);
 
-  if (!isHotkeysInit) return <Skeleton.Text rows={5} />;
+  if (!isHotkeysInit)
+    return (
+      <div aria-busy="true" className="flex flex-col gap-3">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton className="h-4 w-full" key={index} />
+        ))}
+      </div>
+    );
 
   const updateHotkey = async (id: DesktopHotkeyItem['id'], value: string) => {
     setLoading(true);
@@ -60,10 +68,13 @@ const HotkeySetting = memo(() => {
         placeholder={t('hotkey.record')}
         resetValue={item.keys}
         texts={{ clear: t('hotkey.clearBinding') }}
-        value={hotkeys[item.id]}
+        value={desktopHotkeyDisplay(hotkeys[item.id] ?? '')}
         onChange={(value) => void updateHotkey(item.id, value)}
       />
     ),
+
+    // Named Form items inject their own value, so normalize that binding too.
+    getValueProps: (value: string) => ({ value: desktopHotkeyDisplay(value ?? '') }),
 
     label: t(`desktop.${item.id}.title`, { ns: 'hotkey' }),
     name: item.id,
@@ -71,7 +82,9 @@ const HotkeySetting = memo(() => {
 
   const desktop: FormGroupItemType = {
     children: DESKTOP_HOTKEYS_REGISTRATION.map((item) => mapHotkeyItem(item)),
-    extra: loading && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />,
+    extra:
+      loading &&
+      createElement(Loader2Icon, { size: 16, style: { opacity: 0.5 }, className: 'animate-spin' }),
     title: (
       <SettingsSearchAnchor id={'hotkey-desktop'}>{t('hotkey.group.desktop')}</SettingsSearchAnchor>
     ),

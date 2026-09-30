@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type {
   TaskTemplate,
   TaskTemplateConnector,
@@ -11,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { toast } from '@/components/toast';
 import { taskTemplateKeys } from '@/libs/swr/keys';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
 import { taskTemplateService } from '@/services/taskTemplate';

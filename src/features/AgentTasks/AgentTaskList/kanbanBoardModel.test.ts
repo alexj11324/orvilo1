@@ -1,12 +1,17 @@
+import type { TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initialState';
 
+import { kanbanColumnPagingAction } from './kanbanBoardModel';
 import {
   buildKanbanColumnMap,
   buildKanbanColumns,
   buildKanbanGroupQuery,
   canDropTaskIntoKanbanColumn,
+  COLUMN_I18N_KEYS,
+  COLUMN_STATUS_VISUAL,
   computeKanbanPosition,
   effectiveTaskPosition,
   externalVisibleKanbanColumns,
@@ -15,6 +20,7 @@ import {
   getKanbanColumnHeaderVariant,
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
+  issueWorkflowStateChoices,
   KANBAN_STATUS_COLUMN_KEY,
   KANBAN_WORKFLOW_COLUMN_KEY,
   kanbanBoardCapabilities,
@@ -32,6 +38,9 @@ import {
   STATUS_KANBAN_COLUMNS,
   taskKanbanColumnKey,
   taskMatchesKanbanColumn,
+  taskStatusBoardColumnKey,
+  taskStatusChoiceIsCurrent,
+  taskStatusChoices,
 } from './kanbanBoardModel';
 
 const task = (
@@ -462,6 +471,69 @@ describe('kanbanBoardModel', () => {
         excludeStatuses,
       });
     });
+
+    // Three-state projectId contract — `undefined` = unscoped, `null` = the
+    // "No project" chip, a string = that project — across every board scope.
+    // `null` must reach the query (the fetch keys a `:no-project` list for
+    // it); a truthiness test would silently widen it to the unscoped query.
+    it.each<{
+      expected: ReturnType<typeof buildKanbanGroupQuery>;
+      input: Parameters<typeof buildKanbanGroupQuery>[0];
+      name: string;
+    }>([
+      {
+        expected: { allAgents: true, automated: false, groupBy: 'status' },
+        input: { groupBy: 'status' },
+        name: 'global board, no project filter',
+      },
+      {
+        expected: { automated: false, groupBy: 'status', projectId: null },
+        input: { groupBy: 'status', projectId: null },
+        name: 'global board keeps the No-project chip',
+      },
+      {
+        expected: { automated: false, groupBy: 'status', projectId: 'proj_1' },
+        input: { groupBy: 'status', projectId: 'proj_1' },
+        name: 'project board',
+      },
+      {
+        expected: { agentId: 'agt_1', automated: false, groupBy: 'status' },
+        input: { agentId: 'agt_1', groupBy: 'status' },
+        name: 'agent board, no project filter',
+      },
+      {
+        // The project filter wins over agentId — the same precedence
+        // `useFetchTaskGroupList` applies when deriving its list key.
+        expected: { automated: false, groupBy: 'status', projectId: null },
+        input: { agentId: 'agt_1', groupBy: 'status', projectId: null },
+        name: 'agent board keeps the No-project chip',
+      },
+      {
+        expected: { automated: false, groupBy: 'status', projectId: 'proj_1' },
+        input: { agentId: 'agt_1', groupBy: 'status', projectId: 'proj_1' },
+        name: 'project filter wins over agent board',
+      },
+      {
+        expected: { groupBy: 'status', scope: 'assigned' },
+        input: { groupBy: 'status', myTaskScope: 'assigned' },
+        name: 'My tasks board, no project filter',
+      },
+      {
+        expected: { groupBy: 'status', projectId: null, scope: 'delegated' },
+        input: { groupBy: 'status', myTaskScope: 'delegated', projectId: null },
+        name: 'My tasks board keeps the No-project chip',
+      },
+      {
+        expected: { groupBy: 'status', projectId: 'proj_1', scope: 'created' },
+        input: { groupBy: 'status', myTaskScope: 'created', projectId: 'proj_1' },
+        name: 'My tasks board composes scope and project',
+      },
+    ])('builds the scoped query for $name', ({ expected, input }) => {
+      expect(buildKanbanGroupQuery(input)).toEqual({
+        excludeStatuses: undefined,
+        ...expected,
+      });
+    });
   });
 
   describe('resolveKanbanDragTask', () => {
@@ -696,5 +768,184 @@ describe('externalVisibleKanbanColumns', () => {
     ]);
     expect(visible.map((column) => column.key)).toEqual(columns.map((column) => column.key));
     expect(externalVisibleKanbanColumns(columns, [])).toEqual(columns);
+  });
+});
+
+/**
+ * The status pickers (task detail rail, row glyphs, card context menus) read
+ * the board's own columns through `taskStatusChoices` — the hardcoded
+ * four-status list they used to carry lost triage and disagreed with the
+ * board's glyphs. These pins keep the menus 1:1 with the board: same
+ * options, order, labels and icons, and the same reachability rule a drop
+ * obeys.
+ */
+describe('board-driven status choices', () => {
+  it('mirrors the board columns 1:1 — same options, order, labels and glyphs', () => {
+    const choices = taskStatusChoices({ workflowStateId: undefined });
+    expect(choices.map((choice) => choice.column.key)).toEqual(
+      STATUS_KANBAN_COLUMNS.map((column) => column.key),
+    );
+    // triage leads — the column the old hardcoded list missed entirely.
+    expect(choices[0].column.key).toBe('triage');
+    for (const choice of choices) {
+      expect(COLUMN_I18N_KEYS[choice.column.key]).toBeTruthy();
+      // The glyph a menu paints is the one the board header paints.
+      expect(WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog']).toBe(
+        COLUMN_STATUS_VISUAL[choice.column.key],
+      );
+    }
+  });
+
+  it('keeps workflow-only columns unreachable for an unlinked task — like a drop', () => {
+    const choices = taskStatusChoices({ workflowStateId: undefined });
+    const pickable = choices.filter((choice) => choice.status || choice.workflowCategory);
+    expect(pickable.map((choice) => choice.column.key)).toEqual([
+      'backlog',
+      'needsInput',
+      'done',
+      'canceled',
+    ]);
+    expect(pickable.every((choice) => choice.status && !choice.workflowCategory)).toBe(true);
+    // triage, todo and running are workflow categories the board could not
+    // take either — they render disabled, never hidden.
+    const blocked = choices.filter((choice) => !choice.status && !choice.workflowCategory);
+    expect(blocked.map((choice) => choice.column.key)).toEqual(['triage', 'todo', 'running']);
+  });
+
+  it('makes every board column pickable once the task has a workflow state', () => {
+    const choices = taskStatusChoices({ workflowStateId: 'ls-1' });
+    expect(choices.every((choice) => Boolean(choice.workflowCategory))).toBe(true);
+    expect(choices[0]).toMatchObject({
+      column: { key: 'triage' },
+      workflowCategory: 'triage',
+    });
+  });
+
+  it('check-marks the board column the task sits in', () => {
+    expect(taskStatusBoardColumnKey({ status: 'paused' })).toBe('needsInput');
+    expect(taskStatusBoardColumnKey({ status: 'failed' })).toBe('needsInput');
+    expect(taskStatusBoardColumnKey({ status: 'running' })).toBe('running');
+    expect(
+      taskStatusBoardColumnKey({
+        status: 'running',
+        workflowCategory: 'triage',
+        workflowStateId: 'ls-1',
+      }),
+    ).toBe('triage');
+    expect(
+      taskStatusBoardColumnKey({
+        status: 'paused',
+        workflowCategory: 'in_review',
+        workflowStateId: 'ls-1',
+      }),
+    ).toBe('needsInput');
+  });
+});
+
+describe('issueWorkflowStateChoices', () => {
+  const state = (
+    id: string,
+    category: TaskWorkflowCategory,
+    overrides: Partial<TeamWorkflowStateItem> = {},
+  ): TeamWorkflowStateItem => ({
+    category,
+    id,
+    name: `State ${id}`,
+    position: 0,
+    remoteStateId: null,
+    teamId: 'team-1',
+    workspaceId: 'ws-1',
+    ...overrides,
+  });
+
+  it('orders rows by the board category order then catalog position', () => {
+    const choices = issueWorkflowStateChoices([
+      state('todo-b', 'todo', { position: 5 }),
+      state('canceled-a', 'canceled'),
+      state('todo-a', 'todo', { position: 1 }),
+      state('triage-a', 'triage'),
+    ]);
+    expect(choices.map((choice) => choice.state?.id)).toEqual([
+      'triage-a',
+      'todo-a',
+      'todo-b',
+      'canceled-a',
+    ]);
+  });
+
+  it('carries the shared model — ref id and category — on every row', () => {
+    const choices = issueWorkflowStateChoices([state('tw-1', 'in_progress')]);
+    expect(choices).toHaveLength(1);
+    expect(choices[0].state?.id).toBe('tw-1');
+    expect(choices[0].workflowCategory).toBe('in_progress');
+    // The wf: column resolves the same moveBoard targetKey a category drop would.
+    expect(choices[0].column.targetWorkflowCategory).toBe('in_progress');
+    expect(choices[0].status).toBeUndefined();
+  });
+
+  it('keeps two custom states in one category individually pickable', () => {
+    const choices = issueWorkflowStateChoices([
+      state('doing', 'in_progress'),
+      state('paused-waiting', 'in_progress'),
+    ]);
+    expect(choices).toHaveLength(2);
+    expect(new Set(choices.map((choice) => choice.state?.id)).size).toBe(2);
+    expect(choices.every((choice) => choice.workflowCategory === 'in_progress')).toBe(true);
+  });
+});
+
+describe('taskStatusChoiceIsCurrent', () => {
+  const state = (
+    id: string,
+    overrides: Partial<TeamWorkflowStateItem> = {},
+  ): TeamWorkflowStateItem => ({
+    category: 'todo',
+    id,
+    name: `State ${id}`,
+    position: 0,
+    remoteStateId: null,
+    teamId: 'team-1',
+    workspaceId: 'ws-1',
+    ...overrides,
+  });
+  const columnChoice = issueWorkflowStateChoices([state('a')])[0];
+
+  it('matches a state row by internal ref or provider id', () => {
+    const choice = { ...columnChoice, state: state('tws_1', { remoteStateId: 'ls-1' }) };
+    expect(taskStatusChoiceIsCurrent({ workflowStateRefId: 'tws_1' }, choice, 'other')).toBe(true);
+    expect(taskStatusChoiceIsCurrent({ workflowStateId: 'ls-1' }, choice, 'other')).toBe(true);
+    expect(
+      taskStatusChoiceIsCurrent(
+        { workflowStateId: 'ls-2', workflowStateRefId: 'tws_2' },
+        choice,
+        'other',
+      ),
+    ).toBe(false);
+  });
+
+  it('never treats a sibling state in the same category as current', () => {
+    const current = { ...columnChoice, state: state('tws_1') };
+    const sibling = { ...columnChoice, state: state('tws_2') };
+    const task = { workflowStateRefId: 'tws_1' };
+    expect(taskStatusChoiceIsCurrent(task, current, 'todo')).toBe(true);
+    expect(taskStatusChoiceIsCurrent(task, sibling, 'todo')).toBe(false);
+  });
+
+  it('falls back to the column bucket for category rows', () => {
+    const choice = taskStatusChoices({})[0];
+    expect(choice.state).toBeUndefined();
+    expect(taskStatusChoiceIsCurrent({}, choice, choice.column.key)).toBe(true);
+    expect(taskStatusChoiceIsCurrent({}, choice, 'elsewhere')).toBe(false);
+  });
+});
+
+describe('column paging recovery', () => {
+  it('offers the list when an internal column reaches its server limit', () => {
+    expect(kanbanColumnPagingAction({ atLimit: true, external: false })).toBe('viewAll');
+    expect(kanbanColumnPagingAction({ atLimit: false, external: false })).toBe('loadMore');
+  });
+
+  it('does not cap externally paginated cursor boards', () => {
+    expect(kanbanColumnPagingAction({ atLimit: true, external: true })).toBe('loadMore');
   });
 });

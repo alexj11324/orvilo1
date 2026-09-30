@@ -1,0 +1,56 @@
+PR #285 sanitized release-gate results
+======================================
+
+Source revisions
+----------------
+Migration, ACL, tRPC, search: 29edea027c8ffd6e2ff56785ee12b122cbf5c390
+Creator-deletion transfer:    0e728d3a5e026db5f527fdb3536dde61abf7f048
+Electron deletion refresh:    db71f131b27d19b4859f23db4501c32435df221f
+
+Migration 0192 -> 0193 (isolated PostgreSQL 17)
+------------------------------------------------
+Seeded documents:             100000
+Approximate table footprint:  33.3 MiB
+First migration duration:     146 ms
+Second migrator duration:     38 ms (no-op)
+Documents after migration:    100000
+New indexes valid and ready:  6/6
+Audited constraints valid:    4/4
+0193 journal entries:         1
+
+Authorization and search integration
+------------------------------------
+document.teamVisibility.workspace.test.ts:  9 passed
+teamResource.integration.test.ts:           5 passed
+teamDocumentAccess ES hydration case:       1 passed
+
+The ES hydration case used deterministic candidate hits and real PostgreSQL
+rows/membership for live authorization filtering. It did not connect to an
+Elasticsearch cluster. The active production backend is pg_search; production
+has no Elasticsearch connection or sync configuration.
+
+Creator-account deletion regression at db71f131b
+-------------------------------------------------
+src/models/__tests__/user.test.ts:  75 passed
+Scoped repository check:             2 files, lint clean, 75 tests passed
+git diff --check:                     clean
+
+Verified retained state after deleting a non-owner team Page creator:
+- document transferred to the workspace primary owner
+- document history transferred to the workspace primary owner
+- document-backed Work transferred to the workspace primary owner
+- WorkVersion retained under the surviving Work
+
+Electron lifecycle at db71f131b
+--------------------------------
+- edited Page title and body
+- reload and reopen preserved both values
+- deleted Page through the Page menu and confirmation dialog
+- Team Resources row disappeared without page reload
+- empty state rendered and success toast appeared
+
+Independent final review
+------------------------
+PASS at db71f131b. The reviewer confirmed dependency-ordered transfer of Page
+history, Work, and document before creator deletion; no residual P0/P1/P2 issue
+was found in the creator-deletion lifecycle.

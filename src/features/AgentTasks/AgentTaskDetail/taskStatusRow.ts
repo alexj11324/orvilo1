@@ -21,13 +21,3 @@ export const resolveTaskStatusRow = (
   workflowCategory && workflowStateId
     ? { category: workflowCategory, kind: 'workflow' }
     : { kind: 'execution', status: status ?? 'backlog' };
-
-/** The board's workflow columns, in order. Triage is an intake queue, not a Status choice. */
-export const WORKFLOW_STATUS_CHOICES: readonly TaskWorkflowCategory[] = [
-  'backlog',
-  'todo',
-  'in_progress',
-  'in_review',
-  'done',
-  'canceled',
-];

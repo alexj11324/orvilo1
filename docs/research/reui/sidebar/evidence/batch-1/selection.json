@@ -1,0 +1,64 @@
+{
+  "cases": [
+    {
+      "theme": "light",
+      "passedRealClicks": 8,
+      "selectedAfterControls": 0,
+      "selectedScreenshotCount": 1,
+      "rail": {
+        "x": 234,
+        "y": 385,
+        "width": 16,
+        "height": 48,
+        "top": 385,
+        "right": 250,
+        "bottom": 433,
+        "left": 234
+      },
+      "rootHitGap": 9
+    },
+    {
+      "theme": "dark",
+      "passedRealClicks": 8,
+      "selectedAfterControls": 0,
+      "selectedScreenshotCount": 1,
+      "rail": {
+        "x": 234,
+        "y": 385,
+        "width": 16,
+        "height": 48,
+        "top": 385,
+        "right": 250,
+        "bottom": 433,
+        "left": 234
+      },
+      "rootHitGap": 9
+    }
+  ],
+  "component": "WorkQueryResults",
+  "final": {
+    "route": "app://renderer/agent-testing/my-issues",
+    "theme": "light",
+    "selectedCount": 0,
+    "rows": 6
+  },
+  "geometry": "Default ReUI visual16x16; actual pseudo hit38x30 inside48px gutter; root hit-background gap9px; hit-priority gap21px.",
+  "modifierSelection": {
+    "metaToggle": 3,
+    "shiftRange": 5,
+    "routeUnchanged": true
+  },
+  "phase": "FUNCTION_DEFAULT_UI",
+  "quality": {
+    "lint": "passed",
+    "tests": "7 files / 110 passed",
+    "independentReview": "GPT-6.1 Sol Medium: no concrete introduced defects"
+  },
+  "runtimeScope": "Populated list selection, midpoint collision, prioritymenu, groupcollapse/reopen, create dialog/cancel, subscribe/unsubscribe, tooltip, light/dark. No empty/loading/error or loadmore fixture available in this runtime.",
+  "sourceHashes": {
+    "src/features/MyWork/WorkQueryResults.tsx": "1206aed190a3e73c263b9e6a68e13b923da4860f37238512ca21dd23b0853f44",
+    "src/features/ReUIShell/AppSidebar.tsx": "5e4bce3adb949d3546de8ffcc48f14ddc546aed0e6270853cc8c157e5fe48e2a",
+    "src/components/ui/checkbox.tsx": "a7376937985ee3dd697c1faed5aea5ff18adb570eb142db89b1646482f40edaa",
+    "src/components/ui/button.tsx": "276c06cd6b948909f9e6b55b77e355c26e834d0307ea1a52a1f38e222c3f388d"
+  }
+}

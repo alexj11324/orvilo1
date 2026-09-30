@@ -1,8 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskAcceptance from './TaskAcceptance';
@@ -11,6 +9,7 @@ import TaskArtifacts from './TaskArtifacts';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import TaskDetailRunPauseAction from './TaskDetailRunPauseAction';
+import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
 import TaskInstruction from './TaskInstruction';
 import TaskParentBar from './TaskParentBar';
@@ -22,27 +21,27 @@ import TaskSubtasks from './TaskSubtasks';
 
 /**
  * The scrollable body sections of a task detail, shared by the full-page
- * `/task/[tid]` route and the chat-side Portal. All children read the active
- * task from the task store, so the host is responsible for setting
- * `activeTaskId` (e.g. via `setActiveTaskId`) before rendering this.
+ * `/task/[tid]` route and the chat-side Portal. Children resolve their task
+ * through `TaskDetailScope` — the host binds a taskId (or, outside a scope,
+ * reads fall back to the store's `activeTaskId`).
  */
 const TaskDetailSections = memo(() => {
-  const taskId = useTaskStore(taskDetailSelectors.activeTaskDatabaseId);
+  const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
 
   return (
     <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
       <div className={styles.root}>
         <div data-task-detail-header className={styles.header}>
-          <Flexbox className={styles.main} gap={12}>
+          <div className={`flex flex-col gap-3 ${styles.main}`}>
             {/* Reference order: the title owns the top line, then the
                 "Sub-issue of" parent bar, then the run/assignee controls. */}
             <TaskDetailTitleInput />
             <TaskParentBar />
-            <Flexbox horizontal align={'center'} gap={8} style={{ maxWidth: '100%' }} wrap={'wrap'}>
+            <div className="flex items-center gap-2 flex-wrap" style={{ maxWidth: '100%' }}>
               <TaskDetailRunPauseAction />
               <TaskDetailAssignee />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
           <div data-task-detail-side className={styles.side}>
             {/* Rail, top to bottom, matching the reference: round quick
                 actions, then the labeled Properties / Project / Related
@@ -56,13 +55,13 @@ const TaskDetailSections = memo(() => {
               the wide layout bounds it to the left track beside the rail —
               matching the reference, where body text never runs under the
               properties column. */}
-          <Flexbox className={styles.body} gap={24}>
+          <div className={`flex flex-col gap-6 ${styles.body}`}>
             <TaskInstruction />
             <TaskAcceptance />
             <TaskSubtasks />
             <TaskArtifacts />
             <TaskActivities />
-          </Flexbox>
+          </div>
         </div>
       </div>
     </LinearTaskSyncProvider>

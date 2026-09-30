@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { resolveSession, complete } = vi.hoisted(() => ({
+const { resolveSession, complete, peekState } = vi.hoisted(() => ({
   complete: vi.fn(),
+  peekState: vi.fn().mockResolvedValue(null),
   resolveSession: vi.fn(),
 }));
 
@@ -11,7 +12,10 @@ vi.mock('@/server/services/auth/session', () => ({
 }));
 vi.mock('@/database/server', () => ({ serverDB: {} }));
 vi.mock('@/envs/app', () => ({ appEnv: { APP_URL: 'https://orvilo.test' } }));
-vi.mock('@/server/services/githubOAuth', () => ({ completeGitHubOAuth: complete }));
+vi.mock('@/server/services/githubOAuth', () => ({
+  completeGitHubOAuth: complete,
+  peekState,
+}));
 
 const { GET } = await import('./route');
 const callback = () =>

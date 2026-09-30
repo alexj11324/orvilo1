@@ -7,6 +7,8 @@ const stateKey = (state: string): string => `${KEY_PREFIX}${state}`;
 
 export interface LinearOAuthStatePayload {
   actor: 'app';
+  /** Client-minted attempt nonce echoed in the callback postMessage for correlation. */
+  attempt?: string;
   clientId: string;
   codeVerifier: string;
   lobeUserId: string;

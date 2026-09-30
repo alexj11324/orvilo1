@@ -23,6 +23,7 @@ import { isNotNull, isNull, sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   foreignKey,
   index,
@@ -180,6 +181,14 @@ export const tasks = pgTable(
      */
     position: doublePrecision('position'),
 
+    /**
+     * Issue deadline as a calendar date (`YYYY-MM-DD`), matching Linear's
+     * dueDate. NULL = no due date. Calendar-date rather than timestamptz:
+     * the picker offers whole days only, and a date is rendered against the
+     * viewer's locale instead of an instant.
+     */
+    dueDate: date('due_date', { mode: 'string' }),
+
     // Automation mode (mutually exclusive with each other; null = no automation)
     automationMode: text('automation_mode').$type<'heartbeat' | 'schedule'>(),
 
@@ -309,6 +318,13 @@ export const taskDispatches = pgTable(
     leaseOwner: text('lease_owner'),
     leaseExpiresAt: timestamptz('lease_expires_at'),
     waitingReason: text('waiting_reason'),
+    // Bounded cancellation bookkeeping (requestStop → sweep): attempts is
+    // incremented per claimed interrupt; the sweep abandons the dispatch —
+    // freeing the one-active-dispatch slot — once attempts or age pass the
+    // ceiling so a wedged runtime cannot pin the task forever.
+    cancelAttempts: integer('cancel_attempts').notNull().default(0),
+    cancelRequestedAt: timestamptz('cancel_requested_at'),
+    lastCancelError: text('last_cancel_error'),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
     ...timestamps,
   },

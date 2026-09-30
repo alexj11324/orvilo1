@@ -1,16 +1,6 @@
 'use client';
-
-import { Flexbox, Icon } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  Popover,
-  Segmented,
-  Select,
-  Switch,
-  Tooltip,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   ArrowDownWideNarrowIcon,
   ArrowUpNarrowWideIcon,
@@ -20,8 +10,21 @@ import {
   SquareKanbanIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import {
   defaultDirectionForOrdering,
@@ -33,7 +36,6 @@ import {
   PROJECT_LIST_PROPERTIES,
   type ProjectListClosedWindow,
   type ProjectListDisplayOptions,
-  type ProjectListOrdering,
   TIMELINE_PROJECT_LIST_PROPERTIES,
 } from './displayOptions';
 
@@ -97,12 +99,12 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (
-  <Flexbox horizontal align="center" gap={8}>
+  <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
     <span className={styles.optionLabel}>{label}</span>
-    <Flexbox horizontal align="center" flex={1} gap={4} style={{ minWidth: 0 }}>
+    <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
       {children}
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 OptionRow.displayName = 'OptionRow';
@@ -131,221 +133,306 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
   const timelineLayout = options.layout === 'timeline';
 
   return (
-    <Popover
-      placement="bottomRight"
-      trigger="click"
-      content={
-        <Flexbox className={styles.panel} gap={10}>
-          <Segmented
-            block
-            size="small"
-            value={options.layout}
-            options={[
-              {
-                icon: <Icon icon={LayoutListIcon} size={14} />,
-                label: t('list.display.layout.list'),
-                value: 'list',
-              },
-              {
-                icon: <Icon icon={SquareKanbanIcon} size={14} />,
-                label: t('list.display.layout.board'),
-                value: 'board',
-              },
-              {
-                icon: <Icon icon={ChartGanttIcon} size={14} />,
-                label: t('list.display.layout.timeline'),
-                value: 'timeline',
-              },
-            ]}
-            onChange={(value) => {
-              if (value === 'list' || value === 'board' || value === 'timeline')
-                onChange({ layout: value });
-            }}
-          />
-          {timelineLayout ? (
-            <Flexbox gap={4}>
-              <span className={styles.sectionTitle}>{t('list.display.timelineOptions')}</span>
-              {(
-                [
-                  ['showProjectList', t('list.display.showProjectList')],
-                  ['showWeekNumbers', t('list.display.showWeekNumbers')],
-                ] as const
-              ).map(([key, label]) => (
-                <Flexbox horizontal align="center" justify="space-between" key={key}>
-                  <span className={styles.subTitle}>{label}</span>
-                  <Switch
-                    checked={options.timeline[key]}
-                    size="small"
-                    onChange={(checked) =>
-                      onChange({ timeline: { ...options.timeline, [key]: checked } })
-                    }
-                  />
-                </Flexbox>
-              ))}
-            </Flexbox>
-          ) : null}
-          <OptionRow label={t('list.display.grouping')}>
-            {/* The board surface is a fixed status kanban; grouping applies
-                  to the list layout only, so the control goes inert there. */}
-            <Tooltip
-              title={options.layout === 'board' ? t('list.display.groupingBoardHint') : undefined}
-            >
-              {/* span keeps hover events flowing while the Select is disabled. */}
-              <span style={{ display: 'flex', flex: 1, minWidth: 0 }}>
-                <Select
-                  disabled={options.layout === 'board'}
-                  size="small"
-                  style={{ flex: 1, minWidth: 0 }}
-                  value={options.grouping}
-                  options={PROJECT_LIST_GROUPINGS.map((value) => ({
-                    label: t(`list.display.grouping.${value}`),
-                    value,
-                  }))}
-                  onChange={(value) =>
-                    onChange({ grouping: value as ProjectListDisplayOptions['grouping'] })
-                  }
-                />
-              </span>
-            </Tooltip>
-          </OptionRow>
-          <OptionRow label={t('list.display.ordering')}>
-            <Select
-              // The reference dropdown lists only the documented five; a
-              // sortable header can still set a header-only ordering (name →
-              // the reference's "A–Z"/"Z–A", health/targetDate → the field
-              // label), which `labelRender` keeps legible instead of blanking.
-              size="small"
-              style={{ flex: 1, minWidth: 0 }}
-              value={options.orderBy}
-              labelRender={(option) =>
-                option.value === 'name'
-                  ? options.orderDirection === 'desc'
-                    ? 'Z–A'
-                    : 'A–Z'
-                  : t(`list.display.ordering.${option.value as ProjectListOrdering}`)
-              }
-              options={[
-                ...PROJECT_LIST_MENU_ORDERINGS.map((value) => ({
-                  label: t(`list.display.ordering.${value}`),
-                  value,
-                })),
-                // Header-only orderings stay resolvable so an active header
-                // sort labels the trigger — but they render hidden+disabled:
-                // the reference menu does not offer them as dropdown picks.
-                ...PROJECT_LIST_HEADER_ONLY_ORDERINGS.map((value) => ({
-                  disabled: true,
-                  label: t(`list.display.ordering.${value}`),
-                  style: { display: 'none' },
-                  value,
-                })),
-              ]}
-              onChange={(value) =>
-                onChange({
-                  orderBy: value as ProjectListDisplayOptions['orderBy'],
-                  orderDirection: defaultDirectionForOrdering(
-                    value as ProjectListDisplayOptions['orderBy'],
-                  ),
-                })
-              }
-            />
-            <Tooltip title={t('list.display.reverseOrder')}>
-              {/* span keeps hover events flowing while the button is disabled. */}
-              <span style={{ display: 'inline-flex' }}>
-                <ActionIcon
-                  aria-label={t('list.display.reverseOrder')}
-                  disabled={options.orderBy === 'manual'}
-                  size="small"
-                  icon={
-                    options.orderDirection === 'asc'
-                      ? ArrowUpNarrowWideIcon
-                      : ArrowDownWideNarrowIcon
-                  }
-                  onClick={() =>
-                    onChange({
-                      orderDirection: options.orderDirection === 'asc' ? 'desc' : 'asc',
-                    })
-                  }
-                />
-              </span>
-            </Tooltip>
-          </OptionRow>
-          <OptionRow label={t('list.display.showClosed')}>
-            <Select
-              size="small"
-              style={{ flex: 1, minWidth: 0 }}
-              value={options.showClosed}
-              options={PROJECT_LIST_CLOSED_WINDOWS.map((value) => ({
-                label: t(`list.display.closed.${value}`),
-                value,
-              }))}
-              onChange={(value) => onChange({ showClosed: value as ProjectListClosedWindow })}
-            />
-          </OptionRow>
-          <Flexbox gap={4}>
-            <span className={styles.sectionTitle}>
-              {timelineLayout ? t('list.display.properties') : t('list.display.listOptions')}
-            </span>
-            {timelineLayout ? null : (
-              <span className={styles.subTitle}>{t('list.display.properties')}</span>
-            )}
-          </Flexbox>
-          <Flexbox horizontal gap={6} wrap="wrap">
-            {(timelineLayout ? TIMELINE_PROJECT_LIST_PROPERTIES : PROJECT_LIST_PROPERTIES).map(
-              (property) => {
-                const supported = isDataBackedProjectListProperty(property);
-                const active = supported && options.properties[property];
-                const chip = (
-                  <button
-                    aria-pressed={active}
-                    disabled={!supported}
-                    key={property}
-                    type="button"
-                    className={cx(
-                      styles.chip,
-                      active && styles.chipActive,
-                      !supported && styles.chipDisabled,
-                    )}
-                    onClick={() =>
-                      onChange({
-                        properties: { ...options.properties, [property]: !active },
-                      })
-                    }
-                  >
-                    {t(`list.display.property.${property}`)}
-                  </button>
-                );
-                return supported ? (
-                  chip
-                ) : (
-                  <Tooltip key={property} title={t('list.display.propertyUnavailable')}>
-                    {/* Tooltip needs a mouse-event-capable child — disabled buttons swallow them. */}
-                    <span style={{ display: 'inline-flex' }}>{chip}</span>
-                  </Tooltip>
-                );
-              },
-            )}
-          </Flexbox>
-          <Flexbox horizontal align="center" justify="space-between">
-            <Button size="small" type="text" onClick={onReset}>
-              {t('list.display.reset')}
-            </Button>
-            <Tooltip title={t('list.display.setDefaultUnavailable')}>
-              <span style={{ display: 'inline-flex' }}>
-                <Button disabled size="small">
-                  {t('list.display.setDefault')}
-                </Button>
-              </span>
-            </Tooltip>
-          </Flexbox>
-        </Flexbox>
-      }
-    >
-      <ActionIcon
-        aria-label={t('list.display.options')}
-        icon={Settings2Icon}
-        size="small"
-        title={t('list.display.options')}
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            aria-label={t('list.display.options')}
+            size="icon-sm"
+            title={t('list.display.options')}
+            variant="ghost"
+          >
+            {createElement(Settings2Icon, { 'size': 16, 'aria-hidden': true })}
+          </Button>
+        }
       />
+      <PopoverContent align="end" side="bottom">
+        {
+          <div className={cn('flex flex-col', styles.panel)} style={{ gap: 10 }}>
+            <Tabs
+              value={options.layout}
+              onValueChange={(value) => {
+                if (value === 'list' || value === 'board' || value === 'timeline')
+                  onChange({ layout: value });
+              }}
+            >
+              <TabsList className="w-full">
+                {[
+                  {
+                    icon: <LayoutListIcon size={14} />,
+                    label: t('list.display.layout.list'),
+                    value: 'list',
+                  },
+                  {
+                    icon: <SquareKanbanIcon size={14} />,
+                    label: t('list.display.layout.board'),
+                    value: 'board',
+                  },
+                  {
+                    icon: <ChartGanttIcon size={14} />,
+                    label: t('list.display.layout.timeline'),
+                    value: 'timeline',
+                  },
+                ].map((item) => (
+                  <TabsTrigger key={item.value} value={item.value}>
+                    {item.icon}
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            {timelineLayout ? (
+              <div className="flex flex-col" style={{ gap: 4 }}>
+                <span className={styles.sectionTitle}>{t('list.display.timelineOptions')}</span>
+                {(
+                  [
+                    ['showProjectList', t('list.display.showProjectList')],
+                    ['showWeekNumbers', t('list.display.showWeekNumbers')],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div
+                    className="flex flex-row"
+                    key={key}
+                    style={{ alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <span className={styles.subTitle}>{label}</span>
+                    <Switch
+                      checked={options.timeline[key]}
+                      size="sm"
+                      onCheckedChange={(checked) =>
+                        onChange({ timeline: { ...options.timeline, [key]: checked } })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <OptionRow label={t('list.display.grouping')}>
+              {/* The board surface is a fixed status kanban; grouping applies
+                  to the list layout only, so the control goes inert there. */}
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'flex', flex: 1, minWidth: 0 }}>
+                      <Select
+                        disabled={options.layout === 'board'}
+                        value={options.grouping}
+                        items={PROJECT_LIST_GROUPINGS.map((value) => ({
+                          label: t(`list.display.grouping.${value}`),
+                          value,
+                        }))}
+                        onValueChange={(value) =>
+                          onChange({ grouping: value as ProjectListDisplayOptions['grouping'] })
+                        }
+                      >
+                        <SelectTrigger size="sm" style={{ flex: 1, minWidth: 0 }}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROJECT_LIST_GROUPINGS.map((value) => ({
+                            label: t(`list.display.grouping.${value}`),
+                            value,
+                          })).map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {options.layout === 'board' ? t('list.display.groupingBoardHint') : undefined}
+                </TooltipContent>
+              </Tooltip>
+            </OptionRow>
+            <OptionRow label={t('list.display.ordering')}>
+              <Select
+                value={options.orderBy}
+                items={[
+                  ...PROJECT_LIST_MENU_ORDERINGS.map((value) => ({
+                    label: t(`list.display.ordering.${value}`),
+                    value,
+                  })),
+                  // Header-only orderings stay resolvable so an active header
+                  // sort labels the trigger — but they render hidden+disabled:
+                  // the reference menu does not offer them as dropdown picks.
+                  ...PROJECT_LIST_HEADER_ONLY_ORDERINGS.map((value) => ({
+                    disabled: true,
+                    label: t(`list.display.ordering.${value}`),
+                    style: { display: 'none' },
+                    value,
+                  })),
+                ]}
+                onValueChange={(value) =>
+                  onChange({
+                    orderBy: value as ProjectListDisplayOptions['orderBy'],
+                    orderDirection: defaultDirectionForOrdering(
+                      value as ProjectListDisplayOptions['orderBy'],
+                    ),
+                  })
+                }
+              >
+                <SelectTrigger size="sm" style={{ flex: 1, minWidth: 0 }}>
+                  <SelectValue>
+                    {options.orderBy === 'name'
+                      ? options.orderDirection === 'desc'
+                        ? 'Z–A'
+                        : 'A–Z'
+                      : t(`list.display.ordering.${options.orderBy}`)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    ...PROJECT_LIST_MENU_ORDERINGS.map((value) => ({
+                      label: t(`list.display.ordering.${value}`),
+                      value,
+                    })),
+                    // Header-only orderings stay resolvable so an active header
+                    // sort labels the trigger — but they render hidden+disabled:
+                    // the reference menu does not offer them as dropdown picks.
+                    ...PROJECT_LIST_HEADER_ONLY_ORDERINGS.map((value) => ({
+                      disabled: true,
+                      label: t(`list.display.ordering.${value}`),
+                      style: { display: 'none' },
+                      value,
+                    })),
+                  ].map((option) => (
+                    <SelectItem
+                      disabled={'disabled' in option && option.disabled === true}
+                      hidden={'style' in option && Boolean(option.style)}
+                      key={option.value}
+                      value={option.value}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <Button
+                        aria-label={t('list.display.reverseOrder')}
+                        disabled={options.orderBy === 'manual'}
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() =>
+                          onChange({
+                            orderDirection: options.orderDirection === 'asc' ? 'desc' : 'asc',
+                          })
+                        }
+                      >
+                        {createElement(
+                          options.orderDirection === 'asc'
+                            ? ArrowUpNarrowWideIcon
+                            : ArrowDownWideNarrowIcon,
+                          { 'size': 16, 'aria-hidden': true },
+                        )}
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>{t('list.display.reverseOrder')}</TooltipContent>
+              </Tooltip>
+            </OptionRow>
+            <OptionRow label={t('list.display.showClosed')}>
+              <Select
+                value={options.showClosed}
+                items={PROJECT_LIST_CLOSED_WINDOWS.map((value) => ({
+                  label: t(`list.display.closed.${value}`),
+                  value,
+                }))}
+                onValueChange={(value) =>
+                  onChange({ showClosed: value as ProjectListClosedWindow })
+                }
+              >
+                <SelectTrigger size="sm" style={{ flex: 1, minWidth: 0 }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_LIST_CLOSED_WINDOWS.map((value) => ({
+                    label: t(`list.display.closed.${value}`),
+                    value,
+                  })).map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </OptionRow>
+            <div className="flex flex-col" style={{ gap: 4 }}>
+              <span className={styles.sectionTitle}>
+                {timelineLayout ? t('list.display.properties') : t('list.display.listOptions')}
+              </span>
+              {timelineLayout ? null : (
+                <span className={styles.subTitle}>{t('list.display.properties')}</span>
+              )}
+            </div>
+            <div className="flex flex-row" style={{ gap: 6, flexWrap: 'wrap' }}>
+              {(timelineLayout ? TIMELINE_PROJECT_LIST_PROPERTIES : PROJECT_LIST_PROPERTIES).map(
+                (property) => {
+                  const supported = isDataBackedProjectListProperty(property);
+                  const active = supported && options.properties[property];
+                  const chip = (
+                    <button
+                      aria-pressed={active}
+                      disabled={!supported}
+                      key={property}
+                      type="button"
+                      className={cx(
+                        styles.chip,
+                        active && styles.chipActive,
+                        !supported && styles.chipDisabled,
+                      )}
+                      onClick={() =>
+                        onChange({
+                          properties: { ...options.properties, [property]: !active },
+                        })
+                      }
+                    >
+                      {t(`list.display.property.${property}`)}
+                    </button>
+                  );
+                  return supported ? (
+                    chip
+                  ) : (
+                    <Tooltip key={property}>
+                      <TooltipTrigger
+                        render={<span style={{ display: 'inline-flex' }}>{chip}</span>}
+                      />
+                      <TooltipContent>{t('list.display.propertyUnavailable')}</TooltipContent>
+                    </Tooltip>
+                  );
+                },
+              )}
+            </div>
+            <div
+              className="flex flex-row"
+              style={{ alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <Button size="sm" variant="ghost" onClick={onReset}>
+                {t('list.display.reset')}
+              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <Button disabled={true} size="sm" variant="outline">
+                        {t('list.display.setDefault')}
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>{t('list.display.setDefaultUnavailable')}</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        }
+      </PopoverContent>
     </Popover>
   );
 });

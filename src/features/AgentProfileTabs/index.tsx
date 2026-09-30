@@ -1,10 +1,10 @@
 'use client';
 
-import { Segmented } from '@lobehub/ui/base-ui';
 import { type CSSProperties, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAgentShareSupported } from '@/business/client/useAgentShareSupported';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -84,13 +84,20 @@ const AgentProfileTabs = memo<AgentProfileTabsProps>(({ active, agentId }) => {
   if (options.length < 2) return null;
 
   return (
-    <Segmented
-      options={options}
-      size={'small'}
-      value={active}
+    <ToggleGroup
+      size="sm"
+      value={[active]}
       // `Segmented` only fires on a *change*, so the active segment is inert —
-      onChange={(value) => navigate(buildAgentProfileTabPath(agentId, value as AgentProfileTab))}
-    />
+      onValueChange={(value) =>
+        value[0] && navigate(buildAgentProfileTabPath(agentId, value[0] as AgentProfileTab))
+      }
+    >
+      {options.map((o) => (
+        <ToggleGroupItem key={o.value} value={o.value}>
+          {o.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 });
 

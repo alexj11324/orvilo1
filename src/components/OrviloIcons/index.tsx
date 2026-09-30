@@ -4,9 +4,10 @@ import type {
   ProviderCombine as OrviloProviderCombine,
   ProviderIcon as OrviloProviderIcon,
 } from '@lobehub/icons';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { ComponentProps } from 'react';
 import { lazy, Suspense } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 // The catalog-backed features of @lobehub/icons statically import every brand
 // icon (~3 MB). Mounting them through lazy() keeps that catalog in one shared
@@ -25,7 +26,7 @@ const DEFAULT_SIZE = 24;
 export const ModelIcon = (props: ComponentProps<typeof OrviloModelIcon>) => {
   const size = props.size ?? DEFAULT_SIZE;
   return (
-    <Suspense fallback={<Skeleton height={size} width={size} />}>
+    <Suspense fallback={<Skeleton style={{ height: size, width: size }} />}>
       <LazyModelIcon {...props} />
     </Suspense>
   );
@@ -34,14 +35,14 @@ export const ModelIcon = (props: ComponentProps<typeof OrviloModelIcon>) => {
 export const ProviderIcon = (props: ComponentProps<typeof OrviloProviderIcon>) => {
   const size = props.size ?? DEFAULT_SIZE;
   return (
-    <Suspense fallback={<Skeleton height={size} width={size} />}>
+    <Suspense fallback={<Skeleton style={{ height: size, width: size }} />}>
       <LazyProviderIcon {...props} />
     </Suspense>
   );
 };
 
 export const ModelTag = (props: ComponentProps<typeof OrviloModelTag>) => (
-  <Suspense fallback={<Skeleton height={22} width={96} />}>
+  <Suspense fallback={<Skeleton style={{ height: 22, width: 96 }} />}>
     <LazyModelTag {...props} />
   </Suspense>
 );
@@ -49,7 +50,7 @@ export const ModelTag = (props: ComponentProps<typeof OrviloModelTag>) => (
 export const ProviderCombine = (props: ComponentProps<typeof OrviloProviderCombine>) => {
   const size = props.size ?? DEFAULT_SIZE;
   return (
-    <Suspense fallback={<Skeleton height={size} width={size * 4} />}>
+    <Suspense fallback={<Skeleton style={{ height: size, width: size * 4 }} />}>
       <LazyProviderCombine {...props} />
     </Suspense>
   );

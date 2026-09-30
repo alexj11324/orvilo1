@@ -1,15 +1,14 @@
 'use client';
-
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { UsersIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { Badge } from '@/components/reui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import type { TeamHomeMember } from './teamHomeMembersModel';
 
@@ -78,16 +77,25 @@ const TeamHomeMembers = memo<TeamHomeMembersProps>(({ error, isLoading, members,
   const { t } = useTranslation('common');
 
   if (isLoading) {
-    return <SkeletonList aria-label={t('teams.loading')} rows={4} />;
+    return (
+      <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton className="h-10 w-full" key={index} />
+        ))}
+      </div>
+    );
   }
   if (error) {
     return <AsyncError error={error} onRetry={onRetry} />;
   }
   if (members.length === 0) {
     return (
-      <Flexbox align="center" flex={1} justify="center" padding={48}>
-        <Empty description={t('teams.membersEmpty')} icon={UsersIcon} />
-      </Flexbox>
+      <div className="flex flex-col items-center justify-center flex-1 p-12">
+        <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+          <UsersIcon aria-hidden className="size-8" />
+          <p>{t('teams.membersEmpty')}</p>
+        </div>
+      </div>
     );
   }
 
@@ -102,14 +110,16 @@ const TeamHomeMembers = memo<TeamHomeMembersProps>(({ error, isLoading, members,
               size={32}
               title={member.email ?? member.name}
             />
-            <Flexbox flex={1} gap={0} style={{ minWidth: 0 }}>
+            <div className="flex flex-col gap-0 flex-1 min-w-0">
               <span className={styles.name}>{member.name}</span>
               {member.email ? <span className={styles.email}>{member.email}</span> : null}
-            </Flexbox>
+            </div>
           </div>
-          {member.role === 'lead' ? <Tag color="gold">{t('teams.roleLead')}</Tag> : null}
+          {member.role === 'lead' ? <Badge variant="secondary">{t('teams.roleLead')}</Badge> : null}
           {member.joinedAt ? (
-            <Text className={styles.joined}>{new Date(member.joinedAt).toLocaleDateString()}</Text>
+            <span className={cn('text-sm', styles.joined)}>
+              {new Date(member.joinedAt).toLocaleDateString()}
+            </span>
           ) : null}
         </div>
       ))}

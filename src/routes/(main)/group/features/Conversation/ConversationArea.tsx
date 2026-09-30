@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,10 +73,11 @@ const Conversation = memo<ConversationAreaProps>(({ mobile = false }) => {
         replaceMessages(messages, { context: ctx, source: meta?.source });
       }}
     >
-      <Flexbox
-        flex={1}
-        width={'100%'}
+      <div
+        className="flex flex-col flex-1"
         style={{
+          width: '100%',
+
           overflowX: 'hidden',
           overflowY: 'auto',
           position: 'relative',
@@ -88,9 +88,9 @@ const Conversation = memo<ConversationAreaProps>(({ mobile = false }) => {
         ) : (
           <ChatList messageDeepLink={messageDeepLink} welcome={<WelcomeChatItem />} />
         )}
-      </Flexbox>
+      </div>
       {topicPending ? (
-        <Flexbox horizontal align={'center'} justify={'center'} paddingBlock={6} paddingInline={16}>
+        <div className="flex items-center justify-center py-1.5 px-4">
           <span style={{ color: cssVar.colorTextDescription, fontSize: 12, textAlign: 'center' }}>
             {t(
               migrationJob?.type === 'copy'
@@ -98,7 +98,7 @@ const Conversation = memo<ConversationAreaProps>(({ mobile = false }) => {
                 : 'transferMigration.inputDisabledHint',
             )}
           </span>
-        </Flexbox>
+        </div>
       ) : (
         <MessageForwardFooter>
           <MainChatInput />

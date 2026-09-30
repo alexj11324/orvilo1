@@ -1,12 +1,12 @@
 'use client';
 
-import { Empty, Flexbox, Icon, Image } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Image } from '@lobehub/ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import dayjs from 'dayjs';
 import { FileText, Film, Paperclip } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
@@ -106,9 +106,16 @@ const AcceptanceResources = () => {
 
   if (items.length === 0)
     return (
-      <Flexbox paddingBlock={32}>
-        <Empty description={t('acceptance.resources.empty')} icon={Paperclip} />
-      </Flexbox>
+      <div className="flex flex-col" style={{ paddingBlock: 32 }}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant={'icon'}>
+              <Paperclip />
+            </EmptyMedia>
+            <EmptyDescription>{t('acceptance.resources.empty')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     );
 
   const columnCount = lg ? 3 : md ? 2 : 1;
@@ -158,24 +165,20 @@ const AcceptanceResources = () => {
                   </div>
                 ) : (
                   <div className={styles.nonVisual}>
-                    <Icon
-                      icon={evidence.type === 'video' ? Film : FileText}
-                      size={16}
-                      style={{ color: cssVar.colorTextTertiary }}
-                    />
-                    <Text ellipsis fontSize={13}>
-                      {name}
-                    </Text>
+                    {evidence.type === 'video' ? (
+                      <Film size={16} style={{ color: cssVar.colorTextTertiary }} />
+                    ) : (
+                      <FileText size={16} style={{ color: cssVar.colorTextTertiary }} />
+                    )}
+                    <div className="truncate min-w-0 text-[13px]">{name}</div>
                   </div>
                 )}
-                <Flexbox className={styles.meta} gap={2}>
-                  <Text ellipsis fontSize={12}>
-                    {name}
-                  </Text>
-                  <Text ellipsis fontSize={11} type={'secondary'}>
+                <div className={`flex flex-col gap-0.5 ${styles.meta}`}>
+                  <div className="truncate min-w-0 text-[12px]">{name}</div>
+                  <div className="truncate min-w-0 text-[11px] text-muted-foreground">
                     {[check, captured].filter(Boolean).join(' · ')}
-                  </Text>
-                </Flexbox>
+                  </div>
+                </div>
               </div>
             );
           })}

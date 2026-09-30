@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Switch, Text } from '@lobehub/ui/base-ui';
 import type { NotificationChannelSettings, NotificationSettings } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Bell, Mail, Smartphone } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Switch } from '@/components/ui/switch';
 import { useUserStore } from '@/store/user';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -96,22 +96,19 @@ const ItemRows = memo<{
     <>
       {Object.entries(categories).map(([category, items]) =>
         Object.entries(items ?? {}).map(([item, enabled]) => (
-          <Flexbox
-            horizontal
-            align="center"
-            className={styles.itemRow}
-            justify="space-between"
+          <div
+            className={`${styles.itemRow} flex items-center justify-between`}
             key={`${category}.${item}`}
           >
-            <Text className={styles.itemLabel}>
+            <div className={cn(styles.itemLabel)}>
               {humanize(category)} · {humanize(item)}
-            </Text>
+            </div>
             <Switch
               checked={enabled !== false}
-              size="small"
-              onChange={(value: boolean) => onToggle(category, item, value)}
+              size="sm"
+              onCheckedChange={(value: boolean) => onToggle(category, item, value)}
             />
-          </Flexbox>
+          </div>
         )),
       )}
     </>
@@ -126,33 +123,25 @@ const ChannelRow = memo<{
 }>(({ def, settings, onToggleChannel, onToggleItem }) => {
   const { t } = useTranslation('setting');
   return (
-    <Flexbox gap={0}>
-      <Flexbox
-        horizontal
-        align="center"
-        className={styles.channelRow}
-        gap={12}
-        justify="space-between"
-      >
-        <Flexbox horizontal align="center" gap={10}>
-          <Icon icon={def.icon} size={16} />
-          <Flexbox gap={0}>
-            <Text className={styles.channelLabel}>{t(def.labelKey)}</Text>
-            <Text fontSize={12} type="secondary">
-              {t(def.descriptionKey)}
-            </Text>
-          </Flexbox>
-        </Flexbox>
+    <div className="flex flex-col">
+      <div className={`${styles.channelRow} flex items-center justify-between gap-3`}>
+        <div className="flex items-center gap-2.5">
+          <def.icon size={16} />
+          <div className="flex flex-col">
+            <div className={cn(styles.channelLabel)}>{t(def.labelKey)}</div>
+            <div className="text-[12px] text-muted-foreground">{t(def.descriptionKey)}</div>
+          </div>
+        </div>
         <Switch
           checked={settings?.enabled !== false}
-          onChange={(value: boolean) => onToggleChannel(def.key, value)}
+          onCheckedChange={(value: boolean) => onToggleChannel(def.key, value)}
         />
-      </Flexbox>
+      </div>
       <ItemRows
         channel={settings ?? {}}
         onToggle={(category, item, value) => onToggleItem(def.key, category, item, value)}
       />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -168,10 +157,10 @@ export const WorkspaceNotification = memo(() => {
     updateWorkspaceUserPreference({ notification: partial });
 
   return (
-    <Flexbox className={styles.container}>
-      <Text className={styles.pageTitle}>{t('workspaceSetting.notification.title')}</Text>
-      <Flexbox className={styles.section}>
-        <Text className={styles.groupTitle}>{t('workspaceSetting.notification.channels')}</Text>
+    <div className={`${styles.container} flex flex-col`}>
+      <div className={cn(styles.pageTitle)}>{t('workspaceSetting.notification.title')}</div>
+      <div className={`${styles.section} flex flex-col`}>
+        <div className={cn(styles.groupTitle)}>{t('workspaceSetting.notification.channels')}</div>
         {CHANNELS.map((def) => (
           <ChannelRow
             def={def}
@@ -183,8 +172,8 @@ export const WorkspaceNotification = memo(() => {
             }
           />
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

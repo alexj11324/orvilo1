@@ -1,9 +1,5 @@
 'use client';
-
 import { Notion } from '@lobehub/icons';
-import { type DropdownItem } from '@lobehub/ui';
-import { DropdownMenu, Icon, Tooltip } from '@lobehub/ui';
-import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
@@ -14,6 +10,11 @@ import { type ChangeEvent } from 'react';
 import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { SimpleTooltip } from '@/components/ui/tooltip';
+import { Upload } from '@/components/Upload';
 import { useCurrentFolderId } from '@/features/ResourceManager/hooks/useCurrentFolderId';
 import { useTopLevelFileUpload } from '@/features/ResourceManager/hooks/useTopLevelFileUpload';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
@@ -235,7 +236,11 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
   const items = useMemo<DropdownItem[]>(
     () => [
       {
-        icon: <Icon icon={FilePenLine} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FilePenLine fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'create-note',
         label: t('header.actions.newPage'),
         onClick: handleOpenPageEditor,
@@ -243,7 +248,11 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
       ...(libraryId
         ? [
             {
-              icon: <Icon icon={FolderIcon} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <FolderIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'create-folder',
               label: t('header.actions.newFolder'),
               onClick: handleCreateFolder,
@@ -255,7 +264,11 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
       },
       {
         closeOnClick: false,
-        icon: <Icon icon={FileUp} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FileUp fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'upload-file',
         label: (
           <Upload
@@ -275,7 +288,11 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
       },
       {
         closeOnClick: false,
-        icon: <Icon icon={FolderUp} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FolderUp fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'upload-folder',
         label: <label htmlFor={folderUploadInputId}>{t('header.actions.uploadFolder')}</label>,
       },
@@ -291,7 +308,11 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
             onClick: handleOpenNotionGuide,
           },
         ],
-        icon: <Icon icon={Link} />,
+        icon: (
+          <span className="anticon" role="img">
+            <Link fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'connect',
         label: t('header.actions.connect'),
         type: 'submenu',
@@ -312,7 +333,7 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
 
   return (
     <>
-      <Tooltip title={canCreate ? undefined : reason}>
+      <SimpleTooltip title={canCreate ? undefined : reason}>
         <DropdownMenu
           items={canCreate ? items : []}
           open={menuOpen}
@@ -327,16 +348,17 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
               data-no-highlight
               aria-label={t('addLibrary')}
               disabled={!canCreate}
-              icon={Plus}
               title={canCreate ? t('addLibrary') : undefined}
-            />
+            >
+              <Plus data-icon="inline-start" />
+            </Button>
           ) : (
-            <Button data-no-highlight disabled={!canCreate} icon={Plus} type="primary">
-              {t('addLibrary')}
+            <Button data-no-highlight disabled={!canCreate} variant="default">
+              <Plus data-icon="inline-start" /> {t('addLibrary')}
             </Button>
           )}
         </DropdownMenu>
-      </Tooltip>
+      </SimpleTooltip>
       <input
         multiple
         id={folderUploadInputId}

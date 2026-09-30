@@ -1,10 +1,10 @@
 'use client';
-
-import { Block, Flexbox, Highlighter, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import type { ReadReferenceParams, ReadReferenceState } from '../../../types';
 
@@ -66,44 +66,40 @@ const ReadReference = memo<BuiltinRenderProps<ReadReferenceParams, ReadReference
     const sizeText = size ? formatSize(size) : '';
 
     return (
-      <Flexbox className={styles.container} gap={8}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
-          <Text code ellipsis as={'span'} fontSize={12}>
+      <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className="flex flex-row items-center justify-between">
+          <span className="font-mono rounded bg-muted px-1 truncate text-[12px]">
             {displayPath}
-          </Text>
+          </span>
           {sizeText && (
-            <Text code noWrap as={'span'} fontSize={12} type={'secondary'}>
+            <span className="font-mono rounded bg-muted px-1 whitespace-nowrap text-[12px] text-muted-foreground">
               {sizeText}
-            </Text>
+            </span>
           )}
-        </Flexbox>
+        </div>
 
         {isBinary ? (
-          <Block padding={12} variant={'outlined'}>
-            <Text fontSize={12} type={'secondary'}>
-              Binary file ({sizeText})
-            </Text>
-          </Block>
+          <div className="rounded-md border bg-card" style={{ padding: 12 }}>
+            <div className="text-[12px] text-muted-foreground">Binary file ({sizeText})</div>
+          </div>
         ) : isMarkdown ? (
-          <Block padding={12} variant={'outlined'}>
+          <div className="rounded-md border bg-card" style={{ padding: 12 }}>
             <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
               {content}
             </Markdown>
-          </Block>
+          </div>
         ) : (
-          <Block padding={8} variant={'outlined'}>
-            <Highlighter
-              showLanguage
+          <div className="rounded-md border bg-card" style={{ padding: 8 }}>
+            <CodeBlock
               wrap
+              code={content}
               language={getLanguage(ext)}
               style={{ maxHeight: 400, overflow: 'auto' }}
-              variant={'borderless'}
-            >
-              {content}
-            </Highlighter>
-          </Block>
+              variant={'ghost'}
+            />
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

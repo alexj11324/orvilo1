@@ -27,6 +27,7 @@ import {
   userMemories,
 } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
+import { buildDocumentReadableWhere } from '../../../utils/documentAccess';
 import { normalizeInboxAgentMeta, normalizeInboxAgentTitle } from '../../../utils/inboxAgent';
 import { searchableMessage } from '../../../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopic } from '../../../utils/shareVisitor';
@@ -501,7 +502,7 @@ export const hydrateFiles = async (
           })
           .from(documents)
           .where(
-            and(inArray(documents.fileId, selectedFileIds), buildWorkspaceWhere(scope, documents)),
+            and(inArray(documents.fileId, selectedFileIds), buildDocumentReadableWhere(db, scope)),
           );
   const contentByFile = new Map<string, string | null>();
   for (const row of documentRows.toSorted((left, right) => left.id.localeCompare(right.id))) {
@@ -552,7 +553,7 @@ export const hydrateFolders = async (
           documents.id,
           hits.map(({ id }) => id),
         ),
-        buildWorkspaceWhere(scope, documents),
+        buildDocumentReadableWhere(db, scope),
         eq(documents.fileType, DOCUMENT_FOLDER_TYPE),
       ),
     );
@@ -610,7 +611,7 @@ export const hydratePages = async (
           documents.id,
           hits.map(({ id }) => id),
         ),
-        buildWorkspaceWhere(scope, documents),
+        buildDocumentReadableWhere(db, scope),
         eq(documents.fileType, 'custom/document'),
       ),
     );
@@ -665,7 +666,7 @@ export const hydrateKnowledgeBaseDocuments = async (
           documents.id,
           hits.map(({ id }) => id),
         ),
-        buildWorkspaceWhere(scope, documents),
+        buildDocumentReadableWhere(db, scope),
         ne(documents.fileType, DOCUMENT_FOLDER_TYPE),
       ),
     );
@@ -698,7 +699,7 @@ export const hydrateKnowledgeBaseDocuments = async (
           })
           .from(documents)
           .where(
-            and(inArray(documents.id, selectedDocumentIds), buildWorkspaceWhere(scope, documents)),
+            and(inArray(documents.id, selectedDocumentIds), buildDocumentReadableWhere(db, scope)),
           );
   const contentById = new Map(contentRows.map(({ content, id }) => [id, content] as const));
 

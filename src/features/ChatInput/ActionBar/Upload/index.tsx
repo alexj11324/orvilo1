@@ -1,5 +1,3 @@
-import { Icon, Tooltip } from '@lobehub/ui';
-import { toast, Upload } from '@lobehub/ui/base-ui';
 import { validateVideoFileSize } from '@orvilo/utils/client';
 import { css, cx } from 'antd-style';
 import { FileUp, FolderUp, ImageUp, Paperclip } from 'lucide-react';
@@ -7,6 +5,8 @@ import { memo, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import TipGuide from '@/components/TipGuide';
+import { toast } from '@/components/toast';
+import { Upload } from '@/components/Upload';
 import { useMediaUploadAbility } from '@/hooks/useMediaUploadAbility';
 import { usePermission } from '@/hooks/usePermission';
 import { useFileStore } from '@/store/file';
@@ -16,6 +16,7 @@ import { preferenceSelectors } from '@/store/user/selectors';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useEffectiveModel } from '../../hooks/useEffectiveModel';
+import { SimpleTooltip } from '../../SimpleTooltip';
 import { useChatInputStore } from '../../store';
 import { type ActionDropdownMenuItems } from '../components/ActionDropdown';
 import { ChatInputAction } from '../components/ChatInputAction';
@@ -68,14 +69,14 @@ const FileUpload = memo(() => {
 
   if (!canUpload) {
     return (
-      <Tooltip title={reason}>
+      <SimpleTooltip title={reason}>
         <ChatInputAction
           disabled
           icon={Paperclip}
           showTooltip={false}
           title={t('upload.action.tooltip')}
         />
-      </Tooltip>
+      </SimpleTooltip>
     );
   }
 
@@ -83,7 +84,16 @@ const FileUpload = memo(() => {
     {
       closeOnClick: false,
       disabled: !canUploadImage,
-      icon: <Icon icon={ImageUp} size={MENU_ICON_SIZE} />,
+      icon: (
+        <span className="anticon" role="img">
+          <ImageUp
+            fill={'transparent'}
+            height={MENU_ICON_SIZE}
+            size={MENU_ICON_SIZE}
+            width={MENU_ICON_SIZE}
+          />
+        </span>
+      ),
       key: 'upload-image',
       label: canUploadImage ? (
         <Upload
@@ -101,14 +111,23 @@ const FileUpload = memo(() => {
           <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
         </Upload>
       ) : (
-        <Tooltip placement={'right'} title={t('upload.action.imageDisabled')}>
+        <SimpleTooltip side={'right'} title={t('upload.action.imageDisabled')}>
           <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
-        </Tooltip>
+        </SimpleTooltip>
       ),
     },
     {
       closeOnClick: false,
-      icon: <Icon icon={FileUp} size={MENU_ICON_SIZE} />,
+      icon: (
+        <span className="anticon" role="img">
+          <FileUp
+            fill={'transparent'}
+            height={MENU_ICON_SIZE}
+            size={MENU_ICON_SIZE}
+            width={MENU_ICON_SIZE}
+          />
+        </span>
+      ),
       key: 'upload-file',
       label: (
         <Upload
@@ -147,7 +166,16 @@ const FileUpload = memo(() => {
     },
     {
       closeOnClick: false,
-      icon: <Icon icon={FolderUp} size={MENU_ICON_SIZE} />,
+      icon: (
+        <span className="anticon" role="img">
+          <FolderUp
+            fill={'transparent'}
+            height={MENU_ICON_SIZE}
+            size={MENU_ICON_SIZE}
+            width={MENU_ICON_SIZE}
+          />
+        </span>
+      ),
       key: 'upload-folder',
       label: (
         <Upload
@@ -196,7 +224,7 @@ const FileUpload = memo(() => {
       open={dropdownOpen}
       showTooltip={false}
       title={t('upload.action.tooltip')}
-      trigger={'both'}
+      trigger={['click', 'hover']}
       dropdown={{
         maxHeight: 500,
         maxWidth: 480,

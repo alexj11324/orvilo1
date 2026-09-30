@@ -1,9 +1,14 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
-import { Accordion, Text } from '@lobehub/ui/base-ui';
+import { cssVar } from 'antd-style';
 import { memo, useMemo, useState } from 'react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useChatStore } from '@/store/chat';
@@ -134,19 +139,39 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
   return (
     <Accordion
       keepMounted
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
+      multiple
       value={expanded ? [id] : []}
-      items={[
-        {
-          children: (
-            <Block gap={16} padding={12} style={{ marginBlock: 8 }} variant={'outlined'}>
+      onValueChange={(value) => setExpanded(value.includes(id))}
+    >
+      <AccordionItem value={id}>
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+          {
+            <TaskTitle
+              metrics={metrics}
+              status={status}
+              title={title}
+              agent={
+                agent
+                  ? { avatar: agent.avatar || undefined, backgroundColor: agent.backgroundColor }
+                  : undefined
+              }
+            />
+          }
+        </AccordionTrigger>
+        <AccordionContent>
+          {
+            <div
+              className="flex flex-col gap-4 p-3"
+              style={{
+                border: `1px solid ${cssVar.colorBorder}`,
+                borderRadius: cssVar.borderRadiusLG,
+                marginBlock: 8,
+              }}
+            >
               {instruction && (
-                <Block padding={12}>
-                  <Text fontSize={13} type={'secondary'}>
-                    {instruction}
-                  </Text>
-                </Block>
+                <div className="flex flex-col p-3">
+                  <div className="text-[13px] text-muted-foreground">{instruction}</div>
+                </div>
               )}
 
               {/* Initializing State - no taskDetail yet or no blocks */}
@@ -167,25 +192,11 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
 
               {/* Error State */}
               {!isInitializing && isError && taskDetail && <ErrorState taskDetail={taskDetail} />}
-            </Block>
-          ),
-          key: id,
-          title: (
-            <TaskTitle
-              metrics={metrics}
-              status={status}
-              title={title}
-              agent={
-                agent
-                  ? { avatar: agent.avatar || undefined, backgroundColor: agent.backgroundColor }
-                  : undefined
-              }
-            />
-          ),
-        },
-      ]}
-      onValueChange={(value) => setExpanded(value.includes(id))}
-    />
+            </div>
+          }
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }, Object.is);
 

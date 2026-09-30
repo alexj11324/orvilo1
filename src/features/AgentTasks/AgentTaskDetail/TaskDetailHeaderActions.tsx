@@ -1,5 +1,3 @@
-import { type DropdownItem, DropdownMenu, Icon } from '@lobehub/ui';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import {
   CopyIcon,
   EyeOffIcon,
@@ -14,6 +12,12 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -22,6 +26,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { useTaskDetailSelector } from './TaskDetailScope';
 import { useTaskCopyActions } from './useTaskCopyActions';
 
 const TaskDetailHeaderActions = memo(() => {
@@ -31,12 +36,12 @@ const TaskDetailHeaderActions = memo(() => {
   const activeWorkspaceId = useActiveWorkspaceId();
   const { allowed: canEditTask } = usePermission('create_content');
   const { copyBranch, copyId, copyLink, hasBranch, taskId } = useTaskCopyActions();
-  const visibility = useTaskStore(taskDetailSelectors.activeTaskVisibility);
-  const createdByUserId = useTaskStore(taskDetailSelectors.activeTaskCreatedByUserId);
+  const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
+  const createdByUserId = useTaskDetailSelector(taskDetailSelectors.taskCreatedByUserId);
   const currentUserId = useUserStore(userProfileSelectors.userId);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const updateTaskVisibility = useTaskStore((s) => s.updateTaskVisibility);
-  const transferItems = useTaskTransferMenuItem(taskId) as DropdownItem[] | null;
+  const transferItems = useTaskTransferMenuItem(taskId) as SidebarDropdownMenuProps['items'] | null;
 
   const triggerDelete = useCallback(() => {
     if (!canEditTask) return;
@@ -100,20 +105,20 @@ const TaskDetailHeaderActions = memo(() => {
     });
   }, [canEditTask, taskId, t, updateTaskVisibility]);
 
-  const menuItems = useMemo<DropdownItem[]>(() => {
+  const menuItems = useMemo<SidebarDropdownMenuProps['items']>(() => {
     if (!taskId) return [];
 
     // The clipboard group mirrors the rail's round buttons; "copy git branch"
     // joins only for real workspace-bound tasks (see `useTaskCopyActions`).
-    const copyItems: DropdownItem[] = [
+    const copyItems: SidebarDropdownMenuProps['items'] = [
       {
-        icon: <Icon icon={CopyIcon} />,
+        icon: <CopyIcon />,
         key: 'copyId',
         label: t('taskList.contextMenu.copyId'),
         onClick: copyId,
       },
       {
-        icon: <Icon icon={LinkIcon} />,
+        icon: <LinkIcon />,
         key: 'copyLink',
         label: t('taskList.contextMenu.copyLink'),
         onClick: copyLink,
@@ -121,7 +126,7 @@ const TaskDetailHeaderActions = memo(() => {
       ...(hasBranch
         ? [
             {
-              icon: <Icon icon={GitBranchIcon} />,
+              icon: <GitBranchIcon />,
               key: 'copyBranch',
               label: t('taskDetail.copyBranch'),
               onClick: copyBranch,
@@ -129,10 +134,10 @@ const TaskDetailHeaderActions = memo(() => {
           ]
         : []),
     ];
-    const deleteItem: DropdownItem = {
+    const deleteItem = {
       danger: true,
       disabled: !canEditTask,
-      icon: <Icon icon={Trash} />,
+      icon: <Trash />,
       key: 'delete',
       label: t('delete', { ns: 'common' }),
       onClick: triggerDelete,
@@ -140,11 +145,11 @@ const TaskDetailHeaderActions = memo(() => {
 
     // Publish-to-workspace only surfaces on private tasks inside a workspace;
     // personal mode has no workspace to publish to.
-    const publishItem: DropdownItem | null =
+    const publishItem =
       activeWorkspaceId && visibility === 'private'
         ? {
             disabled: !canEditTask,
-            icon: <Icon icon={UsersIcon} />,
+            icon: <UsersIcon />,
             key: 'publishToWorkspace',
             label: t('taskDetail.publishToWorkspace.menuLabel'),
             onClick: triggerPublish,
@@ -157,11 +162,11 @@ const TaskDetailHeaderActions = memo(() => {
     // everyone else doesn't see the entry at all (the server enforces the
     // same rule as a backstop).
     const canMakePrivate = !!currentUserId && createdByUserId === currentUserId;
-    const makePrivateItem: DropdownItem | null =
+    const makePrivateItem =
       activeWorkspaceId && visibility === 'public' && canMakePrivate
         ? {
             disabled: !canEditTask,
-            icon: <Icon icon={EyeOffIcon} />,
+            icon: <EyeOffIcon />,
             key: 'makePrivate',
             label: t('makePrivate', { ns: 'common' }),
             onClick: triggerMakePrivate,
@@ -170,9 +175,12 @@ const TaskDetailHeaderActions = memo(() => {
 
     const visibilityItem = publishItem ?? makePrivateItem;
 
+    const resolvedTransferItems =
+      typeof transferItems === 'function' ? transferItems() : transferItems;
+
     const transferGroup =
-      transferItems && transferItems.length > 0
-        ? [...transferItems, ...(visibilityItem ? [visibilityItem] : [])]
+      resolvedTransferItems && resolvedTransferItems.length > 0
+        ? [...resolvedTransferItems, ...(visibilityItem ? [visibilityItem] : [])]
         : visibilityItem
           ? [visibilityItem]
           : [];
@@ -201,9 +209,9 @@ const TaskDetailHeaderActions = memo(() => {
   if (!taskId) return null;
 
   return (
-    <DropdownMenu items={menuItems}>
+    <SidebarDropdownMenu items={menuItems}>
       <ActionIcon icon={MoreHorizontal} size={'small'} />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

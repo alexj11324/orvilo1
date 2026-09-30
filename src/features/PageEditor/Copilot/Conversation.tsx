@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { isChatGroupSessionId } from '@orvilo/types';
 import { memo, useCallback, useMemo } from 'react';
 
@@ -55,10 +54,10 @@ const Conversation = memo(() => {
   const leftContent = useMemo(
     () => (
       <ActionBarContext value={COMPACT_ACTION_BAR_CONTEXT}>
-        <Flexbox horizontal align={'center'} gap={2}>
+        <div className="flex items-center gap-0.5">
           <AgentSelectorAction onAgentChange={handleAgentChange} />
           <Search />
-        </Flexbox>
+        </div>
       </ActionBarContext>
     ),
     [handleAgentChange],
@@ -75,11 +74,11 @@ const Conversation = memo(() => {
       style={{ flex: 1, height: '100%', minWidth: 300 }}
       onUploadFiles={handleUploadFiles}
     >
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1" style={{ height: '100%' }}>
         <CopilotToolbar />
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <ChatList welcome={<Welcome />} />
-        </Flexbox>
+        </div>
         <ChatInput
           actionBarStyle={COMPACT_ACTION_BAR_STYLE}
           allowExpand={false}
@@ -90,7 +89,7 @@ const Conversation = memo(() => {
           sendButtonProps={COMPACT_SEND_BUTTON_PROPS}
           showControlBar={false}
         />
-      </Flexbox>
+      </div>
     </DragUploadZone>
   );
 });

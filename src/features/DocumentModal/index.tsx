@@ -1,8 +1,8 @@
 'use client';
 
-import { createModal } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import { createModal } from '@/components/Modal';
 import { PageAgentPanelOverrideProvider } from '@/features/PageEditor/RightPanel/OverrideContext';
 import PageExplorer from '@/features/PageExplorer';
 
@@ -10,21 +10,26 @@ import DocumentModalHeader from './Header';
 
 interface DocumentModalContentProps {
   documentId: string;
+  onDeleted?: () => void;
 }
 
-const DocumentModalContent = memo<DocumentModalContentProps>(({ documentId }) => {
+const DocumentModalContent = memo<DocumentModalContentProps>(({ documentId, onDeleted }) => {
   return (
     <PageAgentPanelOverrideProvider defaultExpand={false}>
-      <PageExplorer fullWidthHeader header={<DocumentModalHeader />} pageId={documentId} />
+      <PageExplorer
+        fullWidthHeader
+        header={<DocumentModalHeader onDeleted={onDeleted} />}
+        pageId={documentId}
+      />
     </PageAgentPanelOverrideProvider>
   );
 });
 
 DocumentModalContent.displayName = 'DocumentModalContent';
 
-export const createDocumentModal = (documentId: string) =>
+export const createDocumentModal = (documentId: string, onDeleted?: () => void) =>
   createModal({
-    content: <DocumentModalContent documentId={documentId} />,
+    content: <DocumentModalContent documentId={documentId} onDeleted={onDeleted} />,
     footer: null,
     maskClosable: true,
     styles: {

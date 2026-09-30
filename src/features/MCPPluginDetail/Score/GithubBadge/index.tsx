@@ -1,11 +1,13 @@
-import { Markdown, Snippet } from '@lobehub/ui';
-import { Select, Tag } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
+import { Markdown } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { Badge } from '@/components/reui/badge';
+import { CodeBlock } from '@/components/reui/code-block/code-block';
+import Select from '@/components/Select';
+import { Separator } from '@/components/ui/separator';
 import { OFFICIAL_SITE } from '@/const/url';
 
 import { useDetailContext } from '../../DetailProvider';
@@ -50,31 +52,39 @@ const GithubBadge = memo(() => {
     <>
       <Markdown>{t('mcp.details.githubBadge.desc')}</Markdown>
 
-      <Select
-        options={styleOptions}
-        prefix={<Tag style={{ marginRight: 4 }}>style</Tag>}
-        value={selectedStyle}
-        onChange={setSelectedStyle}
-      />
-      <Snippet language={'md'} style={{ fontSize: 12 }} variant={'outlined'}>
-        {badgeLite}
-      </Snippet>
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary">style</Badge>
+        <Select
+          options={styleOptions}
+          value={selectedStyle}
+          onChange={(v) => {
+            if (typeof v === 'string') setSelectedStyle(v as BadgeStyle);
+          }}
+        />
+      </div>
+      <CodeBlock code={badgeLite} language={'markdown'} style={{ fontSize: 12 }} />
       {}
       <img
         alt="MCP Badge"
         height={selectedStyle === 'for-the-badge' ? 28 : 20}
         src={styledBadgeUrl}
       />
-      <Divider style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>OR</Divider>
-      <Select
-        options={themeOptions}
-        prefix={<Tag style={{ marginRight: 4 }}>theme</Tag>}
-        value={selectedTheme}
-        onChange={setSelectedTheme}
-      />
-      <Snippet language={'md'} style={{ fontSize: 12 }} variant={'outlined'}>
-        {badge}
-      </Snippet>
+      <div className="flex flex-row items-center gap-2">
+        <Separator className="flex-1" />
+        <span style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>OR</span>
+        <Separator className="flex-1" />
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary">theme</Badge>
+        <Select
+          options={themeOptions}
+          value={selectedTheme}
+          onChange={(v) => {
+            if (typeof v === 'string') setSelectedTheme(v as BadgeTheme);
+          }}
+        />
+      </div>
+      <CodeBlock code={badge} language={'markdown'} style={{ fontSize: 12 }} />
       {}
       <img alt="MCP Badge" src={styledBadgeFullUrl} />
     </>

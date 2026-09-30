@@ -49,7 +49,7 @@ vi.mock('@orvilo/electron-client-ipc', () => ({
   },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   createModal: (props: ModalProps) => {
     createModalMock(props);
@@ -164,6 +164,38 @@ describe('useAuthRequiredModal', () => {
     });
 
     expect(createModalMock).not.toHaveBeenCalled();
+    expect(locationAssign).not.toHaveBeenCalled();
+  });
+
+  it('honors an explicit sign-in before config initialization and preserves the target', () => {
+    electronStore.current.isInitRemoteServerConfig = false;
+    locationState.pathname = '/my-issues';
+    window.location.search = '?view=board';
+    window.location.hash = '#task';
+    render(<AuthRequiredModal />);
+    act(() => {
+      sessionAuthEvents.emit('session-auth-expired', {
+        reason: 'user-requested-sign-in',
+        source: 'user-action',
+        timestamp: Date.now(),
+      });
+    });
+    expect(locationAssign).toHaveBeenCalledWith(
+      '/onboarding?callbackUrl=%2Fmy-issues%3Fview%3Dboard%23task',
+    );
+    expect(createModalMock).not.toHaveBeenCalled();
+  });
+
+  it('reopens native authentication on explicit sign-in for an initialized session', () => {
+    render(<AuthRequiredModal />);
+    act(() => {
+      sessionAuthEvents.emit('session-auth-expired', {
+        reason: 'user-requested-sign-in',
+        source: 'user-action',
+        timestamp: Date.now(),
+      });
+    });
+    expect(createModalMock).toHaveBeenCalledOnce();
     expect(locationAssign).not.toHaveBeenCalled();
   });
 

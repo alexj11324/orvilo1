@@ -1,12 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Accordion } from '@/components/ui/accordion';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useTopicGroupCollapse } from '@/hooks/useTopicGroupCollapse';
@@ -49,13 +48,13 @@ const ByTimeMode = memo(() => {
   const { expandedKeys, setExpandedKeys } = useTopicGroupCollapse(topicGroupMode, groupIds);
 
   return (
-    <Flexbox gap={2}>
+    <div className="flex flex-col gap-0.5">
       {/* Grouped topics */}
-      <AccordionRoot
-        indicatorPlacement="inline"
-        style={{ gap: 2 }}
+      <Accordion
+        multiple
+        style={{ display: 'flex', flexDirection: 'column', gap: 2 }}
         value={expandedKeys}
-        onValueChange={(next) => setExpandedKeys(next as string[])}
+        onValueChange={(next) => setExpandedKeys(next)}
       >
         {groupTopics.map((group) => (
           <GroupItem
@@ -65,12 +64,12 @@ const ByTimeMode = memo(() => {
             key={group.id}
           />
         ))}
-      </AccordionRoot>
+      </Accordion>
       {isExpandingPageSize && <SkeletonList rows={3} />}
       {hasMore && !isExpandingPageSize && (
         <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

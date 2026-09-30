@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { agentDisplayName } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@/const/meta';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import { useAgentStore } from '@/store/agent';
@@ -44,18 +44,21 @@ const AgentInfo = memo(() => {
 
   if (isLoading) {
     return (
-      <Flexbox gap={12}>
-        <Skeleton.Avatar shape={'square'} size={64} />
-        <Skeleton height={32} width={200} />
-        <Flexbox width={'min(100%, 640px)'}>
-          <Skeleton.Text rows={2} />
-        </Flexbox>
-      </Flexbox>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="rounded-md shrink-0" style={{ width: 64, height: 64 }} />
+        <Skeleton style={{ height: 32, width: 200 }} />
+        <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
+          <div className="flex flex-col gap-2">
+            <Skeleton />
+            <Skeleton style={{ width: '60%' }} />
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <Avatar
         avatar={isInbox ? meta.avatar || DEFAULT_INBOX_AVATAR : meta.avatar || DEFAULT_AVATAR}
         background={meta.backgroundColor}
@@ -63,15 +66,13 @@ const AgentInfo = memo(() => {
         shape={'square'}
         size={64}
       />
-      <Text fontSize={24} weight={'bold'}>
-        {displayTitle}
-      </Text>
-      <Flexbox width={'min(100%, 640px)'}>
+      <div className="text-[24px] font-bold">{displayTitle}</div>
+      <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
         <Markdown fontSize={fontSize} variant={'chat'}>
           {message}
         </Markdown>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

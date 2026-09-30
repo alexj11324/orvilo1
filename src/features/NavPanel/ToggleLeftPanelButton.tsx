@@ -1,18 +1,15 @@
 'use client';
 
-import { ActionIcon, type ActionIconProps } from '@lobehub/ui/base-ui';
-import { HotkeyEnum } from '@orvilo/const/hotkeys';
+import { cn } from 'cn';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
+import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
-import { useUserStore } from '@/store/user';
-import { settingsSelectors } from '@/store/user/selectors';
 import { isMacOS } from '@/utils/platform';
 
 export const TOGGLE_BUTTON_ID = 'toggle_left_panel_button';
@@ -27,7 +24,7 @@ interface ToggleLeftPanelButtonProps {
    * The persistent titlebar toggle sets this.
    */
   forceVisible?: boolean;
-  icon?: ActionIconProps['icon'];
+  icon?: ReactNode;
   /**
    * DOM id for the button. Defaults to the shared {@link TOGGLE_BUTTON_ID} which
    * NavPanelDraggable targets for its hover-reveal CSS. Pass a custom id (or `null`)
@@ -36,35 +33,36 @@ interface ToggleLeftPanelButtonProps {
    */
   id?: string | null;
   showActive?: boolean;
-  size?: ActionIconProps['size'];
+  size?: 'default' | 'small';
   title?: ReactNode;
 }
 
 const ToggleLeftPanelButton = memo<ToggleLeftPanelButtonProps>(
-  ({ title, showActive, icon, size, id = TOGGLE_BUTTON_ID, forceVisible }) => {
+  ({ title, showActive, icon, size = 'small', id = TOGGLE_BUTTON_ID, forceVisible }) => {
     const [expand, togglePanel] = useGlobalStore((s) => [
-      systemStatusSelectors.showLeftPanel(s),
+      s.leftPanelDrawerMode
+        ? (s.leftPanelDrawerOpen ?? false)
+        : systemStatusSelectors.showLeftPanel(s),
       s.toggleLeftPanel,
     ]);
-    const hotkey = useUserStore(settingsSelectors.getHotkeyById(HotkeyEnum.ToggleLeftPanel));
 
-    const { t } = useTranslation(['chat', 'hotkey']);
+    const { t } = useTranslation(['hotkey']);
 
     if (isMacDesktop && !forceVisible) return null;
 
     return (
-      <ActionIcon
-        active={showActive ? expand : undefined}
-        icon={icon || (expand ? PanelLeftClose : PanelLeftOpen)}
+      <Button
+        aria-label={typeof title === 'string' ? title : t('toggleLeftPanel.title')}
+        aria-pressed={expand}
+        className={cn(showActive && expand && 'bg-muted')}
         id={id ?? undefined}
-        size={size || DESKTOP_HEADER_ICON_SMALL_SIZE}
-        title={title || t('toggleLeftPanel.title', { ns: 'hotkey' })}
-        tooltipProps={{
-          hotkey,
-          placement: 'bottom',
-        }}
+        size={size === 'small' ? 'icon-sm' : 'icon'}
+        title={typeof title === 'string' ? title : t('toggleLeftPanel.title')}
+        variant="ghost"
         onClick={() => togglePanel()}
-      />
+      >
+        {icon || (expand ? <PanelLeftClose aria-hidden /> : <PanelLeftOpen aria-hidden />)}
+      </Button>
     );
   },
 );

@@ -1,5 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
-import { AccordionRoot } from '@lobehub/ui/base-ui';
+import { Accordion } from '@/components/ui/accordion';
 
 import Members from './Members';
 import Topic from './Topic';
@@ -11,16 +10,16 @@ export enum ChatSidebarKey {
 
 const Body = () => {
   return (
-    <Flexbox paddingInline={4}>
-      <AccordionRoot
+    <div className="flex flex-col px-1">
+      <Accordion
+        multiple
         defaultValue={[ChatSidebarKey.Members, ChatSidebarKey.Topic]}
-        indicatorPlacement="inline"
-        style={{ gap: 8 }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
       >
         <Members itemKey={ChatSidebarKey.Members} />
         <Topic itemKey={ChatSidebarKey.Topic} />
-      </AccordionRoot>
-    </Flexbox>
+      </Accordion>
+    </div>
   );
 };
 

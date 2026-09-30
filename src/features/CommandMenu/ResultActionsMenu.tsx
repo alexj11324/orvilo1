@@ -1,5 +1,3 @@
-import { copyToClipboard, Icon } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import { Command } from 'cmdk';
 import {
@@ -10,11 +8,20 @@ import {
   LinkIcon,
   UserRoundPlusIcon,
 } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  createElement,
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
+import { toast } from '@/components/toast';
 import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
 import {
   STATUS_META,
@@ -30,6 +37,7 @@ import { projectService } from '@/services/project';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useCommandMenuContext } from './CommandMenuContext';
 import { styles } from './styles';
@@ -92,7 +100,7 @@ const ResultActionsMenu = memo(() => {
     if (detailPath) {
       entries.push(
         {
-          icon: <Icon icon={CornerDownLeftIcon} />,
+          icon: <CornerDownLeftIcon />,
           key: 'open',
           label: t('cmdk.resultActions.open'),
           run: () => {
@@ -101,7 +109,7 @@ const ResultActionsMenu = memo(() => {
           },
         },
         {
-          icon: <Icon icon={LinkIcon} />,
+          icon: <LinkIcon />,
           key: 'copy-link',
           label: t('cmdk.resultActions.copyLink'),
           run: () => {
@@ -122,7 +130,7 @@ const ResultActionsMenu = memo(() => {
     if (actionTarget.type === 'task') {
       entries.push(
         {
-          icon: <Icon icon={CircleDashedIcon} />,
+          icon: <CircleDashedIcon />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -130,14 +138,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <Icon icon={UserRoundPlusIcon} />,
+          icon: <UserRoundPlusIcon />,
           key: 'assign-to-me',
           label: t('cmdk.resultActions.assignToMe'),
           run: () =>
             runMutation(() => updateTask(actionTarget.id, { assigneeUserId: selfUserId! })),
         },
         {
-          icon: <Icon icon={BarChart3Icon} />,
+          icon: <BarChart3Icon />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -147,7 +155,7 @@ const ResultActionsMenu = memo(() => {
     } else if (actionTarget.type === 'project') {
       entries.push(
         {
-          icon: <Icon icon={CircleDashedIcon} />,
+          icon: <CircleDashedIcon />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -155,14 +163,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <Icon icon={UserRoundPlusIcon} />,
+          icon: <UserRoundPlusIcon />,
           key: 'lead-to-me',
           label: t('cmdk.resultActions.setLeadToMe'),
           run: () =>
             runMutation(() => projectService.update(actionTarget.id, { leadUserId: selfUserId! })),
         },
         {
-          icon: <Icon icon={BarChart3Icon} />,
+          icon: <BarChart3Icon />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -190,7 +198,7 @@ const ResultActionsMenu = memo(() => {
     if (actionTarget.type === 'task') {
       return USER_SELECTABLE_STATUSES.map((status) => ({
         disabled: !canEdit,
-        icon: <Icon color={STATUS_META[status].color} icon={STATUS_META[status].icon} />,
+        icon: createElement(STATUS_META[status].icon, { color: STATUS_META[status].color }),
         key: `status-${status}`,
         label: t(`taskDetail.status.${status}`, { ns: 'chat' }),
         run: () =>

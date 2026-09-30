@@ -1,9 +1,14 @@
 'use client';
 
-import { CopyButton, Flexbox, Markdown, ScrollShadow, TooltipGroup } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { FileTextIcon } from 'lucide-react';
 import { memo } from 'react';
+
+import CopyButton from '@/components/CopyButton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -44,22 +49,22 @@ interface DocumentCardProps {
 }
 
 const DocumentCard = memo<DocumentCardProps>(({ content, title }) => (
-  <Flexbox className={styles.container}>
-    <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+  <div className={cn('flex', 'flex-col', styles.container)}>
+    <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
       <FileTextIcon className={styles.icon} size={16} />
-      <Flexbox flex={1}>
+      <div className="flex flex-col flex-1">
         <div className={styles.title}>{title}</div>
-      </Flexbox>
-      <TooltipGroup>
+      </div>
+      <TooltipProvider>
         <CopyButton content={content} size={'small'} />
-      </TooltipGroup>
-    </Flexbox>
-    <ScrollShadow className={styles.content} offset={12} size={12} style={{ maxHeight: 400 }}>
+      </TooltipProvider>
+    </div>
+    <ScrollArea className={styles.content} style={{ maxHeight: 400 }}>
       <Markdown style={{ overflow: 'unset', paddingBottom: 16 }} variant={'chat'}>
         {content}
       </Markdown>
-    </ScrollShadow>
-  </Flexbox>
+    </ScrollArea>
+  </div>
 ));
 
 export default DocumentCard;

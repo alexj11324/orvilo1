@@ -597,6 +597,9 @@ export interface GlobalState {
   isServerVersionOutdated?: boolean;
   isStatusInit?: boolean;
   latestVersion?: string;
+  /** Transient responsive drawer state; desktop expansion lives in status. */
+  leftPanelDrawerMode?: boolean;
+  leftPanelDrawerOpen?: boolean;
   /** Imperative router navigate; see `NavigatorRegistrar` in `src/utils/router.tsx`. */
   navigationRef: GlobalNavigationRef;
   /**
@@ -681,7 +684,7 @@ export const INITIAL_STATUS = {
   projectListViewOptions: {
     grouping: 'none' as const,
     layout: 'list' as const,
-    orderBy: 'manual' as const,
+    orderBy: 'name' as const,
     orderDirection: 'asc' as const,
     properties: {
       completed: false,
@@ -801,6 +804,8 @@ export const initialState: GlobalState = {
   initClientDBStage: DatabaseLoadingState.Idle,
   isMobile: false,
   isStatusInit: false,
+  leftPanelDrawerMode: false,
+  leftPanelDrawerOpen: false,
   navigationRef: createNavigationRef(),
   sidebarKey: SidebarTabKey.Chat,
   status: createInitialSystemStatus(),

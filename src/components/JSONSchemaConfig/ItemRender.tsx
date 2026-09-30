@@ -2,7 +2,7 @@ import { type JSONSchema7Type } from 'json-schema';
 import { memo } from 'react';
 
 import { NumberField } from '@/components/reui/number-field';
-import { Select } from '@/components/Select';
+import Select from '@/components/Select';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';

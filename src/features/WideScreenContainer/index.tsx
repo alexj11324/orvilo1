@@ -30,7 +30,17 @@ interface WideScreenContainerProps extends ComponentProps<'div'> {
 }
 
 const WideScreenContainer = memo<WideScreenContainerProps>(
-  ({ children, className, onChange, wrapperStyle, onClick, minWidth, fullWidth, ...rest }) => {
+  ({
+    children,
+    className,
+    onChange,
+    wrapperStyle,
+    onClick,
+    minWidth,
+    fullWidth,
+    style,
+    ...rest
+  }) => {
     const wideScreen = useGlobalStore(systemStatusSelectors.wideScreen);
 
     useEffect(() => {
@@ -47,6 +57,7 @@ const WideScreenContainer = memo<WideScreenContainerProps>(
               fullWidth || wideScreen
                 ? '100%'
                 : `min(${minWidth || CONVERSATION_MIN_WIDTH}px, 100%)`,
+            ...style,
           }}
           {...rest}
         >

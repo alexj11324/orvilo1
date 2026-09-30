@@ -57,7 +57,11 @@ const DropdownMenu = memo<DropdownMenuProps>(
     const resolvedItems = typeof items === 'function' ? items() : (items ?? []);
 
     return (
-      <MenuPrimitive.Root open={open} onOpenChange={(nextOpen) => onOpenChange?.(nextOpen)}>
+      <MenuPrimitive.Root
+        modal={false}
+        open={open}
+        onOpenChange={(nextOpen) => onOpenChange?.(nextOpen)}
+      >
         <MenuPrimitive.Trigger className={className} render={children as ReactElement} />
         <MenuPrimitive.Portal {...portalProps}>
           <MenuPrimitive.Positioner

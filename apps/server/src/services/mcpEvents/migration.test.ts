@@ -11,7 +11,7 @@ it('replays the generated migration and commits receipts using its real unique i
   const database = new PGlite();
   try {
     const migration = await readFile(
-      path.resolve('docs/development/mcp-events-migration.sql'),
+      path.resolve('packages/database/migrations/0198_mcp_events.sql'),
       'utf8',
     );
     await database.exec(migration);

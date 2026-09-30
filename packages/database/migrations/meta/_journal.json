@@ -1385,6 +1385,13 @@
       "when": 1790786196366,
       "tag": "0197_experience_memory_shadow",
       "breakpoints": true
+    },
+    {
+      "idx": 198,
+      "version": "7",
+      "when": 1790794374893,
+      "tag": "0198_mcp_events",
+      "breakpoints": true
     }
   ]
 }

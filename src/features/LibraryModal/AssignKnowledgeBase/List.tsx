@@ -1,4 +1,3 @@
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
 import { BookOpen, ServerCrash } from 'lucide-react';
@@ -6,6 +5,7 @@ import React, { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
 
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { useAgentStore } from '@/store/agent';
 import { useGlobalStore } from '@/store/global';
 
@@ -91,18 +91,18 @@ export const List = memo(() => {
   const masonryContext = useMemo(() => ({}), []);
 
   return (
-    <Flexbox height={500}>
+    <div className="flex flex-col h-[500px]">
       {/*
        * Toolbar sits flush with the list items below: Virtuoso uses
        * `marginInline: -16` to pull rows back to the outer edge and each
        * Item re-applies `paddingInline={16}`. Match that here so the tab
        * group and view switcher line up with the item icons / add buttons.
        */}
-      <Flexbox gap={8} style={{ paddingBlockEnd: 12 }}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
+      <div className="flex flex-col gap-2" style={{ paddingBlockEnd: 12 }}>
+        <div className="flex flex-row items-center justify-between">
           {showVisibilityTabs ? <VisibilityTabs value={mode} onChange={setMode} /> : <span />}
           <ViewSwitcher view={viewMode} onViewChange={setViewMode} />
-        </Flexbox>
+        </div>
         {showPublicAgentHint && (
           <Alert
             showIcon
@@ -110,7 +110,7 @@ export const List = memo(() => {
             type={'info'}
           />
         )}
-      </Flexbox>
+      </div>
       {isLoading || isTransitioning ? (
         viewMode === 'masonry' ? (
           <MasonrySkeleton columnCount={columnCount} />
@@ -118,21 +118,23 @@ export const List = memo(() => {
           <Loading />
         )
       ) : isEmpty ? (
-        <Center gap={12} padding={40}>
+        <div className="flex flex-col items-center justify-center gap-3 p-10">
           {error ? (
             <>
-              <Icon icon={ServerCrash} size={80} />
+              <span className="anticon" role="img">
+                <ServerCrash fill={'transparent'} height={80} size={80} width={80} />
+              </span>
               {t('networkError')}
             </>
           ) : (
-            <Empty
+            <SimpleEmpty
               description={t('empty')}
               descriptionProps={{ fontSize: 14 }}
               icon={BookOpen}
               style={{ maxWidth: 400 }}
             />
           )}
-        </Center>
+        </div>
       ) : viewMode === 'list' ? (
         <Virtuoso
           increaseViewportBy={typeof window !== 'undefined' ? window.innerHeight : 0}
@@ -160,7 +162,7 @@ export const List = memo(() => {
           </div>
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

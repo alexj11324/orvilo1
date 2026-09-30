@@ -1,8 +1,8 @@
-import { type DropdownItem } from '@lobehub/ui';
-import { DropdownMenu } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
+
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 
 interface ActionProps {
   dropdownMenu: DropdownItem[] | (() => DropdownItem[]);

@@ -1,13 +1,14 @@
 'use client';
 
-import { Center, Flexbox, Highlighter, Icon, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Tabs } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CodeIcon, EyeIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import { useTextFileLoader } from '../../hooks/useTextFileLoader';
 
@@ -62,32 +63,46 @@ const MarkdownViewer = memo<MarkdownViewerProps>(({ url }) => {
 
   if (loading || fileData === null)
     return (
-      <Center height={'100%'} width={'100%'}>
+      <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
         <NeuralNetworkLoading size={36} />
-      </Center>
+      </div>
     );
 
   return (
-    <Flexbox className={styles.page}>
-      <Flexbox horizontal align={'center'} className={styles.controls} gap={4}>
+    <div className={cx('flex flex-col', styles.page)}>
+      <div className={cx('flex flex-row items-center gap-1', styles.controls)}>
         <Tabs
           activeKey={mode}
           size={'small'}
           items={[
-            { icon: <Icon icon={EyeIcon} />, key: 'render', label: t('preview.render') },
-            { icon: <Icon icon={CodeIcon} />, key: 'raw', label: t('preview.raw') },
+            {
+              icon: (
+                <span className="anticon" role="img">
+                  <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
+              key: 'render',
+              label: t('preview.render'),
+            },
+            {
+              icon: (
+                <span className="anticon" role="img">
+                  <CodeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
+              key: 'raw',
+              label: t('preview.raw'),
+            },
           ]}
           onChange={(key) => setMode(key as PreviewMode)}
         />
-      </Flexbox>
+      </div>
       {mode === 'render' ? (
         <Markdown style={{ paddingBlock: 16, paddingInline: 24 }}>{fileData}</Markdown>
       ) : (
-        <Highlighter language={'markdown'} showLanguage={false} variant={'borderless'}>
-          {fileData}
-        </Highlighter>
+        <CodeBlock className="h-full" code={fileData} language={'markdown'} variant={'ghost'} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

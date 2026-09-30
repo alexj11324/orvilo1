@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Drawer } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -33,16 +32,19 @@ const ChunkDrawer = memo(() => {
         closeChunkDrawer();
       }}
     >
-      <Flexbox horizontal height={'100%'} style={{ overflow: 'hidden' }}>
+      <div className="flex flex-row h-[100%]" style={{ overflow: 'hidden' }}>
         {file && (
-          <Flexbox flex={2} style={{ overflow: 'scroll' }}>
+          <div className="flex flex-col" style={{ overflow: 'scroll', flex: 2 }}>
             <FileViewer {...file} id={file.fileId ?? file.id} />
-          </Flexbox>
+          </div>
         )}
-        <Flexbox flex={1} style={{ borderInlineStart: `1px solid ${cssVar.colorSplit}` }}>
+        <div
+          className="flex flex-col flex-1"
+          style={{ borderInlineStart: `1px solid ${cssVar.colorSplit}` }}
+        >
           <Content />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </Drawer>
   );
 });

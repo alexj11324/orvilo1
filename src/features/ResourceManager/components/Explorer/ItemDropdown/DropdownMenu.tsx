@@ -1,12 +1,12 @@
-import { DropdownMenu as DropdownMenuUI } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
-import { type ItemType } from 'antd/es/menu/interface';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { type DropdownItem, DropdownMenu as DropdownMenuUI } from '@/components/ItemsMenu';
+
 interface DropdownMenuProps {
   className?: string;
-  items: ItemType[] | (() => ItemType[]);
+  items: DropdownItem[] | (() => DropdownItem[]);
 }
 
 const DropdownMenu = memo<DropdownMenuProps>(({ items, className }) => {

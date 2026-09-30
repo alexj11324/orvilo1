@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import { memo } from 'react';
@@ -102,7 +101,7 @@ const RecentFiles = memo(() => {
   if (!isLoading && !error && !data?.length) return null;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <SectionTitle title={t('home.recentFiles')} viewAllUrl={`/resource/${FilesTabs.All}`} />
       {error && !data?.length ? (
         <AsyncError error={error} variant={'inline'} onRetry={() => void mutate()} />
@@ -126,16 +125,16 @@ const RecentFiles = memo(() => {
                     <FileIcon fileName={item.name} fileType={item.fileType} size={40} />
                   )}
                 </div>
-                <Flexbox gap={4} padding={12}>
+                <div className="flex flex-col gap-1 p-3">
                   <span className={styles.name}>{item.name}</span>
                   <span className={styles.meta}>{formatTime(item.createdAt)}</span>
-                </Flexbox>
+                </div>
               </button>
             );
           })}
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

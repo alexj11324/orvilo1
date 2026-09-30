@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
 import { Checkbox } from '@lobehub/ui/base-ui';
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
 import { cssVar } from 'antd-style';
@@ -159,33 +158,31 @@ const SearchResultsOverlay = memo(() => {
       }}
     >
       {isLoading ? (
-        <Center height="100%">
+        <div className="flex flex-col items-center justify-center h-[100%]">
           <NeuralNetworkLoading size={48} />
-        </Center>
+        </div>
       ) : error && (!data || data.length === 0) ? (
         // A failed search fetch used to fall through to the "no results" state, telling
         // the user their query matched nothing when the request actually errored
         // (Read §1.1). Branch the failure before the no-match state; the no-match
         // variant below is untouched and still handles a genuine zero-result search.
-        <Center height="100%">
+        <div className="flex flex-col items-center justify-center h-[100%]">
           <AsyncError error={error} variant={'block'} onRetry={() => mutate()} />
-        </Center>
+        </div>
       ) : !data || data.length === 0 ? (
-        <Center height="100%">
-          <Flexbox align="center" gap={8}>
+        <div className="flex flex-col items-center justify-center h-[100%]">
+          <div className="flex flex-col items-center gap-2">
             <SearchIcon size={32} style={{ color: cssVar.colorTextQuaternary as string }} />
             <span style={{ color: cssVar.colorTextDescription as string, fontSize: 14 }}>
               {t('FileManager.search.noResults')}
             </span>
-          </Flexbox>
-        </Center>
+          </div>
+        </div>
       ) : viewMode === 'list' ? (
-        <Flexbox height={'100%'}>
+        <div className="flex flex-col h-[100%]">
           <div style={{ flex: 1, overflow: 'auto hidden' }}>
-            <Flexbox
-              horizontal
-              align="center"
-              paddingInline={8}
+            <div
+              className="flex flex-row items-center px-2"
               style={{
                 borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
                 color: cssVar.colorTextDescription as string,
@@ -195,11 +192,14 @@ const SearchResultsOverlay = memo(() => {
                 minWidth: getListViewMinWidth(showUploader),
               }}
             >
-              <Center height={40} style={{ paddingInline: 4 }}>
+              <div
+                className="flex flex-col items-center justify-center h-[40px]"
+                style={{ paddingInline: 4 }}
+              >
                 <Checkbox disabled checked={false} />
-              </Center>
-              <Flexbox
-                justify="center"
+              </div>
+              <div
+                className="flex flex-col justify-center"
                 style={{
                   flexShrink: 0,
                   height: '100%',
@@ -211,9 +211,9 @@ const SearchResultsOverlay = memo(() => {
                 }}
               >
                 {t('FileManager.title.title')}
-              </Flexbox>
-              <Flexbox
-                justify="center"
+              </div>
+              <div
+                className="flex flex-col justify-center"
                 style={{
                   flexShrink: 0,
                   height: '100%',
@@ -223,10 +223,10 @@ const SearchResultsOverlay = memo(() => {
                 }}
               >
                 {t('FileManager.title.createdAt')}
-              </Flexbox>
+              </div>
               {showUploader && (
-                <Flexbox
-                  justify="center"
+                <div
+                  className="flex flex-col justify-center"
                   style={{
                     flexShrink: 0,
                     height: '100%',
@@ -236,10 +236,10 @@ const SearchResultsOverlay = memo(() => {
                   }}
                 >
                   {t('FileManager.title.uploader')}
-                </Flexbox>
+                </div>
               )}
-              <Flexbox
-                justify="center"
+              <div
+                className="flex flex-col justify-center"
                 style={{
                   flexShrink: 0,
                   height: '100%',
@@ -249,8 +249,8 @@ const SearchResultsOverlay = memo(() => {
                 }}
               >
                 {t('FileManager.title.size')}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
             <div style={{ height: 'calc(100% - 40px)', overflow: 'hidden', position: 'relative' }}>
               <Virtuoso
                 data={data}
@@ -282,7 +282,7 @@ const SearchResultsOverlay = memo(() => {
               />
             </div>
           </div>
-        </Flexbox>
+        </div>
       ) : (
         <div
           style={{

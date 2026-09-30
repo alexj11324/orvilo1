@@ -1,5 +1,4 @@
-import { Flexbox, Icon, stopPropagation } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { AudioLinesIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -62,9 +61,11 @@ interface AudioFileItemProps {
 const AudioFileItem = memo<AudioFileItemProps>(({ isInView, name, size, url }) => (
   <>
     <div className={styles.cover}>
-      <Icon icon={AudioLinesIcon} size={40} />
+      <span className="anticon" role="img">
+        <AudioLinesIcon fill={'transparent'} height={40} size={40} width={40} />
+      </span>
     </div>
-    <Flexbox className={styles.info} gap={8}>
+    <div className={cx('flex flex-col gap-2', styles.info)}>
       <span className={styles.name}>{name}</span>
       <span className={styles.meta}>{formatSize(size)}</span>
       {isInView && url && (
@@ -74,11 +75,11 @@ const AudioFileItem = memo<AudioFileItemProps>(({ isInView, name, size, url }) =
           className={styles.player}
           preload={'metadata'}
           src={url}
-          onClick={stopPropagation}
-          onPointerDown={stopPropagation}
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         />
       )}
-    </Flexbox>
+    </div>
   </>
 ));
 

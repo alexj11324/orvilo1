@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Avatar, Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, GROUP_CHAT_URL } from '@orvilo/const';
 import { memo, useState } from 'react';
@@ -186,18 +185,12 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
     };
 
     return (
-      <Block
-        aria-label={resourceTitle}
-        gap={4}
-        paddingBlock={12}
-        paddingInline={20}
-        variant="borderless"
-      >
+      <div aria-label={resourceTitle} className="flex flex-col gap-1 py-3 px-5">
         {/* No unread dot: it is not clearable by clicking (a pending item is
             "unread" until acted on), and a dot that ignores clicks reads as
             broken. The Pending badge and the action buttons carry the
             "awaiting you" signal. */}
-        <Flexbox horizontal align="flex-start" gap={12}>
+        <div className="flex flex-row items-start gap-3">
           <Avatar
             avatar={request.resource?.avatar || undefined}
             background={request.resource?.backgroundColor || undefined}
@@ -206,12 +199,9 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
             style={{ flex: 'none' }}
             title={resourceTitle}
           />
-          <Flexbox flex={1} gap={2} style={{ minWidth: 0, overflow: 'hidden' }}>
-            <Flexbox
-              horizontal
-              align="center"
-              gap={6}
-              justify="space-between"
+          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div
+              className="flex flex-row items-center gap-1.5 justify-between"
               style={{ minWidth: 0 }}
             >
               <Text ellipsis style={{ minWidth: 0 }} weight={500}>
@@ -222,14 +212,14 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
                   {t(typeLabelKey as never)}
                 </Tag>
               )}
-            </Flexbox>
+            </div>
             <Text ellipsis fontSize={12} type="secondary">
               {isRecipient
                 ? t('transferRequest.itemIncoming', { name: counterpartLabel })
                 : t('transferRequest.itemOutgoing', { name: counterpartLabel })}
             </Text>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {isRecipient && (
           // The transfer's impact summary: what arrives disabled (bots, cron
           // jobs), what resets (device binding), what detaches (others' task
@@ -250,11 +240,11 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
             }
           />
         )}
-        <Flexbox horizontal align="center" gap={8} justify="space-between">
+        <div className="flex flex-row items-center gap-2 justify-between">
           <Text fontSize={12} style={{ marginInlineStart: 44 }} type="secondary">
             {formatNotificationRelativeTime(request.createdAt, dateLocale)}
           </Text>
-          <Flexbox horizontal gap={8}>
+          <div className="flex flex-row gap-2">
             {isRecipient ? (
               <>
                 <Button
@@ -304,9 +294,9 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
                 {t('transferRequest.withdraw')}
               </Button>
             )}
-          </Flexbox>
-        </Flexbox>
-      </Block>
+          </div>
+        </div>
+      </div>
     );
   },
 );

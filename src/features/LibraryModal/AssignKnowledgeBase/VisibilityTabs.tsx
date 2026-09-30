@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { LockIcon, UsersIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -79,7 +78,9 @@ const VisibilityTabs = memo<VisibilityTabsProps>(({ value, onChange }) => {
               onChange(option.key);
             }}
           >
-            <Icon icon={OptionIcon} size={14} />
+            <span className="anticon" role="img">
+              <OptionIcon fill={'transparent'} height={14} size={14} width={14} />
+            </span>
             <span>{t(option.labelKey as never)}</span>
           </button>
         );

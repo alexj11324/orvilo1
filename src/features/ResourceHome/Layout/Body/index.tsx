@@ -1,4 +1,3 @@
-import { Tooltip } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -13,6 +12,7 @@ import { PlusIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -60,7 +60,7 @@ const SidebarBody = memo<{ itemKey: string }>(({ itemKey }) => {
             accordionStyles.actionBorderless,
           )}
         >
-          {canCreate ? createButton : <Tooltip title={reason}>{createButton}</Tooltip>}
+          {canCreate ? createButton : <SimpleTooltip title={reason}>{createButton}</SimpleTooltip>}
         </div>
       </AccordionHeader>
       <AccordionPanel>

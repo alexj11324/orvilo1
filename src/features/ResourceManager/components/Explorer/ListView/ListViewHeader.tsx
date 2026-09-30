@@ -1,6 +1,5 @@
-import { Center, Flexbox } from '@lobehub/ui';
 import { Checkbox } from '@lobehub/ui/base-ui';
-import { cssVar } from 'antd-style';
+import { cssVar, cx } from 'antd-style';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -73,28 +72,27 @@ const ListViewHeader = ({
 
   return (
     <>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.header}
-        paddingInline={8}
+      <div
+        className={cx('flex flex-row items-center px-2', styles.header)}
         style={{
           borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
           fontSize: 12,
           minWidth: getListViewMinWidth(showUploader),
         }}
       >
-        <Center height={40} style={{ paddingInline: 4 }}>
+        <div
+          className="flex flex-col items-center justify-center h-[40px]"
+          style={{ paddingInline: 4 }}
+        >
           <Checkbox
             checked={allSelected}
             disabled={!hasSelectableItems}
             indeterminate={indeterminate}
             onChange={handleSelectAllResults}
           />
-        </Center>
-        <Flexbox
-          className={styles.headerItem}
-          justify={'center'}
+        </div>
+        <div
+          className={cx('flex flex-col justify-center', styles.headerItem)}
           style={{
             flexShrink: 0,
             maxWidth: columnWidths.name,
@@ -118,12 +116,15 @@ const ListViewHeader = ({
             minWidth={200}
             onResize={(width) => updateColumnWidth('name', width)}
           />
-        </Flexbox>
-        <Flexbox
-          className={styles.headerItem}
-          justify={'center'}
-          style={{ flexShrink: 0, paddingInlineEnd: 16, position: 'relative' }}
-          width={columnWidths.date}
+        </div>
+        <div
+          className={cx('flex flex-col justify-center', styles.headerItem)}
+          style={{
+            flexShrink: 0,
+            paddingInlineEnd: 16,
+            position: 'relative',
+            width: columnWidths.date,
+          }}
         >
           {t('FileManager.title.createdAt')}
           <ColumnResizeHandle
@@ -133,13 +134,16 @@ const ListViewHeader = ({
             minWidth={120}
             onResize={(width) => updateColumnWidth('date', width)}
           />
-        </Flexbox>
+        </div>
         {showUploader && (
-          <Flexbox
-            className={styles.headerItem}
-            justify={'center'}
-            style={{ flexShrink: 0, paddingInlineEnd: 16, position: 'relative' }}
-            width={columnWidths.uploader}
+          <div
+            className={cx('flex flex-col justify-center', styles.headerItem)}
+            style={{
+              flexShrink: 0,
+              paddingInlineEnd: 16,
+              position: 'relative',
+              width: columnWidths.uploader,
+            }}
           >
             {t('FileManager.title.uploader')}
             <ColumnResizeHandle
@@ -149,13 +153,16 @@ const ListViewHeader = ({
               minWidth={120}
               onResize={(width) => updateColumnWidth('uploader', width)}
             />
-          </Flexbox>
+          </div>
         )}
-        <Flexbox
-          className={styles.headerItem}
-          justify={'center'}
-          style={{ flexShrink: 0, paddingInlineEnd: 16, position: 'relative' }}
-          width={columnWidths.size}
+        <div
+          className={cx('flex flex-col justify-center', styles.headerItem)}
+          style={{
+            flexShrink: 0,
+            paddingInlineEnd: 16,
+            position: 'relative',
+            width: columnWidths.size,
+          }}
         >
           {t('FileManager.title.size')}
           <ColumnResizeHandle
@@ -165,8 +172,8 @@ const ListViewHeader = ({
             minWidth={80}
             onResize={(width) => updateColumnWidth('size', width)}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <ListViewSelectAllHint
         dataLength={selectableCount}
         selectAllState={selectAllState}

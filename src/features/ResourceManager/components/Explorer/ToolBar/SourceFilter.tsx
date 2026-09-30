@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
@@ -56,7 +55,7 @@ const SourceFilter = memo(() => {
   if (!canFilter) return null;
 
   return (
-    <Flexbox horizontal align={'center'} gap={2}>
+    <div className="flex flex-row items-center gap-0.5">
       {OPTIONS.map((option) => {
         const isActive = activeFilter === option.key;
 
@@ -73,7 +72,7 @@ const SourceFilter = memo(() => {
           </Button>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -78,7 +77,7 @@ const LibraryList = memo(() => {
       }
       onRetry={() => mutate()}
     >
-      <Flexbox gap={1} paddingInline={4}>
+      <div className="flex flex-col gap-[1px] px-1">
         {data?.map((item) => (
           <Item
             description={item.description}
@@ -91,7 +90,7 @@ const LibraryList = memo(() => {
             visibility={item.visibility}
           />
         ))}
-      </Flexbox>
+      </div>
     </AsyncBoundary>
   );
 });

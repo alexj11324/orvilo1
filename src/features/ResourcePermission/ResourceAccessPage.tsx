@@ -1,19 +1,23 @@
 'use client';
 
-import type { FormGroupItemType } from '@lobehub/ui';
-import { Flexbox, Form, Icon } from '@lobehub/ui';
 import { Alert, Text, toast } from '@lobehub/ui/base-ui';
-import { Breadcrumb as AntBreadcrumb } from 'antd';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRight, InfoIcon, UsersIcon } from 'lucide-react';
-import { memo, useEffect } from 'react';
+import { memo, type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import Loading from '@/components/Loading/BrandTextLoading';
-import { FORM_STYLE } from '@/const/layoutTokens';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -25,6 +29,55 @@ import { AddCollaboratorButton, CollaboratorList } from './Collaborators';
 import PolicySelect from './PolicySelect';
 import { useAccessLevelOptions } from './useAccessLevelOptions';
 import { useResourcePermission } from './useResourcePermission';
+
+interface AccessFormItem {
+  avatar?: ReactNode;
+  children?: ReactNode;
+  desc?: ReactNode;
+  label?: ReactNode;
+}
+
+interface FormGroupItemType {
+  children?: AccessFormItem[] | ReactNode;
+  desc?: ReactNode;
+  extra?: ReactNode;
+  key?: string;
+  title: ReactNode;
+}
+
+/**
+ * Renders the lobehub `Form itemsType="group"` shape the access page uses: a
+ * titled section with an optional description/extra, then label-control rows.
+ */
+const AccessFormGroups = ({ groups }: { groups: FormGroupItemType[] }) => (
+  <div className="flex flex-col gap-6">
+    {groups.map((group, index) => (
+      <section className="flex flex-col gap-2" key={group.key ?? index}>
+        <div className="flex flex-row items-center justify-between">
+          <Text strong as={'span'}>
+            {group.title}
+          </Text>
+          {group.extra}
+        </div>
+        {group.desc ? <Text type={'secondary'}>{group.desc}</Text> : null}
+        {Array.isArray(group.children)
+          ? group.children.map((item, itemIndex) => (
+              <div className="flex flex-row items-center justify-between gap-4" key={itemIndex}>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-row items-center gap-2">
+                    {item.avatar}
+                    <span>{item.label}</span>
+                  </div>
+                  {item.desc ? <Text type={'secondary'}>{item.desc}</Text> : null}
+                </div>
+                {item.children}
+              </div>
+            ))
+          : group.children}
+      </section>
+    ))}
+  </div>
+);
 
 const styles = createStaticStyles(({ css }) => ({
   body: css`
@@ -129,7 +182,9 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
         {
           avatar: (
             <span className={styles.rowIcon}>
-              <Icon icon={UsersIcon} size={16} />
+              <span className="anticon" role="img">
+                <UsersIcon fill={'transparent'} height={16} size={16} width={16} />
+              </span>
             </span>
           ),
           children: (
@@ -158,47 +213,52 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
     }
 
     return (
-      <Flexbox height={'100%'} width={'100%'}>
+      <div className="flex flex-col h-[100%] w-[100%]">
         <NavHeader
           styles={{ left: { paddingInlineStart: 24 } }}
           left={
-            <AntBreadcrumb
-              className={styles.breadcrumb}
-              separator={<Icon icon={ChevronRight} size={14} />}
-              items={[
-                ...(resourceName
-                  ? [
-                      {
-                        title: (
-                          <Link to={buildWorkspaceAwarePath(resourceHomePath, activeWorkspaceSlug)}>
-                            <Text
-                              ellipsis
-                              as={'span'}
-                              color={'inherit'}
-                              style={{ maxWidth: 200 }}
-                              weight={500}
-                            >
-                              {resourceName}
-                            </Text>
-                          </Link>
-                        ),
-                      },
-                    ]
-                  : []),
-                {
-                  title: (
+            <Breadcrumb className={styles.breadcrumb}>
+              <BreadcrumbList>
+                {resourceName ? (
+                  <>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink
+                        render={
+                          <Link
+                            to={buildWorkspaceAwarePath(resourceHomePath, activeWorkspaceSlug)}
+                          />
+                        }
+                      >
+                        <Text
+                          ellipsis
+                          as={'span'}
+                          color={'inherit'}
+                          style={{ maxWidth: 200 }}
+                          weight={500}
+                        >
+                          {resourceName}
+                        </Text>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator>
+                      <ChevronRight size={14} />
+                    </BreadcrumbSeparator>
+                  </>
+                ) : null}
+                <BreadcrumbItem>
+                  <BreadcrumbPage>
                     <Text as={'span'} color={'inherit'} weight={500}>
                       {t('permission.page.title')}
                     </Text>
-                  ),
-                },
-              ]}
-            />
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           }
         />
-        <Flexbox className={styles.body} flex={1} width={'100%'}>
+        <div className={cx('flex flex-col flex-1 w-[100%]', styles.body)}>
           <WideScreenContainer>
-            <Flexbox gap={16} paddingBlock={16}>
+            <div className="flex flex-col gap-4 py-4">
               {error && !isDenied ? (
                 <AsyncError error={error} variant={'inline'} onRetry={() => mutate()} />
               ) : isLoading || isDenied ? (
@@ -207,19 +267,28 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
                 <>
                   {isPrivate ? (
                     <Alert
-                      icon={<Icon icon={InfoIcon} />}
                       style={{ width: '100%' }}
                       title={copy.privateNotice}
                       type={'info'}
+                      icon={
+                        <span className="anticon" role="img">
+                          <InfoIcon
+                            fill={'transparent'}
+                            height={'1em'}
+                            size={'1em'}
+                            width={'1em'}
+                          />
+                        </span>
+                      }
                     />
                   ) : null}
-                  <Form items={formGroups} itemsType={'group'} {...FORM_STYLE} />
+                  <AccessFormGroups groups={formGroups} />
                 </>
               )}
-            </Flexbox>
+            </div>
           </WideScreenContainer>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

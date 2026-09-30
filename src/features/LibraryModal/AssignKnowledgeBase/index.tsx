@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { memo } from 'react';
@@ -11,13 +10,12 @@ const Content = memo(() => {
   const mobile = useServerConfigStore((s) => s.isMobile);
 
   return (
-    <Flexbox
-      gap={mobile ? 8 : 16}
-      style={{ maxHeight: mobile ? '-webkit-fill-available' : 'inherit' }}
-      width={'100%'}
+    <div
+      className="flex flex-col w-[100%]"
+      style={{ maxHeight: mobile ? '-webkit-fill-available' : 'inherit', gap: mobile ? 8 : 16 }}
     >
       <List />
-    </Flexbox>
+    </div>
   );
 });
 

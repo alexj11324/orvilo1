@@ -1,9 +1,9 @@
-import { DropdownMenu, Icon } from '@lobehub/ui';
 import { type LucideIcon } from 'lucide-react';
 import { ArrowDownAZ, CalendarIcon, Check, HardDriveIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { type MenuProps } from '@/components/Menu';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 
@@ -28,8 +28,17 @@ const SortDropdown = memo(() => {
   const menuItems: MenuProps['items'] = useMemo(
     () =>
       sortOptions.map((option) => ({
-        extra: option.key === selectedKey ? <Icon icon={Check} /> : undefined,
-        icon: <Icon icon={option.icon} />,
+        extra:
+          option.key === selectedKey ? (
+            <span className="anticon" role="img">
+              <Check fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ) : undefined,
+        icon: (
+          <span className="anticon" role="img">
+            <option.icon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: option.key,
         label: option.label,
         onClick: () => setSorter(option.key as 'name' | 'createdAt' | 'size'),

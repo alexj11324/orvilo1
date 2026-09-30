@@ -1,6 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { Grid3x3Icon, ListIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +21,7 @@ const ViewSwitcher = memo<ViewSwitcherProps>(({ onViewChange, view }) => {
   const { t } = useTranslation('components');
 
   return (
-    <Flexbox horizontal className={styles.container}>
+    <div className={cx('flex flex-row', styles.container)}>
       <ActionIcon
         active={view === 'list'}
         icon={ListIcon}
@@ -37,7 +36,7 @@ const ViewSwitcher = memo<ViewSwitcherProps>(({ onViewChange, view }) => {
         title={t('FileManager.view.masonry')}
         onClick={() => onViewChange('masonry')}
       />
-    </Flexbox>
+    </div>
   );
 });
 

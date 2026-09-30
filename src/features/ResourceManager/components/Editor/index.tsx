@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, createModal, Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar, useTheme } from 'antd-style';
 import { t as i18nT } from 'i18next';
@@ -22,10 +21,10 @@ interface FileEditorProps {
 }
 
 const FileDetailSkeleton = () => (
-  <Flexbox gap={16}>
+  <div className="flex flex-col gap-4">
     <Skeleton.Text rows={5} width={['80%', '60%', '40%', '70%', '70%']} />
     <Skeleton.Text rows={2} width={['50%', '60%']} />
-  </Flexbox>
+  </div>
 );
 
 const FileDetailModalContent = memo(() => {
@@ -35,13 +34,13 @@ const FileDetailModalContent = memo(() => {
   const { data: fromQuery } = useFetchKnowledgeItem(!fromStore ? currentViewItemId : undefined);
   const fileDetail = fromStore ?? fromQuery;
   return (
-    <Flexbox style={{ minHeight: 260 }}>
+    <div className="flex flex-col" style={{ minHeight: 260 }}>
       {fileDetail ? (
         <FileDetailComponent {...fileDetail} showDownloadButton={false} showTitle={false} />
       ) : (
         <FileDetailSkeleton />
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -68,14 +67,12 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
   const fileDetail = fromStore ?? fromFetch;
 
   return (
-    <Flexbox horizontal height={'100%'} style={{ minHeight: 0 }} width={'100%'}>
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0 }}>
+    <div className="flex flex-row h-[100%] w-[100%]" style={{ minHeight: 0 }}>
+      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0 }}>
         <NavHeader
           left={
-            <Flexbox
-              horizontal
-              align={'center'}
-              gap={12}
+            <div
+              className="flex flex-row items-center gap-3"
               style={{ minHeight: 32, minWidth: 0, overflow: 'hidden' }}
             >
               <ActionIcon icon={ArrowLeftIcon} title={t('back')} onClick={onBack} />
@@ -92,10 +89,10 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
               >
                 {fileDetail?.name}
               </span>
-            </Flexbox>
+            </div>
           }
           right={
-            <Flexbox horizontal gap={8}>
+            <div className="flex flex-row gap-2">
               {fileDetail?.url && (
                 <ActionIcon
                   icon={DownloadIcon}
@@ -108,7 +105,7 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
                 />
               )}
               <ActionIcon icon={InfoIcon} onClick={openFileDetailModal} />
-            </Flexbox>
+            </div>
           }
           style={{
             borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
@@ -117,11 +114,11 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
             left: { flex: 1, minWidth: 0, overflow: 'hidden', padding: 0 },
           }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
           <FileContent fileId={currentViewItemId} />
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

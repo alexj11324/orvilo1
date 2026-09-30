@@ -58,4 +58,23 @@ function TooltipContent({
   );
 }
 
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
+interface SimpleTooltipProps {
+  children?: React.ReactNode;
+  contentStyle?: React.CSSProperties;
+  side?: 'bottom' | 'inline-end' | 'inline-start' | 'left' | 'right' | 'top';
+  title?: React.ReactNode;
+}
+
+const SimpleTooltip = ({ children, contentStyle, side, title }: SimpleTooltipProps) =>
+  title == null || title === '' ? (
+    <>{children}</>
+  ) : (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex">{children}</span>} />
+      <TooltipContent side={side} style={contentStyle}>
+        {title}
+      </TooltipContent>
+    </Tooltip>
+  );
+
+export { SimpleTooltip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };

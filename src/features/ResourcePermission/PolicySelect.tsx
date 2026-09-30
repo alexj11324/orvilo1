@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import type { SelectOptions } from '@lobehub/ui/base-ui';
 import { Select } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -93,12 +92,14 @@ const PolicySelectInner = <Value extends string>({
         label: (
           <span className={styles.option}>
             <span aria-hidden className={styles.optionIcon}>
-              <Icon icon={option.icon} size={16} />
+              <span className="anticon" role="img">
+                <option.icon fill={'transparent'} height={16} size={16} width={16} />
+              </span>
             </span>
-            <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
               <span className={styles.optionLabel}>{option.label}</span>
               {option.desc ? <span className={styles.optionDesc}>{option.desc}</span> : null}
-            </Flexbox>
+            </div>
           </span>
         ),
         title: option.label,
@@ -115,7 +116,9 @@ const PolicySelectInner = <Value extends string>({
       return (
         <span className={styles.trigger}>
           <span aria-hidden className={styles.optionIcon}>
-            <Icon icon={option.icon} size={16} />
+            <span className="anticon" role="img">
+              <option.icon fill={'transparent'} height={16} size={16} width={16} />
+            </span>
           </span>
           <span className={styles.triggerLabel}>{option.label}</span>
         </span>

@@ -4,7 +4,7 @@ import type { HeteroSessionDirGroup, HeteroSessionDirPref } from '@orvilo/types'
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight, Eye, EyeOff, Folder, FolderGit2, Timer, X } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';

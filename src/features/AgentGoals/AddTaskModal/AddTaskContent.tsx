@@ -53,7 +53,7 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') (() => void submit())(event);
+            if (event.key === 'Enter') void submit();
           }}
         />
       </div>

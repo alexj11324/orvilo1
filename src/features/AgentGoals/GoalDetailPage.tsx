@@ -245,7 +245,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
           }
         />
         <div className="flex flex-col flex-1" style={{ overflowY: 'auto' }}>
-          <WideScreenContainer gap={20} paddingBlock={16}>
+          <WideScreenContainer wrapperStyle={{ gap: 20, paddingBlock: 16 }}>
             <div className={`flex flex-col gap-2 ${styles.header}`}>
               <h1 className="text-[22px] font-semibold">{goal.title}</h1>
               <div className={`flex gap-2 flex-wrap ${styles.metrics}`}>

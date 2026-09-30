@@ -3,6 +3,7 @@ import type { GoalGraphSnapshot } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import {
   Accordion,
   AccordionContent,

@@ -135,12 +135,7 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
           </Button>
         }
       />
-      <WideScreenContainer
-        flex={1}
-        gap={16}
-        paddingBlock={16}
-        wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-      >
+      <WideScreenContainer wrapperStyle={{ flex: 1, gap: 16, paddingBlock: 16, overflowY: 'auto' }}>
         {isLoading && !isInitialized ? (
           <GoalSkeleton chrome={'body'} />
         ) : error ? (

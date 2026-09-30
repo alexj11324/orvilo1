@@ -1,4 +1,3 @@
-import { ActionIcon, Popover, Switch } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cx } from 'antd-style';
 import { HardDrive, SettingsIcon } from 'lucide-react';
@@ -6,6 +5,9 @@ import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
+import { Popover } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import {
   getScopedConnectionCount,
   getWorkspaceConnectionState,
@@ -137,9 +139,9 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
             <Switch
               aria-label={t('gateway.enableConnection')}
               checked={isConnected || isConnecting}
-              loading={isConnecting}
-              size="small"
-              onChange={handleSwitchChange}
+              disabled={isConnecting}
+              size="sm"
+              onCheckedChange={handleSwitchChange}
             />
           )}
         </div>

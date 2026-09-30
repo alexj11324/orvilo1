@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import type { IAsyncTaskError } from '@orvilo/types';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import { useMemo } from 'react';
 
 import { useFileTransferMenuItem } from '@/business/client/hooks/useFileTransferMenuItem';
 import type { DropdownItem } from '@/components/ItemsMenu';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { getChunkTargetId } from '@/store/file';
 
@@ -108,14 +108,14 @@ const FileListItemActions = ({
               title={t('FileManager.actions.chunkingTooltip')}
             >
               <Button
-                icon={FileBoxIcon}
                 loading={isCreatingFileParseTask}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 onClick={() => {
                   parseFiles([chunkTargetId]);
                 }}
               >
+                <FileBoxIcon data-icon="inline-start" />{' '}
                 {t(
                   isCreatingFileParseTask
                     ? 'FileManager.actions.createChunkingTask'

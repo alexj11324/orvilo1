@@ -1,6 +1,5 @@
 'use client';
 
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { getOrviloSkillProviderById } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -9,6 +8,7 @@ import { SquareArrowOutUpRight, Unplug, Wrench } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';

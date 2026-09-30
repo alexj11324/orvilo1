@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { Button as BaseButton, createModal, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { UpdateInfo } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -8,6 +7,9 @@ import { X } from 'lucide-react';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button as BaseButton } from '@/components/ui/button';
 import { autoUpdateService } from '@/services/electron/autoUpdate';
 import { rendererOtaService } from '@/services/electron/rendererOta';
 import { useUserStore } from '@/store/user';

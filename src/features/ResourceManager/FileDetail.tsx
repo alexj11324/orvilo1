@@ -1,12 +1,13 @@
 'use client';
 
-import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { BoltIcon, DownloadIcon } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
 import { Separator } from '@/components/ui/separator';
 import { type FileListItem } from '@/types/files';
 import { downloadFile } from '@/utils/client/downloadFile';
@@ -76,17 +77,12 @@ const FileDetail = memo<FileDetailProps>((props) => {
   const dataItems = [
     {
       children: chunkCount ? (
-        <Tag
-          variant={'filled'}
-          icon={
-            <span className="anticon" role="img">
-              <BoltIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-            </span>
-          }
-        >
-          {' '}
+        <Badge variant="secondary">
+          <span className="anticon" role="img">
+            <BoltIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>{' '}
           {chunkCount}
-        </Tag>
+        </Badge>
       ) : (
         t('detail.data.noChunk')
       ),
@@ -95,9 +91,21 @@ const FileDetail = memo<FileDetailProps>((props) => {
     },
     {
       children: (
-        <Tag color={embeddingStatus || 'default'} variant={'filled'}>
+        <Badge
+          variant={
+            embeddingStatus === 'success'
+              ? 'success-light'
+              : embeddingStatus === 'error'
+                ? 'destructive-light'
+                : embeddingStatus === 'warning'
+                  ? 'warning-light'
+                  : embeddingStatus === 'processing'
+                    ? 'info-light'
+                    : 'secondary'
+          }
+        >
           {t(`detail.data.embedding.${embeddingStatus || 'default'}`)}
-        </Tag>
+        </Badge>
       ),
       key: 'embeddingStatus',
       label: t('detail.data.embeddingStatus'),

@@ -1,11 +1,11 @@
 'use client';
-import { toast } from '@lobehub/ui/base-ui';
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { Check, Edit, X } from 'lucide-react';
 import React, { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 

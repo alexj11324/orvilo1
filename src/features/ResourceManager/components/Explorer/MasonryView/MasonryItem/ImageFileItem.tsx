@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { Image } from 'antd';
 import { createStaticStyles, cx, keyframes } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
@@ -6,6 +5,7 @@ import { FileBoxIcon } from 'lucide-react';
 import { createElement, memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
@@ -309,12 +309,9 @@ const ImageFileItem = memo<ImageFileItemProps>(
                   }
                 }}
               >
-                <Button
-                  icon={FileBoxIcon}
-                  loading={isCreatingFileParseTask}
-                  size={'small'}
-                  type={'text'}
-                />
+                <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                  <FileBoxIcon data-icon="inline-start" />
+                </Button>
               </div>
             </SimpleTooltip>
           )

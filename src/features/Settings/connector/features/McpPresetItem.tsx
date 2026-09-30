@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, toast } from '@lobehub/ui/base-ui';
 import { isDesktop, matchMcpPresetByConnector, type McpPresetConnector } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { CircleCheck, Loader2, SquareArrowOutUpRight } from 'lucide-react';
@@ -11,6 +10,8 @@ import {
   getActiveWorkspaceId,
   useActiveWorkspaceId,
 } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import NavItem from '@/features/NavPanel/components/NavItem';

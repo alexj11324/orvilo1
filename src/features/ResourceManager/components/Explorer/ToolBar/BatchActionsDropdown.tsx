@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import {
   BookMinusIcon,
   BookPlusIcon,
@@ -12,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import RepoIcon from '@/components/LibIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useKnowledgeBaseListContext } from '@/features/ResourceManager/components/KnowledgeBaseListProvider';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';

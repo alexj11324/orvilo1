@@ -1,5 +1,4 @@
 'use client';
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import {
   Eye,
@@ -14,6 +13,7 @@ import {
 import { type FC, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {

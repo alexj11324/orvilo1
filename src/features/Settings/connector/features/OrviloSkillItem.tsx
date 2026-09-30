@@ -1,12 +1,12 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { type OrviloSkillProviderType } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { CircleCheck, Loader2, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import NavItem from '@/features/NavPanel/components/NavItem';

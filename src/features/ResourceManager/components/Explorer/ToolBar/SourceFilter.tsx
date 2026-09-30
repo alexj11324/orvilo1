@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import {
   canFilterResourceSource,
@@ -64,8 +64,8 @@ const SourceFilter = memo(() => {
             aria-pressed={isActive}
             className={cx(styles.option, isActive && styles.optionActive)}
             key={option.key}
-            size={'small'}
-            type={'text'}
+            size="sm"
+            variant="ghost"
             onClick={() => setSourceFilter(option.key)}
           >
             {t(option.labelKey as never)}

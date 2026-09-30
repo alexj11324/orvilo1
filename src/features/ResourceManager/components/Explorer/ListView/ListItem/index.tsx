@@ -1,4 +1,3 @@
-import { Avatar, Checkbox } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { isEqual } from 'es-toolkit';
 import { memo, useCallback } from 'react';
@@ -6,7 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
+import { remoteAvatarSrc } from '@/components/Avatar/fallback';
 import { ContextMenuTrigger } from '@/components/ItemsMenu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { isExplorerItemSelected } from '@/features/ResourceManager/store/selectors';
@@ -374,7 +376,8 @@ const FileListItem = ({
                     <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
                       <Avatar
                         alt={uploaderName}
-                        avatar={uploader?.avatar || uploaderName}
+                        avatar={remoteAvatarSrc(uploader?.avatar) || undefined}
+                        name={uploaderName}
                         shape={'circle'}
                         size={20}
                         style={{ flexShrink: 0 }}

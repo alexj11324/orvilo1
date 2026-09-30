@@ -1,5 +1,7 @@
-import { Checkbox, Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { FILE_DATE_WIDTH, FILE_SIZE_WIDTH, getListViewMinWidth } from './ListItem/constants';
 
@@ -51,29 +53,29 @@ const ListViewSkeleton = ({
               width: columnWidths.name,
             }}
           >
-            <Skeleton.Avatar shape={'square'} size={24} style={{ marginInline: 8 }} />
-            <Skeleton height={16} width={'60%'} />
+            <Skeleton className="size-6 rounded-full" style={{ marginInline: 8 }} />
+            <Skeleton style={{ height: 16, width: '60%' }} />
           </div>
           <div
             className="flex flex-col"
             style={{ flexShrink: 0, paddingInline: '0 24px', width: columnWidths.date }}
           >
-            <Skeleton height={16} width={'80%'} />
+            <Skeleton style={{ height: 16, width: '80%' }} />
           </div>
           {showUploader && (
             <div
               className="flex flex-row items-center gap-2"
               style={{ flexShrink: 0, paddingInline: '0 24px', width: columnWidths.uploader }}
             >
-              <Skeleton.Avatar size={20} />
-              <Skeleton height={16} width={'70%'} />
+              <Skeleton className="size-5 rounded-full" />
+              <Skeleton style={{ height: 16, width: '70%' }} />
             </div>
           )}
           <div
             className="flex flex-col"
             style={{ flexShrink: 0, paddingInline: '0 24px', width: columnWidths.size }}
           >
-            <Skeleton height={16} width={'60%'} />
+            <Skeleton style={{ height: 16, width: '60%' }} />
           </div>
         </div>
       ))}

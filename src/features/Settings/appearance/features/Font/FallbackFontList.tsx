@@ -1,13 +1,22 @@
 'use client';
 
-import { Select, type SelectOption } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { PlusIcon, XIcon } from 'lucide-react';
 import { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Sortable, SortableItem, SortableItemHandle } from '@/components/reui/sortable';
+import type { SelectOption } from '@/components/SelectOptions';
 import { Button } from '@/components/ui/button';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
+import { Spinner } from '@/components/ui/spinner';
 
 import { MAX_FALLBACK_FONTS } from './fontStack';
 import { useFontFallbackStack } from './useFontFallbackStack';
@@ -76,19 +85,38 @@ const FallbackFontList = ({
         </div>
       </Sortable>
       {adding ? (
-        <Select
-          autoFocus
+        <Combobox
           defaultOpen
-          showSearch
-          aria-label={ariaLabel}
-          loading={loading}
-          options={candidates}
-          placeholder={t('settingAppearance.font.fallback.placeholder')}
-          onChange={(value: string) => add(value)}
+          itemToStringLabel={(value) => labelOf(value)}
+          items={candidates.map((option) => option.value)}
           onOpenChange={(open) => {
             if (!open) setAdding(false);
           }}
-        />
+          onValueChange={(value) => {
+            if (value) add(value);
+          }}
+        >
+          <ComboboxInput
+            autoFocus
+            aria-label={ariaLabel}
+            placeholder={t('settingAppearance.font.fallback.placeholder')}
+            showTrigger={false}
+          />
+          <ComboboxContent>
+            {loading && (
+              <ComboboxEmpty>
+                <Spinner className="size-4" />
+              </ComboboxEmpty>
+            )}
+            <ComboboxList>
+              {(value: string) => (
+                <ComboboxItem key={value} value={value}>
+                  {labelOf(value)}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       ) : (
         <Button
           className="w-full"

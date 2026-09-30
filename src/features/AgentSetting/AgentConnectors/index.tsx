@@ -1,9 +1,9 @@
-import { Switch } from '@lobehub/ui/base-ui';
 import { getActivePluginIds } from '@orvilo/types';
 import { LinkIcon } from 'lucide-react';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Switch } from '@/components/ui/switch';
 import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 
@@ -61,8 +61,8 @@ const AgentConnectors = memo(() => {
             </div>
             <Switch
               checked={isEnabled}
-              size="small"
-              onChange={() => toggleAgentPlugin(connector.identifier)}
+              size="sm"
+              onCheckedChange={() => toggleAgentPlugin(connector.identifier)}
             />
           </div>
         );

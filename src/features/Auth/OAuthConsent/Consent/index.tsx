@@ -1,9 +1,9 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import React, { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import AuthCard from '@/features/AuthCard';
 import type { OidcClientMetadata } from '@/types/oidc';
 
@@ -57,10 +57,10 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
             <div className="flex flex-col gap-3">
               <Button
                 data-testid="oauth-consent-accept"
-                htmlType="submit"
                 loading={isLoading}
-                size={'large'}
-                type="primary"
+                size="lg"
+                type="submit"
+                variant="default"
                 onClick={() => {
                   if (consentInputRef.current) consentInputRef.current.value = 'accept';
                   setIsLoading(true);
@@ -70,8 +70,8 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
               </Button>
               <Button
                 data-testid="oauth-consent-deny"
-                htmlType="submit"
-                size={'large'}
+                size="lg"
+                type="submit"
                 onClick={() => {
                   if (consentInputRef.current) consentInputRef.current.value = 'deny';
                 }}
@@ -90,13 +90,11 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
             />
           </div>
         )}
-        <Text fontSize={16} type={'secondary'}>
-          {t('consent.permissionsTitle')}
-        </Text>
+        <div className="text-[16px] text-muted-foreground">{t('consent.permissionsTitle')}</div>
         <div className="flex flex-col gap-1 w-full" style={{ marginTop: 8 }}>
           {scopes.map((scope) => (
             <div className="flex flex-col p-4" key={scope}>
-              <Text>{getScopeDescription(scope, t)}</Text>
+              <div>{getScopeDescription(scope, t)}</div>
             </div>
           ))}
         </div>

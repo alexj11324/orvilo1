@@ -1,9 +1,9 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ChevronRight, GlobeIcon } from 'lucide-react';
 import { memo, type ReactElement, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -51,10 +51,10 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
         key: 'auto',
         label: (
           <div className="flex flex-col gap-1" onMouseEnter={() => preloadLang('auto')}>
-            <Text style={{ lineHeight: 1.2 }}>{t('settingCommon.lang.autoMode')}</Text>
-            <Text fontSize={12} style={{ lineHeight: 1.2 }} type={'secondary'}>
+            <div style={{ lineHeight: 1.2 }}>{t('settingCommon.lang.autoMode')}</div>
+            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.2 }}>
               {t(`lang.auto` as any, { ns: 'common' })}
-            </Text>
+            </div>
           </div>
         ),
         onCheckedChange: (checked: boolean) => {
@@ -75,10 +75,10 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
             key={item.value}
             onMouseEnter={() => preloadLang(item.value)}
           >
-            <Text style={{ lineHeight: 1.2 }}>{item.label}</Text>
-            <Text fontSize={12} style={{ lineHeight: 1.2 }} type={'secondary'}>
+            <div style={{ lineHeight: 1.2 }}>{item.label}</div>
+            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.2 }}>
               {t(`lang.${item.value}` as any, { ns: 'common' })}
-            </Text>
+            </div>
           </div>
         ),
         onCheckedChange: (checked: boolean) => {
@@ -97,16 +97,14 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
     if (compact) {
       trigger = (
         <Button
-          icon={GlobeIcon}
-          iconPosition="end"
-          size="small"
-          type="text"
+          size="sm"
+          variant="ghost"
           style={{
             height: 32,
             paddingInline: 8,
           }}
         >
-          <Text fontSize={12}>{currentLabel}</Text>
+          <Text fontSize={12}>{currentLabel}</Text> <GlobeIcon data-icon="inline-end" />
         </Button>
       );
     } else {

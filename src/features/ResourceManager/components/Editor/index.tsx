@@ -1,12 +1,14 @@
 'use client';
 
-import { ActionIcon, createModal, Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar, useTheme } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import { ArrowLeftIcon, DownloadIcon, InfoIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { createModal } from '@/components/Modal';
+import { Skeleton } from '@/components/ui/skeleton';
 import NavHeader from '@/features/NavHeader';
 import { PageAgentProvider } from '@/features/PageEditor/PageAgentProvider';
 import FileDetailComponent from '@/features/ResourceManager/FileDetail';
@@ -20,10 +22,21 @@ interface FileEditorProps {
   onBack?: () => void;
 }
 
+const FILE_DETAIL_SKELETON_WIDTHS = ['80%', '60%', '40%', '70%', '70%'];
+const FILE_DETAIL_SKELETON_WIDTHS_2 = ['50%', '60%'];
+
 const FileDetailSkeleton = () => (
   <div className="flex flex-col gap-4">
-    <Skeleton.Text rows={5} width={['80%', '60%', '40%', '70%', '70%']} />
-    <Skeleton.Text rows={2} width={['50%', '60%']} />
+    <div className="flex flex-col gap-2">
+      {FILE_DETAIL_SKELETON_WIDTHS.map((width) => (
+        <Skeleton className="h-4" key={width} style={{ width }} />
+      ))}
+    </div>
+    <div className="flex flex-col gap-2">
+      {FILE_DETAIL_SKELETON_WIDTHS_2.map((width) => (
+        <Skeleton className="h-4" key={width} style={{ width }} />
+      ))}
+    </div>
   </div>
 );
 

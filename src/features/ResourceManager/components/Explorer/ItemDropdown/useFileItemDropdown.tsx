@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { CUSTOM_FOLDER_FILE_TYPE, DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import {
@@ -19,6 +18,8 @@ import { shallow } from 'zustand/shallow';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { type DropdownItem } from '@/components/ItemsMenu';
 import RepoIcon from '@/components/LibIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { useKnowledgeBaseListContext } from '@/features/ResourceManager/components/KnowledgeBaseListProvider';
 import { PAGE_FILE_TYPE } from '@/features/ResourceManager/constants';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';

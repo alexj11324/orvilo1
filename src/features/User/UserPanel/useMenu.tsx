@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
 import { Cloudy, Download, HardDriveDownload, LogOut, Settings2 } from 'lucide-react';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import useBusinessMenuItems from '@/business/client/features/User/useBusinessMenuItems';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import type { ItemType, MenuProps } from '@/components/Menu';
+import { Badge } from '@/components/reui/badge';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { DEFAULT_DESKTOP_HOTKEY_CONFIG } from '@/const/desktop';
 import { OFFICIAL_URL } from '@/const/url';
@@ -37,9 +37,9 @@ const NewVersionBadge = memo(
     return (
       <div className="flex items-center flex-1 gap-2 w-full" onClick={onClick}>
         {children}
-        <Tag color={'info'} size={'small'} style={{ borderRadius: 16, paddingInline: 8 }}>
+        <Badge size="sm" style={{ borderRadius: 16, paddingInline: 8 }} variant="info">
           {t('upgradeVersion.hasNew')}
-        </Tag>
+        </Badge>
       </div>
     );
   },

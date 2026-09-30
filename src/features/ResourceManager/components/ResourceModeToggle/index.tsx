@@ -1,12 +1,12 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon, LockIcon, UsersIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import { type DropdownItem, DropdownMenu, type MenuInfo } from '@/components/ItemsMenu';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';

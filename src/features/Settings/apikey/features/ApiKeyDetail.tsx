@@ -1,5 +1,4 @@
 'use client';
-import { Drawer } from '@lobehub/ui/base-ui';
 import { Loader2, Pencil, Trash } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import {
   API_KEY_FULL_ACCESS_SCOPE,
@@ -149,177 +149,176 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
   const { t } = useTranslation('auth');
 
   return (
-    <Drawer
-      open={open}
-      placement={'right'}
-      title={t('apikey.detail.title')}
-      width={'min(92vw, 520px)'}
-      onClose={onClose}
-    >
-      {apiKey && (
-        <div className="flex flex-col gap-3">
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-[min(92vw,520px)] sm:max-w-[min(92vw,520px)]" side={'right'}>
+        <SheetHeader>
+          <SheetTitle>{t('apikey.detail.title')}</SheetTitle>
+        </SheetHeader>
+        {apiKey && (
           <div className="flex flex-col gap-3">
-            <div className="flex min-h-7 items-center gap-4">
-              <span className="w-24 flex-none text-xs text-muted-foreground">
-                {t('apikey.list.columns.name')}
-              </span>
-              <span className="flex items-center overflow-hidden text-[13px]">
-                <EditableCell
-                  disabled={!canEdit}
-                  placeholder={t('apikey.display.enterPlaceholder')}
-                  type="text"
-                  value={apiKey.name}
-                  onSubmit={(name) => {
-                    if (!canEdit || !name || name === apiKey.name) return;
-                    void onUpdate(apiKey.id, { name: name as string });
-                  }}
-                />
-              </span>
-            </div>
-
-            <div className="flex min-h-7 items-center gap-4">
-              <span className="w-24 flex-none text-xs text-muted-foreground">
-                {t('apikey.list.columns.key')}
-              </span>
-              <span className="flex items-center overflow-hidden text-[13px]">
-                {apiKey.isMine === false ? (
-                  <span style={{ opacity: 0.5 }}>{`sk-ov-${'*'.repeat(12)}`}</span>
-                ) : apiKey.keyDecryptionFailed ? (
-                  <span title={t('apikey.display.unavailableDescription')}>
-                    {t('apikey.display.unavailable')}
-                  </span>
-                ) : (
-                  <ApiKeyDisplay apiKey={apiKey.key} />
-                )}
-              </span>
-            </div>
-
-            {apiKey.creator && (
+            <div className="flex flex-col gap-3">
               <div className="flex min-h-7 items-center gap-4">
                 <span className="w-24 flex-none text-xs text-muted-foreground">
-                  {t('apikey.list.columns.creator')}
+                  {t('apikey.list.columns.name')}
                 </span>
                 <span className="flex items-center overflow-hidden text-[13px]">
-                  {apiKey.creator}
+                  <EditableCell
+                    disabled={!canEdit}
+                    placeholder={t('apikey.display.enterPlaceholder')}
+                    type="text"
+                    value={apiKey.name}
+                    onSubmit={(name) => {
+                      if (!canEdit || !name || name === apiKey.name) return;
+                      void onUpdate(apiKey.id, { name: name as string });
+                    }}
+                  />
                 </span>
               </div>
-            )}
 
-            <div className="flex min-h-7 items-center gap-4">
-              <span className="w-24 flex-none text-xs text-muted-foreground">
-                {t('apikey.detail.createdAt')}
-              </span>
-              <span className="flex items-center overflow-hidden text-[13px]">
-                {apiKey.createdAt.toLocaleString()}
-              </span>
-            </div>
+              <div className="flex min-h-7 items-center gap-4">
+                <span className="w-24 flex-none text-xs text-muted-foreground">
+                  {t('apikey.list.columns.key')}
+                </span>
+                <span className="flex items-center overflow-hidden text-[13px]">
+                  {apiKey.isMine === false ? (
+                    <span style={{ opacity: 0.5 }}>{`sk-ov-${'*'.repeat(12)}`}</span>
+                  ) : apiKey.keyDecryptionFailed ? (
+                    <span title={t('apikey.display.unavailableDescription')}>
+                      {t('apikey.display.unavailable')}
+                    </span>
+                  ) : (
+                    <ApiKeyDisplay apiKey={apiKey.key} />
+                  )}
+                </span>
+              </div>
 
-            <div className="flex min-h-7 items-center gap-4">
-              <span className="w-24 flex-none text-xs text-muted-foreground">
-                {t('apikey.list.columns.lastUsedAt')}
-              </span>
-              <span className="flex items-center overflow-hidden text-[13px]">
-                {apiKey.lastUsedAt?.toLocaleString() || t('apikey.display.neverUsed')}
-              </span>
-            </div>
+              {apiKey.creator && (
+                <div className="flex min-h-7 items-center gap-4">
+                  <span className="w-24 flex-none text-xs text-muted-foreground">
+                    {t('apikey.list.columns.creator')}
+                  </span>
+                  <span className="flex items-center overflow-hidden text-[13px]">
+                    {apiKey.creator}
+                  </span>
+                </div>
+              )}
 
-            <div className="flex min-h-7 items-center gap-4">
-              <span className="w-24 flex-none text-xs text-muted-foreground">
-                {t('apikey.list.columns.expiresAt')}
-              </span>
-              <span className="flex items-center overflow-hidden text-[13px]">
-                <EditableCell
-                  disabled={!canEdit}
-                  placeholder={t('apikey.display.neverExpires')}
-                  type="date"
-                  value={apiKey.expiresAt?.toLocaleString() || t('apikey.display.neverExpires')}
-                  onSubmit={(expiresAt) => {
-                    if (!canEdit || expiresAt === apiKey.expiresAt) return;
-                    void onUpdate(apiKey.id, {
-                      expiresAt: expiresAt ? new Date(expiresAt as string) : null,
-                    });
-                  }}
-                />
-              </span>
-            </div>
+              <div className="flex min-h-7 items-center gap-4">
+                <span className="w-24 flex-none text-xs text-muted-foreground">
+                  {t('apikey.detail.createdAt')}
+                </span>
+                <span className="flex items-center overflow-hidden text-[13px]">
+                  {apiKey.createdAt.toLocaleString()}
+                </span>
+              </div>
 
-            <div className="flex min-h-7 items-center gap-4">
-              <span className="w-24 flex-none text-xs text-muted-foreground">
-                {t('apikey.list.columns.status')}
-              </span>
-              <span
-                className="flex items-center overflow-hidden text-[13px]"
-                title={canEdit ? undefined : manageTooltip}
-              >
-                <Switch
-                  aria-label={t('apikey.list.columns.status')}
-                  checked={!!apiKey.enabled}
-                  disabled={!canEdit}
-                  onCheckedChange={(checked) => {
-                    if (!canEdit) return;
-                    void onUpdate(apiKey.id, { enabled: checked });
-                  }}
-                />
-              </span>
-            </div>
-          </div>
+              <div className="flex min-h-7 items-center gap-4">
+                <span className="w-24 flex-none text-xs text-muted-foreground">
+                  {t('apikey.list.columns.lastUsedAt')}
+                </span>
+                <span className="flex items-center overflow-hidden text-[13px]">
+                  {apiKey.lastUsedAt?.toLocaleString() || t('apikey.display.neverUsed')}
+                </span>
+              </div>
 
-          <div className="flex flex-col gap-3">
-            <span className="text-[13px] font-medium text-muted-foreground">
-              {t('apikey.form.fields.scopes.label')}
-            </span>
-            <ApiKeyScopeEditor
-              apiKey={apiKey}
-              canEdit={canEdit}
-              key={`${apiKey.id}-${apiKey.updatedAt.toISOString()}`}
-              onUpdate={onUpdate}
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <AlertDialog>
-              <AlertDialogTrigger
-                render={
-                  <Button
-                    disabled={!canDelete}
-                    title={canDelete ? t('apikey.list.actions.delete') : manageTooltip}
-                    type="button"
-                    variant="destructive"
-                  >
-                    <Trash />
-                    {t('apikey.list.actions.delete')}
-                  </Button>
-                }
-              />
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {t('apikey.list.actions.deleteConfirm.title')}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t('apikey.list.actions.deleteConfirm.content')}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>
-                    {t('apikey.list.actions.deleteConfirm.actions.cancel')}
-                  </AlertDialogCancel>
-                  <AlertDialogConfirm
-                    disabled={!canDelete}
-                    onClick={async () => {
-                      if (!canDelete) return;
-                      await onDelete(apiKey.id);
+              <div className="flex min-h-7 items-center gap-4">
+                <span className="w-24 flex-none text-xs text-muted-foreground">
+                  {t('apikey.list.columns.expiresAt')}
+                </span>
+                <span className="flex items-center overflow-hidden text-[13px]">
+                  <EditableCell
+                    disabled={!canEdit}
+                    placeholder={t('apikey.display.neverExpires')}
+                    type="date"
+                    value={apiKey.expiresAt?.toLocaleString() || t('apikey.display.neverExpires')}
+                    onSubmit={(expiresAt) => {
+                      if (!canEdit || expiresAt === apiKey.expiresAt) return;
+                      void onUpdate(apiKey.id, {
+                        expiresAt: expiresAt ? new Date(expiresAt as string) : null,
+                      });
                     }}
-                  >
-                    {t('apikey.list.actions.deleteConfirm.actions.ok')}
-                  </AlertDialogConfirm>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  />
+                </span>
+              </div>
+
+              <div className="flex min-h-7 items-center gap-4">
+                <span className="w-24 flex-none text-xs text-muted-foreground">
+                  {t('apikey.list.columns.status')}
+                </span>
+                <span
+                  className="flex items-center overflow-hidden text-[13px]"
+                  title={canEdit ? undefined : manageTooltip}
+                >
+                  <Switch
+                    aria-label={t('apikey.list.columns.status')}
+                    checked={!!apiKey.enabled}
+                    disabled={!canEdit}
+                    onCheckedChange={(checked) => {
+                      if (!canEdit) return;
+                      void onUpdate(apiKey.id, { enabled: checked });
+                    }}
+                  />
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <span className="text-[13px] font-medium text-muted-foreground">
+                {t('apikey.form.fields.scopes.label')}
+              </span>
+              <ApiKeyScopeEditor
+                apiKey={apiKey}
+                canEdit={canEdit}
+                key={`${apiKey.id}-${apiKey.updatedAt.toISOString()}`}
+                onUpdate={onUpdate}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <Button
+                      disabled={!canDelete}
+                      title={canDelete ? t('apikey.list.actions.delete') : manageTooltip}
+                      type="button"
+                      variant="destructive"
+                    >
+                      <Trash />
+                      {t('apikey.list.actions.delete')}
+                    </Button>
+                  }
+                />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {t('apikey.list.actions.deleteConfirm.title')}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t('apikey.list.actions.deleteConfirm.content')}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>
+                      {t('apikey.list.actions.deleteConfirm.actions.cancel')}
+                    </AlertDialogCancel>
+                    <AlertDialogConfirm
+                      disabled={!canDelete}
+                      onClick={async () => {
+                        if (!canDelete) return;
+                        await onDelete(apiKey.id);
+                      }}
+                    >
+                      {t('apikey.list.actions.deleteConfirm.actions.ok')}
+                    </AlertDialogConfirm>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
-        </div>
-      )}
-    </Drawer>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 };
 

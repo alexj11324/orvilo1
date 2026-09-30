@@ -1,7 +1,5 @@
 'use client';
-
 import { useSortable } from '@dnd-kit/sortable';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { X } from 'lucide-react';
 import { useMotionValue, useSpring, useTransform } from 'motion/react';
@@ -9,6 +7,7 @@ import * as m from 'motion/react-m';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';

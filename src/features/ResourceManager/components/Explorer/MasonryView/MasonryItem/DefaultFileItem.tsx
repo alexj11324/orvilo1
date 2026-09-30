@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
@@ -7,6 +6,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
@@ -135,12 +135,9 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
                     }
                   }}
                 >
-                  <Button
-                    icon={FileBoxIcon}
-                    loading={isCreatingFileParseTask}
-                    size={'small'}
-                    type={'text'}
-                  />
+                  <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                    <FileBoxIcon data-icon="inline-start" />
+                  </Button>
                 </div>
               </SimpleTooltip>
             )

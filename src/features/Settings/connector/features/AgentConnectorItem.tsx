@@ -1,11 +1,11 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { createElement, memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/reui/badge';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import type { AgentBoundConnector } from '@/store/tool/slices/connector/types';

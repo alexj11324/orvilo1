@@ -1,7 +1,7 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useMemo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
 import { type SemanticSearchChunk } from '@/types/chunk';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -49,7 +49,7 @@ const SearchItem = memo<ChunkItemProps>(({ text, pageNumber, type, similarity })
       {text}
 
       <div className="flex flex-row items-center justify-between">
-        <Tag variant={'filled'}>{similarity.toFixed(2)}</Tag>
+        <Badge variant="secondary">{similarity.toFixed(2)}</Badge>
         <div className={cx('flex flex-col', styles.pageNumber)}>第 {pageNumber} 页</div>
       </div>
     </div>

@@ -1,11 +1,12 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { EditableMessage } from '@lobehub/ui/chat';
 import { createStaticStyles } from 'antd-style';
 import { PencilLine } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { useStore } from '../store';
 import { selectors } from '../store/selectors';
@@ -47,14 +48,14 @@ const OpeningMessage = memo(() => {
   }, [disabled]);
 
   const editIconButton = !editing && openingMessage && !disabled && (
-    <Button disabled={disabled} size={'small'} onClick={handleEdit}>
+    <Button disabled={disabled} size="sm" onClick={handleEdit}>
       <PencilLine size={16} />
     </Button>
   );
 
   return (
     <div className={styles.wrapper}>
-      <div className="flex flex-col" direction={'horizontal'}>
+      <div className="flex flex-row">
         <EditableMessage
           editButtonSize={'small'}
           editing={editing}

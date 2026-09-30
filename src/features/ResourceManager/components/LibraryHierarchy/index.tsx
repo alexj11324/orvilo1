@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { FolderPlusIcon } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
@@ -86,10 +85,10 @@ const LibraryHierarchy = memo(() => {
         />
       </span>
       <div className="flex flex-col items-center gap-1">
-        <Text strong>{t('library.hierarchy.empty.title')}</Text>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="font-semibold">{t('library.hierarchy.empty.title')}</div>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('library.hierarchy.empty.desc')}
-        </Text>
+        </div>
       </div>
       <AddButton />
     </div>

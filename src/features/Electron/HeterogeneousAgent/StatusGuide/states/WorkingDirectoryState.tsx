@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { FolderX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,7 +10,6 @@ const WorkingDirectoryState = ({ error, onRetry, variant }: HeterogeneousAgentGu
 
   return (
     <GuideShell
-      headerDescription={<Text type="secondary">{t('workingDirectoryGuide.desc')}</Text>}
       icon={<FolderX size={24} />}
       title={t('workingDirectoryGuide.title')}
       variant={variant}
@@ -22,11 +20,16 @@ const WorkingDirectoryState = ({ error, onRetry, variant }: HeterogeneousAgentGu
           onRetry={onRetry}
         />
       }
+      headerDescription={
+        <div className="text-muted-foreground">{t('workingDirectoryGuide.desc')}</div>
+      }
     >
-      {error?.workingDirectory && <Text code>{error.workingDirectory}</Text>}
-      <Text style={{ fontSize: 12 }} type="secondary">
+      {error?.workingDirectory && (
+        <div className="font-mono rounded bg-muted px-1">{error.workingDirectory}</div>
+      )}
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('workingDirectoryGuide.hint')}
-      </Text>
+      </div>
     </GuideShell>
   );
 };

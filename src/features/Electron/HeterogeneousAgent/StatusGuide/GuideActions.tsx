@@ -1,7 +1,7 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { ExternalLink, RotateCcw, Settings2 } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import { electronSystemService } from '@/services/electron/system';
 
 interface GuideActionsProps {
@@ -34,25 +34,19 @@ const GuideActions = ({
   return (
     <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
       {showRetryButton && (
-        <Button
-          icon={<RotateCcw size={14} />}
-          size="small"
-          type={retryPrimary ? 'primary' : undefined}
-          onClick={onRetry}
-        >
-          {retryLabel}
+        <Button size="sm" type={retryPrimary ? 'primary' : undefined} onClick={onRetry}>
+          <RotateCcw size={14} /> {retryLabel}
         </Button>
       )}
       {showSystemToolsButton && (
-        <Button icon={<Settings2 size={14} />} size="small" onClick={onOpenSystemTools}>
-          {openSystemToolsLabel}
+        <Button size="sm" onClick={onOpenSystemTools}>
+          <Settings2 size={14} /> {openSystemToolsLabel}
         </Button>
       )}
       {showDocsButton && docsUrl && openDocsLabel && (
         <Button
-          icon={<ExternalLink size={14} />}
-          size="small"
-          type="primary"
+          size="sm"
+          variant="default"
           onClick={() => {
             const openLink = isDesktop
               ? electronSystemService.openExternalLink(docsUrl)
@@ -61,7 +55,7 @@ const GuideActions = ({
             openLink.catch(console.error);
           }}
         >
-          {openDocsLabel}
+          <ExternalLink size={14} /> {openDocsLabel}
         </Button>
       )}
     </div>

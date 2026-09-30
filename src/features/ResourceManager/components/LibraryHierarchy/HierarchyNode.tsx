@@ -1,7 +1,5 @@
 'use client';
-
 import { CaretDownFilled } from '@ant-design/icons';
-import { ActionIcon, Spin, toast } from '@lobehub/ui/base-ui';
 import { DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
 import { cx } from 'antd-style';
 import { FileText, FolderIcon, FolderOpenIcon, LockIcon } from 'lucide-react';
@@ -18,8 +16,11 @@ import React, {
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { PAGE_FILE_TYPE } from '@/features/ResourceManager/constants';
 import {
@@ -325,7 +326,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
             {flat ? (
               <div style={{ width: 20 }} />
             ) : isLoading ? (
-              <Spin size={'small'} style={{ width: 20 }} />
+              <Spinner className="size-5" />
             ) : (
               <m.div
                 animate={{ rotate: isExpanded ? 0 : -90 }}

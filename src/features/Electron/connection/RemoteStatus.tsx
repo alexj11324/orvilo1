@@ -1,8 +1,8 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Loader, Wifi, WifiOffIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 

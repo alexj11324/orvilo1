@@ -1,9 +1,10 @@
 import { CategoryBar, useThemeColorRange } from '@lobehub/charts';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { remoteAvatarSrc } from '@/components/Avatar/fallback';
 import InlineTable from '@/components/InlineTable';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import { Badge } from '@/components/reui/badge';
@@ -127,8 +128,9 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
         >
           <Avatar
-            avatar={display?.avatar || display?.name || key}
+            avatar={remoteAvatarSrc(display?.avatar || display?.name || key) || undefined}
             background={cssVar.colorFillSecondary}
+            name={display?.name || key}
             shape={'circle'}
             size={24}
             title={display?.name || key}

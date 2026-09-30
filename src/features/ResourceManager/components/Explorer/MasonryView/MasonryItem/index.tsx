@@ -1,4 +1,3 @@
-import { Checkbox } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
@@ -10,6 +9,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Checkbox } from '@/components/ui/checkbox';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import {
   getTransparentDragImage,

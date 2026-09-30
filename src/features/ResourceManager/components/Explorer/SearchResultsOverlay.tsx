@@ -1,6 +1,5 @@
 'use client';
 
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
 import { cssVar } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
@@ -11,6 +10,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import {
   getResourceQueryVisibility,

@@ -1,8 +1,3 @@
-import {
-  type ActionIconGroupEvent,
-  type ActionIconGroupItemType,
-  type GenericItemType,
-} from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
@@ -31,9 +26,18 @@ import {
 import { useChatListActionsBar } from './useChatListActionsBar';
 import { useConversationResourceAccess } from './useConversationResourceAccess';
 
-interface ActionMenuItem extends ActionIconGroupItemType {
+interface ActionIconGroupEvent {
+  key: string;
+}
+
+interface ActionMenuItem {
   children?: { key: string; label: ReactNode }[];
+  danger?: boolean;
   disable?: boolean;
+  disabled?: boolean;
+  icon?: ReactNode;
+  key: string;
+  label?: ReactNode;
   popupClassName?: string;
   sfSymbol?: SFSymbol;
 }
@@ -357,7 +361,7 @@ export const useChatItemContextMenu = ({
     [handleAction],
   );
 
-  const contextMenuItems = useMemo<GenericItemType[]>(() => {
+  const contextMenuItems = useMemo<NativeContextMenuItem[]>(() => {
     if (!menuItems) return [];
     return menuItems.filter(Boolean).map((item) => {
       if ('type' in item && item.type === 'divider') return { type: 'divider' as const };

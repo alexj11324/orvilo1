@@ -1,4 +1,4 @@
-import { Flexbox, ThemeProvider } from '@lobehub/ui';
+import { ThemeProvider } from '@lobehub/ui';
 import { type ReactNode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -10,15 +10,18 @@ import MemoryDetailLoading from '@/routes/(main)/memory/features/DetailLoading';
 import MemoryLoading from '@/routes/(main)/memory/features/Loading';
 
 const Case = ({ children, title }: { children: ReactNode; title: string }) => (
-  <Flexbox gap={12} style={{ borderBottom: '1px solid #eee', padding: 24 }} width={'100%'}>
+  <div
+    className="flex flex-col gap-3 w-full"
+    style={{ borderBottom: '1px solid #eee', padding: 24 }}
+  >
     <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.5 }}>{title}</div>
     <Suspense fallback={null}>{children}</Suspense>
-  </Flexbox>
+  </div>
 );
 
 createRoot(document.querySelector('#root')!).render(
   <ThemeProvider>
-    <Flexbox style={{ margin: '0 auto', maxWidth: 900 }} width={'100%'}>
+    <div className="flex flex-col w-full" style={{ margin: '0 auto', maxWidth: 900 }}>
       <Case title="ArticleSkeleton — title + 3 rows">
         <ArticleSkeleton rows={3} />
       </Case>
@@ -43,6 +46,6 @@ createRoot(document.querySelector('#root')!).render(
       <Case title="Conversation / List skeleton">
         <ConversationListSkeleton />
       </Case>
-    </Flexbox>
+    </div>
   </ThemeProvider>,
 );

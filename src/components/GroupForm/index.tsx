@@ -1,16 +1,20 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
+import { Button, type ButtonProps, Text } from '@lobehub/ui/base-ui';
 import {
   Form as AntdForm,
   type FormItemProps as AntdFormItemProps,
   type FormProps as AntdFormProps,
 } from 'antd';
-import { cx } from 'antd-style';
-import type { LucideIcon } from 'lucide-react';
-import { createElement, type CSSProperties, memo, type ReactNode } from 'react';
+import { cssVar, cx } from 'antd-style';
+import { mergeWith } from 'es-toolkit/compat';
+import isEqual from 'fast-deep-equal';
+import { Info, type LucideIcon } from 'lucide-react';
+import { createElement, type CSSProperties, memo, type ReactNode, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Separator } from '@/components/ui/separator';
+import { useSingleton } from '@/hooks/useSingleton';
 
 type FormVariant = 'borderless' | 'filled' | 'outlined';
 
@@ -263,3 +267,121 @@ const Form = Object.assign(FormBase, {
 });
 
 export default Form;
+
+interface FormSubmitFooterTexts {
+  reset?: string;
+  submit?: string;
+  unSaved?: string;
+  unSavedWarning?: string;
+}
+
+export interface FormSubmitFooterProps {
+  buttonProps?: ButtonProps;
+  children?: ReactNode;
+  className?: string;
+  enableReset?: boolean;
+  enableUnsavedWarning?: boolean;
+  float?: boolean;
+  onReset?: (value: unknown, preValue: unknown) => void;
+  resetButtonProps?: ButtonProps;
+  saveButtonProps?: ButtonProps;
+  texts?: FormSubmitFooterTexts;
+}
+
+const removeUndefined = <T,>(obj: T): T => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj))
+    return obj.map((item) => removeUndefined(item)).filter((item) => item !== undefined) as T;
+  const result = {} as Record<string, unknown>;
+  for (const [key, value] of Object.entries(obj)) {
+    const v = removeUndefined(value);
+    if (v !== undefined) result[key] = v;
+  }
+  return result as T;
+};
+
+const deepMerge = <T,>(target: T, source: T): T =>
+  mergeWith({}, target, source, (obj: unknown, src: unknown) =>
+    Array.isArray(obj) ? src : undefined,
+  ) as T;
+
+const FormSubmitFooter = memo<FormSubmitFooterProps>(
+  ({
+    buttonProps,
+    children,
+    className,
+    enableReset = true,
+    enableUnsavedWarning,
+    float,
+    onReset,
+    resetButtonProps,
+    saveButtonProps,
+    texts,
+    ...rest
+  }) => {
+    const form = AntdForm.useFormInstance();
+    const initialV = useSingleton(
+      () => removeUndefined(form.getFieldsValue(true)) as Record<string, unknown>,
+    );
+    const { t } = useTranslation(['ui', 'common']);
+    const values = AntdForm.useWatch([], form) as Record<string, unknown> | undefined;
+
+    const v = useMemo(() => removeUndefined(values ?? {}), [values]);
+    const mergedV = useMemo(() => deepMerge(initialV, v), [v, initialV]);
+    const hasUnsavedChanges = !isEqual(mergedV, initialV);
+
+    const unsavedWarningText = texts?.unSavedWarning ?? t('form.unsavedWarning', { ns: 'ui' });
+    const unsavedText = texts?.unSaved ?? t('form.unsavedChanges', { ns: 'ui' });
+    const resetText = texts?.reset ?? t('reset', { ns: 'common' });
+    const submitText = texts?.submit ?? t('form.submit', { ns: 'ui' });
+
+    useEffect(() => {
+      if (!enableUnsavedWarning || typeof window === 'undefined' || !hasUnsavedChanges) return;
+      const fn = (e: BeforeUnloadEvent) => {
+        e.returnValue = unsavedWarningText;
+      };
+      window.addEventListener('beforeunload', fn);
+      return () => window.removeEventListener('beforeunload', fn);
+    }, [enableUnsavedWarning, hasUnsavedChanges, unsavedWarningText]);
+
+    return (
+      <div className={cx('flex items-center justify-end gap-2', className)} {...rest}>
+        {(float || hasUnsavedChanges) && (
+          <>
+            <Info size={12} style={{ color: cssVar.colorTextDescription, marginLeft: 8 }} />
+            <span
+              style={{
+                color: cssVar.colorTextDescription,
+                flex: 'none',
+                fontSize: 12,
+                marginRight: float ? 16 : 4,
+              }}
+            >
+              {unsavedText}
+            </span>
+          </>
+        )}
+        {children}
+        {enableReset && (float || hasUnsavedChanges) && (
+          <Button
+            htmlType="button"
+            variant="filled"
+            onClick={() => {
+              onReset?.(v, initialV);
+              form.resetFields();
+            }}
+            {...buttonProps}
+            {...resetButtonProps}
+          >
+            {resetText}
+          </Button>
+        )}
+        <Button htmlType="submit" type="primary" {...buttonProps} {...saveButtonProps}>
+          {submitText}
+        </Button>
+      </div>
+    );
+  },
+);
+
+FormSubmitFooter.displayName = 'FormSubmitFooter';

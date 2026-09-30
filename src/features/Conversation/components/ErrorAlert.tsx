@@ -1,7 +1,7 @@
 import { cx } from 'antd-style';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -23,6 +23,7 @@ export interface ErrorAlertProps {
   onClose?: () => void;
   showIcon?: boolean;
   style?: CSSProperties;
+  text?: { detail?: ReactNode };
   title?: ReactNode;
   type?: ErrorAlertType;
   variant?: 'borderless' | 'filled' | 'outlined';
@@ -62,15 +63,20 @@ const ErrorAlert = memo<ErrorAlertProps>(
     onClose,
     showIcon = true,
     style,
+    text,
     title,
     type = 'info',
     variant,
   }) => {
     const TypeIcon = ICON_MAP[type];
+    const [visible, setVisible] = useState(true);
     const handleClose = () => {
       onClose?.();
+      setVisible(false);
       afterClose?.();
     };
+
+    if (!visible) return null;
 
     return (
       <Alert
@@ -93,7 +99,7 @@ const ErrorAlert = memo<ErrorAlertProps>(
           ) : (
             <Collapsible className="col-start-2" defaultOpen={extraDefaultExpand}>
               <CollapsibleTrigger className="text-xs text-muted-foreground">
-                Show Details
+                {text?.detail ?? 'Show Details'}
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <AlertDescription>{extra}</AlertDescription>

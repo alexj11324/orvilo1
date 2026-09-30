@@ -289,7 +289,11 @@ vi.mock('@/components/ActionIcon', async (importOriginal) => ({
 
 vi.mock('@/components/ui/skeleton', async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
-  Skeleton: () => <div />,
+  // The params fallback's short last bar is its only unique class — keep the
+  // loading testid on that one so getByTestId stays a unique match.
+  Skeleton: ({ className }: { className?: string }) => (
+    <div data-testid={className?.includes('w-3/5') ? 'params-loading' : undefined} />
+  ),
 }));
 
 vi.mock('@/components/ItemsMenu', async (importOriginal) => {

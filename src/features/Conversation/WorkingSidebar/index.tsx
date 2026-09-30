@@ -1046,10 +1046,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                   <div className={cn('flex flex-col', styles.pane)}>
                     <Suspense
                       fallback={
-                        <div
-                          className={cn('flex flex-col gap-2', styles.paramsLoading)}
-                          data-testid="params-loading"
-                        >
+                        <div className={cn('flex flex-col gap-2', styles.paramsLoading)}>
                           {Array.from({ length: 6 }, (_, i) => (
                             <Skeleton className={i === 5 ? 'h-4 w-3/5' : 'h-4 w-full'} key={i} />
                           ))}

@@ -17,13 +17,17 @@ import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvata
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
+  completedWindowQueryFilter,
   MY_WORK_PRIORITY_LABEL_KEYS,
   myWorkPriorityGroupRank,
   workQueryFieldSections,
 } from '@/features/MyWork/myWorkDisplay';
 import {
   EMPTY_FILTER_BUILDER,
+  mergeWorkQueryFilters,
   myWorkActiveFilterCount,
+  parseWorkQueryFilterParam,
+  serializeWorkQueryFilterParam,
   workQueryFilterHasPredicates,
 } from '@/features/MyWork/myWorkFilters';
 import MyWorkIssuePane from '@/features/MyWork/MyWorkIssuePane';
@@ -39,6 +43,7 @@ import NewViewModal from '@/features/SavedViews/NewViewModal';
 import {
   type BuilderState,
   builderToFilter,
+  filterToBuilder,
   stableStringify,
 } from '@/features/SavedViews/workQueryBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -61,7 +66,7 @@ import {
   readTeamIssuesUrlState,
   resetTeamIssuesDisplayParams,
   TEAM_ISSUES_ORDERING_SORTS,
-  teamIssuesDisplayFiltersRows,
+  teamIssuesBoardLane,
   teamIssuesServerGroupBy,
   type TeamIssuesUrlPatch,
 } from './teamIssuesDisplay';
@@ -191,9 +196,30 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
 
   /* ----------------------------- filters ----------------------------- */
 
-  // The Add-filter builder state is component-local like My issues — the
-  // durable form of a filter set is the saved view "Add new view" produces.
-  const [builder, setBuilder] = useState<BuilderState>(EMPTY_FILTER_BUILDER);
+  // The applied AST lives in `?filter=`. Incomplete builder rows stay local
+  // until they produce a predicate.
+  const filterParam = searchParams.get('filter');
+  const [builder, setBuilderState] = useState<BuilderState>(() =>
+    filterToBuilder('task', parseWorkQueryFilterParam(filterParam)),
+  );
+  useEffect(() => {
+    const parsed = parseWorkQueryFilterParam(filterParam);
+    setBuilderState((current) => {
+      if (stableStringify(builderToFilter('task', current)) === stableStringify(parsed)) {
+        return current;
+      }
+      return filterToBuilder('task', parsed);
+    });
+  }, [filterParam]);
+  const setBuilder = useCallback(
+    (next: BuilderState) => {
+      setBuilderState(next);
+      const serialized = serializeWorkQueryFilterParam(builderToFilter('task', next));
+      if ((serialized ?? null) === (filterParam ?? null)) return;
+      updateParams({ filter: serialized });
+    },
+    [filterParam, updateParams],
+  );
   const builderFilter = builderToFilter('task', builder);
   const hasCustomFilters = workQueryFilterHasPredicates(builderFilter);
   const activeFilterCount = myWorkActiveFilterCount(builder);
@@ -201,26 +227,33 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
   /* ------------------------------ fetch ------------------------------ */
 
   const serverGroupBy = teamIssuesServerGroupBy(display, layout);
+  const boardLane =
+    layout === 'board' ? teamIssuesBoardLane(display.boardGrouping, display.boardLane) : 'none';
   const sort =
     display.ordering === 'default' ? undefined : TEAM_ISSUES_ORDERING_SORTS[display.ordering];
   // A field sort on the board is an ordering, not a manual position — the
   // kanban refuses same-column position writes under it.
   const sortMode: WorkQuerySortMode | undefined = sort && boardActive ? 'field' : undefined;
+  const queryFilter = mergeWorkQueryFilters(
+    hasCustomFilters ? builderFilter : undefined,
+    completedWindowQueryFilter(display.completed),
+  );
   const tasksQuery = useMemo(
     () =>
       teamTaskQuery(teamId, cycleId, noProject, layout, issueScope, triageCapable, {
-        filter: hasCustomFilters ? builderFilter : undefined,
+        filter: queryFilter,
         groupBy: serverGroupBy,
         sort,
         sortMode,
+        subGroupBy: boardLane === 'none' ? undefined : boardLane,
       }),
     [
-      builderFilter,
+      boardLane,
       cycleId,
-      hasCustomFilters,
       issueScope,
       layout,
       noProject,
+      queryFilter,
       serverGroupBy,
       sort,
       sortMode,
@@ -228,6 +261,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
       triageCapable,
     ],
   );
+  const pageLimit = boardLane !== 'none' ? 10 : undefined;
   const tasksQueryKey = stableStringify(tasksQuery);
   const tasksKey = useMemo(
     () => ['team-tasks', workspaceId, teamId, tasksQueryKey],
@@ -238,7 +272,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     error: teamTasksError,
     isLoading: isTeamTasksLoading,
   } = useClientDataSWR(workspaceId ? tasksKey : null, () =>
-    workAttentionService.query({ query: tasksQuery }),
+    workAttentionService.query({ limit: pageLimit, query: tasksQuery }),
   );
 
   const firstTeamTasks =
@@ -298,10 +332,11 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
       workAttentionService.query({
         afterId: input.afterId,
         groupKey: input.groupKey,
+        limit: pageLimit,
         query: tasksQuery,
         queryHash: teamQueryHash,
       }),
-    [tasksQuery, teamQueryHash],
+    [pageLimit, tasksQuery, teamQueryHash],
   );
 
   const loadMore = useCallback(async () => {
@@ -326,22 +361,23 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
 
   /* --------------------------- display pass --------------------------- */
 
-  // Display filters (completed window, sub-issues) are a presentation-only
-  // pass over the loaded page — ordering stays server-side.
-  const displayFiltersRows = teamIssuesDisplayFiltersRows(display);
-  const displayTasks = useMemo(() => filterTeamIssueRows(teamTasks, display), [display, teamTasks]);
+  // Sub-issues stay a presentation pass. The completed window is a query
+  // predicate, and neither pass replaces the server group total.
+  const displayTasks = useMemo(
+    () => filterTeamIssueRows(teamTasks, { ...display, completed: 'all' }),
+    [display, teamTasks],
+  );
   const displayGroups = useMemo(
     () =>
-      teamGroups.map((group) => {
-        const filteredTasks = filterTeamIssueRows(group.tasks, display);
-        return {
-          ...group,
-          tasks: filteredTasks,
-          // A display-filtered group counts what it actually shows.
-          total: displayFiltersRows ? filteredTasks.length : group.total,
-        };
-      }),
-    [display, displayFiltersRows, teamGroups],
+      teamGroups.map((group) => ({
+        ...group,
+        tasks: filterTeamIssueRows(group.tasks, { ...display, completed: 'all' }),
+      })),
+    [display, teamGroups],
+  );
+  const hiddenRowProperties = useMemo(
+    () => (display.projectChip ? undefined : new Set(['project'] as const)),
+    [display.projectChip],
   );
 
   const cycleOptions = useMemo(
@@ -602,11 +638,13 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           <AsyncError error={teamTasksError} variant={'inline'} onRetry={() => refresh()} />
         ) : null}
         <WorkQueryResults
+          collapsedColumns={display.collapsedColumns}
           createContext={{ teamId }}
           emptyLabel={t('teams.workEmpty')}
           flatNested={display.showSubIssues && display.nestedSubIssues}
           flatSections={flatSections}
           groups={displayGroups}
+          hiddenRowProperties={hiddenRowProperties}
           hideEmptyColumns={!display.showEmptyColumns}
           layout={layout}
           loadMoreError={loadMoreError}
@@ -619,6 +657,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           rowExtras={display.projectChip ? rowExtras : undefined}
           selectedTaskId={selected?.identifier}
           sortMode={sortMode}
+          subGroupBy={boardLane === 'none' ? undefined : boardLane}
           tasks={displayTasks}
           groupBy={
             teamTasksData?.data && 'groupBy' in teamTasksData.data
@@ -630,6 +669,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               ? teamTasksData.data.total
               : undefined
           }
+          onCollapsedColumnsChange={(keys) => updateParams({ collapsedColumns: keys })}
           onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
           onCreateInGroup={createInGroup}
           onLoadMore={teamGroups.length === 0 ? () => runLoadMore(loadMore) : undefined}
@@ -767,6 +807,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
         defaultEntityType="task"
         defaultTeamId={teamId}
         open={viewBuilderOpen}
+        seedFilter={hasCustomFilters ? builderFilter : undefined}
         onClose={() => setViewBuilderOpen(false)}
       />
     </WorkSurface>

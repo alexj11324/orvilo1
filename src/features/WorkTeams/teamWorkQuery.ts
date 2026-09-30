@@ -70,6 +70,8 @@ export interface TeamTaskQueryOptions {
   sort?: WorkQuerySort[];
   /** Board ordering semantics when a field sort is applied. */
   sortMode?: WorkQuerySortMode;
+  /** Board swimlane. Ignored on the list layout. */
+  subGroupBy?: WorkQuery['subGroupBy'];
 }
 
 export const teamTaskQuery = (
@@ -107,12 +109,15 @@ export const teamTaskQuery = (
       sort: options?.sort,
     };
   }
+  const lane =
+    options?.subGroupBy && options.subGroupBy !== 'none' ? options.subGroupBy : undefined;
   return {
     ...filtered,
     groupBy: options?.groupBy ?? 'workflowCategory',
     layout: 'board',
     sort: options?.sort,
     sortMode: options?.sortMode,
+    ...(lane ? { subGroupBy: lane } : {}),
   };
 };
 

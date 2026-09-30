@@ -18,11 +18,14 @@ import type {
 } from '@orvilo/types';
 import {
   isWorkAttentionAllowedHttpsHost,
+  normalizeWorkQuerySubGroupBy,
   PROJECT_STATUS_VALUES,
+  WORK_QUERY_BOARD_KEY_SEP,
   WORK_QUERY_FACET_FIELDS,
   WORK_QUERY_MAX_DEPTH,
   WORK_QUERY_MAX_IN_VALUES,
   WORK_QUERY_MAX_PREDICATES,
+  WORK_QUERY_PRIORITY_KEYS,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
   WORK_SEARCH_MAX_PER_TYPE,
@@ -74,18 +77,26 @@ export class WorkQueryError extends Error {
 }
 
 const TASK_FIELDS = new Set<WorkQueryField>([
+  'assigneeAgentId',
   'assigneeUserId',
+  'closedAt',
+  'completedAt',
+  'createdAt',
   'createdByUserId',
   'cycleId',
   'delegatedByUserId',
+  'hasActivity',
   'id',
   'labelId',
   'priority',
   'projectId',
   'reviewerUserId',
   'status',
+  'subscribed',
   'teamId',
+  'text',
   'triageStatus',
+  'updatedAt',
   'workflowCategory',
 ]);
 
@@ -123,14 +134,36 @@ type CompileCtx = {
   readableTeamIds: ReadonlySet<string>;
 };
 
-const assertInValues = (resolved: unknown, op: 'in' | 'notIn'): string[] => {
+const isCurrentUserRef = (value: unknown): value is { ref: 'currentUser' } =>
+  Boolean(value && typeof value === 'object' && 'ref' in value && value.ref === 'currentUser');
+
+const isDateRange = (value: unknown): value is { from: string; to: string } =>
+  Boolean(
+    value &&
+    typeof value === 'object' &&
+    'from' in value &&
+    'to' in value &&
+    typeof value.from === 'string' &&
+    typeof value.to === 'string',
+  );
+
+/** Resolve `{ref:'currentUser'}` members so `in` can mix "me" with ids. */
+const assertInValues = (
+  resolved: unknown,
+  op: 'in' | 'notIn',
+  currentUserId: string,
+): Array<number | string> => {
   if (!Array.isArray(resolved) || resolved.length === 0) {
     throw new WorkQueryError('INVALID_QUERY', `${op} requires a non-empty array`);
   }
   if (resolved.length > WORK_QUERY_MAX_IN_VALUES) {
     throw new WorkQueryError('QUERY_TOO_COMPLEX', `${op} exceeded maximum values`);
   }
-  return resolved as string[];
+  return resolved.map((item) => {
+    if (isCurrentUserRef(item)) return currentUserId;
+    if (typeof item === 'string' || typeof item === 'number') return item;
+    throw new WorkQueryError('INVALID_QUERY', `${op} values must be strings or numbers`);
+  });
 };
 
 const compileTeamIdColumnPredicate = (
@@ -138,6 +171,7 @@ const compileTeamIdColumnPredicate = (
   op: WorkQueryOp,
   resolved: ReturnType<typeof resolveValue>,
   readableTeamIds: ReadonlySet<string>,
+  currentUserId: string,
 ): SQL => {
   const readable = [...readableTeamIds];
   switch (op) {
@@ -152,7 +186,7 @@ const compileTeamIdColumnPredicate = (
       return eq(column, resolved as never);
     }
     case 'in': {
-      const kept = assertInValues(resolved, 'in').filter(
+      const kept = assertInValues(resolved, 'in', currentUserId).filter(
         (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
       );
       return kept.length ? inArray(column, kept) : FALSE_SQL;
@@ -162,7 +196,7 @@ const compileTeamIdColumnPredicate = (
       return ne(column, resolved as never);
     }
     case 'notIn': {
-      const kept = assertInValues(resolved, 'notIn').filter(
+      const kept = assertInValues(resolved, 'notIn', currentUserId).filter(
         (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
       );
       return kept.length ? notInArray(column, kept) : TRUE_SQL;
@@ -198,8 +232,17 @@ const resolveValue = (value: WorkQueryPredicate['value'], currentUserId: string)
 
 const taskColumn = (field: WorkQueryField) => {
   switch (field) {
+    case 'assigneeAgentId': {
+      return tasks.assigneeAgentId;
+    }
     case 'assigneeUserId': {
       return tasks.assigneeUserId;
+    }
+    case 'completedAt': {
+      return tasks.completedAt;
+    }
+    case 'createdAt': {
+      return tasks.createdAt;
     }
     case 'createdByUserId': {
       return tasks.createdByUserId;
@@ -228,6 +271,9 @@ const taskColumn = (field: WorkQueryField) => {
     case 'triageStatus': {
       return tasks.triageStatus;
     }
+    case 'updatedAt': {
+      return tasks.updatedAt;
+    }
     case 'workflowCategory': {
       return tasks.workflowCategory;
     }
@@ -241,6 +287,7 @@ const compileColumnPredicate = (
   column: AnyPgColumn,
   op: WorkQueryOp,
   resolved: ReturnType<typeof resolveValue>,
+  currentUserId: string,
 ): SQL => {
   switch (op) {
     case 'isNull': {
@@ -262,10 +309,10 @@ const compileColumnPredicate = (
       return ne(column, resolved as never);
     }
     case 'in': {
-      return inArray(column, assertInValues(resolved, 'in') as never[]);
+      return inArray(column, assertInValues(resolved, 'in', currentUserId) as never[]);
     }
     case 'notIn': {
-      return notInArray(column, assertInValues(resolved, 'notIn') as never[]);
+      return notInArray(column, assertInValues(resolved, 'notIn', currentUserId) as never[]);
     }
     default: {
       throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
@@ -285,6 +332,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.id,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'status') {
@@ -292,6 +340,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.status,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'visibility') {
@@ -299,6 +348,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.visibility,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'ownerUserId') {
@@ -306,6 +356,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.userId,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'teamId') {
@@ -360,6 +411,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
       predicate.op,
       resolveValue(predicate.value, ctx.currentUserId),
       ctx.readableTeamIds,
+      ctx.currentUserId,
     );
   }
 
@@ -392,13 +444,13 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         return sql`not ${bindingWith(sql`${taskLabelBindings.labelId} = ${resolved}`)}`;
       }
       case 'in': {
-        const values = assertInValues(resolved, 'in').filter(
+        const values = assertInValues(resolved, 'in', ctx.currentUserId).filter(
           (item): item is string => typeof item === 'string',
         );
         return values.length ? bindingWith(inArray(taskLabelBindings.labelId, values)) : FALSE_SQL;
       }
       case 'notIn': {
-        const values = assertInValues(resolved, 'notIn').filter(
+        const values = assertInValues(resolved, 'notIn', ctx.currentUserId).filter(
           (item): item is string => typeof item === 'string',
         );
         return values.length
@@ -413,7 +465,83 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
 
   const op: WorkQueryOp = predicate.op;
   const resolved = resolveValue(predicate.value, ctx.currentUserId);
-  return compileColumnPredicate(taskColumn(predicate.field), op, resolved);
+
+  if (predicate.field === 'text') {
+    if (op !== 'contains' || typeof resolved !== 'string' || !resolved.trim()) {
+      throw new WorkQueryError('INVALID_QUERY', 'text only supports contains');
+    }
+    const pattern = `%${escapeLike(resolved.trim())}%`;
+    return or(
+      sql`${tasks.name} ilike ${pattern} escape '\\'`,
+      sql`${tasks.description} ilike ${pattern} escape '\\'`,
+      sql`${tasks.instruction} ilike ${pattern} escape '\\'`,
+    )!;
+  }
+
+  if (predicate.field === 'subscribed' || predicate.field === 'hasActivity') {
+    if (op !== 'eq' || resolved !== ctx.currentUserId) {
+      throw new WorkQueryError('INVALID_QUERY', `${predicate.field} only supports eq currentUser`);
+    }
+    return predicate.field === 'subscribed'
+      ? sql`exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${tasks.id} and ${taskSubscriptions.userId} = ${ctx.currentUserId} and ${taskSubscriptions.unsubscribedAt} is null)`
+      : sql`exists (select 1 from ${notifications} where ${notifications.userId} = ${ctx.currentUserId} and ${notifications.resourceType} = 'task' and ${notifications.resourceId} = ${tasks.id})`;
+  }
+
+  if (
+    predicate.field === 'createdAt' ||
+    predicate.field === 'updatedAt' ||
+    predicate.field === 'completedAt' ||
+    predicate.field === 'closedAt'
+  ) {
+    const column =
+      predicate.field === 'closedAt'
+        ? sql`coalesce(${tasks.completedAt}, ${tasks.updatedAt})`
+        : taskColumn(predicate.field);
+    return compileDatePredicate(column, op, resolved);
+  }
+
+  return compileColumnPredicate(taskColumn(predicate.field), op, resolved, ctx.currentUserId);
+};
+
+const compileDatePredicate = (
+  column: AnyPgColumn | SQL,
+  op: WorkQueryOp,
+  resolved: ReturnType<typeof resolveValue>,
+): SQL => {
+  const instant = (value: unknown, label: string) => {
+    if (typeof value !== 'string' || Number.isNaN(new Date(value).getTime())) {
+      throw new WorkQueryError('INVALID_QUERY', `${label} requires an ISO timestamp`);
+    }
+    return new Date(value);
+  };
+  // `closedAt` is `coalesce(...)`, a SQL fragment. Drizzle's comparison
+  // helpers only accept a column or a SQL value, not the union, so the
+  // predicate is written as SQL for both.
+  switch (op) {
+    case 'isNull': {
+      return sql`${column} is null`;
+    }
+    case 'isNotNull': {
+      return sql`${column} is not null`;
+    }
+    case 'lt': {
+      return sql`${column} < ${instant(resolved, 'lt')}`;
+    }
+    case 'gte': {
+      return sql`${column} >= ${instant(resolved, 'gte')}`;
+    }
+    case 'between': {
+      if (!isDateRange(resolved)) {
+        throw new WorkQueryError('INVALID_QUERY', 'between requires {from, to}');
+      }
+      const from = instant(resolved.from, 'between.from');
+      const to = instant(resolved.to, 'between.to');
+      return sql`${column} >= ${from} and ${column} <= ${to}`;
+    }
+    default: {
+      throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
+    }
+  }
 };
 
 const compileFilter = (
@@ -457,6 +585,14 @@ export const validateWorkQuery = (query: WorkQuery) => {
   }
   if (query.sortMode !== undefined && query.sortMode !== 'field' && query.sortMode !== 'manual') {
     throw new WorkQueryError('INVALID_QUERY', `Unknown sortMode: ${String(query.sortMode)}`);
+  }
+  if (
+    query.subGroupBy &&
+    query.subGroupBy !== 'none' &&
+    query.layout === 'board' &&
+    !normalizeWorkQuerySubGroupBy(query.groupBy, query.subGroupBy)
+  ) {
+    throw new WorkQueryError('INVALID_QUERY', 'Board axes cannot repeat the same state machine');
   }
 };
 
@@ -502,15 +638,18 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
     case 'subscribed': {
       return {
         entityType: 'task',
+        filter: { all: [{ field: 'subscribed', op: 'eq', value: current }] },
         schemaVersion: 1,
       };
     }
     case 'activity': {
       // "Activity" = tasks with real activity for the caller — notification
-      // episodes carry actor/verb/subject. The EXISTS lives in taskConditions;
-      // the list path orders by the episode's `lastActivityAt`.
+      // episodes carry actor/verb/subject. The predicate is the same EXISTS
+      // taskConditions adds when `mode` is passed; the list path still orders
+      // by the episode's `lastActivityAt` when that mode is set.
       return {
         entityType: 'task',
+        filter: { all: [{ field: 'hasActivity', op: 'eq', value: current }] },
         schemaVersion: 1,
         sort: [
           { direction: 'desc', field: 'updatedAt' },
@@ -523,6 +662,14 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
 
 export const hashQuery = (query: WorkQuery) => JSON.stringify(query);
 
+const BOARD_GROUP_BY = new Set<WorkQueryGroupBy>([
+  'assignee',
+  'attention',
+  'priority',
+  'status',
+  'workflowCategory',
+]);
+
 export const applyWorkQueryLayout = (
   query: WorkQuery,
   layout?: WorkQueryLayout,
@@ -530,34 +677,52 @@ export const applyWorkQueryLayout = (
 ): WorkQuery => {
   const nextLayout = layout ?? query.layout ?? 'list';
   if (nextLayout !== 'board') {
+    const { subGroupBy: _lane, ...rest } = query;
     const nextGroupBy = groupBy ?? query.groupBy;
     if (nextGroupBy === 'none') {
-      return { ...query, groupBy: 'none', layout: 'list' };
+      return { ...rest, groupBy: 'none', layout: 'list' };
     }
-    return {
-      ...query,
-      groupBy:
-        nextGroupBy === 'workflowCategory' || nextGroupBy === 'attention' ? nextGroupBy : 'status',
-      layout: 'list',
-    };
+    const kept =
+      nextGroupBy === 'workflowCategory' ||
+      nextGroupBy === 'attention' ||
+      nextGroupBy === 'assignee' ||
+      nextGroupBy === 'priority'
+        ? nextGroupBy
+        : 'status';
+    return { ...rest, groupBy: kept, layout: 'list' };
   }
+  const nextGroupBy = groupBy ?? query.groupBy ?? 'workflowCategory';
+  const boardGroupBy = BOARD_GROUP_BY.has(nextGroupBy) ? nextGroupBy : 'workflowCategory';
+  const subGroupBy = normalizeWorkQuerySubGroupBy(boardGroupBy, query.subGroupBy);
   return {
     ...query,
-    groupBy: groupBy ?? query.groupBy ?? 'workflowCategory',
+    groupBy: boardGroupBy,
     layout: 'board',
+    subGroupBy,
   };
 };
 
-export const workQueryBoardGroupBy = (
-  query: WorkQuery,
-): 'attention' | 'status' | 'workflowCategory' | undefined => {
+export type WorkQueryBoardDimension =
+  'assignee' | 'attention' | 'priority' | 'status' | 'workflowCategory';
+
+export const workQueryBoardGroupBy = (query: WorkQuery): WorkQueryBoardDimension | undefined => {
   if (query.layout === 'board') {
-    return query.groupBy === 'status' ? 'status' : 'workflowCategory';
+    if (
+      query.groupBy === 'status' ||
+      query.groupBy === 'priority' ||
+      query.groupBy === 'assignee' ||
+      query.groupBy === 'attention'
+    ) {
+      return query.groupBy;
+    }
+    return 'workflowCategory';
   }
   if (
     query.groupBy === 'status' ||
     query.groupBy === 'workflowCategory' ||
-    query.groupBy === 'attention'
+    query.groupBy === 'attention' ||
+    query.groupBy === 'priority' ||
+    query.groupBy === 'assignee'
   ) {
     return query.groupBy;
   }
@@ -622,24 +787,52 @@ const attentionGroupExpr = (ctx: {
   ELSE ${tasks.workflowCategory}
 END`;
 
-const groupExprFor = (
-  groupBy: 'attention' | 'status' | 'workflowCategory',
-  attentionExpr: SQL,
-): SQL | AnyPgColumn =>
-  groupBy === 'attention'
-    ? attentionExpr
-    : groupBy === 'status'
-      ? tasks.status
-      : tasks.workflowCategory;
+type BoardLaneAxis = 'assignee' | 'priority' | 'project' | 'status' | 'workflowCategory';
+
+const axisExpr = (axis: WorkQueryBoardDimension | BoardLaneAxis, attentionExpr: SQL): SQL => {
+  switch (axis) {
+    case 'attention': {
+      return attentionExpr;
+    }
+    case 'status': {
+      return sql`${tasks.status}`;
+    }
+    case 'workflowCategory': {
+      return sql`${tasks.workflowCategory}`;
+    }
+    case 'priority': {
+      return sql`coalesce(${tasks.priority}::text, '0')`;
+    }
+    case 'assignee': {
+      return sql`coalesce(${tasks.assigneeUserId}, 'none')`;
+    }
+    case 'project': {
+      return sql`coalesce(${tasks.projectId}, 'none')`;
+    }
+  }
+};
+
+/** Finite axes keep their empty buckets. Assignee and project only return keys that exist. */
+const finiteBoardKeys = (axis: string): readonly string[] | undefined => {
+  if (axis === 'attention') return ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS];
+  if (axis === 'status') return WORK_QUERY_STATUS_COLUMNS;
+  if (axis === 'workflowCategory') return WORK_QUERY_WORKFLOW_COLUMNS;
+  if (axis === 'priority') return WORK_QUERY_PRIORITY_KEYS;
+  return undefined;
+};
 
 const stableBoardKeys = (
-  groupBy: 'attention' | 'status' | 'workflowCategory',
-): readonly string[] =>
-  groupBy === 'attention'
-    ? ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS]
-    : groupBy === 'status'
-      ? WORK_QUERY_STATUS_COLUMNS
-      : WORK_QUERY_WORKFLOW_COLUMNS;
+  groupBy: WorkQueryBoardDimension,
+  lane?: BoardLaneAxis,
+): readonly string[] => {
+  const columns = finiteBoardKeys(groupBy);
+  if (!lane) return columns ?? [];
+  const lanes = finiteBoardKeys(lane);
+  if (!columns || !lanes) return [];
+  return columns.flatMap((column) =>
+    lanes.map((laneKey) => `${column}${WORK_QUERY_BOARD_KEY_SEP}${laneKey}`),
+  );
+};
 
 /** Keyset for board-ordered groups: position asc, then createdAt/seq desc —
  * the same total order TASK_BOARD_ORDER applies on the task-store board. */
@@ -724,10 +917,14 @@ const sortValue = (
   if (field === 'id') return row.id;
   if (field === 'cycleId') return row.cycleRefId;
   if (
+    field === 'closedAt' ||
     field === 'delegatedByUserId' ||
+    field === 'hasActivity' ||
     field === 'labelId' ||
     field === 'ownerUserId' ||
     field === 'reviewerUserId' ||
+    field === 'subscribed' ||
+    field === 'text' ||
     field === 'visibility'
   ) {
     throw new WorkQueryError('INVALID_QUERY', `Cannot sort tasks by ${field}`);
@@ -982,13 +1179,19 @@ export class WorkQueryModel {
     const groupBy = workQueryBoardGroupBy(query);
 
     if (groupBy) {
+      const lane =
+        query.layout === 'board'
+          ? normalizeWorkQuerySubGroupBy(groupBy, query.subGroupBy)
+          : undefined;
       return this.queryTaskBoard({
         afterId: params.afterId,
         conditions,
         groupBy,
         groupKey: params.groupKey,
+        lane,
         layout: query.layout === 'board' ? 'board' : 'list',
-        limit,
+        // Swimlanes page each cell; a full column page would over-fetch the grid.
+        limit: lane ? Math.min(limit, 10) : limit,
         queryHash,
         requestedHash: params.queryHash,
         sort,
@@ -1081,8 +1284,9 @@ export class WorkQueryModel {
   private queryTaskBoard = async (params: {
     afterId?: string;
     conditions: SQL[];
-    groupBy: 'attention' | 'status' | 'workflowCategory';
+    groupBy: WorkQueryBoardDimension;
     groupKey?: string;
+    lane?: BoardLaneAxis;
     layout: WorkQueryLayout;
     limit: number;
     queryHash: string;
@@ -1101,14 +1305,15 @@ export class WorkQueryModel {
     // in-review issue never lands in a needs-input run-state bucket. The
     // grouping dimension is an expression, not always a stored column —
     // 'attention' derives urgent/blocking from priority + live blocks edges.
-    const dimension = groupExprFor(
-      params.groupBy,
-      attentionGroupExpr({
-        db: this.db,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      }),
-    );
+    const attention = attentionGroupExpr({
+      db: this.db,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    const columnExpr = axisExpr(params.groupBy, attention);
+    const dimension = params.lane
+      ? sql`${columnExpr} || E'\\x1f' || ${axisExpr(params.lane, attention)}`
+      : columnExpr;
     const matchesKey = (key: string): SQL => sql`${dimension} = ${key}`;
     // Group over a derived `key` column: the dimension may carry params
     // (attention's NOT-IN list), and Postgres won't match a SELECT CASE whose
@@ -1131,7 +1336,7 @@ export class WorkQueryModel {
     }
     const total = [...countByKey.values()].reduce((sum, count) => sum + count, 0);
 
-    const stable = stableBoardKeys(params.groupBy);
+    const stable = stableBoardKeys(params.groupBy, params.lane);
     const extra = [...countByKey.keys()]
       .filter((key) => !(stable as readonly string[]).includes(key))
       .sort();

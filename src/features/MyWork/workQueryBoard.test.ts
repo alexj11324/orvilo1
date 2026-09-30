@@ -1,4 +1,4 @@
-import type { TaskListItem } from '@orvilo/types';
+import { WORK_QUERY_BOARD_KEY_SEP, type TaskListItem } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -19,6 +19,19 @@ import {
   workQueryTaskColumnKey,
 } from './workQueryBoard';
 import type { WorkQueryResultTask } from './workQueryPaging';
+
+describe('workQueryBoardGroups swimlanes', () => {
+  it('prefixes a cell as column then lane and pages that composite key', () => {
+    const raw = `todo${WORK_QUERY_BOARD_KEY_SEP}1`;
+    const groups = workQueryBoardGroups(
+      [{ hasMore: false, key: raw, tasks: [], total: 2 }],
+      'workflowCategory',
+      'priority',
+    );
+    expect(groups[0]?.key).toBe(`wf:todo${WORK_QUERY_BOARD_KEY_SEP}pr:1`);
+    expect(workQuerySourceKeysForKanbanColumn('workflowCategory', groups[0]!.key)).toEqual([raw]);
+  });
+});
 
 describe('isMyWorkBoardMode', () => {
   it('offers a board only on assigned and delegated', () => {

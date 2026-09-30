@@ -20,7 +20,8 @@ import { ALL_TEAM_CYCLES } from './teamWorkQuery';
 
 export type TeamIssuesListGrouping =
   'assignee' | 'cycle' | 'none' | 'priority' | 'project' | 'status' | 'workflowCategory';
-export type TeamIssuesBoardGrouping = 'status' | 'workflowCategory';
+export type TeamIssuesBoardGrouping = 'assignee' | 'priority' | 'status' | 'workflowCategory';
+export type TeamIssuesBoardLane = 'assignee' | 'none' | 'priority' | 'project' | 'status';
 export type TeamIssuesOrdering =
   'createdAsc' | 'createdDesc' | 'default' | 'updatedAsc' | 'updatedDesc';
 export type TeamIssuesCompletedWindow = 'all' | 'none' | 'pastDay';
@@ -28,7 +29,11 @@ export type TeamIssuesCompletedWindow = 'all' | 'none' | 'pastDay';
 export interface TeamIssuesDisplay {
   /** Column dimension when the board layout is active. */
   boardGrouping: TeamIssuesBoardGrouping;
-  /** Completed-issues window — client-side display filter (Linear's "Completed issues"). */
+  /** Swimlane under the board columns. `none` is a single row of columns. */
+  boardLane: TeamIssuesBoardLane;
+  /** Columns the user collapsed, persisted in the URL. */
+  collapsedColumns: string[];
+  /** Completed-issues window — compiled into the work query (Linear's "Completed issues"). */
   completed: TeamIssuesCompletedWindow;
   /** List grouping; client-side dimensions bucket the loaded flat page. */
   grouping: TeamIssuesListGrouping;
@@ -45,6 +50,8 @@ export interface TeamIssuesDisplay {
 
 export const DEFAULT_TEAM_ISSUES_DISPLAY: TeamIssuesDisplay = {
   boardGrouping: 'workflowCategory',
+  boardLane: 'none',
+  collapsedColumns: [],
   completed: 'all',
   // Same workflow states as the board, so every group header draws the glyph
   // of the row status marks under it (Linear groups its list by Status).
@@ -69,7 +76,27 @@ export const TEAM_ISSUES_LIST_GROUPINGS: readonly TeamIssuesListGrouping[] = [
 export const TEAM_ISSUES_BOARD_GROUPINGS: readonly TeamIssuesBoardGrouping[] = [
   'workflowCategory',
   'status',
+  'priority',
+  'assignee',
 ];
+
+export const TEAM_ISSUES_BOARD_LANES: readonly TeamIssuesBoardLane[] = [
+  'none',
+  'status',
+  'priority',
+  'assignee',
+  'project',
+];
+
+export const teamIssuesBoardLane = (
+  grouping: TeamIssuesBoardGrouping,
+  lane: TeamIssuesBoardLane,
+): TeamIssuesBoardLane => {
+  if (lane === 'none' || lane === grouping) return 'none';
+  if (grouping === 'workflowCategory' && lane === 'status') return 'none';
+  if (grouping === 'status' && lane === 'status') return 'none';
+  return lane;
+};
 
 export const TEAM_ISSUES_ORDERINGS: readonly TeamIssuesOrdering[] = [
   'default',
@@ -154,6 +181,8 @@ export const filterTeamIssueRows = <T extends WorkQueryResultTask>(
 export interface TeamIssuesUrlState {
   cycleId: string;
   display: TeamIssuesDisplay;
+  /** Serialized work-query filter (`?filter=`). Null when the param is absent. */
+  filter: string | null;
   layout: WorkQueryLayout;
   noProject: boolean;
 }
@@ -164,7 +193,22 @@ const parseListGrouping = (value: string | null): TeamIssuesListGrouping =>
     : DEFAULT_TEAM_ISSUES_DISPLAY.grouping;
 
 const parseBoardGrouping = (value: string | null): TeamIssuesBoardGrouping =>
-  value === 'status' ? 'status' : DEFAULT_TEAM_ISSUES_DISPLAY.boardGrouping;
+  (TEAM_ISSUES_BOARD_GROUPINGS as readonly string[]).includes(value ?? '')
+    ? (value as TeamIssuesBoardGrouping)
+    : DEFAULT_TEAM_ISSUES_DISPLAY.boardGrouping;
+
+const parseBoardLane = (value: string | null): TeamIssuesBoardLane =>
+  (TEAM_ISSUES_BOARD_LANES as readonly string[]).includes(value ?? '')
+    ? (value as TeamIssuesBoardLane)
+    : DEFAULT_TEAM_ISSUES_DISPLAY.boardLane;
+
+const parseCollapsedColumns = (value: string | null): string[] =>
+  value
+    ? value
+        .split(',')
+        .map((key) => key.trim())
+        .filter(Boolean)
+    : [];
 
 const parseOrdering = (value: string | null): TeamIssuesOrdering =>
   (TEAM_ISSUES_ORDERINGS as readonly string[]).includes(value ?? '')
@@ -185,8 +229,11 @@ export const readTeamIssuesUrlState = (params: URLSearchParams): TeamIssuesUrlSt
   const grouping = params.get('grouping');
   return {
     cycleId: params.get('cycle') ?? ALL_TEAM_CYCLES,
+    filter: params.get('filter'),
     display: {
       boardGrouping: parseBoardGrouping(grouping),
+      boardLane: parseBoardLane(params.get('lane')),
+      collapsedColumns: parseCollapsedColumns(params.get('cols')),
       completed: parseCompleted(params.get('completed')),
       grouping: parseListGrouping(grouping),
       nestedSubIssues: params.get('nestedSub') !== '0',
@@ -203,8 +250,11 @@ export const readTeamIssuesUrlState = (params: URLSearchParams): TeamIssuesUrlSt
 
 export interface TeamIssuesUrlPatch {
   boardGrouping?: TeamIssuesBoardGrouping;
+  boardLane?: TeamIssuesBoardLane;
+  collapsedColumns?: string[];
   completed?: TeamIssuesCompletedWindow;
   cycleId?: string;
+  filter?: string | null;
   grouping?: TeamIssuesListGrouping;
   layout?: WorkQueryLayout;
   nestedSubIssues?: boolean;
@@ -216,9 +266,11 @@ export interface TeamIssuesUrlPatch {
 }
 
 const DISPLAY_PARAM_KEYS = [
+  'cols',
   'completed',
   'emptyColumns',
   'grouping',
+  'lane',
   'layout',
   'nestedSub',
   'ordering',
@@ -274,6 +326,18 @@ export const patchTeamIssuesParams = (
   if (patch.showEmptyColumns !== undefined) {
     if (patch.showEmptyColumns) next.set('emptyColumns', '1');
     else next.delete('emptyColumns');
+  }
+  if (patch.boardLane !== undefined) {
+    if (patch.boardLane === 'none') next.delete('lane');
+    else next.set('lane', patch.boardLane);
+  }
+  if (patch.collapsedColumns !== undefined) {
+    if (patch.collapsedColumns.length === 0) next.delete('cols');
+    else next.set('cols', patch.collapsedColumns.join(','));
+  }
+  if (patch.filter !== undefined) {
+    if (!patch.filter) next.delete('filter');
+    else next.set('filter', patch.filter);
   }
   if (patch.projectChip !== undefined) {
     if (patch.projectChip) next.delete('projectChip');

@@ -44,7 +44,9 @@ describe('teamIssuesDisplay URL state', () => {
     expect(state.cycleId).toBe('cycle-9');
     expect(state.noProject).toBe(true);
     expect(state.display).toEqual({
-      boardGrouping: 'workflowCategory',
+      boardGrouping: 'priority',
+      boardLane: 'none',
+      collapsedColumns: [],
       completed: 'pastDay',
       grouping: 'priority',
       nestedSubIssues: false,
@@ -76,11 +78,33 @@ describe('teamIssuesDisplay URL state', () => {
     expect(shared.display.grouping).toBe('status');
     expect(shared.display.boardGrouping).toBe('status');
 
-    // A list-only bucket is not a valid board grouping — board falls back
-    // without the param being rewritten.
-    const listOnly = readTeamIssuesUrlState(new URLSearchParams('grouping=assignee'));
-    expect(listOnly.display.grouping).toBe('assignee');
+    // Priority and assignee are board columns too. Project stays list-only,
+    // so the board falls back without the param being rewritten.
+    const sharedField = readTeamIssuesUrlState(new URLSearchParams('grouping=assignee'));
+    expect(sharedField.display.grouping).toBe('assignee');
+    expect(sharedField.display.boardGrouping).toBe('assignee');
+    const listOnly = readTeamIssuesUrlState(new URLSearchParams('grouping=project'));
+    expect(listOnly.display.grouping).toBe('project');
     expect(listOnly.display.boardGrouping).toBe('workflowCategory');
+  });
+
+  it('round-trips the swimlane, collapsed columns and filter without resetting them as display', () => {
+    const next = patchTeamIssuesParams(new URLSearchParams('tab=issues'), {
+      boardLane: 'priority',
+      collapsedColumns: ['wf:todo', 'wf:done'],
+      filter: '{"all":[]}',
+    });
+    expect(next.get('lane')).toBe('priority');
+    expect(next.get('cols')).toBe('wf:todo,wf:done');
+    expect(next.get('filter')).toBe('{"all":[]}');
+    const read = readTeamIssuesUrlState(next);
+    expect(read.display.boardLane).toBe('priority');
+    expect(read.display.collapsedColumns).toEqual(['wf:todo', 'wf:done']);
+    expect(read.filter).toBe('{"all":[]}');
+    const reset = resetTeamIssuesDisplayParams(next);
+    expect(reset.get('lane')).toBeNull();
+    expect(reset.get('cols')).toBeNull();
+    expect(reset.get('filter')).toBe('{"all":[]}');
   });
 
   it('writes non-defaults, deletes defaults, and keeps unrelated params', () => {

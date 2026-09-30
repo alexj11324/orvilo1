@@ -1,6 +1,11 @@
 'use client';
 
-import { type MyWorkMode, type TaskStatus, type WorkQueryLayout } from '@orvilo/types';
+import {
+  type MyWorkMode,
+  normalizeWorkQuerySubGroupBy,
+  type TaskStatus,
+  type WorkQueryLayout,
+} from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
@@ -30,7 +35,11 @@ import NavHeader from '@/features/NavHeader';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
-import { builderToFilter, stableStringify } from '@/features/SavedViews/workQueryBuilder';
+import {
+  builderToFilter,
+  filterToBuilder,
+  stableStringify,
+} from '@/features/SavedViews/workQueryBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { inboxPriorityScopeKey } from '@/features/WorkInbox/inboxPriority';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -55,12 +64,12 @@ import type { BulkSelectGesture } from './bulkSelection';
 import MyWorkControls from './MyWorkControls';
 import {
   activityBucketTitle,
+  completedWindowQueryFilter,
   filterMyWorkTaskRows,
   isMyWorkClientGrouping,
   MY_WORK_PRIORITY_LABEL_KEYS,
   MY_WORK_ROW_PROPERTIES,
   type MyWorkDisplay,
-  myWorkDisplayFiltersRows,
   myWorkListGroupingOptions,
   myWorkOrderingOptions,
   myWorkPriorityGroupRank,
@@ -74,9 +83,11 @@ import {
 } from './myWorkDisplay';
 import {
   EMPTY_FILTER_BUILDER,
+  mergeWorkQueryFilters,
   myWorkActiveFilterCount,
   myWorkComposedQuery,
-  workQueryFilterHasPredicates,
+  parseWorkQueryFilterParam,
+  serializeWorkQueryFilterParam,
 } from './myWorkFilters';
 import MyWorkIssuePane from './MyWorkIssuePane';
 import { isMyWorkSaveableMode } from './myWorkSaveAs';
@@ -236,28 +247,65 @@ const MyWorkPage = memo(() => {
     [display, mode, updateSystemStatus, viewScopeKey],
   );
 
-  // Filter-builder rows, also per tab. Only the saveable modes can actually
-  // compose them into a work query — the other tabs' membership rules live in
-  // mode-injected SQL the generic query endpoint cannot express.
-  const [builderByMode, setBuilderByMode] = useState<Partial<Record<MyWorkMode, BuilderState>>>({});
-  const builder = builderByMode[mode] ?? EMPTY_FILTER_BUILDER;
-  const setBuilder = useCallback(
-    (next: BuilderState) => setBuilderByMode((current) => ({ ...current, [mode]: next })),
-    [mode],
+  // Filter-builder rows, also per tab. The applied AST lives in `?filter=`
+  // so reload and Back/forward restore it. Delegated stays on the mode query.
+  const filterParam = searchParams.get('filter');
+  const [builderByMode, setBuilderByMode] = useState<Partial<Record<MyWorkMode, BuilderState>>>(
+    () => {
+      if (!isMyWorkSaveableMode(mode)) return {};
+      const parsed = parseWorkQueryFilterParam(filterParam);
+      return parsed ? { [mode]: filterToBuilder('task', parsed) } : {};
+    },
   );
+  const builder = builderByMode[mode] ?? EMPTY_FILTER_BUILDER;
   const filterSupported = isMyWorkSaveableMode(mode);
+  useEffect(() => {
+    if (!filterSupported) return;
+    const parsed = parseWorkQueryFilterParam(filterParam);
+    setBuilderByMode((current) => {
+      const existing = current[mode] ?? EMPTY_FILTER_BUILDER;
+      if (stableStringify(builderToFilter('task', existing)) === stableStringify(parsed)) {
+        return current;
+      }
+      return { ...current, [mode]: filterToBuilder('task', parsed) };
+    });
+  }, [filterParam, filterSupported, mode]);
+  const setBuilder = useCallback(
+    (next: BuilderState) => {
+      setBuilderByMode((current) => ({ ...current, [mode]: next }));
+      if (!filterSupported) return;
+      const serialized = serializeWorkQueryFilterParam(builderToFilter('task', next));
+      if ((serialized ?? null) === (filterParam ?? null)) return;
+      const params = new URLSearchParams(searchParams);
+      if (serialized) params.set('filter', serialized);
+      else params.delete('filter');
+      setSearchParams(params, { replace: true });
+    },
+    [filterParam, filterSupported, mode, searchParams, setSearchParams],
+  );
   const builderFilter = filterSupported ? builderToFilter('task', builder) : undefined;
-  const hasCustomFilters = workQueryFilterHasPredicates(builderFilter);
   const activeFilterCount = myWorkActiveFilterCount(builder);
 
   const serverGroupBy = myWorkServerGroupBy(display, layout);
-  // Extra filters or a non-default ordering reroute the feed through the
-  // generic work-query endpoint — `myWork` keeps the mode's fixed sort and
-  // only knows the noProject/delegated chips.
+  const boardLane =
+    layout === 'board'
+      ? normalizeWorkQuerySubGroupBy(
+          display.boardGrouping,
+          display.boardLane === 'none' ? undefined : display.boardLane,
+        )
+      : undefined;
+  const queryFilter = mergeWorkQueryFilters(
+    builderFilter,
+    completedWindowQueryFilter(display.completed),
+  );
+  // A non-default ordering needs the generic endpoint. Filters, the completed
+  // window, priority/assignee columns and swimlanes ride `myWork` so the
+  // follow bells stay on the mode feed.
   const composedQuery = useMemo(
     () =>
-      hasCustomFilters || display.ordering !== 'default'
+      display.ordering !== 'default'
         ? myWorkComposedQuery({
+            completed: display.completed,
             delegated,
             filter: builderFilter,
             groupBy: serverGroupBy,
@@ -265,13 +313,15 @@ const MyWorkPage = memo(() => {
             mode,
             noProject,
             ordering: display.ordering,
+            subGroupBy: boardLane,
           })
         : null,
     [
+      boardLane,
       builderFilter,
       delegated,
+      display.completed,
       display.ordering,
-      hasCustomFilters,
       layout,
       mode,
       noProject,
@@ -284,6 +334,7 @@ const MyWorkPage = memo(() => {
   // One feed powers both layouts: list rows and the board's external groups
   // come from the same work query, so the two never disagree. The key carries
   // the resolved grouping + composed query so option changes refetch.
+  const pageLimit = boardLane ? 10 : undefined;
   const swrKey = useMemo(
     () => [
       'workAttention:myWork',
@@ -293,19 +344,37 @@ const MyWorkPage = memo(() => {
       noProject,
       delegated,
       serverGroupBy,
+      boardLane ?? '',
+      stableStringify(queryFilter ?? null),
       composedQuery ? stableStringify(composedQuery) : '',
     ],
-    [workspaceId, mode, layout, noProject, delegated, serverGroupBy, composedQuery],
+    [
+      boardLane,
+      composedQuery,
+      delegated,
+      layout,
+      mode,
+      noProject,
+      queryFilter,
+      serverGroupBy,
+      workspaceId,
+    ],
   );
   const { data, error, isLoading } = useClientDataSWR(swrKey, () =>
     composedQuery
-      ? workAttentionService.query({ query: composedQuery })
+      ? workAttentionService.query({
+          limit: pageLimit,
+          query: composedQuery,
+        })
       : workAttentionService.myWork({
           delegated,
+          filter: queryFilter,
           groupBy: serverGroupBy,
           layout,
+          limit: pageLimit,
           mode,
           noProject,
+          subGroupBy: boardLane,
         }),
   );
   const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(data?.data);
@@ -329,10 +398,12 @@ const MyWorkPage = memo(() => {
     setExtraSubscribed([]);
     resetLoadMoreError();
   }, [
+    boardLane,
     delegated,
     layout,
     mode,
     noProject,
+    queryFilter,
     queryHash,
     resetLoadMoreError,
     serverGroupBy,
@@ -361,20 +432,35 @@ const MyWorkPage = memo(() => {
         ? workAttentionService.query({
             afterId: input.afterId,
             groupKey: input.groupKey,
+            limit: pageLimit,
             query: composedQuery,
             queryHash,
           })
         : workAttentionService.myWork({
             afterId: input.afterId,
             delegated,
+            filter: queryFilter,
             groupBy: serverGroupBy,
             groupKey: input.groupKey,
             layout,
+            limit: pageLimit,
             mode,
             noProject,
             queryHash,
+            subGroupBy: boardLane,
           }),
-    [composedQuery, delegated, layout, mode, noProject, queryHash, serverGroupBy],
+    [
+      boardLane,
+      composedQuery,
+      delegated,
+      layout,
+      mode,
+      noProject,
+      pageLimit,
+      queryFilter,
+      queryHash,
+      serverGroupBy,
+    ],
   );
 
   const loadMoreGroup = useCallback(
@@ -414,11 +500,12 @@ const MyWorkPage = memo(() => {
   // Display filters (completed window, sub-issues, triage) and Assigned's
   // importance ordering are presentation-only passes over the loaded page.
   const importanceOrdered = mode === 'assigned' && display.ordering === 'default' && !boardActive;
-  const displayFiltersRows = myWorkDisplayFiltersRows(display);
   const displayTasks = useMemo(() => {
     const filtered = filterMyWorkTaskRows(tasks, display);
     return importanceOrdered ? sortTasksByImportance(filtered) : filtered;
   }, [display, importanceOrdered, tasks]);
+  // Sub-issues and triage stay a client pass. Their hiding must not replace
+  // the server total — the completed window is already a query predicate.
   const displayGroups = useMemo(
     () =>
       groups.map((group) => {
@@ -426,11 +513,9 @@ const MyWorkPage = memo(() => {
         return {
           ...group,
           tasks: importanceOrdered ? sortTasksByImportance(filteredTasks) : filteredTasks,
-          // A display-filtered group counts what it actually shows.
-          total: displayFiltersRows ? filteredTasks.length : group.total,
         };
       }),
-    [display, displayFiltersRows, groups, importanceOrdered],
+    [display, groups, importanceOrdered],
   );
 
   /* --------------------------- selection + peek --------------------------- */
@@ -893,6 +978,7 @@ const MyWorkPage = memo(() => {
   const saveCopy = useCallback(async () => {
     if (!isMyWorkSaveableMode(mode)) return;
     const query = myWorkComposedQuery({
+      completed: display.completed,
       delegated,
       filter: builderFilter,
       groupBy: serverGroupBy,
@@ -900,6 +986,7 @@ const MyWorkPage = memo(() => {
       mode,
       noProject,
       ordering: display.ordering,
+      subGroupBy: boardLane,
     });
     if (!query) return;
     try {
@@ -916,9 +1003,11 @@ const MyWorkPage = memo(() => {
       toast.error(t('myWork.saveAsFailed'));
     }
   }, [
+    boardLane,
     builderFilter,
     canBoard,
     delegated,
+    display.completed,
     display.ordering,
     layout,
     mode,
@@ -939,6 +1028,12 @@ const MyWorkPage = memo(() => {
     const nextLayout = patch.layout ?? layout;
     const nextNoProject = patch.noProject ?? noProject;
     const nextDelegated = patch.delegated ?? delegated;
+    const nextMode = (patch.tab ?? mode) as MyWorkMode;
+    const nextBuilder =
+      nextMode === mode ? builder : (builderByMode[nextMode] ?? EMPTY_FILTER_BUILDER);
+    const serialized = isMyWorkSaveableMode(nextMode)
+      ? serializeWorkQueryFilterParam(builderToFilter('task', nextBuilder))
+      : null;
     setSearchParams(
       {
         tab: nextTab,
@@ -947,6 +1042,7 @@ const MyWorkPage = memo(() => {
           : {}),
         ...(nextNoProject ? { noProject: '1' } : {}),
         ...(nextDelegated ? { delegated: '1' } : {}),
+        ...(serialized ? { filter: serialized } : {}),
       },
       { replace: true },
     );
@@ -1021,6 +1117,7 @@ const MyWorkPage = memo(() => {
         ))}
         <WorkQueryResults
           bulkSelectedIds={bulkEnabled ? bulkSelectedIds : undefined}
+          collapsedColumns={display.collapsedColumns}
           emptyLabel={t('myWork.empty')}
           flatNested={display.showSubIssues && display.nestedSubIssues}
           flatSections={flatSections}
@@ -1038,6 +1135,7 @@ const MyWorkPage = memo(() => {
           peekOnSelect={peekOnSelect}
           rowExtras={rowExtras}
           selectedTaskId={selected?.identifier}
+          subGroupBy={boardLane}
           subSectionsFor={subSectionsFor}
           tasks={displayTasks}
           total={data?.data.total}
@@ -1047,6 +1145,7 @@ const MyWorkPage = memo(() => {
               : undefined
           }
           onBulkSelectTask={bulkEnabled ? handleBulkSelect : undefined}
+          onCollapsedColumnsChange={(keys) => setDisplay({ collapsedColumns: keys })}
           onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
           onCreateInGroup={createInGroup}
           onLoadMore={groups.length === 0 ? () => runLoadMore(loadMore) : undefined}

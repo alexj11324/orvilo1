@@ -1,7 +1,11 @@
 'use client';
 
 import type { SavedViewItem } from '@orvilo/database/schemas';
-import type { SavedViewVisibility, WorkQuery } from '@orvilo/types';
+import {
+  normalizeWorkQuerySubGroupBy,
+  type SavedViewVisibility,
+  type WorkQuery,
+} from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -271,6 +275,7 @@ const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
   name: view.name,
   sort: view.queryAst.sort,
   sortMode: view.queryAst.sortMode,
+  subGroupBy: view.queryAst.subGroupBy,
   teamId: view.teamId ?? null,
   visibility: view.visibility ?? 'private',
 });
@@ -283,6 +288,10 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   sort: state.sort,
   // Board ordering is explicit — the field is meaningless off-board.
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
+  subGroupBy:
+    state.layout === 'board'
+      ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
+      : undefined,
 });
 
 const SavedViewPage = memo(() => {
@@ -887,6 +896,7 @@ const SavedViewPage = memo(() => {
                   loadingLabel={t('savedViews.loading')}
                   movable={resolvedLayout === 'board'}
                   sortMode={view?.queryAst.sortMode}
+                  subGroupBy={view?.queryAst.subGroupBy}
                   tasks={tasks}
                   total={evaluation?.total}
                   createContext={

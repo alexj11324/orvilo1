@@ -84,6 +84,20 @@ describe('applyWorkQueryLayout', () => {
     expect(workQueryBoardGroupBy({ ...assigned, groupBy: 'none', layout: 'board' })).toBe(
       'workflowCategory',
     );
+    expect(applyWorkQueryLayout(assigned, 'list', 'priority')).toMatchObject({
+      groupBy: 'priority',
+      layout: 'list',
+    });
+    expect(
+      applyWorkQueryLayout({ ...assigned, subGroupBy: 'priority' }, 'board', 'assignee'),
+    ).toMatchObject({ groupBy: 'assignee', layout: 'board', subGroupBy: 'priority' });
+    expect(
+      applyWorkQueryLayout({ ...assigned, subGroupBy: 'status' }, 'board', 'workflowCategory')
+        .subGroupBy,
+    ).toBeUndefined();
+    expect(applyWorkQueryLayout({ ...assigned, subGroupBy: 'priority' }, 'list').subGroupBy).toBe(
+      undefined,
+    );
   });
 });
 
@@ -611,6 +625,96 @@ describe('WorkQueryModel', () => {
     expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[0]!.id);
     expect(todoPage?.tasks[0]!.id).not.toBe(byKey.get('todo')!.tasks[1]!.id);
     expect(second.groups?.find((group) => group.key === 'done')?.total).toBe(1);
+  });
+
+  it('keeps empty priority columns and pages assignee swimlanes as cells', async () => {
+    const mine = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Urgent mine',
+      priority: 1,
+    });
+    const theirs = await createTask(userId, {
+      assigneeUserId: otherUserId,
+      name: 'Urgent theirs',
+      priority: 1,
+    });
+    const unassigned = await createTask(userId, {
+      assigneeUserId: null,
+      name: 'Low unassigned',
+      priority: 4,
+    });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const columns = await model.queryTasks({
+      limit: 10,
+      query: {
+        entityType: 'task',
+        groupBy: 'priority',
+        layout: 'board',
+        schemaVersion: 1,
+      },
+    });
+    expect(columns.groups?.map((group) => group.key)).toEqual(['0', '1', '2', '3', '4']);
+    expect(columns.groups?.find((group) => group.key === '0')?.total).toBe(0);
+    expect(columns.groups?.find((group) => group.key === '1')?.total).toBe(2);
+    expect(columns.total).toBe(3);
+
+    const cells = await model.queryTasks({
+      limit: 10,
+      query: {
+        entityType: 'task',
+        groupBy: 'priority',
+        layout: 'board',
+        schemaVersion: 1,
+        subGroupBy: 'assignee',
+      },
+    });
+    const byKey = new Map(cells.groups?.map((group) => [group.key, group]));
+    const sep = '\u001f';
+    expect(byKey.get(`1${sep}${userId}`)?.tasks.map((row) => row.id)).toEqual([mine.id]);
+    expect(byKey.get(`1${sep}${otherUserId}`)?.tasks.map((row) => row.id)).toEqual([theirs.id]);
+    expect(byKey.get(`4${sep}none`)?.tasks.map((row) => row.id)).toEqual([unassigned.id]);
+    expect(byKey.has(`0${sep}none`)).toBe(false);
+    expect(cells.total).toBe(3);
+  });
+
+  it('compiles createdAt lt and between against the row clock', async () => {
+    const early = await createTask(userId, { name: 'Early' });
+    const late = await createTask(userId, { name: 'Late' });
+    await serverDB
+      .update(tasksTable)
+      .set({ createdAt: new Date('2026-01-01T00:00:00Z') })
+      .where(eq(tasksTable.id, early.id));
+    await serverDB
+      .update(tasksTable)
+      .set({ createdAt: new Date('2026-06-01T00:00:00Z') })
+      .where(eq(tasksTable.id, late.id));
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const beforeMarch = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'createdAt', op: 'lt', value: '2026-03-01T00:00:00.000Z' }] },
+        schemaVersion: 1,
+      },
+    });
+    expect(beforeMarch.tasks.map((row) => row.id)).toContain(early.id);
+    expect(beforeMarch.tasks.map((row) => row.id)).not.toContain(late.id);
+
+    const spring = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: {
+          all: [
+            {
+              field: 'createdAt',
+              op: 'between',
+              value: { from: '2026-05-01T00:00:00.000Z', to: '2026-07-01T00:00:00.000Z' },
+            },
+          ],
+        },
+        schemaVersion: 1,
+      },
+    });
+    expect(spring.tasks.map((row) => row.id)).toEqual([late.id]);
   });
 
   it('groups a list in the database so status sections are not a page rearrange', async () => {

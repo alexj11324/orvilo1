@@ -1,5 +1,10 @@
-import type { MyWorkMode, WorkQuerySort } from '@orvilo/types';
-import { WORK_QUERY_STATUS_COLUMNS } from '@orvilo/types';
+import {
+  type MyWorkMode,
+  normalizeWorkQuerySubGroupBy,
+  WORK_QUERY_STATUS_COLUMNS,
+  type WorkQueryFilter,
+  type WorkQuerySort,
+} from '@orvilo/types';
 
 import { isMyWorkSaveableMode } from './myWorkSaveAs';
 import type { WorkQueryResultTask } from './workQueryPaging';
@@ -25,7 +30,7 @@ export type MyWorkListGrouping =
   | 'project'
   | 'status'
   | 'workflowCategory';
-export type MyWorkBoardGrouping = 'status' | 'workflowCategory';
+export type MyWorkBoardGrouping = 'assignee' | 'priority' | 'status' | 'workflowCategory';
 /**
  * Second-level list grouping — the row fields Linear's "Sub-grouping" menu
  * offers on My issues. Always bucketed client-side over the loaded rows, so
@@ -73,7 +78,11 @@ export const MY_WORK_DEFAULT_ROW_PROPERTIES: MyWorkRowProperties = {
 export interface MyWorkDisplay {
   /** Column dimension when the board layout is active. */
   boardGrouping: MyWorkBoardGrouping;
-  /** Completed-issues window — client-side display filter (audit D12). */
+  /** Board swimlane. `none` is a single row of columns. */
+  boardLane: MyWorkSubGrouping;
+  /** Board columns the user collapsed. Empty keeps every column open. */
+  collapsedColumns: string[];
+  /** Completed-issues window — compiled into the work query when it hides rows. */
   completed: MyWorkCompletedWindow;
   /** List grouping; `activityDate` buckets client-side by activity day. */
   grouping: MyWorkListGrouping;
@@ -107,6 +116,8 @@ export const defaultMyWorkGrouping = (mode: MyWorkMode): MyWorkListGrouping => {
 
 export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   boardGrouping: 'workflowCategory',
+  boardLane: 'none',
+  collapsedColumns: [],
   // Assigned defaults to "Completed issues: Past day"; the other tabs show all.
   completed: mode === 'assigned' ? 'pastDay' : 'all',
   grouping: defaultMyWorkGrouping(mode),
@@ -120,7 +131,12 @@ export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   subGrouping: 'none',
 });
 
-const MY_WORK_BOARD_GROUPINGS: readonly MyWorkBoardGrouping[] = ['status', 'workflowCategory'];
+const MY_WORK_BOARD_GROUPINGS: readonly MyWorkBoardGrouping[] = [
+  'assignee',
+  'priority',
+  'status',
+  'workflowCategory',
+];
 const MY_WORK_COMPLETED_WINDOWS: readonly MyWorkCompletedWindow[] = ['all', 'none', 'pastDay'];
 const MY_WORK_ORDERINGS: readonly MyWorkOrdering[] = [
   'createdAsc',
@@ -170,6 +186,13 @@ export const normalizeMyWorkDisplay = (
   )
     ? (source.boardGrouping as MyWorkBoardGrouping)
     : defaults.boardGrouping;
+  const requestedLane = MY_WORK_SUB_GROUPING_OPTIONS.includes(source.boardLane as MyWorkSubGrouping)
+    ? (source.boardLane as MyWorkSubGrouping)
+    : defaults.boardLane;
+  const boardLane =
+    requestedLane !== 'none' && normalizeWorkQuerySubGroupBy(boardGrouping, requestedLane)
+      ? requestedLane
+      : 'none';
   const completed = MY_WORK_COMPLETED_WINDOWS.includes(source.completed as MyWorkCompletedWindow)
     ? (source.completed as MyWorkCompletedWindow)
     : defaults.completed;
@@ -188,6 +211,10 @@ export const normalizeMyWorkDisplay = (
   }
   return {
     boardGrouping,
+    boardLane,
+    collapsedColumns: Array.isArray(source.collapsedColumns)
+      ? source.collapsedColumns.filter((key) => typeof key === 'string' && key.length > 0)
+      : defaults.collapsedColumns,
     completed,
     grouping,
     nestedSubIssues:
@@ -227,7 +254,25 @@ export const myWorkListGroupingOptions = (mode: MyWorkMode): MyWorkListGrouping[
   return ['none', 'status', 'workflowCategory', 'priority', 'project', 'assignee', 'attention'];
 };
 
-export const MY_WORK_BOARD_GROUPING_OPTIONS: MyWorkBoardGrouping[] = ['workflowCategory', 'status'];
+export const MY_WORK_BOARD_GROUPING_OPTIONS: MyWorkBoardGrouping[] = [
+  'workflowCategory',
+  'status',
+  'priority',
+  'assignee',
+];
+
+/** Swimlanes offered for a board column axis. Status and workflow stay apart. */
+export const myWorkBoardSubGroupingOptions = (
+  boardGrouping: MyWorkBoardGrouping,
+): MyWorkSubGrouping[] =>
+  MY_WORK_SUB_GROUPING_OPTIONS.filter((option) => {
+    if (option === 'none') return true;
+    if (option === boardGrouping) return false;
+    // Status and workflow are one state machine. Swimlanes don't offer
+    // workflowCategory, so only the status lane under a workflow column is dropped.
+    if (boardGrouping === 'workflowCategory' && option === 'status') return false;
+    return true;
+  });
 
 /**
  * Sub-grouping choices for the display-options menu. The option matching the
@@ -239,9 +284,9 @@ export const myWorkSubGroupingOptions = (grouping: MyWorkListGrouping): MyWorkSu
 
 /**
  * Non-default orderings need the generic work-query endpoint (the `myWork`
- * endpoint keeps the mode's server sort). `subscribed`/`activity` semantics
- * live in mode-injected SQL the generic query cannot express, so those tabs
- * only expose `default`.
+ * endpoint keeps the mode's server sort, including activity's notification
+ * clock). Saveable tabs — including subscribed and activity — can pick a
+ * field order. Delegated and review stay on the mode feed.
  */
 export const myWorkOrderingOptions = (mode: MyWorkMode): MyWorkOrdering[] =>
   isMyWorkSaveableMode(mode)
@@ -261,7 +306,7 @@ export const isMyWorkClientGrouping = (
 export const myWorkServerGroupBy = (
   display: Pick<MyWorkDisplay, 'boardGrouping' | 'grouping'>,
   layout: 'board' | 'list',
-): 'attention' | 'none' | 'status' | 'workflowCategory' => {
+): 'assignee' | 'attention' | 'none' | 'priority' | 'status' | 'workflowCategory' => {
   if (layout === 'board') return display.boardGrouping;
   return isMyWorkClientGrouping(display.grouping) ? 'none' : display.grouping;
 };
@@ -321,6 +366,27 @@ export const sortTasksByImportance = <
 ): T[] => [...tasks].sort(compareTasksByImportance);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Completed-window as work-query predicates. `all` adds nothing. `none` drops
+ * closed rows. `pastDay` keeps open rows plus closed rows whose close time
+ * (completedAt, else updatedAt) is inside the last day.
+ */
+export const completedWindowQueryFilter = (
+  completed: MyWorkCompletedWindow,
+  now: number = Date.now(),
+): WorkQueryFilter | undefined => {
+  if (completed === 'all') return undefined;
+  if (completed === 'none') {
+    return { all: [{ field: 'status', op: 'notIn', value: ['completed', 'canceled'] }] };
+  }
+  return {
+    any: [
+      { field: 'status', op: 'notIn', value: ['completed', 'canceled'] },
+      { field: 'closedAt', op: 'gte', value: new Date(now - DAY_MS).toISOString() },
+    ],
+  };
+};
 
 /**
  * Completed-issues window: 'all' keeps everything, 'pastDay' keeps the last

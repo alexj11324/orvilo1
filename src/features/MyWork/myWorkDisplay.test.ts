@@ -119,10 +119,11 @@ describe('myWorkServerGroupBy', () => {
 });
 
 describe('myWorkOrderingOptions', () => {
-  it('exposes real orderings only on modes the generic query can express', () => {
+  it('exposes field orderings on saveable tabs and keeps the mode feed on the rest', () => {
     expect(myWorkOrderingOptions('assigned')).toContain('createdAsc');
-    expect(myWorkOrderingOptions('subscribed')).toEqual(['default']);
-    expect(myWorkOrderingOptions('activity')).toEqual(['default']);
+    expect(myWorkOrderingOptions('subscribed')).toContain('createdAsc');
+    expect(myWorkOrderingOptions('activity')).toContain('createdAsc');
+    expect(myWorkOrderingOptions('delegated')).toEqual(['default']);
   });
 });
 

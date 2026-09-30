@@ -1,11 +1,13 @@
 'use client';
 
-import type {
-  TaskWorkflowCategory,
-  WorkQueryExternalReview,
-  WorkQueryGroupBy,
-  WorkQueryLayout,
-  WorkQuerySortMode,
+import {
+  normalizeWorkQuerySubGroupBy,
+  type TaskWorkflowCategory,
+  type WorkQuery,
+  type WorkQueryExternalReview,
+  type WorkQueryGroupBy,
+  type WorkQueryLayout,
+  type WorkQuerySortMode,
 } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -129,6 +131,8 @@ interface WorkQueryResultsProps {
    * their checkbox without waiting for hover. Absent = no bulk affordance.
    */
   bulkSelectedIds?: ReadonlySet<string>;
+  /** Work-query board columns the user collapsed. Persisted by the caller. */
+  collapsedColumns?: readonly string[];
   /**
    * Where the board's create entry should file a new card. `teamId` files it
    * directly; `teamOptions` makes the create modal ask the one ambiguous
@@ -195,6 +199,7 @@ interface WorkQueryResultsProps {
     gesture: BulkSelectGesture,
     orderedRowIds: string[],
   ) => void;
+  onCollapsedColumnsChange?: (keys: string[]) => void;
   /**
    * Hover `+` on caller-computed (`flatSections`) headers. Only supplied when
    * the bucket key is a real create preset (e.g. a project id) — day/priority
@@ -226,6 +231,8 @@ interface WorkQueryResultsProps {
   selectedTaskId?: string;
   /** Saved-view sort mode — `field` boards refuse same-column position writes. */
   sortMode?: WorkQuerySortMode;
+  /** Board swimlane. Ignored on the list layout. */
+  subGroupBy?: WorkQuery['subGroupBy'];
   /**
    * Second-level grouping inside each list section — Linear's "Sub-grouping"
    * nested headers. Called with a section's tasks; `undefined` renders the
@@ -727,6 +734,7 @@ const WORK_QUERY_BOARD_OPTIONS = {
 const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
     emptyLabel,
+    collapsedColumns,
     externalReviews,
     bulkSelectedIds,
     createContext,
@@ -751,6 +759,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     onLoadMore,
     onLoadMoreGroup,
     onMoved,
+    onCollapsedColumnsChange,
     onRetryLoadMore,
     onRetryLoadMoreGroup,
     onOpenTask,
@@ -760,13 +769,25 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     rowExtras,
     selectedTaskId,
     sortMode,
+    subGroupBy,
     subSectionsFor,
     tasks,
     total,
   }) => {
     const { t } = useTranslation(['common', 'chat']);
-    const boardGroupBy = groupBy === 'status' ? 'status' : 'workflowCategory';
+    const boardGroupBy =
+      groupBy === 'status' || groupBy === 'priority' || groupBy === 'assignee'
+        ? groupBy
+        : 'workflowCategory';
+    const laneAxis =
+      layout === 'board' ? normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy) : undefined;
     const listGroupBy = workQueryListGroupBy(groupBy);
+    const headerGroupBy =
+      listGroupBy === 'status' || listGroupBy === 'workflowCategory' ? listGroupBy : 'status';
+    const fieldGroupLabel = (key: string) => {
+      if (listGroupBy !== 'priority' && listGroupBy !== 'assignee') return undefined;
+      return t(`savedViews.values.${listGroupBy}.${key}` as never, { defaultValue: key });
+    };
     const listSections =
       listGroupBy === 'none' ? [] : workQueryListSections(groups, tasks, listGroupBy);
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
@@ -837,8 +858,11 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             options={WORK_QUERY_BOARD_OPTIONS}
             routeScope={'global'}
             external={{
-              groups: workQueryBoardGroups(groups, boardGroupBy),
+              groups: workQueryBoardGroups(groups, boardGroupBy, laneAxis),
+              hiddenColumnKeys: collapsedColumns,
+              hiddenProperties: hiddenRowProperties,
               hideEmptyColumns,
+              laneAxis,
               movable,
               sortMode,
               loadMoreGroupError: loadMoreGroupErrors
@@ -851,6 +875,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                     }
                   }
                 : undefined,
+              onHiddenColumnKeysChange: onCollapsedColumnsChange,
               onRefresh: onMoved,
               onRetryLoadMoreGroup: onRetryLoadMoreGroup
                 ? (columnKey) => onRetryLoadMoreGroup(workQueryKeyForKanbanColumn(columnKey))
@@ -945,7 +970,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   allTasks={allTasks}
                   bulkSelectedIds={bulkSelectedIds}
                   columnKey={group.key}
-                  groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
+                  groupBy={headerGroupBy}
+                  label={fieldGroupLabel(group.key)}
                   // Attention buckets aren't a writable status dimension — a
                   // status change inside them still writes `status` — but the
                   // tail keys are workflow states and take that axis's marks.
@@ -961,8 +987,10 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   tasks={group.tasks}
                   total={group.total}
                   attention={
-                    listGroupBy === 'attention' &&
-                    (group.key === 'urgent' || group.key === 'blocking')
+                    listGroupBy === 'priority' ||
+                    listGroupBy === 'assignee' ||
+                    (listGroupBy === 'attention' &&
+                      (group.key === 'urgent' || group.key === 'blocking'))
                   }
                   onCreateInGroup={onCreateInGroup}
                   onLoadMore={

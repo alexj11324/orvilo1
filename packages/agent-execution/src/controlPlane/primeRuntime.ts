@@ -42,6 +42,8 @@ export interface PrimeRuntimeOptions {
   executable: string;
   home: string;
   now?: () => number;
+  /** Trusted supervisor mapping of the host workspace into the isolated tree. */
+  runtimeWorkspace?: string;
   supervisor: ProcessTreeSupervisor;
   temp: string;
   /** Trusted artifact verification, not the child reporting its own commit. */
@@ -180,7 +182,10 @@ export class PrimeExecutionRuntime implements ExecutionRuntime {
         return cleanup.ok ? admitted : cleanup;
       }
       const created = record(
-        await transport.request('session/new', { cwd: input.workspace, mcpServers: [] }),
+        await transport.request('session/new', {
+          cwd: options.runtimeWorkspace ?? input.workspace,
+          mcpServers: [],
+        }),
       );
       if (
         typeof created?.sessionId !== 'string' ||

@@ -42,12 +42,17 @@ The text-only inference contract does not yet express Prime tool-call semantics.
 
 ## Actual verification
 
-After the original contract arrived, the complete then-current Core scope plus the
-existing package boundary suite passed 122 tests in 12 files on Linux at 16:40 UTC.
-A subsequent action-gateway fence regression is recorded separately pending the
-final consolidated run. Scoped strict TypeScript checking of all Core sources and
-tests passed at the same checkpoint. Earlier missing-contract import failures are
-historical, not a passing-test claim and no longer a collection blocker.
+The final consolidated Core scope plus package boundary suite passed **141 tests
+in 14 files** on Linux at 16:51 UTC. Scoped strict TypeScript checking of all Core
+sources and tests passed. Docker supervision tests include actual confined processes;
+SQL receipt tests use disk-backed PGlite and real brokered file writes. Independent
+Docker/SQL adversarial probes also passed, including orphan descendants, recovered
+termination, withheld drain proof and durable reservation ownership.
+
+The actual pinned Prime artifact completed ACP initialize/session creation and
+whole-container shutdown with zero remaining processes. Reproduction, exact image
+identity and output are in [protocol acceptance](../../scripts/acceptance/prime-protocol.md).
+The build used the upstream fixture catalog fallback; no provider prompt was sent.
 
 These are boundary, disk/SQL/transport tests where specifically documented. They do
 not establish production authority integration or real provider execution. See

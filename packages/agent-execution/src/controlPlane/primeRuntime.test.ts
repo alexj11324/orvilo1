@@ -154,6 +154,7 @@ it('keeps one session when concurrent starts return the same ID across final adm
     executable: '/prime',
     home: '/runtime',
     temp: '/tmp/runtime',
+    runtimeWorkspace: '/isolated-workspace',
     now: () => 100,
     async authorize(candidate) {
       const count = (calls.get(candidate.ownerId) ?? 0) + 1;
@@ -203,13 +204,14 @@ it('keeps one session when concurrent starts return the same ID across final adm
         subscribe() {
           return () => {};
         },
-        async request(method) {
+        async request(method, params) {
           if (method === 'initialize')
             return {
               protocolVersion: 1,
               agentInfo: { name: 'prime-agent', version: '0.9.8' },
               agentCapabilities: { loadSession: false },
             };
+          expect(params).toEqual({ cwd: '/isolated-workspace', mcpServers: [] });
           return { sessionId: 'collision' };
         },
       };

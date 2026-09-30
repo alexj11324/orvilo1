@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -18,7 +17,7 @@ const WriteFile = memo<BuiltinInterventionProps<WriteLocalFileParams>>(({ args }
 
   return (
     <div className="flex flex-col gap-2">
-      <Text>Write to file: {path}</Text>
+      <div>Write to file: {path}</div>
       <CodeBlock
         wrap
         code={preview}

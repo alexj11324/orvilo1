@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -18,13 +17,13 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
 
   return (
     <div className="flex flex-col gap-2">
-      <Text>
+      <div>
         Edit file: {path} {all && '(replace all)'}
-      </Text>
+      </div>
       <div className="flex flex-col gap-1">
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           Search:
-        </Text>
+        </div>
         <CodeBlock
           wrap
           code={search}
@@ -34,9 +33,9 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           Replace with:
-        </Text>
+        </div>
         <CodeBlock
           wrap
           code={replace}

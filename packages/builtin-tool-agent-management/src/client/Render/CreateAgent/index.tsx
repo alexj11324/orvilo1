@@ -1,13 +1,15 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { ArrowRight } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
+
+import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
 
 import type { CreateAgentParams, CreateAgentState } from '../../../types';
 

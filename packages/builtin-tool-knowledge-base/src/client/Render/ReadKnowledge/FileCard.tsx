@@ -1,9 +1,11 @@
 'use client';
 
 import { MaterialFileTypeIcon } from '@lobehub/ui';
-import { Alert, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import type { FileContentDetail } from '../../../types';
 
@@ -82,7 +84,9 @@ const FileCard = memo<FileCardProps>(({ file }) => {
           </div>
         </div>
         <div className={styles.footer}>
-          <Alert message={file.error} type={'error'} variant={'borderless'} />
+          <Alert variant="destructive">
+            <AlertDescription>{file.error}</AlertDescription>
+          </Alert>
         </div>
       </div>
     );
@@ -96,16 +100,20 @@ const FileCard = memo<FileCardProps>(({ file }) => {
           <div className={styles.title}>{file.filename}</div>
         </div>
         {file.preview && (
-          <Text
-            code
-            as={'span'}
-            className={styles.preview}
-            ellipsis={{ rows: 4 }}
-            fontSize={12}
-            type={'secondary'}
+          <span
+            className={cn(
+              'font-mono',
+              'rounded',
+              'bg-muted',
+              'px-1',
+              'line-clamp-4',
+              'text-[12px]',
+              'text-muted-foreground',
+              styles.preview,
+            )}
           >
             {file.preview}...
-          </Text>
+          </span>
         )}
       </div>
       <div className={styles.footer}>

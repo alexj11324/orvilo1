@@ -1,7 +1,6 @@
 'use client';
 
 import { stopPropagation } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { createStaticStyles, useTheme } from 'antd-style';
@@ -11,6 +10,7 @@ import type { ChangeEvent } from 'react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import InputNumber from '@/components/InputNumber';
 import {
   Accordion,

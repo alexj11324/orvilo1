@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { MoveLocalFilesParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo, useMemo } from 'react';
@@ -17,7 +16,9 @@ const MoveLocalFiles = memo<BuiltinInterventionProps<MoveLocalFilesParams>>(({ a
   return (
     <div className="flex flex-col gap-2">
       <OutOfScopeWarning paths={allPaths} />
-      <Text type="secondary">{t('localFiles.moveFiles.itemsToMove', { count: items.length })}</Text>
+      <div className="text-muted-foreground">
+        {t('localFiles.moveFiles.itemsToMove', { count: items.length })}
+      </div>
       <div className="flex flex-col gap-1.5">
         {items.map((item, index) => (
           <MoveFileItem key={index} newPath={item.newPath} oldPath={item.oldPath} />

@@ -1,7 +1,6 @@
 'use client';
 
 import { Image, PreviewGroup } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRender, BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { Globe } from 'lucide-react';
@@ -59,7 +58,7 @@ const PageRow = memo<{ content?: string }>(({ content }) => {
   return (
     <div className={cx('flex flex-row items-center gap-1.5', styles.row)}>
       <Globe size={14} />
-      <Text ellipsis>{content}</Text>
+      <div className="truncate block">{content}</div>
     </div>
   );
 });

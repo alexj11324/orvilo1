@@ -1,12 +1,12 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { shinyGroupStyles, shinyTextStyles } from '@/styles';
 
 import type { GetAgentInfoParams } from '../../../types';

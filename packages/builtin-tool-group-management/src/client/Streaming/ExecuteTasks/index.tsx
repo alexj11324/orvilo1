@@ -1,12 +1,12 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles, useTheme } from 'antd-style';
 import { memo, useMemo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 

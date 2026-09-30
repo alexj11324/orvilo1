@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { type GlobFilesParams } from '@orvilo/electron-client-ipc';
 import { type BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
@@ -16,7 +15,7 @@ const GlobLocalFiles = memo<BuiltinInterventionProps<GlobFilesParams>>(({ args }
     <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={[pattern]} />
       <div className="flex flex-col gap-1">
-        <Text type="secondary">{t('localFiles.globFiles.pattern')}</Text>
+        <div className="text-muted-foreground">{t('localFiles.globFiles.pattern')}</div>
         <CodeBlock code={pattern} language="text" variant={'default'} />
       </div>
     </div>

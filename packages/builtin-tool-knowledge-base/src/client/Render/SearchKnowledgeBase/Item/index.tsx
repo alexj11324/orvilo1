@@ -1,7 +1,6 @@
 'use client';
 
 import { MaterialFileTypeIcon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { FileSearchResult } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { useTheme } from 'next-themes';
@@ -29,7 +28,7 @@ const FileItem = memo<FileItemProps>(({ fileId, fileName, relevanceScore }) => {
     >
       <MaterialFileTypeIcon filename={fileName} size={20} type={'file'} variant={'raw'} />
       <div className="flex flex-row gap-3 justify-between" style={{ maxWidth: 200 }}>
-        <Text ellipsis>{fileName}</Text>
+        <div className="truncate block">{fileName}</div>
         <SimpleTooltip title={`Relevance: ${(relevanceScore * 100).toFixed(1)}%`}>
           <div className={cx('flex flex-col items-center justify-center', styles.badge)}>
             {relevanceScore.toFixed(2)}

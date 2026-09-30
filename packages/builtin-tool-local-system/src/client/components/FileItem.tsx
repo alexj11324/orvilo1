@@ -1,4 +1,3 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import dayjs from 'dayjs';
@@ -7,6 +6,7 @@ import nodePath from 'path-browserify-esm';
 import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import { formatSize } from '@/utils/format';
 

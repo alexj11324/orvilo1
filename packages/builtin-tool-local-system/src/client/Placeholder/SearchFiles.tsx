@@ -1,9 +1,10 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { LocalSearchFilesParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinPlaceholderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import React, { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   query: css`
@@ -28,17 +29,17 @@ const SearchFiles = memo<BuiltinPlaceholderProps<LocalSearchFilesParams>>(({ arg
           <span className="anticon" role="img">
             <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
           </span>
-          {args.keywords ? args.keywords : <Skeleton height={20} width={40} />}
+          {args.keywords ? args.keywords : <Skeleton style={{ height: 20, width: 40 }} />}
         </div>
 
-        <Skeleton height={20} width={40} />
+        <Skeleton style={{ height: 20, width: 40 }} />
       </div>
       <div className="flex flex-col items-center justify-center h-[140px]">
         <div className="flex flex-col gap-1 w-[90%]">
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-          <Skeleton height={16} />
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
         </div>
       </div>
     </div>

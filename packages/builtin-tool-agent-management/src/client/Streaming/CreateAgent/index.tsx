@@ -1,10 +1,11 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 import type { CreateAgentParams } from '../../../types';
 

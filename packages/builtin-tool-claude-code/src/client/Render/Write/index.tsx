@@ -1,12 +1,12 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface WriteArgs {
   content?: string;

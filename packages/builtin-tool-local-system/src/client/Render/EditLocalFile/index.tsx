@@ -1,8 +1,11 @@
 import { PatchDiff } from '@lobehub/ui';
-import { Alert, Skeleton } from '@lobehub/ui/base-ui';
 import type { EditLocalFileState } from '@orvilo/builtin-tool-local-system';
 import type { BuiltinRenderProps } from '@orvilo/types';
+import { CircleAlert } from 'lucide-react';
 import React, { memo } from 'react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
   ({ args, pluginState, pluginError }) => {
@@ -14,12 +17,11 @@ const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
     return (
       <div className="flex flex-col gap-3">
         {pluginError ? (
-          <Alert
-            showIcon
-            description={pluginError.message || 'Unknown error occurred'}
-            title="Edit Failed"
-            type="error"
-          />
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>Edit Failed</AlertTitle>
+            <AlertDescription>{pluginError.message || 'Unknown error occurred'}</AlertDescription>
+          </Alert>
         ) : pluginState?.diffText ? (
           <PatchDiff
             fileName={filePath}

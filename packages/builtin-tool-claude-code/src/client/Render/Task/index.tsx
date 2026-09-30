@@ -1,11 +1,12 @@
 'use client';
 
-import { Checkbox } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleArrowRight, CircleCheckBig, CircleX, ListTodo, RotateCcw } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { ClaudeCodeApiName, type TaskUpdateArgs } from '../../../types';
 
@@ -114,21 +115,22 @@ const TaskRow = memo<TaskRowProps>(({ item }) => {
   const isCompleted = status === 'completed';
 
   return (
-    <Checkbox
-      backgroundColor={cssVar.colorSuccess}
-      checked={isCompleted}
-      shape={'circle'}
-      style={{ borderWidth: 1.5, cursor: 'default' }}
-      classNames={{
-        text: cx(styles.textPending, isCompleted && styles.textCompleted),
-        wrapper: styles.itemRow,
-      }}
-      textProps={{
-        type: isCompleted ? 'secondary' : undefined,
-      }}
-    >
-      {text}
-    </Checkbox>
+    <label className={cx('flex items-center gap-2', styles.itemRow)} style={{ cursor: 'default' }}>
+      <Checkbox
+        checked={isCompleted}
+        className="rounded-full data-checked:border-success data-checked:bg-success"
+        style={{ borderWidth: 1.5 }}
+      />
+      <span
+        className={cx(
+          styles.textPending,
+          isCompleted && 'text-muted-foreground',
+          isCompleted && styles.textCompleted,
+        )}
+      >
+        {text}
+      </span>
+    </label>
   );
 });
 

@@ -1,6 +1,6 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowRight } from 'lucide-react';
 import { memo } from 'react';
 
@@ -38,15 +38,13 @@ const MoveFileItem = memo<MoveFileItemProps>(({ oldPath, newPath }) => {
   return (
     <div className={cx('flex flex-row items-center gap-2 w-[100%]', styles.item)}>
       <div className="flex flex-col flex-1">
-        <Text className={styles.path} type="secondary">
-          {displayOldPath}
-        </Text>
+        <div className={cn('text-muted-foreground', styles.path)}>{displayOldPath}</div>
       </div>
       <span className={cx('anticon', styles.icon)} role="img">
         <ArrowRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
       </span>
       <div className="flex flex-col" style={{ flex: 2 }}>
-        <Text className={styles.path}>{displayNewPath}</Text>
+        <div className={cn(styles.path)}>{displayNewPath}</div>
       </div>
     </div>
   );

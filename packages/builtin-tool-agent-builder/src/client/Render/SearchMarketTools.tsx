@@ -1,10 +1,12 @@
 'use client';
 
-import { Avatar, Button, Tag } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { CheckCircle, Download, Package, Search } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { useMarketAuth } from '@/layout/AuthProvider/MarketAuth';
 import { useAgentStore } from '@/store/agent';
 import { useToolStore } from '@/store/tool';
@@ -103,11 +105,12 @@ const ToolItem = memo<ToolItemProps>(({ tool }) => {
             <span style={{ fontSize: 12 }}>Installed</span>
           </div>
         ) : isInstalling ? (
-          <Button size="small" type="fill" onClick={handleCancel}>
+          <Button size="sm" variant="secondary" onClick={handleCancel}>
             Cancel
           </Button>
         ) : (
-          <Button icon={<Download size={14} />} size="small" type="primary" onClick={handleInstall}>
+          <Button size="sm" variant="default" onClick={handleInstall}>
+            {<Download size={14} />}
             Install
           </Button>
         )}

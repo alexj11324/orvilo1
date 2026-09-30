@@ -1,4 +1,3 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
 import type { ChatMessagePluginError } from '@orvilo/types';
 import { SearchIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import FileItem from '../../components/FileItem';
 
@@ -23,10 +23,10 @@ const SearchFiles = memo<SearchFilesProps>(({ searchResults = [], messageId }) =
   if (loading) {
     return (
       <div className="flex flex-col gap-1">
-        <Skeleton height={16} />
-        <Skeleton height={16} />
-        <Skeleton height={16} />
-        <Skeleton height={16} />
+        <Skeleton style={{ height: 16 }} />
+        <Skeleton style={{ height: 16 }} />
+        <Skeleton style={{ height: 16 }} />
+        <Skeleton style={{ height: 16 }} />
       </div>
     );
   }

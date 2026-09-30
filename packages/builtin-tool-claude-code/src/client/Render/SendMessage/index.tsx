@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleCheckBig, SendHorizontal } from 'lucide-react';
@@ -60,9 +59,9 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
         <span className="anticon" role="img">
           <SendHorizontal fill={'transparent'} height={'14'} size={'14'} width={'14'} />
         </span>
-        <Text ellipsis strong>
+        <div className="truncate block font-semibold">
           {summary || t('builtins.orvilo-claude-code.sendMessage.title')}
-        </Text>
+        </div>
       </div>
 
       {body && (
@@ -78,9 +77,9 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
           <span className="anticon" role="img" style={{ color: cssVar.colorSuccess }}>
             <CircleCheckBig fill={'transparent'} height={'14'} size={'14'} width={'14'} />
           </span>
-          <Text style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
+          <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
             {t('builtins.orvilo-claude-code.sendMessage.queued')}
-          </Text>
+          </div>
         </div>
       )}
     </div>

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { RenameLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { ArrowRight, ChevronRight } from 'lucide-react';
@@ -24,11 +23,11 @@ const RenameLocalFile = memo<BuiltinInterventionProps<RenameLocalFileParams>>(({
         <LocalFile name={base} path={filePath} />
       </div>
       <div className="flex flex-row items-center gap-2">
-        <Text type="secondary">{base}</Text>
+        <div className="text-muted-foreground">{base}</div>
         <span className="anticon" role="img">
           <ArrowRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
         </span>
-        <Text>{newName}</Text>
+        <div>{newName}</div>
       </div>
     </div>
   );

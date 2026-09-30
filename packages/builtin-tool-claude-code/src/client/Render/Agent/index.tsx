@@ -1,13 +1,14 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';
 
@@ -99,9 +100,9 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
       <div className={cx('flex flex-col gap-3', styles.container)}>
         {prompt && (
           <div className="flex flex-col">
-            <Text className={styles.label} style={{ marginBlockEnd: 4 }}>
+            <div className={cn(styles.label)} style={{ marginBlockEnd: 4 }}>
               {t('builtins.orvilo-claude-code.agent.instruction')}
-            </Text>
+            </div>
             <div className={cx('flex flex-col', styles.promptBox)}>
               <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
                 {prompt}
@@ -113,15 +114,17 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
         {showResultSection && (
           <div className="flex flex-col">
             <div className={cx('flex flex-row items-center justify-between', styles.labelRow)}>
-              <Text className={styles.label}>{t('builtins.orvilo-claude-code.agent.result')}</Text>
+              <div className={cn(styles.label)}>
+                {t('builtins.orvilo-claude-code.agent.result')}
+              </div>
               {subagentThread && (
                 <Button
-                  className={styles.openThread}
-                  icon={ListTree}
-                  size={'small'}
-                  type={'text'}
+                  className={cn(styles.openThread)}
+                  size="sm"
+                  variant="ghost"
                   onClick={handleToggleThread}
                 >
+                  <ListTree data-icon="inline-start" />
                   {isOpenInPortal
                     ? tChat('thread.closeSubagentThread')
                     : tChat('thread.openSubagentThread')}

@@ -1,11 +1,13 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, useTheme } from 'antd-style';
 import { memo } from 'react';
+
+import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
 
 import type { GetAgentDetailParams, GetAgentDetailState } from '../../../types';
 

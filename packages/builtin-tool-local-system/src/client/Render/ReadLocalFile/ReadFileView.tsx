@@ -1,12 +1,13 @@
 import { Image, Markdown, PreviewGroup } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
 import type { ReadFileState } from '@orvilo/tool-runtime';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ExternalLink, FolderOpen } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
 
@@ -128,9 +129,7 @@ const ReadFileView = memo<ReadFileState>(
             <div className="flex flex-row items-center flex-1 gap-0" style={{ overflow: 'hidden' }}>
               <FileIcon fileName={filename} fileType={fileType} size={16} variant={'raw'} />
               <div className="flex flex-row">
-                <Text ellipsis className={styles.fileName}>
-                  {filename}
-                </Text>
+                <div className={cn('truncate', 'block', styles.fileName)}>{filename}</div>
                 {(handleOpenFile || handleOpenFolder) && (
                   <div
                     className={cx('flex flex-row gap-0.5', `${styles.actions} local-file-actions`)}
@@ -158,9 +157,9 @@ const ReadFileView = memo<ReadFileState>(
             </div>
           </div>
 
-          <Text ellipsis className={styles.path} type={'secondary'}>
+          <div className={cn('truncate', 'block', 'text-muted-foreground', styles.path)}>
             {displayPath}
-          </Text>
+          </div>
         </div>
 
         <div

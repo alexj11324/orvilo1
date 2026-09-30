@@ -1,6 +1,7 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 import type { GetAvailableModelsParams, GetAvailableModelsState } from '../../types';
 
@@ -23,7 +24,7 @@ const GetAvailableModels = memo<
         <div className="flex flex-col gap-2" key={provider.id}>
           <div className="flex items-center gap-2">
             <span style={{ fontWeight: 600 }}>{provider.name}</span>
-            <Tag color="blue" style={{ margin: 0 }}>
+            <Tag style={{ margin: 0 }} variant="info-light">
               {provider.models.length} models
             </Tag>
           </div>
@@ -41,17 +42,17 @@ const GetAvailableModels = memo<
               <div className="flex items-center gap-2" key={model.id} style={{ fontSize: 12 }}>
                 <code style={{ color: 'var(--lobe-text)' }}>{model.id}</code>
                 {model.abilities?.vision && (
-                  <Tag color="purple" style={{ fontSize: 10, margin: 0 }}>
+                  <Tag style={{ fontSize: 10, margin: 0 }} variant="info-light">
                     vision
                   </Tag>
                 )}
                 {model.abilities?.functionCall && (
-                  <Tag color="green" style={{ fontSize: 10, margin: 0 }}>
+                  <Tag style={{ fontSize: 10, margin: 0 }} variant="success-light">
                     tools
                   </Tag>
                 )}
                 {model.abilities?.reasoning && (
-                  <Tag color="orange" style={{ fontSize: 10, margin: 0 }}>
+                  <Tag style={{ fontSize: 10, margin: 0 }} variant="warning-light">
                     reasoning
                   </Tag>
                 )}

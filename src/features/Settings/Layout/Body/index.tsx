@@ -3,7 +3,6 @@
 import { memo, useMemo } from 'react';
 import { Link } from 'react-router';
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -37,34 +36,30 @@ const Body = memo(() => {
   return (
     <SearchSection>
       {categoryGroups.map((group) => (
-        <Collapsible defaultOpen key={group.key}>
-          <SidebarGroup>
-            <SidebarGroupLabel render={<CollapsibleTrigger />}>{group.title}</SidebarGroupLabel>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu className="gap-0.25">
-                  {group.items.map((item) => {
-                    const url = item.href ?? getTabUrl(item.key);
-                    return (
-                      <NavItem
-                        active={activeTab === item.key}
-                        href={url}
-                        icon={item.icon}
-                        key={item.key}
-                        render={<Link to={url} />}
-                        title={item.label}
-                        onClick={(e) => {
-                          if (isModifierClick(e)) return;
-                          navigate(url);
-                        }}
-                      />
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+        <SidebarGroup key={group.key}>
+          <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.25">
+              {group.items.map((item) => {
+                const url = item.href ?? getTabUrl(item.key);
+                return (
+                  <NavItem
+                    active={activeTab === item.key}
+                    href={url}
+                    icon={item.icon}
+                    key={item.key}
+                    render={<Link to={url} />}
+                    title={item.label}
+                    onClick={(e) => {
+                      if (isModifierClick(e)) return;
+                      navigate(url);
+                    }}
+                  />
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       ))}
     </SearchSection>
   );

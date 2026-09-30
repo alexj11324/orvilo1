@@ -17,7 +17,9 @@ const Header = () => {
       <SidebarGroupLabel className="gap-2">
         <BackButton to={`/${workspace.slug}`} />
         <span className="truncate">{workspace.name ?? workspace.slug}</span>
-        <span>{t('workspaceSetting.breadcrumb.settings')}</span>
+        <span className="shrink-0 whitespace-nowrap">
+          {t('workspaceSetting.breadcrumb.settings')}
+        </span>
       </SidebarGroupLabel>
     </SidebarGroup>
   );

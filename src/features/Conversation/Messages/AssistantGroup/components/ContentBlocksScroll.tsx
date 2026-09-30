@@ -1,10 +1,12 @@
 'use client';
 
-import { ScrollArea } from '@lobehub/ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import type { UIChatMessage } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import type { RefObject } from 'react';
 import { memo, useMemo } from 'react';
+
+import { ScrollBar } from '@/components/ui/scroll-area';
 
 import { resolveAssistantGroupFromMessages } from '../utils/resolveAssistantGroupFromMessages';
 import ContentBlock from './ContentBlock';
@@ -95,24 +97,18 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
   const scrollClass = variant === 'task' ? styles.scrollTask : styles.scrollWorkflow;
 
   return (
-    <ScrollArea
-      disableContentFit
-      scrollFade
-      className={styles.scrollRoot}
-      contentProps={{ style: { paddingInlineEnd: 12 } }}
-      scrollbarProps={{
-        style: {
-          marginInlineEnd: 2,
-        },
-      }}
-      viewportProps={{
-        className: scrollClass,
-        ref: scrollRef as RefObject<HTMLDivElement>,
-        onScroll,
-      }}
-    >
-      {body}
-    </ScrollArea>
+    <ScrollAreaPrimitive.Root className={styles.scrollRoot}>
+      <ScrollAreaPrimitive.Viewport
+        className={scrollClass}
+        ref={scrollRef as RefObject<HTMLDivElement>}
+        style={{ paddingInlineEnd: 12 }}
+        onScroll={onScroll}
+      >
+        {body}
+      </ScrollAreaPrimitive.Viewport>
+      <ScrollBar style={{ marginInlineEnd: 2 }} />
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
   );
 });
 

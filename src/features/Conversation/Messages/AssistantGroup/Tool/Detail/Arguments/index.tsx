@@ -1,4 +1,3 @@
-import { Highlighter } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
@@ -10,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { DescriptionItem } from '@/components/Descriptions';
 import Descriptions from '@/components/Descriptions';
+import { CodeBlock } from '@/components/ui/code-block';
 import { useYamlArguments } from '@/hooks/useYamlArguments';
 import { shinyTextStyles } from '@/styles';
 
@@ -51,11 +51,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
   let contentNode;
 
   if (typeof displayArgs === 'string') {
-    contentNode = !!yaml && (
-      <Highlighter language={'yaml'} showLanguage={false} wrap={wrap}>
-        {yaml}
-      </Highlighter>
-    );
+    contentNode = !!yaml && <CodeBlock code={yaml} language="yaml" wrap={wrap} />;
   } else if (Object.keys(displayArgs).length === 0) {
     contentNode = null;
   } else {

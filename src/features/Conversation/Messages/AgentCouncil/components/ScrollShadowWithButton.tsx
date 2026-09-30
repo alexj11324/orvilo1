@@ -1,4 +1,4 @@
-import { ScrollShadow } from '@lobehub/ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -105,17 +105,16 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
             onClick={() => handleScroll('left')}
           />
         )}
-        <ScrollShadow
-          hideScrollBar
-          offset={16}
-          orientation={'horizontal'}
-          ref={scrollRef}
-          size={16}
-          onScroll={checkScrollability}
-          onScrollCapture={checkScrollability}
-        >
-          {children}
-        </ScrollShadow>
+        <ScrollAreaPrimitive.Root>
+          <ScrollAreaPrimitive.Viewport
+            ref={scrollRef}
+            onScroll={checkScrollability}
+            onScrollCapture={checkScrollability}
+          >
+            {children}
+          </ScrollAreaPrimitive.Viewport>
+          <ScrollAreaPrimitive.Corner />
+        </ScrollAreaPrimitive.Root>
         {canScrollRight && (
           <Button
             className={cx(styles.button, styles.rightButton, 'scroll-button')}

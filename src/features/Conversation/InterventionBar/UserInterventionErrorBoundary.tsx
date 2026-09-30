@@ -1,6 +1,5 @@
 'use client';
 
-import { Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { safeParseJSON } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
@@ -10,6 +9,7 @@ import { Component, memo, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { CodeBlock } from '@/components/ui/code-block';
 import { useUserStore } from '@/store/user';
 import { toolInterventionSelectors } from '@/store/user/selectors';
 
@@ -112,9 +112,7 @@ const UserInterventionFallback = memo<UserInterventionFallbackProps>(
         <Text fontSize={12} type="secondary">
           {identifier} / {apiName} · {t('tool.intervention.renderFallback.rawJson')}
         </Text>
-        <Highlighter wrap actionIconSize="small" language="json" variant="borderless">
-          {json}
-        </Highlighter>
+        <CodeBlock wrap code={json} language="json" variant="ghost" />
         {actionsPortalTarget ? createPortal(actions, actionsPortalTarget) : actions}
       </div>
     );

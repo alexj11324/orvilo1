@@ -1,4 +1,3 @@
-import { Highlighter } from '@lobehub/ui';
 import { Tabs, type TabsProps } from '@lobehub/ui/base-ui';
 import { type ToolIntervention } from '@orvilo/types';
 import {
@@ -11,6 +10,8 @@ import {
 } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/ui/code-block';
 
 interface DebugProps {
   apiName: string;
@@ -51,13 +52,11 @@ const Debug = memo<DebugProps>(
       () => [
         {
           children: (
-            <Highlighter
-              language={'json'}
+            <CodeBlock
+              code={params}
+              language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
-              variant={'filled'}
-            >
-              {params}
-            </Highlighter>
+            />
           ),
           icon: <MessageSquareCodeIcon />,
           key: 'arguments',
@@ -65,13 +64,11 @@ const Debug = memo<DebugProps>(
         },
         {
           children: (
-            <Highlighter
+            <CodeBlock
+              code={isJsonResult ? JSON.stringify(result?.content, null, 2) : result?.content || ''}
               language={isJsonResult ? 'json' : 'plaintext'}
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
-              variant={'filled'}
-            >
-              {isJsonResult ? JSON.stringify(result?.content, null, 2) : result?.content || ''}
-            </Highlighter>
+            />
           ),
           icon: <SquareArrowDownIcon />,
           key: 'response',
@@ -79,13 +76,11 @@ const Debug = memo<DebugProps>(
         },
         {
           children: (
-            <Highlighter
-              language={'json'}
+            <CodeBlock
+              code={JSON.stringify(functionCall, null, 2)}
+              language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
-              variant={'filled'}
-            >
-              {JSON.stringify(functionCall, null, 2)}
-            </Highlighter>
+            />
           ),
           icon: <FunctionSquareIcon />,
           key: 'function_call',
@@ -93,13 +88,11 @@ const Debug = memo<DebugProps>(
         },
         {
           children: (
-            <Highlighter
-              language={'json'}
+            <CodeBlock
+              code={JSON.stringify(result?.state, null, 2)}
+              language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
-              variant={'filled'}
-            >
-              {JSON.stringify(result?.state, null, 2)}
-            </Highlighter>
+            />
           ),
           icon: <BracesIcon />,
           key: 'pluginState',
@@ -107,13 +100,11 @@ const Debug = memo<DebugProps>(
         },
         {
           children: (
-            <Highlighter
-              language={'json'}
+            <CodeBlock
+              code={JSON.stringify(intervention, null, 2)}
+              language="json"
               style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
-              variant={'filled'}
-            >
-              {JSON.stringify(intervention, null, 2)}
-            </Highlighter>
+            />
           ),
           icon: <HandIcon />,
           key: 'intervention',
@@ -123,13 +114,11 @@ const Debug = memo<DebugProps>(
           ? [
               {
                 children: (
-                  <Highlighter
-                    language={'json'}
+                  <CodeBlock
+                    code={JSON.stringify(result.error, null, 2)}
+                    language="json"
                     style={{ background: 'transparent', borderRadius: 0, height: '100%' }}
-                    variant={'filled'}
-                  >
-                    {JSON.stringify(result.error, null, 2)}
-                  </Highlighter>
+                  />
                 ),
                 icon: <CircleAlertIcon />,
                 key: 'error',

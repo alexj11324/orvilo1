@@ -1,11 +1,12 @@
 import { type AudioPlayerProps } from '@lobehub/tts/react';
 import { AudioPlayer } from '@lobehub/tts/react';
-import { Highlighter } from '@lobehub/ui';
 import { ActionIcon, Alert, Button } from '@lobehub/ui/base-ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { TrashIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/ui/code-block';
 
 interface PlayerProps extends AudioPlayerProps {
   error?: ChatMessageError;
@@ -31,9 +32,11 @@ const Player = memo<PlayerProps>(({ onRetry, error, onDelete, audio, isLoading, 
           }
           extra={
             error.body && (
-              <Highlighter actionIconSize={'small'} language={'json'} variant={'borderless'}>
-                {JSON.stringify(error.body, null, 2)}
-              </Highlighter>
+              <CodeBlock
+                code={JSON.stringify(error.body, null, 2)}
+                language="json"
+                variant="ghost"
+              />
             )
           }
           onClose={onDelete}

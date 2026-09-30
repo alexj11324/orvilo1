@@ -1,4 +1,3 @@
-import { Input } from '@lobehub/ui';
 import { ActionIcon, Button, toast } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
 import { Form } from 'antd';
@@ -7,6 +6,8 @@ import { cn } from 'cn';
 import { LucidePlus, LucideTrash } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   form: css`
@@ -150,12 +151,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                     },
                   ]}
                 >
-                  <Input
-                    allowClear
-                    className={styles.input}
-                    placeholder={t('updateArgs.form.key')}
-                    variant={'filled'}
-                  />
+                  <Input className={styles.input} placeholder={t('updateArgs.form.key')} />
                 </Form.Item>
                 <Form.Item
                   {...restField}
@@ -163,12 +159,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                   name={[name, 'value']}
                   style={{ flex: 4 }}
                 >
-                  <Input
-                    allowClear
-                    className={styles.input}
-                    placeholder={t('updateArgs.form.value')}
-                    variant={'filled'}
-                  />
+                  <Input className={styles.input} placeholder={t('updateArgs.form.value')} />
                 </Form.Item>
                 <ActionIcon
                   icon={LucideTrash}

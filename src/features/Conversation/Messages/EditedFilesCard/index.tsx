@@ -1,11 +1,9 @@
 'use client';
 
-import { PatchDiff } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { EditedFileEntry } from '@orvilo/builtin-tools/fileEditScan';
 import {
   FilePathDisplay,
-  getFileLanguage,
   getFileName,
   getFilePathDisplayInfo,
   KindDot,
@@ -24,6 +22,7 @@ import { type KeyboardEvent, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { CodeBlock } from '@/components/ui/code-block';
 
 import { type OperationEditedFile, summarizeEditedFilesTotals } from './deriveEditedFiles';
 import { useOpenEditedFile } from './useOpenEditedFile';
@@ -202,7 +201,6 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
   const [expanded, setExpanded] = useState(false);
   const hasDiff = entry.diffTexts.length > 0;
   const fileName = getFileName(entry.path);
-  const language = getFileLanguage(entry.path);
 
   // Preview when the file's content is reachable; otherwise the row keeps its
   // legacy diff-toggle click so it never turns into a dead affordance.
@@ -262,15 +260,7 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
       {hasDiff && expanded && (
         <div className={styles.patch}>
           {entry.diffTexts.map((patch, index) => (
-            <PatchDiff
-              fileName={fileName}
-              key={index}
-              language={language}
-              patch={patch}
-              showHeader={false}
-              variant={'borderless'}
-              viewMode={'unified'}
-            />
+            <CodeBlock code={patch} key={index} label={fileName} language="diff" variant="ghost" />
           ))}
         </div>
       )}
@@ -298,7 +288,6 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
     const hasDiff = entry.diffTexts.length > 0;
     const fileName = getFileName(entry.path);
     const { displayPath } = getFilePathDisplayInfo(entry.path);
-    const language = getFileLanguage(entry.path);
 
     return (
       <div className={cn('flex flex-col', styles.card)}>
@@ -355,14 +344,12 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
         {hasDiff && showDiff && (
           <div className={styles.patch}>
             {entry.diffTexts.map((patch, index) => (
-              <PatchDiff
-                fileName={fileName}
+              <CodeBlock
+                code={patch}
                 key={index}
-                language={language}
-                patch={patch}
-                showHeader={false}
-                variant={'borderless'}
-                viewMode={'unified'}
+                label={fileName}
+                language="diff"
+                variant="ghost"
               />
             ))}
           </div>

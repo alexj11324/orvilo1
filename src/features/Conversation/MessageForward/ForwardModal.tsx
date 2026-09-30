@@ -1,15 +1,16 @@
 'use client';
 
-import { SearchBar } from '@lobehub/ui';
 import { Button, createModal, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type StoreApiWithSelector } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
+import { Search as SearchIcon, X as XIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -152,12 +153,24 @@ const ForwardModalContent = memo(() => {
     <div className={cn('flex gap-4', styles.body)}>
       {/* Left: searchable multi-select agent list */}
       <div className="flex flex-col flex-1 gap-2" style={{ minWidth: 0 }}>
-        <SearchBar
-          allowClear
-          placeholder={t('messageForward.modal.searchPlaceholder')}
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
+        <div className="relative">
+          <SearchIcon className="-translate-y-1/2 absolute top-1/2 left-2 size-4 text-muted-foreground" />
+          <Input
+            className="px-8"
+            placeholder={t('messageForward.modal.searchPlaceholder')}
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
+          {keyword && (
+            <button
+              className="-translate-y-1/2 absolute top-1/2 right-2 text-muted-foreground"
+              type="button"
+              onClick={() => setKeyword('')}
+            >
+              <XIcon className="size-4" />
+            </button>
+          )}
+        </div>
         <div className={cn('flex flex-col gap-1', styles.list)}>
           {candidates.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-6">

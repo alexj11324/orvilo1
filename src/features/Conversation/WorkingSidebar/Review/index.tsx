@@ -1,6 +1,5 @@
 'use client';
 
-import { Empty } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { GitWorkingTreePatch } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
@@ -26,6 +25,7 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
@@ -595,7 +595,14 @@ const Review = memo<ReviewProps>(
         </div>
         {isEmpty ? (
           <div className="flex items-center justify-center flex-1 gap-2 py-6">
-            <Empty description={emptyText} icon={GitCompareIcon} />
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GitCompareIcon />
+                </EmptyMedia>
+                <EmptyDescription>{emptyText}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           </div>
         ) : (
           <div className={cn('flex flex-1', styles.body)} style={{ width: '100%' }}>

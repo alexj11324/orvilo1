@@ -1,8 +1,9 @@
-import { Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/ui/code-block';
 
 import Arguments from '../Arguments';
 
@@ -48,18 +49,16 @@ export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
             <div className="flex flex-col px-4" style={{ paddingBlock: '8px 0' }}>
               <Text>{t('debug.response')}</Text>
             </div>
-            <Highlighter
+            <CodeBlock
+              code={data}
               language={language}
-              variant={'filled'}
               style={{
                 background: 'transparent',
                 borderRadius: 0,
                 maxHeight: 300,
                 overflow: 'auto',
               }}
-            >
-              {data}
-            </Highlighter>
+            />
           </>
         )}
       </div>

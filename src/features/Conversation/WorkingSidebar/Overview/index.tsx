@@ -1,6 +1,5 @@
 'use client';
 
-import { Empty } from '@lobehub/ui';
 import { Button, Skeleton, toast } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -22,6 +21,13 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   getCiVisual,
@@ -464,12 +470,15 @@ const Overview = memo<OverviewProps>(
         )}
 
         {environmentAvailable && !workingDirectory && (
-          <Empty
-            className={cx(styles.section, styles.emptyWorkspace)}
-            description={t('workingPanel.overview.workspace.emptyDesc')}
-            icon={LaptopIcon}
-            title={t('workingPanel.overview.workspace.empty')}
-          />
+          <Empty className={cx(styles.section, styles.emptyWorkspace)}>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <LaptopIcon />
+              </EmptyMedia>
+              <EmptyTitle>{t('workingPanel.overview.workspace.empty')}</EmptyTitle>
+              <EmptyDescription>{t('workingPanel.overview.workspace.emptyDesc')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         <ProgressSection className={styles.section} />
@@ -494,12 +503,15 @@ const Overview = memo<OverviewProps>(
         )}
 
         {!environmentAvailable && !topicId && visibleWorks.length === 0 && (
-          <Empty
-            className={styles.section}
-            description={t('workingPanel.overview.empty')}
-            icon={BoxesIcon}
-            title={t('workingPanel.overview.emptyTitle')}
-          />
+          <Empty className={styles.section}>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <BoxesIcon />
+              </EmptyMedia>
+              <EmptyTitle>{t('workingPanel.overview.emptyTitle')}</EmptyTitle>
+              <EmptyDescription>{t('workingPanel.overview.empty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         <div className={cn('flex flex-col', styles.section)}>

@@ -1,4 +1,3 @@
-import { Empty } from '@lobehub/ui';
 import { ActionIcon, Button, Text, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { nanoid } from '@orvilo/utils';
@@ -19,6 +18,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BrowserIcon } from '@/components/BrowserIcon';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
@@ -333,7 +333,14 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
   if (!isDesktop)
     return (
       <div className="flex items-center justify-center" style={{ height: '100%', width: '100%' }}>
-        <Empty description={t('workingPanel.browser.desktopOnly')} icon={Globe} />
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Globe />
+            </EmptyMedia>
+            <EmptyDescription>{t('workingPanel.browser.desktopOnly')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </div>
     );
 

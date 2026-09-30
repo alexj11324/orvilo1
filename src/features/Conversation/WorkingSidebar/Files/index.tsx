@@ -1,6 +1,6 @@
 'use client';
 
-import { copyToClipboard, Empty, stopPropagation } from '@lobehub/ui';
+import { copyToClipboard, stopPropagation } from '@lobehub/ui';
 import { ActionIcon, Button, DropdownMenu, Input, toast } from '@lobehub/ui/base-ui';
 import type { ProjectFileIndexEntry } from '@orvilo/electron-client-ipc';
 import type { GitStatusEntry } from '@pierre/trees';
@@ -21,6 +21,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { startWorkspaceFileDrag } from '@/features/ChatInput/InputEditor/workspaceFileDragData';
 import type { ExplorerTreeNode } from '@/features/ExplorerTree';
 import {
@@ -615,12 +616,20 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
         </div>
       ) : isEmpty ? (
         <div className="flex items-center justify-center flex-1 gap-2 py-6">
-          <Empty
-            icon={FileIcon}
-            description={t(
-              hasDisplayFilter ? 'workingPanel.files.noSearchResults' : 'workingPanel.files.empty',
-            )}
-          />
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <FileIcon />
+              </EmptyMedia>
+              <EmptyDescription>
+                {t(
+                  hasDisplayFilter
+                    ? 'workingPanel.files.noSearchResults'
+                    : 'workingPanel.files.empty',
+                )}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </div>
       ) : (
         <div className={styles.tree} style={treeStyleVars}>

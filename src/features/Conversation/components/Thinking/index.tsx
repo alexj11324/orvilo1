@@ -1,9 +1,10 @@
-import { ScrollArea } from '@lobehub/ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import { Accordion } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { memo, useEffect, useState } from 'react';
 
+import { ScrollBar } from '@/components/ui/scroll-area';
 import MarkdownMessage from '@/features/Conversation/Markdown';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { type ChatCitationItem } from '@/types/index';
@@ -59,31 +60,30 @@ const Thinking = memo<ThinkingProps>((props) => {
       items={[
         {
           children: (
-            <ScrollArea
-              disableContentFit
-              scrollFade
-              className={styles.scrollRoot}
-              viewportProps={{
-                className: styles.contentScroll,
-                ref: ref as RefObject<HTMLDivElement>,
-                onScroll: handleScroll,
-              }}
-            >
-              {typeof content === 'string' ? (
-                <MarkdownMessage
-                  animated={thinkingAnimated}
-                  citations={citations}
-                  variant={'chat'}
-                  style={{
-                    overflow: 'unset',
-                  }}
-                >
-                  {content}
-                </MarkdownMessage>
-              ) : (
-                content
-              )}
-            </ScrollArea>
+            <ScrollAreaPrimitive.Root className={styles.scrollRoot}>
+              <ScrollAreaPrimitive.Viewport
+                className={styles.contentScroll}
+                ref={ref as RefObject<HTMLDivElement>}
+                onScroll={handleScroll}
+              >
+                {typeof content === 'string' ? (
+                  <MarkdownMessage
+                    animated={thinkingAnimated}
+                    citations={citations}
+                    variant={'chat'}
+                    style={{
+                      overflow: 'unset',
+                    }}
+                  >
+                    {content}
+                  </MarkdownMessage>
+                ) : (
+                  content
+                )}
+              </ScrollAreaPrimitive.Viewport>
+              <ScrollBar />
+              <ScrollAreaPrimitive.Corner />
+            </ScrollAreaPrimitive.Root>
           ),
           key: 'thinking',
           title: <Title duration={duration} showDetail={showDetail} thinking={thinking} />,

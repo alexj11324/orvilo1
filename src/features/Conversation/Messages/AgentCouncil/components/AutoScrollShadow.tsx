@@ -1,7 +1,8 @@
-import { ScrollArea } from '@lobehub/ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import type { PropsWithChildren, RefObject } from 'react';
 import { memo, useEffect } from 'react';
 
+import { ScrollBar } from '@/components/ui/scroll-area';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 
 interface AutoScrollShadowProps extends PropsWithChildren {
@@ -29,17 +30,17 @@ const AutoScrollShadow = memo<AutoScrollShadowProps>(({ children, content, strea
   }, [content, resetScrollLock]);
 
   return (
-    <ScrollArea
-      scrollFade
-      style={{ background: 'transparent', borderRadius: 0 }}
-      viewportProps={{
-        ref: ref as RefObject<HTMLDivElement>,
-        style: { height: 'max(33vh, 480px)' },
-        onScroll: handleScroll,
-      }}
-    >
-      {children}
-    </ScrollArea>
+    <ScrollAreaPrimitive.Root style={{ background: 'transparent', borderRadius: 0 }}>
+      <ScrollAreaPrimitive.Viewport
+        ref={ref as RefObject<HTMLDivElement>}
+        style={{ height: 'max(33vh, 480px)' }}
+        onScroll={handleScroll}
+      >
+        {children}
+      </ScrollAreaPrimitive.Viewport>
+      <ScrollBar />
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
   );
 });
 

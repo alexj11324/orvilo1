@@ -1,4 +1,3 @@
-import { Empty } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import {
@@ -21,6 +20,7 @@ import { useParams } from 'react-router';
 import AsyncError from '@/components/AsyncError';
 import { withErrorBoundary } from '@/components/ErrorBoundary';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { buildAgentDocumentPath } from '@/features/AgentDocumentPage/navigation';
 import { DocumentExplorerTree } from '@/features/AgentDocumentsExplorer';
 import { startSkillDrag } from '@/features/ChatInput/InputEditor/ActionTag/skillDragData';
@@ -588,7 +588,14 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
         }
         return (
           <div className="flex items-center justify-center flex-1 gap-2 py-6">
-            <Empty description={t('workingPanel.skills.empty')} icon={SkillsIcon} />
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SkillsIcon />
+                </EmptyMedia>
+                <EmptyDescription>{t('workingPanel.skills.empty')}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           </div>
         );
       }
@@ -647,7 +654,14 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
       if (webData.length === 0) {
         return (
           <div className="flex items-center justify-center flex-1 gap-2 py-6">
-            <Empty description={t('workingPanel.resources.empty')} icon={GlobeIcon} />
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GlobeIcon />
+                </EmptyMedia>
+                <EmptyDescription>{t('workingPanel.resources.empty')}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           </div>
         );
       }

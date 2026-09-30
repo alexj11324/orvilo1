@@ -1,6 +1,6 @@
 'use client';
 
-import { Markdown, ScrollShadow } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Tabs, type TabsItem } from '@lobehub/ui/base-ui';
 import type { CompressionGroupMetadata, UIChatMessage } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -11,6 +11,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import StreamingMarkdown from '@/components/StreamingMarkdown';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 import { shinyTextStyles } from '@/styles/loading';
@@ -166,19 +167,19 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
         </div>
       )}
       {!showPanelContent ? null : activeTab === 'summary' ? (
-        <ScrollShadow className={styles.contentScroll} offset={12} size={12}>
+        <ScrollArea className={styles.contentScroll}>
           <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
             {content}
           </Markdown>
-        </ScrollShadow>
+        </ScrollArea>
       ) : (
-        <ScrollShadow className={styles.contentScroll} offset={12} size={12}>
+        <ScrollArea className={styles.contentScroll}>
           <div className={cn('flex flex-col gap-1', styles.messagesContainer)}>
             {compressedMessages?.map((msg) => (
               <CompressedMessageItem key={msg.id} message={msg} />
             ))}
           </div>
-        </ScrollShadow>
+        </ScrollArea>
       )}
     </div>
   );

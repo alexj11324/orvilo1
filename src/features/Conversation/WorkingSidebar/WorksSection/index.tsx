@@ -1,4 +1,3 @@
-import { Empty } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { WorkListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -9,6 +8,7 @@ import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { getAllWorkSummaries } from '@/features/Conversation/store/slices/data/workSummaries';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
@@ -169,7 +169,14 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
     if (error) {
       return (
         <div className="flex items-center justify-center flex-1">
-          <Empty description={t('workingPanel.works.error')} icon={ClipboardListIcon} />
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ClipboardListIcon />
+              </EmptyMedia>
+              <EmptyDescription>{t('workingPanel.works.error')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </div>
       );
     }
@@ -177,7 +184,14 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
     if (data.length === 0) {
       return (
         <div className="flex items-center justify-center flex-1">
-          <Empty description={t('workingPanel.works.empty')} icon={ClipboardListIcon} />
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ClipboardListIcon />
+              </EmptyMedia>
+              <EmptyDescription>{t('workingPanel.works.empty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </div>
       );
     }

@@ -1,12 +1,12 @@
 'use client';
 
-import {Highlighter} from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { MessageSquare, Timer, Wrench } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { CodeBlock } from '@/components/ui/code-block';
 import { type TaskDetail } from '@/types/index';
 import { ThreadStatus } from '@/types/index';
 
@@ -104,14 +104,12 @@ const ErrorState = memo<ErrorStateProps>(({ taskDetail }) => {
         type={'secondary'}
         extra={
           errorContent && (
-            <Highlighter
-              actionIconSize={'small'}
-              language={'json'}
-              padding={8}
-              variant={'borderless'}
-            >
-              {errorContent}
-            </Highlighter>
+            <CodeBlock
+              code={errorContent}
+              language="json"
+              style={{ padding: 8 }}
+              variant="ghost"
+            />
           )
         }
       />

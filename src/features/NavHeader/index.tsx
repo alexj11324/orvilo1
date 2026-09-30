@@ -3,6 +3,10 @@ import { Flexbox, TooltipGroup } from '@lobehub/ui';
 import { type CSSProperties, type ReactNode } from 'react';
 import { memo } from 'react';
 
+import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
+
 export interface NavHeaderProps extends Omit<FlexboxProps, 'children'> {
   children?: ReactNode;
   left?: ReactNode;
@@ -22,7 +26,7 @@ export interface NavHeaderProps extends Omit<FlexboxProps, 'children'> {
 
 const NavHeader = memo<NavHeaderProps>(
   ({
-    showTogglePanelButton: _showTogglePanelButton,
+    showTogglePanelButton = true,
     style,
     children,
     left,
@@ -31,6 +35,7 @@ const NavHeader = memo<NavHeaderProps>(
     styles,
     ...rest
   }) => {
+    const expand = useGlobalStore(systemStatusSelectors.showLeftPanel);
     const noContent = !left && !right && !children;
     if (noContent) return;
 
@@ -57,6 +62,7 @@ const NavHeader = memo<NavHeaderProps>(
             justify={'flex-start'}
             style={styles?.left}
           >
+            {showTogglePanelButton && !expand && <ToggleLeftPanelButton />}
             {left}
           </Flexbox>
           {children && (

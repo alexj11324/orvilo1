@@ -274,7 +274,6 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
             ))}
           </nav>
         </aside>
-
       </div>
     );
   },

@@ -765,7 +765,6 @@ export const SortableHeader = memo<{
             'size': 12,
           })
         : null}
->>>>>>> 778c197ad (🚧 Hand off ReUI page migrations and remaining work)
     </button>
   );
 });

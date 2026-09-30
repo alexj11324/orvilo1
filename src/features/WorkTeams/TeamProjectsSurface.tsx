@@ -493,20 +493,20 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                       onReset={resetOptions}
                     />
                     <Button
+                      aria-pressed={sidebarOpen}
+                      className={cn('rounded-full', sidebarOpen && 'bg-muted')}
+                      size="icon-sm"
+                      variant="outline"
                       aria-label={
                         sidebarOpen
                           ? t('list.sidebar.close', { ns: 'project' })
                           : t('list.sidebar.open', { ns: 'project' })
                       }
-                      aria-pressed={sidebarOpen}
-                      className={cn('rounded-full', sidebarOpen && 'bg-muted')}
-                      size="icon-sm"
                       title={
                         sidebarOpen
                           ? t('list.sidebar.close', { ns: 'project' })
                           : t('list.sidebar.open', { ns: 'project' })
                       }
-                      variant="outline"
                       onClick={() => setSidebarOpen((open) => !open)}
                     >
                       <PanelRightIcon aria-hidden className="size-4" />

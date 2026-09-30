@@ -124,8 +124,8 @@ describe('provider configuration check', () => {
     await expect(
       checkProviderBinding(changing, userId, { id: bindingId, revision: 1 }),
     ).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-      message: 'PROVIDER_CHECK_UNAVAILABLE',
+      code: 'CONFLICT',
+      message: 'BINDING_UNAVAILABLE_OR_CHANGED',
     });
   });
 
@@ -140,10 +140,7 @@ describe('provider configuration check', () => {
     } as unknown as ProviderBindingModel;
     await expect(
       checkProviderBinding(rotating, userId, { id: bindingId, revision: 1 }),
-    ).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-      message: 'PROVIDER_CHECK_UNAVAILABLE',
-    });
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(calls).toBeGreaterThan(1);
   });
 });

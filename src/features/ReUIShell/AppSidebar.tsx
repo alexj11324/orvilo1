@@ -17,7 +17,6 @@ import { Logo } from './Logo';
 import { NavMain } from './NavMain';
 import { NavWorkspace } from './NavWorkspace';
 import { NotificationsPopover } from './NotificationsPopover';
-import { SearchForm } from './SearchForm';
 
 export function AppSidebar() {
   const { t } = useTranslation('common');
@@ -45,9 +44,6 @@ export function AppSidebar() {
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <div className="py-2">
-            <SearchForm />
-          </div>
           <NavMain />
         </SidebarContent>
         <SidebarFooter className="pb-2">

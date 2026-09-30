@@ -12,6 +12,7 @@ import {
   subscribeNavPanelRegistry,
 } from '@/features/NavPanel/registry';
 import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
+import { SearchForm } from '@/features/ReUIShell/SearchForm';
 
 /**
  * Single-column nav, Linear-style: when the active route registered its own
@@ -26,5 +27,14 @@ export function NavMain() {
   if (content) return content;
 
   const isSettings = activeNavKey === 'settings' || activeNavKey === 'workspace-settings';
-  return isSettings ? <NavSideBarSkeleton {...NAV_SKELETON_SHAPES[activeNavKey]} /> : <Body />;
+  if (isSettings) return <NavSideBarSkeleton {...NAV_SKELETON_SHAPES[activeNavKey]} />;
+
+  return (
+    <>
+      <div className="py-2">
+        <SearchForm />
+      </div>
+      <Body />
+    </>
+  );
 }

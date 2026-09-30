@@ -306,11 +306,11 @@ const SavedViewsPage = memo(() => {
           <div className={styles.nameCell}>
             <span className="anticon" role="img">
               {createElement(viewIcon(view), {
-                size = 16,
-                width = 16,
-                height = 16,
-                color = cssVar.colorTextSecondary,
-                fill = 'transparent',
+                size: 16,
+                width: 16,
+                height: 16,
+                color: cssVar.colorTextSecondary,
+                fill: 'transparent',
               })}
             </span>
             {/* A real anchor keeps open-in-new-tab and middle-click working;

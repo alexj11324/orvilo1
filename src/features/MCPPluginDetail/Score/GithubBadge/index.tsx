@@ -5,7 +5,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
-import { CodeBlock } from '@/components/reui/code-block';
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { Separator } from '@/components/ui/separator';
 import { OFFICIAL_SITE } from '@/const/url';
 

@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import Descriptions from '@/components/Descriptions';
 import InlineTable from '@/components/InlineTable';
-import { CodeBlock } from '@/components/reui/code-block';
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import {
   Stepper,
   StepperIndicator,
@@ -239,13 +239,13 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                           render: (_, record) => (
                             <span className="anticon" role="img">
                               {createElement(record.required ? CheckIcon : MinusIcon, {
-                                size = '1em',
-                                width = '1em',
-                                height = '1em',
-                                color = record.required
+                                size: '1em',
+                                width: '1em',
+                                height: '1em',
+                                color: record.required
                                   ? cssVar.colorSuccess
                                   : cssVar.colorTextDescription,
-                                fill = 'transparent',
+                                fill: 'transparent',
                               })}
                             </span>
                           ),

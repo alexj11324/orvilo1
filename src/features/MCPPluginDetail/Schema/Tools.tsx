@@ -6,7 +6,7 @@ import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
-import { CodeBlock } from '@/components/reui/code-block';
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import { useDetailContext } from '../DetailProvider';
@@ -82,13 +82,13 @@ const Tools = memo<ToolsProps>(({ mode, activeKey = [], setActiveKey }) => {
                       render: (_, record) => (
                         <span className="anticon" role="img">
                           {createElement(record.required ? CheckIcon : MinusIcon, {
-                            size = '1em',
-                            width = '1em',
-                            height = '1em',
-                            color = record.required
+                            size: '1em',
+                            width: '1em',
+                            height: '1em',
+                            color: record.required
                               ? cssVar.colorSuccess
                               : cssVar.colorTextDescription,
-                            fill = 'transparent',
+                            fill: 'transparent',
                           })}
                         </span>
                       ),

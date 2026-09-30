@@ -230,7 +230,7 @@ const ReviewOverview = memo<{
                   : pullRequest.checks.summary.state === 'failing'
                     ? XCircleIcon
                     : CircleDashedIcon,
-                { size = 14, width = 14, height = 14, color = checks.color, fill = 'transparent' },
+                { size: 14, width: 14, height: 14, color: checks.color, fill: 'transparent' },
               )}
             </span>
             <Text fontSize={13}>

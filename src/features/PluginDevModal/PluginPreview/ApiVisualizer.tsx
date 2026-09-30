@@ -113,10 +113,10 @@ const ApiItem = memo<ApiItemProps>(({ api }) => {
 
         <span className="anticon" role="img">
           {createElement(expanded ? ChevronDown : ChevronRight, {
-            size = '1em',
-            width = '1em',
-            height = '1em',
-            fill = 'transparent',
+            size: '1em',
+            width: '1em',
+            height: '1em',
+            fill: 'transparent',
           })}
         </span>
       </div>

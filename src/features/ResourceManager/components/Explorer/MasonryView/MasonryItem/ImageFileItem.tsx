@@ -225,10 +225,10 @@ const ImageFileItem = memo<ImageFileItemProps>(
             >
               <span className={cx('anticon', styles.placeholderIcon)} role="img">
                 {createElement(readPlaceholderIcon(status), {
-                  size = 28,
-                  width = 28,
-                  height = 28,
-                  fill = 'transparent',
+                  size: 28,
+                  width: 28,
+                  height: 28,
+                  fill: 'transparent',
                 })}
               </span>
               {status === 'error' && (

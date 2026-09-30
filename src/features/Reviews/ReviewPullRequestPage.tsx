@@ -658,7 +658,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
           ) : pullRequest ? (
             <>
               {stale ? (
-                <div className={cx('flex', styles.staleBanner)} role={'alert'}>
+                <div className={cx('flex flex-col', styles.staleBanner)} role={'alert'}>
                   <Text fontSize={13}>{t('reviews.staleBanner')}</Text>
                   <Button size={'small'} onClick={() => void refresh()}>
                     {t('reviews.staleAction')}

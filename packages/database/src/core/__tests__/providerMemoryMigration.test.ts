@@ -78,12 +78,63 @@ describe('provider and experience forward migrations', () => {
       db.exec(`INSERT INTO user_experience_memories (user_id,legacy_id,content)
       VALUES ('migration-owner','legacy-experience','duplicate')`),
     ).rejects.toThrow();
+    // The shadow key is (user_id, legacy_id): a second copy under another owner
+    // is legal, and NULL legacy_id rows never collide.
+    await db.exec(`INSERT INTO users (id) VALUES ('other-owner')`);
+    await db.exec(`INSERT INTO user_experience_memories (user_id,legacy_id,content)
+      VALUES ('other-owner','legacy-experience','other shadow'),
+             ('migration-owner',NULL,'fresh memory 1'),
+             ('migration-owner',NULL,'fresh memory 2')`);
     await expect(
       db.exec(`UPDATE user_experience_memories SET lifecycle='invalid'`),
     ).rejects.toThrow();
     await expect(db.exec(`UPDATE user_experience_memories SET revision=0`)).rejects.toThrow();
+    // Content boundary: the check caps octet_length at 16384 — exactly at the
+    // limit passes, one byte over fails.
     await expect(
       db.exec(`UPDATE user_experience_memories SET content=repeat('中',6000)`),
     ).rejects.toThrow();
+    await expect(
+      db.exec(`INSERT INTO user_experience_memories (user_id,content)
+      VALUES ('migration-owner',repeat('x',16385))`),
+    ).rejects.toThrow();
+    await db.exec(`INSERT INTO user_experience_memories (user_id,content)
+      VALUES ('migration-owner',repeat('x',16384))`);
+  });
+
+  it('cascades user deletion across prime, legacy and provider rows', async () => {
+    expect(
+      (
+        await db.query(
+          `SELECT count(*)::int AS n FROM user_experience_memories WHERE user_id='migration-owner'`,
+        )
+      ).rows,
+    ).toEqual([{ n: 4 }]);
+    await db.exec(`DELETE FROM users WHERE id='migration-owner'`);
+    expect(
+      (
+        await db.query(
+          `SELECT count(*)::int AS n FROM user_experience_memories WHERE user_id='migration-owner'`,
+        )
+      ).rows,
+    ).toEqual([{ n: 0 }]);
+    expect(
+      (
+        await db.query(
+          `SELECT count(*)::int AS n FROM provider_bindings WHERE user_id='migration-owner'`,
+        )
+      ).rows,
+    ).toEqual([{ n: 0 }]);
+    expect(
+      (
+        await db.query(
+          `SELECT count(*)::int AS n FROM user_memories_experiences WHERE user_id='migration-owner'`,
+        )
+      ).rows,
+    ).toEqual([{ n: 0 }]);
+    // The other owner's rows are untouched by the cascade.
+    expect((await db.query(`SELECT content FROM user_experience_memories`)).rows).toEqual([
+      { content: 'other shadow' },
+    ]);
   });
 });

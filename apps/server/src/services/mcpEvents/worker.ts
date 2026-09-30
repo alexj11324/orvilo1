@@ -1,30 +1,10 @@
+import type { EventDispatchAdmission } from '@orvilo/agent-execution/controlPlane';
+
 import type { McpEventInbox } from './deliveryTypes';
 import type { SqlMcpEventWorkRepository } from './workerRepository';
 
-/** Temporary shape until the separate Core commit is materialized here.
- * Integration must use EventDispatchAdmission from @orvilo/agent-execution/controlPlane.
- * No runtime launch lives here. */
-export interface McpEventDispatchAdmission {
-  admit: (request: {
-    schemaVersion: 1;
-    tenantId: string;
-    workspaceId: string;
-    userId: string;
-    taskId: string;
-    triggerId: string;
-    triggerRevision: number;
-    sourceId: string;
-    subscriptionId: string;
-    eventId: string;
-    inboxRef: string;
-    idempotencyKey: string;
-  }) => Promise<
-    | { status: 'accepted'; dispatchId: string; operationId?: string }
-    | { status: 'duplicate'; dispatchId: string }
-    | { status: 'waiting'; reason: string; retryable: boolean }
-    | { status: 'denied'; reason: string }
-  >;
-}
+/** Canonical Core port. No production adapter is installed, and this module does not start a runtime. */
+export type McpEventDispatchAdmission = EventDispatchAdmission;
 
 /** Called by the existing maintenance scheduler, never a second task runner. */
 export class McpEventWorker {

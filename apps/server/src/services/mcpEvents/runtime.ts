@@ -1,8 +1,9 @@
+import type { EventDispatchAdmission } from '@orvilo/agent-execution/controlPlane';
+
 import type { McpEventsDatabase } from './database';
 import { createMcpEventsSql } from './database';
 import { SqlMcpEventBindingRepository, SqlMcpEventInbox } from './inbox';
 import { McpEventReceiver } from './receiver';
-import type { McpEventDispatchAdmission } from './worker';
 import { McpEventWorker } from './worker';
 import { SqlMcpEventWorkRepository } from './workerRepository';
 
@@ -18,11 +19,11 @@ export function createMcpEventReceiver(db: McpEventsDatabase) {
 /** Called by the existing task watchdog, never by a second polling runner. */
 export async function sweepMcpEventInbox(
   db: McpEventsDatabase,
-  admission?: McpEventDispatchAdmission,
+  admission?: EventDispatchAdmission,
 ) {
-  // The optional core port is intentionally not fabricated from TaskRunner.
-  // Until the authoritative core adapter is installed, worker admission waits.
-  // Do not burn finite delivery retries while a required deployment is absent.
+  // The canonical port is optional and is not fabricated from TaskRunner.
+  // Until an authoritative adapter is installed, admission waits.
+  // Do not burn finite delivery retries while that adapter is absent.
   if (!admission) {
     return {
       claimed: 0,

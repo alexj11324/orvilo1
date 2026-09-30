@@ -3,9 +3,12 @@ import type {
   ProviderConfigurationBroker,
   ProviderConfigurationScope,
 } from '@orvilo/agent-execution/controlPlane';
+import { CONTROL_PLANE_VERSION } from '@orvilo/agent-execution/controlPlane';
 import { TRPCError } from '@trpc/server';
 
 import type { ProviderBindingModel } from '@/database/models/providerBinding';
+
+import { createClosedProviderComposition } from './closedBroker';
 
 /** Host composition supplies the canonical broker and an authoritative scope resolver. */
 export interface ProviderConfigurationComposition {
@@ -31,18 +34,17 @@ export async function checkProviderBinding(
   };
 
   const row = await load();
-  if (!composition) {
-    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_BROKER_UNAVAILABLE' });
-  }
+  // Absent host composition still enters the canonical broker, with network access refused.
+  const active = composition ?? createClosedProviderComposition(model, userId);
 
-  const scope = structuredClone(await composition.authorizeScope(userId));
+  const scope = structuredClone(await active.authorizeScope(userId));
   if (scope.ownerId !== userId || scope.principalId !== userId) {
     throw new TRPCError({ code: 'FORBIDDEN' });
   }
   // The scope is resolved by the server; configuration checks never invent a task fence.
-  const result = await composition.broker
+  const result = await active.broker
     .checkBinding({
-      schemaVersion: 1,
+      schemaVersion: CONTROL_PLANE_VERSION,
       scope,
       bindingId: row.id,
       bindingRevision: row.revision,
@@ -51,7 +53,7 @@ export async function checkProviderBinding(
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_CHECK_UNAVAILABLE' });
     });
   const fresh = await load();
-  const freshScope = await composition.authorizeScope(userId);
+  const freshScope = await active.authorizeScope(userId);
   if (
     fresh.config.secretReference !== row.config.secretReference ||
     freshScope.tenantId !== scope.tenantId ||

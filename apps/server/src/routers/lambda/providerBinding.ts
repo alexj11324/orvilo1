@@ -56,5 +56,6 @@ export const createProviderBindingRouter = (composition?: ProviderConfigurationC
     }),
   });
 
-// Deployment composition must explicitly provide the authoritative host broker.
+// The default check uses the canonical broker and refuses provider network access.
+// Pass an explicit composition only when it supplies a real trusted backend.
 export const providerBindingRouter = createProviderBindingRouter();

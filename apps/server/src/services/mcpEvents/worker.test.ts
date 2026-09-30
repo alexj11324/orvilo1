@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { PGlite } from '@electric-sql/pglite';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { EventDispatchAdmission } from '@orvilo/agent-execution/controlPlane';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from 'vitest';
 
 import type { AcceptedMcpEvent, McpEventBinding } from './deliveryTypes';
 import { matchesMcpEventFilters } from './filter';
@@ -23,6 +24,11 @@ import {
 
 /** Real SQL repositories. Core admission is an explicit boundary, not a runtime claim. */
 describe('MCP event durable worker', () => {
+  it('requires the canonical event admission port', () => {
+    expectTypeOf<
+      NonNullable<ConstructorParameters<typeof McpEventWorker>[0]['admission']>
+    >().toEqualTypeOf<EventDispatchAdmission>();
+  });
   let db: PGlite;
   let directory: string;
   let inbox: SqlMcpEventInbox;
@@ -201,9 +207,9 @@ describe('MCP event durable worker', () => {
       maxAttempts: 1,
       admission: {
         async admit() {
-          return { status: 'waiting', retryable: true, reason: 'capacity' };
+          return { status: 'waiting', retryable: true, reason: 'runtime-unavailable' };
         },
-      },
+      } satisfies EventDispatchAdmission,
     });
     await worker.pump();
     now += 3000;

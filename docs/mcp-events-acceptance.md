@@ -1,5 +1,14 @@
 # MCP Events acceptance evidence
 
+## Integration update (2026-09-30)
+
+The combined Core / Provider / Memory / Events branch registers
+`packages/database/migrations/0198_mcp_events.sql` after 0196 and 0197. The worker
+admission port is canonical `EventDispatchAdmission`. No production admission adapter
+is installed, bare `trigger: 'event'` remains rejected, and provider connection checks
+enter the canonical broker with network access refused. The sections below record the
+pre-integration candidate.
+
 ## Baseline audit
 
 Baseline: `28dc3bbad36e4661f8d09154ff8b017cf5cadaeb`.

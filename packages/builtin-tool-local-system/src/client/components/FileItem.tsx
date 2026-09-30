@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { FolderOpen } from 'lucide-react';
 import nodePath from 'path-browserify-esm';
@@ -100,16 +99,13 @@ const FileItem = memo<FileItemProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.container}
-        gap={12}
-        padding={'4px 8px'}
+      <div
+        className={cx('flex flex-row items-center gap-3', styles.container)}
         style={{
           cursor: openFile || openFolder ? 'pointer' : 'default',
           fontSize: 12,
           width: '100%',
+          padding: '4px 8px',
         }}
         onClick={handleRowClick}
       >
@@ -120,7 +116,7 @@ const FileItem = memo<FileItemProps>(
           size={20}
           variant={'raw'}
         />
-        <Flexbox flex={1} gap={2} style={{ overflow: 'hidden', minWidth: 0 }}>
+        <div className="flex flex-col flex-1 gap-0.5" style={{ overflow: 'hidden', minWidth: 0 }}>
           <div className={styles.title}>{name}</div>
           {showTime ? (
             createdTime && (
@@ -129,7 +125,7 @@ const FileItem = memo<FileItemProps>(
           ) : parentDir ? (
             <div className={styles.dir}>{parentDir}</div>
           ) : null}
-        </Flexbox>
+        </div>
         {size !== undefined && <span className={styles.size}>{formatSize(size)}</span>}
         {!isDirectory && openFolder && path && (
           <ActionIcon
@@ -140,7 +136,7 @@ const FileItem = memo<FileItemProps>(
             onClick={handleOpenFolder}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

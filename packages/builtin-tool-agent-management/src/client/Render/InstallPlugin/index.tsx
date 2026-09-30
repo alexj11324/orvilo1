@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -44,19 +43,19 @@ export const InstallPluginRender = memo<
 
   return (
     <div className={styles.container}>
-      <Flexbox gap={8}>
-        <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-center gap-2">
           <span className={styles.label}>
             {t('builtins.orvilo-agent-management.render.installPlugin.plugin')}
           </span>
           <Tag>{pluginState.pluginName || pluginState.pluginId}</Tag>
-        </Flexbox>
+        </div>
         <span className={pluginState.installed ? styles.statusSuccess : styles.statusFail}>
           {pluginState.installed
             ? t('builtins.orvilo-agent-management.render.installPlugin.success')
             : t('builtins.orvilo-agent-management.render.installPlugin.failed')}
         </span>
-      </Flexbox>
+      </div>
     </div>
   );
 });

@@ -1,4 +1,3 @@
-import { Block, Empty, Flexbox, Icon, ScrollShadow } from '@lobehub/ui';
 import { Button, Skeleton } from '@lobehub/ui/base-ui';
 import type { SearchQuery, UniformSearchResponse } from '@orvilo/types';
 import { uniq } from 'es-toolkit/compat';
@@ -6,6 +5,7 @@ import { Edit2Icon, SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';
 import { chatToolSelectors } from '@/store/chat/selectors';
@@ -36,22 +36,26 @@ const SearchResult = memo<SearchResultProps>(
 
     if (loading || !pluginState)
       return (
-        <Flexbox horizontal gap={8}>
+        <div className="flex flex-row gap-2">
           {['1', '2', '3', '4', '5'].map((id) => (
             <Skeleton height={ITEM_HEIGHT} key={id} width={ITEM_WIDTH} />
           ))}
-        </Flexbox>
+        </div>
       );
 
     if (searchResults.length === 0)
       return (
-        <Block variant={'outlined'}>
-          <Empty description={t('search.emptyResult')} icon={SearchIcon}>
+        <div className="rounded-md border bg-card">
+          <SimpleEmpty description={t('search.emptyResult')} icon={SearchIcon}>
             {!editing && (
               <Button
-                icon={<Icon icon={Edit2Icon} />}
                 size={'small'}
                 type={'fill'}
+                icon={
+                  <span className="anticon" role="img">
+                    <Edit2Icon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
+                }
                 onClick={() => {
                   setEditing(true);
                 }}
@@ -59,17 +63,13 @@ const SearchResult = memo<SearchResultProps>(
                 {t('edit', { ns: 'common' })}
               </Button>
             )}
-          </Empty>
-        </Block>
+          </SimpleEmpty>
+        </div>
       );
 
     return (
-      <ScrollShadow
-        horizontal
-        gap={8}
-        offset={8}
-        orientation={'horizontal'}
-        size={4}
+      <div
+        className="flex flex-row gap-2 overflow-x-auto"
         style={{ minHeight: ITEM_HEIGHT, paddingBottom: 8, width: '100%' }}
       >
         {searchResults.slice(0, 5).map((result) => (
@@ -87,7 +87,7 @@ const SearchResult = memo<SearchResultProps>(
             style={{ minWidth: ITEM_WIDTH }}
           />
         )}
-      </ScrollShadow>
+      </div>
     );
   },
 );

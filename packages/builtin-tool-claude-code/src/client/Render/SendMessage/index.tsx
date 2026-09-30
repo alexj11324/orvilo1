@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleCheckBig, SendHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,31 +55,35 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
   const delivered = result?.success === true;
 
   return (
-    <Flexbox className={styles.container} gap={8}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
-        <Icon icon={SendHorizontal} size={'small'} />
+    <div className={cx('flex flex-col gap-2', styles.container)}>
+      <div className={cx('flex flex-row items-center gap-2', styles.header)}>
+        <span className="anticon" role="img">
+          <SendHorizontal fill={'transparent'} height={'14'} size={'14'} width={'14'} />
+        </span>
         <Text ellipsis strong>
           {summary || t('builtins.orvilo-claude-code.sendMessage.title')}
         </Text>
-      </Flexbox>
+      </div>
 
       {body && (
-        <Flexbox className={styles.bodyBox}>
+        <div className={cx('flex flex-col', styles.bodyBox)}>
           <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
             {body}
           </Markdown>
-        </Flexbox>
+        </div>
       )}
 
       {delivered && (
-        <Flexbox horizontal align={'center'} className={styles.status} gap={6}>
-          <Icon icon={CircleCheckBig} size={'small'} style={{ color: cssVar.colorSuccess }} />
+        <div className={cx('flex flex-row items-center gap-1.5', styles.status)}>
+          <span className="anticon" role="img" style={{ color: cssVar.colorSuccess }}>
+            <CircleCheckBig fill={'transparent'} height={'14'} size={'14'} width={'14'} />
+          </span>
           <Text style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
             {t('builtins.orvilo-claude-code.sendMessage.queued')}
           </Text>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

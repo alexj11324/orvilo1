@@ -1,8 +1,8 @@
-import { Flexbox, Icon, Markdown, PatchDiff } from '@lobehub/ui';
+import { Markdown, PatchDiff } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
@@ -64,15 +64,20 @@ const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
   }
 
   return (
-    <Flexbox className={styles.container} gap={12}>
-      <Flexbox horizontal align={'center'}>
+    <div className={cx('flex flex-col gap-3', styles.container)}>
+      <div className="flex flex-row items-center">
         <LocalFolder path={dir} />
-        <Icon icon={ChevronRight} />
+        <span className="anticon" role="img">
+          <ChevronRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
         <LocalFile name={base} path={filePath} />
-      </Flexbox>
+      </div>
 
       {args.content && (
-        <Flexbox className={styles.previewBox} style={{ height: isHtml ? 260 : undefined }}>
+        <div
+          className={cx('flex flex-col', styles.previewBox)}
+          style={{ height: isHtml ? 260 : undefined }}
+        >
           {isHtml ? (
             <InlineHtmlPreview content={args.content} />
           ) : (
@@ -83,9 +88,9 @@ const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
               {args.content}
             </Markdown>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

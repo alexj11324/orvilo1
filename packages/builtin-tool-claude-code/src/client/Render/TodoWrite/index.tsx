@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
 import { Checkbox } from '@lobehub/ui/base-ui';
 import { TodoPanelHeader } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
@@ -50,7 +49,9 @@ const TodoRow = memo<TodoRowProps>(({ item }) => {
   if (status === 'in_progress') {
     return (
       <div className={cx(styles.itemRow, styles.processingRow)}>
-        <Icon icon={CircleArrowRight} size={17} style={{ color: cssVar.colorInfo }} />
+        <span className="anticon" role="img" style={{ color: cssVar.colorInfo }}>
+          <CircleArrowRight fill={'transparent'} height={17} size={17} width={17} />
+        </span>
         <span className={styles.textProcessing}>{activeForm || content}</span>
       </div>
     );
@@ -88,12 +89,12 @@ const TodoWrite = memo<BuiltinRenderProps<TodoWriteArgs>>(({ args }) => {
   if (!todos || todos.length === 0) return null;
 
   return (
-    <Block variant={'outlined'} width="100%">
+    <div className="rounded-md border bg-card" style={{ width: '100%' }}>
       <TodoPanelHeader label={t(TODO_SUMMARY_LABEL_KEYS[summary.state])} summary={summary} />
       {todos.map((item, index) => (
         <TodoRow item={item} key={index} />
       ))}
-    </Block>
+    </div>
   );
 });
 

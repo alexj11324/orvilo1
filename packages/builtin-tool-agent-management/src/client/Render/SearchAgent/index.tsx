@@ -1,11 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, useTheme } from 'antd-style';
+import { createStaticStyles, cx, useTheme } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -85,7 +84,7 @@ export const SearchAgentRender = memo<BuiltinRenderProps<SearchAgentParams, Sear
     return (
       <div className={styles.container}>
         {agents.map((agent: AgentSearchItem) => (
-          <Flexbox horizontal align={'center'} className={styles.agentItem} gap={12} key={agent.id}>
+          <div className={cx('flex flex-row items-center gap-3', styles.agentItem)} key={agent.id}>
             <Avatar
               avatar={agent.avatar || DEFAULT_AVATAR}
               background={agent.backgroundColor || theme.colorBgContainer}
@@ -93,8 +92,8 @@ export const SearchAgentRender = memo<BuiltinRenderProps<SearchAgentParams, Sear
               size={32}
               title={agent.title || undefined}
             />
-            <Flexbox flex={1} gap={2}>
-              <Flexbox horizontal align={'center'} gap={8}>
+            <div className="flex flex-col flex-1 gap-0.5">
+              <div className="flex flex-row items-center gap-2">
                 <span className={styles.agentTitle}>{agent.title || agent.id}</span>
                 {agent.heteroType && (
                   <span className={styles.heteroBadge}>
@@ -102,10 +101,10 @@ export const SearchAgentRender = memo<BuiltinRenderProps<SearchAgentParams, Sear
                   </span>
                 )}
                 {agent.isMarket && <span className={styles.marketBadge}>Market</span>}
-              </Flexbox>
+              </div>
               {agent.description && <span className={styles.description}>{agent.description}</span>}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ))}
       </div>
     );

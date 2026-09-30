@@ -1,4 +1,3 @@
-import { Flexbox, ScrollShadow } from '@lobehub/ui';
 import type { CrawlPluginState } from '@orvilo/types';
 import type { CrawlErrorResult } from '@orvilo/web-crawler';
 import { memo } from 'react';
@@ -15,16 +14,16 @@ interface PagesContentProps {
 const PagesContent = memo<PagesContentProps>(({ results, messageId, urls = [] }) => {
   if (!results || results.length === 0) {
     return (
-      <Flexbox horizontal gap={8}>
+      <div className="flex flex-row gap-2">
         {urls &&
           urls.length > 0 &&
           urls.map((url, index) => <Loading key={`${url}_${index}`} url={url} />)}
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <ScrollShadow horizontal gap={8} offset={8} orientation={'horizontal'} size={4}>
+    <div className="flex flex-row gap-2 overflow-x-auto">
       {results.map((result) => (
         <Result
           crawler={result.crawler}
@@ -43,7 +42,7 @@ const PagesContent = memo<PagesContentProps>(({ results, messageId, urls = [] })
           }
         />
       ))}
-    </ScrollShadow>
+    </div>
   );
 });
 

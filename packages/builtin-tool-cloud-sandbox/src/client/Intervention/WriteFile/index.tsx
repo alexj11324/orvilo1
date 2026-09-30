@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface WriteLocalFileParams {
   content: string;
@@ -16,18 +17,16 @@ const WriteFile = memo<BuiltinInterventionProps<WriteLocalFileParams>>(({ args }
   const preview = content.length > 500 ? content.slice(0, 500) + '\n...(truncated)' : content;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <Text>Write to file: {path}</Text>
-      <Highlighter
+      <CodeBlock
         wrap
+        code={preview}
         language={'text'}
-        showLanguage={false}
         style={{ maxHeight: 200, overflow: 'auto', padding: '4px 8px' }}
-        variant={'outlined'}
-      >
-        {preview}
-      </Highlighter>
-    </Flexbox>
+        variant={'default'}
+      />
+    </div>
   );
 });
 

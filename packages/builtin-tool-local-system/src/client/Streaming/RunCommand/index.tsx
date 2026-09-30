@@ -1,8 +1,9 @@
 'use client';
 
-import { Highlighter } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface RunCommandParams {
   command?: string;
@@ -17,16 +18,14 @@ export const RunCommandStreaming = memo<BuiltinStreamingProps<RunCommandParams>>
   if (!command) return null;
 
   return (
-    <Highlighter
+    <CodeBlock
       animated
       wrap
+      code={command}
       language={'sh'}
-      showLanguage={false}
       style={{ padding: '4px 8px' }}
-      variant={'outlined'}
-    >
-      {command}
-    </Highlighter>
+      variant={'default'}
+    />
   );
 });
 

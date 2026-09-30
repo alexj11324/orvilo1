@@ -1,9 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Highlighter } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import type { ExecScriptParams, ExecScriptState } from '../../../types';
 
@@ -19,24 +20,18 @@ const ExecScript = memo<BuiltinRenderProps<ExecScriptParams, ExecScriptState>>(
     const { command } = pluginState || {};
 
     return (
-      <Flexbox className={styles.container} gap={8}>
-        <Block gap={8} padding={8} variant={'outlined'}>
-          <Highlighter
+      <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className="rounded-md border bg-card flex flex-col" style={{ gap: 8, padding: 8 }}>
+          <CodeBlock
             wrap
+            code={args?.command || command || ''}
             language={'sh'}
-            showLanguage={false}
             style={{ paddingInline: 8 }}
-            variant={'borderless'}
-          >
-            {args?.command || command || ''}
-          </Highlighter>
-          {content && (
-            <Highlighter wrap language={'text'} showLanguage={false} variant={'filled'}>
-              {content}
-            </Highlighter>
-          )}
-        </Block>
-      </Flexbox>
+            variant={'ghost'}
+          />
+          {content && <CodeBlock wrap code={content} language={'text'} variant={'default'} />}
+        </div>
+      </div>
     );
   },
 );

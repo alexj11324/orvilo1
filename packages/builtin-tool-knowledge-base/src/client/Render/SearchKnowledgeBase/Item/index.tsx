@@ -1,11 +1,13 @@
 'use client';
 
-import { Center, Flexbox, MaterialFileTypeIcon, Tooltip } from '@lobehub/ui';
+import { MaterialFileTypeIcon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { FileSearchResult } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { useTheme } from 'next-themes';
 import { memo } from 'react';
+
+import { SimpleTooltip } from '@/components/ui/tooltip';
 
 import { styles } from './style';
 
@@ -18,21 +20,23 @@ const FileItem = memo<FileItemProps>(({ fileId, fileName, relevanceScore }) => {
   const isDarkMode = resolvedTheme === 'dark';
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight)}
-      gap={4}
+    <div
       key={fileId}
+      className={cx(
+        'flex flex-row items-center gap-1',
+        cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
+      )}
     >
       <MaterialFileTypeIcon filename={fileName} size={20} type={'file'} variant={'raw'} />
-      <Flexbox horizontal gap={12} justify={'space-between'} style={{ maxWidth: 200 }}>
+      <div className="flex flex-row gap-3 justify-between" style={{ maxWidth: 200 }}>
         <Text ellipsis>{fileName}</Text>
-        <Tooltip title={`Relevance: ${(relevanceScore * 100).toFixed(1)}%`}>
-          <Center className={styles.badge}>{relevanceScore.toFixed(2)}</Center>
-        </Tooltip>
-      </Flexbox>
-    </Flexbox>
+        <SimpleTooltip title={`Relevance: ${(relevanceScore * 100).toFixed(1)}%`}>
+          <div className={cx('flex flex-col items-center justify-center', styles.badge)}>
+            {relevanceScore.toFixed(2)}
+          </div>
+        </SimpleTooltip>
+      </div>
+    </div>
   );
 });
 

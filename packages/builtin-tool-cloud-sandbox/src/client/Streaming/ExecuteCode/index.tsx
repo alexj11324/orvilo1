@@ -1,8 +1,9 @@
 'use client';
 
-import { Highlighter } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface ExecuteCodeParams {
   code?: string;
@@ -25,16 +26,14 @@ export const ExecuteCodeStreaming = memo<BuiltinStreamingProps<ExecuteCodeParams
   if (!code) return null;
 
   return (
-    <Highlighter
+    <CodeBlock
       animated
       wrap
+      code={code}
       language={displayLanguage}
-      showLanguage={false}
       style={{ padding: '4px 8px' }}
-      variant={'outlined'}
-    >
-      {code}
-    </Highlighter>
+      variant={'default'}
+    />
   );
 });
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ArrowRight } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
@@ -78,11 +78,8 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
     // After tool execution succeeds, render a clickable agent card
     if (pluginState?.success && pluginState.agentId) {
       return (
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.agentCard}
-          gap={12}
+        <div
+          className={cx('flex flex-row items-center gap-3', styles.agentCard)}
           onClick={handleNavigateToAgent}
         >
           <Avatar
@@ -92,12 +89,12 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
             size={36}
             title={title || undefined}
           />
-          <Flexbox flex={1} gap={2}>
+          <div className="flex flex-col flex-1 gap-0.5">
             <span className={styles.agentTitle}>{title}</span>
             {description && <span className={styles.agentDescription}>{description}</span>}
-          </Flexbox>
+          </div>
           <ArrowRight className={styles.arrowIcon} size={16} />
-        </Flexbox>
+        </div>
       );
     }
 
@@ -130,21 +127,24 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
         {plugins && plugins.length > 0 && (
           <div className={styles.field}>
             <div className={styles.label}>Plugins</div>
-            <Flexbox horizontal gap={4} wrap={'wrap'}>
+            <div className="flex flex-row gap-1 flex-wrap">
               {plugins.map((plugin) => (
                 <Tag key={plugin}>{plugin}</Tag>
               ))}
-            </Flexbox>
+            </div>
           </div>
         )}
         {systemRole && (
           <div className={styles.field}>
             <div className={styles.label}>System Prompt</div>
-            <Block paddingBlock={8} paddingInline={12} variant={'outlined'} width="100%">
+            <div
+              className="rounded-md border bg-card"
+              style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
+            >
               <Markdown fontSize={13} variant={'chat'}>
                 {systemRole}
               </Markdown>
-            </Block>
+            </div>
           </div>
         )}
       </div>

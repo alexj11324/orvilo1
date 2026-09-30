@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,15 +74,10 @@ const AgentStreaming = memo<BuiltinStreamingProps<AgentArgs>>(({ args, toolCallI
   if (!prompt && !subagentThread) return null;
 
   return (
-    <Flexbox className={styles.container} gap={12}>
+    <div className={cx('flex flex-col gap-3', styles.container)}>
       {prompt && (
-        <Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.labelRow}
-            justify={'space-between'}
-          >
+        <div className="flex flex-col">
+          <div className={cx('flex flex-row items-center justify-between', styles.labelRow)}>
             <Text className={styles.label}>
               {t('builtins.orvilo-claude-code.agent.instruction')}
             </Text>
@@ -99,13 +94,13 @@ const AgentStreaming = memo<BuiltinStreamingProps<AgentArgs>>(({ args, toolCallI
                   : tChat('thread.openSubagentThread')}
               </Button>
             )}
-          </Flexbox>
-          <Flexbox className={styles.promptBox}>
+          </div>
+          <div className={cx('flex flex-col', styles.promptBox)}>
             <Markdown variant={'chat'}>{prompt}</Markdown>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface ExecuteCodeParams {
   code: string;
@@ -21,25 +22,23 @@ const ExecuteCode = memo<BuiltinInterventionProps<ExecuteCodeParams>>(({ args })
   const displayLanguage = languageDisplayNames[language] || language;
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal justify={'space-between'}>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-row justify-between">
         <Text>Execute code in cloud sandbox</Text>
         <Text style={{ fontSize: 12 }} type={'secondary'}>
           {displayLanguage}
         </Text>
-      </Flexbox>
+      </div>
       {code && (
-        <Highlighter
+        <CodeBlock
           wrap
+          code={code}
           language={language}
-          showLanguage={false}
           style={{ padding: '4px 8px' }}
-          variant={'outlined'}
-        >
-          {code}
-        </Highlighter>
+          variant={'default'}
+        />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

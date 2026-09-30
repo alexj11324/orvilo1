@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { LocalReadFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
@@ -16,19 +15,21 @@ const ReadLocalFile = memo<BuiltinInterventionProps<LocalReadFileParams>>(({ arg
   const { base, dir } = path.parse(args.path || '');
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={[args.path]} />
-      <Flexbox horizontal>
+      <div className="flex flex-row">
         <LocalFolder path={dir} />
-        <Icon icon={ChevronRight} />
+        <span className="anticon" role="img">
+          <ChevronRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
         <LocalFile name={base} path={args.path} />
-      </Flexbox>
+      </div>
       {args.loc && (
         <Text style={{ fontSize: 12 }} type="secondary">
           {t('localFiles.readFile.lineRange', { end: args.loc[1], start: args.loc[0] })}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

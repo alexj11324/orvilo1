@@ -1,7 +1,6 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ArrowRight } from 'lucide-react';
 import { memo } from 'react';
 
@@ -37,17 +36,19 @@ const MoveFileItem = memo<MoveFileItemProps>(({ oldPath, newPath }) => {
   const displayNewPath = displayRelativePath ? displayRelativePath(newPath) : newPath;
 
   return (
-    <Flexbox horizontal align="center" className={styles.item} gap={8} width="100%">
-      <Flexbox flex={1}>
+    <div className={cx('flex flex-row items-center gap-2 w-[100%]', styles.item)}>
+      <div className="flex flex-col flex-1">
         <Text className={styles.path} type="secondary">
           {displayOldPath}
         </Text>
-      </Flexbox>
-      <Icon className={styles.icon} icon={ArrowRight} />
-      <Flexbox flex={2}>
+      </div>
+      <span className={cx('anticon', styles.icon)} role="img">
+        <ArrowRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+      </span>
+      <div className="flex flex-col" style={{ flex: 2 }}>
         <Text className={styles.path}>{displayNewPath}</Text>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

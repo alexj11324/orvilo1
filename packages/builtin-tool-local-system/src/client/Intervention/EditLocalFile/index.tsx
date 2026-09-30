@@ -1,4 +1,4 @@
-import { CodeDiff, Flexbox, Icon } from '@lobehub/ui';
+import { CodeDiff } from '@lobehub/ui';
 import { Alert, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { EditLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
@@ -53,18 +53,20 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
   const isAmbiguous = !args.replace_all && matchCount > 1;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={[args.file_path]} />
-      <Flexbox horizontal>
+      <div className="flex flex-row">
         <LocalFolder path={dir} />
-        <Icon icon={ChevronRight} />
+        <span className="anticon" role="img">
+          <ChevronRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
         <LocalFile name={base} path={args.file_path} />
-      </Flexbox>
+      </div>
 
       {isLoading ? (
         <Skeleton.Text rows={3} />
       ) : (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           {isAmbiguous ? (
             <Alert
               showIcon
@@ -90,9 +92,9 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
               )}
             </>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

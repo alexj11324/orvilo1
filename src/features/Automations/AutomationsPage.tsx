@@ -121,7 +121,7 @@ const AutomationsPage = memo(() => {
         }
       />
       <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
-        <WideScreenContainer fullWidth paddingBlock={16} paddingInline={24}>
+        <WideScreenContainer fullWidth style={{ paddingBlock: 16, paddingInline: 24 }}>
           <AutomationScheduleList
             error={error}
             footer={<AutomationTemplateGallery persistent onStartBlank={startBlank} />}

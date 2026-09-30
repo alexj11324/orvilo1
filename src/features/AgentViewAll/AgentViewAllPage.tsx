@@ -441,7 +441,7 @@ const AgentViewAllPage = memo(() => {
           />
         }
       />
-      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+      <WideScreenContainer className="gap-4 py-4" wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
         <div className="flex items-center gap-3 justify-between">
           {/* The workspace/private split only exists inside a workspace;
               personal mode leads with the search box instead. */}

@@ -76,7 +76,8 @@ const ListConfig = memo<ListConfigProps>(
             size={'small'}
             style={{ width: 150 }}
             value={options.groupBy}
-            onChange={(value: AgentGroupBy) => {
+            onChange={(value) => {
+              if (Array.isArray(value) || value == null) return;
               setOptions((prev) => ({ ...prev, groupBy: value }));
             }}
           />
@@ -101,7 +102,8 @@ const ListConfig = memo<ListConfigProps>(
               size={'small'}
               style={{ width: 112 }}
               value={options.orderBy}
-              onChange={(value: AgentOrderBy) => {
+              onChange={(value) => {
+                if (Array.isArray(value) || value == null) return;
                 setOptions((prev) => ({ ...prev, orderBy: value }));
               }}
             />

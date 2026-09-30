@@ -279,8 +279,6 @@ const Form = Object.assign(FormBase, {
   useWatch: AntdForm.useWatch,
 });
 
-export default Form;
-
 interface FormSubmitFooterTexts {
   reset?: string;
   submit?: string;
@@ -398,3 +396,5 @@ const FormSubmitFooter = memo<FormSubmitFooterProps>(
 );
 
 FormSubmitFooter.displayName = 'FormSubmitFooter';
+
+export default Object.assign(Form, { SubmitFooter: FormSubmitFooter });

@@ -2,7 +2,14 @@ import type { TaskListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { MoreHorizontalIcon, PauseIcon, PlayIcon, SearchIcon, Trash2Icon } from 'lucide-react';
+import {
+  MoreHorizontalIcon,
+  PauseIcon,
+  PlayIcon,
+  SearchIcon,
+  Trash2Icon,
+  XIcon,
+} from 'lucide-react';
 import {
   createElement,
   memo,

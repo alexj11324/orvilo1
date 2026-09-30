@@ -43,15 +43,16 @@ const AgentSelfIteration = memo(() => {
       footer={isInbox ? undefined : <Form.SubmitFooter />}
       form={form}
       initialValues={config}
+      itemMinWidth={FORM_STYLE.itemMinWidth}
       items={[selfIterationItem]}
       itemsType={'flat'}
+      style={FORM_STYLE.style}
       variant={'borderless'}
       onFinish={(values) => {
         if (disabled) return;
 
         updateConfig(values);
       }}
-      {...FORM_STYLE}
     />
   );
 });

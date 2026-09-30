@@ -63,10 +63,10 @@ const CategoryAvatar = memo<CategoryAvatarProps>(({ category, size = 24 }) => {
       avatar={
         <span className="anticon" role="img" style={{ color: cssVar.colorTextSecondary }}>
           {createElement(categoryIcon, {
-            size = '1em',
-            width = '1em',
-            height = '1em',
-            fill = 'transparent',
+            size: '1em',
+            width: '1em',
+            height: '1em',
+            fill: 'transparent',
           })}
         </span>
       }

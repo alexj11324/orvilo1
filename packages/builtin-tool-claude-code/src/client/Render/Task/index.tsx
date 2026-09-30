@@ -179,7 +179,7 @@ const TaskHeader = memo<TaskHeaderProps>(({ completed, total, inProgress, overri
   return (
     <div className={styles.header}>
       <span className="anticon" role="img" style={{ color, flexShrink: 0 }}>
-        {createElement(icon, { size = 16, width = 16, height = 16, fill = 'transparent' })}
+        {createElement(icon, { size: 16, width: 16, height: 16, fill: 'transparent' })}
       </span>
       <div className={styles.headerLabel}>
         <span>{label}</span>

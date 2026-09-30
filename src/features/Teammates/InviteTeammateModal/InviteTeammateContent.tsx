@@ -11,7 +11,7 @@ import { ModalFooter, useModalContext } from '@/components/Modal';
 import Select from '@/components/Select';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import Textarea from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/textarea';
 import { mutate } from '@/libs/swr';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 

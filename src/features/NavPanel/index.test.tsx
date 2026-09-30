@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { NavMain } from '@/features/ReUIShell/NavMain';
 
 import NavPanel from './index';
@@ -74,12 +75,12 @@ describe('ReUI sidebar panel selection', () => {
   ])('renders the registered Settings navigation for %s', (route, key) => {
     pathname = route;
     render(
-      <>
+      <SidebarProvider>
         <NavPanelPortal navKey={key}>
           <div>Settings category navigation</div>
         </NavPanelPortal>
         <NavMain />
-      </>,
+      </SidebarProvider>,
     );
     expect(screen.getByText('Settings category navigation')).toBeInTheDocument();
     expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
@@ -92,7 +93,11 @@ describe('ReUI sidebar panel selection', () => {
   ])('swaps the registered %s panel into the column on %s', (route, key) => {
     pathname = route;
     registerNavPanelContent(key, Symbol(key), <div>Route panel</div>);
-    render(<NavMain />);
+    render(
+      <SidebarProvider>
+        <NavMain />
+      </SidebarProvider>,
+    );
     expect(screen.getByText('Route panel')).toBeInTheDocument();
     expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
   });
@@ -102,7 +107,11 @@ describe('ReUI sidebar panel selection', () => {
     (route) => {
       pathname = route;
       registerNavPanelContent('agent', Symbol('agent'), <div>Agent navigation</div>);
-      render(<NavMain />);
+      render(
+        <SidebarProvider>
+          <NavMain />
+        </SidebarProvider>,
+      );
       expect(screen.getByText('Global workspace navigation')).toBeInTheDocument();
       expect(screen.queryByText('Agent navigation')).not.toBeInTheDocument();
     },
@@ -112,7 +121,11 @@ describe('ReUI sidebar panel selection', () => {
     'shows the loading skeleton on %s while its panel has not registered yet',
     (route) => {
       pathname = route;
-      render(<NavMain />);
+      render(
+        <SidebarProvider>
+          <NavMain />
+        </SidebarProvider>,
+      );
       expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
       expect(screen.getByTestId('nav-sidebar-skeleton')).toBeInTheDocument();
     },

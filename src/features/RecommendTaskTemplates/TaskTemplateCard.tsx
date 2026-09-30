@@ -1,12 +1,11 @@
-import { Block, Center, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskTemplate } from '@orvilo/const';
-import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
 import { Clock, X } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
 import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
 import { homeType } from '@/features/Home/components/homeType';
@@ -74,24 +73,24 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     if (compact)
       return (
-        <Flexbox horizontal align={'center'} className={styles.compactRow} gap={4}>
+        <div className={cx('flex flex-row items-center gap-1', styles.compactRow)}>
           <Button
             className={styles.compactMain}
             disabled={loading || pendingCreate}
             type={'text'}
             onClick={handleOpenDetail}
           >
-            <Flexbox horizontal align={'flex-start'} gap={10} style={{ width: '100%' }}>
-              <Flexbox flex={'none'} paddingBlock={2}>
+            <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
+              <div className="flex flex-col flex-none py-[2px]">
                 <TemplateBriefIcon spec={iconSpec} tileSize={RECOMMENDATION_ICON_SIZE.compact} />
-              </Flexbox>
+              </div>
               <Text
                 className={cx(homeType.itemTitleProse, styles.compactTitle)}
                 style={{ flex: 1 }}
               >
                 {title}
               </Text>
-            </Flexbox>
+            </div>
           </Button>
           <ActionIcon
             className={`${styles.dismissBtn} task-template-dismiss`}
@@ -100,7 +99,7 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
             title={t('taskTemplate.action.dismiss.tooltip')}
             onClick={handleDismiss}
           />
-        </Flexbox>
+        </div>
       );
 
     const primaryButton = (
@@ -116,27 +115,24 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
     );
 
     return (
-      <Block
+      <div
         className={cx(briefStyles.card, styles.card)}
-        gap={12}
-        padding={12}
         style={{ borderRadius: cssVar.borderRadiusLG, cursor: 'pointer' }}
-        variant={'outlined'}
+        className={cx(
+          briefStyles.card,
+          styles.card,
+          'rounded-md border bg-card flex flex-col gap-3 p-3',
+        )}
         onClick={handleOpenDetail}
       >
-        <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={8}
+        <div className="flex flex-row items-center gap-4 justify-between">
+          <div
+            className="flex flex-row items-center gap-2"
             style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
           >
             <TemplateBriefIcon spec={iconSpec} tileSize={RECOMMENDATION_ICON_SIZE.regular} />
-            <Flexbox
-              horizontal
-              align={'center'}
-              flex={1}
-              gap={6}
+            <div
+              className="flex flex-row items-center flex-1 gap-1.5"
               style={{ minWidth: 0, overflow: 'hidden' }}
             >
               <Text ellipsis fontSize={16} weight={500}>
@@ -146,16 +142,16 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
                 icon={Clock}
                 size={12}
                 title={
-                  <Center>
+                  <div className="flex flex-col items-center justify-center">
                     <span>{scheduleText}</span>
                     {t('taskTemplate.schedule.editableAfterCreateTooltip')}
-                  </Center>
+                  </div>
                 }
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
 
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-row items-center gap-2">
             <ActionIcon
               className={`${styles.dismissBtn} task-template-dismiss`}
               icon={X}
@@ -163,12 +159,12 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
               title={t('taskTemplate.action.dismiss.tooltip')}
               onClick={handleDismiss}
             />
-          </Flexbox>
-        </Flexbox>
-        <Divider dashed style={{ marginBlock: 0 }} />
+          </div>
+        </div>
+        <Separator className="border-dashed" style={{ marginBlock: 0 }} />
         {description.trim().length > 0 ? <BriefCardSummary summary={description} /> : null}
         {visibleAuthSpecs.length > 0 && (
-          <Flexbox gap={6} onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
             {visibleAuthSpecs.map((spec) => (
               <ConnectorAuthRow
                 disabled={disabled}
@@ -177,19 +173,17 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
                 onError={handleConnectError}
               />
             ))}
-          </Flexbox>
+          </div>
         )}
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
-          <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex flex-row items-center gap-2 justify-between flex-wrap">
+          <div className="flex flex-row items-center gap-2">
             <Tag size={'small'} variant={'outlined'}>
               {t('taskTemplate.card.templateTag')}
             </Tag>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8}>
-            {primaryButton}
-          </Flexbox>
-        </Flexbox>
-      </Block>
+          </div>
+          <div className="flex flex-row items-center gap-2">{primaryButton}</div>
+        </div>
+      </div>
     );
   },
 );

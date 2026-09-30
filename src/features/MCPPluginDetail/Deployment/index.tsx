@@ -1,8 +1,6 @@
 import { SiApple, SiLinux } from '@icons-pack/react-simple-icons';
 import { Microsoft } from '@lobehub/icons';
-import { Block, Empty, Flexbox, Icon, Popover, Snippet } from '@lobehub/ui';
 import { Accordion, ActionIcon, Tag } from '@lobehub/ui/base-ui';
-import { Divider, Steps } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { startCase } from 'es-toolkit/compat';
 import {
@@ -14,11 +12,24 @@ import {
   Package,
   TerminalIcon,
 } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Descriptions from '@/components/Descriptions';
 import InlineTable from '@/components/InlineTable';
+import { CodeBlock } from '@/components/reui/code-block';
+import {
+  Stepper,
+  StepperIndicator,
+  StepperItem,
+  StepperNav,
+  StepperSeparator,
+  StepperTitle,
+  StepperTrigger,
+} from '@/components/reui/stepper';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import InstallationIcon from '../../../components/MCPDepsIcon';
@@ -43,23 +54,31 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   if (!deploymentOptions)
     return (
-      <Block variant="outlined">
-        <Empty
+      <div className="rounded-md border bg-card">
+        <SimpleEmpty
           description={t('plugin:mcpEmpty.deployment')}
           descriptionProps={{ fontSize: 14 }}
           icon={Package}
           style={{ maxWidth: 400 }}
         />
-      </Block>
+      </div>
     );
 
   const getConnectionTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'stdio': {
-        return <Icon icon={TerminalIcon} />;
+        return (
+          <span className="anticon" role="img">
+            <TerminalIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        );
       }
       default: {
-        return <Icon icon={CloudIcon} />;
+        return (
+          <span className="anticon" role="img">
+            <CloudIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        );
       }
     }
   };
@@ -117,7 +136,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
         return {
           key: String(index),
           title: (
-            <Flexbox>
+            <div className="flex flex-col">
               <Title
                 icon={<InstallationIcon size={20} type={item.installationMethod} />}
                 id={`deployment-${index}`}
@@ -141,7 +160,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                   {item.description && markdownToTxt(item.description)}
                 </CollapseDesc>
               }
-            </Flexbox>
+            </div>
           ),
           children: (
             <CollapseLayout
@@ -161,21 +180,28 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                     <>
                       <p style={{ margin: 0 }}>{item.description}</p>
                       {setupSteps && setupSteps.length > 0 && (
-                        <Steps
-                          progressDot
-                          current={-1}
-                          direction="vertical"
-                          size={'small'}
+                        <Stepper
+                          defaultValue={0}
+                          orientation={'vertical'}
                           style={{ marginTop: 12 }}
-                          items={setupSteps.map((i) => ({
-                            title: <p style={{ color: cssVar.colorText }}>{i}</p>,
-                          }))}
-                        />
+                        >
+                          <StepperNav>
+                            {setupSteps.map((i, index) => (
+                              <StepperItem key={index} step={index + 1}>
+                                <StepperTrigger>
+                                  <StepperIndicator />
+                                  <StepperTitle>
+                                    <p style={{ color: cssVar.colorText, margin: 0 }}>{i}</p>
+                                  </StepperTitle>
+                                </StepperTrigger>
+                                {index < setupSteps.length - 1 && <StepperSeparator />}
+                              </StepperItem>
+                            ))}
+                          </StepperNav>
+                        </Stepper>
                       )}
                       {item.connection.command && (
-                        <Snippet language={'shell'} prefix={'$'}>
-                          {installCommand}
-                        </Snippet>
+                        <CodeBlock code={`$ ${installCommand}`} language={'shell'} />
                       )}
                     </>
                   ),
@@ -211,12 +237,17 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                         {
                           dataIndex: 'required',
                           render: (_, record) => (
-                            <Icon
-                              icon={record.required ? CheckIcon : MinusIcon}
-                              color={
-                                record.required ? cssVar.colorSuccess : cssVar.colorTextDescription
-                              }
-                            />
+                            <span className="anticon" role="img">
+                              {createElement(record.required ? CheckIcon : MinusIcon, {
+                                size = '1em',
+                                width = '1em',
+                                height = '1em',
+                                color = record.required
+                                  ? cssVar.colorSuccess
+                                  : cssVar.colorTextDescription,
+                                fill = 'transparent',
+                              })}
+                            </span>
                           ),
                           title: t('mcp.details.deployment.table.required'),
                         },
@@ -240,7 +271,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                           key: `system-dependency-${i}`,
                           label: dep.name,
                           value: (
-                            <Flexbox horizontal align="center" gap={8}>
+                            <div className="flex flex-row items-center gap-2">
                               <span
                                 style={{
                                   fontFamily: cssVar.fontFamilyCode,
@@ -250,10 +281,16 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                                 {dep.requiredVersion || 'installed'}
                               </span>
                               {dep.installInstructions && (
-                                <Popover
-                                  trigger="hover"
-                                  content={
-                                    <Flexbox gap={8}>
+                                <Popover openOnHover>
+                                  <PopoverTrigger render={<span />}>
+                                    <ActionIcon
+                                      color={cssVar.colorTextDescription}
+                                      icon={DownloadIcon}
+                                      size={'small'}
+                                    />
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-3">
+                                    <div className="flex flex-col gap-2">
                                       <Descriptions
                                         rows={1}
                                         items={Object.entries(dep.installInstructions).map(
@@ -276,7 +313,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                                       />
                                       {dep.checkCommand && (
                                         <>
-                                          <Divider style={{ margin: 0 }} />
+                                          <Separator />
                                           <Descriptions
                                             rows={1}
                                             items={[
@@ -294,17 +331,11 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                                           />
                                         </>
                                       )}
-                                    </Flexbox>
-                                  }
-                                >
-                                  <ActionIcon
-                                    color={cssVar.colorTextDescription}
-                                    icon={DownloadIcon}
-                                    size={'small'}
-                                  />
+                                    </div>
+                                  </PopoverContent>
                                 </Popover>
                               )}
-                            </Flexbox>
+                            </div>
                           ),
                         };
                       })}

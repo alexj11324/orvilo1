@@ -1,16 +1,35 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
-import { Descriptions, Divider } from 'antd';
 import dayjs from 'dayjs';
 import { BoltIcon, DownloadIcon } from 'lucide-react';
+import type { CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
 import { type FileListItem } from '@/types/files';
 import { downloadFile } from '@/utils/client/downloadFile';
 import { formatSize } from '@/utils/format';
+
+const descriptionRowStyle: CSSProperties = { width: 120 };
+
+const DescriptionRows = ({
+  items,
+}: {
+  items: { children?: ReactNode; key: string; label?: ReactNode }[];
+}) => (
+  <div className="flex flex-col gap-1">
+    {items.map((item) => (
+      <div className="flex flex-row items-center text-sm" key={item.key}>
+        <span className="text-muted-foreground" style={descriptionRowStyle}>
+          {item.label}
+        </span>
+        <span>{item.children}</span>
+      </div>
+    ))}
+  </div>
+);
 
 interface FileDetailProps extends FileListItem {
   showDownloadButton?: boolean;
@@ -57,7 +76,14 @@ const FileDetail = memo<FileDetailProps>((props) => {
   const dataItems = [
     {
       children: chunkCount ? (
-        <Tag icon={<Icon icon={BoltIcon} />} variant={'filled'}>
+        <Tag
+          variant={'filled'}
+          icon={
+            <span className="anticon" role="img">
+              <BoltIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          }
+        >
           {' '}
           {chunkCount}
         </Tag>
@@ -79,16 +105,11 @@ const FileDetail = memo<FileDetailProps>((props) => {
   ];
 
   return (
-    <Flexbox>
-      <Descriptions
-        colon={false}
-        column={1}
-        items={items}
-        labelStyle={{ width: 120 }}
-        size={'small'}
-        title={showTitle ? t('detail.basic.title') : undefined}
-        extra={
-          showDownloadButton && url ? (
+    <div className="flex flex-col">
+      {showTitle || (showDownloadButton && url) ? (
+        <div className="flex flex-row items-center justify-between">
+          {showTitle ? <span className="font-medium">{t('detail.basic.title')}</span> : <span />}
+          {showDownloadButton && url ? (
             <ActionIcon
               icon={DownloadIcon}
               title={t('download', { ns: 'common' })}
@@ -96,18 +117,13 @@ const FileDetail = memo<FileDetailProps>((props) => {
                 downloadFile(url, name);
               }}
             />
-          ) : undefined
-        }
-      />
-      <Divider />
-      <Descriptions
-        colon={false}
-        column={1}
-        items={dataItems}
-        labelStyle={{ width: 120 }}
-        size={'small'}
-      />
-    </Flexbox>
+          ) : null}
+        </div>
+      ) : null}
+      <DescriptionRows items={items} />
+      <Separator />
+      <DescriptionRows items={dataItems} />
+    </div>
   );
 });
 

@@ -1,14 +1,22 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Avatar, SkeletonAvatar, SkeletonText, Tag, Text } from '@lobehub/ui/base-ui';
-import { Popconfirm } from 'antd';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogConfirm,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import type { PermissionResourceType, ResourceCollaborator } from '@/services/resourcePermission';
 
 import { useAccessLevelOptions } from '../useAccessLevelOptions';
@@ -52,21 +60,21 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
 
   if (isLoading)
     return (
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         {[0, 1].map((key) => (
-          <Flexbox horizontal align={'center'} className={styles.row} gap={12} key={key}>
+          <div className={cx('flex flex-row items-center gap-3', styles.row)} key={key}>
             <SkeletonAvatar size={32} />
             <SkeletonText style={{ marginBottom: 0, width: 160 }} />
-          </Flexbox>
+          </div>
         ))}
-      </Flexbox>
+      </div>
     );
 
   if (!collaborators || collaborators.length === 0)
     return <div className={styles.empty}>{t('permission.collaborators.empty')}</div>;
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       {collaborators.map((collaborator) => {
         const name = displayName(collaborator);
         const email = collaborator.user?.email;
@@ -75,15 +83,12 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
         )?.label;
 
         return (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.row}
-            gap={12}
+          <div
+            className={cx('flex flex-row items-center gap-3', styles.row)}
             key={collaborator.userId}
           >
             <Avatar avatar={collaborator.user?.avatar || undefined} size={32} title={name} />
-            <Flexbox flex={1} style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
               <Text ellipsis weight={500}>
                 {name}
               </Text>
@@ -92,28 +97,40 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
                   {email}
                 </Text>
               ) : null}
-            </Flexbox>
+            </div>
             {levelLabel ? <Tag>{levelLabel}</Tag> : null}
-            <Popconfirm
-              arrow={false}
-              cancelText={t('cancel', { ns: 'common' })}
-              okButtonProps={{ danger: true }}
-              okText={t('permission.collaborators.remove')}
-              placement={'topRight'}
-              title={t('permission.collaborators.removeConfirmTitle', { name })}
-              onConfirm={() => void removeCollaborator(collaborator.userId)}
-            >
-              <ActionIcon
-                disabled={mutating}
-                icon={XIcon}
-                size={'small'}
-                title={t('permission.collaborators.remove')}
+            <AlertDialog>
+              <AlertDialogTrigger
+                render={
+                  <ActionIcon
+                    disabled={mutating}
+                    icon={XIcon}
+                    size={'small'}
+                    title={t('permission.collaborators.remove')}
+                  />
+                }
               />
-            </Popconfirm>
-          </Flexbox>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {t('permission.collaborators.removeConfirmTitle', { name })}
+                  </AlertDialogTitle>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
+                  <AlertDialogConfirm
+                    variant="destructive"
+                    onClick={() => void removeCollaborator(collaborator.userId)}
+                  >
+                    {t('permission.collaborators.remove')}
+                  </AlertDialogConfirm>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,11 +1,12 @@
-import { Markdown, Snippet } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Select, Tag } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { CodeBlock } from '@/components/reui/code-block';
+import { Separator } from '@/components/ui/separator';
 import { OFFICIAL_SITE } from '@/const/url';
 
 import { useDetailContext } from '../../DetailProvider';
@@ -56,25 +57,25 @@ const GithubBadge = memo(() => {
         value={selectedStyle}
         onChange={setSelectedStyle}
       />
-      <Snippet language={'md'} style={{ fontSize: 12 }} variant={'outlined'}>
-        {badgeLite}
-      </Snippet>
+      <CodeBlock code={badgeLite} language={'markdown'} style={{ fontSize: 12 }} />
       {}
       <img
         alt="MCP Badge"
         height={selectedStyle === 'for-the-badge' ? 28 : 20}
         src={styledBadgeUrl}
       />
-      <Divider style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>OR</Divider>
+      <div className="flex flex-row items-center gap-2">
+        <Separator className="flex-1" />
+        <span style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>OR</span>
+        <Separator className="flex-1" />
+      </div>
       <Select
         options={themeOptions}
         prefix={<Tag style={{ marginRight: 4 }}>theme</Tag>}
         value={selectedTheme}
         onChange={setSelectedTheme}
       />
-      <Snippet language={'md'} style={{ fontSize: 12 }} variant={'outlined'}>
-        {badge}
-      </Snippet>
+      <CodeBlock code={badge} language={'markdown'} style={{ fontSize: 12 }} />
       {}
       <img alt="MCP Badge" src={styledBadgeFullUrl} />
     </>

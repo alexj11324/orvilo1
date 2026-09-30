@@ -1,14 +1,15 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { copyToClipboard, Flexbox, Form } from '@lobehub/ui';
 import { Button, Switch, Tabs, toast } from '@lobehub/ui/base-ui';
 import { FORM_STYLE } from '@orvilo/const';
 import { type TopicExportMode } from '@orvilo/types';
 import { exportFile } from '@orvilo/utils/client';
+import { cx } from 'antd-style';
 import { CopyIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormItemProps } from '@/components/GroupForm';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useShareData } from '../ShareDataProvider';
 import { styles } from '../style';
@@ -116,9 +117,9 @@ const ShareJSON = memo(() => {
 
   return (
     <>
-      <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
+      <div className={cx('flex flex-row gap-4', styles.body)}>
         <Preview content={content} />
-        <Flexbox className={styles.sidebar} gap={12}>
+        <div className={cx('flex flex-col gap-3', styles.sidebar)}>
           <Form
             initialValues={DEFAULT_FIELD_VALUE}
             items={settings}
@@ -127,13 +128,9 @@ const ShareJSON = memo(() => {
             {...FORM_STYLE}
           />
           {!isMobile && button}
-        </Flexbox>
-      </Flexbox>
-      {isMobile && (
-        <Flexbox horizontal className={styles.footer} gap={8}>
-          {button}
-        </Flexbox>
-      )}
+        </div>
+      </div>
+      {isMobile && <div className={cx('flex flex-row gap-2', styles.footer)}>{button}</div>}
     </>
   );
 });

@@ -1,13 +1,14 @@
-import { Flexbox, FormItem, Input, InputPassword } from '@lobehub/ui';
 import { Alert, Button, RadioGroup } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
-import { Divider, Form } from 'antd';
 import isEqual from 'fast-deep-equal';
-import { useEffect, useState } from 'react';
+import { type ComponentProps, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import ErrorDetails from '@/features/MCP/MCPInstallProgress/InstallError/ErrorDetails';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useToolStore } from '@/store/tool';
@@ -49,6 +50,40 @@ const AUTH_CLIENT_ID = ['customParams', 'mcp', 'auth', 'clientId'];
 const AUTH_CLIENT_SECRET = ['customParams', 'mcp', 'auth', 'clientSecret'];
 // Headers-related constants
 const HEADERS = ['customParams', 'mcp', 'headers'];
+
+type LobeFormItemProps = ComponentProps<typeof Form.Item> & {
+  desc?: ReactNode;
+  layout?: 'horizontal' | 'vertical';
+  minWidth?: number | string;
+  tag?: ReactNode;
+};
+
+const FormItem = ({
+  children,
+  desc,
+  label,
+  layout: _layout,
+  minWidth,
+  tag,
+  ...rest
+}: LobeFormItemProps) => (
+  <Form.Item
+    label={
+      label || tag ? (
+        <div className="flex flex-col" style={{ minWidth }}>
+          <div className="flex flex-row items-center gap-2">
+            <span>{label}</span>
+            {tag}
+          </div>
+          {desc ? <span className="text-muted-foreground text-xs">{desc}</span> : null}
+        </div>
+      ) : undefined
+    }
+    {...rest}
+  >
+    {children}
+  </Form.Item>
+);
 
 const MCPManifestForm = ({
   form,
@@ -189,7 +224,7 @@ const MCPManifestForm = ({
         }}
       />
       <Form form={form} layout={'vertical'}>
-        <Flexbox>
+        <div className="flex flex-col">
           <Form.Item
             initialValue={'http'}
             label={t('dev.mcp.type.title')}
@@ -282,9 +317,10 @@ const MCPManifestForm = ({
                   name={AUTH_TOKEN}
                   rules={[{ message: t('dev.mcp.auth.token.required'), required: true }]}
                 >
-                  <InputPassword
+                  <Input
                     autoComplete="new-password"
                     placeholder={t('dev.mcp.auth.token.placeholder')}
+                    type={'password'}
                   />
                 </FormItem>
               )}
@@ -302,9 +338,10 @@ const MCPManifestForm = ({
                     label={t('dev.mcp.auth.oauth.clientSecret.label')}
                     name={AUTH_CLIENT_SECRET}
                   >
-                    <InputPassword
+                    <Input
                       autoComplete="new-password"
                       placeholder={t('dev.mcp.auth.oauth.clientSecret.placeholder')}
+                      type={'password'}
                     />
                   </FormItem>
                   <div
@@ -371,7 +408,7 @@ const MCPManifestForm = ({
             </>
           )}
           <FormItem colon={false} label={t('dev.mcp.testConnectionTip')} layout={'horizontal'}>
-            <Flexbox horizontal align={'center'} gap={8} justify={'flex-end'}>
+            <div className="flex flex-row items-center gap-2 justify-end">
               <Button
                 loading={isTesting}
                 type={!!mcpType ? 'primary' : undefined}
@@ -379,7 +416,7 @@ const MCPManifestForm = ({
               >
                 {isOAuth ? t('dev.mcp.auth.oauth.authorize') : t('dev.mcp.testConnection')}
               </Button>
-            </Flexbox>
+            </div>
           </FormItem>
           {(connectionError || testState.error) && (
             <Alert
@@ -395,7 +432,7 @@ const MCPManifestForm = ({
             />
           )}
           <FormItem noStyle name={'manifest'} />
-          <Divider />
+          <Separator />
           <FormItem
             desc={t('dev.mcp.desc.desc')}
             label={t('dev.mcp.desc.label')}
@@ -411,7 +448,7 @@ const MCPManifestForm = ({
           >
             <Input placeholder={'https://plugin-avatar.com'} />
           </FormItem>
-        </Flexbox>
+        </div>
       </Form>
     </>
   );

@@ -1,10 +1,9 @@
 'use client';
 
-import { Center, Empty, Flexbox, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Alert, Button, confirmModal, Popover, Text, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { SavedViewVisibility, WorkQuery } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { FilterIcon, PanelRightCloseIcon, PanelRightOpenIcon, Settings2Icon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -16,6 +15,8 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
@@ -175,16 +176,16 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
   const status = resolveProjectStatus(project.status);
 
   return (
-    <Flexbox horizontal align="center" className={styles.row}>
+    <div className={cx('flex flex-row items-center', styles.row)}>
       <WorkspaceLink className={styles.link} to={savedViewProjectPath(project)}>
-        <Tooltip title={t(`status.${status}`)}>
+        <SimpleTooltip title={t(`status.${status}`)}>
           <ProjectStatusIcon size={16} status={status} />
-        </Tooltip>
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
+        </SimpleTooltip>
+        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
           <Text ellipsis weight={500}>
             {project.name}
           </Text>
-        </Flexbox>
+        </div>
         {project.identifier ? (
           <Text className={styles.identifier} fontSize={12}>
             {project.identifier}
@@ -200,7 +201,7 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
           </Text>
         ) : null}
       </WorkspaceLink>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -220,12 +221,12 @@ const SavedViewProjectBoard = memo<{
 }>(({ groups, loadMoreGroupErrors, loadMoreLabel, onLoadMoreGroup, onRetryLoadMoreGroup }) => {
   const { t } = useTranslation('project');
   return (
-    <Flexbox horizontal align="flex-start" gap={12} style={{ overflowX: 'auto' }}>
+    <div className="flex flex-row items-start gap-3" style={{ overflowX: 'auto' }}>
       {groups.map((group) => {
         const status = resolveProjectStatus(group.key);
         return (
-          <Flexbox className={styles.boardColumn} key={group.key}>
-            <Flexbox horizontal className={styles.boardColumnHeader}>
+          <div className={cx('flex flex-col', styles.boardColumn)} key={group.key}>
+            <div className={cx('flex flex-row', styles.boardColumnHeader)}>
               <ProjectStatusIcon size={14} status={status} />
               <Text fontSize={13} weight={500}>
                 {t(`status.${status}`)}
@@ -233,8 +234,8 @@ const SavedViewProjectBoard = memo<{
               <Text fontSize={12} type="secondary">
                 {group.total}
               </Text>
-            </Flexbox>
-            <Flexbox className={styles.boardColumnBody}>
+            </div>
+            <div className={cx('flex flex-col', styles.boardColumnBody)}>
               {group.tasks.map((project) => (
                 <SavedViewProjectRow key={project.id} project={project} />
               ))}
@@ -249,11 +250,11 @@ const SavedViewProjectBoard = memo<{
                   {loadMoreLabel}
                 </Button>
               ) : null}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -659,7 +660,7 @@ const SavedViewPage = memo(() => {
           </Text>
         }
         right={
-          <Flexbox horizontal gap={8}>
+          <div className="flex flex-row gap-2">
             <WorkFavoriteButton targetId={viewId} targetType="savedView" />
             {view ? (
               <SavedViewActionsMenu
@@ -681,17 +682,15 @@ const SavedViewPage = memo(() => {
                 onSave={saveView}
               />
             ) : null}
-          </Flexbox>
+          </div>
         }
       />
       <WorkSurfaceToolbar>
         <Text fontSize={12} type="secondary">
           {t('savedViews.resultCount', { count: evaluation?.total ?? 0 })}
         </Text>
-        <Flexbox
-          horizontal
-          align="center"
-          gap={6}
+        <div
+          className="flex flex-row items-center gap-1.5"
           style={{ flex: 'none', marginInlineStart: 'auto' }}
         >
           {isOwner && draft ? (
@@ -701,9 +700,9 @@ const SavedViewPage = memo(() => {
                 placement="bottomRight"
                 trigger="click"
                 content={
-                  <Flexbox className={styles.controlPopover} gap={12}>
+                  <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
-                    <Flexbox horizontal gap={8} justify="flex-end">
+                    <div className="flex flex-row gap-2 justify-end">
                       <Button size="small" onClick={cancelDraft}>
                         {t('cancel')}
                       </Button>
@@ -715,8 +714,8 @@ const SavedViewPage = memo(() => {
                       >
                         {t('save')}
                       </Button>
-                    </Flexbox>
-                  </Flexbox>
+                    </div>
+                  </div>
                 }
                 onOpenChange={(open) => handleControlOpenChange('filters', open)}
               >
@@ -733,9 +732,9 @@ const SavedViewPage = memo(() => {
                 placement="bottomRight"
                 trigger="click"
                 content={
-                  <Flexbox className={styles.controlPopover} gap={12}>
+                  <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
-                    <Flexbox horizontal gap={8} justify="flex-end">
+                    <div className="flex flex-row gap-2 justify-end">
                       <Button size="small" onClick={cancelDraft}>
                         {t('cancel')}
                       </Button>
@@ -747,8 +746,8 @@ const SavedViewPage = memo(() => {
                       >
                         {t('save')}
                       </Button>
-                    </Flexbox>
-                  </Flexbox>
+                    </div>
+                  </div>
                 }
                 onOpenChange={(open) => handleControlOpenChange('display', open)}
               >
@@ -772,7 +771,7 @@ const SavedViewPage = memo(() => {
             )}
             onClick={() => setDetailsOpen((open) => !open)}
           />
-        </Flexbox>
+        </div>
       </WorkSurfaceToolbar>
       <div className={styles.detailLayout}>
         <div className={styles.resultsScroll}>
@@ -782,7 +781,10 @@ const SavedViewPage = memo(() => {
               boardActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : undefined
             }
           >
-            <Flexbox gap={12} style={boardActive ? { flex: 1, minHeight: 0 } : undefined}>
+            <div
+              className="flex flex-col gap-3"
+              style={boardActive ? { flex: 1, minHeight: 0 } : undefined}
+            >
               {conflict ? (
                 <Alert
                   showIcon
@@ -790,14 +792,14 @@ const SavedViewPage = memo(() => {
                   title={t('savedViews.conflictTitle')}
                   type="warning"
                   action={
-                    <Flexbox horizontal gap={8}>
+                    <div className="flex flex-row gap-2">
                       <Button size="small" onClick={reloadDraft}>
                         {t('savedViews.conflictReload')}
                       </Button>
                       <Button size="small" onClick={() => void saveCopy()}>
                         {t('savedViews.saveAs')}
                       </Button>
-                    </Flexbox>
+                    </div>
                   }
                 />
               ) : null}
@@ -820,10 +822,10 @@ const SavedViewPage = memo(() => {
                 isLoading ? (
                   <Text type="secondary">{t('savedViews.loading')}</Text>
                 ) : (
-                  <Empty description={t('savedViews.needsRepairEmpty')} />
+                  <SimpleEmpty description={t('savedViews.needsRepairEmpty')} />
                 )
               ) : view?.entityType === 'project' ? (
-                <Flexbox gap={16}>
+                <div className="flex flex-col gap-4">
                   {isLoading ? (
                     <SkeletonList aria-label={t('savedViews.loading')} rows={8} />
                   ) : projectBoard ? (
@@ -837,18 +839,18 @@ const SavedViewPage = memo(() => {
                       }
                     />
                   ) : projectRows.length === 0 ? (
-                    <Center flex={1} padding={48}>
-                      <Empty
+                    <div className="flex flex-col items-center justify-center flex-1 p-12">
+                      <SimpleEmpty
                         description={t('savedViews.emptyResults')}
                         icon={PROJECT_ENTITY_ICON}
                       />
-                    </Center>
+                    </div>
                   ) : (
-                    <Flexbox gap={2}>
+                    <div className="flex flex-col gap-0.5">
                       {projectRows.map((project) => (
                         <SavedViewProjectRow key={project.id} project={project} />
                       ))}
-                    </Flexbox>
+                    </div>
                   )}
                   {pagedMore.loadMoreError ? (
                     <AsyncError
@@ -858,13 +860,13 @@ const SavedViewPage = memo(() => {
                     />
                   ) : null}
                   {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
-                    <Flexbox horizontal justify="center">
+                    <div className="flex flex-row justify-center">
                       <Button size="small" onClick={() => pagedMore.runLoadMore(loadMore)}>
                         {t('savedViews.loadMore')}
                       </Button>
-                    </Flexbox>
+                    </div>
                   ) : null}
-                </Flexbox>
+                </div>
               ) : (
                 <WorkQueryResults
                   emptyLabel={t('savedViews.emptyResults')}
@@ -896,7 +898,7 @@ const SavedViewPage = memo(() => {
                   }
                 />
               )}
-            </Flexbox>
+            </div>
           </div>
         </div>
         {detailsOpen && view ? (

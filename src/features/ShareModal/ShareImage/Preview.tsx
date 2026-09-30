@@ -1,4 +1,4 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type ConversationContext, type UIChatMessage } from '@orvilo/types';
 import { cx } from 'antd-style';
@@ -101,12 +101,14 @@ const Preview = memo<PreviewProps>(
         )}
       >
         <div className={withBackground ? styles.background : undefined} id={previewId}>
-          <Flexbox
-            className={cx(styles.container, withBackground && styles.container_withBackground_true)}
-            gap={16}
+          <div
+            className={cx(
+              'flex flex-col gap-4',
+              cx(styles.container, withBackground && styles.container_withBackground_true),
+            )}
           >
             <div className={styles.header}>
-              <Flexbox horizontal align={'center'} gap={12}>
+              <div className="flex flex-row items-center gap-3">
                 <Avatar
                   avatar={displayAvatar}
                   background={displayBackgroundColor}
@@ -117,13 +119,13 @@ const Preview = memo<PreviewProps>(
                 <Text strong fontSize={16}>
                   {displayTitle}
                 </Text>
-                <Flexbox horizontal gap={4}>
+                <div className="flex flex-row gap-1">
                   <ModelTag model={displayModel} />
                   {withPluginInfo && displayPlugins?.length > 0 && (
                     <PluginTag plugins={displayPlugins} />
                   )}
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
               {withSystemRole && systemRole && (
                 <div className={styles.role}>
                   <Markdown variant={'chat'}>{systemRole}</Markdown>
@@ -132,14 +134,14 @@ const Preview = memo<PreviewProps>(
             </div>
             <ChatList context={context} ids={[]} messages={messages} />
             {withFooter ? (
-              <Flexbox align={'center'} className={styles.footer} gap={4}>
+              <div className={cx('flex flex-col items-center gap-1', styles.footer)}>
                 <ProductLogo type={'combine'} />
                 <div className={styles.url}>{pkg.homepage}</div>
-              </Flexbox>
+              </div>
             ) : (
               <div />
             )}
-          </Flexbox>
+          </div>
         </div>
       </div>
     );

@@ -2,6 +2,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDetailContext } from '../DetailProvider';
+import Block from './Block';
 import Prompts from './Prompts';
 import Resources from './Resources';
 import Tools from './Tools';
@@ -18,8 +19,7 @@ const Schema = memo(() => {
 
   return (
     <div className="flex flex-col" style={{ gap: 40 }}>
-      <div
-        className="flex flex-col"
+      <Block
         count={toolsCount || 0}
         desc={t('mcp.details.schema.tools.desc')}
         id={'tools'}
@@ -28,10 +28,9 @@ const Schema = memo(() => {
         title={t('mcp.details.schema.tools.title')}
       >
         <Tools activeKey={toolsActiveKey} mode={toolsMode} setActiveKey={setToolsActiveKey} />
-      </div>
+      </Block>
 
-      <div
-        className="flex flex-col"
+      <Block
         count={promptsCount || 0}
         desc={t('mcp.details.schema.prompts.desc')}
         id={'prompts'}
@@ -44,10 +43,9 @@ const Schema = memo(() => {
           mode={promptsMode}
           setActiveKey={setPromptsActiveKey}
         />
-      </div>
+      </Block>
 
-      <div
-        className="flex flex-col"
+      <Block
         count={resourcesCount || 0}
         desc={t('mcp.details.schema.resources.desc')}
         id={'resources'}
@@ -56,7 +54,7 @@ const Schema = memo(() => {
         title={t('mcp.details.schema.resources.title')}
       >
         <Resources mode={resourcesMode} />
-      </div>
+      </Block>
     </div>
   );
 });

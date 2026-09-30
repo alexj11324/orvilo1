@@ -1,13 +1,16 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { ActionIcon, Avatar, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { CircleIcon, DotIcon, DownloadIcon, ScaleIcon, StarIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import OfficialIcon from '@/components/OfficialIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import Scores from '@/features/MCP/Scores';
 import { getLanguageColor, getRecommendedDeployment } from '@/features/MCP/utils';
@@ -77,7 +80,8 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
   );
 
   const cateButton = (
-    <Button disabled icon={cate?.icon} size={'middle'}>
+    <Button disabled>
+      {cate?.icon ? <cate.icon size={16} /> : null}
       {cate?.label}
     </Button>
   );
@@ -106,14 +110,13 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
                 position: 'relative',
               }}
             >
-              <Text
-                ellipsis
-                as={'h1'}
+              <h1
+                className="truncate"
                 style={{ fontSize: inModal ? 20 : mobile ? 18 : 24, margin: 0 }}
                 title={identifier}
               >
                 {name}
-              </Text>
+              </h1>
               {isOfficial && (
                 <SimpleTooltip title={t('isOfficial')}>
                   <OfficialIcon size={24} />
@@ -149,7 +152,7 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
             ) : (
               <span>{author?.name}</span>
             )}
-            {isClaimed && <Tag size={'small'}>{t('isClaimed')}</Tag>}
+            {isClaimed && <Badge variant="secondary">{t('isClaimed')}</Badge>}
             <span className="anticon" role="img">
               <DotIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
             </span>

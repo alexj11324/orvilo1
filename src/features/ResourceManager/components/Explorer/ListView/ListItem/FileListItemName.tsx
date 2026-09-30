@@ -80,7 +80,6 @@ const FileListItemName = ({
     {isRenaming && isFolder ? (
       <Input
         ref={inputRef}
-        size="small"
         style={{ flex: 1, maxWidth: 400 }}
         value={renamingValue}
         onBlur={onRenameConfirm}

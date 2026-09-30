@@ -30,7 +30,8 @@ import {
 } from '@/features/ResourceManager/DndContextWrapper';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { type NativeContextMenuItem, showContextMenu } from '@/libs/contextMenu';
+import { showContextMenu } from '@/libs/contextMenu';
+import { type NativeContextMenuItem } from '@/libs/contextMenu/types';
 import type { TreeItem } from '@/store/tree';
 import { useTreeStore } from '@/store/tree';
 

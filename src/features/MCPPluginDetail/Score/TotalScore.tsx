@@ -1,4 +1,3 @@
-import { Progress } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
@@ -258,18 +257,20 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
             openOnHover
             render={
               <span style={{ display: 'inline-flex' }}>
-                <Progress
-                  percent={Math.round(percentage)}
-                  showInfo={false}
-                  size={8}
-                  strokeColor={
-                    percentage < 60
-                      ? SEGMENT_COLORS.F_COLOR
-                      : percentage < 80
-                        ? SEGMENT_COLORS.B_COLOR
-                        : SEGMENT_COLORS.A_COLOR
-                  }
-                />
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      backgroundColor:
+                        percentage < 60
+                          ? SEGMENT_COLORS.F_COLOR
+                          : percentage < 80
+                            ? SEGMENT_COLORS.B_COLOR
+                            : SEGMENT_COLORS.A_COLOR,
+                      width: `${Math.round(percentage)}%`,
+                    }}
+                  />
+                </div>
               </span>
             }
           />

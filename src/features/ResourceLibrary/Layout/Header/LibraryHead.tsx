@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import BusinessKnowledgeBaseImportAction from '@/business/client/BusinessKnowledgeBaseImportAction';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import ActionIcon from '@/components/ActionIcon';
-import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import LibraryStatusIcon from '@/components/LibIcon/StatusIcon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDragActive } from '@/features/ResourceManager/DndContextWrapper';
@@ -109,7 +109,7 @@ const Head = memo<{ id: string }>(({ id }) => {
         key: library.id,
         label: library.name,
         onClick: () => handleLibrarySwitch(library.id),
-        style: library.id === id ? { backgroundColor: 'var(--ant-control-item-bg-active)' } : {},
+        className: library.id === id ? 'bg-[var(--ant-control-item-bg-active)]' : undefined,
       },
       visibility: library.visibility,
     }));

@@ -4,7 +4,7 @@ import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRightIcon, FileIcon, FolderIcon, type LucideIcon } from 'lucide-react';
-import type React from 'react';
+import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 
 import {

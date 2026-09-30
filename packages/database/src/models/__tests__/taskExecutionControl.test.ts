@@ -281,9 +281,12 @@ describe('canonical durable runtime handoff', () => {
       runtimeRegistrationId: i.successorRegistrationId,
     };
     const stopped = await model().stop(successor);
+    if (!stopped) throw new Error('Successor stop did not return the fenced dispatch');
     expect(stopped.phase).toBe('cancel_requested');
     expect(stopped.fence).toBe(b.dispatchFence + 1);
-    expect((await model().stop(successor)).fence).toBe(stopped.fence);
+    const replayedStop = await model().stop(successor);
+    if (!replayedStop) throw new Error('Repeated stop lost the fenced dispatch');
+    expect(replayedStop.fence).toBe(stopped.fence);
     expect((await model().readControl(successor))?.control?.state).toBe('stopped');
   });
 
@@ -312,6 +315,7 @@ describe('canonical durable runtime handoff', () => {
       .where(eq(executionGrants.id, b.grantId));
     await expect(model().renew(b, 60_000)).rejects.toThrow();
     const stopped = await model().stop(b);
+    if (!stopped) throw new Error('Revoked owner cleanup did not return the fenced dispatch');
     expect(stopped.phase).toBe('cancel_requested');
     expect(stopped.fence).toBe(b.dispatchFence + 1);
     expect((await model().readControl(b))?.control?.state).toBe('stopped');
@@ -423,6 +427,13 @@ describe('canonical durable runtime handoff', () => {
       const i = intent();
       const phases = ['prepared', 'quiescing', 'quiescent', 'transferred', 'resumed'] as const;
       for (const phase of phases) {
+        // A test child allowlist is not the application's augmented ambient environment.
+        const childEnvironment: Record<string, string | undefined> = {
+          PATH: process.env.PATH,
+          NODE_ENV: 'test',
+          DATABASE_TEST_URL: process.env.DATABASE_TEST_URL,
+          HANDOFF_CRASH_INPUT: JSON.stringify({ binding: b, intent: i, stage: phase }),
+        };
         const child = spawn(
           process.execPath,
           [
@@ -433,12 +444,7 @@ describe('canonical durable runtime handoff', () => {
           {
             cwd: fileURLToPath(new URL('../../../../..', import.meta.url)),
             stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
-            env: {
-              PATH: process.env.PATH,
-              NODE_ENV: 'test',
-              DATABASE_TEST_URL: process.env.DATABASE_TEST_URL,
-              HANDOFF_CRASH_INPUT: JSON.stringify({ binding: b, intent: i, stage: phase }),
-            } as NodeJS.ProcessEnv,
+            env: childEnvironment as NodeJS.ProcessEnv,
           },
         );
         let errors = '';

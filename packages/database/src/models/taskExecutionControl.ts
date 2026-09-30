@@ -40,9 +40,9 @@ export interface RuntimeIdentity {
   supervisorId: string;
   treeId: string;
 }
-const fail = (message: string): never => {
+function fail(message: string): never {
   throw new Error(message);
-};
+}
 const bounded = (value: number) => Number.isSafeInteger(value) && value > 0 && value <= 300_000;
 
 /** Canonical process ownership on task_topics. History is not another live authority.

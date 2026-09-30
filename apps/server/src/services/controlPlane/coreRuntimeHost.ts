@@ -267,6 +267,11 @@ export class CanonicalCoreRuntimeHost {
     }
   }
 
+  /** Read after the asynchronous launch callback has persisted its result. */
+  private registeredIsolation(): IsolationEvidence | undefined {
+    return this.journal.isolation;
+  }
+
   async start(): Promise<ControlResult<RuntimeSession>> {
     if (
       this.starting ||
@@ -290,13 +295,14 @@ export class CanonicalCoreRuntimeHost {
         workspace: this.options.docker.workspace,
       });
       if (result.ok) {
-        if (!this.journal.isolation) return failure('Runtime isolation registration unavailable');
+        const isolation = this.registeredIsolation();
+        if (!isolation) return failure('Runtime isolation registration unavailable');
         this.journal.session = result.value;
         try {
           await this.persist();
           const identity = {
-            treeId: this.journal.isolation.treeId,
-            supervisorId: this.journal.isolation.supervisorId,
+            treeId: isolation.treeId,
+            supervisorId: isolation.supervisorId,
             sessionId: result.value.sessionId,
           };
           if (checked.value.activeHandoffId) {
@@ -315,14 +321,14 @@ export class CanonicalCoreRuntimeHost {
           );
           if (
             reconciled.ok &&
-            reconciled.value.treeId === this.journal.isolation.treeId &&
-            reconciled.value.supervisorId === this.journal.isolation.supervisorId &&
+            reconciled.value.treeId === isolation.treeId &&
+            reconciled.value.supervisorId === isolation.supervisorId &&
             reconciled.value.sessionId === result.value.sessionId
           ) {
             this.session = result.value;
             return result;
           }
-          const stopped = await this.supervisor.terminate(this.journal.isolation.treeId);
+          const stopped = await this.supervisor.terminate(isolation.treeId);
           if (!stopped.ok) return stopped;
           return failure('Runtime activation did not commit; admission remains closed');
         }

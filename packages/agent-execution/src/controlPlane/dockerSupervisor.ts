@@ -10,7 +10,7 @@ const execute = promisify(execFile);
 // The application's ProcessEnv augmentation describes its ambient process, not
 // a child allowlist. Do not inherit ambient credentials to satisfy that type.
 const dockerClientEnvironment = () =>
-  ({ PATH: '/usr/bin:/bin', HOME: '/nonexistent' }) as NodeJS.ProcessEnv;
+  ({ PATH: '/usr/bin:/bin', HOME: '/nonexistent' }) as unknown as NodeJS.ProcessEnv;
 const fail = (message: string): ControlResult<never> => ({
   ok: false,
   error: { code: 'isolation_unavailable', message, retryable: false },

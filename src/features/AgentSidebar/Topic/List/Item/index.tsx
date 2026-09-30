@@ -530,7 +530,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       >
         {metaCard ? (
           <PreviewCard.Root>
-            <PreviewCard.Trigger render={<div>{navItem}</div>} />
+            <PreviewCard.Trigger delay={800} render={<div>{navItem}</div>} />
             <PreviewCard.Portal>
               <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'right'} sideOffset={4}>
                 <PreviewCard.Popup

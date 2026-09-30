@@ -1,9 +1,11 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { Link } from 'react-router';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -38,30 +40,37 @@ const Body = memo(() => {
   return (
     <>
       {groups.map((group) => (
-        <SidebarGroup key={group.key}>
-          <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-0.25">
-              {group.items.map((item) => {
-                const url = `/${slug}/settings/${item.key}`;
-                return (
-                  <NavItem
-                    active={activeTab === item.key}
-                    href={url}
-                    icon={item.icon}
-                    key={item.key}
-                    render={<Link to={url} />}
-                    title={item.label}
-                    onClick={(e) => {
-                      if (isModifierClick(e)) return;
-                      navigate(url);
-                    }}
-                  />
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <Collapsible defaultOpen className="group/collapsible" key={group.key}>
+          <SidebarGroup>
+            <SidebarGroupLabel render={<CollapsibleTrigger />}>
+              {group.title}
+              <ChevronDown className="ml-auto transition-transform group-data-[closed]/collapsible:-rotate-90" />
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.25">
+                  {group.items.map((item) => {
+                    const url = `/${slug}/settings/${item.key}`;
+                    return (
+                      <NavItem
+                        active={activeTab === item.key}
+                        href={url}
+                        icon={item.icon}
+                        key={item.key}
+                        render={<Link to={url} />}
+                        title={item.label}
+                        onClick={(e) => {
+                          if (isModifierClick(e)) return;
+                          navigate(url);
+                        }}
+                      />
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
       ))}
     </>
   );

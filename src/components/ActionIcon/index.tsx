@@ -13,7 +13,7 @@ type ActionIconSizeType = 'small' | 'middle' | 'large';
 interface ActionIconSizeConfig {
   blockSize?: number | string;
   borderRadius?: number | string;
-  size?: number;
+  size?: number | string;
   strokeWidth?: number;
 }
 
@@ -69,7 +69,7 @@ const toCss = (value: number | string): string =>
 function calcSize(iconSize: ActionIconSize | undefined): {
   blockSize: number | string;
   borderRadius: number | string;
-  iconSize: number;
+  iconSize: number | string;
   strokeWidth: number;
 } {
   if (typeof iconSize === 'number') {
@@ -98,7 +98,9 @@ function calcOutdent(iconSize: ActionIconSize | undefined): string {
   }
   if (iconSize) {
     const { blockSize, iconSize: glyph } = calcSize(iconSize);
-    if (typeof blockSize === 'number') return `${Math.max(0, (blockSize - glyph) / 2)}px`;
+    if (typeof blockSize === 'number' && typeof glyph === 'number') {
+      return `${Math.max(0, (blockSize - glyph) / 2)}px`;
+    }
     return `calc((${toCss(blockSize)} - ${toCss(glyph)}) / 2)`;
   }
   return '0.4em';

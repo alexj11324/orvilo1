@@ -12,7 +12,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 
-interface MemoryEmptyProps extends ComponentProps<'div'> {
+interface MemoryEmptyProps extends Omit<ComponentProps<'div'>, 'title'> {
   children?: ReactNode | ReactNode[];
   search?: boolean;
   title?: ReactNode;

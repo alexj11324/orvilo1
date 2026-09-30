@@ -3,6 +3,7 @@ import { type FC } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { MemoryListBoundary, useResetMemoryList } from '@/features/Memory';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -99,7 +100,7 @@ const PreferencesArea = memo(() => {
         id={SCROLL_PARENT_ID}
         style={{ height: '100%', width: '100%', overflowY: 'auto', paddingBottom: '16vh' }}
       >
-        <WideScreenContainer gap={32} paddingBlock={48}>
+        <WideScreenContainer wrapperStyle={{ gap: 32, paddingBlock: 48 }}>
           <FilterBar
             searchValue={searchValue}
             sortOptions={viewMode === 'grid' ? sortOptions : undefined}

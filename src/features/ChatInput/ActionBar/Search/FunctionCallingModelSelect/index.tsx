@@ -1,4 +1,5 @@
 import { createStaticStyles } from 'antd-style';
+import { type CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
@@ -28,10 +29,11 @@ interface ModelSelectProps {
   disabled?: boolean;
   onChange?: (props: WorkingModel) => void;
   showAbility?: boolean;
+  style?: CSSProperties;
   value?: WorkingModel;
 }
 
-const ModelSelect = memo<ModelSelectProps>(({ value, onChange, ...rest }) => {
+const ModelSelect = memo<ModelSelectProps>(({ value, onChange, style, ...rest }) => {
   const enabledList = useEnabledChatModels();
 
   const options = useMemo(() => {
@@ -76,12 +78,13 @@ const ModelSelect = memo<ModelSelectProps>(({ value, onChange, ...rest }) => {
         disabled={rest.disabled}
         value={`${value?.provider}/${value?.model}`}
         onValueChange={(v) => {
+          if (!v) return;
           const model = v.split('/').slice(1).join('/');
           const provider = v.split('/')[0];
           onChange?.({ model, provider });
         }}
       >
-        <SelectTrigger>
+        <SelectTrigger style={style}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent className={styles.select}>

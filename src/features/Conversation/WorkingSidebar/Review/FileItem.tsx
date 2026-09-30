@@ -201,7 +201,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
     const fileName = lastSlash >= 0 ? filePath.slice(lastSlash + 1) : filePath;
 
     const handleCopy = useCallback(
-      async (event: MouseEvent<HTMLDivElement>) => {
+      async (event: MouseEvent<HTMLElement>) => {
         // Stop propagation so the row doesn't toggle expand on copy click.
         event.stopPropagation();
         await copyToClipboard(filePath);
@@ -211,7 +211,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
     );
 
     const handleReveal = useCallback(
-      (event: MouseEvent<HTMLDivElement>) => {
+      (event: MouseEvent<HTMLElement>) => {
         event.stopPropagation();
         revealInFilesTab(filePath);
       },
@@ -219,7 +219,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
     );
 
     const handleRevert = useCallback(
-      (event: MouseEvent<HTMLDivElement>) => {
+      (event: MouseEvent<HTMLElement>) => {
         event.stopPropagation();
         if (!revertContext) return;
         confirmModal({

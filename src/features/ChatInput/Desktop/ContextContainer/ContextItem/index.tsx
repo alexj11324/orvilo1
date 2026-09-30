@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
 import ActionIcon from '@/components/ActionIcon';
 import ClosableBadge from '@/components/ClosableBadge';
-import { Progress } from '@/components/ui/progress';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useFileStore } from '@/store/file';
 import { type UploadFileItem } from '@/types/files/upload';
@@ -155,13 +154,30 @@ const ContextItem = memo<FileItemProps>((props) => {
                   className={styles.statusIcon}
                   role={'progressbar'}
                 >
-                  <Progress
-                    percent={progress ?? 0}
-                    showInfo={false}
-                    size={12}
-                    status={'normal'}
-                    type={'circle'}
-                  />
+                  <svg aria-hidden="true" height={12} viewBox={'0 0 12 12'} width={12}>
+                    <circle
+                      cx={6}
+                      cy={6}
+                      fill={'none'}
+                      r={5}
+                      stroke={cssVar.colorFillSecondary}
+                      strokeWidth={2}
+                    />
+                    <circle
+                      cx={6}
+                      cy={6}
+                      fill={'none'}
+                      r={5}
+                      stroke={cssVar.colorPrimary}
+                      strokeDasharray={2 * Math.PI * 5}
+                      strokeLinecap={'round'}
+                      strokeWidth={2}
+                      transform={'rotate(-90 6 6)'}
+                      strokeDashoffset={
+                        2 * Math.PI * 5 * (1 - Math.min(100, Math.max(0, progress ?? 0)) / 100)
+                      }
+                    />
+                  </svg>
                 </span>
               ) : (
                 <span className="anticon" role="img" style={{ color: cssVar.colorError }}>

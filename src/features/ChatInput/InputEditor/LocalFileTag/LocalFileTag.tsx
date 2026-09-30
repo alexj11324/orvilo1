@@ -8,6 +8,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClientDataSWR } from '@/libs/swr';
@@ -208,7 +209,7 @@ const LocalFileTagTrigger = memo<LocalFileTagTriggerProps>(
 
     return (
       <Badge
-        rest
+        {...rest}
         className={cx(styles.tag, className)}
         ref={setSpanRef}
         title={title}

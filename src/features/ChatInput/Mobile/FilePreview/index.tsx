@@ -22,10 +22,7 @@ const FilePreview = memo(() => {
   if (!list || list?.length === 0) return null;
 
   return (
-    <ScrollArea
-      className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}
-      orientation={'horizontal'}
-    >
+    <ScrollArea className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}>
       <div className="flex flex-row gap-1.5 py-2" style={{ paddingInline: expand ? 0 : 12 }}>
         <PreviewGroup>
           {list.map((i) => (

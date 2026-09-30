@@ -198,7 +198,10 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
                   type={type}
                 />
               </SafeBoundary>
-              <Separator dashed style={{ marginBottom: 0, marginTop: 8 }} />
+              <Separator
+                className={'bg-transparent border-t border-dashed'}
+                style={{ marginBottom: 0, marginTop: 8 }}
+              />
             </div>
           }
         </AccordionContent>

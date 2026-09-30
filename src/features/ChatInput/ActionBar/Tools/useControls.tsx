@@ -22,6 +22,8 @@ import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
+import SearchBar from '@/components/SearchBar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { openConnectorEditDrawer } from '@/features/Connectors/CustomConnectorModal/imperative';
@@ -1637,18 +1639,16 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   );
 
   const marketHeader = (
-    <SearchBar
-      allowClear
-      className="orvilo-skill-submenu-search"
-      placeholder={t('tools.search')}
-      size="small"
-      style={{ width: '100%' }}
-      value={searchKeyword}
-      variant="borderless"
-      onChange={(event) => setSearchKeyword(event.target.value)}
-      onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}
-    />
+    <div style={{ width: '100%' }} onClick={(event) => event.stopPropagation()}>
+      <SearchBar
+        className="orvilo-skill-submenu-search"
+        placeholder={t('tools.search')}
+        style={{ width: '100%' }}
+        value={searchKeyword}
+        onChange={(event) => setSearchKeyword(event.target.value)}
+        onKeyDown={(event) => event.stopPropagation()}
+      />
+    </div>
   );
 
   const marketFooter =

@@ -5,6 +5,7 @@ import { AgentRuntimeErrorType, getErrorCodeSpec } from '@orvilo/model-runtime';
 import { type ChatMessageError, type ErrorType, type IToolErrorType } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
+import { cssVar } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

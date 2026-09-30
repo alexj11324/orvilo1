@@ -119,7 +119,7 @@ const Inspectors = memo<InspectorProps>(
         : undefined;
 
     return (
-      <div allowShrink className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5">
         <StatusIndicator
           intervention={intervention}
           isToolExecuting={isToolCalling}

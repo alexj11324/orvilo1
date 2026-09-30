@@ -1,4 +1,5 @@
 import { type ToolIntervention } from '@orvilo/types';
+import { cssVar } from 'antd-style';
 import {
   BracesIcon,
   CircleAlertIcon,

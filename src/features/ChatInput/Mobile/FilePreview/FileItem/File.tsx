@@ -65,7 +65,6 @@ const FileItem = memo<FileItemProps>(
             <FileUploadErrorActions compact code={errorCode} />
           ) : status === 'error' ? (
             <ActionIcon
-              glass
               className={styles.deleteButton}
               icon={RotateCw}
               size={'small'}
@@ -76,7 +75,6 @@ const FileItem = memo<FileItemProps>(
             />
           ) : null}
           <ActionIcon
-            glass
             className={styles.deleteButton}
             icon={Trash}
             size={'small'}

@@ -47,7 +47,7 @@ const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string 
             flex: 'none',
             height: 16,
             border: `1px solid ${cssVar.colorBorder}`,
-            borderRadius: cssVar.borderRadiusLG,
+
             width: 16,
 
             borderRadius: 4,

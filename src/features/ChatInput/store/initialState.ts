@@ -4,7 +4,7 @@ import { type OpenAIChatMessage, type VoiceMessageRecording } from '@orvilo/type
 
 import { type ActionKeys } from '@/features/ChatInput';
 
-import type { ActionDropdownMenu } from './ActionBar/components/ActionDropdown';
+import type { ActionDropdownMenu } from '../ActionBar/components/ActionDropdown';
 
 export type SendButtonHandler = (params: {
   clearContent: () => void;

@@ -1,6 +1,10 @@
 'use client';
 
-import { Menu as MenuPrimitive } from '@base-ui/react/menu';
+import {
+  Menu as MenuPrimitive,
+  type MenuPopupProps,
+  type MenuPopupState,
+} from '@base-ui/react/menu';
 import { createGlobalStyle, createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type CSSProperties, type ReactElement, type ReactNode, type RefObject } from 'react';
@@ -182,8 +186,8 @@ export interface ActionDropdownProps {
   open?: boolean;
   placement?: string;
   popupProps?: {
-    className?: string | ((state: Record<string, unknown>) => string);
-    style?: CSSProperties | ((state: Record<string, unknown>) => CSSProperties);
+    className?: MenuPopupProps['className'];
+    style?: MenuPopupProps['style'];
   };
   popupRender?: (menu: ReactNode) => ReactNode;
   portalProps?: { container?: HTMLElement | null | RefObject<HTMLElement | null> | ShadowRoot };
@@ -368,7 +372,7 @@ const ActionDropdown = memo<ActionDropdownProps>(
     const resolvedPopupClassName = useMemo(() => {
       const popupClassName = popupProps?.className;
       if (typeof popupClassName === 'function') {
-        return (state: Record<string, unknown>) =>
+        return (state: MenuPopupState) =>
           cx(
             POPUP_Z_CLASS,
             'cn-menu-target cn-menu-translucent min-w-32 rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none',
@@ -399,7 +403,7 @@ const ActionDropdown = memo<ActionDropdownProps>(
       const popupStyle = popupProps?.style;
 
       if (typeof popupStyle === 'function') {
-        return (state) => ({
+        return (state: MenuPopupState) => ({
           ...baseStyle,
           ...menu.style,
           ...popupStyle(state),

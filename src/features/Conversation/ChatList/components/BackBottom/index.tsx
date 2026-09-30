@@ -39,7 +39,6 @@ const BackBottom = memo<BackBottomProps>(
         )}
 
         <ActionIcon
-          glass
           className={cx(styles.container, visible && styles.visible)}
           icon={ArrowDownIcon}
           style={bottomOffset ? { insetBlockEnd: 16 + bottomOffset } : undefined}

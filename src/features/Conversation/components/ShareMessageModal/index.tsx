@@ -4,7 +4,7 @@ import { memo, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { createModal } from '@/components/Modal';
-import { Tabs } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ShareDataProvider from '@/features/ShareModal/ShareDataProvider';
 import SharePdf from '@/features/ShareModal/SharePdf';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -62,13 +62,7 @@ const ShareMessageModalContent = memo<ShareMessageModalContentProps>(({ message 
       <Tabs value={tab} onValueChange={(key) => setTab(key as Tab)}>
         <TabsList style={{ display: 'flex', width: '100%' }}>
           {tabItems.map((item) => (
-            <TabsTrigger
-              disabled={item.disabled}
-              key={item.key}
-              style={{ flex: 1 }}
-              value={item.key}
-            >
-              {item.icon}
+            <TabsTrigger key={item.key} style={{ flex: 1 }} value={item.key}>
               {item.label}
             </TabsTrigger>
           ))}

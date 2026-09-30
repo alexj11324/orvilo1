@@ -489,7 +489,7 @@ const Overview = memo<OverviewProps>(
           <div className={cn('flex flex-col', styles.section)}>
             <div className={cn('flex items-center justify-between', styles.sectionHeader)}>
               <span className={styles.sectionTitle}>{t('workingPanel.overview.outputs')}</span>
-              <Button outdent={'end'} size="sm" variant="ghost" onClick={() => onOpenTab('works')}>
+              <Button size="sm" variant="ghost" onClick={() => onOpenTab('works')}>
                 {t('workingPanel.overview.viewAll')}
               </Button>
             </div>

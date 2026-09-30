@@ -32,11 +32,12 @@ const useFilePick = ({ beforeUpload, maxCount, onChange, onFiles }: UploadProps)
 
 const HiddenInput = ({
   accept,
+  directory,
   disabled,
   inputRef,
   multiple,
   onPick,
-}: Pick<UploadProps, 'accept' | 'disabled' | 'multiple'> & {
+}: Pick<UploadProps, 'accept' | 'directory' | 'disabled' | 'multiple'> & {
   inputRef: Ref<HTMLInputElement>;
   onPick: (files: File[]) => void;
 }) => {
@@ -57,6 +58,7 @@ const HiddenInput = ({
       style={{ display: 'none' }}
       tabIndex={-1}
       type={'file'}
+      webkitdirectory={directory ? '' : undefined}
       onChange={handleChange}
     />
   );
@@ -73,6 +75,7 @@ const Upload = memo<UploadProps>(
     beforeUpload,
     children,
     className,
+    directory,
     disabled,
     maxCount,
     multiple,
@@ -97,6 +100,7 @@ const Upload = memo<UploadProps>(
       >
         <HiddenInput
           accept={accept}
+          directory={directory}
           disabled={disabled}
           inputRef={inputRef}
           multiple={multiple}
@@ -124,6 +128,7 @@ const UploadDragger = memo<UploadDraggerProps>(
     beforeUpload,
     children,
     className,
+    directory,
     disabled,
     maxCount,
     multiple,
@@ -164,6 +169,7 @@ const UploadDragger = memo<UploadDraggerProps>(
       >
         <HiddenInput
           accept={accept}
+          directory={directory}
           disabled={disabled}
           inputRef={inputRef}
           multiple={multiple}

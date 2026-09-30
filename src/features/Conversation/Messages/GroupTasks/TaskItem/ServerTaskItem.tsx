@@ -2,6 +2,7 @@
 
 import { type UIChatMessage } from '@orvilo/types';
 import { ThreadStatus } from '@orvilo/types';
+import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo, useState } from 'react';
 

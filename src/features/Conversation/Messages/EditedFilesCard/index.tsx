@@ -235,8 +235,8 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
             <Button
               aria-expanded={expanded}
               className={styles.viewChangesButton}
-              size={'small'}
-              type={'text'}
+              size={'sm'}
+              variant={'ghost'}
               // Enter/Space on the button must not bubble into the row's own
               // key handler, which would also open the file preview.
               onKeyDown={(event) => event.stopPropagation()}
@@ -324,10 +324,8 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
               <Button
                 aria-expanded={showDiff}
                 className={styles.viewChangesButton}
-                icon={<ArrowUpRightIcon size={14} />}
-                iconPosition={'end'}
-                size={'small'}
-                type={'text'}
+                size={'sm'}
+                variant={'ghost'}
                 onKeyDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   // The header itself may open the file preview — keep the diff
@@ -337,6 +335,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
                 }}
               >
                 {t(showDiff ? 'editedFiles.hideChanges' : 'editedFiles.viewChanges')}
+                <ArrowUpRightIcon data-icon="inline-end" size={14} />
               </Button>
             </div>
           )}

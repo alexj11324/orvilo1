@@ -507,7 +507,7 @@ const SliderField = ({
         min={min}
         step={step}
         value={value}
-        onValueChange={(v) => onChange(v)}
+        onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
       />
       <InputNumber
         disabled={disabled}
@@ -962,6 +962,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                               : 'medium'
                           }
                           onValueChange={(value) => {
+                            if (value == null) return;
                             handleFieldChange(['params', 'reasoning_effort'], value);
                           }}
                         >

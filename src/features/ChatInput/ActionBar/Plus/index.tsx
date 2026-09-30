@@ -204,13 +204,7 @@ const activeIcon = (
     width?: number;
   }>,
   active?: boolean,
-): ComponentType<{
-  color?: string;
-  fill?: string;
-  height?: number;
-  size?: number;
-  width?: number;
-}> =>
+): ReactNode =>
   active ? (
     <span className="anticon" role="img">
       {createElement(icon, {
@@ -222,7 +216,14 @@ const activeIcon = (
       })}
     </span>
   ) : (
-    icon
+    <span className="anticon" role="img">
+      {createElement(icon, {
+        size: 16,
+        width: 16,
+        height: 16,
+        fill: 'transparent',
+      })}
+    </span>
   );
 
 type DropdownItemWithPopover = NonNullable<ActionDropdownMenuItems>[number] & {
@@ -593,7 +594,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
               ),
               footer: skillMarketFooter,
               header: skillMarketHeader,
-              icon: SkillsIcon,
+              icon: (
+                <span className="anticon" role="img">
+                  <SkillsIcon fill={'transparent'} height={20} size={20} width={20} />
+                </span>
+              ),
               key: 'tools',
               label: renderLabelWithCount(
                 tSetting('tools.title'),
@@ -615,7 +620,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
         ? [
             {
               checked: isGatewayModeEnabled,
-              icon: Cloud,
+              icon: (
+                <span className="anticon" role="img">
+                  <Cloud fill={'transparent'} height={20} size={20} width={20} />
+                </span>
+              ),
               key: 'gateway-mode',
               label: (
                 <PopoverLabel label={renderGatewayModeLabel()} popoverContent={gatewayModeInfo} />
@@ -633,7 +642,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
           // Memory toggle — trailing switch; toggle by clicking the switch or the whole row
           {
             checked: Boolean(isMemoryEnabled),
-            icon: Brain,
+            icon: (
+              <span className="anticon" role="img">
+                <Brain fill={'transparent'} height={20} size={20} width={20} />
+              </span>
+            ),
             key: 'memory',
             label: t('memory.title'),
             onCheckedChange: handleToggleMemory,
@@ -713,7 +726,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                 // Web search toggle — trailing switch; toggle by clicking the switch or the whole row
                 {
                   checked: activeSearchOption !== 'off',
-                  icon: Globe,
+                  icon: (
+                    <span className="anticon" role="img">
+                      <Globe fill={'transparent'} height={20} size={20} width={20} />
+                    </span>
+                  ),
                   key: 'search-toggle',
                   label: t('search.title'),
                   onCheckedChange: (checked: boolean) =>
@@ -732,7 +749,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       // Formatting toolbar toggle — trailing switch; toggle by clicking the switch or the whole row
       {
         checked: Boolean(showTypoBar),
-        icon: TypeIcon,
+        icon: (
+          <span className="anticon" role="img">
+            <TypeIcon fill={'transparent'} height={20} size={20} width={20} />
+          </span>
+        ),
         key: 'typo',
         label: tEditor('actions.typobar.title'),
         onCheckedChange: (checked: boolean) => setShowTypoBar(checked),
@@ -744,7 +765,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       ...(canConfigureResource
         ? [
             {
-              icon: Settings2Icon,
+              icon: (
+                <span className="anticon" role="img">
+                  <Settings2Icon fill={'transparent'} height={20} size={20} width={20} />
+                </span>
+              ),
               key: 'params',
               label: renderActive(tSetting('settingModel.params.title'), isParamsPanelActive),
               onClick: handleToggleParams,
@@ -783,7 +808,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
               </span>
             ),
             footer: canConfigureResource ? knowledgeFooter : undefined,
-            icon: LibraryBig,
+            icon: (
+              <span className="anticon" role="img">
+                <LibraryBig fill={'transparent'} height={20} size={20} width={20} />
+              </span>
+            ),
             key: 'attachments',
             label: renderLabelWithCount(
               t('plus.addAttachments'),
@@ -799,7 +828,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
     const acceptanceItems: ActionDropdownMenuItems = enableTopicAcceptance
       ? [
           {
-            icon: TargetIcon,
+            icon: (
+              <span className="anticon" role="img">
+                <TargetIcon fill={'transparent'} height={20} size={20} width={20} />
+              </span>
+            ),
             key: 'set-topic-goal',
             // Same string as the chip it inserts: one label for the affordance,
             // so the menu row and the chip can never drift apart.

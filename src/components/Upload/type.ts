@@ -8,6 +8,7 @@ interface UploadChangeInfo {
 interface UploadProps extends Omit<ComponentProps<'span'>, 'onChange'> {
   accept?: string;
   beforeUpload?: (file: File, fileList: File[]) => boolean | Promise<boolean | void> | void;
+  directory?: boolean;
   disabled?: boolean;
   maxCount?: number;
   multiple?: boolean;

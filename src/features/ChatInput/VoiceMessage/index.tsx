@@ -689,7 +689,7 @@ const VoiceMessage = memo(() => {
       <ChatInputAction
         aria-label={t('voiceMessage.action')}
         data-testid="voice-message-action"
-        icon={VoiceMessageIcon}
+        icon={<VoiceMessageIcon />}
         title={t('voiceMessage.action')}
         onClick={handleStart}
       />
@@ -699,7 +699,7 @@ const VoiceMessage = memo(() => {
           disabled
           aria-label={t('voiceMessage.action')}
           data-testid="voice-message-action"
-          icon={VoiceMessageIcon}
+          icon={<VoiceMessageIcon />}
           showTooltip={false}
           title={t('voiceMessage.action')}
         />

@@ -1,7 +1,10 @@
 import type { ChatContextContent } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { Code2Icon, TextIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import ClosableBadge from '@/components/ClosableBadge';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
 
@@ -105,6 +108,7 @@ const getLocationText = ({
 
 const SelectionItem = memo<ChatContextContent>(
   ({ content, filePath, id, lineRange, preview, source, title }) => {
+    const { t } = useTranslation('common');
     const contextSelectionKey = useChatInputStore((s) => s.contextSelectionKey);
     const [removeSelection] = useFileStore((s) => [s.removeChatContextSelection]);
 
@@ -147,23 +151,23 @@ const SelectionItem = memo<ChatContextContent>(
     }, [content, filePath, isCodeSelection, lineRange, preview, title]);
 
     return (
-      <Badge
-        TODO_closable
-        TODO_onClose
-        contextKey
-        contextSelectionKey
-        contextSelectionKey
-        id
-        if
-        removeSelection
-        data-icon="inline-start"
-        size={'large'}
+      <ClosableBadge
+        closeLabel={t('close')}
+        size={'lg'}
         variant="secondary"
+        onClose={() => {
+          if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
+        }}
       >
+        {isCodeSelection ? (
+          <Code2Icon data-icon="inline-start" size={16} />
+        ) : (
+          <TextIcon data-icon="inline-start" size={16} />
+        )}
         <SimpleTooltip title={tooltip}>
           <span className={styles.name}>{displayText}</span>
         </SimpleTooltip>
-      </Badge>
+      </ClosableBadge>
     );
   },
 );

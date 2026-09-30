@@ -223,6 +223,7 @@ const styles = createStaticStyles(({ css }) => ({
   list: css`
     overflow-y: auto;
     flex: 1;
+    max-height: 320px;
     padding: 6px;
   `,
   createItemWrapper: css`

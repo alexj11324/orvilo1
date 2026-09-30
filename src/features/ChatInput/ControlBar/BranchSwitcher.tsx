@@ -166,8 +166,10 @@ const styles = createStaticStyles(({ css }) => ({
     color: ${cssVar.colorTextTertiary};
   `,
   list: css`
+    overflow-y: auto;
     flex: 1;
     min-height: 0;
+    max-height: 320px;
   `,
   popup: css`
     width: 300px;

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
 import ActionIcon from '@/components/ActionIcon';
+import ClosableBadge from '@/components/ClosableBadge';
 import { Progress } from '@/components/ui/progress';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useFileStore } from '@/store/file';
@@ -105,15 +106,14 @@ const ContextItem = memo<FileItemProps>((props) => {
   );
 
   return (
-    <Badge
-      TODO_closable
-      aria
-      TODO_onClose={handleClose}
-      busy={busy}
+    <ClosableBadge
+      aria-busy={busy}
       className={styles.chip}
-      size={'large'}
+      closeLabel={t('close', { ns: 'common' })}
+      size={'lg'}
       variant="secondary"
       onClick={canPreview ? handleClick : undefined}
+      onClose={handleClose}
     >
       <SimpleTooltip title={detail}>
         <div className={cx('flex flex-row items-center', styles.content)}>
@@ -189,7 +189,7 @@ const ContextItem = memo<FileItemProps>((props) => {
           )}
         </div>
       )}
-    </Badge>
+    </ClosableBadge>
   );
 });
 

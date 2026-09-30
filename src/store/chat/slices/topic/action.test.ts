@@ -134,7 +134,7 @@ describe('topic action', () => {
       async (action) => {
         const { result } = renderHook(() => useChatStore());
         act(() =>
-          useChatStore.setState({ activeTopicId: action === 'switchTopic' ? 'old' : null }),
+          useChatStore.setState({ activeTopicId: action === 'switchTopic' ? 'old' : undefined }),
         );
         let complete!: () => void;
         const pending = new Promise<void>((resolve) => {

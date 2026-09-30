@@ -1,11 +1,11 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import { BellIcon, CheckCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';

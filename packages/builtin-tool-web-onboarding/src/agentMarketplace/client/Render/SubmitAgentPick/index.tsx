@@ -1,8 +1,7 @@
 'use client';
 
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -90,6 +89,26 @@ export type SubmitAgentPickRenderProps = Pick<
   'pluginState'
 >;
 
+const AgentAvatar = ({ avatar }: { avatar: string }) => {
+  const tileStyle = {
+    alignItems: 'center',
+    background: cssVar.colorFillSecondary,
+    borderRadius: 8,
+    display: 'flex',
+    flexShrink: 0,
+    fontSize: 20,
+    height: 36,
+    justifyContent: 'center',
+    lineHeight: 1,
+    overflow: 'hidden',
+    width: 36,
+  } as const;
+  if (/^https?:\/\//.test(avatar)) {
+    return <img alt="" src={avatar} style={{ ...tileStyle, objectFit: 'cover' }} />;
+  }
+  return <span style={tileStyle}>{avatar}</span>;
+};
+
 const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
   const { t } = useTranslation('tool');
   const summaries = pluginState?.summaries ?? [];
@@ -101,18 +120,18 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <Text style={{ fontSize: 13 }} type="secondary">
+      <span style={{ color: cssVar.colorTextSecondary, fontSize: 13 }}>
         {t('agentMarketplace.inspector.pickCount', { count: installedCount })}
         {skippedCount > 0 &&
           ` · ${t('agentMarketplace.render.alreadyInLibrary', { count: skippedCount })}`}
-      </Text>
+      </span>
       <div className={styles.list}>
         {summaries.map((summary) => (
           <div
             className={cx(styles.card, summary.skipped && styles.cardSkipped)}
             key={summary.templateId}
           >
-            <Avatar avatar={summary.avatar || '🤖'} shape="square" size={36} />
+            <AgentAvatar avatar={summary.avatar || '🤖'} />
             <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
               <div className={styles.titleRow}>
                 <span className={styles.title}>{summary.title || summary.templateId}</span>

@@ -1,10 +1,11 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { Plans } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Atom, Box, CircleSlash, Sparkle, Zap } from 'lucide-react';
 import { type CSSProperties, type MouseEvent } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
 
 export const themes = {
   [Plans.Free]: {
@@ -77,9 +78,9 @@ const PlanIcon = memo<PlanIconProps>(
 
     if (isTag) {
       return (
-        <Tag
+        <Badge
           className={className}
-          variant={'filled'}
+          variant="secondary"
           style={{
             ...(theme || { background: cssVar.colorFillSecondary, color: cssVar.colorText }),
             border: 'none',
@@ -92,7 +93,7 @@ const PlanIcon = memo<PlanIconProps>(
           onClick={onClick}
         >
           {t(`plans.plan.${plan}.title`)}
-        </Tag>
+        </Badge>
       );
     }
 

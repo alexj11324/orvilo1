@@ -44,9 +44,15 @@ interface MetricItemProps {
 }
 
 export const MetricItem = memo<MetricItemProps>(({ icon, label, value }) => (
-  <Badge className='bg-transparent border-transparent' style={{ color: cssVar.colorTextDescription, padding: 0 }} variant='secondary'>{icon && createElement(icon)} 
+  <Badge
+    className="bg-transparent border-transparent"
+    style={{ color: cssVar.colorTextDescription, padding: 0 }}
+    variant="secondary"
+  >
+    {icon && createElement(icon)}
     {value}
-    {label}</Badge>
+    {label}
+  </Badge>
 ));
 
 MetricItem.displayName = 'MetricItem';

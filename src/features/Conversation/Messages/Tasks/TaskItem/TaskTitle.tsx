@@ -50,8 +50,15 @@ const TaskStatusIndicator = memo<{ status?: ThreadStatus }>(({ status }) => {
   }
 
   return (
-    <div className="flex items-center gap-1 justify-center" style={{flex: 'none', height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24, 
-        fontSize: 12
+    <div
+      className="flex items-center gap-1 justify-center"
+      style={{
+        flex: 'none',
+        height: 24,
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+        width: 24,
+        fontSize: 12,
       }}
     >
       {icon}

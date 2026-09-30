@@ -13,12 +13,12 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { openCustomizeSidebarModal } from '@/features/HomeSidebar/Body/CustomizeSidebarModal';
-import type { SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu, {
   renderSidebarMenuItems,
+  type SidebarMenuItems,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
@@ -120,7 +120,7 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
         label: t('navPanel.customizeSidebar'),
         onClick: () => openCustomizeSidebarModal(),
       },
-    ] as SidebarDropdownMenuProps['items'];
+    ] as SidebarMenuItems;
   }, [recentPageSize, updateSystemStatus, t, isFirst, isLast, moveSection, hideSection]);
 
   if (!isLogin) return null;

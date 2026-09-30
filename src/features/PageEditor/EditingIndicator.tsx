@@ -51,7 +51,7 @@ const EditingIndicator = memo(() => {
     return (
       <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
         <Loader2Icon className="animate-spin" size={14} />
-        <div className="truncate min-w-0" style={{ labelStyle }} style={labelStyle}>
+        <div className="truncate min-w-0" style={labelStyle}>
           {t('pageEditor.editMode.checking')}
         </div>
       </div>
@@ -74,7 +74,7 @@ const EditingIndicator = memo(() => {
             <span style={{ display: 'inline-flex' }}>
               <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
                 <PencilIcon size={14} />
-                <div className="truncate min-w-0" style={{ labelStyle }} style={labelStyle}>
+                <div className="truncate min-w-0" style={labelStyle}>
                   {label}
                 </div>
               </div>

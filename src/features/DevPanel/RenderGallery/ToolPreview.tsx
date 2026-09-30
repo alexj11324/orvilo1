@@ -98,7 +98,7 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
                 if (typeof key === 'string') setActiveVariantId(key);
               }}
             >
-              <TabsList size="sm">
+              <TabsList>
                 {variants.map((variant) => (
                   <TabsTrigger key={variant.id} value={variant.id}>
                     {variant.label}

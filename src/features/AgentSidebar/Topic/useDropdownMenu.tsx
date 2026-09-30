@@ -1,6 +1,5 @@
-import { confirmModal, toast, Upload } from '@lobehub/ui/base-ui';
+import { confirmModal, createModal, toast, Upload } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
-import { App } from 'antd';
 import { css, cx } from 'antd-style';
 import { Archive, HardDriveDownload, Hash, Import, LucideCheck, Trash } from 'lucide-react';
 import { useCallback } from 'react';
@@ -38,7 +37,6 @@ export const useTopicActionsDropdownMenu = (
   options: UseTopicActionsDropdownMenuOptions = {},
 ): (() => DropdownItem[]) => {
   const { t } = useTranslation(['topic', 'common']);
-  const { modal } = App.useApp();
   const { onUploadClose } = options;
   const activeWorkspaceId = useActiveWorkspaceId();
   const isWorkspaceOwner = useIsWorkspaceOwner();
@@ -108,14 +106,15 @@ export const useTopicActionsDropdownMenu = (
         JSON.parse(text);
         await importTopic(text);
       } catch {
-        modal.error({
+        createModal({
           content: t('importInvalidFormat'),
+          footer: null,
           title: t('importError'),
         });
       }
       return false; // Prevent default upload behavior
     },
-    [importTopic, modal, onUploadClose, t],
+    [importTopic, onUploadClose, t],
   );
 
   const [topicPageSize, updateSystemStatus] = useGlobalStore((s) => [

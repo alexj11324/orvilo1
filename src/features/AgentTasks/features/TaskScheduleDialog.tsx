@@ -81,7 +81,7 @@ interface TaskScheduleDialogContentProps {
 const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
   ({ identifier, initialDueDate }) => {
     const { t, i18n } = useTranslation('chat');
-    const { close } = useModalContext();
+    const { close, setCanDismissByClickOutside } = useModalContext();
     const updateTask = useTaskStore((s) => s.updateTask);
     const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
 
@@ -155,6 +155,14 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
 
     const stepMonth = (delta: number) =>
       setMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+
+    // Select popups portal to document.body — suspend the modal's
+    // outside-click dismissal while one is open or the option click
+    // closes the whole dialog.
+    const handleSelectOpenChange = useCallback(
+      (open: boolean) => setCanDismissByClickOutside(!open),
+      [setCanDismissByClickOutside],
+    );
 
     const selectedDate = parseDateString(dueDate);
     const dateFormat = useMemo(
@@ -253,6 +261,7 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
           </Button>
           <Select
             value={months[month.getMonth()]}
+            onOpenChange={handleSelectOpenChange}
             onValueChange={(value) => {
               const index = months.indexOf(String(value));
               if (index >= 0) setMonth((prev) => new Date(prev.getFullYear(), index, 1));
@@ -271,6 +280,7 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
           </Select>
           <Select
             value={String(month.getFullYear())}
+            onOpenChange={handleSelectOpenChange}
             onValueChange={(value) => {
               const year = Number.parseInt(String(value), 10);
               if (!Number.isNaN(year)) setMonth((prev) => new Date(year, prev.getMonth(), 1));

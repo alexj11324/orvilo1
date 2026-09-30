@@ -1,13 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type PropsWithChildren, useState } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Sidebar, SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import NavHeader from '@/features/NavHeader';
+import { clearNavPanelRegistry, registerNavPanelContent } from '@/features/NavPanel/registry';
 import SearchSection from '@/features/SettingsSearch/SearchSection';
 
 import { AppSidebar } from './AppSidebar';
+import { NavMain } from './NavMain';
 import { NavWorkspace } from './NavWorkspace';
 
 const platform = vi.hoisted(() => ({ desktop: false }));
@@ -44,7 +46,15 @@ vi.mock('@/features/SettingsSearch/useSettingsSearch', () => ({
 vi.mock('@/features/SettingsSearch/SearchResults', () => ({
   default: () => <div>Search results</div>,
 }));
-vi.mock('./NavMain', () => ({ NavMain: () => null }));
+const route = vi.hoisted(() => ({ key: 'home' }));
+vi.mock('@/features/NavPanel/useActiveNavKey', () => ({ useActiveNavKey: () => route.key }));
+vi.mock('@/features/HomeSidebar/Body', () => ({ default: () => <div>Global navigation</div> }));
+vi.mock('./SearchForm', () => ({ SearchForm: () => <div>Global search</div> }));
+vi.mock('@/features/NavPanel/components/SideBarSkeleton', () => ({
+  DEFAULT_NAV_SKELETON_SHAPE: {},
+  NAV_SKELETON_SHAPES: {},
+  NavSideBarSkeleton: () => <div>Panel loading</div>,
+}));
 vi.mock('./NotificationsPopover', () => ({ NotificationsPopover: () => null }));
 vi.mock('./Logo', () => ({ Logo: () => null }));
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({ useWorkspaces: () => workspace.items }));
@@ -86,6 +96,8 @@ vi.mock('@/components/ui/dropdown-menu', () => {
   };
 });
 beforeEach(() => {
+  route.key = 'home';
+  clearNavPanelRegistry();
   platform.desktop = false;
   viewport.mobile = false;
   globalState.status.showLeftPanel = true;
@@ -261,5 +273,85 @@ describe('workspace destinations', () => {
     );
     expect(screen.queryByRole('menuitem', { name: /workspaceSwitcher.personal/ })).toBeNull();
     expect(screen.queryByText('reuiShell9.organizations')).toBeNull();
+  });
+});
+
+afterEach(() => clearNavPanelRegistry());
+
+describe('registered settings navigation composition', () => {
+  it('expands and focuses registered settings search from the collapsed rail', async () => {
+    route.key = 'settings';
+    registerNavPanelContent(
+      'settings',
+      Symbol('settings'),
+      <SearchSection>Settings categories</SearchSection>,
+    );
+    function RegisteredShell() {
+      const [open, setOpen] = useState(false);
+      return (
+        <SidebarProvider open={open} onOpenChange={setOpen}>
+          <NavMain />
+        </SidebarProvider>
+      );
+    }
+    const user = userEvent.setup();
+    render(<RegisteredShell />);
+    expect(screen.queryByText('Global search')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'settingsSearch.placeholder' }));
+    const input = screen.getByRole('searchbox');
+    await waitFor(() => expect(document.activeElement).toBe(input));
+    await user.keyboard('privacy');
+    expect(input).toHaveValue('privacy');
+  });
+
+  it('retains the registered settings search query across collapse', () => {
+    route.key = 'settings';
+    registerNavPanelContent(
+      'settings',
+      Symbol('settings'),
+      <SearchSection>Settings categories</SearchSection>,
+    );
+    const { rerender } = render(
+      <SidebarProvider open>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'privacy' } });
+    rerender(
+      <SidebarProvider open={false}>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    rerender(
+      <SidebarProvider open>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    expect(screen.getByRole('searchbox')).toHaveValue('privacy');
+  });
+
+  it('keeps nonsettings desktop panels on the global icon navigation when collapsed', () => {
+    route.key = 'agent';
+    registerNavPanelContent('agent', Symbol('agent'), <div>Agent topics</div>);
+    render(
+      <SidebarProvider open={false}>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByText('Agent topics')).toBeNull();
+    expect(screen.getByText('Global navigation')).toBeTruthy();
+  });
+
+  it('renders a full route panel in the narrow drawer despite collapsed desktop preference', () => {
+    route.key = 'agent';
+    viewport.mobile = true;
+    registerNavPanelContent('agent', Symbol('agent'), <div>Agent topics</div>);
+    render(
+      <SidebarProvider open={false}>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    expect(screen.getByText('Agent topics')).toBeTruthy();
+    expect(screen.queryByText('Global navigation')).toBeNull();
   });
 });

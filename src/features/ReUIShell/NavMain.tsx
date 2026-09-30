@@ -37,20 +37,21 @@ const PANEL_KEYS = new Set([
  */
 export function NavMain() {
   const activeNavKey = useActiveNavKey();
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
   const getContent = () => getNavPanelRegistrySnapshot().get(activeNavKey)?.node;
   const content = useSyncExternalStore(subscribeNavPanelRegistry, getContent, getContent);
 
-  // Route panels are full-column layouts that don't collapse to an icon rail —
-  // while collapsed, fall back to the icon-aware global navigation instead of
-  // rendering truncated panel fragments.
-  const collapsed = state === 'collapsed';
+  // Settings owns an icon-aware search/category rail and must stay mounted to
+  // preserve its query. Other full-column panels use global navigation when
+  // collapsed. Mobile drawers always have room for the full route panel.
+  const collapsed = !isMobile && state === 'collapsed';
+  const showRoutePanel = !collapsed || activeNavKey === 'settings';
 
   // Keyed by navKey: unkeyed reuse would let one panel's component state bleed
   // into the next panel when their trees share a component type.
-  if (content && !collapsed) return <Fragment key={activeNavKey}>{content}</Fragment>;
+  if (content && showRoutePanel) return <Fragment key={activeNavKey}>{content}</Fragment>;
 
-  if (!collapsed && PANEL_KEYS.has(activeNavKey)) {
+  if (showRoutePanel && PANEL_KEYS.has(activeNavKey)) {
     return (
       <NavSideBarSkeleton {...(NAV_SKELETON_SHAPES[activeNavKey] ?? DEFAULT_NAV_SKELETON_SHAPE)} />
     );

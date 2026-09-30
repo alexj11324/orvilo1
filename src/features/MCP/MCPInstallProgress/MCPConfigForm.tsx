@@ -1,4 +1,4 @@
-import { Form, Markdown } from '@lobehub/ui';
+import { Flexbox, Form, Markdown } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { Form as AForm } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -83,12 +83,12 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
         initial={{ opacity: 0, y: 4 }}
         transition={{ delay: 0.15, duration: 0.2 }}
       >
-        <div className="flex flex-col gap-2">
+        <Flexbox gap={8}>
           <strong>{t('mcpInstall.configurationRequired')}</strong>
           <span style={{ fontSize: 12, opacity: 0.7 }}>
             {t('mcpInstall.configurationDescription')}
           </span>
-        </div>
+        </Flexbox>
       </m.div>
 
       <m.div

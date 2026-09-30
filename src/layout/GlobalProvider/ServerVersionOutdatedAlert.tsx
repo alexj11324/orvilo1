@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, useTheme } from 'antd-style';
 import { TriangleAlert, X } from 'lucide-react';
@@ -104,14 +103,14 @@ const ServerVersionOutdatedAlert = () => {
     <div className={styles.container}>
       <div className={styles.content} style={cssVariables}>
         <div className={styles.closeButton} onClick={() => setDismissed(true)}>
-          <Icon icon={X} />
+          <X />
         </div>
 
-        <Flexbox gap={16}>
-          <Flexbox horizontal align="center" gap={8}>
-            <Icon className={styles.titleIcon} icon={TriangleAlert} />
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <TriangleAlert className={styles.titleIcon} />
             <div className={styles.title}>{t('serverVersionOutdated.title')}</div>
-          </Flexbox>
+          </div>
 
           <div className={styles.desc}>
             {t('serverVersionOutdated.desc', { version: CURRENT_VERSION })}
@@ -119,7 +118,7 @@ const ServerVersionOutdatedAlert = () => {
 
           <div className={styles.warning}>{t('serverVersionOutdated.warning')}</div>
 
-          <Flexbox horizontal gap={8} justify="flex-end" style={{ marginTop: 8 }}>
+          <div className="flex justify-end gap-2" style={{ marginTop: 8 }}>
             <a href={MANUAL_UPGRADE_URL} rel="noreferrer" target="_blank">
               <Button size="small" type="primary">
                 {t('serverVersionOutdated.upgrade')}
@@ -128,8 +127,8 @@ const ServerVersionOutdatedAlert = () => {
             <Button size="small" onClick={() => setDismissed(true)}>
               {t('serverVersionOutdated.dismiss')}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </div>
     </div>
   );

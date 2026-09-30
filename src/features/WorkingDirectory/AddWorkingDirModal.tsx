@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
 import type { ModalInstance } from '@lobehub/ui/base-ui';
 import { Button, createModal, Text, useModalContext } from '@lobehub/ui/base-ui';
-import type { InputRef } from 'antd';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
 
 import { RemoteDirectoryBrowser } from './RemoteDirectoryBrowser';
 
@@ -36,7 +36,7 @@ const AddWorkingDirContent = ({
   const [value, setValue] = useState(defaultPath ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     queueMicrotask(() => inputRef.current?.focus());
@@ -82,24 +82,24 @@ const AddWorkingDirContent = ({
   }
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       <Text type={'secondary'}>{tPlugin('workingDirectory.addFolderDesc')}</Text>
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <Input
           aria-label={tPlugin('workingDirectory.current')}
           disabled={loading}
           placeholder={placeholder || tPlugin('workingDirectory.placeholder')}
           ref={inputRef}
           value={value}
-          onPressEnter={() => handleSubmit(value)}
+          onKeyDown={(e) => e.key === 'Enter' && void handleSubmit(value)}
           onChange={(e) => {
             setValue(e.target.value);
             setError(undefined);
           }}
         />
         {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
-      </Flexbox>
-      <Flexbox horizontal gap={8} justify={'flex-end'} wrap={'wrap'}>
+      </div>
+      <div className="flex flex-wrap justify-end gap-2">
         {deviceId && (
           <Button
             disabled={loading}
@@ -122,8 +122,8 @@ const AddWorkingDirContent = ({
         >
           {tPlugin('workingDirectory.useFolder')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

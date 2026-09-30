@@ -1,14 +1,13 @@
+import { Flexbox, Icon, Input } from '@lobehub/ui';
 import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { Form as AForm } from 'antd';
 import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { EditIcon, LinkIcon, Settings2Icon, TerminalIcon } from 'lucide-react';
 import { useImperativeHandle, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
-import { Input } from '@/components/ui/input';
 import ArgsInput from '@/features/PluginDevModal/MCPManifestForm/ArgsInput';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
@@ -236,9 +235,9 @@ const Settings = ({
   };
 
   return (
-    <div className="flex flex-col py-2 px-3">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-6">
+    <Flexbox paddingBlock={8} paddingInline={12}>
+      <Flexbox gap={24}>
+        <Flexbox gap={24}>
           <div className={styles.sectionTitle}>
             <LinkIcon size={16} />
             {t('settings.connection.title')}
@@ -257,15 +256,15 @@ const Settings = ({
 
           {!isEditingConnection ? (
             // Preview mode
-            <div className="flex flex-col px-2">
+            <Flexbox paddingInline={8}>
               <div className={styles.previewItem}>
                 <span className={styles.previewLabel}>{t('settings.connection.type')}</span>
-                <div className="flex">
-                  <TerminalIcon />
+                <Flexbox horizontal>
+                  <Icon icon={TerminalIcon} />
                   <Text className={styles.previewValue}>
                     {customParams?.type?.toUpperCase() || 'Unknown'}
                   </Text>
-                </div>
+                </Flexbox>
               </div>
 
               {customParams?.type === 'http' && customParams?.url && (
@@ -294,7 +293,7 @@ const Settings = ({
                   )}
                 </>
               )}
-            </div>
+            </Flexbox>
           ) : (
             // Edit mode
             <div className={styles.connectionForm}>
@@ -311,7 +310,7 @@ const Settings = ({
                     name={'url'}
                     rules={[{ message: t('settings.rules.urlRequired'), required: true }]}
                   >
-                    <Input placeholder="https://mcp.example.com/server" />
+                    <Input placeholder="https://mcp.example.com/server" size="small" />
                   </AForm.Item>
                 )}
 
@@ -343,20 +342,20 @@ const Settings = ({
                     </AForm.Item>
                   </>
                 )}
-                <div className={cn('flex gap-2', styles.footer)}>
+                <Flexbox horizontal className={styles.footer} gap={8}>
                   <Button htmlType="submit" loading={connectionLoading} type="primary">
                     {t('common:save')}
                   </Button>
                   <Button onClick={handleCancelEdit}>{t('common:cancel')}</Button>
-                </div>
+                </Flexbox>
               </AForm>
             </div>
           )}
-        </div>
+        </Flexbox>
 
         {/* Environment variable configuration (stdio type only) */}
         {isStdioType && (
-          <div className="flex flex-col gap-3">
+          <Flexbox gap={12}>
             <div className={styles.sectionTitle}>
               <Settings2Icon size={16} />
               {t('settings.configuration.title')}
@@ -377,15 +376,15 @@ const Settings = ({
                 />
               </AForm.Item>
               {!hideFooter && (
-                <div className={cn('flex gap-2', styles.footer)}>
+                <Flexbox horizontal className={styles.footer} gap={8}>
                   <Button htmlType="submit" loading={loading} type="primary">
                     {t('common:save')}
                   </Button>
                   <Button onClick={() => envForm.resetFields()}>{t('common:reset')}</Button>
-                </div>
+                </Flexbox>
               )}
             </AForm>
-          </div>
+          </Flexbox>
         )}
 
         {/* HTTP type notice */}
@@ -400,8 +399,8 @@ const Settings = ({
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 };
 

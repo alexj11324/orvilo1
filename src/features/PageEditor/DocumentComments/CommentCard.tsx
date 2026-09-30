@@ -1,8 +1,7 @@
 import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Markdown } from '@lobehub/ui';
 import { ActionIcon, Avatar, Button, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import type { DocumentCommentItem } from '@orvilo/types';
-import { cn } from 'cn';
 import { ChevronRight, MessageCircle, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -169,15 +168,12 @@ const CommentCard = memo<CommentCardProps>(
     const attachmentState = getEditorAttachmentStateFromJson(editorData);
 
     return (
-      <div
+      <Flexbox
+        className={`${styles.card} ${variant === 'reply' ? styles.replyCard : ''}`}
         data-document-comment-id={comment.id}
         ref={cardRef}
-        className={cn(
-          'flex flex-col',
-          `${styles.card} ${variant === 'reply' ? styles.replyCard : ''}`,
-        )}
       >
-        <div className={cn('flex items-center gap-2', styles.header)}>
+        <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
           <Avatar
             avatar={comment.author.avatar || authorName}
             size={variant === 'reply' ? 28 : 32}
@@ -208,7 +204,7 @@ const CommentCard = memo<CommentCardProps>(
               {t('pageEditor.comments.edited')}
             </Text>
           )}
-        </div>
+        </Flexbox>
 
         <div className={`${styles.body} ${variant === 'reply' ? styles.replyBody : ''}`}>
           {deleted ? (
@@ -236,7 +232,7 @@ const CommentCard = memo<CommentCardProps>(
                     />
                   }
                   right={
-                    <div className="flex gap-2">
+                    <Flexbox horizontal gap={8}>
                       <Button disabled={mutating} size={'small'} onClick={() => setEditing(false)}>
                         {t('pageEditor.comments.cancel')}
                       </Button>
@@ -252,7 +248,7 @@ const CommentCard = memo<CommentCardProps>(
                       >
                         {t('pageEditor.comments.save')}
                       </Button>
-                    </div>
+                    </Flexbox>
                   }
                 />
               }
@@ -288,11 +284,10 @@ const CommentCard = memo<CommentCardProps>(
         </div>
 
         {!optimistic && !editing && (onReply || comment.canEdit || comment.canDelete) && (
-          <div
-            className={cn(
-              'flex gap-1',
-              `${styles.actions} ${variant === 'reply' ? styles.replyCardActions : ''}`,
-            )}
+          <Flexbox
+            horizontal
+            className={`${styles.actions} ${variant === 'reply' ? styles.replyCardActions : ''}`}
+            gap={4}
           >
             {onReply && (
               <ActionIcon
@@ -325,9 +320,9 @@ const CommentCard = memo<CommentCardProps>(
                 onClick={handleDelete}
               />
             )}
-          </div>
+          </Flexbox>
         )}
-      </div>
+      </Flexbox>
     );
   },
 );

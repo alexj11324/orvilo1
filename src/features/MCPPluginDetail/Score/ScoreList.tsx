@@ -1,3 +1,4 @@
+import { Flexbox } from '@lobehub/ui';
 import { Divider } from 'antd';
 import { Fragment, memo } from 'react';
 
@@ -10,14 +11,14 @@ interface ScoreListProps {
 
 const ScoreList = memo<ScoreListProps>(({ items }) => {
   return (
-    <div className="flex flex-col gap-4 py-4">
+    <Flexbox gap={16} paddingBlock={16}>
       {items.map((item, index) => (
         <Fragment key={item.key}>
           <ScoreItem {...item} key={item.key} />
           {index < items.length - 1 && <Divider style={{ margin: 0 }} />}
         </Fragment>
       ))}
-    </div>
+    </Flexbox>
   );
 });
 

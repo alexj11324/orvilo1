@@ -1,8 +1,9 @@
 'use client';
 
+import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Avatar, SkeletonAvatar, SkeletonText, Tag, Text } from '@lobehub/ui/base-ui';
 import { Popconfirm } from 'antd';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,21 +52,21 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
 
   if (isLoading)
     return (
-      <div className="flex flex-col gap-1">
+      <Flexbox gap={4}>
         {[0, 1].map((key) => (
-          <div className={cx('flex flex-row items-center gap-3', styles.row)} key={key}>
+          <Flexbox horizontal align={'center'} className={styles.row} gap={12} key={key}>
             <SkeletonAvatar size={32} />
             <SkeletonText style={{ marginBottom: 0, width: 160 }} />
-          </div>
+          </Flexbox>
         ))}
-      </div>
+      </Flexbox>
     );
 
   if (!collaborators || collaborators.length === 0)
     return <div className={styles.empty}>{t('permission.collaborators.empty')}</div>;
 
   return (
-    <div className="flex flex-col">
+    <Flexbox>
       {collaborators.map((collaborator) => {
         const name = displayName(collaborator);
         const email = collaborator.user?.email;
@@ -74,12 +75,15 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
         )?.label;
 
         return (
-          <div
-            className={cx('flex flex-row items-center gap-3', styles.row)}
+          <Flexbox
+            horizontal
+            align={'center'}
+            className={styles.row}
+            gap={12}
             key={collaborator.userId}
           >
             <Avatar avatar={collaborator.user?.avatar || undefined} size={32} title={name} />
-            <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+            <Flexbox flex={1} style={{ minWidth: 0 }}>
               <Text ellipsis weight={500}>
                 {name}
               </Text>
@@ -88,7 +92,7 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
                   {email}
                 </Text>
               ) : null}
-            </div>
+            </Flexbox>
             {levelLabel ? <Tag>{levelLabel}</Tag> : null}
             <Popconfirm
               arrow={false}
@@ -106,10 +110,10 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
                 title={t('permission.collaborators.remove')}
               />
             </Popconfirm>
-          </div>
+          </Flexbox>
         );
       })}
-    </div>
+    </Flexbox>
   );
 });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { ContextMenuHost, ModalHost, TooltipGroup } from '@lobehub/ui';
+import { ContextMenuHost, ModalHost } from '@lobehub/ui';
 import { ModalHost as BaseModalHost, ToastHost } from '@lobehub/ui/base-ui';
 import { StyleProvider } from 'antd-style';
 import { domMax, LazyMotion } from 'motion/react';
@@ -8,6 +8,7 @@ import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Susp
 
 import { OrviloAnalyticsProviderWrapper } from '@/components/Analytics/OrviloAnalyticsProviderWrapper';
 import { DragUploadProvider } from '@/components/DragUploadZone/DragUploadProvider';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { isDesktop } from '@/const/version';
 import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
@@ -104,7 +105,7 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
           <GroupWizardProvider>
             <DragUploadProvider>
               <LazyMotion features={domMax}>
-                <TooltipGroup layoutAnimation={false}>
+                <TooltipProvider>
                   <StyleProvider speedy={import.meta.env.PROD}>
                     <OrviloAnalyticsProviderWrapper>
                       <CacheHydrationGate>
@@ -113,7 +114,7 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
                       </CacheHydrationGate>
                     </OrviloAnalyticsProviderWrapper>
                   </StyleProvider>
-                </TooltipGroup>
+                </TooltipProvider>
                 <ModalHost />
                 <BaseModalHost />
                 <ToastHost />

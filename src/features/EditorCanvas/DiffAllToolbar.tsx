@@ -2,10 +2,10 @@
 
 import type { IEditor } from '@lobehub/editor';
 import { DiffAction, LITEXML_DIFFNODE_ALL_COMMAND } from '@lobehub/editor';
+import { Block, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { Space } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
 import { Check, X } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -125,13 +125,13 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
 
   return (
     <div className={styles.container}>
-      <div
+      <Block
+        horizontal
         shadow
-        style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
-        className={cn(
-          'flex gap-2 p-1',
-          cx(styles.toolbar, isDarkMode ? styles.toolbarDark : styles.toolbarLight),
-        )}
+        className={cx(styles.toolbar, isDarkMode ? styles.toolbarDark : styles.toolbarLight)}
+        gap={8}
+        padding={4}
+        variant="outlined"
       >
         <Space>
           <Button
@@ -144,7 +144,7 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
               await handleSave();
             }}
           >
-            <X size={16} />
+            <Icon icon={X} size={16} />
             {t('modifier.rejectAll')}
           </Button>
           <Button
@@ -157,11 +157,11 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
               await handleSave();
             }}
           >
-            <Check color={'green'} size={16} />
+            <Icon color={'green'} icon={Check} size={16} />
             {t('modifier.acceptAll')}
           </Button>
         </Space>
-      </div>
+      </Block>
     </div>
   );
 });

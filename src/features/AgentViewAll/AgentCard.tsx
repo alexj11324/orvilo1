@@ -1,6 +1,6 @@
 'use client';
 
-import { ContextMenuTrigger, type MenuProps, Tooltip } from '@lobehub/ui';
+import { Block, ContextMenuTrigger, Flexbox, type MenuProps, Tooltip } from '@lobehub/ui';
 import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
@@ -125,14 +125,17 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
           to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
           onPointerEnter={activateMenu}
         >
-          <div
-            className={`flex flex-col cursor-pointer h-full rounded-md border border-border ${cardStyles.card}`}
-          >
+          <Block clickable className={cardStyles.card} height={'100%'} variant={'outlined'}>
             {/* Right padding reserves the header slot the absolutely
                   positioned "…" sibling overlays. */}
-            <div className="flex items-center gap-2" style={{ minWidth: 0, paddingInlineEnd: 28 }}>
+            <Flexbox
+              horizontal
+              align={'center'}
+              gap={8}
+              style={{ minWidth: 0, paddingInlineEnd: 28 }}
+            >
               <AgentAvatar item={item} size={24} />
-              <div className="flex items-center flex-1 gap-1.5" style={{ minWidth: 0 }}>
+              <Flexbox horizontal align={'center'} flex={1} gap={6} style={{ minWidth: 0 }}>
                 <Text ellipsis style={{ minWidth: 0 }} weight={600}>
                   {displayTitle}
                 </Text>
@@ -141,22 +144,25 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
                     {roleTag}
                   </Tag>
                 ) : null}
-              </div>
-            </div>
+              </Flexbox>
+            </Flexbox>
             <Text className={cardStyles.description} fontSize={12} type={'secondary'}>
               {description}
             </Text>
             {item.labels?.length ? (
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <Flexbox horizontal align={'center'} gap={6} wrap={'wrap'}>
                 <LabelTags labels={item.labels} />
-              </div>
+              </Flexbox>
             ) : null}
-            <div
-              className="flex items-center gap-2 justify-between"
+            <Flexbox
+              horizontal
+              align={'center'}
+              gap={8}
+              justify={'space-between'}
               style={{ marginBlockStart: 'auto' }}
             >
               {showAuthor ? (
-                <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
                   {author ? (
                     <Tooltip title={author.name}>
                       <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={18} />
@@ -166,15 +172,15 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
                       –
                     </Text>
                   )}
-                </div>
+                </Flexbox>
               ) : (
                 <div />
               )}
               <Text className={cardStyles.updatedAt} fontSize={12}>
                 {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
               </Text>
-            </div>
-          </div>
+            </Flexbox>
+          </Block>
         </WorkspaceLink>
         <span className={cardStyles.actions}>
           {/* Visible "…" trigger AND right-click open the same menu — the

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -32,7 +31,7 @@ export interface ShareHeroProps {
 }
 
 export const ShareHero = ({ avatar, byline, title }: ShareHeroProps) => (
-  <Flexbox gap={8} paddingBlock={'24px 16px'} paddingInline={24}>
+  <div className="flex flex-col gap-2 px-6 pt-6 pb-4">
     {avatar}
     {title && (
       <Text as={'h1'} fontSize={24} style={{ margin: 0 }} weight={700}>
@@ -44,7 +43,7 @@ export const ShareHero = ({ avatar, byline, title }: ShareHeroProps) => (
         {byline}
       </Text>
     )}
-  </Flexbox>
+  </div>
 );
 
 export default function ShareShell({ aside, children, error, loading }: ShareShellProps) {
@@ -53,18 +52,18 @@ export default function ShareShell({ aside, children, error, loading }: ShareShe
   else if (loading) body = <Loading debugId="share shell" />;
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
-      <Flexbox horizontal align={'center'} padding={12}>
+    <div className="flex h-full w-full flex-col">
+      <div className="flex items-center p-3">
         <Link style={{ color: 'inherit' }} to="/">
           <ProductLogo size={32} />
         </Link>
-      </Flexbox>
-      <Flexbox horizontal flex={1} style={{ overflow: 'hidden' }}>
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+      </div>
+      <div className="flex flex-1" style={{ overflow: 'hidden' }}>
+        <div className="flex flex-1 flex-col" style={{ overflow: 'hidden' }}>
           {body}
-        </Flexbox>
+        </div>
         {aside}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 }

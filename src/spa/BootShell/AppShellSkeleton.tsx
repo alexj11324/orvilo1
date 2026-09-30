@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { createStaticStyles, keyframes } from 'antd-style';
 import { memo, useEffect, useState } from 'react';
@@ -114,10 +113,12 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
   return (
     <div aria-hidden className={`${CSS_VAR_CLASS} ${styles.root}`} id={id}>
       {isDesktop && <div className={`${styles.dragRegion} ${electronStylish.draggable}`} />}
-      <Flexbox
-        horizontal
-        height={isDesktop ? `calc(100% - ${TITLE_BAR_HEIGHT}px)` : '100%'}
-        width={'100%'}
+      <div
+        className="flex"
+        style={{
+          height: isDesktop ? `calc(100% - ${TITLE_BAR_HEIGHT}px)` : '100%',
+          width: '100%',
+        }}
       >
         <div
           style={{
@@ -127,23 +128,27 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
             width: navPanelWidth,
           }}
         />
-        <Flexbox
-          className={containerStyles.outerContainer}
-          height={'100%'}
-          padding={8}
-          style={getOuterCssVariables({ expand: showLeftPanel })}
-          width={'100%'}
+        <div
+          className={`${containerStyles.outerContainer} flex`}
+          style={{
+            height: '100%',
+            padding: 8,
+            width: '100%',
+            ...getOuterCssVariables({ expand: showLeftPanel }),
+          }}
         >
-          <Flexbox
-            className={containerStyles.innerContainer}
-            height={'100%'}
-            style={getInnerCssVariables({ isDark })}
-            width={'100%'}
+          <div
+            className={`${containerStyles.innerContainer} flex`}
+            style={{
+              height: '100%',
+              width: '100%',
+              ...getInnerCssVariables({ isDark }),
+            }}
           >
             <div className={styles.contentOverlay}>{waiting && <LoadingHint />}</div>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
     </div>
   );
 });

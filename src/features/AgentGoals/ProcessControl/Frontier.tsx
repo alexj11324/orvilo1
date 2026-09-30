@@ -1,5 +1,6 @@
 'use client';
 
+import { Block, Flexbox, Icon, TextArea, Tooltip } from '@lobehub/ui';
 import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceStatus, GoalDecisionOption } from '@orvilo/types';
 import { Divider } from 'antd';
@@ -9,8 +10,6 @@ import { Fragment, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
-import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { openAddGoalTaskModal } from '@/features/AgentGoals/AddTaskModal';
 import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
@@ -153,20 +152,36 @@ const RowGlyph = memo<{ kind: FrontierItem['kind']; view: GoalNodeView }>(({ kin
         view.node.status === 'resolved'
           ? TASK_STATUS_VISUALS.completed
           : TASK_STATUS_VISUALS.canceled;
-      return <visual.icon color={visual.color} size={16} />;
+      return <Icon color={visual.color} icon={visual.icon} size={16} />;
     }
     case 'gate': {
-      return <TASK_STATUS_VISUALS.paused.icon color={TASK_STATUS_VISUALS.paused.color} size={16} />;
+      return (
+        <Icon
+          color={TASK_STATUS_VISUALS.paused.color}
+          icon={TASK_STATUS_VISUALS.paused.icon}
+          size={16}
+        />
+      );
     }
     case 'running': {
       return <RunningGlyph size={16} />;
     }
     case 'stale': {
-      return <TASK_STATUS_VISUALS.failed.icon color={TASK_STATUS_VISUALS.failed.color} size={16} />;
+      return (
+        <Icon
+          color={TASK_STATUS_VISUALS.failed.color}
+          icon={TASK_STATUS_VISUALS.failed.icon}
+          size={16}
+        />
+      );
     }
     default: {
       return (
-        <TASK_STATUS_VISUALS.backlog.icon color={TASK_STATUS_VISUALS.backlog.color} size={16} />
+        <Icon
+          color={TASK_STATUS_VISUALS.backlog.color}
+          icon={TASK_STATUS_VISUALS.backlog.icon}
+          size={16}
+        />
       );
     }
   }
@@ -191,10 +206,16 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
   if (view.attempts.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-0">
+    <Flexbox gap={0}>
       <span className={styles.label}>{t('goalProcess.attempts.title')}</span>
       {view.attempts.map((attempt) => (
-        <div className={`flex items-baseline gap-2.5 ${styles.attempt}`} key={attempt.index}>
+        <Flexbox
+          horizontal
+          align={'baseline'}
+          className={styles.attempt}
+          gap={10}
+          key={attempt.index}
+        >
           <Text
             className={styles.mono}
             fontSize={12}
@@ -217,9 +238,9 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
             {t(`goalProcess.attempts.${attempt.outcome}` as const)}
           </Text>
           <AttemptReason reason={attempt.reason} />
-        </div>
+        </Flexbox>
       ))}
-    </div>
+    </Flexbox>
   );
 });
 
@@ -362,12 +383,14 @@ const FrontierRow = memo<{
   const stop = (event: React.MouseEvent) => event.stopPropagation();
 
   return (
-    <div
-      className={`flex flex-col cursor-pointer ${item.kind === 'done' ? styles.dim : undefined}`}
-      style={{ padding: 12 }}
+    <Block
+      clickable
+      className={item.kind === 'done' ? styles.dim : undefined}
+      padding={12}
+      variant={'borderless'}
       onClick={() => onSelect(node.id)}
     >
-      <div className="flex items-center gap-2.5">
+      <Flexbox horizontal align={'center'} gap={10}>
         {view.seq !== undefined && <span className={styles.num}>#{view.seq}</span>}
         <RowGlyph kind={item.kind} view={view} />
         <Text ellipsis style={{ flexShrink: 1, maxWidth: '60%', minWidth: 0 }} weight={500}>
@@ -383,8 +406,8 @@ const FrontierRow = memo<{
             {t('goalProcess.frontier.dependsOn', { refs: deps.map((d) => `#${d}`).join(' ') })}
           </span>
         )}
-        <div className="flex flex-col flex-1" />
-        <div className="flex items-center gap-2" style={{ flex: 'none' }}>
+        <Flexbox flex={1} />
+        <Flexbox horizontal align={'center'} gap={8} style={{ flex: 'none' }}>
           <AcceptanceChip view={view} />
           {/* Delivery is not done when the child is: the run's branch still has
               to land. Same chip as the task detail — state, evidence tooltip,
@@ -398,8 +421,8 @@ const FrontierRow = memo<{
           )}
           {item.kind === 'running' && <RunningClock startedAt={view.startedAt} />}
           {item.kind === 'done' && <DoneTime view={view} />}
-        </div>
-      </div>
+        </Flexbox>
+      </Flexbox>
 
       {item.rank === 0 && (
         // The expanded body is READ-ONLY content — why it stopped and what each
@@ -409,7 +432,7 @@ const FrontierRow = memo<{
         // height, so a click aimed anywhere natural landed in dead space while
         // the pointer cursor still promised otherwise. Only the form below opts
         // out.
-        <div className={`flex flex-col gap-3.5 ${styles.body}`}>
+        <Flexbox className={styles.body} gap={14}>
           {item.kind === 'gate' && view.decision && (
             // State the problem itself, in the user's language when the
             // coordinator's vocabulary is recognized — the buttons below
@@ -423,53 +446,39 @@ const FrontierRow = memo<{
           {item.kind === 'gate' && canEdit && (
             // A click here is aimed at the note field or a decision button —
             // never at "open this node".
-            <div className="flex flex-col gap-3.5" onClick={stop}>
-              <div className="flex flex-col gap-1">
+            <Flexbox gap={14} onClick={stop}>
+              <Flexbox gap={4}>
                 <span className={styles.label}>{t('goalProcess.gate.noteLabel')}</span>
-                <Textarea
+                <TextArea
+                  autoSize={{ maxRows: 3, minRows: 1 }}
                   placeholder={t('goalProcess.gate.notePlaceholder')}
-                  rows={1}
-                  style={{ maxHeight: '3lh' }}
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                 />
-              </div>
+              </Flexbox>
               {/* Actions close the card: read the situation, add guidance, then decide. */}
-              <div className="flex gap-2">
+              <Flexbox horizontal gap={8}>
                 {view.decision?.options?.map((option) => (
-                  <Tooltip key={option.id}>
-                    <TooltipTrigger
-                      render={
-                        <span>
-                          <Button
-                            type={
-                              option.id === view.decision?.recommendedOptionId
-                                ? 'primary'
-                                : 'default'
-                            }
-                            onClick={(event) => {
-                              stop(event);
-                              actions.decide(
-                                view.decision!.id,
-                                option.id,
-                                note.trim() || undefined,
-                              );
-                            }}
-                          >
-                            {optionLabel(option)}
-                          </Button>
-                        </span>
+                  <Tooltip key={option.id} title={option.description}>
+                    <Button
+                      type={
+                        option.id === view.decision?.recommendedOptionId ? 'primary' : 'default'
                       }
-                    />
-                    <TooltipContent>{option.description}</TooltipContent>
+                      onClick={(event) => {
+                        stop(event);
+                        actions.decide(view.decision!.id, option.id, note.trim() || undefined);
+                      }}
+                    >
+                      {optionLabel(option)}
+                    </Button>
                   </Tooltip>
                 ))}
-              </div>
-            </div>
+              </Flexbox>
+            </Flexbox>
           )}
-        </div>
+        </Flexbox>
       )}
-    </div>
+    </Block>
   );
 });
 
@@ -480,7 +489,7 @@ const AddTaskButton = memo<{ onAdd: FrontierActions['addTask'] }>(({ onAdd }) =>
   const { t } = useTranslation('chat');
   return (
     <Button
-      icon={<Plus />}
+      icon={<Icon icon={Plus} />}
       size={'small'}
       type={'text'}
       onClick={() => openAddGoalTaskModal({ onAdd })}
@@ -502,9 +511,9 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
   const achieved = graph.goal.status === 'achieved';
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <div className="flex items-baseline gap-2">
+    <Flexbox gap={8}>
+      <Flexbox horizontal align={'baseline'} justify={'space-between'}>
+        <Flexbox horizontal align={'baseline'} gap={8}>
           <Text fontSize={16} weight={600}>
             {t('goalProcess.frontier.title')}
           </Text>
@@ -516,25 +525,25 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
               {t('goalProcess.frontier.advanceable', { count: graph.advanceable })}
             </Text>
           )}
-        </div>
+        </Flexbox>
         {canEdit && <AddTaskButton onAdd={actions.addTask} />}
-      </div>
+      </Flexbox>
 
       <div className={styles.list}>
-        <div className="flex flex-col gap-0" style={{ padding: 2 }}>
+        <Block gap={0} padding={2} variant={'borderless'}>
           {graph.frontier.length === 0 &&
             (planning ? (
-              <div className="flex items-center gap-2.5" style={{ padding: 12 }}>
+              <Flexbox horizontal align={'center'} gap={10} padding={12}>
                 <RunningGlyph size={16} />
-                <div className="flex flex-col gap-0.5">
+                <Flexbox gap={2}>
                   <Text weight={500}>{t('goalProcess.planning.title')}</Text>
                   <Text fontSize={12} type={'secondary'}>
                     {t('goalProcess.planning.description')}
                   </Text>
-                </div>
-              </div>
+                </Flexbox>
+              </Flexbox>
             ) : (
-              <div className="flex flex-col gap-0.5" style={{ padding: 12 }}>
+              <Flexbox gap={2} padding={12}>
                 <Text weight={500}>
                   {achieved
                     ? t('goalProcess.frontier.achievedTitle')
@@ -545,7 +554,7 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
                     ? t('goalProcess.frontier.achievedDescription')
                     : t('goalProcess.frontier.emptyDescription')}
                 </Text>
-              </div>
+              </Flexbox>
             ))}
           {graph.frontier.map((item, index) => (
             <Fragment key={item.key}>
@@ -560,16 +569,16 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
               />
             </Fragment>
           ))}
-        </div>
+        </Block>
         {graph.blocked.length > 0 && (
           <>
             <Divider dashed style={{ margin: 0 }} />
             <div className={styles.blockedHead} onClick={() => setShowBlocked(!showBlocked)}>
-              {showBlocked ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <Icon icon={showBlocked ? ChevronDown : ChevronRight} size={12} />
               <span>{t('goalProcess.frontier.blocked', { count: graph.blocked.length })}</span>
             </div>
             {showBlocked && (
-              <div className="flex flex-col gap-0" style={{ padding: 2 }}>
+              <Block gap={0} padding={2} variant={'borderless'}>
                 {graph.blocked.map((view, index) => (
                   <Fragment key={view.node.id}>
                     {index > 0 && <Divider dashed style={{ margin: 0 }} />}
@@ -582,12 +591,12 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
                     />
                   </Fragment>
                 ))}
-              </div>
+              </Block>
             )}
           </>
         )}
       </div>
-    </div>
+    </Flexbox>
   );
 });
 

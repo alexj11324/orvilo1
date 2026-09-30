@@ -1,6 +1,6 @@
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Icon, Markdown } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 // GitHub check status is separate from Orvilo task and issue workflow status.
 /* eslint-disable @typescript-eslint/no-restricted-imports */
 import {
@@ -13,7 +13,7 @@ import {
   XCircleIcon,
 } from 'lucide-react';
 /* eslint-enable @typescript-eslint/no-restricted-imports */
-import { createElement, memo, type ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
@@ -178,7 +178,7 @@ const ReviewOverview = memo<{
     <div className={styles.layout}>
       <div className={styles.body}>
         <h1 className={styles.title}>{pullRequest.title}</h1>
-        <div className={cx('flex items-center gap-2', styles.author)}>
+        <Flexbox horizontal align={'center'} className={styles.author} gap={8}>
           <Avatar
             avatar={pullRequest.authorAvatar ?? undefined}
             name={pullRequest.author ?? '?'}
@@ -193,7 +193,7 @@ const ReviewOverview = memo<{
           <span className={styles.branch} title={branchLabel}>
             {pullRequest.baseRef} ← {pullRequest.headRef}
           </span>
-        </div>
+        </Flexbox>
         <section className={styles.description}>
           <div className={styles.sectionLabel}>{t('reviews.description')}</div>
           {pullRequest.body ? (
@@ -207,26 +207,29 @@ const ReviewOverview = memo<{
       <aside className={styles.rail}>
         <section>
           <div className={styles.railLabel}>{t('reviews.status')}</div>
-          <div className={cx('flex items-center gap-2', styles.railValue)}>
-            {createElement(state.icon, { color: state.color, size: 14 })}
+          <Flexbox horizontal align={'center'} className={styles.railValue} gap={8}>
+            <Icon color={state.color} icon={state.icon} size={14} />
             <Text fontSize={13}>{t(state.key as never)}</Text>
-          </div>
+          </Flexbox>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.checks')}</div>
-          <div className={cx('flex items-center gap-2', styles.railValue)}>
-            {createElement(
-              pullRequest.checks.summary.state === 'passed'
-                ? CheckCircle2Icon
-                : pullRequest.checks.summary.state === 'failing'
-                  ? XCircleIcon
-                  : CircleDashedIcon,
-              { color: checks.color, size: 14 },
-            )}
+          <Flexbox horizontal align={'center'} className={styles.railValue} gap={8}>
+            <Icon
+              color={checks.color}
+              size={14}
+              icon={
+                pullRequest.checks.summary.state === 'passed'
+                  ? CheckCircle2Icon
+                  : pullRequest.checks.summary.state === 'failing'
+                    ? XCircleIcon
+                    : CircleDashedIcon
+              }
+            />
             <Text fontSize={13}>
               {t(checks.labelKey as never, { count: pullRequest.checks.summary.failing })}
             </Text>
-          </div>
+          </Flexbox>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.branch')}</div>
@@ -238,7 +241,7 @@ const ReviewOverview = memo<{
           <div className={styles.railLabel}>
             {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
           </div>
-          <div className="flex flex-col gap-0.5" style={{ marginBlockStart: 8 }}>
+          <Flexbox gap={2} style={{ marginBlockStart: 8 }}>
             {files.map((file) => (
               <button
                 className={styles.fileButton}
@@ -247,7 +250,7 @@ const ReviewOverview = memo<{
                 type={'button'}
                 onClick={() => onFileSelect(file.filename)}
               >
-                <FileTextIcon size={14} />
+                <Icon icon={FileTextIcon} size={14} />
                 <span className={styles.fileName}>{file.filename}</span>
                 <span>
                   +{file.additions} −{file.deletions}
@@ -259,7 +262,7 @@ const ReviewOverview = memo<{
                 {t('reviews.moreFilesInDiff')}
               </button>
             ) : null}
-          </div>
+          </Flexbox>
         </section>
       </aside>
     </div>

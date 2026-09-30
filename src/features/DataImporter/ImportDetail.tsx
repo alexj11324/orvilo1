@@ -1,8 +1,9 @@
 'use client';
 
+import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { Table } from 'antd';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { Info } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -143,23 +144,23 @@ const ImportPreviewModal = ({
       onCancel={() => onOpenChange(false)}
     >
       <div className={styles.modalContent}>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between" style={{ width: '100%' }}>
-              <div className="flex items-center gap-2">
+        <Flexbox gap={16}>
+          <Flexbox gap={4}>
+            <Flexbox horizontal align="center" justify="space-between" width="100%">
+              <Flexbox horizontal align="center" gap={8}>
                 <Info className={styles.infoIcon} size={16} />
                 <Text strong>{t('importPreview.totalRecords', { count: totalRecords })}</Text>
-              </div>
-              <div className="flex">
+              </Flexbox>
+              <Flexbox horizontal>
                 <Text type="secondary">
                   {t('importPreview.totalTables', { count: tables.length })}
                 </Text>
-              </div>
-            </div>
-            <div className={cx(styles.hash, 'flex gap-1')}>
+              </Flexbox>
+            </Flexbox>
+            <Flexbox horizontal className={styles.hash} gap={4}>
               {t('importPreview.hashLabel')}: <span>{importData.schemaHash}</span>
-            </div>
-          </div>
+            </Flexbox>
+          </Flexbox>
 
           <div className={styles.tableContainer}>
             <Table
@@ -171,7 +172,7 @@ const ImportPreviewModal = ({
               size="small"
             />
           </div>
-        </div>
+        </Flexbox>
       </div>
     </ImperativeModal>
   );

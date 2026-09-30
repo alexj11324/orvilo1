@@ -1,10 +1,10 @@
+import { Empty, Flexbox } from '@lobehub/ui';
 import { Table } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { Wrench } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 
@@ -16,20 +16,16 @@ const APIs = memo<{
 
   if (!pluginManifest?.api)
     return (
-      <Empty style={{ maxWidth: 400 }}>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Wrench />
-          </EmptyMedia>
-          <EmptyDescription style={{ fontSize: 14 }}>
-            {t('detailModal.info.description')}
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <Empty
+        description={t('detailModal.info.description')}
+        descriptionProps={{ fontSize: 14 }}
+        icon={Wrench}
+        style={{ maxWidth: 400 }}
+      />
     );
 
   return (
-    <div className="flex flex-col py-4" style={{ width: '100%' }}>
+    <Flexbox paddingBlock={16} width={'100%'}>
       <Table
         bordered
         dataSource={pluginManifest.api}
@@ -49,7 +45,7 @@ const APIs = memo<{
           },
         ]}
       />
-    </div>
+    </Flexbox>
   );
 });
 

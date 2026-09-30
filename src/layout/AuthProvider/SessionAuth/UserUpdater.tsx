@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, type PropsWithChildren, useEffect, useLayoutEffect, useState } from 'react';
@@ -120,10 +119,8 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
         {children}
       </div>
       {showRecovery && (
-        <Flexbox
-          align="center"
-          gap={16}
-          justify="center"
+        <div
+          className="flex flex-col items-center justify-center gap-4"
           style={{
             background: cssVar.colorBgLayout,
             inset: 0,
@@ -147,7 +144,7 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
           >
             {t('common:retry')}
           </Button>
-        </Flexbox>
+        </div>
       )}
     </>
   );

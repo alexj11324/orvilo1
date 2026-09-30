@@ -1,3 +1,4 @@
+import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { Space } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -58,7 +59,7 @@ export default function PluginEmptyState() {
   return (
     <div className={styles.container}>
       <div className={styles.iconWrapper}>
-        <Puzzle size={32} />
+        <Icon icon={Puzzle} size={32} />
       </div>
       <Text as={'h4'} className={styles.title}>
         {t('dev.preview.empty.title')}

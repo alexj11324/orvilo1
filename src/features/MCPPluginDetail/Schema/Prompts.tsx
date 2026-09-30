@@ -1,11 +1,10 @@
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Highlighter, Icon, Markdown } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon, MinusIcon } from 'lucide-react';
-import { createElement, memo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
-import { CodeBlock } from '@/components/ui/code-block';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import { useDetailContext } from '../DetailProvider';
@@ -37,7 +36,7 @@ const Prompts = memo<PromptsProps>(({ mode, activeKey = [], setActiveKey }) => {
           open={activeKey.includes(item.name)}
         >
           {item.description && <Markdown fontSize={14}>{item.description}</Markdown>}
-          <div className="flex flex-col gap-1.5">
+          <Flexbox gap={6}>
             <SchemaSubtitle>{t('mcp.details.schema.prompts.arguments')}</SchemaSubtitle>
             {mode === ModeType.Docs ? (
               <InlineTable
@@ -56,10 +55,12 @@ const Prompts = memo<PromptsProps>(({ mode, activeKey = [], setActiveKey }) => {
                   },
                   {
                     dataIndex: 'required',
-                    render: (_, record) =>
-                      createElement(record.required ? CheckIcon : MinusIcon, {
-                        color: record.required ? cssVar.colorSuccess : cssVar.colorTextDescription,
-                      }),
+                    render: (_, record) => (
+                      <Icon
+                        color={record.required ? cssVar.colorSuccess : cssVar.colorTextDescription}
+                        icon={record.required ? CheckIcon : MinusIcon}
+                      />
+                    ),
                     title: t('mcp.details.schema.prompts.table.required'),
                   },
                   {
@@ -69,14 +70,11 @@ const Prompts = memo<PromptsProps>(({ mode, activeKey = [], setActiveKey }) => {
                 ]}
               />
             ) : (
-              <CodeBlock
-                code={JSON.stringify(item.arguments, null, 2)}
-                language="json"
-                style={{ fontSize: 12 }}
-                variant="ghost"
-              />
+              <Highlighter language={'json'} style={{ fontSize: 12 }} variant={'borderless'}>
+                {JSON.stringify(item.arguments, null, 2)}
+              </Highlighter>
             )}
-          </div>
+          </Flexbox>
         </SchemaItem>
       ))}
     </SchemaList>

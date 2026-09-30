@@ -1,9 +1,9 @@
+import { Flexbox, TextArea } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Textarea } from '@/components/ui/textarea';
 import { isDesktop } from '@/const/version';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
@@ -111,12 +111,12 @@ const QuickImportSection = ({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <Flexbox gap={8}>
       {importError && (
         <Alert showIcon style={{ marginBottom: 8 }} title={importError} type="error" />
       )}
-      <Textarea
-        rows={10}
+      <TextArea
+        autoSize={{ maxRows: 15, minRows: 10 }}
         value={jsonInput}
         placeholder={`{
   "mcpServers": {
@@ -137,7 +137,7 @@ const QuickImportSection = ({
           if (importError) setImportError(null);
         }}
       />
-      <div className="flex justify-between">
+      <Flexbox horizontal justify={'space-between'}>
         <Button
           className={electronStylish.nodrag}
           size={'small'}
@@ -150,8 +150,8 @@ const QuickImportSection = ({
         <Button size={'small'} type={'primary'} onClick={handleImportConfirm}>
           {t('common:import')}
         </Button>
-      </div>
-    </div>
+      </Flexbox>
+    </Flexbox>
   );
 };
 

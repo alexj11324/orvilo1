@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
@@ -50,12 +49,9 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
     selected: boolean,
     onClick: () => void,
   ) => (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={8}
+    <div
+      className="flex items-center gap-2 p-2"
       key={key}
-      padding={8}
       style={{ borderRadius: 8, cursor: 'pointer' }}
       onClick={onClick}
       onMouseEnter={(e) => {
@@ -74,12 +70,12 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
       <Text ellipsis fontSize={13} style={{ flex: 1 }}>
         {name}
       </Text>
-      {selected && <Icon color={cssVar.colorTextSecondary} icon={CheckIcon} size={16} />}
-    </Flexbox>
+      {selected && <CheckIcon size={16} style={{ color: cssVar.colorTextSecondary }} />}
+    </div>
   );
 
   return (
-    <Flexbox gap={1} paddingInline={4}>
+    <div className="flex flex-col gap-px px-1">
       <Text fontSize={11} style={{ paddingInline: 8 }} type={'secondary'} weight={500}>
         {t('workspaceSwitcher.label')}
       </Text>
@@ -92,7 +88,7 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
           () => void handlePick(workspace.id),
         ),
       )}
-    </Flexbox>
+    </div>
   );
 });
 

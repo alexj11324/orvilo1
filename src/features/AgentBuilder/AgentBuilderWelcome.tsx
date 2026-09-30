@@ -1,6 +1,6 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Markdown } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,9 +26,10 @@ const AgentBuilderWelcome = memo<AgentBuilderWelcomeProps>(
 
     return (
       <>
-        <div className="flex flex-col flex-1" />
-        <div
-          className="flex flex-col gap-3 w-full"
+        <Flexbox flex={1} />
+        <Flexbox
+          gap={12}
+          width={'100%'}
           style={{
             paddingBottom: 16,
           }}
@@ -41,7 +42,7 @@ const AgentBuilderWelcome = memo<AgentBuilderWelcomeProps>(
             {t('agentBuilder.welcome')}
           </Markdown>
           <SuggestionChips builderAgentId={agentId} count={3} disabled={disabled} mode={mode} />
-        </div>
+        </Flexbox>
       </>
     );
   },

@@ -1,3 +1,4 @@
+import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
 import { ChevronRight } from 'lucide-react';
@@ -12,7 +13,7 @@ const AutomationBreadcrumb = memo<{ taskId: string }>(({ taskId }) => {
   const name = useTaskStore((s) => s.taskDetailMap[taskId]?.name);
   return (
     <AntBreadcrumb
-      separator={<ChevronRight />}
+      separator={<Icon icon={ChevronRight} />}
       items={[
         {
           title: (

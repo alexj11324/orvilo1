@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
 import { Button, Switch, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { snakeCase } from 'es-toolkit/compat';
 import { ListRestartIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 
+import { Input } from '@/components/ui/input';
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
 import { useServerConfigStore } from '@/store/serverConfig';
 import {
@@ -94,20 +94,17 @@ const Panel = memo(() => {
     <div className={devDockPanelStyles.root}>
       <div className={styles.toolbar}>
         <Input
-          allowClear
           className={devDockPanelStyles.searchInput}
           placeholder={'Search flag name…'}
-          size={'small'}
           value={search}
-          variant={'borderless'}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Flexbox horizontal className={styles.toolbarFilter}>
+        <div className={`${styles.toolbarFilter} flex`}>
           <Switch checked={overriddenOnly} size={'small'} onChange={setOverriddenOnly} />
           <Text style={{ fontSize: 12, whiteSpace: 'nowrap' }} type={'secondary'}>
             overridden only
           </Text>
-        </Flexbox>
+        </div>
       </div>
 
       <div className={styles.body}>

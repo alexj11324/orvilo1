@@ -1,9 +1,10 @@
 'use client';
 
+import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BreadcrumbProps } from 'antd';
 import { Breadcrumb } from 'antd';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { ChevronRightIcon, HomeIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
@@ -58,7 +59,15 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
   ({ left, right, backTo = '/', showBack = true, breadcrumb = [], homeItem }) => {
     const navigate = useWorkspaceAwareNavigate();
     const leftContent = left ? (
-      <div className="flex items-center flex-1 gap-0.5" style={{ overflow: 'hidden' }}>
+      <Flexbox
+        horizontal
+        align={'center'}
+        flex={1}
+        gap={2}
+        style={{
+          overflow: 'hidden',
+        }}
+      >
         {showBack && <BackButton size={DESKTOP_HEADER_ICON_SMALL_SIZE} to={backTo} />}
         {left && typeof left === 'string' ? (
           <Text ellipsis fontSize={16} weight={500}>
@@ -67,16 +76,16 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
         ) : (
           left
         )}
-      </div>
+      </Flexbox>
     ) : (
-      <div className="flex flex-col flex-1 px-[6px]">
+      <Flexbox flex={1} paddingInline={6}>
         <Breadcrumb
           className={styles.breadcrumb}
-          separator={<ChevronRightIcon size={12} />}
+          separator={<Icon icon={ChevronRightIcon} />}
           items={[
             homeItem ?? {
               href: '/',
-              title: <HomeIcon size={16} />,
+              title: <Icon icon={HomeIcon} />,
             },
             ...breadcrumb,
           ].map((item) => ({
@@ -93,17 +102,23 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
             },
           }))}
         />
-      </div>
+      </Flexbox>
     );
 
     return (
-      <div
-        className={cx(styles.container, 'flex items-center flex-none justify-between')}
-        style={{ padding: '8px 6px' }}
+      <Flexbox
+        horizontal
+        align={'center'}
+        className={styles.container}
+        flex={'none'}
+        justify={'space-between'}
+        padding={'8px 6px'}
       >
         {leftContent}
-        <div className="flex items-center gap-0.5 justify-end">{right}</div>
-      </div>
+        <Flexbox horizontal align={'center'} gap={2} justify={'flex-end'}>
+          {right}
+        </Flexbox>
+      </Flexbox>
     );
   },
 );

@@ -1,4 +1,4 @@
-import { Markdown } from '@lobehub/ui';
+import { Flexbox, Markdown, Snippet } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { Card, Space } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -7,7 +7,6 @@ import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CodeBlock } from '@/components/ui/code-block';
 import { useToolStore } from '@/store/tool';
 import { type SystemDependencyCheckResult } from '@/types/plugins';
 
@@ -106,17 +105,17 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
           style={{ marginBottom: 8 }}
           transition={{ delay: 0.15, duration: 0.2 }}
         >
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
+          <Flexbox gap={8}>
+            <Flexbox horizontal align="center" gap={8}>
               <AlertTriangle color={cssVar.colorWarning} size={16} />
               <Text as={'h5'} style={{ margin: 0 }}>
                 {t('mcpInstall.dependenciesRequired')}
               </Text>
-            </div>
+            </Flexbox>
             <Text style={{ fontSize: 12 }} type="secondary">
               {t('mcpInstall.dependenciesDescription')}
             </Text>
-          </div>
+          </Flexbox>
         </m.div>
 
         <m.div
@@ -124,12 +123,12 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
           initial={{ opacity: 0, y: 4 }}
           transition={{ delay: 0.2, duration: 0.2 }}
         >
-          <div className="flex flex-col gap-2">
+          <Flexbox gap={8}>
             {systemDependencies.map((dep) => (
               <Card className={styles.dependencyCard} key={dep.name} size="small">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                <Flexbox gap={12}>
+                  <Flexbox horizontal align="center" justify="space-between">
+                    <Flexbox horizontal align="center" gap={8}>
                       <Text strong>{dep.name}</Text>
                       {dep.requiredVersion && (
                         <Text style={{ fontSize: 12 }} type="secondary">
@@ -138,7 +137,7 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                           })}
                         </Text>
                       )}
-                    </div>
+                    </Flexbox>
                     <div className={styles.statusIcon}>
                       {dep.meetRequirement ? (
                         <>
@@ -156,22 +155,22 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                         </>
                       )}
                     </div>
-                  </div>
+                  </Flexbox>
 
                   {!dep.meetRequirement && dep.installInstructions && (
-                    <div className="flex flex-col gap-3">
+                    <Flexbox gap={12}>
                       {dep.installInstructions.current && (
-                        <div className="flex flex-col gap-1">
+                        <Flexbox gap={4}>
                           <Text strong style={{ fontSize: 12 }}>
                             <Terminal size={12} style={{ marginRight: 4 }} />
                             {t('mcpInstall.installMethods.recommended')}
                           </Text>
-                          <CodeBlock code={dep.installInstructions.current} language="bash" />
-                        </div>
+                          <Snippet language={'bash'}>{dep.installInstructions.current}</Snippet>
+                        </Flexbox>
                       )}
 
                       {dep.installInstructions.manual && (
-                        <div className="flex flex-col gap-1">
+                        <Flexbox gap={4}>
                           <Text strong style={{ fontSize: 12 }}>
                             <ExternalLink size={12} style={{ marginRight: 4 }} />
                             {t('mcpInstall.installMethods.manual')}
@@ -179,14 +178,14 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                           <Markdown style={{ fontSize: 12 }}>
                             {dep.installInstructions.manual}
                           </Markdown>
-                        </div>
+                        </Flexbox>
                       )}
-                    </div>
+                    </Flexbox>
                   )}
-                </div>
+                </Flexbox>
               </Card>
             ))}
-          </div>
+          </Flexbox>
         </m.div>
 
         <m.div
@@ -195,7 +194,7 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
           initial={{ opacity: 0, y: 4 }}
           transition={{ delay: 0.3, duration: 0.2 }}
         >
-          <div className="flex justify-between">
+          <Flexbox horizontal justify={'space-between'}>
             <Button size="small" onClick={handleCancel}>
               {t('common:cancel')}
             </Button>
@@ -207,7 +206,7 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                 {t('mcpInstall.recheckDependencies')}
               </Button>
             </Space>
-          </div>
+          </Flexbox>
         </m.div>
       </m.div>
     );

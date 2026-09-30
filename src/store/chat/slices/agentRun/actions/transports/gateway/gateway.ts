@@ -904,10 +904,15 @@ export class GatewayActionImpl {
         /* non-critical */
       }
 
-      await this.#get().switchTopic(result.topicId, {
-        clearNewKey: true,
-        skipRefreshMessage: true,
-      });
+      // The optimistic topic was adopted before persistence. A late response
+      // must not reselect it after the user opened a blank or different topic.
+      // internal_replaceTopicId above preserves ownership while reconciling ids.
+      if (!optimisticTopic || this.#get().activeTopicId === result.topicId) {
+        await this.#get().switchTopic(result.topicId, {
+          clearNewKey: true,
+          skipRefreshMessage: true,
+        });
+      }
 
       // Refresh the topic list so the new topic appears in topicDataMap (sidebar).
       // Unlike the direct-API sendMessage path (which receives topics[] in the

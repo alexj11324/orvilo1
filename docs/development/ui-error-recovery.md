@@ -24,6 +24,8 @@ Desktop shortcut settings normalize Electron accelerator names for the platform-
 
 The agent sidebar completes the new-topic action against the source conversation before navigating to the bare agent URL. The action awaits topic switching and message refresh. Pending clicks are disabled; a rejected action shows an error, skips the explicit navigation and allows retry. A later send or navigation takes ownership of its destination, so completion of an earlier New topic action does not send it back to the blank view. Route subscriptions may also react to topic state changes; message revalidation follows the existing SWR error contract. The explicit SWR data mutation propagates rejection without replaying the action as a revalidation.
 
+Gateway topic creation also reconciles persisted messages and sidebar data without reselecting its optimistic topic after the user has opened a blank or different conversation. It retains selection when that topic still owns the active view.
+
 ## Regression coverage
 
 Targeted tests cover duplicate creation, handoff preflight rejection, user-state failure/retry, 401/403 recovery and the Electron explicit-action gate, capped-column list switching, and accelerator display normalization. Native authenticated Electron flows and healthy-gateway successor execution require separate runtime validation.

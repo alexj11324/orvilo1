@@ -27,7 +27,8 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
           title={t('sharePage.error.unauthorized.title')}
           extra={
             <Button
-              href="/signin"
+              nativeButton={false}
+              render={<a href="/signin" />}
               onClick={(event) => {
                 event.preventDefault();
                 const callbackUrl = `${window.location.pathname}${window.location.search}`;

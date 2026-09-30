@@ -40,13 +40,17 @@ const SidebarBody = memo<{ itemKey: string }>(({ itemKey }) => {
 
   return (
     <AccordionItem value={itemKey}>
-      <div className="flex items-center">
+      <div className="group flex items-center">
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
           <div className="truncate min-w-0 text-[12px] text-muted-foreground font-medium">
             {t('library.title')}
           </div>
         </AccordionTrigger>
-        <div className={cx('accordion-action')}>
+        <div
+          className={cx(
+            'accordion-action flex shrink-0 items-center gap-1 pe-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100',
+          )}
+        >
           {canCreate ? createButton : <SimpleTooltip title={reason}>{createButton}</SimpleTooltip>}
         </div>
       </div>

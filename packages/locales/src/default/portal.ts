@@ -48,5 +48,7 @@ export default {
   'notebook.empty': 'No pages yet. Pages linked to this Topic will show up here.',
   'notebook.title': 'Notebook',
   'openInPageEditor': 'Edit in Page',
+  'fullscreen': 'Fullscreen',
+  'exitFullscreen': 'Exit fullscreen',
   'title': 'Workspace',
 };

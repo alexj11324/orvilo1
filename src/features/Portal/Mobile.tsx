@@ -65,17 +65,14 @@ const MobilePortalContent = ({
 
   return (
     <SheetContent
+      className={cx('gap-0 rounded-t-2xl p-0', isPortalThread && styles.container)}
       showCloseButton={false}
       side={'bottom'}
-      className={cx(
-        'gap-0 rounded-t-2xl p-0',
-        fullscreen ? 'h-dvh' : 'h-[95%]',
-        isPortalThread && styles.container,
-      )}
+      style={{ height: fullscreen ? '100%' : '95%' }}
     >
       <SheetTitle className={'sr-only'}>{t('title')}</SheetTitle>
       <button
-        aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        aria-label={t(fullscreen ? 'exitFullscreen' : 'fullscreen')}
         className={styles.fullscreenToggle}
         type="button"
         onClick={() => setFullscreen((prev) => !prev)}

@@ -1,5 +1,5 @@
 import { isNull } from 'drizzle-orm';
-import { index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { timestamps, timestamptz } from './_helpers';
 import { tasks } from './task';
@@ -33,6 +33,12 @@ export const taskReminders = pgTable(
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     remindAt: timestamptz('remind_at').notNull(),
     deliveredAt: timestamptz('delivered_at'),
+    // Delivery retry bookkeeping: a failed attempt bumps `attemptCount` and
+    // re-arms `nextAttemptAt` on a bounded backoff; the sweep re-claims the
+    // row then. Rows past the attempt cap get `deliveredAt` so they cannot
+    // head-block the pending index forever.
+    attemptCount: integer('attempt_count').notNull().default(0),
+    nextAttemptAt: timestamptz('next_attempt_at'),
 
     ...timestamps,
   },

@@ -8,7 +8,7 @@ import * as React from 'react';
 import { POPUP_Z_CLASS } from './zIndex';
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
-  return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
+  return <MenuPrimitive.Root data-slot="dropdown-menu" modal={false} {...props} />;
 }
 
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {

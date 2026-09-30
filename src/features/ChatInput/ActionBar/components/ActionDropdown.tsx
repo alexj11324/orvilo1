@@ -457,6 +457,7 @@ const ActionDropdown = memo<ActionDropdownProps>(
         <MenuPrimitive.Root
           {...rest}
           defaultOpen={defaultOpen}
+          modal={false}
           open={open}
           onOpenChange={handleOpenChange}
           onOpenChangeComplete={handleOpenChangeComplete}

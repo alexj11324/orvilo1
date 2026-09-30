@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+import { cn } from 'cn';
 import { type FC } from 'react';
 import { Outlet } from 'react-router';
 
@@ -13,11 +13,11 @@ const DesktopMemoryLayout: FC = () => {
   return (
     <>
       <Sidebar />
-      <Flexbox className={styles.mainContainer} flex={1} height={'100%'}>
+      <div className={cn('flex flex-col flex-1', styles.mainContainer)} style={{ height: '100%' }}>
         <RouteSkeletonChromeProvider>
           <Outlet />
         </RouteSkeletonChromeProvider>
-      </Flexbox>
+      </div>
     </>
   );
 };

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
@@ -49,20 +48,26 @@ const ProjectLayout = memo(() => {
 
   return (
     <ProjectToolbarContext value={toolbar}>
-      <Flexbox height="100%" style={{ minWidth: 0 }}>
+      <div className="flex flex-col" style={{ height: '100%', minWidth: 0 }}>
         <ProjectTabsBar toolbarRef={setToolbar} />
-        <Flexbox horizontal flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
-          <Flexbox flex={1} height="100%" style={{ minHeight: 0, minWidth: 0 }}>
+        <div
+          className="flex flex-row"
+          style={{ flex: 1, height: '100%', minHeight: 0, minWidth: 0 }}
+        >
+          <div
+            className="flex flex-col"
+            style={{ flex: 1, height: '100%', minHeight: 0, minWidth: 0 }}
+          >
             <Outlet />
-          </Flexbox>
+          </div>
           {showPanel && projectId && (
             <ProjectSidePanel
               projectId={projectId}
               showActivity={projectPathSection(pathname) === 'overview'}
             />
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </ProjectToolbarContext>
   );
 });

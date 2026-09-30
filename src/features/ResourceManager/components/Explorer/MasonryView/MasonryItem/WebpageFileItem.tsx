@@ -1,5 +1,4 @@
-import { Flexbox, Icon, stopPropagation } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ExternalLinkIcon, GlobeIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -126,11 +125,13 @@ const WebpageFileItem = memo<WebpageFileItemProps>(({ contentPreview, name, url 
           <div className={styles.excerpt}>{contentPreview}</div>
         </div>
       )}
-      <Flexbox className={styles.info} gap={8}>
+      <div className={cx('flex flex-col gap-2', styles.info)}>
         <span className={styles.title}>{title}</span>
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+        <div className="flex flex-row items-center gap-2 justify-between">
           <div className={styles.domain}>
-            <Icon icon={GlobeIcon} size={13} />
+            <span className="anticon" role="img">
+              <GlobeIcon fill={'transparent'} height={13} size={13} width={13} />
+            </span>
             {hostname && <span>{hostname}</span>}
           </div>
           {url && (
@@ -138,17 +139,19 @@ const WebpageFileItem = memo<WebpageFileItemProps>(({ contentPreview, name, url 
               aria-label={'open source page'}
               className={styles.openLink}
               type={'button'}
-              onPointerDown={stopPropagation}
+              onPointerDown={(event) => event.stopPropagation()}
               onClick={(e) => {
-                stopPropagation(e);
+                e.stopPropagation();
                 window.open(url, '_blank', 'noopener,noreferrer');
               }}
             >
-              <Icon icon={ExternalLinkIcon} size={13} />
+              <span className="anticon" role="img">
+                <ExternalLinkIcon fill={'transparent'} height={13} size={13} width={13} />
+              </span>
             </button>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </>
   );
 });

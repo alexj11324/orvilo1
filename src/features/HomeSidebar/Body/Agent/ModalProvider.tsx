@@ -1,6 +1,5 @@
 'use client';
 
-import { type ModalInstance } from '@lobehub/ui/base-ui';
 import {
   createContext,
   lazy,
@@ -15,6 +14,7 @@ import {
   useState,
 } from 'react';
 
+import { type ModalInstance } from '@/components/Modal';
 import EditingPopover from '@/features/EditingPopover';
 import type { OpenCreateAgentModalOptions } from '@/features/HomeSidebar/hooks/useCreateModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';

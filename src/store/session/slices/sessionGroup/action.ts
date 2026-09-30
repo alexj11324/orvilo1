@@ -1,6 +1,6 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { sessionService } from '@/services/session';
 import { type SessionStore } from '@/store/session';
 import { type StoreSetter } from '@/store/types';

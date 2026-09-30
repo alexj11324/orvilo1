@@ -1,13 +1,13 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { TodoPanelHeader } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleArrowRight } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Checkbox } from '@/components/ui/checkbox';
 
 import type { ClaudeCodeTodoItem, TodoWriteArgs } from '../../../types';
 import { computeTodoSummary, TODO_SUMMARY_LABEL_KEYS } from '../../todoSummary';
@@ -50,7 +50,9 @@ const TodoRow = memo<TodoRowProps>(({ item }) => {
   if (status === 'in_progress') {
     return (
       <div className={cx(styles.itemRow, styles.processingRow)}>
-        <Icon icon={CircleArrowRight} size={17} style={{ color: cssVar.colorInfo }} />
+        <span className="anticon" role="img" style={{ color: cssVar.colorInfo }}>
+          <CircleArrowRight fill={'transparent'} height={17} size={17} width={17} />
+        </span>
         <span className={styles.textProcessing}>{activeForm || content}</span>
       </div>
     );
@@ -59,21 +61,22 @@ const TodoRow = memo<TodoRowProps>(({ item }) => {
   const isCompleted = status === 'completed';
 
   return (
-    <Checkbox
-      backgroundColor={cssVar.colorSuccess}
-      checked={isCompleted}
-      shape={'circle'}
-      style={{ borderWidth: 1.5, cursor: 'default' }}
-      classNames={{
-        text: cx(styles.textPending, isCompleted && styles.textCompleted),
-        wrapper: styles.itemRow,
-      }}
-      textProps={{
-        type: isCompleted ? 'secondary' : undefined,
-      }}
-    >
-      {content}
-    </Checkbox>
+    <label className={cx('flex items-center gap-2', styles.itemRow)} style={{ cursor: 'default' }}>
+      <Checkbox
+        checked={isCompleted}
+        className="rounded-full data-checked:border-success data-checked:bg-success"
+        style={{ borderWidth: 1.5 }}
+      />
+      <span
+        className={cx(
+          styles.textPending,
+          isCompleted && 'text-muted-foreground',
+          isCompleted && styles.textCompleted,
+        )}
+      >
+        {content}
+      </span>
+    </label>
   );
 });
 
@@ -88,12 +91,12 @@ const TodoWrite = memo<BuiltinRenderProps<TodoWriteArgs>>(({ args }) => {
   if (!todos || todos.length === 0) return null;
 
   return (
-    <Block variant={'outlined'} width="100%">
+    <div className="rounded-md border bg-card" style={{ width: '100%' }}>
       <TodoPanelHeader label={t(TODO_SUMMARY_LABEL_KEYS[summary.state])} summary={summary} />
       {todos.map((item, index) => (
         <TodoRow item={item} key={index} />
       ))}
-    </Block>
+    </div>
   );
 });
 

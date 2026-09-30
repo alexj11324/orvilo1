@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -30,17 +29,19 @@ interface SearchBarProps {
 const SearchBar = memo<SearchBarProps>(({ defaultQuery, resultsNumber, searching }) => {
   const { t } = useTranslation('tool');
   return (
-    <Flexbox horizontal align={'center'} distribution={'space-between'} gap={40} height={26}>
-      <Flexbox horizontal align={'center'} className={styles.query} gap={8}>
-        <Icon icon={SearchIcon} />
+    <div className="flex flex-row items-center justify-between gap-10 h-[26px]">
+      <div className={cx('flex flex-row items-center gap-2', styles.query)}>
+        <span className="anticon" role="img">
+          <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
         <span className={cx(searching && shinyTextStyles.shinyText)}>{defaultQuery}</span>
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal align={'center'} className={styles.font}>
+      <div className={cx('flex flex-row items-center', styles.font)}>
         <div>{t('search.searchResult')}</div>
         {resultsNumber}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 export default SearchBar;

@@ -1,14 +1,13 @@
 'use client';
 
-import { Block, Flexbox, stopPropagation } from '@lobehub/ui';
-import { ActionIcon, Alert, Text } from '@lobehub/ui/base-ui';
 import type { CrawlErrorResult, CrawlSuccessResult } from '@orvilo/web-crawler';
-import { Descriptions } from 'antd';
-import { createStaticStyles } from 'antd-style';
-import { ExternalLink } from 'lucide-react';
+import { createStaticStyles, cx } from 'antd-style';
+import { CircleAlert, ExternalLink } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useChatStore } from '@/store/chat';
 
 import { WebBrowsingManifest } from '../../../manifest';
@@ -72,77 +71,62 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
 
   if ('errorType' in result) {
     return (
-      <Flexbox className={styles.footer} gap={8}>
-        <Alert
-          title={<div style={{ textAlign: 'start' }}>{result.errorMessage || result.content}</div>}
-          type={'error'}
-          variant={'borderless'}
-        />
+      <div className={cx('flex flex-col gap-2', styles.footer)}>
+        <Alert className="border-transparent bg-transparent" variant="destructive">
+          <CircleAlert />
+          <AlertTitle>
+            <div style={{ textAlign: 'start' }}>{result.errorMessage || result.content}</div>
+          </AlertTitle>
+        </Alert>
         <div>
-          <Descriptions
-            column={1}
-            size="small"
-            classNames={{
-              content: styles.footerText,
-              label: styles.footerText,
-            }}
-            items={[
-              {
-                children: crawler,
-                label: t('search.crawPages.meta.crawler'),
-              },
-            ]}
-          />
+          <div className="flex flex-col">
+            <div className={cx('flex gap-1', styles.footerText)}>
+              <span>{t('search.crawPages.meta.crawler')}</span>
+              <span>{crawler}</span>
+            </div>
+          </div>
         </div>
-      </Flexbox>
+      </div>
     );
   }
 
   const { url, title, description } = result as CrawlSuccessResult;
 
   return (
-    <Block
-      clickable
-      className={styles.container}
-      justify={'space-between'}
-      variant={'outlined'}
+    <div
+      className={cx(
+        styles.container,
+        'flex flex-col justify-between rounded-md border bg-card cursor-pointer',
+      )}
       onClick={() => {
         openToolUI(messageId, WebBrowsingManifest.identifier);
         togglePageContent(originalUrl);
       }}
     >
-      <Flexbox gap={8} paddingBlock={8} paddingInline={12}>
-        <Flexbox horizontal align={'center'} className={styles.titleRow} justify={'space-between'}>
-          <Text ellipsis>{title || originalUrl}</Text>
-          <a href={url} target={'_blank'} onClick={stopPropagation}>
+      <div className="flex flex-col gap-2 py-2 px-3">
+        <div className={cx('flex flex-row items-center justify-between', styles.titleRow)}>
+          <div className="truncate">{title || originalUrl}</div>
+          <a href={url} target={'_blank'} onClick={(event) => event.stopPropagation()}>
             <ActionIcon icon={ExternalLink} size={'small'} />
           </a>
-        </Flexbox>
-        <Text ellipsis={{ rows: 2 }} fontSize={12} type={'secondary'}>
+        </div>
+        <div className="line-clamp-2 text-[12px] text-muted-foreground">
           {description || result.content?.slice(0, 40)}
-        </Text>
-      </Flexbox>
-      <Flexbox className={styles.footer}>
-        <Descriptions
-          column={2}
-          size="small"
-          classNames={{
-            content: styles.footerText,
-            label: styles.footerText,
-          }}
-          items={[
-            {
-              children: result.content?.length,
-              label: t('search.crawPages.meta.words'),
-            },
-            {
-              children: crawler,
-              label: t('search.crawPages.meta.crawler'),
-            },
-          ]}
-        />
-      </Flexbox>
-    </Block>
+        </div>
+      </div>
+      <div className={cx('flex flex-col', styles.footer)}>
+        <div className="flex gap-6">
+          <div className={cx('flex gap-1', styles.footerText)}>
+            <span>{t('search.crawPages.meta.words')}</span>
+            <span>{result.content?.length}</span>
+          </div>
+          <div className={cx('flex gap-1', styles.footerText)}>
+            <span>{t('search.crawPages.meta.crawler')}</span>
+            <span>{crawler}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 });
 

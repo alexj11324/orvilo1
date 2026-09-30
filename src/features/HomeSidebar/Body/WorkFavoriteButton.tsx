@@ -1,9 +1,10 @@
 'use client';
 
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import type { NavigationFavoriteTargetType } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { FAVORITE_MARK, FAVORITE_MARK_OFF, type FavoriteIconSet } from './favoriteIcons';
 import { useWorkFavoriteToggle } from './useWorkFavoriteToggle';
@@ -27,11 +28,21 @@ const WorkFavoriteButton = memo<WorkFavoriteButtonProps>(
     if (!targetId) return null;
     const label = pinned ? t('savedViews.unfavorite') : t('savedViews.favorite');
     if (variant === 'icon') {
-      const glyph = pinned ? FAVORITE_MARK_OFF[icon] : FAVORITE_MARK[icon];
-      return <ActionIcon icon={glyph} size="small" title={label} onClick={() => void toggle()} />;
+      const Glyph = pinned ? FAVORITE_MARK_OFF[icon] : FAVORITE_MARK[icon];
+      return (
+        <Button
+          aria-label={label}
+          size="icon-sm"
+          title={label}
+          variant="ghost"
+          onClick={() => void toggle()}
+        >
+          <Glyph aria-hidden />
+        </Button>
+      );
     }
     return (
-      <Button size="small" onClick={() => void toggle()}>
+      <Button size="sm" onClick={() => void toggle()}>
         {label}
       </Button>
     );

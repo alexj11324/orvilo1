@@ -1,8 +1,10 @@
 'use client';
 
-import { Alert } from '@lobehub/ui/base-ui';
+import { InfoIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { usePageEditorStore } from './store';
 import { usePageLockedByOther } from './usePageLockedByOther';
@@ -32,23 +34,19 @@ const LockStatusBanner = memo(() => {
 
   if (lockHealth === 'unstable') {
     return (
-      <Alert
-        showIcon
-        style={{ marginBlock: 8 }}
-        title={t('pageEditor.editMode.lockUnstable')}
-        type="info"
-      />
+      <Alert style={{ marginBlock: 8 }} variant="info">
+        <InfoIcon />
+        <AlertTitle>{t('pageEditor.editMode.lockUnstable')}</AlertTitle>
+      </Alert>
     );
   }
 
   return (
-    <Alert
-      showIcon
-      description={t('pageEditor.editMode.lockLostDescription')}
-      style={{ marginBlock: 8 }}
-      title={t('pageEditor.editMode.lockLostTitle')}
-      type="warning"
-    />
+    <Alert style={{ marginBlock: 8 }} variant="warning">
+      <TriangleAlertIcon />
+      <AlertTitle>{t('pageEditor.editMode.lockLostTitle')}</AlertTitle>
+      <AlertDescription>{t('pageEditor.editMode.lockLostDescription')}</AlertDescription>
+    </Alert>
   );
 });
 

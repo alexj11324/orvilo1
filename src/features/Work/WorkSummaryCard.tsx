@@ -1,12 +1,11 @@
 'use client';
 
-import { Center, Flexbox, Icon as OrviloIcon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleDollarSignIcon, CoinsIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useChatStore } from '@/store/chat';
@@ -206,74 +205,80 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
 
     if (variant === 'inline') {
       return (
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={cx(styles.inline, clickable && styles.inlineClickable, className)}
-          gap={10}
+        <div
+          className={cx(
+            'flex items-center gap-2.5',
+            styles.inline,
+            clickable && styles.inlineClickable,
+            className,
+          )}
           onClick={clickable ? handleOpen : undefined}
         >
           <Icon className={styles.inlineIcon} size={17} />
-          <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-            <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-              <Text ellipsis className={styles.inlineTitle}>
-                {title}
-              </Text>
+          <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
+            <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+              <div className={cn('truncate min-w-0', styles.inlineTitle)}>{title}</div>
               {showIdentifier && <span className={styles.inlineIdentifier}>{identifier}</span>}
-            </Flexbox>
+            </div>
             {description && (
-              <Text ellipsis className={styles.inlineDescription}>
-                {description}
-              </Text>
+              <div className={cn('truncate min-w-0', styles.inlineDescription)}>{description}</div>
             )}
-          </Flexbox>
+          </div>
           {usage && (
-            <Center horizontal className={styles.inlineCost} gap={2} title={usageTitle}>
-              <OrviloIcon icon={usage.icon} />
+            <div
+              className={cx('flex items-center justify-center gap-0.5', styles.inlineCost)}
+              title={usageTitle}
+            >
+              {createElement(usage.icon)}
               {usage.value}
-            </Center>
+            </div>
           )}
-        </Flexbox>
+        </div>
       );
     }
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={cx(styles.card, clickable && styles.clickable, className)}
-        gap={12}
+      <div
+        className={cx(
+          'flex items-center gap-3',
+          styles.card,
+          clickable && styles.clickable,
+          className,
+        )}
         onClick={clickable ? handleOpen : undefined}
       >
-        <Flexbox align={'center'} className={styles.icon} justify={'center'}>
+        <div className={cx('flex flex-col items-center justify-center', styles.icon)}>
           <Icon size={18} />
-        </Flexbox>
-        <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-            <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-              <Text ellipsis className={styles.title}>
-                {title}
-              </Text>
+        </div>
+        <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+              <div className={cn('truncate min-w-0', styles.title)}>{title}</div>
               {showIdentifier && (
-                <Text code className={styles.identifier} fontSize={12}>
+                <div
+                  className={cn('font-mono rounded bg-muted px-1 text-[12px]', styles.identifier)}
+                >
                   {identifier}
-                </Text>
+                </div>
               )}
-            </Flexbox>
+            </div>
             {usage && (
-              <Center horizontal className={styles.cost} gap={2} title={usageTitle}>
-                <OrviloIcon icon={usage.icon} />
+              <div
+                className={cx('flex items-center justify-center gap-0.5', styles.cost)}
+                title={usageTitle}
+              >
+                {createElement(usage.icon)}
                 {usage.value}
-              </Center>
+              </div>
             )}
-          </Flexbox>
+          </div>
           {description && (
-            <Text ellipsis className={styles.description} fontSize={12}>
+            <div className={cn('truncate min-w-0 text-[12px]', styles.description)}>
               {description}
-            </Text>
+            </div>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

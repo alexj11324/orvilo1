@@ -1,6 +1,8 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import Avatar from '@/components/Avatar';
+import AvatarGroup from '@/components/Avatar/AvatarGroup';
 
 import { ENGINE_ICON_MAP } from '../../const';
 
@@ -18,7 +20,7 @@ export const EngineAvatar = memo<EngineAvatarProps>(({ engine }) => (
 
 export const EngineAvatarGroup = memo<EngineAvatarGroupProps>(({ engines }) => {
   return (
-    <Avatar.Group
+    <AvatarGroup
       shape={'circle'}
       size={14}
       items={engines.map((engine) => ({

@@ -1,6 +1,7 @@
-import { createModal, useModalContext } from '@lobehub/ui/base-ui';
 import { memo, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, useModalContext } from '@/components/Modal';
 
 import CreateForm from './CreateForm';
 

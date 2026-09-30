@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -7,6 +5,7 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import { Button } from '@/components/ui/button';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
@@ -44,37 +43,37 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
   // offer Reload instead of the terminal "task was deleted" dead-end below.
   if (error) {
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, position: 'relative' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   if (isNotFound) {
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, position: 'relative' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, position: 'relative' }}>
         <NavHeader
           left={<Breadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4, gap: 8 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <NotFound
             desc={t('taskDetail.notFound.desc')}
             title={t('taskDetail.notFound.title')}
             extra={
               <Link to={'/tasks'}>
-                <Button type={'primary'}>{t('taskDetail.notFound.backToTasks')}</Button>
+                <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
               </Link>
             }
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 

@@ -1,16 +1,18 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { EDITOR_DEBOUNCE_TIME, EDITOR_MAX_WAIT } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { debounce } from 'es-toolkit/compat';
 import { CheckIcon, PencilIcon, XIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import CodeEditorPane from '@/components/CodeEditorPane';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import FloatingChatPanel from '@/features/FloatingChatPanel';
 import { useDocumentChatTopic } from '@/features/FloatingChatPanel/useDocumentChatTopic';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -152,24 +154,20 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
   }, [currentName, documentId, draft, performSave, t, updateSkillFrontmatter]);
 
   return (
-    <Flexbox className={styles.frontmatter}>
-      <Flexbox horizontal align="center" className={styles.sectionHeader} justify="space-between">
-        <Text type="secondary">{t('skillFrontmatter.title')}</Text>
+    <div className={cx('flex flex-col', styles.frontmatter)}>
+      <div className={cx('flex flex-row items-center justify-between', styles.sectionHeader)}>
+        <div className="text-muted-foreground">{t('skillFrontmatter.title')}</div>
         {editing ? (
-          <Flexbox horizontal gap={8}>
-            <Button icon={XIcon} size="small" onClick={handleCancel}>
+          <div className="flex flex-row gap-2">
+            <Button size="sm" variant="outline" onClick={handleCancel}>
+              <XIcon data-icon="inline-start" />
               {t('cancel')}
             </Button>
-            <Button
-              icon={CheckIcon}
-              loading={saving}
-              size="small"
-              type="primary"
-              onClick={handleSave}
-            >
+            <Button loading={saving} size="sm" variant="default" onClick={handleSave}>
+              <CheckIcon data-icon="inline-start" />
               {t('confirm')}
             </Button>
-          </Flexbox>
+          </div>
         ) : (
           <ActionIcon
             icon={PencilIcon}
@@ -178,35 +176,38 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
             onClick={handleEdit}
           />
         )}
-      </Flexbox>
+      </div>
       {editing ? (
-        <Flexbox gap={8} padding={12}>
+        <div className="flex flex-col gap-2 p-3">
           {/* Raw YAML is only exposed in edit mode so users can keep advanced frontmatter syntax. */}
-          <TextArea
-            autoSize={{ maxRows: 12, minRows: 4 }}
-            className={styles.textArea}
+          <Textarea
+            rows={4}
+            style={{ maxHeight: '19em' }}
             value={draft}
-            variant="borderless"
+            className={cx(
+              'border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0',
+              styles.textArea,
+            )}
             onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
               setDraft(event.target.value);
               setError(undefined);
             }}
           />
-          {error && <Text type="danger">{error}</Text>}
-        </Flexbox>
+          {error && <div className="text-destructive">{error}</div>}
+        </div>
       ) : metadata.length > 0 ? (
         metadata.map((item) => (
-          <Flexbox horizontal align="flex-start" className={styles.metadataRow} key={item.key}>
-            <Text className={styles.metadataKey}>{item.key}</Text>
-            <Text className={styles.metadataValue}>{item.value}</Text>
-          </Flexbox>
+          <div className={cx('flex flex-row items-start', styles.metadataRow)} key={item.key}>
+            <div className={cn(styles.metadataKey)}>{item.key}</div>
+            <div className={cn(styles.metadataValue)}>{item.value}</div>
+          </div>
         ))
       ) : (
-        <Flexbox className={styles.metadataRow}>
-          <Text type="secondary">{t('skillFrontmatter.empty')}</Text>
-        </Flexbox>
+        <div className={cx('flex flex-col', styles.metadataRow)}>
+          <div className="text-muted-foreground">{t('skillFrontmatter.empty')}</div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -376,7 +377,7 @@ const DocumentBody = memo(() => {
   );
 
   return (
-    <Flexbox flex={1} height={'100%'} style={{ overflow: 'hidden' }}>
+    <div className="flex flex-col flex-1 h-[100%]" style={{ overflow: 'hidden' }}>
       <div className={fullPage ? styles.contentFull : styles.content}>
         {fullPage ? <WideScreenContainer>{editorContent}</WideScreenContainer> : editorContent}
       </div>
@@ -394,7 +395,7 @@ const DocumentBody = memo(() => {
           topicId={docChatTopicId}
         />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

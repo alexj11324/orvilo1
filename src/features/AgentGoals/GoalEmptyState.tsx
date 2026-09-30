@@ -1,8 +1,7 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { TargetIcon } from 'lucide-react';
 import {
   CalendarClockIcon,
@@ -14,8 +13,10 @@ import {
   TablePropertiesIcon,
   XIcon,
 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import type { GoalExampleKey, GoalExampleSeed } from './goalExamples';
 import { buildGoalExampleSeed, GOAL_EXAMPLE_KEYS } from './goalExamples';
@@ -141,51 +142,47 @@ const GoalEmptyState = memo<GoalEmptyStateProps>(({ onCreate }) => {
   const { t } = useTranslation('chat');
 
   return (
-    <Block padding={0} variant={'borderless'}>
-      <Flexbox align={'center'} className={styles.hero}>
-        <Flexbox align={'center'} className={styles.heroInner} gap={16}>
+    <div style={{ padding: 0 }}>
+      <div className={`flex flex-col items-center ${styles.hero}`}>
+        <div className={`flex flex-col items-center gap-4 ${styles.heroInner}`}>
           <div className={styles.heroIcon}>
             <InfinityIcon aria-hidden size={64} strokeWidth={1.75} />
           </div>
-          <Flexbox align={'center'} gap={8}>
-            <Text fontSize={20} weight={600}>
-              {t('goalEmpty.title')}
-            </Text>
-            <Text className={styles.heroLead} fontSize={14} type={'secondary'}>
+          <div className="flex flex-col items-center gap-2">
+            <div className="text-[20px] font-semibold">{t('goalEmpty.title')}</div>
+            <div className={cn('text-[14px] text-muted-foreground', styles.heroLead)}>
               {t('goalEmpty.lead')}
-            </Text>
-          </Flexbox>
-          <Button icon={PlusIcon} type={'primary'} onClick={() => onCreate()}>
+            </div>
+          </div>
+          <Button variant="outline" onClick={() => onCreate()}>
+            <PlusIcon data-icon="inline-start" />
             {t('goalEmpty.create')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
-      <Flexbox className={styles.section} gap={12}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
-          <Text fontSize={13} type={'secondary'} weight={600}>
+      <div className={`flex flex-col gap-3 ${styles.section}`}>
+        <div className="flex items-center justify-between">
+          <div className="text-[13px] text-muted-foreground font-semibold">
             {t('goalEmpty.examplesTitle')}
-          </Text>
+          </div>
           <Button
-            className={styles.howHint}
-            icon={CircleHelpIcon}
-            size={'small'}
-            type={'text'}
+            className={cn(styles.howHint)}
+            size="sm"
+            variant="ghost"
             onClick={() => createGoalHowItWorksModal()}
           >
+            <CircleHelpIcon data-icon="inline-start" />
             {t('goalEmpty.howHint')}
           </Button>
-        </Flexbox>
+        </div>
         <div className={styles.exampleGrid}>
           {GOAL_EXAMPLE_KEYS.map((key) => {
             const seed = buildGoalExampleSeed(key, (localeKey) => t(localeKey as never));
 
             return (
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.example}
-                gap={12}
+              <div
+                className={`flex items-center gap-3 ${styles.example}`}
                 key={key}
                 role={'button'}
                 tabIndex={0}
@@ -197,45 +194,31 @@ const GoalEmptyState = memo<GoalEmptyStateProps>(({ onCreate }) => {
                 }}
               >
                 <div className={styles.exampleIconBox}>
-                  <Icon icon={EXAMPLE_ICONS[key]} size={16} />
+                  {createElement(EXAMPLE_ICONS[key], { size: 16 })}
                 </div>
-                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-                  <Text fontSize={11} type={'secondary'}>
+                <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+                  <div className="text-[11px] text-muted-foreground">
                     {t(`goalEmpty.examples.${key}.tag` as never)}
-                  </Text>
-                  <Text ellipsis={{ rows: 2 }} fontSize={13} weight={500}>
-                    {seed.title}
-                  </Text>
-                </Flexbox>
-              </Flexbox>
+                  </div>
+                  <div className="line-clamp-2 text-[13px] font-medium">{seed.title}</div>
+                </div>
+              </div>
             );
           })}
         </div>
 
-        <Flexbox className={styles.judge} gap={6}>
-          <Flexbox horizontal align={'flex-start'} gap={8}>
-            <Icon
-              color={cssVar.colorError}
-              icon={XIcon}
-              size={13}
-              style={{ marginBlockStart: 3 }}
-            />
-            <Text fontSize={12} type={'secondary'}>
-              {t('goalEmpty.judge.bad')}
-            </Text>
-          </Flexbox>
-          <Flexbox horizontal align={'flex-start'} gap={8}>
-            <Icon
-              color={cssVar.colorSuccess}
-              icon={CheckIcon}
-              size={13}
-              style={{ marginBlockStart: 3 }}
-            />
-            <Text fontSize={12}>{t('goalEmpty.judge.good')}</Text>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
-    </Block>
+        <div className={`flex flex-col gap-1.5 ${styles.judge}`}>
+          <div className="flex items-start gap-2">
+            <XIcon color={cssVar.colorError} size={13} style={{ marginBlockStart: 3 }} />
+            <div className="text-[12px] text-muted-foreground">{t('goalEmpty.judge.bad')}</div>
+          </div>
+          <div className="flex items-start gap-2">
+            <CheckIcon color={cssVar.colorSuccess} size={13} style={{ marginBlockStart: 3 }} />
+            <div className="text-[12px]">{t('goalEmpty.judge.good')}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 });
 

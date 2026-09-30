@@ -1,6 +1,6 @@
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { Markdown } from '@lobehub/ui';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 // GitHub check status is separate from Orvilo task and issue workflow status.
 /* eslint-disable @typescript-eslint/no-restricted-imports */
 import {
@@ -13,7 +13,7 @@ import {
   XCircleIcon,
 } from 'lucide-react';
 /* eslint-enable @typescript-eslint/no-restricted-imports */
-import { memo, type ReactNode } from 'react';
+import { createElement, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
@@ -178,22 +178,18 @@ const ReviewOverview = memo<{
     <div className={styles.layout}>
       <div className={styles.body}>
         <h1 className={styles.title}>{pullRequest.title}</h1>
-        <Flexbox horizontal align={'center'} className={styles.author} gap={8}>
+        <div className={cx('flex flex-row items-center gap-2', styles.author)}>
           <Avatar
             avatar={pullRequest.authorAvatar ?? undefined}
             name={pullRequest.author ?? '?'}
             size={20}
           />
-          <Text className={styles.authorName} fontSize={12}>
-            {pullRequest.author}
-          </Text>
-          <Text fontSize={12} type={'secondary'}>
-            ·
-          </Text>
+          <div className={cn('text-[12px]', styles.authorName)}>{pullRequest.author}</div>
+          <div className="text-[12px] text-muted-foreground">·</div>
           <span className={styles.branch} title={branchLabel}>
             {pullRequest.baseRef} ← {pullRequest.headRef}
           </span>
-        </Flexbox>
+        </div>
         <section className={styles.description}>
           <div className={styles.sectionLabel}>{t('reviews.description')}</div>
           {pullRequest.body ? (
@@ -207,41 +203,46 @@ const ReviewOverview = memo<{
       <aside className={styles.rail}>
         <section>
           <div className={styles.railLabel}>{t('reviews.status')}</div>
-          <Flexbox horizontal align={'center'} className={styles.railValue} gap={8}>
-            <Icon color={state.color} icon={state.icon} size={14} />
-            <Text fontSize={13}>{t(state.key as never)}</Text>
-          </Flexbox>
+          <div className={cx('flex flex-row items-center gap-2', styles.railValue)}>
+            <span className="anticon" role="img">
+              <state.icon
+                color={state.color}
+                fill={'transparent'}
+                height={14}
+                size={14}
+                width={14}
+              />
+            </span>
+            <div className="text-[13px]">{t(state.key as never)}</div>
+          </div>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.checks')}</div>
-          <Flexbox horizontal align={'center'} className={styles.railValue} gap={8}>
-            <Icon
-              color={checks.color}
-              size={14}
-              icon={
+          <div className={cx('flex flex-row items-center gap-2', styles.railValue)}>
+            <span className="anticon" role="img">
+              {createElement(
                 pullRequest.checks.summary.state === 'passed'
                   ? CheckCircle2Icon
                   : pullRequest.checks.summary.state === 'failing'
                     ? XCircleIcon
-                    : CircleDashedIcon
-              }
-            />
-            <Text fontSize={13}>
+                    : CircleDashedIcon,
+                { size: 14, width: 14, height: 14, color: checks.color, fill: 'transparent' },
+              )}
+            </span>
+            <div className="text-[13px]">
               {t(checks.labelKey as never, { count: pullRequest.checks.summary.failing })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.branch')}</div>
-          <Text className={styles.railValue} fontSize={13}>
-            {branchLabel}
-          </Text>
+          <div className={cn('text-[13px]', styles.railValue)}>{branchLabel}</div>
         </section>
         <section>
           <div className={styles.railLabel}>
             {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
           </div>
-          <Flexbox gap={2} style={{ marginBlockStart: 8 }}>
+          <div className="flex flex-col gap-0.5" style={{ marginBlockStart: 8 }}>
             {files.map((file) => (
               <button
                 className={styles.fileButton}
@@ -250,7 +251,9 @@ const ReviewOverview = memo<{
                 type={'button'}
                 onClick={() => onFileSelect(file.filename)}
               >
-                <Icon icon={FileTextIcon} size={14} />
+                <span className="anticon" role="img">
+                  <FileTextIcon fill={'transparent'} height={14} size={14} width={14} />
+                </span>
                 <span className={styles.fileName}>{file.filename}</span>
                 <span>
                   +{file.additions} −{file.deletions}
@@ -262,7 +265,7 @@ const ReviewOverview = memo<{
                 {t('reviews.moreFilesInDiff')}
               </button>
             ) : null}
-          </Flexbox>
+          </div>
         </section>
       </aside>
     </div>

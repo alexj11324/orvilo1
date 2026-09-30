@@ -1,12 +1,12 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { ActionIcon, Upload } from '@lobehub/ui/base-ui';
 import { css, cx } from 'antd-style';
 import { ChevronRight, FileUp, LibraryBig, PlusIcon, TypeIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Upload } from '@/components/Upload';
 import type { ExistingEditorAttachment } from '@/features/EditorCanvas/editorAttachments';
 import { openLibraryFilePicker } from '@/features/LibraryModal';
 
@@ -42,7 +42,7 @@ const AttachmentMenu = memo<AttachmentMenuProps>(
           children: [
             {
               closeOnClick: false,
-              icon: <Icon icon={FileUp} size={18} />,
+              icon: <FileUp size={18} />,
               key: 'upload',
               label: (
                 <Upload
@@ -63,7 +63,7 @@ const AttachmentMenu = memo<AttachmentMenuProps>(
               ),
             },
             {
-              icon: <Icon icon={LibraryBig} size={18} />,
+              icon: <LibraryBig size={18} />,
               key: 'library',
               label: t('pageEditor.comments.attachments.chooseLibrary', { ns: 'file' }),
               onClick: () => {
@@ -72,7 +72,7 @@ const AttachmentMenu = memo<AttachmentMenuProps>(
               },
             },
           ],
-          extra: <Icon className={'orvilo-submenu-chevron'} icon={ChevronRight} size={16} />,
+          extra: <ChevronRight className={'orvilo-submenu-chevron'} size={16} />,
           icon: LibraryBig,
           key: 'attachments',
           label: t('plus.addAttachments', { ns: 'chat' }),

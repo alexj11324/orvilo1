@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Handle, Position } from '@xyflow/react';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
@@ -13,6 +12,7 @@ import {
   Paperclip,
   Repeat2,
 } from 'lucide-react';
+import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface FlowNodeData extends Record<string, unknown> {
@@ -144,7 +144,7 @@ export function FlowNode({ data }: { data: FlowNodeData }) {
     <>
       <Handle className={styles.handle} id="in" position={Position.Left} type="target" />
       <div className={cx(styles.card, data.selected && styles.selected)}>
-        <Flexbox horizontal className={styles.head} gap={10}>
+        <div className={`flex gap-2.5 ${styles.head}`}>
           <div
             aria-label={t(`flow.state.${data.state ?? 'pending'}`)}
             className={styles.glyph}
@@ -154,23 +154,23 @@ export function FlowNode({ data }: { data: FlowNodeData }) {
               color: flowStateColor(data.state),
             }}
           >
-            <Icon icon={statusIcon} size={24} />
+            {createElement(statusIcon, { size: 24 })}
           </div>
-          <Flexbox gap={3} style={{ minWidth: 0 }}>
+          <div className="flex flex-col gap-[3px]" style={{ minWidth: 0 }}>
             <span className={styles.title}>{data.title}</span>
             <span className={styles.subtitle}>{data.expected}</span>
-          </Flexbox>
-        </Flexbox>
-        <Flexbox horizontal align="center" className={styles.footer} gap={12}>
-          <Flexbox horizontal align="center" gap={4}>
-            <Icon icon={Repeat2} size={12} />
+          </div>
+        </div>
+        <div className={`flex items-center gap-3 ${styles.footer}`}>
+          <div className="flex items-center gap-1">
+            <Repeat2 size={12} />
             {data.attempts}
-          </Flexbox>
-          <Flexbox horizontal align="center" gap={4}>
-            <Icon icon={Paperclip} size={12} />
+          </div>
+          <div className="flex items-center gap-1">
+            <Paperclip size={12} />
             {data.evidence}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </div>
       <Handle className={styles.handle} id="out" position={Position.Right} type="source" />
       <Handle

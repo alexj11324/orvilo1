@@ -1,5 +1,3 @@
-import { type ItemType } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { ArrowRight, LibraryBig } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +10,7 @@ import { agentByIdSelectors } from '@/store/agent/selectors';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useChatInputResourceAccess } from '../../hooks/useChatInputResourceAccess';
+import type { ActionMenuItem } from '../../menuItems';
 import CheckboxItem from '../components/CheckboxWithLoading';
 
 // Keep every row's leading icon the same width. The menu's icon slot sizes to its
@@ -34,7 +33,7 @@ export const useKnowledgeMenuItems = ({
   onUpdatingChange,
 }: {
   onUpdatingChange: (updating: boolean) => void;
-}): ItemType[] => {
+}): ActionMenuItem[] => {
   const { t } = useTranslation('chat');
   const agentId = useAgentId();
   const { canConfigureResource } = useChatInputResourceAccess();
@@ -52,7 +51,7 @@ export const useKnowledgeMenuItems = ({
 
   if (!canConfigureResource) return [];
 
-  const items: ItemType[] = [];
+  const items: ActionMenuItem[] = [];
 
   if (files.length > 0 || knowledgeBases.length > 0) {
     items.push({
@@ -114,8 +113,21 @@ export const useKnowledgeMenuItems = ({
   // The picker entry is the only way to attach the first library or file, so it has to
   // stay reachable while nothing is attached yet — otherwise the empty hint is a dead end.
   items.push({
-    extra: <Icon icon={ArrowRight} />,
-    icon: <Icon icon={LibraryBig} size={MENU_ICON_SIZE} />,
+    extra: (
+      <span className="anticon" role="img">
+        <ArrowRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+      </span>
+    ),
+    icon: (
+      <span className="anticon" role="img">
+        <LibraryBig
+          fill={'transparent'}
+          height={MENU_ICON_SIZE}
+          size={MENU_ICON_SIZE}
+          width={MENU_ICON_SIZE}
+        />
+      </span>
+    ),
     key: 'knowledge-base-store',
     label: hasRelated ? t('knowledgeBase.viewMore') : t('knowledgeBase.related.browse'),
     onClick: () => {

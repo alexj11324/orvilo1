@@ -42,11 +42,9 @@ vi.mock('@/store/user', () => ({
   useUserStore: () => userMock.currentUserId,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  confirmModal: confirmModalMock,
-  toast: messageMock,
-}));
+vi.mock('@/components/Modal', () => ({ confirmModal: confirmModalMock }));
+
+vi.mock('@/components/toast', () => ({ toast: messageMock }));
 
 vi.mock('antd', async (importOriginal) => ({
   ...(await importOriginal<object>()),

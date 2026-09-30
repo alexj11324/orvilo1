@@ -17,6 +17,7 @@ import { watchdog } from '@/server/router-hono/workflows/task/handlers/watchdog'
 import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/verify/handlers/sweep';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
+import { runTaskReminderSweep } from '@/server/services/taskReminder/sweep';
 import { runHeartbeatTick } from '@/server/services/taskRunner/heartbeatTick';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
 
@@ -164,12 +165,21 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
+  const taskReminderSweep = hatchet.task({
+    name: HATCHET_TASK_NAMES.taskReminderSweep,
+    executionTimeout: '5m',
+    fn: async () => runTaskReminderSweep(),
+    onCrons: ['* * * * *'],
+    retries: 3,
+  });
+
   return [
     agentSignalNightlySchedule,
     goalAdvance,
     goalSweep,
     linearSyncSweep,
     taskHeartbeat,
+    taskReminderSweep,
     taskScheduleDispatch,
     taskScheduleExecute,
     taskScheduledTopicDispatch,

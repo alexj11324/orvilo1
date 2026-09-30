@@ -1,10 +1,14 @@
-import { DatePicker, Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarIcon, PlusIcon, XIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import DatePicker from '@/components/DatePicker';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 import { type CreateProjectMilestone } from './createProjectForm';
 import MilestoneIcon from './MilestoneIcon';
@@ -65,51 +69,59 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
   };
 
   return (
-    <Flexbox className={styles.container} gap={0}>
-      <Flexbox horizontal align="center" className={styles.header} gap={8}>
-        <Text fontSize={13} weight={500}>
+    <div className={cn('flex flex-col', styles.container)} style={{ gap: 0 }}>
+      <div className={cn('flex flex-row', styles.header)} style={{ alignItems: 'center', gap: 8 }}>
+        <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
           {t('create.milestones')}
-        </Text>
-        <Flexbox flex={1} />
-        <ActionIcon
+        </span>
+        <div className="flex flex-col" style={{ flex: 1 }} />
+        <Button
           aria-label={t('create.addMilestone')}
-          icon={PlusIcon}
-          size="small"
+          size="icon-sm"
+          variant="ghost"
           onClick={() => setComposerOpen((open) => !open)}
-        />
-      </Flexbox>
+        >
+          {createElement(PlusIcon, { 'size': 16, 'aria-hidden': true })}
+        </Button>
+      </div>
       {milestones.map((milestone, index) => (
-        <Flexbox className={styles.row} gap={4} key={`${milestone.name}-${index}`}>
-          <Flexbox horizontal align="center" gap={8}>
+        <div
+          className={cn('flex flex-col', styles.row)}
+          key={`${milestone.name}-${index}`}
+          style={{ gap: 4 }}
+        >
+          <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
             <MilestoneIcon size={14} />
-            <Text fontSize={13} weight={500}>
+            <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
               {milestone.name}
-            </Text>
+            </span>
             {milestone.date && (
-              <Text fontSize={12} type="secondary">
+              <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
                 {formatProjectDate(milestone.date)}
-              </Text>
+              </span>
             )}
-            <Flexbox flex={1} />
-            <ActionIcon
+            <div className="flex flex-col" style={{ flex: 1 }} />
+            <Button
               aria-label={t('create.removeMilestone')}
-              icon={XIcon}
-              size="small"
+              size="icon-sm"
+              variant="ghost"
               onClick={() => onChange(milestones.filter((_, itemIndex) => itemIndex !== index))}
-            />
-          </Flexbox>
+            >
+              {createElement(XIcon, { 'size': 16, 'aria-hidden': true })}
+            </Button>
+          </div>
           {milestone.description && (
-            <Text fontSize={12} type="secondary">
+            <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
               {milestone.description}
-            </Text>
+            </span>
           )}
-        </Flexbox>
+        </div>
       ))}
       {composerOpen && (
-        <Flexbox className={styles.composer} gap={8}>
-          <Text fontSize={13} weight={500}>
+        <div className={cn('flex flex-col', styles.composer)} style={{ gap: 8 }}>
+          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('create.milestone.create')}
-          </Text>
+          </span>
           <Input
             aria-label={t('create.milestone.name')}
             placeholder={t('create.milestone.name')}
@@ -120,7 +132,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             aria-label={t('create.milestone.date')}
             format="MMM D"
             placeholder={t('create.milestone.date')}
-            prefix={<Icon icon={CalendarIcon} size={13} />}
+            prefix={<CalendarIcon size={13} />}
             size="small"
             suffixIcon={null}
             value={draft.date ? dayjs(draft.date) : null}
@@ -131,7 +143,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
               }))
             }
           />
-          <TextArea
+          <Textarea
             aria-label={t('create.milestone.description')}
             placeholder={t('create.milestone.description')}
             rows={2}
@@ -140,9 +152,13 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
               setDraft((current) => ({ ...current, description: event.target.value }))
             }
           />
-          <Flexbox horizontal className={styles.composerActions} gap={8} justify="end">
+          <div
+            className={cn('flex flex-row', styles.composerActions)}
+            style={{ justifyContent: 'end', gap: 8 }}
+          >
             <Button
-              size="small"
+              size="sm"
+              variant="outline"
               onClick={() => {
                 setDraft(createEmptyMilestone());
                 setComposerOpen(false);
@@ -152,16 +168,16 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             </Button>
             <Button
               disabled={!draft.name.trim()}
-              size="small"
-              type="primary"
+              size="sm"
+              variant="default"
               onClick={addMilestone}
             >
               {t('create.milestone.add')}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

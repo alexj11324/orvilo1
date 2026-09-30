@@ -1,14 +1,14 @@
 'use client';
-
-import { Block, Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Accordion, Text } from '@lobehub/ui/base-ui';
+import {Markdown} from '@lobehub/ui';
 import { type AssistantContentBlock, type UIChatMessage } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ScrollText, Workflow } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
@@ -44,48 +44,22 @@ const InstructionAccordion = memo<{ childrenCount: number; instruction: string }
     }, [childrenCount > 1]);
 
     return (
-      <Accordion
-        gap={8}
-        indicatorPlacement="inline"
-        styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
-        value={expandedKeys}
-        items={[
-          {
-            children: (
-              <Block
-                className={styles.instructionContent}
-                padding={12}
-                style={{ marginBlock: 8 }}
-                variant={'outlined'}
+      <Accordion multiple className='gap-2' value={expandedKeys} onValueChange={setExpandedKeys}><AccordionItem value='instruction'><AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>{(
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
+                >
+                  <ScrollText color={cssVar.colorTextSecondary} />
+                </div>
+                <span className='text-muted-foreground'>
+                  {t('task.instruction')}
+                </span>
+              </div>
+            )}</AccordionTrigger><AccordionContent>{(
+              <div className={cn('flex flex-col p-3', styles.instructionContent)} style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}
               >
                 <Markdown variant={'chat'}>{instruction}</Markdown>
-              </Block>
-            ),
-            key: 'instruction',
-            title: (
-              <Flexbox horizontal align="center" gap={8}>
-                <Block
-                  horizontal
-                  align="center"
-                  flex="none"
-                  gap={4}
-                  height={24}
-                  justify="center"
-                  style={{ fontSize: 12 }}
-                  variant="outlined"
-                  width={24}
-                >
-                  <Icon color={cssVar.colorTextSecondary} icon={ScrollText} />
-                </Block>
-                <Text as="span" type="secondary">
-                  {t('task.instruction')}
-                </Text>
-              </Flexbox>
-            ),
-          },
-        ]}
-        onValueChange={setExpandedKeys}
-      />
+              </div>
+            )}</AccordionContent></AccordionItem></Accordion>
     );
   },
 );
@@ -162,39 +136,30 @@ const ProcessingView = memo<{
   }, [startTime]);
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal align="center" gap={8} paddingInline={4}>
-        <Block
-          horizontal
-          align="center"
-          flex="none"
-          gap={4}
-          height={24}
-          justify="center"
-          style={{ fontSize: 12 }}
-          variant="outlined"
-          width={24}
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 px-1">
+        <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
         >
           <NeuralNetworkLoading size={16} />
-        </Block>
-        <Flexbox horizontal align="center" gap={4}>
-          <Text as="span" type="secondary" weight={500}>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className='text-muted-foreground font-medium'>
             <AnimatedNumber
               duration={500}
               formatter={(v) => Math.round(v).toString()}
               value={totalToolCalls}
             />
-          </Text>
-          <Text as="span" type="secondary">
+          </span>
+          <span className='text-muted-foreground'>
             {t('task.metrics.toolCallsShort')}
-          </Text>
+          </span>
           {startTime && (
-            <Text as="span" type="secondary">
+            <span className='text-muted-foreground'>
               ({formatElapsedTime(elapsedTime)})
-            </Text>
+            </span>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <ContentBlocksScroll
         disableEditing
         messages={messages}
@@ -207,7 +172,7 @@ const ProcessingView = memo<{
       {isDevMode && model && provider && (
         <Usage model={model} provider={provider} usage={accumulatedUsage} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -243,50 +208,34 @@ const CompletedView = memo<{
   if (!finalBlock) return null;
 
   const title = (
-    <Flexbox horizontal align="center" gap={8}>
-      <Block
-        horizontal
-        align="center"
-        flex="none"
-        gap={4}
-        height={24}
-        justify="center"
-        style={{ fontSize: 12 }}
-        variant="outlined"
-        width={24}
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
       >
-        <Icon color={cssVar.colorTextSecondary} icon={Workflow} />
-      </Block>
-      <Flexbox horizontal align="center" gap={4}>
-        <Text as="span" type="secondary" weight={500}>
+        <Workflow color={cssVar.colorTextSecondary} />
+      </div>
+      <div className="flex items-center gap-1">
+        <span className='text-muted-foreground font-medium'>
           {totalToolCalls}
-        </Text>
-        <Text as="span" type="secondary">
+        </span>
+        <span className='text-muted-foreground'>
           {t('task.metrics.toolCallsShort')}
-        </Text>
+        </span>
         {/* Duration display */}
         {duration && (
-          <Text as="span" type="secondary">
+          <span className='text-muted-foreground'>
             {t('task.metrics.duration', { duration: formatDuration(duration) })}
-          </Text>
+          </span>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {/* Intermediate steps - collapsed by default */}
       {intermediateBlocks.length > 0 && (
-        <Accordion
-          defaultValue={[]}
-          gap={8}
-          indicatorPlacement="inline"
-          styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
-          items={[
-            {
-              children: (
-                <Flexbox gap={8} paddingInline={4} style={{ marginTop: 8 }}>
+        <Accordion multiple className='gap-2' defaultValue={[]}><AccordionItem value='intermediate'><AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>{title}</AccordionTrigger><AccordionContent>{(
+                <div className="flex flex-col gap-2 px-1" style={{ marginTop: 8 }}>
                   {intermediateBlocks.map((block) => (
                     <ContentBlock
                       {...block}
@@ -295,13 +244,8 @@ const CompletedView = memo<{
                       key={block.id}
                     />
                   ))}
-                </Flexbox>
-              ),
-              key: 'intermediate',
-              title,
-            },
-          ]}
-        />
+                </div>
+              )}</AccordionContent></AccordionItem></Accordion>
       )}
 
       {/* Final result - always visible */}
@@ -311,7 +255,7 @@ const CompletedView = memo<{
       {isDevMode && model && provider && (
         <Usage model={model} provider={provider} usage={{ cost: totalCost, totalTokens }} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -342,7 +286,7 @@ const TaskMessages = memo<TaskMessagesProps>(
     const accumulatedUsage = useMemo(() => accumulateUsage(blocks), [blocks]);
 
     return (
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         {/* Instruction accordion */}
         {instruction && (
           <InstructionAccordion childrenCount={blocks.length} instruction={instruction} />
@@ -370,7 +314,7 @@ const TaskMessages = memo<TaskMessagesProps>(
             totalToolCalls={totalToolCalls}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

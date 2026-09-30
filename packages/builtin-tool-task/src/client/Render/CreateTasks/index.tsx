@@ -1,9 +1,7 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -115,7 +113,14 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
     const failedCount = pluginState?.failed ?? results.filter((r) => !r.success).length;
 
     return (
-      <Block variant={'outlined'} width={'100%'}>
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
+      >
         <div className={styles.header}>
           <span className={styles.headerCount}>
             {t('builtins.orvilo-task.createTasks.count', { count: rows.length })}
@@ -137,21 +142,17 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
               <div className={styles.taskBody}>
                 <div className={styles.row}>
                   {identifier && <span className={styles.identifier}>{identifier}</span>}
-                  <Text ellipsis className={styles.title}>
-                    {task.name}
-                  </Text>
+                  <div className={`truncate ${styles.title}`}>{task.name}</div>
                 </div>
                 {task.instruction && <div className={styles.instruction}>{task.instruction}</div>}
                 {failed && (
-                  <Text as={'span'} fontSize={11} type={'danger'}>
-                    {result?.error ?? 'Failed'}
-                  </Text>
+                  <span className="text-[11px] text-destructive">{result?.error ?? 'Failed'}</span>
                 )}
               </div>
             </div>
           );
         })}
-      </Block>
+      </div>
     );
   },
 );

@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+import { cx } from 'antd-style';
 import { type FC } from 'react';
 import { Outlet } from 'react-router';
 
@@ -11,9 +11,9 @@ const HomeLayout: FC = () => {
   return (
     <>
       <Sidebar />
-      <Flexbox className={styles.mainContainer} flex={1} height={'100%'}>
+      <div className={cx('flex flex-col flex-1 h-[100%]', styles.mainContainer)}>
         <Outlet />
-      </Flexbox>
+      </div>
     </>
   );
 };

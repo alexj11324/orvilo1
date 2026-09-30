@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { type SidebarAgentItem } from '@orvilo/types';
 import { MoreHorizontal } from 'lucide-react';
 import { type CSSProperties } from 'react';
@@ -58,7 +57,7 @@ const List = memo<SessionListProps>(
     }
 
     return (
-      <Flexbox gap={1}>
+      <div className="flex flex-col gap-[1px]">
         {dataSource.map((item) =>
           item.type === 'group' ? (
             <GroupItem className={itemClassName} item={item} key={item.id} style={itemStyle} />
@@ -76,7 +75,7 @@ const List = memo<SessionListProps>(
         {showCreateButton && (
           <CreateAgentButton className={itemClassName} groupId={groupId} visibility={visibility} />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

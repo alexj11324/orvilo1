@@ -1,12 +1,24 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, Drawer, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { type OrviloToolCustomPlugin } from '@orvilo/types';
-import { Form, Popconfirm } from 'antd';
 import { useResponsive } from 'antd-style';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Form from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogConfirm,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import MCPManifestForm from './MCPManifestForm';
 import PluginPreview from './PluginPreview';
@@ -113,31 +125,38 @@ const DevModal = memo<DevModalProps>(
     const buttonStyle = mobile ? { flex: 1 } : { margin: 0 };
 
     const footer = (
-      <Flexbox horizontal flex={1} gap={12} justify={'space-between'}>
+      <div className="flex flex-row flex-1 gap-3 justify-between">
         {isEditMode ? (
-          <Popconfirm
-            arrow={false}
-            cancelText={t('cancel', { ns: 'common' })}
-            okText={t('ok', { ns: 'common' })}
-            placement={'topLeft'}
-            title={t('dev.confirmDeleteDevPlugin')}
-            okButtonProps={{
-              danger: true,
-              type: 'primary',
-            }}
-            onConfirm={() => {
-              onDelete?.();
-              toast.success(t('dev.deleteSuccess'));
-            }}
-          >
-            <Button danger style={buttonStyle}>
-              {t('delete', { ns: 'common' })}
-            </Button>
-          </Popconfirm>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button style={buttonStyle} variant="destructive">
+                  {t('delete', { ns: 'common' })}
+                </Button>
+              }
+            />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('dev.confirmDeleteDevPlugin')}</AlertDialogTitle>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
+                <AlertDialogConfirm
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete?.();
+                    toast.success(t('dev.deleteSuccess'));
+                  }}
+                >
+                  {t('ok', { ns: 'common' })}
+                </AlertDialogConfirm>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         ) : (
           <div />
         )}
-        <Flexbox horizontal gap={12}>
+        <div className="flex flex-row gap-3">
           <Button
             style={buttonStyle}
             onClick={() => {
@@ -149,13 +168,13 @@ const DevModal = memo<DevModalProps>(
           <Button
             loading={submitting}
             style={buttonStyle}
-            type={'primary'}
+            variant={'default'}
             onClick={handlePrimaryClick}
           >
             {t(isEditMode ? 'dev.update' : 'dev.save')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
 
     return (
@@ -167,44 +186,41 @@ const DevModal = memo<DevModalProps>(
           await doSave(info.values as OrviloToolCustomPlugin);
         }}
       >
-        <Drawer
-          containerMaxWidth={'auto'}
-          footer={footer}
-          height={isDesktop ? `calc(100vh - ${TITLE_BAR_HEIGHT}px)` : '100vh'}
-          open={open}
-          placement={'bottom'}
-          push={false}
-          title={t(isEditMode ? 'dev.title.skillSettings' : 'dev.title.create')}
-          width={mobile ? '100%' : 800}
-          styles={{
-            bodyContent: {
-              height: '100%',
-              padding: 0,
-            },
-          }}
-          onClose={() => {
-            onOpenChange(false);
-          }}
-        >
-          <Flexbox
-            horizontal
-            gap={0}
-            height={'100%'}
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
+        <Sheet open={open} onOpenChange={(next) => !next && onOpenChange(false)}>
+          <SheetContent
+            className="gap-0"
+            side="bottom"
+            style={{ height: isDesktop ? `calc(100vh - ${TITLE_BAR_HEIGHT}px)` : '100vh' }}
           >
-            <Flexbox flex={3} gap={16} padding={24} style={{ overflowY: 'auto' }}>
-              <MCPManifestForm
-                enableOAuth={enableOAuth}
-                form={form}
-                isEditMode={isEditMode}
-                onAuthorizeOAuth={runOAuthFlow}
-              />
-            </Flexbox>
-            <PluginPreview form={form} />
-          </Flexbox>
-        </Drawer>
+            <SheetHeader>
+              <SheetTitle>
+                {t(isEditMode ? 'dev.title.skillSettings' : 'dev.title.create')}
+              </SheetTitle>
+            </SheetHeader>
+            <div
+              className="flex-1 min-h-0"
+              style={{ marginInline: 'auto', maxWidth: mobile ? '100%' : 800, width: '100%' }}
+            >
+              <div
+                className="flex flex-row gap-0 h-[100%]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <div className="flex flex-col gap-4 p-6" style={{ overflowY: 'auto', flex: 3 }}>
+                  <MCPManifestForm
+                    enableOAuth={enableOAuth}
+                    form={form}
+                    isEditMode={isEditMode}
+                    onAuthorizeOAuth={runOAuthFlow}
+                  />
+                </div>
+                <PluginPreview form={form} />
+              </div>
+            </div>
+            <SheetFooter>{footer}</SheetFooter>
+          </SheetContent>
+        </Sheet>
       </Form.Provider>
     );
   },

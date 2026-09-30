@@ -1,24 +1,13 @@
 'use client';
 
 import {
-  type BaseMenuItemType,
-  type DropdownMenuPopupProps,
-  type DropdownMenuProps,
-  type MenuInfo,
-  type MenuItemType,
-  type MenuProps,
-  type PopoverTrigger,
-} from '@lobehub/ui';
-import {
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  renderDropdownMenuItems,
-} from '@lobehub/ui';
+  Menu as MenuPrimitive,
+  type MenuPopupProps,
+  type MenuPopupState,
+} from '@base-ui/react/menu';
 import { createGlobalStyle, createStaticStyles, cssVar, cx } from 'antd-style';
-import { type CSSProperties, type ReactNode } from 'react';
+import { cn } from 'cn';
+import { type CSSProperties, type ReactElement, type ReactNode, type RefObject } from 'react';
 import {
   isValidElement,
   memo,
@@ -31,8 +20,11 @@ import {
 } from 'react';
 
 import DebugNode from '@/components/DebugNode';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
+import { type ActionMenuItem, type MenuInfo, renderMenuItems } from '../../menuItems';
+import { popoverPlacement } from '../../popoverPlacement';
 import { type MenuOpenChangeDetails, shouldVetoMenuClose } from './menuCloseVeto';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -143,14 +135,9 @@ const SubmenuScrollStyle = createGlobalStyle`
   }
 `;
 
-export type ActionDropdownMenuItem = MenuItemType;
+export type ActionDropdownMenuItem = ActionMenuItem;
 
-/**
- * `renderDropdownMenuItems` accepts Base UI's full item union (`BaseMenuItemType`),
- * which is wider than antd's `MenuProps['items']` — it also covers `type: 'switch'`
- * and `type: 'checkbox'` items. Use it here so callers can declare those directly.
- */
-export type ActionDropdownMenuItems = BaseMenuItemType[];
+export type ActionDropdownMenuItems = ActionMenuItem[];
 
 interface MenuItemsHostProps {
   close: () => void;
@@ -165,15 +152,16 @@ interface MenuItemsHostProps {
 const MenuItemsHost = memo<MenuItemsHostProps>(({ close, decorate, useItems }) => {
   const items = useItems({ close });
 
-  return <>{renderDropdownMenuItems(decorate(items ?? []))}</>;
+  return <>{renderMenuItems(decorate(items ?? []))}</>;
 });
 
 MenuItemsHost.displayName = 'ActionDropdownMenuItemsHost';
 
-type ActionDropdownMenu = Omit<
-  Pick<MenuProps<ActionDropdownMenuItem>, 'className' | 'onClick' | 'style'>,
-  'items'
-> & {
+export type ActionDropdownMenu = {
+  className?: string;
+  onClick?: (info: MenuInfo) => void;
+  style?: CSSProperties;
+
   items?: ActionDropdownMenuItems | (() => ActionDropdownMenuItems);
   /**
    * Hook form of `items`, invoked from inside the popup so it only runs while the
@@ -183,18 +171,33 @@ type ActionDropdownMenu = Omit<
   useItems?: (ctx: { close: () => void }) => ActionDropdownMenuItems;
 };
 
-export interface ActionDropdownProps extends Omit<DropdownMenuProps, 'items'> {
+export interface ActionDropdownProps {
+  children?: ReactNode;
+  defaultOpen?: boolean;
+  disabled?: boolean;
   maxHeight?: number | string;
   maxWidth?: number | string;
   menu: ActionDropdownMenu;
   minHeight?: number | string;
   minWidth?: number | string;
+  modal?: boolean;
+  onOpenChange?: (open: boolean, details?: MenuOpenChangeDetails) => void;
+  onOpenChangeComplete?: (open: boolean) => void;
+  open?: boolean;
+  placement?: string;
+  popupProps?: {
+    className?: MenuPopupProps['className'];
+    style?: MenuPopupProps['style'];
+  };
   popupRender?: (menu: ReactNode) => ReactNode;
+  portalProps?: { container?: HTMLElement | null | RefObject<HTMLElement | null> | ShadowRoot };
+  positionerProps?: Record<string, unknown>;
   /**
    * Whether to pre-render the dropdown overlay on mount, to avoid rendering lag on first expand
    */
   prefetch?: boolean;
-  trigger?: PopoverTrigger;
+  trigger?: 'both' | 'click' | 'hover' | ('click' | 'hover')[];
+  triggerProps?: Record<string, unknown>;
 }
 
 const ActionDropdown = memo<ActionDropdownProps>(
@@ -274,8 +277,8 @@ const ActionDropdown = memo<ActionDropdownProps>(
 
         return items.map((item) => {
           if (!item) return item;
-          if ('type' in item && item.type === 'divider') return item;
-          if ('type' in item && item.type === 'group') {
+          if (item.type === 'divider') return item;
+          if (item.type === 'group') {
             return {
               ...item,
               children: item.children ? decorateMenuItems(item.children) : item.children,
@@ -284,16 +287,14 @@ const ActionDropdown = memo<ActionDropdownProps>(
           // Switch / checkbox items are self-contained: they toggle via `onCheckedChange`,
           // and Base UI already wires up "click the row or the control" for them. Pass them
           // through untouched instead of wrapping their click handler.
-          if ('type' in item && (item.type === 'switch' || item.type === 'checkbox')) {
+          if (item.type === 'switch' || item.type === 'checkbox') {
             return item;
           }
 
           // Any item carrying a `children` key is a submenu (children may be optional);
           // route them all here so plain items never inherit a submenu's click signature.
           if ('children' in item) {
-            const itemOnOpenChange = (
-              item as { onOpenChange?: (open: boolean, details?: MenuOpenChangeDetails) => void }
-            ).onOpenChange;
+            const itemOnOpenChange = item.onOpenChange;
             return {
               ...item,
               children: item.children ? decorateMenuItems(item.children) : item.children,
@@ -304,10 +305,8 @@ const ActionDropdown = memo<ActionDropdownProps>(
                 }
                 itemOnOpenChange?.(open, details);
               },
-              type: 'submenu',
-              // `children` is re-widened to the full item union; cast back to satisfy
-              // the mixed rc-menu / Base UI submenu types in `BaseMenuItemType`.
-            } as BaseMenuItemType;
+              type: 'submenu' as const,
+            };
           }
           // Submenus are handled above; everything else is a plain menu item. Base UI's
           // types keep optional-`children` submenu members in scope here, so narrow to the
@@ -351,7 +350,7 @@ const ActionDropdown = memo<ActionDropdownProps>(
       if (menu.useItems) return null;
       if (!prefetch && !isOpen) return menuItemsRef.current;
       const sourceItems = typeof menu.items === 'function' ? menu.items() : menu.items;
-      const nextItems = renderDropdownMenuItems(decorateMenuItems(sourceItems ?? []));
+      const nextItems = renderMenuItems(decorateMenuItems(sourceItems ?? []));
 
       menuItemsRef.current = nextItems;
 
@@ -370,15 +369,28 @@ const ActionDropdown = memo<ActionDropdownProps>(
       return popupRender(body ?? null);
     }, [closePopup, decorateMenuItems, menu.useItems, popupRender, renderedItems]);
 
-    const resolvedPopupClassName = useMemo<DropdownMenuPopupProps['className']>(() => {
+    const resolvedPopupClassName = useMemo(() => {
       const popupClassName = popupProps?.className;
       if (typeof popupClassName === 'function') {
-        return (state) => cx(styles.dropdownMenu, menu.className, popupClassName(state));
+        return (state: MenuPopupState) =>
+          cx(
+            POPUP_Z_CLASS,
+            'cn-menu-target cn-menu-translucent min-w-32 rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none',
+            styles.dropdownMenu,
+            menu.className,
+            popupClassName(state),
+          );
       }
-      return cx(styles.dropdownMenu, menu.className, popupClassName);
+      return cx(
+        POPUP_Z_CLASS,
+        'cn-menu-target cn-menu-translucent min-w-32 rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-none',
+        styles.dropdownMenu,
+        menu.className,
+        popupClassName,
+      );
     }, [menu.className, popupProps?.className]);
 
-    const resolvedPopupStyle = useMemo<DropdownMenuPopupProps['style']>(() => {
+    const resolvedPopupStyle = useMemo(() => {
       const baseStyle: CSSProperties = {
         maxHeight,
         maxWidth: isMobile ? undefined : maxWidth,
@@ -391,7 +403,7 @@ const ActionDropdown = memo<ActionDropdownProps>(
       const popupStyle = popupProps?.style;
 
       if (typeof popupStyle === 'function') {
-        return (state) => ({
+        return (state: MenuPopupState) => ({
           ...baseStyle,
           ...menu.style,
           ...popupStyle(state),
@@ -437,33 +449,42 @@ const ActionDropdown = memo<ActionDropdownProps>(
       return portalContainer as HTMLElement;
     }, [portalContainer]);
 
+    const { align, side } = popoverPlacement(isMobile ? 'top' : placement);
+
     return (
       <>
         <SubmenuScrollStyle />
-        <DropdownMenuRoot
+        <MenuPrimitive.Root
           {...rest}
           defaultOpen={defaultOpen}
+          modal={false}
           open={open}
           onOpenChange={handleOpenChange}
           onOpenChangeComplete={handleOpenChangeComplete}
         >
-          <DropdownMenuTrigger className={styles.trigger} {...resolvedTriggerProps}>
-            {children}
-          </DropdownMenuTrigger>
-          <DropdownMenuPortal container={resolvedPortalContainer} {...restPortalProps}>
-            <DropdownMenuPositioner
+          <MenuPrimitive.Trigger
+            className={styles.trigger}
+            render={children as ReactElement}
+            {...resolvedTriggerProps}
+          />
+          <MenuPrimitive.Portal container={resolvedPortalContainer} {...restPortalProps}>
+            <MenuPrimitive.Positioner
+              align={align}
+              className={cn('isolate outline-none', POPUP_Z_CLASS)}
+              data-hover-trigger={resolvedTriggerProps?.openOnHover ? '' : undefined}
+              data-placement={isMobile ? 'top' : placement}
+              side={side}
+              sideOffset={6}
               {...positionerProps}
-              hoverTrigger={Boolean(resolvedTriggerProps?.openOnHover)}
-              placement={isMobile ? 'top' : placement}
             >
-              <DropdownMenuPopup {...resolvedPopupProps}>
+              <MenuPrimitive.Popup {...resolvedPopupProps}>
                 <Suspense fallback={<DebugNode trace="ActionDropdown > popup" />}>
                   {menuContent}
                 </Suspense>
-              </DropdownMenuPopup>
-            </DropdownMenuPositioner>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
+              </MenuPrimitive.Popup>
+            </MenuPrimitive.Positioner>
+          </MenuPrimitive.Portal>
+        </MenuPrimitive.Root>
       </>
     );
   },

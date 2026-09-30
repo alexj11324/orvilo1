@@ -20,15 +20,15 @@ const mocks = vi.hoisted(() => ({
   navigateToAgent: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/ui/popover', () => ({
   // The real Popover only mounts its content after an open interaction; the
   // assertions read the agent list synchronously.
-  Popover: ({ children, content }: { children: ReactNode; content: ReactNode }) => (
-    <div>
-      <div data-testid="popover-trigger">{children}</div>
-      <div data-testid="popover-content">{content}</div>
-    </div>
+  Popover: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  PopoverContent: ({ children }: { children: ReactNode }) => (
+    <div data-testid="popover-content">{children}</div>
+  ),
+  PopoverTrigger: ({ render }: { render: ReactNode }) => (
+    <div data-testid="popover-trigger">{render}</div>
   ),
 }));
 

@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme as useNextThemesTheme } from 'next-themes';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { MOBILE_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import { useIsDark } from '@/hooks/useIsDark';
 

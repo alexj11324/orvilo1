@@ -1,11 +1,11 @@
-import { copyToClipboard } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { Braces } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { defineAction } from '../defineAction';
 

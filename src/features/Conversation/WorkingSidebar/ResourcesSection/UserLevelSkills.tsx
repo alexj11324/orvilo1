@@ -1,4 +1,3 @@
-import { createModal } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
 import { EyeIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import type React from 'react';
 import { lazy, memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal } from '@/components/Modal';
 import { startSkillDrag } from '@/features/ChatInput/InputEditor/ActionTag/skillDragData';
 import {
   type SkillListItem,

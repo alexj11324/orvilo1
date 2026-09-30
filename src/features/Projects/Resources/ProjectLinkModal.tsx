@@ -1,12 +1,15 @@
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { Button, createModal, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { t as translate } from 'i18next';
 import { Link2Icon } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { useProjectStore } from '@/store/project';
 
 interface ProjectLinkValue {
@@ -177,12 +180,12 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
       }}
     >
       <div className={styles.formBody}>
-        <Flexbox horizontal align="center" gap={8}>
-          <Icon icon={Link2Icon} size={16} />
+        <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
+          <Link2Icon size={16} />
           <span className={styles.title}>
             {t(link ? 'resources.link.editHeading' : 'resources.link.addHeading')}
           </span>
-        </Flexbox>
+        </div>
         <div className={styles.field}>
           <label htmlFor={`${id}-url`}>
             <span className={styles.labelText}>{t('resources.link.url')}</span>
@@ -190,7 +193,7 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           <Input
             autoFocus
             required
-            className={styles.input}
+
             disabled={pending}
             id={`${id}-url`}
             maxLength={8192}
@@ -206,7 +209,7 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           </label>
           <Input
             aria-label={t('resources.link.title')}
-            className={styles.input}
+
             disabled={pending}
             id={`${id}-title`}
             maxLength={255}
@@ -221,20 +224,18 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
             variant="inline"
           />
         )}
-        <Flexbox horizontal className={styles.actions} gap={16} justify="flex-end">
-          <Button className={styles.cancelButton} disabled={pending} onClick={close}>
+        <div
+          className={cn('flex flex-row', styles.actions)}
+          style={{ justifyContent: 'flex-end', gap: 16 }}
+        >
+          <Button disabled={pending} variant="outline" onClick={close}>
             {t('resources.link.cancel')}
           </Button>
-          <Button
-            className={styles.primaryButton}
-            disabled={pending}
-            htmlType="submit"
-            loading={pending}
-            type="primary"
-          >
+          <Button aria-busy={pending} disabled={pending || pending} type="submit" variant="default">
+            {pending && <Spinner />}
             {t(savedId ? 'resources.link.save' : 'resources.link.add')}
           </Button>
-        </Flexbox>
+        </div>
       </div>
     </form>
   );

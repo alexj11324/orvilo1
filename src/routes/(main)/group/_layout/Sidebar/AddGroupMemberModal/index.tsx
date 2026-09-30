@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Divider } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Separator } from '@/components/ui/separator';
 import { groupKeys } from '@/libs/swr/keys';
 import { agentService } from '@/services/agent';
 
@@ -98,15 +98,15 @@ const AddGroupMemberModal = memo<AddGroupMemberModalProps>(
         onCancel={handleCancel}
         onOk={handleConfirm}
       >
-        <Flexbox horizontal className={styles.container} gap={8}>
+        <div className={cn('flex gap-2', styles.container)}>
           {/* Left Column - Available Agents */}
           <AvailableAgentList agents={availableAgents} isLoading={isLoadingAgents} />
 
-          <Divider orientation={'vertical'} style={{ height: '100%' }} />
+          <Separator orientation={'vertical'} style={{ height: '100%' }} />
 
           {/* Right Column - Selected Agents */}
           <SelectedAgentList agents={allAgents} />
-        </Flexbox>
+        </div>
       </ImperativeModal>
     );
   },

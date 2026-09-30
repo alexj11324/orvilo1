@@ -1,5 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +8,7 @@ import {
   type DailyBriefRecommendationsUIState,
   useDailyBriefRecommendationsUI,
 } from '@/business/client/useDailyBriefRecommendationsUI';
+import { Button } from '@/components/ui/button';
 import GroupBlock from '@/features/Home/components/GroupBlock';
 import RailCard from '@/features/Home/components/RailCard';
 import { useGlobalStore } from '@/store/global';
@@ -85,18 +85,23 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   const refresh = showTaskTemplates && (
     <Button
       disabled={!canRefresh && !isRefreshing}
-      icon={<RefreshCw className={isRefreshing ? styles.refreshSpin : undefined} size={12} />}
-      size={'small'}
+      size="sm"
       title={tCommon('taskTemplate.action.refresh.button')}
-      type={'text'}
+      variant="ghost"
       onClick={handleRefresh}
-    />
+    >
+      <RefreshCw
+        className={isRefreshing ? styles.refreshSpin : undefined}
+        data-icon="inline-start"
+        size={12}
+      />
+    </Button>
   );
 
   const compact = variant === 'rail';
 
   const body = (
-    <Flexbox gap={compact ? 2 : 8}>
+    <div className="flex flex-col" style={{ gap: compact ? 2 : 8 }}>
       {actions.map((action) => (
         <RecommendationCard
           compact={compact}
@@ -113,7 +118,7 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
       {showTaskTemplates ? (
         <DailyBriefRecommendations compact={compact} state={taskTemplatesState} />
       ) : null}
-    </Flexbox>
+    </div>
   );
 
   if (variant === 'rail')
@@ -133,24 +138,18 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
     );
 
   return (
-    <Flexbox gap={12}>
-      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-        <Text className={styles.subtitle} fontSize={12}>
-          {t('recommendations.subtitle')}
-        </Text>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 justify-between">
+        <div className={cn('text-[12px]', styles.subtitle)}>{t('recommendations.subtitle')}</div>
         {taskTemplatesState.mode === 'cards' && (
-          <Button
-            icon={<RefreshCw size={12} />}
-            size={'small'}
-            type={'text'}
-            onClick={taskTemplatesState.onRefresh}
-          >
+          <Button size="sm" variant="ghost" onClick={taskTemplatesState.onRefresh}>
+            <RefreshCw data-icon="inline-start" size={12} />
             {tCommon('taskTemplate.action.refresh.button')}
           </Button>
         )}
-      </Flexbox>
+      </div>
       {body}
-    </Flexbox>
+    </div>
   );
 });
 

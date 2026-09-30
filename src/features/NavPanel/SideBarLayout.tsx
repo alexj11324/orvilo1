@@ -1,14 +1,88 @@
-import { Flexbox, TooltipGroup } from '@lobehub/ui';
-import { ScrollArea } from '@lobehub/ui/base-ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
+import { createGlobalStyle, createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { type ReactNode, type UIEvent } from 'react';
 import { memo, Suspense, useCallback, useLayoutEffect, useRef } from 'react';
 
+import { ScrollBar } from '@/components/ui/scroll-area';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { SideBarHeaderSkeleton } from '@/features/NavPanel/components/SideBarSkeleton';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
 import { useActiveNavKey } from './useActiveNavKey';
 
 const scrollOffsets = new Map<string, number>();
+
+// Register the fade custom properties as lengths so scroll-driven animation
+// interpolates smoothly instead of snapping at scroll edges.
+const ScrollFadeProperties = createGlobalStyle`
+  @property --sidebar-fade-top {
+    inherits: true;
+    initial-value: 0;
+    syntax: '<length>';
+  }
+
+  @property --sidebar-fade-bottom {
+    inherits: true;
+    initial-value: 0;
+    syntax: '<length>';
+  }
+`;
+
+const styles = createStaticStyles(({ css }) => ({
+  // Edge fade on the scroll viewport: mask fades content near the top/bottom
+  // edges, driven by distance to each edge (first/last 40px). Base UI's
+  // ScrollArea.Viewport already publishes --scroll-area-overflow-y-* px values.
+  scrollFade: css`
+    --scroll-area-overflow-y-start: inherit;
+    --scroll-area-overflow-y-end: inherit;
+    --sidebar-fade-size: 40px;
+    --sidebar-fade-top: min(var(--sidebar-fade-size), var(--scroll-area-overflow-y-start, 0px));
+    --sidebar-fade-bottom: min(var(--sidebar-fade-size), var(--scroll-area-overflow-y-end, 0px));
+
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--sidebar-fade-top),
+      #000 calc(100% - var(--sidebar-fade-bottom)),
+      transparent 100%
+    );
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+
+    @supports (animation-timeline: scroll()) {
+      @keyframes sidebar-scroll-fade-top-in {
+        from {
+          --sidebar-fade-top: 0;
+        }
+
+        to {
+          --sidebar-fade-top: var(--sidebar-fade-size);
+        }
+      }
+
+      @keyframes sidebar-scroll-fade-bottom-out {
+        from {
+          --sidebar-fade-bottom: var(--sidebar-fade-size);
+        }
+
+        to {
+          --sidebar-fade-bottom: 0;
+        }
+      }
+
+      animation-name: sidebar-scroll-fade-top-in, sidebar-scroll-fade-bottom-out;
+      animation-duration: 1ms, 1ms;
+      animation-timing-function: linear, linear;
+      animation-fill-mode: both, both;
+      animation-timeline: scroll(self y), scroll(self y);
+
+      animation-range:
+        0 var(--sidebar-fade-size),
+        calc(100% - var(--sidebar-fade-size)) 100%;
+    }
+  `,
+}));
 
 interface SidebarLayoutProps {
   body?: ReactNode;
@@ -38,21 +112,27 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
   }, [navKey]);
 
   return (
-    <Flexbox gap={1} style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="flex flex-col gap-[1px]" style={{ height: '100%', overflow: 'hidden' }}>
+      <ScrollFadeProperties />
       <Suspense fallback={<SideBarHeaderSkeleton />}>{header}</Suspense>
-      <ScrollArea
-        disableContentFit
-        scrollFade
+      <ScrollAreaPrimitive.Root
         // Preserve the height chain for sidebar bodies containing virtual lists.
-        contentProps={{ style: { height: '100%' } }}
+        className="relative"
         style={{ flex: 1, minHeight: 0 }}
-        viewportProps={{ onScroll: handleScroll, ref: scrollerRef }}
       >
-        <TooltipGroup>
-          <Suspense fallback={<SkeletonList paddingBlock={8} />}>{body}</Suspense>
-        </TooltipGroup>
-      </ScrollArea>
-    </Flexbox>
+        <ScrollAreaPrimitive.Viewport
+          className={cn('size-full', styles.scrollFade)}
+          ref={scrollerRef}
+          onScroll={handleScroll}
+        >
+          <TooltipProvider>
+            <Suspense fallback={<SkeletonList style={{ paddingBlock: 8 }} />}>{body}</Suspense>
+          </TooltipProvider>
+        </ScrollAreaPrimitive.Viewport>
+        <ScrollBar />
+        <ScrollAreaPrimitive.Corner />
+      </ScrollAreaPrimitive.Root>
+    </div>
   );
 });
 

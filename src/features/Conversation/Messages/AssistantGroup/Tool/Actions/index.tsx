@@ -1,8 +1,8 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { LayoutPanelTop, LogsIcon, LucideBug, LucideBugOff, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { usePermission } from '@/hooks/usePermission';
 
 import { useConversationStore } from '../../../../store';

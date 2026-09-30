@@ -1,16 +1,15 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import type { TabsItem } from '@lobehub/ui/base-ui';
-import { Tabs } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Wrench } from 'lucide-react';
-import React, { memo } from 'react';
+import React, { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import RunPriorityHint from '@/features/ProfileEditor/AgentUserTools/RunPriorityHint';
 import { usePermission } from '@/hooks/usePermission';
@@ -94,7 +93,12 @@ const ProfileEditor = memo(() => {
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
   const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';
-  const heterogeneousTabItems: TabsItem[] = heterogeneousProvider
+  const heterogeneousTabItems: {
+    children: ReactNode;
+    disabled?: boolean;
+    key: string;
+    label: ReactNode;
+  }[] = heterogeneousProvider
     ? [
         ...(showCloudHeterogeneousTab
           ? [
@@ -126,18 +130,17 @@ const ProfileEditor = memo(() => {
 
   return (
     <>
-      <Flexbox
-        className={styles.topArea}
+      <div
+        className={cn('flex flex-col', styles.topArea)}
         onClick={(e) => {
           e.stopPropagation();
         }}
       >
         {/* Header: Avatar + Name + Description */}
         <AgentHeader />
-        <Flexbox
-          className={styles.configStack}
-          gap={8}
-          paddingBlock={isRemoteHetero ? '8px 0' : undefined}
+        <div
+          className={cn('flex flex-col gap-2', styles.configStack)}
+          style={{ paddingBlock: isRemoteHetero ? '8px 0' : undefined }}
         >
           {/* Engine: harness / builtin engine / per-harness model + effort /
               execution target. Also the upgrade surface for legacy agents —
@@ -158,16 +161,25 @@ const ProfileEditor = memo(() => {
             />
           ) : isHeterogeneous && heterogeneousProvider ? (
             // Local CLI agents: Claude Code supports cloud config; Codex is desktop-only for now.
-            <Tabs
-              defaultActiveKey={isDesktop || !showCloudHeterogeneousTab ? 'desktop' : 'cloud'}
-              items={heterogeneousTabItems}
-              size="small"
-            />
+            <Tabs defaultValue={isDesktop || !showCloudHeterogeneousTab ? 'desktop' : 'cloud'}>
+              <TabsList>
+                {heterogeneousTabItems.map((item) => (
+                  <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {heterogeneousTabItems.map((item) => (
+                <TabsContent key={item.key} value={item.key}>
+                  {item.children}
+                </TabsContent>
+              ))}
+            </Tabs>
           ) : isWorkspaceAgent ? (
             <>
-              <Flexbox horizontal gap={8} wrap={'wrap'}>
+              <div className="flex gap-2 flex-wrap">
                 <WorkspaceAgentDevicePolicy agentId={agentId} />
-              </Flexbox>
+              </div>
               <WorkspaceAgentPolicyCard
                 fullWidth
                 action={<RunPriorityHint agentId={agentId} />}
@@ -178,19 +190,19 @@ const ProfileEditor = memo(() => {
               </WorkspaceAgentPolicyCard>
             </>
           ) : (
-            <Flexbox className={styles.configPanel} gap={10}>
-              <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+            <div className={cn('flex flex-col gap-2.5', styles.configPanel)}>
+              <div className="flex items-center gap-3 justify-between">
                 <div className={styles.configLabel}>{t('settingAgent.runtimeConfig.title')}</div>
                 <RunPriorityHint agentId={agentId} />
-              </Flexbox>
+              </div>
               <AgentTool />
-            </Flexbox>
+            </div>
           )}
           {isHeterogeneous ? (
             <WorkspaceAgentDevicePolicy agentId={agentId} showDevicePicker={!isRemoteHetero} />
           ) : null}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {/* Main Content: Prompt Editor — built-in model runtime only. Hetero agents
           (Claude Code / Codex + remote platforms) run an external CLI with its own
           system prompt, so the agent's systemRole never reaches them. Hide the

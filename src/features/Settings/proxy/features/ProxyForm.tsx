@@ -1,13 +1,17 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Flexbox, Form } from '@lobehub/ui';
-import { Button, RadioGroup, Skeleton, Switch, toast } from '@lobehub/ui/base-ui';
 import { type NetworkProxySettings } from '@orvilo/electron-client-ipc';
-import { Form as AntdForm, Input } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { desktopSettingsService } from '@/services/electron/settings';
@@ -58,8 +62,8 @@ const ProxyForm = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const isEnableProxy = AntdForm.useWatch('enableProxy', form);
-  const proxyRequireAuth = AntdForm.useWatch('proxyRequireAuth', form);
+  const isEnableProxy = Form.useWatch('enableProxy', form);
+  const proxyRequireAuth = Form.useWatch('proxyRequireAuth', form);
 
   const [setProxySettings, useGetProxySettings] = useElectronStore((s) => [
     s.setProxySettings,
@@ -206,7 +210,14 @@ const ProxyForm = () => {
     }
   }, [proxySettings, testUrl, form, t]);
 
-  if (isLoading) return <Skeleton.Text rows={5} />;
+  if (isLoading)
+    return (
+      <div aria-busy="true" className="flex flex-col gap-3">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton className="h-4 w-full" key={index} />
+        ))}
+      </div>
+    );
 
   const enableProxyGroup: FormGroupItemType = {
     children: [
@@ -217,6 +228,7 @@ const ProxyForm = () => {
         layout: 'horizontal',
         minWidth: undefined,
         name: 'enableProxy',
+        trigger: 'onCheckedChange',
         valuePropName: 'checked',
       },
     ],
@@ -227,14 +239,19 @@ const ProxyForm = () => {
     children: [
       {
         children: (
-          <RadioGroup
-            disabled={!isEnableProxy}
-            options={PROXY_TYPES.map((type) => ({ label: type.toUpperCase(), value: type }))}
-          />
+          <RadioGroup className="flex gap-4" disabled={!isEnableProxy}>
+            {PROXY_TYPES.map((type) => (
+              <label className="flex items-center gap-2" key={type}>
+                <RadioGroupItem value={type} />
+                {type.toUpperCase()}
+              </label>
+            ))}
+          </RadioGroup>
         ),
         label: t('proxy.type'),
         minWidth: undefined,
         name: 'proxyType',
+        trigger: 'onValueChange',
         rules: [{ validator: validateProxyType }],
       },
       {
@@ -264,6 +281,7 @@ const ProxyForm = () => {
         layout: 'horizontal',
         minWidth: undefined,
         name: 'proxyRequireAuth',
+        trigger: 'onCheckedChange',
         valuePropName: 'checked',
       },
       ...(proxyRequireAuth && isEnableProxy
@@ -276,9 +294,10 @@ const ProxyForm = () => {
             },
             {
               children: (
-                <Input.Password
+                <Input
                   autoComplete="new-password"
                   placeholder={t('proxy.password_placeholder')}
+                  type="password"
                 />
               ),
               label: t('proxy.password'),
@@ -295,17 +314,26 @@ const ProxyForm = () => {
     children: [
       {
         children: (
-          <Flexbox horizontal align={'center'} gap={8} width={'100%'}>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}
+          >
             <Input
               placeholder={t('proxy.testUrlPlaceholder')}
               style={{ flex: 1 }}
               value={testUrl}
               onChange={(e) => setTestUrl(e.target.value)}
             />
-            <Button loading={isTesting} type="default" onClick={handleTest}>
+            <Button
+              aria-busy={isTesting}
+              disabled={isTesting}
+              variant="outline"
+              onClick={handleTest}
+            >
+              {isTesting && <Spinner />}
               {t('proxy.testButton')}
             </Button>
-          </Flexbox>
+          </div>
         ),
         desc: t('proxy.testDescription'),
         label: <SettingsSearchAnchor id={'proxy-test'}>{t('proxy.testUrl')}</SettingsSearchAnchor>,

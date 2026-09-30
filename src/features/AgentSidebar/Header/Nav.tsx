@@ -1,13 +1,18 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
-import { BotPromptIcon } from '@lobehub/ui/icons';
-import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
+import {
+  BotMessageSquareIcon,
+  DnaIcon,
+  ListTodoIcon,
+  MessageSquarePlusIcon,
+  SearchIcon,
+  TargetIcon,
+} from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { toast } from '@/components/toast';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
@@ -87,7 +92,7 @@ const Nav = memo(() => {
   };
 
   return (
-    <Flexbox gap={1} paddingInline={4}>
+    <div className="flex flex-col gap-[1px]" style={{ paddingInline: 4 }}>
       <NavItem
         disabled={!canCreateTopic || isNewTopicSendInFlight || isOpeningTopic}
         icon={MessageSquarePlusIcon}
@@ -104,7 +109,7 @@ const Nav = memo(() => {
       {!hideProfile && (
         <NavItem
           active={isProfileActive}
-          icon={BotPromptIcon}
+          icon={BotMessageSquareIcon}
           title={t('tab.profile')}
           onClick={() => {
             switchTopic(null, { skipRefreshMessage: true });
@@ -143,7 +148,7 @@ const Nav = memo(() => {
           router.push(urlJoin('/agent', agentId!, 'tasks'));
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

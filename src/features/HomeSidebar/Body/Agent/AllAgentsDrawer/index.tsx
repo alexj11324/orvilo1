@@ -1,18 +1,18 @@
 'use client';
 
-import { Flexbox, SearchBar } from '@lobehub/ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import SideBarDrawer from '@/features/NavPanel/SideBarDrawer';
 import dynamic from '@/libs/next/dynamic';
 
 const Content = dynamic(() => import('./Content'), {
   loading: () => (
-    <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
+    <div className="flex flex-col gap-[1px] py-[1px] px-[4px]">
       <SkeletonList rows={3} />
-    </Flexbox>
+    </div>
   ),
   ssr: false,
 });
@@ -31,17 +31,15 @@ const AllAgentsDrawer = memo<AllAgentsDrawerProps>(({ open, onClose }) => {
       open={open}
       title={t('navPanel.agent')}
       subHeader={
-        <Flexbox paddingBlock={'0 8px'} paddingInline={8}>
-          <SearchBar
-            allowClear
-            defaultValue={searchKeyword}
+        <div className="flex flex-col px-[8px] pb-2">
+          <Input
+            aria-label={t('navPanel.searchAgent')}
             placeholder={t('navPanel.searchAgent')}
-            onSearch={(keyword) => setSearchKeyword(keyword)}
-            onInputChange={(keyword) => {
-              if (!keyword) setSearchKeyword('');
-            }}
+            type="search"
+            value={searchKeyword}
+            onChange={(event) => setSearchKeyword(event.target.value)}
           />
-        </Flexbox>
+        </div>
       }
       onClose={onClose}
     >

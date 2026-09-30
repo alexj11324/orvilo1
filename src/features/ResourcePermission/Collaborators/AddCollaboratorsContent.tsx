@@ -1,15 +1,5 @@
 'use client';
 
-import { Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
-import {
-  Avatar,
-  Button,
-  SkeletonAvatar,
-  SkeletonText,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { MAX_RESOURCE_COLLABORATORS_PER_ADD } from '@orvilo/const';
 import { useHover } from 'ahooks';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -19,6 +9,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import Avatar from '@/components/Avatar';
+import { useModalContext } from '@/components/Modal';
+import SearchBar from '@/components/SearchBar';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { PermissionResourceType, ResourceAccessLevel } from '@/services/resourcePermission';
 
 import { useResourceCollaborators } from '../useResourceCollaborators';
@@ -112,15 +109,15 @@ const MemberRow = memo<{
   const email = member.user?.email;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
+    <div
       aria-selected={selected}
-      className={cx(styles.row, selected && styles.rowSelected)}
-      gap={12}
       ref={ref}
       role={'option'}
       tabIndex={0}
+      className={cx(
+        'flex flex-row items-center gap-3',
+        cx(styles.row, selected && styles.rowSelected),
+      )}
       onClick={() => onToggle(member.userId)}
       onKeyDown={(e) => {
         // Focus lands here by Tab out of the search field; Enter and Space are
@@ -137,24 +134,22 @@ const MemberRow = memo<{
         size={40}
         title={name}
       />
-      <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-        <Text ellipsis weight={500}>
-          {name}
-        </Text>
+      <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+        <div className="truncate min-w-0 font-medium">{name}</div>
         {email && email !== name ? (
-          <Text ellipsis fontSize={12} type={'secondary'}>
-            {email}
-          </Text>
+          <div className="truncate min-w-0 text-[12px] text-muted-foreground">{email}</div>
         ) : null}
-      </Flexbox>
+      </div>
       {/* Select-option style: the selected state reads as a primary check on
           the trailing edge, mirroring base-ui Select's ItemIndicator. */}
       {selected ? (
         <span className={styles.rowIndicator}>
-          <Icon icon={CheckIcon} size={'small'} />
+          <span className="anticon" role="img">
+            <CheckIcon fill={'transparent'} height={'14'} size={'14'} width={'14'} />
+          </span>
         </span>
       ) : null}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -238,31 +233,30 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
     const isSearchMiss = filtered.length === 0 && candidates.length > 0;
 
     return (
-      <Flexbox>
-        <Flexbox className={styles.header}>
+      <div className="flex flex-col">
+        <div className={cx('flex flex-col', styles.header)}>
           <SearchBar
             autoFocus
             placeholder={t('permission.collaborators.addModal.search')}
             value={query}
-            variant={'filled'}
             onChange={(e) => setQuery(e.target.value)}
           />
-        </Flexbox>
-        <Flexbox
+        </div>
+        <div
           aria-multiselectable
           aria-label={t('permission.collaborators.addModal.title')}
-          className={styles.list}
+          className={cx('flex flex-col', styles.list)}
           role={'listbox'}
         >
           {isInitialLoading ? (
             [0, 1, 2].map((key) => (
-              <Flexbox horizontal align={'center'} className={styles.row} gap={12} key={key}>
-                <SkeletonAvatar size={40} />
-                <SkeletonText style={{ marginBottom: 0, width: 180 }} />
-              </Flexbox>
+              <div className={cx('flex flex-row items-center gap-3', styles.row)} key={key}>
+                <Skeleton className="rounded-full" style={{ height: 40, width: 40 }} />
+                <Skeleton style={{ marginBottom: 0, width: 180 }} />
+              </div>
             ))
           ) : filtered.length === 0 ? (
-            <Empty
+            <SimpleEmpty
               icon={isSearchMiss ? SearchXIcon : UsersIcon}
               description={t(
                 isSearchMiss
@@ -280,28 +274,30 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
               />
             ))
           )}
-        </Flexbox>
-        <Flexbox horizontal align={'center'} className={styles.footer} gap={8}>
-          <Flexbox flex={1}>
+        </div>
+        <div className={cx('flex flex-row items-center gap-2', styles.footer)}>
+          <div className="flex flex-col flex-1">
             {selected.length > 0 ? (
-              <Text fontSize={13} type={'secondary'}>
+              <div className="text-[13px] text-muted-foreground">
                 {t('permission.collaborators.addModal.selectedCount', { count: selected.length })}
-              </Text>
+              </div>
             ) : null}
-          </Flexbox>
-          <Button onClick={() => close()}>{t('cancel', { ns: 'common' })}</Button>
+          </div>
+          <Button variant="outline" onClick={() => close()}>
+            {t('cancel', { ns: 'common' })}
+          </Button>
           <Button
             disabled={selected.length === 0}
             loading={mutating}
-            type={'primary'}
+            variant="default"
             onClick={handleConfirm}
           >
             {selected.length > 0
               ? t('permission.collaborators.addModal.confirmCount', { count: selected.length })
               : t('permission.collaborators.addModal.confirm')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

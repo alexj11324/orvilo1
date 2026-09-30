@@ -1,5 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import path from 'path-browserify-esm';
 import React from 'react';
 
@@ -47,18 +46,18 @@ export const LocalFolder = ({ path: pathname, size = 22 }: LocalFolderProps) => 
   const { base } = path.parse(pathname);
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.container}
-      gap={4}
+    <div
+      className={cx('flex flex-row items-center gap-1', styles.container)}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
       onClick={handleClick}
     >
       <FileIcon isDirectory fileName={base} size={size} variant={'raw'} />
-      <Flexbox horizontal align={'baseline'} gap={4} style={{ overflow: 'hidden', width: '100%' }}>
+      <div
+        className="flex flex-row items-baseline gap-1"
+        style={{ overflow: 'hidden', width: '100%' }}
+      >
         <div className={styles.title}>{base}</div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };

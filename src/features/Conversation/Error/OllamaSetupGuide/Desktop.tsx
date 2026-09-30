@@ -1,8 +1,8 @@
 import { Ollama } from '@lobehub/icons';
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useConversationStore } from '@/features/Conversation/store';
 
 import BaseErrorForm from '../BaseErrorForm';
@@ -19,7 +19,7 @@ const OllamaDesktopSetupGuide = memo<{ id?: string }>(({ id }) => {
       title={t('OllamaSetupGuide.install.title')}
       action={
         <Button
-          type={'primary'}
+          variant="default"
           onClick={() => {
             if (id) delAndRegenerateMessage(id);
           }}

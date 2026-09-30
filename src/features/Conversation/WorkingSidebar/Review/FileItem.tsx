@@ -1,18 +1,21 @@
 'use client';
-
-import { copyToClipboard, Flexbox, PatchDiff } from '@lobehub/ui';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
+import { PatchDiff } from '@lobehub/ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles, cssVar as themeCssVar } from 'antd-style';
+import { cn } from 'cn';
 import { CopyIcon, LocateFixedIcon, Undo2Icon } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { gitService } from '@/services/git';
 import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import type { ComposerTarget } from '../../types';
 import type { DiffSelectedLineRange } from './selection';
@@ -198,7 +201,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
     const fileName = lastSlash >= 0 ? filePath.slice(lastSlash + 1) : filePath;
 
     const handleCopy = useCallback(
-      async (event: MouseEvent<HTMLDivElement>) => {
+      async (event: MouseEvent<HTMLElement>) => {
         // Stop propagation so the row doesn't toggle expand on copy click.
         event.stopPropagation();
         await copyToClipboard(filePath);
@@ -208,7 +211,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
     );
 
     const handleReveal = useCallback(
-      (event: MouseEvent<HTMLDivElement>) => {
+      (event: MouseEvent<HTMLElement>) => {
         event.stopPropagation();
         revealInFilesTab(filePath);
       },
@@ -216,7 +219,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
     );
 
     const handleRevert = useCallback(
-      (event: MouseEvent<HTMLDivElement>) => {
+      (event: MouseEvent<HTMLElement>) => {
         event.stopPropagation();
         if (!revertContext) return;
         confirmModal({
@@ -272,7 +275,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
           {additions > 0 && deletions > 0 && ' '}
           {deletions > 0 && <span className={styles.deletions}>-{deletions}</span>}
         </span>
-        <Flexbox horizontal align={'center'} className={styles.actions} gap={2}>
+        <div className={cn('flex items-center gap-0.5', styles.actions)}>
           <ActionIcon
             className={styles.rowAction}
             icon={CopyIcon}
@@ -297,7 +300,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
               onClick={handleRevert}
             />
           )}
-        </Flexbox>
+        </div>
       </div>
     );
   },

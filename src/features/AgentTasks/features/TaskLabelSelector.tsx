@@ -1,5 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Popover, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskLabelSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckIcon, PlusIcon } from 'lucide-react';
@@ -8,6 +6,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { resolveLabelColor } from '@/features/Labels/labelColor';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -24,6 +24,7 @@ import {
   blockedPickerTriggerStyle,
   pickerTriggerStyle,
 } from './pickerTriggerStyles';
+import { SimpleTooltip } from './SimpleTooltip';
 
 interface TaskLabelSelectorProps {
   /**
@@ -225,99 +226,96 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
     );
 
     const blocked = disabled || !canEditTask;
-    const trigger = blocked ? (
-      <Tooltip title={disabled ? t('taskDetail.labels.disabled') : reason}>
-        <div style={blockedPickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
-          <span style={blockedPickerContentStyle}>{children}</span>
-        </div>
-      </Tooltip>
-    ) : (
-      <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
-        {children}
-      </div>
-    );
+
+    if (blocked)
+      return (
+        <SimpleTooltip title={disabled ? t('taskDetail.labels.disabled') : reason}>
+          <div style={blockedPickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
+            <span style={blockedPickerContentStyle}>{children}</span>
+          </div>
+        </SimpleTooltip>
+      );
 
     return (
-      <Popover
-        disabled={blocked}
-        placement={'bottomLeft'}
-        styles={{ content: { padding: 0, width: 260 } }}
-        trigger={'click'}
-        content={
-          <Flexbox onClick={(event) => event.stopPropagation()}>
-            <input
-              autoFocus
-              className={styles.searchInput}
-              placeholder={t('taskDetail.labels.searchPlaceholder')}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onKeyDown={handleSearchKeyDown}
-            />
-            {isLoading ? (
-              <SkeletonList rows={4} />
-            ) : flatOptions.length === 0 ? (
-              <Flexbox align={'center'} justify={'center'} padding={16}>
-                <Text fontSize={12} type={'secondary'}>
-                  {t('taskDetail.labels.empty')}
-                </Text>
-              </Flexbox>
-            ) : (
-              <Flexbox
-                gap={4}
-                padding={8}
-                ref={listRef}
-                style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
-              >
-                {flatOptions.map((option, index) => (
-                  <div
-                    data-label-index={index}
-                    key={option.key}
-                    onMouseEnter={() => setActiveIndex(index)}
-                  >
-                    {option.kind === 'create' ? (
-                      <NavItem
-                        active={index === activeIndex}
-                        icon={PlusIcon}
-                        loading={creating}
-                        style={{ flexShrink: 0 }}
-                        title={t('taskDetail.labels.create', { name: option.name })}
-                        onClick={() => void handleCreate(option.name)}
-                      />
-                    ) : (
-                      <NavItem
-                        active={index === activeIndex}
-                        style={{ flexShrink: 0 }}
-                        title={option.label.name}
-                        extra={
-                          assignedIds.has(option.label.id) ? (
-                            <Icon color={cssVar.colorTextDescription} icon={CheckIcon} size={14} />
-                          ) : undefined
-                        }
-                        slots={{
-                          titlePrefix: (
-                            <span
-                              aria-hidden
-                              className={styles.dot}
-                              style={{
-                                background: resolveLabelColor(
-                                  option.label.name,
-                                  option.label.color,
-                                ),
-                              }}
-                            />
-                          ),
-                        }}
-                        onClick={() => void handleToggle(option.label)}
-                      />
-                    )}
-                  </div>
-                ))}
-              </Flexbox>
-            )}
-          </Flexbox>
-        }
-      >
-        {trigger}
+      <Popover>
+        <PopoverTrigger
+          render={
+            <div style={pickerTriggerStyle} onClick={(event) => event.stopPropagation()}>
+              {children}
+            </div>
+          }
+        />
+        <PopoverContent
+          align="start"
+          className="w-65 gap-0 p-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <input
+            autoFocus
+            className={styles.searchInput}
+            placeholder={t('taskDetail.labels.searchPlaceholder')}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
+          {isLoading ? (
+            <SkeletonList rows={4} />
+          ) : flatOptions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-4">
+              <div className="text-[12px] text-muted-foreground">
+                {t('taskDetail.labels.empty')}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="flex flex-col gap-1 p-2"
+              ref={listRef}
+              style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
+            >
+              {flatOptions.map((option, index) => (
+                <div
+                  data-label-index={index}
+                  key={option.key}
+                  onMouseEnter={() => setActiveIndex(index)}
+                >
+                  {option.kind === 'create' ? (
+                    <NavItem
+                      active={index === activeIndex}
+                      icon={PlusIcon}
+                      loading={creating}
+                      style={{ flexShrink: 0 }}
+                      title={t('taskDetail.labels.create', { name: option.name })}
+                      onClick={() => void handleCreate(option.name)}
+                    />
+                  ) : (
+                    <NavItem
+                      active={index === activeIndex}
+                      style={{ flexShrink: 0 }}
+                      title={option.label.name}
+                      extra={
+                        assignedIds.has(option.label.id) ? (
+                          <CheckIcon size={14} style={{ color: cssVar.colorTextDescription }} />
+                        ) : undefined
+                      }
+                      slots={{
+                        titlePrefix: (
+                          <span
+                            aria-hidden
+                            className={styles.dot}
+                            style={{
+                              background: resolveLabelColor(option.label.name, option.label.color),
+                            }}
+                          />
+                        ),
+                      }}
+                      onClick={() => void handleToggle(option.label)}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </PopoverContent>
       </Popover>
     );
   },

@@ -1,10 +1,11 @@
-import { Block, Empty, Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
 import type { ChatMessagePluginError } from '@orvilo/types';
 import { FolderOpenIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import FileItem from '../../components/FileItem';
 
@@ -21,29 +22,29 @@ const SearchFiles = memo<SearchFilesProps>(({ listResults = [], messageId }) => 
 
   if (loading) {
     return (
-      <Flexbox gap={4}>
-        <Skeleton height={16} />
-        <Skeleton height={16} />
-        <Skeleton height={16} />
-        <Skeleton height={16} />
-      </Flexbox>
+      <div className="flex flex-col gap-1">
+        <Skeleton style={{ height: 16 }} />
+        <Skeleton style={{ height: 16 }} />
+        <Skeleton style={{ height: 16 }} />
+        <Skeleton style={{ height: 16 }} />
+      </div>
     );
   }
 
   if (listResults.length === 0) {
     return (
-      <Block variant={'outlined'}>
-        <Empty description={t('localFiles.listFiles.emptyDirectory')} icon={FolderOpenIcon} />
-      </Block>
+      <div className="rounded-md border bg-card">
+        <SimpleEmpty description={t('localFiles.listFiles.emptyDirectory')} icon={FolderOpenIcon} />
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={2} style={{ maxHeight: 140, overflow: 'scroll' }}>
+    <div className="flex flex-col gap-0.5" style={{ maxHeight: 140, overflow: 'scroll' }}>
       {listResults.map((item) => (
         <FileItem key={item.path || item.name} {...item} showTime />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

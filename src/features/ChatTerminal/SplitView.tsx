@@ -1,10 +1,11 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { Fragment, type PointerEvent as ReactPointerEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import { DIVIDER_WIDTH, paneTrackWidth, resizePanes } from './paneLayout';
 import type { TerminalPane } from './store';

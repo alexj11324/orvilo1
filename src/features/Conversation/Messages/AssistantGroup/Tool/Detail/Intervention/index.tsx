@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { getBuiltinIntervention } from '@orvilo/builtin-tools/interventions';
 import { safeParseJSON } from '@orvilo/utils';
 import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
@@ -247,7 +246,7 @@ const Intervention = memo<InterventionProps>(
 
       if (isCustomInteraction) {
         return (
-          <Flexbox gap={12}>
+          <div className="flex flex-col gap-3">
             <BuiltinToolInterventionRender
               actionsPortalTarget={actionsPortalTarget}
               apiName={apiName}
@@ -260,12 +259,12 @@ const Intervention = memo<InterventionProps>(
               onArgsChange={handleArgsChange}
               onInteractionAction={handleInteractionAction}
             />
-          </Flexbox>
+          </div>
         );
       }
 
       const actions = (
-        <Flexbox horizontal justify={'flex-end'}>
+        <div className="flex justify-end">
           <ApprovalActions
             apiName={apiName}
             approvalMode={approvalMode}
@@ -275,11 +274,11 @@ const Intervention = memo<InterventionProps>(
             toolCallId={toolCallId}
             onBeforeApprove={handleBeforeApprove}
           />
-        </Flexbox>
+        </div>
       );
 
       return (
-        <Flexbox data-pending-hotkey-scope gap={12}>
+        <div data-pending-hotkey-scope className="flex flex-col gap-3">
           <SecurityBlacklistWarning args={parsedArgs} />
           <BuiltinToolInterventionRender
             apiName={apiName}
@@ -290,12 +289,12 @@ const Intervention = memo<InterventionProps>(
             onArgsChange={handleArgsChange}
           />
           {actionsPortalTarget ? createPortal(actions, actionsPortalTarget) : actions}
-        </Flexbox>
+        </div>
       );
     }
 
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         <SecurityBlacklistWarning args={parsedArgs} />
         <Fallback
           actionsPortalTarget={actionsPortalTarget}
@@ -306,7 +305,7 @@ const Intervention = memo<InterventionProps>(
           requestArgs={requestArgs}
           toolCallId={toolCallId}
         />
-      </Flexbox>
+      </div>
     );
   },
 );

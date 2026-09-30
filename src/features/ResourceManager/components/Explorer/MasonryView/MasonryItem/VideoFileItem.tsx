@@ -1,5 +1,4 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { PlayIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -79,13 +78,15 @@ const VideoFileItem = memo<VideoFileItemProps>(({ isInView, name, size, url }) =
         <video muted playsInline preload={'metadata'} src={`${url}#t=0.001`} />
       )}
       <div className={styles.playBadge}>
-        <Icon icon={PlayIcon} size={20} />
+        <span className="anticon" role="img">
+          <PlayIcon fill={'transparent'} height={20} size={20} width={20} />
+        </span>
       </div>
     </div>
-    <Flexbox className={styles.info} gap={4}>
+    <div className={cx('flex flex-col gap-1', styles.info)}>
       <span className={styles.name}>{name}</span>
       <span className={styles.meta}>{formatSize(size)}</span>
-    </Flexbox>
+    </div>
   </>
 ));
 

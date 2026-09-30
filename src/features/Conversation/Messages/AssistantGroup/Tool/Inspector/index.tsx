@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import type { ActivateToolsState } from '@orvilo/builtin-tool-activator';
 import { ActivatorApiName, OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { AuvApiName, AuvIdentifier } from '@orvilo/builtin-tool-auv';
@@ -120,7 +119,7 @@ const Inspectors = memo<InspectorProps>(
         : undefined;
 
     return (
-      <Flexbox allowShrink horizontal align={'center'} gap={6}>
+      <div className="flex items-center gap-1.5">
         <StatusIndicator
           intervention={intervention}
           isToolExecuting={isToolCalling}
@@ -157,7 +156,7 @@ const Inspectors = memo<InspectorProps>(
           startTime={toolCallStartTime}
           timerKey={toolCallId}
         />
-      </Flexbox>
+      </div>
     );
   },
 );

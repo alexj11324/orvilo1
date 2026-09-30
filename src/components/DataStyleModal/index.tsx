@@ -1,7 +1,6 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 import { memo } from 'react';
 
 import ImperativeModal from '@/components/ImperativeModal';
@@ -71,10 +70,10 @@ const DataStyleModal = memo<DataStyleModalProps>(
           header: isDarkMode ? styles.modalTitleDark : styles.modalTitleLight,
         }}
         title={
-          <Flexbox horizontal gap={8}>
-            <Icon icon={icon} />
+          <div className={'flex gap-2'}>
+            {createElement(icon, { size: 16 })}
             {title}
-          </Flexbox>
+          </div>
         }
       >
         {children}

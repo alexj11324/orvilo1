@@ -1,18 +1,18 @@
 'use client';
 
-import { type InputProps } from '@lobehub/ui';
-import { Input, Popover, stopPropagation } from '@lobehub/ui';
-import { type InputRef, type PopoverProps } from 'antd';
-import { type KeyboardEvent } from 'react';
+import { Popover } from '@base-ui/react/popover';
+import { type HTMLAttributes, type KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
+import { Input } from '@/components/ui/input';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { useOverlayPopoverPortalProps } from '@/features/NavPanel/OverlayContainer';
 
-function FocusableInput(props: InputProps) {
-  const ref = useRef<InputRef>(null);
+function FocusableInput(props: HTMLAttributes<HTMLInputElement>) {
+  const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     queueMicrotask(() => {
-      ref.current?.input?.focus();
+      ref.current?.focus();
     });
   }, []);
   return <Input {...props} ref={ref} />;
@@ -38,7 +38,7 @@ export interface InlineRenameProps {
   /**
    * Popover placement
    */
-  placement?: PopoverProps['placement'];
+  placement?: 'bottom' | 'bottomLeft' | 'top' | 'topLeft';
   /**
    * Current title
    */
@@ -88,38 +88,38 @@ const InlineRename = memo<InlineRenameProps>(
       [onCancel, handleClose],
     );
 
+    const side = placement.startsWith('top') ? 'top' : 'bottom';
+    const align = placement.endsWith('Left') ? 'start' : 'center';
+
     return (
-      <Popover
+      <Popover.Root
         open={open}
-        placement={placement}
-        portalProps={popoverPortalProps}
-        trigger="click"
-        content={
-          <FocusableInput
-            defaultValue={title}
-            onBlur={handleSave}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onClick={stopPropagation}
-            onKeyDown={handleKeyDown}
-            onPressEnter={() => {
-              handleSave();
-              handleClose();
-            }}
-          />
-        }
-        styles={{
-          content: {
-            padding: 4,
-            width,
-          },
-        }}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) handleSave();
           onOpenChange(nextOpen);
         }}
       >
-        <div />
-      </Popover>
+        <Popover.Trigger render={<div />} />
+        <Popover.Portal {...(popoverPortalProps ?? {})}>
+          <Popover.Positioner align={align} side={side} sideOffset={4}>
+            <Popover.Popup className={POPUP_Z_CLASS} style={{ padding: 4, width }}>
+              <FocusableInput
+                defaultValue={title}
+                onBlur={handleSave}
+                onChange={(e) => setNewTitle((e.target as HTMLInputElement).value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  handleKeyDown(e as KeyboardEvent);
+                  if (e.key === 'Enter') {
+                    handleSave();
+                    handleClose();
+                  }
+                }}
+              />
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
     );
   },
 );

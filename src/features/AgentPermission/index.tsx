@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -34,7 +33,7 @@ const AgentPermission = memo(() => {
   const retryAgentConfigFetch = useAgentStore((s) => s.retryAgentConfigFetch);
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <div className="flex flex-col h-full w-full">
       <NavHeader
         styles={{ left: { paddingInlineStart: 24 } }}
         left={
@@ -43,9 +42,9 @@ const AgentPermission = memo(() => {
           ) : null
         }
       />
-      <Flexbox flex={1} style={styles.body} width={'100%'}>
+      <div className="flex flex-col flex-1 w-full" style={{ ...styles.body }}>
         <WideScreenContainer>
-          <Flexbox gap={16} paddingBlock={16}>
+          <div className="flex flex-col gap-4" style={{ paddingBlock: 16 }}>
             <AsyncBoundary
               data={isAgentConfigLoading ? undefined : true}
               error={configError}
@@ -56,10 +55,10 @@ const AgentPermission = memo(() => {
             >
               <PermissionForm agentId={activeAgentId ?? ''} />
             </AsyncBoundary>
-          </Flexbox>
+          </div>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

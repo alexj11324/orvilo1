@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { agentSecondaryDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -9,6 +7,10 @@ import { PencilIcon, SparklesIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
@@ -37,10 +39,11 @@ const AgentHeader = memo(() => {
   const showNamePrompt = !personalName && canEdit;
 
   return (
-    <Flexbox
-      gap={16}
-      paddingBlock={'0 16px'}
+    <div
+      className="flex flex-col gap-4"
       style={{
+        paddingBlock: '0 16px',
+
         cursor: 'default',
         marginInline: -16,
         width: 'calc(100% + 32px)',
@@ -77,7 +80,7 @@ const AgentHeader = memo(() => {
       {/* Identity Section — display only. Editing all three fields happens in a
           form modal; inline inputs crowded the header and left no room for a
           per-field label or error. */}
-      <Flexbox flex={1} gap={8} paddingInline={24} style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1 gap-2 px-6" style={{ minWidth: 0 }}>
         {/* The headline is the NAME slot. With no name there is nothing to
             headline, so it carries the action that can fix this instead of a
             placeholder pretending to be a name. The edit affordance stays hidden
@@ -85,27 +88,27 @@ const AgentHeader = memo(() => {
             next step, and offering the full identity form alongside would split
             attention between two ways to do the same thing. */}
         {showNamePrompt ? (
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-            <Text ellipsis style={{ color: cssVar.colorTextTertiary, fontSize: 20 }}>
+          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+            <div className="truncate" style={{ color: cssVar.colorTextTertiary, fontSize: 20 }}>
               {t('settingAgent.personalName.unnamed', { ns: 'setting' })}
-            </Text>
+            </div>
             <Button
-              icon={SparklesIcon}
               loading={naming}
-              size={'small'}
-              type={'text'}
+              size="sm"
+              variant="ghost"
               onClick={() => {
                 void autoName();
               }}
             >
+              <SparklesIcon data-icon="inline-start" />
               {t('settingAgent.personalName.pickForMe', { ns: 'setting' })}
             </Button>
-          </Flexbox>
+          </div>
         ) : (
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
-            <Text ellipsis style={{ fontSize: 36, fontWeight: 600 }}>
+          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+            <div className="truncate" style={{ fontSize: 36, fontWeight: 600 }}>
               {personalName || t('settingAgent.identity.untitled', { ns: 'setting' })}
-            </Text>
+            </div>
             {canEdit ? (
               <ActionIcon
                 icon={PencilIcon}
@@ -114,9 +117,9 @@ const AgentHeader = memo(() => {
                 onClick={() => createAgentIdentityModal(agentId)}
               />
             ) : null}
-          </Flexbox>
+          </div>
         )}
-        <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+        <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
           {/* `Text type="secondary"` resolves to `colorTextDescription`, which antd
               maps to the TERTIARY step — too faint for the line that carries the
               agent's role. Set the secondary colour explicitly, and leave only
@@ -124,31 +127,43 @@ const AgentHeader = memo(() => {
           {/* A heterogeneous product name that already includes its role is
               shown once. Genuinely custom names retain the role underneath. */}
           {!suppressDuplicateRole ? (
-            <Text
-              ellipsis
-              style={{
-                color: role ? cssVar.colorTextSecondary : cssVar.colorTextTertiary,
-              }}
+            <div
+              className="truncate"
+              style={{ color: role ? cssVar.colorTextSecondary : cssVar.colorTextTertiary }}
             >
               {role || t('settingAgent.role.unset', { ns: 'setting' })}
-            </Text>
+            </div>
           ) : null}
           {slug && !suppressDuplicateRole ? (
-            <Text style={{ color: cssVar.colorTextTertiary }}>·</Text>
+            <div style={{ color: cssVar.colorTextTertiary }}>·</div>
           ) : null}
           {/* The tooltip only renders when a slug exists, so it can always name
               the real url rather than a `<slug>` the reader has to substitute. */}
           {slug ? (
-            <Tooltip title={t('settingAgent.slug.openWith', { ns: 'setting', slug })}>
-              <Text code style={{ color: cssVar.colorTextSecondary, flex: 'none' }}>
-                <span style={{ color: cssVar.colorTextTertiary }}>@</span>
-                {slug}
-              </Text>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <code
+                        className="font-mono rounded bg-muted px-1"
+                        style={{ color: cssVar.colorTextSecondary, flex: 'none' }}
+                      >
+                        <span style={{ color: cssVar.colorTextTertiary }}>@</span>
+                        {slug}
+                      </code>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t('settingAgent.slug.openWith', { ns: 'setting', slug })}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : null}
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox, Tooltip } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { highlightTextStyles, shinyTextStyles } from '@/styles';
 
 import type { GetAgentDetailParams, GetAgentDetailState } from '../../../types';
@@ -47,13 +47,13 @@ export const GetAgentDetailInspector = memo<
   }
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
+    <div className={cx('flex flex-row items-center gap-2', styles.root)}>
       <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-agent-management.inspector.getAgentDetail.title')}
       </span>
       {title ? (
-        <Tooltip title={agentId}>
-          <Flexbox horizontal align={'center'} gap={6}>
+        <SimpleTooltip title={agentId}>
+          <div className="flex flex-row items-center gap-1.5">
             {meta?.avatar && (
               <Avatar
                 avatar={meta.avatar}
@@ -63,12 +63,12 @@ export const GetAgentDetailInspector = memo<
               />
             )}
             <span className={highlightTextStyles.primary}>{title}</span>
-          </Flexbox>
-        </Tooltip>
+          </div>
+        </SimpleTooltip>
       ) : (
         agentId && <span className={highlightTextStyles.primary}>{agentId}</span>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import GroupAvatar from '@/features/GroupAvatar';
 
 export interface AgentGroupAvatarProps {

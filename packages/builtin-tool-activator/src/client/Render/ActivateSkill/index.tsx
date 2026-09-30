@@ -1,9 +1,12 @@
 'use client';
 
-import { Flexbox, Markdown, ScrollShadow } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
+
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import type { ActivateSkillParams, ActivateSkillState } from '../../../types';
 
@@ -44,19 +47,19 @@ const ActivateSkill = memo<BuiltinRenderProps<ActivateSkillParams, ActivateSkill
     if (!displayName) return null;
 
     return (
-      <Flexbox className={styles.container}>
-        <Flexbox className={styles.header} gap={4}>
+      <div className={cn('flex', 'flex-col', styles.container)}>
+        <div className={cn('flex', 'flex-col', 'gap-1', styles.header)}>
           <span className={styles.name}>{displayName}</span>
           {description && <span className={styles.description}>{description}</span>}
-        </Flexbox>
+        </div>
         {content && (
-          <ScrollShadow className={styles.content} offset={12} size={12} style={{ maxHeight: 400 }}>
+          <ScrollArea className={styles.content} style={{ maxHeight: 400 }}>
             <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
               {content}
             </Markdown>
-          </ScrollShadow>
+          </ScrollArea>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

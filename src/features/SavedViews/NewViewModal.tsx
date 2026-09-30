@@ -1,12 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Button, Modal, Text, toast } from '@lobehub/ui/base-ui';
 import type { WorkQuery, WorkQueryEntityType, WorkQueryFilter } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Modal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { mutate } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -137,21 +138,20 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
 
   return (
     <Modal
-      destroyOnHidden
       open={open}
       title={t('savedViews.newView')}
       width={640}
       footer={
-        <Flexbox horizontal gap={8} justify="flex-end">
+        <div className="flex justify-end gap-2">
           <Button onClick={onClose}>{t('cancel')}</Button>
-          <Button disabled={!ready} loading={saving} type="primary" onClick={() => void save()}>
+          <Button disabled={!ready} loading={saving} variant="default" onClick={() => void save()}>
             {t('savedViews.createView')}
           </Button>
-        </Flexbox>
+        </div>
       }
       onCancel={onClose}
     >
-      <Flexbox gap={16} paddingBlock={8}>
+      <div className="flex flex-col gap-4 py-2">
         <ViewDefinitionEditor
           showEntityPicker
           showName
@@ -159,26 +159,25 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
           value={state}
           onChange={setState}
         />
-        <Flexbox
-          gap={4}
-          padding={12}
+        <div
+          className="flex flex-col gap-1 p-3"
           style={{
             background: 'var(--ant-color-fill-quaternary, rgba(0,0,0,0.02))',
             borderRadius: 8,
           }}
         >
-          <Text fontSize={12} type="secondary">
+          <div className="text-[12px] text-muted-foreground">
             {preview
               ? t('savedViews.previewCount', { count: preview.total })
               : t('savedViews.previewPending')}
-          </Text>
+          </div>
           {preview?.titles.map((title) => (
-            <Text ellipsis fontSize={12} key={title}>
+            <div className="truncate block text-[12px]" key={title}>
               · {title}
-            </Text>
+            </div>
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </Modal>
   );
 });

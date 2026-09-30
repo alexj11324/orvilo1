@@ -1,12 +1,11 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
-import { Switch } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
@@ -22,7 +21,7 @@ const Analytics = memo(() => {
         children: (
           <Switch
             checked={!!checked}
-            onChange={(e) => {
+            onCheckedChange={(e) => {
               updateGeneralConfig({ telemetry: e });
             }}
           />
@@ -30,6 +29,7 @@ const Analytics = memo(() => {
         desc: t('analytics.telemetry.desc', { appName: BRANDING_NAME }),
         label: t('analytics.telemetry.title'),
         minWidth: undefined,
+        trigger: 'onCheckedChange',
         valuePropName: 'checked',
       },
     ],

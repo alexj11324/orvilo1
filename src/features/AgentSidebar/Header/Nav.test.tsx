@@ -1,11 +1,12 @@
 /**
  * @vitest-environment happy-dom
  */
-import { toast } from '@lobehub/ui/base-ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type * as React from 'react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { toast } from '@/components/toast';
 
 import Nav from './Nav';
 
@@ -14,7 +15,7 @@ vi.mock('react', async (importOriginal) => {
   return { ...actual, memo: (component: unknown) => component };
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
+vi.mock('@/components/toast', async (importOriginal) => {
   const actual = await importOriginal<{ toast: Record<string, unknown> }>();
   return { ...actual, toast: { ...actual.toast, error: vi.fn() } };
 });

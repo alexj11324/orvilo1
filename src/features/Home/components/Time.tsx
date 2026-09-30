@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
 import { useActivityTime } from '@/hooks/useActivityTime';
@@ -19,13 +18,13 @@ export const Time = memo<TimeProps>(({ date, minWidth }) => {
   const { text, title } = useActivityTime(date);
   if (!text) return null;
   return (
-    <Text
+    <div
       className={homeType.meta}
       style={{ flex: 'none', minWidth, textAlign: minWidth === undefined ? undefined : 'end' }}
       title={title}
     >
       {text}
-    </Text>
+    </div>
   );
 });
 

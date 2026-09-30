@@ -1,8 +1,7 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckIcon, RouterIcon, TerminalIcon } from 'lucide-react';
-import React, { memo } from 'react';
+import React, { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isDesktop } from '@/const/version';
@@ -89,9 +88,9 @@ const styles = createStaticStyles(({ css }) => ({
 const FeatureItem = memo(({ children }: { children: React.ReactNode }) => {
   return (
     <div className={styles.featureItem}>
-      <Center className={styles.featureIcon}>
+      <div className={cn('flex flex-col items-center justify-center', styles.featureIcon)}>
         <CheckIcon color={cssVar.colorSuccess} size={16} />
-      </Center>
+      </div>
       <div className={styles.featureText}>{children}</div>
     </div>
   );
@@ -127,46 +126,51 @@ const MCPTypeSelect = ({ value, onChange }: MCPTypeSelectProps) => {
   ];
 
   return (
-    <Flexbox horizontal gap={16} width={'100%'}>
+    <div className="flex gap-4" style={{ width: '100%' }}>
       {data.map(({ label, description, features, value: itemValue, icon }) => {
         const isActive = value === itemValue;
         const disabled = itemValue === 'stdio' && !isDesktop;
         return (
-          <Flexbox
-            className={cx(styles.container, isActive && styles.active, disabled && styles.disabled)}
-            gap={12}
+          <div
             key={itemValue}
             style={{ flex: 1 }} // Make cards take equal width
+            className={cn(
+              'flex flex-col gap-3',
+              cx(styles.container, isActive && styles.active, disabled && styles.disabled),
+            )}
             onClick={disabled ? undefined : () => handleSelect(itemValue)}
           >
-            <Center className={styles.checkIcon} style={{ opacity: isActive ? 1 : 0 }}>
+            <div
+              className={cn('flex flex-col items-center justify-center', styles.checkIcon)}
+              style={{ opacity: isActive ? 1 : 0 }}
+            >
               <CheckIcon size={14} />
-            </Center>
+            </div>
 
-            <Flexbox horizontal align={'flex-start'} gap={12}>
-              <Center height={22}>
-                <Icon icon={icon} style={{ fontSize: 16 }} />
-              </Center>
-              <Flexbox>
+            <div className="flex items-start gap-3">
+              <div className="flex flex-col items-center justify-center" style={{ height: 22 }}>
+                {createElement(icon, { style: { fontSize: 16 } })}
+              </div>
+              <div className="flex flex-col">
                 <div className={styles.cardTitle}>{label}</div>
                 <div className={styles.cardDescription}>{description}</div>
-              </Flexbox>
-            </Flexbox>
-            <Flexbox gap={8}>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
               {features.map((feature) => (
                 <FeatureItem key={feature}>{feature}</FeatureItem>
               ))}
-            </Flexbox>
+            </div>
             {disabled && (
-              <Text style={{ fontSize: 12, marginTop: 8 }} type="warning">
+              <div style={{ fontSize: 12, marginTop: 8, color: cssVar.colorWarning }}>
                 {t('dev.mcp.type.stdioNotAvailable')}
-              </Text>
+              </div>
             )}
-          </Flexbox>
+          </div>
         );
       })}
       {/* Streamable HTTP Card */}
-    </Flexbox>
+    </div>
   );
 };
 

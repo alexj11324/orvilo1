@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles, useTheme } from 'antd-style';
+import { createStaticStyles, cx, useTheme } from 'antd-style';
 import { memo, type ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 
@@ -149,21 +148,21 @@ const ResourceManager = memo<ResourceManagerProps>(({ content }) => {
         style={{ height: '100%' }}
         onUploadFiles={handleUploadFiles}
       >
-        <Flexbox className={styles.container} height={'100%'} style={cssVariables}>
+        <div className={cx('flex flex-col h-[100%]', styles.container)} style={cssVariables}>
           {/* Explorer stays mounted to preserve its state, unless the caller
               swaps in its own base content (resource home dashboard) */}
           {content ?? <Explorer />}
 
           {/* Editor overlay */}
           {mode === 'editor' && (
-            <Flexbox className={styles.editorOverlay}>
+            <div className={cx('flex flex-col', styles.editorOverlay)}>
               <FileEditor onBack={handleBack} />
-            </Flexbox>
+            </div>
           )}
 
           {/* PageEditor overlay */}
           {mode === 'page' && (
-            <Flexbox className={styles.pageEditorOverlay}>
+            <div className={cx('flex flex-col', styles.pageEditorOverlay)}>
               <PageEditor
                 emoji={currentDocument?.metadata?.emoji as string | undefined}
                 knowledgeBaseId={libraryId}
@@ -173,9 +172,9 @@ const ResourceManager = memo<ResourceManagerProps>(({ content }) => {
                 onEmojiChange={handleEmojiChange}
                 onTitleChange={handleTitleChange}
               />
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       </DragUploadZone>
       <ChunkDrawer />
     </>

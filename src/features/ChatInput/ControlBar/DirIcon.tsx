@@ -1,8 +1,7 @@
 import { Github } from '@lobehub/icons';
-import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { FolderGit2Icon, FolderIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 interface DirIconProps {
   /** Detected repo type — drives the glyph: GitHub mark, a git-tracked folder, or
@@ -22,7 +21,14 @@ const DirIcon = memo<DirIconProps>(({ repoType, size = 16 }) => {
   const iconStyle = { color: cssVar.colorTextTertiary, flex: 'none' as const };
   if (repoType === 'github') return <Github size={size} style={iconStyle} />;
   return (
-    <Icon icon={repoType === 'git' ? FolderGit2Icon : FolderIcon} size={size} style={iconStyle} />
+    <span className="anticon" role="img" style={iconStyle}>
+      {createElement(repoType === 'git' ? FolderGit2Icon : FolderIcon, {
+        size,
+        width: size,
+        height: size,
+        fill: 'transparent',
+      })}
+    </span>
   );
 });
 

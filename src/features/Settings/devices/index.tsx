@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox, Form, Icon } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { MonitorUpIcon, RefreshCwIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { DeviceConnectModal, DeviceManager, useDeviceList } from '@/features/DeviceManager';
 
@@ -39,27 +40,35 @@ const Page = memo(() => {
           {
             children: <DeviceManager scope={'personal'} onConnect={handleConnect} />,
             extra: (
-              <Flexbox horizontal align={'center'} gap={8}>
+              <div
+                className={'flex min-w-0'}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
                 {devices.length > 0 && (
-                  <Text fontSize={12} type={'secondary'} weight={500}>
+                  <span
+                    className={'text-muted-foreground'}
+                    style={{ fontSize: 12, fontWeight: 500 }}
+                  >
                     {t('devices.selection.total', { count: devices.length })}
-                  </Text>
+                  </span>
                 )}
-                <Button
-                  icon={<Icon icon={MonitorUpIcon} />}
-                  size={'small'}
-                  onClick={() => handleConnect()}
-                >
+                <Button size="sm" variant="outline" onClick={() => handleConnect()}>
+                  {createElement(MonitorUpIcon, {})}
                   {t('devices.connectWizard.button')}
                 </Button>
-                <ActionIcon
-                  icon={RefreshCwIcon}
-                  loading={isValidating}
-                  size={'small'}
+                <Button
+                  aria-busy={isValidating}
+                  aria-label={t('devices.actions.refresh')}
+                  disabled={isValidating}
+                  size="icon-sm"
                   title={t('devices.actions.refresh')}
+                  variant="ghost"
                   onClick={() => mutate()}
-                />
-              </Flexbox>
+                >
+                  {isValidating && <Spinner />}
+                  {createElement(RefreshCwIcon)}
+                </Button>
+              </div>
             ),
             title: t('devices.title'),
           },

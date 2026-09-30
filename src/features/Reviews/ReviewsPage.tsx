@@ -1,8 +1,7 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useId, useMemo, useState } from 'react';
@@ -11,6 +10,10 @@ import { useParams, useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import { Badge as Tag } from '@/components/reui/badge';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -180,31 +183,32 @@ const PullRequestRow = memo<{
       title={`${item.repository}#${item.number}${item.author ? ` · ${item.author}` : ''}`}
       to={detailPath}
     >
-      <Icon className={styles.prIcon} icon={GitPullRequestIcon} size={14} />
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
-        <Text ellipsis fontSize={13} weight={500}>
-          {item.title}
-        </Text>
-      </Flexbox>
+      <span className={cx('anticon', styles.prIcon)} role="img">
+        <GitPullRequestIcon fill={'transparent'} height={14} size={14} width={14} />
+      </span>
+      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+        <div className="truncate block text-[13px] font-medium">{item.title}</div>
+      </div>
       {item.isDraft ? (
-        <Icon
+        <span
           aria-label={t('reviews.state.draft')}
-          className={styles.draftIcon}
-          icon={SquarePenIcon}
-          size={14}
+          className={cx('anticon', styles.draftIcon)}
+          role="img"
           title={t('reviews.state.draft')}
-        />
+        >
+          <SquarePenIcon fill={'transparent'} height={14} size={14} width={14} />
+        </span>
       ) : null}
       {item.reviewDecision === 'APPROVED' ? (
-        <Tag color={'green'}>{t('reviews.decision.approved')}</Tag>
+        <Tag variant="success-light">{t('reviews.decision.approved')}</Tag>
       ) : null}
       {item.reviewDecision === 'CHANGES_REQUESTED' ? (
-        <Tag color={'red'}>{t('reviews.decision.changesRequested')}</Tag>
+        <Tag variant="destructive-light">{t('reviews.decision.changesRequested')}</Tag>
       ) : null}
       {item.updatedAt ? (
-        <Text className={styles.meta} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
+        <div className={cn(styles.meta)} title={dayjs(item.updatedAt).format('YYYY-MM-DD HH:mm')}>
           {reviewRelativeTime(item.updatedAt)}
-        </Text>
+        </div>
       ) : null}
     </WorkspaceLink>
   );
@@ -239,7 +243,7 @@ const QueueGroup = ({
 }) => {
   const regionId = useId();
   return (
-    <Flexbox gap={collapsed ? 0 : 4}>
+    <div className="flex flex-col" style={{ gap: collapsed ? 0 : 4 }}>
       <button
         aria-controls={regionId}
         aria-expanded={!collapsed}
@@ -251,19 +255,15 @@ const QueueGroup = ({
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
           size={14}
         />
-        <Text fontSize={12} weight={500}>
-          {label}
-        </Text>
+        <div className="text-[12px] font-medium">{label}</div>
         {typeof count === 'number' ? (
-          <Text fontSize={12} type={'secondary'}>
-            {count}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{count}</div>
         ) : null}
       </button>
       <div hidden={collapsed} id={regionId}>
         {children}
       </div>
-    </Flexbox>
+    </div>
   );
 };
 
@@ -430,26 +430,25 @@ const ReviewsPage = memo(() => {
       <div className={styles.listChrome}>
         <NavHeader
           left={
-            <Text fontSize={13} style={{ paddingInlineStart: 4 }} weight={500}>
+            <div className="text-[13px] font-medium" style={{ paddingInlineStart: 4 }}>
               {t('tab.reviews')}
-            </Text>
+            </div>
           }
         />
         <div className={styles.tabs}>
-          <TabsRoot value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
+          <Tabs value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
             <TabsList>
-              <TabsIndicator />
               {tabs.map((item) => (
-                <TabsTab key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
+                <TabsTrigger key={item.key} style={{ fontSize: 12, height: 28 }} value={item.key}>
                   {item.label}
-                </TabsTab>
+                </TabsTrigger>
               ))}
             </TabsList>
-          </TabsRoot>
+          </Tabs>
         </div>
       </div>
       <div className={styles.listBody}>
-        <Flexbox gap={16}>
+        <div className="flex flex-col gap-4">
           {queue.isLoading || notConnected || queue.error || allPullRequests.length === 0 ? (
             /* A single fallback group keeps the header visible — and
                collapsible — over loading / disconnected / error / empty
@@ -463,14 +462,14 @@ const ReviewsPage = memo(() => {
               {queue.isLoading ? (
                 <SkeletonList />
               ) : notConnected ? (
-                <Center gap={8} padding={24}>
-                  <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+                <div className="flex flex-col items-center justify-center gap-2 p-6">
+                  <SimpleEmpty description={t('reviews.connectGitHub')} icon={PlugIcon} />
                   <ConnectGitHubButton onConnected={refresh} />
-                </Center>
+                </div>
               ) : queue.error ? (
                 <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
               ) : (
-                <Empty
+                <SimpleEmpty
                   icon={GitPullRequestIcon}
                   description={t(
                     tab === 'created' ? 'reviews.queueEmptyCreated' : 'reviews.queueEmpty',
@@ -479,8 +478,8 @@ const ReviewsPage = memo(() => {
               )}
             </QueueGroup>
           ) : (
-            <Flexbox gap={4}>
-              <Flexbox gap={8}>
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 {queueGroups.map((group) => (
                   <QueueGroup
                     collapsed={collapsedGroups.has(group.key)}
@@ -493,7 +492,7 @@ const ReviewsPage = memo(() => {
                     }
                     onToggle={() => toggleQueueGroup(group.key)}
                   >
-                    <Flexbox>
+                    <div className="flex flex-col">
                       {group.items.map((item) => (
                         <PullRequestRow
                           active={selectedId === item.id}
@@ -503,10 +502,10 @@ const ReviewsPage = memo(() => {
                           returnTo={listPath}
                         />
                       ))}
-                    </Flexbox>
+                    </div>
                   </QueueGroup>
                 ))}
-              </Flexbox>
+              </div>
               {/* A partial queue is never presented as complete — the tail
                   counts stay visible and pages load on demand. */}
               {queuePager.errorFor('queue') ? (
@@ -517,26 +516,26 @@ const ReviewsPage = memo(() => {
                 />
               ) : null}
               {queueHasMore || (queueTail?.items.length ?? 0) > 0 ? (
-                <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
-                  <Text fontSize={12} type={'secondary'}>
+                <div className="flex flex-row items-center justify-between px-3">
+                  <div className="text-[12px] text-muted-foreground">
                     {t('reviews.loadedCount', {
                       loaded: allPullRequests.length,
                       total: queueTotal ?? '…',
                     })}
-                  </Text>
+                  </div>
                   {queueHasMore ? (
                     <Button
                       loading={queuePager.isLoading('queue')}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={loadMoreQueue}
                     >
                       {t('myWork.loadMore')}
                     </Button>
                   ) : null}
-                </Flexbox>
+                </div>
               ) : null}
-            </Flexbox>
+            </div>
           )}
 
           <QueueGroup
@@ -569,7 +568,7 @@ const ReviewsPage = memo(() => {
               />
             )}
           </QueueGroup>
-        </Flexbox>
+        </div>
       </div>
     </div>
   );
@@ -577,25 +576,27 @@ const ReviewsPage = memo(() => {
   const detailPane = selectedId ? (
     <ReviewPullRequestPage embedded showBack={surface === 'detail'} />
   ) : queue.isLoading ? (
-    <SkeletonList padding={24} rows={5} />
+    <SkeletonList rows={5} style={{ padding: 24 }} />
   ) : notConnected ? (
-    <Center className={styles.detailEmpty} gap={8} padding={24}>
-      <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
+    <div className={cx('flex flex-col items-center justify-center gap-2 p-6', styles.detailEmpty)}>
+      <SimpleEmpty description={t('reviews.connectGitHub')} icon={PlugIcon} />
       <ConnectGitHubButton onConnected={refresh} />
-    </Center>
+    </div>
   ) : queue.error ? (
-    <Center className={styles.detailEmpty} padding={24}>
+    <div className={cx('flex flex-col items-center justify-center p-6', styles.detailEmpty)}>
       <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
-    </Center>
+    </div>
   ) : (
     /* Reference shows a single `N reviews` line under the illustration —
        the queue total for the active tab is the closest count we own. */
-    <Center className={styles.detailEmpty} gap={8}>
-      <Icon icon={GitPullRequestIcon} size={44} />
-      <Text fontSize={13} type={'secondary'}>
+    <div className={cx('flex flex-col items-center justify-center gap-2', styles.detailEmpty)}>
+      <span className="anticon" role="img">
+        <GitPullRequestIcon fill={'transparent'} height={44} size={44} width={44} />
+      </span>
+      <div className="text-[13px] text-muted-foreground">
         {t('reviews.detailEmpty', { count: queueTotal ?? allPullRequests.length })}
-      </Text>
-    </Center>
+      </div>
+    </div>
   );
 
   return (

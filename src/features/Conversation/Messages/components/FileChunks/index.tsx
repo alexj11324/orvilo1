@@ -1,8 +1,8 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { type ChatFileChunk } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { BookOpenTextIcon, ChevronDown, ChevronRight } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useIsDark } from '@/hooks/useIsDark';
@@ -54,28 +54,30 @@ const FileChunks = memo<FileChunksProps>(({ data }) => {
   const [showDetail, setShowDetail] = useState(false);
 
   return (
-    <Flexbox
-      className={cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight)}
-      gap={16}
-      width={'100%'}
+    <div
+      style={{ width: '100%' }}
+      className={cn(
+        'flex flex-col gap-4',
+        cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
+      )}
       onClick={() => {
         setShowDetail(!showDetail);
       }}
     >
-      <Flexbox horizontal distribution={'space-between'} flex={1}>
-        <Flexbox horizontal gap={8}>
-          <Icon color={cssVar.geekblue} icon={BookOpenTextIcon} /> {t('rag.referenceChunks')}
-        </Flexbox>
-        <Icon icon={showDetail ? ChevronDown : ChevronRight} />
-      </Flexbox>
+      <div className="flex justify-between flex-1">
+        <div className="flex gap-2">
+          <BookOpenTextIcon color={cssVar.geekblue} /> {t('rag.referenceChunks')}
+        </div>
+        {createElement(showDetail ? ChevronDown : ChevronRight, {})}
+      </div>
       {showDetail && (
-        <Flexbox horizontal gap={8} wrap={'wrap'}>
+        <div className="flex gap-2 flex-wrap">
           {data.map((item, index) => {
             return <ChunkItem index={index} key={item.id} {...item} />;
           })}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

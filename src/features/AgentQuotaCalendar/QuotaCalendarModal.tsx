@@ -1,14 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  createModal,
-  type ModalInstance,
-  Segmented,
-  Skeleton,
-  Text,
-} from '@lobehub/ui/base-ui';
 import type { QuotaLimitReading } from '@orvilo/heterogeneous-agents/quota';
 import { projectWindows } from '@orvilo/heterogeneous-agents/quota';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -19,6 +10,11 @@ import { BanIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, RotateCcwIcon } f
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, type ModalInstance } from '@/components/Modal';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { agentQuotaService } from '@/services/agentQuota';
 
 import {
@@ -442,15 +438,15 @@ const BurnChart = memo<{
           });
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal align={'flex-end'} gap={12} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} gap={10}>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-end gap-3 justify-between">
+        <div className="flex items-center gap-2.5">
           <CapacityRing utilization={last.utilization} />
-          <Flexbox gap={2}>
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <div className="flex flex-col gap-0.5">
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {t('heteroAgent.claudeQuota.calendar.usedOfWindow')}
-            </Text>
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            </div>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {spend.tokens > 0
                 ? t('heteroAgent.claudeQuota.calendar.windowSpend', {
                     // One convention for every amount on this surface; the
@@ -459,9 +455,9 @@ const BurnChart = memo<{
                     tokens: formatTokens(spend.tokens),
                   })
                 : t('heteroAgent.claudeQuota.calendar.noLedgerSpend')}
-            </Text>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
         <span
           className={
             exhausted
@@ -473,7 +469,7 @@ const BurnChart = memo<{
         >
           {statusText}
         </span>
-      </Flexbox>
+      </div>
 
       <div className={styles.chartFrame}>
         <svg
@@ -534,18 +530,18 @@ const BurnChart = memo<{
         </svg>
       </div>
 
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
-        <Text style={{ fontSize: 11 }} type={'secondary'}>
+      <div className="flex items-center justify-between">
+        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
           {dayjs(window.windowStartAt).format(timeFormat)}
-        </Text>
-        <Text style={{ color: cssVar.colorTextQuaternary, fontSize: 11 }}>
+        </div>
+        <div style={{ color: cssVar.colorTextQuaternary, fontSize: 11 }}>
           {t('heteroAgent.claudeQuota.calendar.pace')}
-        </Text>
-        <Text style={{ fontSize: 11 }} type={'secondary'}>
+        </div>
+        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
           {dayjs(window.resetsAt).format(timeFormat)}
-        </Text>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 
@@ -639,15 +635,15 @@ const WindowHistory = memo<{
     const grid = buildSessionGrid(stats, latestDay);
 
     return (
-      <Flexbox className={styles.sectionPanel} gap={8}>
-        <Flexbox horizontal align={'baseline'} justify={'space-between'}>
-          <Text strong style={{ fontSize: 13 }}>
+      <div className={`flex flex-col gap-2 ${styles.sectionPanel}`}>
+        <div className="flex items-baseline justify-between">
+          <div className="font-semibold" style={{ fontSize: 13 }}>
             {t('heteroAgent.claudeQuota.calendar.sessionHistory')}
-          </Text>
-          <Text style={{ fontSize: 11 }} type={'secondary'}>
+          </div>
+          <div className="text-muted-foreground" style={{ fontSize: 11 }}>
             {t('heteroAgent.claudeQuota.calendar.sessionHistoryHint')}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
         <div className={styles.windowGrid}>
           {grid.columns.map((column) => (
             <div className={styles.weekday} key={column.key}>
@@ -665,87 +661,106 @@ const WindowHistory = memo<{
                   data-rate-limited={stat.rateLimitedAt != null}
                   key={`${column.key}-${stat.resetsAt}`}
                 >
-                  <Flexbox
-                    horizontal
-                    justify={'space-between'}
-                    style={{ minWidth: 0, width: '100%' }}
-                  >
+                  <div className="flex justify-between" style={{ minWidth: 0, width: '100%' }}>
                     <span>{dayjs(stat.windowStartAt).format('HH:mm')}</span>
                     <strong>{Math.round(stat.peakUtilization)}%</strong>
-                  </Flexbox>
+                  </div>
                   <CapacityMeter utilization={stat.peakUtilization} />
                 </div>
               );
 
               return (
-                <Tooltip
-                  key={`${column.key}-${stat.resetsAt}`}
-                  title={windowTooltip(stat, t).join(' · ')}
-                >
-                  {cell}
+                <Tooltip key={`${column.key}-${stat.resetsAt}`}>
+                  <TooltipTrigger render={<span>{cell}</span>} />
+                  <TooltipContent>{windowTooltip(stat, t).join(' · ')}</TooltipContent>
                 </Tooltip>
               );
             }),
           )}
         </div>
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.sectionPanel} gap={6}>
-      <Flexbox horizontal align={'baseline'} justify={'space-between'}>
-        <Text strong style={{ fontSize: 13 }}>
+    <div className={`flex flex-col gap-1.5 ${styles.sectionPanel}`}>
+      <div className="flex items-baseline justify-between">
+        <div className="font-semibold" style={{ fontSize: 13 }}>
           {t('heteroAgent.claudeQuota.calendar.weeklyHistory')}
-        </Text>
-        <Text style={{ fontSize: 11 }} type={'secondary'}>
+        </div>
+        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
           {t('heteroAgent.claudeQuota.calendar.weeklyHistoryHint')}
-        </Text>
-      </Flexbox>
-      <Flexbox>
+        </div>
+      </div>
+      <div className="flex flex-col">
         {stats.map((stat) => (
           <div className={styles.windowListRow} key={stat.resetsAt}>
-            <Flexbox horizontal align={'baseline'} gap={6}>
-              <Text style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+            <div className="flex items-baseline gap-1.5">
+              <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                 {dayjs(stat.windowStartAt).format('M/D')} – {dayjs(stat.resetsAt).format('M/D')}
-              </Text>
+              </div>
               {/* Only the live window needs naming; the rest are read as history. */}
               {stat.isLive && (
-                <Text style={{ fontSize: 10, whiteSpace: 'nowrap' }} type={'secondary'}>
+                <div
+                  className="text-muted-foreground"
+                  style={{ fontSize: 10, whiteSpace: 'nowrap' }}
+                >
                   {t('heteroAgent.claudeQuota.calendar.currentWindow')}
-                </Text>
+                </div>
               )}
-            </Flexbox>
-            <Flexbox horizontal align={'center'} gap={8}>
-              <Flexbox flex={1} style={{ minWidth: 0 }}>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
                 <CapacityMeter utilization={stat.peakUtilization} />
-              </Flexbox>
-              <Text strong style={{ flex: 'none', fontSize: 12, textAlign: 'right', width: 34 }}>
+              </div>
+              <div
+                className="font-semibold"
+                style={{ flex: 'none', fontSize: 12, textAlign: 'right', width: 34 }}
+              >
                 {Math.round(stat.peakUtilization)}%
-              </Text>
-            </Flexbox>
+              </div>
+            </div>
             {stat.tokens > 0 ? (
               /* The `+` is the compact bound; hovering spells it out, the way
                  the session grid already explains its own cells. */
-              <Tooltip title={windowTooltip(stat, t).join(' · ')}>
-                <Text style={{ fontSize: 11, textAlign: 'right' }} type={'secondary'}>
-                  {formatTokens(stat.tokens)} · {formatTrackedCost(stat, t, true)}
-                </Text>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <div
+                        className="text-muted-foreground"
+                        style={{ fontSize: 11, textAlign: 'right' }}
+                      >
+                        {formatTokens(stat.tokens)} · {formatTrackedCost(stat, t, true)}
+                      </div>
+                    </span>
+                  }
+                />
+                <TooltipContent>{windowTooltip(stat, t).join(' · ')}</TooltipContent>
               </Tooltip>
             ) : (
-              <Tooltip title={t('heteroAgent.claudeQuota.calendar.noLedgerSpendHint')}>
-                <Flexbox horizontal align={'center'} gap={4} justify={'flex-end'}>
-                  <Icon color={cssVar.colorTextTertiary} icon={InfoIcon} size={11} />
-                  <Text style={{ fontSize: 11 }} type={'secondary'}>
-                    {t('heteroAgent.claudeQuota.calendar.noLedgerSpendShort')}
-                  </Text>
-                </Flexbox>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <div className="flex items-center gap-1 justify-end">
+                        <InfoIcon color={cssVar.colorTextTertiary} size={11} />
+                        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+                          {t('heteroAgent.claudeQuota.calendar.noLedgerSpendShort')}
+                        </div>
+                      </div>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t('heteroAgent.claudeQuota.calendar.noLedgerSpendHint')}
+                </TooltipContent>
               </Tooltip>
             )}
           </div>
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -888,21 +903,21 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
 
   if (loading)
     return (
-      <Flexbox gap={12}>
-        <Skeleton height={170} />
-        <Skeleton height={320} />
-      </Flexbox>
+      <div className="flex flex-col gap-3">
+        <Skeleton style={{ height: 170 }} />
+        <Skeleton style={{ height: 320 }} />
+      </div>
     );
 
   if (readings.length === 0 && windows.length === 0)
     return (
-      <Text style={{ paddingBlock: 24, textAlign: 'center' }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ paddingBlock: 24, textAlign: 'center' }}>
         {t(
           accountUnavailable
             ? 'heteroAgent.claudeQuota.calendar.accountUnavailable'
             : 'heteroAgent.claudeQuota.calendar.empty',
         )}
-      </Text>
+      </div>
     );
 
   /**
@@ -924,19 +939,25 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
   return (
     <div className={styles.root}>
       <div className={styles.layout} data-single={!hasWindowColumn}>
-        <Flexbox gap={16}>
+        <div className="flex flex-col gap-4">
           {/* The series switcher heads the window column, so the calendar beside
               it starts at the body top instead of below a full-width control. */}
-          <Segmented
-            options={seriesOptions}
-            size={'small'}
+          <ToggleGroup
+            size="sm"
             style={{ alignSelf: 'flex-start' }}
-            value={seriesId(series)}
-            onChange={(value) => {
-              const [type, scopeKey = ''] = String(value).split(':');
+            value={[seriesId(series)]}
+            onValueChange={(value) => {
+              if (!value[0]) return;
+              const [type, scopeKey = ''] = String(value[0]).split(':');
               setSeries({ scopeKey, type: type === 'session' ? 'session' : 'weekly' });
             }}
-          />
+          >
+            {seriesOptions.map((o) => (
+              <ToggleGroupItem key={o.value} value={o.value}>
+                {o.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
 
           {chartWindow && (
             <BurnChart
@@ -949,19 +970,19 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
           )}
 
           <WindowHistory series={series} stats={windowStats} />
-        </Flexbox>
+        </div>
 
-        <Flexbox className={styles.sectionPanel} gap={8}>
-          <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
-            <Flexbox horizontal align={'baseline'} gap={8}>
-              <Text strong style={{ fontSize: 13 }}>
+        <div className={`flex flex-col gap-2 ${styles.sectionPanel}`}>
+          <div className="flex items-center gap-1 justify-between">
+            <div className="flex items-baseline gap-2">
+              <div className="font-semibold" style={{ fontSize: 13 }}>
                 {t('heteroAgent.claudeQuota.calendar.monthSpend')}
-              </Text>
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+              </div>
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {month.format('YYYY/MM')}
-              </Text>
-            </Flexbox>
-            <Flexbox horizontal gap={2}>
+              </div>
+            </div>
+            <div className="flex gap-0.5">
               <ActionIcon
                 disabled={!isCalendarMonthAvailable(previousMonth, now)}
                 icon={ChevronLeftIcon}
@@ -974,8 +995,8 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
                 size={'small'}
                 onClick={() => setMonth((m) => m.add(1, 'month'))}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
 
           <div className={styles.calendarGrid}>
             {weekdayLabels.map((label) => (
@@ -1021,10 +1042,8 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
                   <span className={styles.dayFooter}>
                     <span className={styles.cost}>{primary}</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                      {rateLimited && <Icon color={cssVar.colorError} icon={BanIcon} size={12} />}
-                      {resetsAt && (
-                        <Icon color={cssVar.colorTextSecondary} icon={RotateCcwIcon} size={11} />
-                      )}
+                      {rateLimited && <BanIcon color={cssVar.colorError} size={12} />}
+                      {resetsAt && <RotateCcwIcon color={cssVar.colorTextSecondary} size={11} />}
                     </span>
                   </span>
                   {secondary && (
@@ -1036,8 +1055,9 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
               );
 
               return tooltipParts.length > 0 ? (
-                <Tooltip key={cell.key} title={tooltipParts.join(' · ')}>
-                  {day}
+                <Tooltip key={cell.key}>
+                  <TooltipTrigger render={<span>{day}</span>} />
+                  <TooltipContent>{tooltipParts.join(' · ')}</TooltipContent>
                 </Tooltip>
               ) : (
                 day
@@ -1045,11 +1065,11 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
             })}
           </div>
 
-          <Flexbox horizontal align={'center'} gap={12} style={{ fontSize: 11 }} wrap={'wrap'}>
-            <Flexbox horizontal align={'center'} gap={4}>
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+          <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: 11 }}>
+            <div className="flex items-center gap-1">
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {t('heteroAgent.claudeQuota.calendar.legendLess')}
-              </Text>
+              </div>
               {[1, 2, 3, 4].map((level) => (
                 <span
                   className={styles.heatDot}
@@ -1058,27 +1078,27 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
                   key={level}
                 />
               ))}
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {t('heteroAgent.claudeQuota.calendar.legendMore')}
-              </Text>
-            </Flexbox>
-            <Flexbox horizontal align={'center'} gap={4}>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
               <span className={styles.legendSwatch} data-rate-limited={'true'} />
-              <Icon color={cssVar.colorError} icon={BanIcon} size={11} />
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+              <BanIcon color={cssVar.colorError} size={11} />
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {t('heteroAgent.claudeQuota.calendar.rateLimited')}
-              </Text>
-            </Flexbox>
+              </div>
+            </div>
             {series.type !== 'session' && (
-              <Flexbox horizontal align={'center'} gap={4}>
-                <Icon color={cssVar.colorTextSecondary} icon={RotateCcwIcon} size={11} />
-                <Text style={{ fontSize: 11 }} type={'secondary'}>
+              <div className="flex items-center gap-1">
+                <RotateCcwIcon color={cssVar.colorTextSecondary} size={11} />
+                <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                   {t('heteroAgent.claudeQuota.calendar.legendReset')}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </div>
     </div>
   );

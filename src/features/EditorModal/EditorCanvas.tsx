@@ -1,7 +1,6 @@
 import { type IEditor } from '@lobehub/editor';
 import { ReactLinkPlugin, ReactTablePlugin } from '@lobehub/editor';
 import { Editor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { type FC, useMemo } from 'react';
 
 import { createChatInputRichPlugins } from '@/features/ChatInput/InputEditor/plugins';
@@ -33,8 +32,8 @@ const EditorCanvas: FC<EditorCanvasProps> = ({ defaultValue, editor, editorData 
   return (
     <>
       <TypoBar editor={editor} />
-      <Flexbox
-        padding={16}
+      <div
+        className="flex flex-col p-4"
         style={{ cursor: 'text', maxHeight: '80vh', minHeight: '50vh', overflowY: 'auto' }}
       >
         <Editor
@@ -48,7 +47,7 @@ const EditorCanvas: FC<EditorCanvasProps> = ({ defaultValue, editor, editorData 
             paddingBottom: 120,
           }}
         />
-      </Flexbox>
+      </div>
     </>
   );
 };

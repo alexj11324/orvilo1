@@ -1947,6 +1947,7 @@ export class TaskService {
         };
       }),
       description: task.description,
+      dueDate: task.dueDate,
       editorData: task.editorData ?? undefined,
       error: task.error,
       files: taskFiles.length > 0 ? taskFiles : undefined,

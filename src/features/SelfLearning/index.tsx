@@ -1,16 +1,27 @@
 'use client';
 
-import { Block, Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { ActionIcon, Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { DnaIcon, MoreHorizontalIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import urlJoin from 'url-join';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -115,7 +126,7 @@ const SelfLearning = memo(() => {
     ? [
         {
           danger: true,
-          icon: <Icon icon={Trash2Icon} />,
+          icon: <Trash2Icon />,
           key: 'delete',
           label: t('domain.delete'),
           onClick: () => confirmDelete(current),
@@ -124,7 +135,7 @@ const SelfLearning = memo(() => {
     : [];
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <div className="flex flex-col h-full w-full">
       <NavHeader
         styles={{ left: { paddingInlineStart: 24 } }}
         left={
@@ -146,13 +157,14 @@ const SelfLearning = memo(() => {
         }
         right={
           activeAgentId && allDomains.length > 0 ? (
-            <Flexbox horizontal gap={8}>
-              <Button icon={PlusIcon} onClick={() => setTeachOpen((v) => !v)}>
+            <div className="flex gap-2">
+              <Button onClick={() => setTeachOpen((v) => !v)}>
+                <PlusIcon data-icon="inline-start" />
                 {t('nav.teach')}
               </Button>
               {/* Starting a new direction belongs to the overview, not to one direction's page. */}
               {!domainId && (
-                <Button type={'text'} onClick={openCreate}>
+                <Button variant="ghost" onClick={openCreate}>
                   {t('nav.newDomain')}
                 </Button>
               )}
@@ -161,11 +173,11 @@ const SelfLearning = memo(() => {
                   <ActionIcon icon={MoreHorizontalIcon} title={t('domain.more')} />
                 </DropdownMenu>
               )}
-            </Flexbox>
+            </div>
           ) : null
         }
       />
-      <Flexbox className={styles.body} flex={1} width={'100%'}>
+      <div className={cx(styles.body, 'flex flex-col flex-1 w-full')}>
         <WideScreenContainer>
           <AsyncBoundary
             data={data}
@@ -173,58 +185,70 @@ const SelfLearning = memo(() => {
             errorVariant={'page'}
             isEmpty={!error && allDomains.length === 0}
             empty={
-              <Center height={'100%'} style={{ minHeight: '50vh' }} width={'100%'}>
-                <Empty
-                  description={t('empty.desc')}
-                  descriptionProps={{ fontSize: 13 }}
-                  icon={DnaIcon}
-                  style={{ maxWidth: 420 }}
-                  title={t('empty.title')}
-                  action={
-                    <Button icon={PlusIcon} type={'primary'} onClick={openCreate}>
+              <div
+                className="flex flex-col items-center justify-center h-full w-full"
+                style={{ minHeight: '50vh' }}
+              >
+                <Empty style={{ maxWidth: 420 }}>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <DnaIcon />
+                    </EmptyMedia>
+                    <EmptyTitle>{t('empty.title')}</EmptyTitle>
+                    <EmptyDescription style={{ fontSize: 13 }}>{t('empty.desc')}</EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button variant="outline" onClick={openCreate}>
+                      <PlusIcon data-icon="inline-start" />
                       {t('nav.newDomain')}
                     </Button>
-                  }
-                />
-              </Center>
+                  </EmptyContent>
+                </Empty>
+              </div>
             }
             onRetry={() => mutate()}
           >
-            <Flexbox gap={20} paddingBlock={'22px 64px'}>
+            <div className="flex flex-col gap-5" style={{ paddingBlock: '22px 64px' }}>
               {/* Counts, not a verdict: this line used to be a sentence judging how well the
                   agent had "grown" into each direction. */}
-              <Text type={'secondary'}>{t('domains.meta', { habits: habits.length, runs })}</Text>
+              <div className="text-muted-foreground">
+                {t('domains.meta', { habits: habits.length, runs })}
+              </div>
 
               {teachOpen && (
-                <Block padding={12} variant={'outlined'}>
-                  <Flexbox gap={8}>
-                    <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-                      <Text fontSize={12} type={'secondary'}>
-                        {t('teachNew.help')}
-                      </Text>
+                <div
+                  className="flex flex-col p-3 border"
+                  style={{
+                    borderColor: cssVar.colorBorderSecondary,
+                    background: cssVar.colorBgContainer,
+                  }}
+                >
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                      <div className="text-[12px] text-muted-foreground">{t('teachNew.help')}</div>
                       {!single && (
-                        <Flexbox horizontal align={'center'} gap={6}>
-                          <Text fontSize={12} type={'secondary'}>
+                        <div className="flex items-center gap-1.5">
+                          <div className="text-[12px] text-muted-foreground">
                             {t('teachNew.domain')}
-                          </Text>
+                          </div>
                           {scoped.map((d) => (
                             <Button
                               key={d.id}
-                              size={'small'}
-                              type={
-                                (teachDomainId ?? scoped[0].id) === d.id ? 'primary' : 'default'
+                              size="sm"
+                              variant={
+                                (teachDomainId ?? scoped[0].id) === d.id ? 'default' : 'outline'
                               }
                               onClick={() => setTeachDomainId(d.id)}
                             >
                               {d.title}
                             </Button>
                           ))}
-                        </Flexbox>
+                        </div>
                       )}
-                    </Flexbox>
+                    </div>
                     <TeachBox autoFocus placeholder={t('teachNew.placeholder')} onSubmit={teach} />
-                  </Flexbox>
-                </Block>
+                  </div>
+                </div>
               )}
 
               {habits.length > 0 && activeAgentId && (
@@ -252,11 +276,11 @@ const SelfLearning = memo(() => {
                   }}
                 />
               )}
-            </Flexbox>
+            </div>
           </AsyncBoundary>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

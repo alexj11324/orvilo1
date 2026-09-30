@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon, type IconProps } from '@lobehub/ui';
 import type { LucideIcon } from 'lucide-react';
 import { BoxIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -23,11 +22,11 @@ export const PROJECT_ENTITY_ICON: LucideIcon = BoxIcon;
 interface ProjectIconProps {
   className?: string;
   color?: string;
-  size?: IconProps['size'];
+  size?: number | string;
 }
 
 export const ProjectIcon = memo<ProjectIconProps>(({ className, color, size }) => (
-  <Icon aria-hidden className={className} color={color} icon={PROJECT_ENTITY_ICON} size={size} />
+  <PROJECT_ENTITY_ICON aria-hidden className={className} color={color} size={size} />
 ));
 
 ProjectIcon.displayName = 'ProjectIcon';

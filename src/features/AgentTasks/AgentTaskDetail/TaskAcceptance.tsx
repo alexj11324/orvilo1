@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Button, Collapsible, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ChevronRight,
@@ -14,7 +12,10 @@ import {
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   type AcceptanceCheck,
   checkDisplayTitle,
@@ -76,14 +77,15 @@ const AcceptanceError = memo<AcceptanceErrorProps>(({ onRetry }) => {
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.error} gap={8}>
-      <Text fontSize={12} style={{ flex: 1 }} type={'danger'}>
+    <div className={`flex items-center gap-2 ${styles.error}`}>
+      <div className="text-[12px] text-destructive" style={{ flex: 1 }}>
         {t('taskDetail.acceptance.loadError')}
-      </Text>
-      <Button icon={<Icon icon={RotateCcw} />} size={'small'} type={'text'} onClick={onRetry}>
+      </div>
+      <Button size="sm" variant="ghost" onClick={onRetry}>
+        {<RotateCcw />}
         {t('taskDetail.acceptance.retry')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -101,7 +103,7 @@ const CompactCheckRow = memo<CompactCheckRowProps>(({ check, onOpen }) => {
   return (
     <CriterionRow
       data-task-acceptance-check={check.id}
-      icon={<Icon color={meta.color} icon={meta.icon} size={16} style={{ flex: 'none' }} />}
+      icon={<meta.icon color={meta.color} size={16} style={{ flex: 'none' }} />}
       seq={check.seq}
       title={checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'))}
       onOpen={onOpen}
@@ -220,13 +222,9 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   // owner, cloud-side), not everyone who can edit the task — so the affordance
   // follows the bundle's isOwner rather than dead-ending in FORBIDDEN.
   const reportButton = acceptanceSubject && (
-    <Flexbox horizontal align={'center'} gap={4}>
-      <Button
-        icon={<Icon icon={ExternalLink} />}
-        size={'small'}
-        type={'text'}
-        onClick={() => openReport(acceptanceSubject.id)}
-      >
+    <div className="flex items-center gap-1">
+      <Button size="sm" variant="ghost" onClick={() => openReport(acceptanceSubject.id)}>
+        {<ExternalLink />}
         {t('taskDetail.acceptance.openReport')}
       </Button>
       {canEditTask && bundle?.isOwner && (
@@ -237,7 +235,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
           onClick={handleRemoveAcceptance}
         />
       )}
-    </Flexbox>
+    </div>
   );
 
   // The result panel mounts the live checklist itself — rows expand in place,
@@ -248,10 +246,10 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
     return (
       <AcceptanceScope embedded acceptanceId={acceptanceSubject.id}>
         <AcceptanceBundleGate height={160}>
-          <Flexbox gap={16}>
+          <div className="flex flex-col gap-4">
             <AcceptanceCheckInventory toolbar={reportButton} />
             <AcceptanceDecision />
-          </Flexbox>
+          </div>
         </AcceptanceBundleGate>
       </AcceptanceScope>
     );
@@ -271,126 +269,124 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
 
   if (subjectError) {
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {header}
-        <Flexbox className={styles.body}>
+        <div className={`flex flex-col ${styles.body}`}>
           <AcceptanceError onRetry={() => void mutateSubject()} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {header}
       <Collapsible open={sectionExpanded}>
-        <Flexbox className={styles.body} gap={14}>
-          {bundleLoading && <NeuralNetworkLoading size={28} />}
-          {bundleError && <AcceptanceError onRetry={() => void mutateBundle()} />}
-          {bundle && (
-            <>
-              <GoalRoundTimeline rounds={bundle.rounds} />
-              {requirement && (
-                <Flexbox gap={6}>
-                  <Text fontSize={12} type={'secondary'}>
-                    {t('taskDetail.acceptance.goal')}
-                  </Text>
-                  {/* The contract, not the result. A goal-dispatched task carries
+        <CollapsibleContent>
+          <div className={`flex flex-col gap-3.5 ${styles.body}`}>
+            {bundleLoading && <NeuralNetworkLoading size={28} />}
+            {bundleError && <AcceptanceError onRetry={() => void mutateBundle()} />}
+            {bundle && (
+              <>
+                <GoalRoundTimeline rounds={bundle.rounds} />
+                {requirement && (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="text-[12px] text-muted-foreground">
+                      {t('taskDetail.acceptance.goal')}
+                    </div>
+                    {/* The contract, not the result. A goal-dispatched task carries
                       a generated paragraph here, and printing it in full pushed
                       the checks — the thing the reader came for — below the
                       fold. Two lines, and the rest on demand. */}
-                  <Text
-                    ellipsis={requirementExpanded ? undefined : { rows: 2 }}
-                    style={{ cursor: 'pointer' }}
-                    title={requirement}
-                    onClick={() => setRequirementExpanded((open) => !open)}
-                  >
-                    {requirement}
-                  </Text>
-                </Flexbox>
-              )}
-              <Flexbox gap={7}>
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <Text fontSize={12} type={'secondary'}>
-                    {t('taskDetail.acceptance.checklist')}
-                  </Text>
-                  <Flexbox flex={1} />
-                  {grouped && groupKeys.length > 0 && (
-                    <ActionIcon
-                      icon={allGroupsCollapsed ? ChevronsUpDown : ChevronsDownUp}
-                      size={'small'}
-                      title={
-                        allGroupsCollapsed
-                          ? t('taskDetail.acceptance.expandAll')
-                          : t('taskDetail.acceptance.collapseAll')
-                      }
-                      onClick={() =>
-                        setCollapsedGroups(allGroupsCollapsed ? new Set() : new Set(groupKeys))
-                      }
-                    />
-                  )}
-                </Flexbox>
-                <CriterionList>
-                  {grouped
-                    ? groups.map((group) => {
-                        const collapsed = collapsedGroups.has(group.key);
+                    <div
+                      className={requirementExpanded ? undefined : 'line-clamp-2'}
+                      style={{ cursor: 'pointer' }}
+                      title={requirement}
+                      onClick={() => setRequirementExpanded((open) => !open)}
+                    >
+                      {requirement}
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-col gap-[7px]">
+                  <div className="flex items-center gap-2">
+                    <div className="text-[12px] text-muted-foreground">
+                      {t('taskDetail.acceptance.checklist')}
+                    </div>
+                    <div className="flex-1" />
+                    {grouped && groupKeys.length > 0 && (
+                      <ActionIcon
+                        icon={allGroupsCollapsed ? ChevronsUpDown : ChevronsDownUp}
+                        size={'small'}
+                        title={
+                          allGroupsCollapsed
+                            ? t('taskDetail.acceptance.expandAll')
+                            : t('taskDetail.acceptance.collapseAll')
+                        }
+                        onClick={() =>
+                          setCollapsedGroups(allGroupsCollapsed ? new Set() : new Set(groupKeys))
+                        }
+                      />
+                    )}
+                  </div>
+                  <CriterionList>
+                    {grouped
+                      ? groups.map((group) => {
+                          const collapsed = collapsedGroups.has(group.key);
 
-                        return (
-                          <Flexbox className={styles.group} key={group.key}>
-                            <Flexbox
-                              horizontal
-                              align={'center'}
-                              className={styles.groupHeader}
-                              gap={8}
-                              onClick={() =>
-                                setCollapsedGroups((previous) => {
-                                  const next = new Set(previous);
-                                  if (next.has(group.key)) next.delete(group.key);
-                                  else next.add(group.key);
-                                  return next;
-                                })
-                              }
-                            >
-                              <Text fontSize={12}>{group.label}</Text>
-                              <Text fontSize={11} type={'secondary'}>
-                                {group.checks.length}
-                              </Text>
-                              <Flexbox flex={1} />
-                              <Icon
-                                color={cssVar.colorTextDescription}
-                                icon={ChevronRight}
-                                size={13}
-                                style={{
-                                  transform: collapsed ? 'none' : 'rotate(90deg)',
-                                  transition: 'transform 0.2s',
-                                }}
-                              />
-                            </Flexbox>
-                            {!collapsed &&
-                              group.checks.map((check) => (
-                                <CompactCheckRow
-                                  check={check}
-                                  key={check.id}
-                                  onOpen={() => openCheck(bundle.acceptance.id, check.id)}
+                          return (
+                            <div className={`flex flex-col ${styles.group}`} key={group.key}>
+                              <div
+                                className={`flex items-center gap-2 ${styles.groupHeader}`}
+                                onClick={() =>
+                                  setCollapsedGroups((previous) => {
+                                    const next = new Set(previous);
+                                    if (next.has(group.key)) next.delete(group.key);
+                                    else next.add(group.key);
+                                    return next;
+                                  })
+                                }
+                              >
+                                <div className="text-[12px]">{group.label}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {group.checks.length}
+                                </div>
+                                <div className="flex-1" />
+                                <ChevronRight
+                                  size={13}
+                                  style={{
+                                    color: cssVar.colorTextDescription,
+                                    transform: collapsed ? 'none' : 'rotate(90deg)',
+                                    transition: 'transform 0.2s',
+                                  }}
                                 />
-                              ))}
-                          </Flexbox>
-                        );
-                      })
-                    : checks.map((check) => (
-                        <CompactCheckRow
-                          check={check}
-                          key={check.id}
-                          onOpen={() => openCheck(bundle.acceptance.id, check.id)}
-                        />
-                      ))}
-                </CriterionList>
-              </Flexbox>
-            </>
-          )}
-        </Flexbox>
+                              </div>
+                              {!collapsed &&
+                                group.checks.map((check) => (
+                                  <CompactCheckRow
+                                    check={check}
+                                    key={check.id}
+                                    onOpen={() => openCheck(bundle.acceptance.id, check.id)}
+                                  />
+                                ))}
+                            </div>
+                          );
+                        })
+                      : checks.map((check) => (
+                          <CompactCheckRow
+                            check={check}
+                            key={check.id}
+                            onOpen={() => openCheck(bundle.acceptance.id, check.id)}
+                          />
+                        ))}
+                  </CriterionList>
+                </div>
+              </>
+            )}
+          </div>
+        </CollapsibleContent>
       </Collapsible>
-    </Flexbox>
+    </div>
   );
 });
 

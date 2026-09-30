@@ -1,14 +1,17 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { CircleIcon, DotIcon, DownloadIcon, ScaleIcon, StarIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import OfficialIcon from '@/components/OfficialIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import Scores from '@/features/MCP/Scores';
 import { getLanguageColor, getRecommendedDeployment } from '@/features/MCP/utils';
 import { useCategory } from '@/hooks/useMCPCategory';
@@ -77,71 +80,71 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
   );
 
   const cateButton = (
-    <Button disabled icon={cate?.icon} size={'middle'}>
+    <Button disabled>
+      {cate?.icon ? <cate.icon size={16} /> : null}
       {cate?.label}
     </Button>
   );
 
   return (
-    <Flexbox gap={12}>
-      <Flexbox horizontal align={'flex-start'} gap={16} width={'100%'}>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-row items-start gap-4 w-[100%]">
         <Avatar avatar={icon} shape={'square'} size={mobile ? 48 : 64} />
-        <Flexbox
-          flex={1}
-          gap={4}
+        <div
+          className="flex flex-col flex-1 gap-1"
           style={{
             overflow: 'hidden',
           }}
         >
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={8}
-            justify={'space-between'}
+          <div
+            className="flex flex-row items-center gap-2 justify-between"
             style={{
               overflow: 'hidden',
               position: 'relative',
             }}
           >
-            <Flexbox
-              horizontal
-              align={'center'}
-              flex={1}
-              gap={12}
+            <div
+              className="flex flex-row items-center flex-1 gap-3"
               style={{
                 overflow: 'hidden',
                 position: 'relative',
               }}
             >
-              <Text
-                ellipsis
-                as={'h1'}
+              <h1
+                className="truncate"
                 style={{ fontSize: inModal ? 20 : mobile ? 18 : 24, margin: 0 }}
                 title={identifier}
               >
                 {name}
-              </Text>
+              </h1>
               {isOfficial && (
-                <Tooltip title={t('isOfficial')}>
+                <SimpleTooltip title={t('isOfficial')}>
                   <OfficialIcon size={24} />
-                </Tooltip>
+                </SimpleTooltip>
               )}
               {!mobile && scores}
-            </Flexbox>
-            <Flexbox horizontal align={'center'} gap={6}>
+            </div>
+            <div className="flex flex-row items-center gap-1.5">
               {recommendedDeployment?.installationMethod && (
                 <InstallationIcon type={recommendedDeployment.installationMethod} />
               )}
               {github?.url && (
-                <a href={github.url} rel="noreferrer" target={'_blank'} onClick={stopPropagation}>
+                <a
+                  href={github.url}
+                  rel="noreferrer"
+                  target={'_blank'}
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <ActionIcon fill={cssVar.colorTextDescription} icon={Github} />
                 </a>
               )}
-            </Flexbox>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={4}>
+            </div>
+          </div>
+          <div className="flex flex-row items-center gap-1">
             <div className={styles.version}>{version}</div>
-            <Icon icon={DotIcon} />
+            <span className="anticon" role="img">
+              <DotIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
             {author?.url ? (
               <a href={author?.url} rel="noreferrer" target={'_blank'}>
                 {author?.name}
@@ -149,56 +152,62 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
             ) : (
               <span>{author?.name}</span>
             )}
-            {isClaimed && <Tag size={'small'}>{t('isClaimed')}</Tag>}
-            <Icon icon={DotIcon} />
+            {isClaimed && <Badge variant="secondary">{t('isClaimed')}</Badge>}
+            <span className="anticon" role="img">
+              <DotIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
             <PublishedTime className={styles.time} date={(updatedAt || createdAt) as string} />
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={mobile ? 12 : 24}
-        wrap={'wrap'}
-        style={{
-          color: cssVar.colorTextSecondary,
-        }}
+          </div>
+        </div>
+      </div>
+      <div
+        className="flex flex-row items-center flex-wrap"
+        style={{ color: cssVar.colorTextSecondary, gap: mobile ? 12 : 24 }}
       >
         {mobile && scores}
         {!mobile && cateButton}
-        <Flexbox horizontal align={'center'} gap={mobile ? 12 : 24} wrap={'wrap'}>
+        <div className="flex flex-row items-center flex-wrap" style={{ gap: mobile ? 12 : 24 }}>
           {Boolean(github?.language) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon
-                color={cssVar.colorFillTertiary}
-                fill={getLanguageColor(github?.language)}
-                icon={CircleIcon}
-                size={12}
-              />
+            <div className="flex flex-row items-center gap-1.5">
+              <span className="anticon" role="img">
+                <CircleIcon
+                  color={cssVar.colorFillTertiary}
+                  fill={getLanguageColor(github?.language)}
+                  height={12}
+                  size={12}
+                  width={12}
+                />
+              </span>
               {github?.language}
-            </Flexbox>
+            </div>
           )}
           {Boolean(github?.license) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon icon={ScaleIcon} size={14} />
+            <div className="flex flex-row items-center gap-1.5">
+              <span className="anticon" role="img">
+                <ScaleIcon fill={'transparent'} height={14} size={14} width={14} />
+              </span>
               {github?.license}
-            </Flexbox>
+            </div>
           )}
           {Boolean(installCount) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon icon={DownloadIcon} size={14} />
+            <div className="flex flex-row items-center gap-1.5">
+              <span className="anticon" role="img">
+                <DownloadIcon fill={'transparent'} height={14} size={14} width={14} />
+              </span>
               {installCount}
-            </Flexbox>
+            </div>
           )}
           {Boolean(github?.stars) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon icon={StarIcon} size={14} />
+            <div className="flex flex-row items-center gap-1.5">
+              <span className="anticon" role="img">
+                <StarIcon fill={'transparent'} height={14} size={14} width={14} />
+              </span>
               {github?.stars}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

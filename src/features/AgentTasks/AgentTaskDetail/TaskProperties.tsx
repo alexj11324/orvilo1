@@ -1,13 +1,13 @@
-import { Block, Icon, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { TaskPriority, TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { TagIcon } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { CalendarIcon, TagIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import LabelChips from '@/features/Labels/LabelChips';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -16,6 +16,7 @@ import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
+import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import TaskStatusTag from '../features/TaskStatusTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
@@ -65,6 +66,7 @@ const TaskProperties = memo(() => {
   const workflowStateRefId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateRefId);
   const taskTeamId = useTaskDetailSelector(taskDetailSelectors.taskTeamId);
   const priority = useTaskDetailSelector(taskDetailSelectors.taskPriority);
+  const dueDate = useTaskDetailSelector(taskDetailSelectors.taskDueDate);
   const labels = useTaskDetailSelector(taskDetailSelectors.taskLabels);
   const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
   const reviewerUserId = useTaskDetailSelector(taskDetailSelectors.taskReviewerUserId);
@@ -91,31 +93,32 @@ const TaskProperties = memo(() => {
   )?.name;
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
+  const WorkflowGlyph =
+    statusRow.kind === 'workflow' ? WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon : null;
+
   const statusChip = (
-    <Block
-      clickable
-      horizontal
-      align="center"
-      className={styles.propertyItem}
+    <div
+      className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}
       data-task-workflow-state={statusRow.kind === 'workflow' ? statusRow.category : undefined}
-      gap={8}
-      variant={'borderless'}
     >
-      {statusRow.kind === 'workflow' ? (
-        <Icon
-          color={WORKFLOW_CATEGORY_VISUALS[statusRow.category].color}
-          icon={WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon}
+      {WorkflowGlyph ? (
+        <WorkflowGlyph
           size={16}
+          color={
+            statusRow.kind === 'workflow'
+              ? WORKFLOW_CATEGORY_VISUALS[statusRow.category].color
+              : undefined
+          }
         />
       ) : (
         <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
       )}
-      <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+      <div className="font-medium" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
         {statusRow.kind === 'workflow'
           ? (workflowStateName ?? t(`taskDetail.workflow.category.${statusRow.category}` as never))
           : t(`taskDetail.${statusMeta.labelKey}` as never)}
-      </Text>
-    </Block>
+      </div>
+    </div>
   );
 
   return (
@@ -139,10 +142,11 @@ const TaskProperties = memo(() => {
           workflowStateRefId={workflowStateRefId}
         >
           {statusRow.kind === 'workflow' && status ? (
-            <Tooltip
-              title={`${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`}
-            >
-              {statusChip}
+            <Tooltip>
+              <TooltipTrigger render={statusChip} />
+              <TooltipContent>
+                {`${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`}
+              </TooltipContent>
             </Tooltip>
           ) : (
             statusChip
@@ -150,24 +154,17 @@ const TaskProperties = memo(() => {
         </TaskStatusTag>
 
         <TaskPriorityTag priority={priority} taskIdentifier={taskId}>
-          <Block
-            clickable
-            horizontal
-            align="center"
-            className={styles.propertyItem}
-            gap={8}
-            variant={'borderless'}
-          >
+          <div className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}>
             <TaskPriorityTag
               disableDropdown
               priority={priority}
               size={16}
               taskIdentifier={taskId}
             />
-            <Text fontSize={RAIL_VALUE_FONT_SIZE} weight={500}>
+            <div className="font-medium" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
               {t(`taskDetail.${priorityMeta.labelKey}` as never)}
-            </Text>
-          </Block>
+            </div>
+          </div>
         </TaskPriorityTag>
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
@@ -178,41 +175,55 @@ const TaskProperties = memo(() => {
             taskIdentifier={taskId}
             taskVisibility={visibility}
           >
-            <Block
-              clickable
-              horizontal
-              align="center"
-              className={styles.propertyItem}
-              gap={8}
-              variant={'borderless'}
-            >
+            <div className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}>
               {assigneeUserId ? (
                 <>
                   <AssigneeUserAvatar size={16} userId={assigneeUserId} />
-                  <Text
-                    ellipsis
-                    fontSize={RAIL_VALUE_FONT_SIZE}
-                    style={{ minWidth: 0 }}
-                    weight={500}
+                  <div
+                    className="truncate block font-medium"
+                    style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
                   >
                     {memberMeta?.title}
-                  </Text>
+                  </div>
                 </>
               ) : (
                 <>
                   <UnassignedAssigneeIcon kind={'human'} size={16} />
-                  <Text
-                    fontSize={RAIL_VALUE_FONT_SIZE}
-                    style={{ color: cssVar.colorTextDescription }}
-                    weight={500}
+                  <div
+                    className="font-medium"
+                    style={{ color: cssVar.colorTextDescription, fontSize: RAIL_VALUE_FONT_SIZE }}
                   >
                     {t('taskDetail.assignee')}
-                  </Text>
+                  </div>
                 </>
               )}
-            </Block>
+            </div>
           </AssigneeMemberSelector>
         )}
+
+        {/* Linear's Due date row — the shared schedule dialog (calendar +
+            reminder presets) is the picker; overdue renders warning-orange. */}
+        <div
+          className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}
+          onClick={() => openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })}
+        >
+          <CalendarIcon color={cssVar.colorTextDescription} size={16} />
+          <div
+            className="font-medium"
+            style={{
+              color: dueDate
+                ? parseISO(dueDate).getTime() < Date.now() - 24 * 60 * 60 * 1000
+                  ? cssVar.colorWarning
+                  : undefined
+                : cssVar.colorTextDescription,
+              fontSize: RAIL_VALUE_FONT_SIZE,
+            }}
+          >
+            {dueDate
+              ? format(parseISO(dueDate), 'MMM d, yyyy')
+              : t('taskDetail.dueDate', { defaultValue: 'Due date' })}
+          </div>
+        </div>
 
         {/* Review-phase owner: visible once the task has someone accountable for
           review (auto-stamped on the paused transition) or while it sits in
@@ -242,40 +253,40 @@ const TaskProperties = memo(() => {
                 )
               }
             >
-              <Tooltip title={t('taskDetail.reviewer')}>
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  className={styles.propertyItem}
-                  gap={8}
-                  variant={'borderless'}
-                >
-                  {reviewerUserId ? (
-                    <>
-                      <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                      <Text
-                        ellipsis
-                        fontSize={RAIL_VALUE_FONT_SIZE}
-                        style={{ minWidth: 0 }}
-                        weight={500}
-                      >
-                        {reviewerMeta?.title}
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <UnassignedAssigneeIcon kind={'human'} size={16} />
-                      <Text
-                        fontSize={RAIL_VALUE_FONT_SIZE}
-                        style={{ color: cssVar.colorTextDescription }}
-                        weight={500}
-                      >
-                        {t('taskDetail.reviewer')}
-                      </Text>
-                    </>
-                  )}
-                </Block>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <div
+                      className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}
+                    >
+                      {reviewerUserId ? (
+                        <>
+                          <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                          <div
+                            className="truncate block font-medium"
+                            style={{ minWidth: 0, fontSize: RAIL_VALUE_FONT_SIZE }}
+                          >
+                            {reviewerMeta?.title}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <UnassignedAssigneeIcon kind={'human'} size={16} />
+                          <div
+                            className="font-medium"
+                            style={{
+                              color: cssVar.colorTextDescription,
+                              fontSize: RAIL_VALUE_FONT_SIZE,
+                            }}
+                          >
+                            {t('taskDetail.reviewer')}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  }
+                />
+                <TooltipContent>{t('taskDetail.reviewer')}</TooltipContent>
               </Tooltip>
             </AssigneeMemberSelector>
           )}
@@ -287,27 +298,19 @@ const TaskProperties = memo(() => {
           disabled={status === 'running'}
           taskIdentifier={taskId}
         >
-          <Block
-            clickable
-            horizontal
-            align="center"
-            className={styles.propertyItem}
-            gap={8}
-            variant={'borderless'}
-          >
-            <Icon color={cssVar.colorTextDescription} icon={TagIcon} size={16} />
+          <div className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}>
+            <TagIcon color={cssVar.colorTextDescription} size={16} />
             {labels.length > 0 ? (
               <LabelChips labels={labels} max={3} />
             ) : (
-              <Text
-                fontSize={RAIL_VALUE_FONT_SIZE}
-                style={{ color: cssVar.colorTextDescription }}
-                weight={500}
+              <div
+                className="font-medium"
+                style={{ color: cssVar.colorTextDescription, fontSize: RAIL_VALUE_FONT_SIZE }}
               >
                 {t('taskDetail.labels.title')}
-              </Text>
+              </div>
             )}
-          </Block>
+          </div>
         </TaskLabelSelector>
 
         {/* The human layer: whether the delivery is accepted. Read-only here —
@@ -316,14 +319,7 @@ const TaskProperties = memo(() => {
         {!automationMode && <TaskAcceptanceStateRow />}
 
         <TaskScheduleConfig>
-          <Block
-            clickable
-            horizontal
-            align="center"
-            className={styles.propertyItem}
-            gap={8}
-            variant={'borderless'}
-          >
+          <div className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}>
             <TaskTriggerTag
               automationMode={automationMode}
               heartbeatInterval={heartbeatInterval}
@@ -331,7 +327,7 @@ const TaskProperties = memo(() => {
               schedulePattern={schedulePattern}
               scheduleTimezone={scheduleTimezone}
             />
-          </Block>
+          </div>
         </TaskScheduleConfig>
       </div>
     </div>

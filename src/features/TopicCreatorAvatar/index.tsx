@@ -1,11 +1,11 @@
 'use client';
 
-import { Tooltip } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import Avatar from '@/components/Avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
  * Resolves a topic creator's profile from the *active workspace* members.
@@ -40,16 +40,25 @@ const TopicCreatorAvatar = memo<TopicCreatorAvatarProps>(({ userId, size = 20, c
   if (!author) return null;
 
   const avatar = (
-    <Tooltip title={author.fullName}>
-      <Avatar
-        avatar={author.avatar ?? undefined}
-        name={author.fullName ?? undefined}
-        shape={'circle'}
-        size={size}
-        style={{ flex: 'none' }}
-        title={author.fullName ?? undefined}
-      />
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              <Avatar
+                avatar={author.avatar ?? undefined}
+                name={author.fullName ?? undefined}
+                shape={'circle'}
+                size={size}
+                style={{ flex: 'none' }}
+                title={author.fullName ?? undefined}
+              />
+            </span>
+          }
+        />
+        <TooltipContent>{author.fullName}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 
   if (!corner) return avatar;

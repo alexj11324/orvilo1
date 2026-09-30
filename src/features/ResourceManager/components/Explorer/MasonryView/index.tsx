@@ -1,13 +1,13 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
-import { Button, Checkbox } from '@lobehub/ui/base-ui';
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { type UIEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { sortFileList } from '@/features/ResourceManager/store/selectors';
 import { useFileStore } from '@/store/file';
@@ -215,12 +215,12 @@ const MasonryView = memo(function MasonryView({
       onScroll={handleScroll}
     >
       <div style={{ paddingBlockEnd: 24, paddingBlockStart: 12, paddingInline: 24 }}>
-        <Flexbox horizontal align={'center'} className={styles.toolbar} gap={8}>
+        <div className={cx('flex flex-row items-center gap-2', styles.toolbar)}>
           <Checkbox
             checked={allSelected}
             disabled={!hasSelectableItems}
             indeterminate={indeterminate}
-            onChange={handleSelectAllResults}
+            onCheckedChange={handleSelectAllResults}
           />
           <span>
             {selectedCount > 0 || selectAllState === 'all'
@@ -242,17 +242,15 @@ const MasonryView = memo(function MasonryView({
                   ns: 'components',
                 })}
           </span>
-          <Flexbox flex={1} />
+          <div className="flex flex-col flex-1" />
           <SourceFilter />
-        </Flexbox>
+        </div>
         {showSelectAllHint && (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.selectAllHint}
-            gap={6}
-            paddingInline={4}
-            wrap={'wrap'}
+          <div
+            className={cx(
+              'flex flex-row items-center gap-1.5 px-1 flex-wrap',
+              styles.selectAllHint,
+            )}
           >
             <span>
               {t(
@@ -270,7 +268,7 @@ const MasonryView = memo(function MasonryView({
               )}
             </span>
             {selectAllState !== 'all' && (
-              <Button size={'small'} type={'link'} onClick={handleSelectAllResources}>
+              <Button size="sm" variant="link" onClick={handleSelectAllResources}>
                 {total && total > selectableCount
                   ? t('FileManager.total.selectAll', {
                       count: total,
@@ -281,7 +279,7 @@ const MasonryView = memo(function MasonryView({
                     })}
               </Button>
             )}
-          </Flexbox>
+          </div>
         )}
         <VirtuosoMasonry
           ItemContent={MasonryItemWrapper}
@@ -294,7 +292,8 @@ const MasonryView = memo(function MasonryView({
           }}
         />
         {isLoadingMore && (
-          <Center
+          <div
+            className="flex flex-col items-center justify-center"
             style={{
               color: cssVar.colorTextDescription,
               fontSize: 14,
@@ -303,7 +302,7 @@ const MasonryView = memo(function MasonryView({
             }}
           >
             {t('loading', { defaultValue: 'Loading...' })}
-          </Center>
+          </div>
         )}
       </div>
     </div>

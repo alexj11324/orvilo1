@@ -1,4 +1,3 @@
-import { genCdnUrl } from '@lobehub/ui';
 import type { CSSProperties } from 'react';
 
 // Pierre's unsafeCSS is captured at FileTree construction with no public
@@ -16,11 +15,8 @@ const FILE_ICON_SIZE = '16px';
 const DEFAULT_ICON_WIDTH = 16;
 const DEFAULT_ITEM_ROW_GAP = 6;
 
-const MATERIAL_FILE_ICON_ASSETS_URL = genCdnUrl({
-  path: 'assets',
-  pkg: '@lobehub/assets-fileicon',
-  version: '1.0.0',
-});
+const MATERIAL_FILE_ICON_ASSETS_URL =
+  'https://registry.npmmirror.com/@lobehub/assets-fileicon/1.0.0/files/assets';
 
 const MATERIAL_FOLDER_ICON_RULES = [
   { iconName: 'folder-github', names: ['.github', 'github', '_github', '__github__'] },

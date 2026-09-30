@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { electronSystemService } from '@/services/electron/system';
 
 interface CommandResult {
@@ -33,41 +34,52 @@ const CliTestSection = memo(() => {
   const presetCommands = ['--version', '--help', 'status'];
 
   return (
-    <Flexbox gap={16} style={{ marginTop: 24 }}>
-      <Text style={{ fontSize: 18, fontWeight: 600 }}>CLI Embedded Test</Text>
-
-      <Flexbox horizontal gap={8} wrap="wrap">
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 16, marginTop: 24 }}>
+      <span style={{ fontSize: 18, fontWeight: 600 }}>CLI Embedded Test</span>
+      <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         {presetCommands.map((cmd) => (
-          <Button key={cmd} loading={running} size="small" onClick={() => runCommand(cmd)}>
-            orvilo {cmd}
+          <Button
+            aria-busy={running}
+            disabled={running}
+            key={cmd}
+            size="sm"
+            variant="outline"
+            onClick={() => runCommand(cmd)}
+          >
+            {running && <Spinner />}orvilo {cmd}
           </Button>
         ))}
-      </Flexbox>
-
-      <Flexbox horizontal gap={8}>
+      </div>
+      <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 8 }}>
         <Input
+          aria-label="Custom args"
           placeholder="Custom args (e.g. connect --help)"
           style={{ flex: 1 }}
           value={customCmd}
           onChange={(e) => setCustomCmd(e.target.value)}
-          onPressEnter={() => customCmd && runCommand(customCmd)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing && customCmd && !running) {
+              void runCommand(customCmd);
+            }
+          }}
         />
         <Button
-          disabled={!customCmd}
-          loading={running}
-          size="small"
-          type="primary"
+          aria-busy={running}
+          disabled={!customCmd || running}
+          size="sm"
+          variant="default"
           onClick={() => runCommand(customCmd)}
         >
-          Run
+          {running && <Spinner />}Run
         </Button>
-      </Flexbox>
-
+      </div>
       {results.map((r, i) => (
-        <Flexbox
-          gap={4}
+        <div
+          className={'flex min-w-0'}
           key={i}
           style={{
+            flexDirection: 'column',
+            gap: 4,
             background: 'var(--ant-color-fill-quaternary)',
             borderRadius: 8,
             fontFamily: 'monospace',
@@ -75,9 +87,9 @@ const CliTestSection = memo(() => {
             padding: 12,
           }}
         >
-          <Text style={{ color: 'var(--ant-color-primary)', fontWeight: 600 }}>
-            $ orvilo {r.args} (exit: {r.exitCode})
-          </Text>
+          <span style={{ color: 'var(--ant-color-primary)', fontWeight: 600 }}>
+            $ orvilo {r.args}(exit: {r.exitCode})
+          </span>
           {r.stdout && (
             <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
               {r.stdout}
@@ -95,9 +107,9 @@ const CliTestSection = memo(() => {
               {r.stderr}
             </pre>
           )}
-        </Flexbox>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

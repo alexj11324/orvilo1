@@ -1,5 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Skeleton, Tag, Text } from '@lobehub/ui/base-ui';
 import { GROUP_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, useTheme } from 'antd-style';
@@ -12,7 +10,10 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import DotsLoading from '@/components/DotsLoading';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
+import { Badge } from '@/components/reui/badge';
 import RingLoadingIcon from '@/components/RingLoading';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isDesktop } from '@/const/version';
 import { TopicMigrationIndicator } from '@/features/AgentTransferMigration';
 import { useHasDraft } from '@/features/ChatInput/draftStorage';
@@ -91,7 +92,7 @@ interface TopicItemProps {
   userId?: string;
 }
 
-const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, status, userId }) => {
+const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, userId }) => {
   const { t } = useTranslation('topic');
   const { isDarkMode } = useTheme();
   // Same live-running ring as the agent sidebar topic rows (see List/Item there).
@@ -243,9 +244,9 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
   );
   const hasDraft = useHasDraft(draftKey);
   const draftPrefix = hasDraft ? (
-    <Text fontSize={12} style={{ color: cssVar.colorError, flex: 'none' }}>
+    <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
       {t('draft')}
-    </Text>
+    </div>
   ) : undefined;
 
   // For default topic (no id)
@@ -263,22 +264,20 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
               style={{ color: cssVar.colorWarning }}
             />
           ) : (
-            <Icon color={cssVar.colorTextDescription} icon={MessageSquareDashed} size={'small'} />
+            <MessageSquareDashed color={cssVar.colorTextDescription} size="sm" />
           )
         }
         title={
-          <Flexbox horizontal align={'center'} flex={1} gap={6}>
+          <div className="flex items-center flex-1 gap-1.5">
             {t('defaultTitle')}
-            <Tag
-              size={'small'}
-              style={{
-                color: cssVar.colorTextDescription,
-                fontSize: 10,
-              }}
+            <Badge
+              size="sm"
+              style={{ color: cssVar.colorTextDescription, fontSize: 10 }}
+              variant="primary-light"
             >
               {t('temp')}
-            </Tag>
-          </Flexbox>
+            </Badge>
+          </div>
         }
         onClick={handleClick}
       />
@@ -290,7 +289,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
   const statusIconNode = (() => {
     if (isWaitingForHuman) {
       const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-      return <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+      return <visual.icon size="sm" style={{ color: visual.color }} />;
     }
     if (isLoading || isRunning) {
       return (
@@ -304,20 +303,29 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
     if (isFailed) {
       const visual = TOPIC_STATUS_VISUALS.failed;
       return (
-        <Tooltip title={t('failedStatusTip')}>
-          <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <visual.icon size="sm" style={{ color: visual.color }} />
+                </span>
+              }
+            />
+            <TooltipContent>{t('failedStatusTip')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     }
     if (isCompleted) {
       const visual = TOPIC_STATUS_VISUALS.completed;
-      return <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+      return <visual.icon size="sm" style={{ color: visual.color }} />;
     }
     return null;
   })();
 
   return (
-    <Flexbox style={{ position: 'relative' }}>
+    <div className="flex flex-col" style={{ position: 'relative' }}>
       <NavItem
         actions={<Actions dropdownMenu={dropdownMenu} />}
         active={active && !threadId}
@@ -338,7 +346,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
             <TopicCreatorAvatar corner={statusIconNode} userId={userId} />
           ) : (
             (statusIconNode ?? (
-              <Icon icon={HashIcon} size={'small'} style={{ color: cssVar.colorTextDescription }} />
+              <HashIcon size="sm" style={{ color: cssVar.colorTextDescription }} />
             ))
           )
         }
@@ -353,16 +361,16 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
       {active && (
         <Suspense
           fallback={
-            <Flexbox gap={8} paddingBlock={8} paddingInline={24} width={'100%'}>
-              <Skeleton height={18} width={'100%'} />
-              <Skeleton height={18} width={'100%'} />
-            </Flexbox>
+            <div className="flex flex-col gap-2 py-2 px-6" style={{ width: '100%' }}>
+              <Skeleton style={{ height: 18, width: '100%' }} />
+              <Skeleton style={{ height: 18, width: '100%' }} />
+            </div>
           }
         >
           <ThreadList />
         </Suspense>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

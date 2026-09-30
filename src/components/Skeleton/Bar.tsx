@@ -1,7 +1,8 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface SkeletonBarProps {
   height: number;
@@ -11,7 +12,6 @@ export interface SkeletonBarProps {
 
 const SkeletonBar = ({ height, width = '100%', radius }: SkeletonBarProps) => (
   <Skeleton
-    height={28}
     style={{
       borderRadius: radius ?? cssVar.borderRadius,
       height,

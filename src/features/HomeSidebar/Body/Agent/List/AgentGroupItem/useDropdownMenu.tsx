@@ -1,13 +1,13 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { LucideCopy, Pen, PictureInPicture2Icon, Pin, PinOff, Trash } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentGroupTransferMenuItem';
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { openEditingPopover } from '@/features/EditingPopover/store';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { usePermission } from '@/hooks/usePermission';
 import { useResourceManageable } from '@/hooks/useResourceManageable';
@@ -37,7 +37,7 @@ export const useGroupDropdownMenu = ({
   pinned,
   title,
   userId,
-}: UseGroupDropdownMenuParams): (() => MenuProps['items']) => {
+}: UseGroupDropdownMenuParams): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['chat', 'common']);
 
   const { allowed: canEdit } = usePermission('edit_own_content');
@@ -70,14 +70,14 @@ export const useGroupDropdownMenu = ({
         ...(canConfigure
           ? [
               {
-                icon: <Icon icon={pinned ? PinOff : Pin} />,
+                icon: pinned ? <PinOff size={16} /> : <Pin size={16} />,
                 key: 'pin',
                 label: t(pinned ? 'pinOff' : 'pin'),
                 onClick: () => pinAgentGroup(id, !pinned),
                 sfSymbol: pinned ? 'pin.slash' : 'pin',
               },
               {
-                icon: <Icon icon={Pen} />,
+                icon: <Pen size={16} />,
                 key: 'rename',
                 label: t('rename', { ns: 'common' }),
                 onClick: (info: any) => {
@@ -97,7 +97,7 @@ export const useGroupDropdownMenu = ({
                 sfSymbol: 'pencil',
               },
               {
-                icon: <Icon icon={LucideCopy} />,
+                icon: <LucideCopy size={16} />,
                 key: 'duplicate',
                 label: t('duplicate', { ns: 'common' }),
                 onClick: ({ domEvent }: any) => {
@@ -109,7 +109,7 @@ export const useGroupDropdownMenu = ({
             ]
           : []),
         {
-          icon: <Icon icon={PictureInPicture2Icon} />,
+          icon: <PictureInPicture2Icon size={16} />,
           key: 'openInNewWindow',
           label: t('openInNewWindow'),
           onClick: ({ domEvent }: any) => {
@@ -130,7 +130,7 @@ export const useGroupDropdownMenu = ({
               { type: 'divider' as const },
               {
                 danger: true,
-                icon: <Icon icon={Trash} />,
+                icon: <Trash size={16} />,
                 key: 'delete',
                 label: t('delete', { ns: 'common' }),
                 onClick: ({ domEvent }: any) => {
@@ -155,7 +155,7 @@ export const useGroupDropdownMenu = ({
               },
             ]
           : []),
-      ] as MenuProps['items'],
+      ] as SidebarMenuItems,
     [
       anchor,
       avatar,

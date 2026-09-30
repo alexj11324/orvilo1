@@ -1,9 +1,12 @@
-import { Flexbox, Input } from '@lobehub/ui';
-import { Button, createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { t as translate } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { useHomeStore } from '@/store/home';
@@ -55,19 +58,25 @@ const CreateGroupContent = memo<CreateGroupModalOptions>(({ id, visibility }) =>
 
   return (
     <>
-      <Flexbox paddingBlock={16} paddingInline={16}>
+      <div className="flex flex-col py-[16px] px-[16px]">
         <Input
           autoFocus
+          aria-label={t('sessionGroup.inputPlaceholder')}
           disabled={!canCreate || loading}
           placeholder={t('sessionGroup.inputPlaceholder')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onPressEnter={handleCreate}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleCreate();
+          }}
         />
-      </Flexbox>
+      </div>
       <ModalFooter>
-        <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-        <Button disabled={!canCreate} loading={loading} type={'primary'} onClick={handleCreate}>
+        <Button variant="outline" onClick={close}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
+        <Button aria-busy={loading} disabled={!canCreate || loading} onClick={handleCreate}>
+          {loading && <Spinner />}
           {t('ok', { defaultValue: 'OK', ns: 'common' })}
         </Button>
       </ModalFooter>

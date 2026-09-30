@@ -1,6 +1,5 @@
-import { Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   CircleHelp,
   FlaskConical,
@@ -9,7 +8,7 @@ import {
   ListChecks,
   type LucideIcon,
 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import type { GoalGraphNodeKind } from '../Experiments/model';
 
@@ -64,16 +63,16 @@ KindDot.displayName = 'GoalKindDot';
 
 export const MonoText = memo<{ children: React.ReactNode; title?: string }>(
   ({ children, title }) => (
-    <Text className={styles.mono} fontSize={12} title={title} type={'secondary'}>
+    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} title={title}>
       {children}
-    </Text>
+    </div>
   ),
 );
 
 MonoText.displayName = 'GoalMonoText';
 
-export const KindIcon = memo<{ kind: GoalGraphNodeKind; size?: number }>(({ kind, size = 14 }) => (
-  <Icon color={KIND_COLOR[kind].line} icon={KIND_ICON[kind]} size={size} />
-));
+export const KindIcon = memo<{ kind: GoalGraphNodeKind; size?: number }>(({ kind, size = 14 }) =>
+  createElement(KIND_ICON[kind], { color: KIND_COLOR[kind].line, size }),
+);
 
 KindIcon.displayName = 'GoalKindIcon';

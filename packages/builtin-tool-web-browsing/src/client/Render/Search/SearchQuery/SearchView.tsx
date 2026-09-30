@@ -1,9 +1,8 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { shinyTextStyles } from '@/styles';
 
@@ -30,41 +29,39 @@ const SearchBar = memo<SearchBarProps>(
   ({ defaultEngines, defaultQuery, resultsNumber, onEditingChange, searching }) => {
     const isMobile = useIsMobile();
     return (
-      <Flexbox
-        align={isMobile ? 'flex-start' : 'center'}
-        distribution={'space-between'}
-        gap={isMobile ? 8 : 40}
-        height={isMobile ? undefined : 32}
-        horizontal={!isMobile}
+      <div
+        className="flex flex-row justify-between"
+        style={{
+          alignItems: isMobile ? 'flex-start' : 'center',
+          gap: isMobile ? 8 : 40,
+          height: isMobile ? undefined : 32,
+        }}
       >
-        <Block
-          clickable
-          horizontal
-          align={'center'}
-          className={styles.query}
-          gap={8}
-          variant={'borderless'}
+        <div
+          className={cx(styles.query, 'flex flex-row items-center gap-2 cursor-pointer')}
           onClick={() => {
             onEditingChange(true);
           }}
         >
-          <Icon icon={SearchIcon} />
+          <span className="anticon" role="img">
+            <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
           <span className={cx(searching && shinyTextStyles.shinyText)}>{defaultQuery}</span>
-        </Block>
+        </div>
 
         {searching ? (
-          <Skeleton height={20} width={40} />
+          <Skeleton style={{ height: 20, width: 40 }} />
         ) : (
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex flex-row items-center gap-1">
             <EngineAvatarGroup engines={defaultEngines} />
             {!isMobile && (
-              <Text style={{ fontSize: 12 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 12 }}>
                 {resultsNumber}
-              </Text>
+              </div>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

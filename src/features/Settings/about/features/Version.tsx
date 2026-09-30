@@ -1,5 +1,3 @@
-import { Block, Flexbox } from '@lobehub/ui';
-import { Button, Tag } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { getElectronIpc, type UpdaterState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
@@ -7,6 +5,9 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProductLogo } from '@/components/Branding';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { CHANGELOG_URL, MANUAL_UPGRADE_URL, OFFICIAL_SITE } from '@/const/url';
 import { CURRENT_VERSION } from '@/const/version';
 import { useNewVersion } from '@/features/User/UserPanel/useNewVersion';
@@ -87,7 +88,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       if (hasNewVersion) {
         return (
           <a href={MANUAL_UPGRADE_URL} rel="noreferrer" style={{ flex: 1 }} target="_blank">
-            <Button block={mobile} type={'primary'}>
+            <Button className={mobile ? 'w-full' : ''} variant="default">
               {t('upgradeVersion.action')}
             </Button>
           </a>
@@ -96,7 +97,14 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       // A failed update check must not read as "up to date" — offer a retry.
       if (updateCheckError) {
         return (
-          <Button block={mobile} loading={isCheckingUpdate} onClick={() => recheckUpdate()}>
+          <Button
+            aria-busy={isCheckingUpdate}
+            className={mobile ? 'w-full' : ''}
+            disabled={isCheckingUpdate}
+            variant="outline"
+            onClick={() => recheckUpdate()}
+          >
+            {isCheckingUpdate && <Spinner />}
             {t('checkForUpdates')}
           </Button>
         );
@@ -109,7 +117,13 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
     switch (stage) {
       case 'checking': {
         return (
-          <Button loading block={mobile}>
+          <Button
+            aria-busy={true}
+            className={mobile ? 'w-full' : ''}
+            disabled={true}
+            variant="outline"
+          >
+            <Spinner />
             {t('checkForUpdates')}
           </Button>
         );
@@ -117,28 +131,42 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       case 'downloading': {
         const percent = progress ? Math.round(progress.percent) : 0;
         return (
-          <Button loading block={mobile}>
+          <Button
+            aria-busy={true}
+            className={mobile ? 'w-full' : ''}
+            disabled={true}
+            variant="outline"
+          >
+            <Spinner />
             {t('downloadingUpdate', { percent })}
           </Button>
         );
       }
       case 'downloaded': {
         return (
-          <Button block={mobile} type="primary" onClick={() => void autoUpdateService.installNow()}>
+          <Button
+            className={mobile ? 'w-full' : ''}
+            variant="default"
+            onClick={() => void autoUpdateService.installNow()}
+          >
             {t('restartToUpdate')}
           </Button>
         );
       }
       case 'latest': {
         return (
-          <Button disabled block={mobile}>
+          <Button disabled className={mobile ? 'w-full' : ''} variant="outline">
             {t('alreadyUpToDate')}
           </Button>
         );
       }
       default: {
         return (
-          <Button block={mobile} onClick={() => void autoUpdateService.checkUpdate()}>
+          <Button
+            className={mobile ? 'w-full' : ''}
+            variant="outline"
+            onClick={() => void autoUpdateService.checkUpdate()}
+          >
             {t('checkForUpdates')}
           </Button>
         );
@@ -147,61 +175,72 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
   };
 
   return (
-    <Flexbox
-      align={mobile ? 'stretch' : 'center'}
-      gap={16}
-      horizontal={!mobile}
-      justify={'space-between'}
-      width={'100%'}
+    <div
+      className={'flex min-w-0'}
+      style={{
+        flexDirection: !mobile ? 'row' : 'column',
+        alignItems: mobile ? 'stretch' : 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        width: '100%',
+      }}
     >
-      <Flexbox horizontal align={'center'} flex={'none'} gap={16}>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flex: 'none' }}
+      >
         <a href={OFFICIAL_SITE} rel="noreferrer" target="_blank">
-          <Block
-            clickable
-            align={'center'}
-            className={styles.logo}
-            height={64}
-            justify={'center'}
-            width={64}
+          <div
+            className={`flex flex-col cursor-pointer items-center h-[64px] justify-center w-[64px] ${styles.logo}`}
           >
             <ProductLogo size={52} />
-          </Block>
+          </div>
         </a>
-        <Flexbox align={'flex-start'} gap={6}>
+        <div
+          className={'flex min-w-0'}
+          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}
+        >
           <div style={{ fontSize: 18, fontWeight: 'bolder' }}>{BRANDING_NAME}</div>
-          <Flexbox gap={6} horizontal={!mobile}>
-            <Tag
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: !mobile ? 'row' : 'column', gap: 6 }}
+          >
+            <Badge
               style={{ cursor: devDockGestureEnabled ? 'pointer' : 'default' }}
               onClick={handleVersionClick}
             >
               v{APP_VERSION}
-            </Tag>
-
+            </Badge>
             {buildChannel && buildChannel !== 'stable' && (
-              <Tag color={'gold'}>
+              <Badge variant="warning-light">
                 {t(`setting:tab.advanced.updateChannel.${buildChannel}`, {
                   defaultValue: buildChannel.charAt(0).toUpperCase() + buildChannel.slice(1),
                 })}
-              </Tag>
+              </Badge>
             )}
             {showServerVersion && (
-              <Tag>{t('upgradeVersion.serverVersion', { version: `v${serverVersion}` })}</Tag>
+              <Badge>{t('upgradeVersion.serverVersion', { version: `v${serverVersion}` })}</Badge>
             )}
             {hasNewVersion && (
-              <Tag color={'info'}>
+              <Badge variant="info-light">
                 {t('upgradeVersion.newVersion', { version: `v${latestVersion}` })}
-              </Tag>
+              </Badge>
             )}
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
-      <Flexbox horizontal flex={mobile ? 1 : undefined} gap={8}>
+          </div>
+        </div>
+      </div>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', gap: 8, flex: mobile ? 1 : undefined }}
+      >
         <a href={CHANGELOG_URL} rel="noreferrer" style={{ flex: 1 }} target="_blank">
-          <Button block={mobile}>{t('changelog')}</Button>
+          <Button className={mobile ? 'w-full' : ''} variant="outline">
+            {t('changelog')}
+          </Button>
         </a>
         {renderUpdateButton()}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

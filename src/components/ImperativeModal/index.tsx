@@ -1,15 +1,17 @@
 'use client';
 
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
+
 import {
-  Button,
   createModal,
   type ImperativeModalProps as BaseImperativeModalProps,
   ModalFooter,
   type ModalInstance,
-} from '@lobehub/ui/base-ui';
-import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
+} from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 interface LegacyModalButtonProps {
   [key: string]: unknown;
@@ -115,18 +117,22 @@ const ImperativeModal = ({
     if (footer !== undefined) return footer;
     if (!onOk && !onCancel) return null;
 
+    const okLoading = confirmLoading || Boolean(okButtonProps?.loading);
     return (
       <ModalFooter>
-        <Button disabled={cancelButtonProps?.disabled || confirmLoading} onClick={onCancel}>
+        <Button
+          disabled={cancelButtonProps?.disabled || confirmLoading}
+          variant="outline"
+          onClick={onCancel}
+        >
           {cancelText ?? t('cancel')}
         </Button>
         <Button
-          danger={okButtonProps?.danger}
-          disabled={okButtonProps?.disabled}
-          loading={confirmLoading || Boolean(okButtonProps?.loading)}
-          type="primary"
+          disabled={okButtonProps?.disabled || okLoading}
+          variant={okButtonProps?.danger ? 'destructive' : 'default'}
           onClick={onOk}
         >
+          {okLoading && <Spinner data-icon="inline-start" />}
           {okText ?? t('ok', { defaultValue: 'OK' })}
         </Button>
       </ModalFooter>

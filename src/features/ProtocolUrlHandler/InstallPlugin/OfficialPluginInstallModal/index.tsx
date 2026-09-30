@@ -1,11 +1,10 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
-import { Text, toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { toast } from '@/components/toast';
 import DetailLoading from '@/features/MCP/MCPDetail/Loading';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
@@ -82,9 +81,9 @@ const OfficialPluginInstallModal = memo<OfficialPluginInstallModalProps>(
       // If loading failed or no data, show error message
       if (!data) {
         return (
-          <Block>
-            <Text type="danger">{t('protocolInstall.messages.manifestError')}</Text>
-          </Block>
+          <div className="flex flex-col">
+            <span className="text-destructive">{t('protocolInstall.messages.manifestError')}</span>
+          </div>
         );
       }
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import {
   AlertTriangleIcon,
@@ -185,7 +184,7 @@ const VisibilityConfirmContent = memo<VisibilityConfirmContentProps>(({ inLibrar
         return (
           <li className={styles.row} key={item.key}>
             <span className={`${styles.rowIcon} ${rowIconClass(item.tone)}`}>
-              <Icon icon={ItemIcon} size={14} />
+              <ItemIcon size={14} />
             </span>
             <span className={item.emphasis ? styles.emphasis : undefined}>
               {t(item.key as any)}

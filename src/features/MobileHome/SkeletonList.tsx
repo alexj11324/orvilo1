@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const prefixCls = 'ant';
 
@@ -48,23 +48,21 @@ interface SkeletonListProps {
 
 const SkeletonList = memo<SkeletonListProps>(({ count = 4 }) => {
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       {Array.from({ length: count }).map((_, index) => (
-        <Flexbox horizontal align="center" className={styles.item} gap={12} key={index}>
-          <Skeleton.Avatar
-            shape="square"
-            size={40}
-            style={{ borderRadius: cssVar.borderRadius, flex: 'none' }}
+        <div className={cx(styles.item, 'flex items-center gap-3')} key={index}>
+          <Skeleton
+            style={{ borderRadius: cssVar.borderRadius, flex: 'none', height: 40, width: 40 }}
           />
-          <Flexbox flex={1} style={{ overflow: 'hidden' }}>
-            <Flexbox gap={16} width={'100%'}>
-              <Skeleton.Text className={styles.title} width={'60%'} />
-              <Skeleton.Text className={styles.paragraph} width={'80%'} />
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+          <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
+            <div className="flex flex-col gap-4 w-full">
+              <Skeleton style={{ height: 18, marginBlock: 2, width: '60%' }} />
+              <Skeleton style={{ height: 18, marginBlock: 2, width: '80%' }} />
+            </div>
+          </div>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

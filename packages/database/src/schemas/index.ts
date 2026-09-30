@@ -65,6 +65,7 @@ export * from './task';
 export * from './taskCommentDraft';
 export * from './taskInput';
 export * from './taskLabel';
+export * from './taskReminder';
 export * from './taskWorkspace';
 export * from './team';
 export * from './teamResource';

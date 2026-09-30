@@ -1,11 +1,13 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -48,29 +50,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   message: css`
     color: ${cssVar.colorTextSecondary};
   `,
-  resetButton: css`
-    height: 28px;
-    padding-block: 0;
-    padding-inline: 12px;
-    border-radius: 999px;
-
-    color: ${cssVar.colorTextSecondary} !important;
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText} !important;
-      background: ${cssVar.colorFillSecondary} !important;
-    }
-  `,
-  saveButton: css`
-    height: 28px;
-    padding-block: 0;
-    padding-inline: 14px;
-    border-radius: 999px;
-
-    font-weight: 500;
-  `,
 }));
 
 interface SaveBarProps {
@@ -98,22 +77,17 @@ const SaveBar = memo<SaveBarProps>(({ isDirty, isSaving, onReset, onSave }) => {
           <div className={styles.pill}>
             <span className={styles.dot} />
             <span className={styles.message}>{t('proxy.unsavedChanges')}</span>
-            <Button
-              className={styles.resetButton}
-              disabled={isSaving}
-              size="small"
-              type="text"
-              onClick={onReset}
-            >
+            <Button disabled={isSaving} size="sm" variant="ghost" onClick={onReset}>
               {t('proxy.resetButton')}
             </Button>
             <Button
-              className={styles.saveButton}
-              loading={isSaving}
-              size="small"
-              type="primary"
+              aria-busy={isSaving}
+              disabled={isSaving}
+              size="sm"
+              variant="default"
               onClick={onSave}
             >
+              {isSaving && <Spinner />}
               {t('proxy.saveButton')}
             </Button>
           </div>

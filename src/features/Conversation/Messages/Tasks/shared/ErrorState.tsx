@@ -1,12 +1,13 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Alert } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
-import { MessageSquare, Timer, Wrench } from 'lucide-react';
+import { Info,MessageSquare, Timer, Wrench } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CodeBlock } from '@/components/ui/code-block';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { type TaskDetail } from '@/types/index';
 import { ThreadStatus } from '@/types/index';
 
@@ -97,26 +98,33 @@ const ErrorState = memo<ErrorStateProps>(({ taskDetail }) => {
   const hasMetrics = !!(formattedDuration || totalToolCalls || totalMessages || formattedCost);
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {/* Error Content */}
-      <Alert
-        title={isCancelled ? t('task.status.cancelled') : t('task.status.failed')}
-        type={'secondary'}
-        extra={
-          errorContent && (
-            <Highlighter
-              actionIconSize={'small'}
-              language={'json'}
-              padding={8}
-              variant={'borderless'}
-            >
-              {errorContent}
-            </Highlighter>
-          )
-        }
-      />
+      <Alert variant="default">
+        <Info />
+        <AlertTitle>
+          {isCancelled ? t('task.status.cancelled') : t('task.status.failed')}
+        </AlertTitle>
+        {errorContent && (
+          <Collapsible className="col-start-2">
+            <CollapsibleTrigger className="text-xs text-muted-foreground">
+              Show Details
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <AlertDescription>
+                <CodeBlock
+                  code={errorContent}
+                  language="json"
+                  style={{ padding: 8 }}
+                  variant="ghost"
+                />
+              </AlertDescription>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </Alert>
       {hasMetrics ? (
-        <Flexbox horizontal align="center" gap={12} wrap="wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Duration */}
           {formattedDuration && <MetricItem icon={Timer} value={formattedDuration} />}
 
@@ -151,9 +159,9 @@ const ErrorState = memo<ErrorStateProps>(({ taskDetail }) => {
               <MetricItem value={formattedCost} />
             </>
           )}
-        </Flexbox>
+        </div>
       ) : null}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,8 +1,7 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { createElement, memo, type ReactNode } from 'react';
 
 import CountBadge from '../CountBadge';
 import { homeType } from '../homeType';
@@ -54,26 +53,22 @@ interface RailCardProps {
 const RailCard = memo<RailCardProps>(
   ({ action, children, collapsed = false, count, onCollapsedChange, title }) => {
     const heading = (
-      <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
-        <Text ellipsis className={homeType.sectionLabel}>
-          {title}
-        </Text>
+      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+        <div className={cn('truncate', homeType.sectionLabel)}>{title}</div>
         {count !== undefined && <CountBadge count={count} />}
-        {onCollapsedChange && (
-          <Icon
-            className={'home-rail-card-chevron'}
-            color={cssVar.colorTextQuaternary}
-            icon={collapsed ? ChevronRightIcon : ChevronDownIcon}
-            size={14}
-          />
-        )}
-      </Flexbox>
+        {onCollapsedChange &&
+          createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {
+            className: 'home-rail-card-chevron',
+            color: cssVar.colorTextQuaternary,
+            size: 14,
+          })}
+      </div>
     );
 
     return (
-      <Flexbox className={styles.card} data-testid={'home-rail-card'} gap={12}>
+      <div className={cx(styles.card, 'flex flex-col gap-3')} data-testid={'home-rail-card'}>
         {title && (
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+          <div className="flex items-center gap-2 justify-between">
             {onCollapsedChange ? (
               <button
                 aria-expanded={!collapsed}
@@ -87,15 +82,11 @@ const RailCard = memo<RailCardProps>(
             ) : (
               heading
             )}
-            {action && (
-              <Flexbox horizontal align={'center'} flex={'none'} gap={2}>
-                {action}
-              </Flexbox>
-            )}
-          </Flexbox>
+            {action && <div className="flex items-center flex-none gap-0.5">{action}</div>}
+          </div>
         )}
         {!collapsed && children}
-      </Flexbox>
+      </div>
     );
   },
 );

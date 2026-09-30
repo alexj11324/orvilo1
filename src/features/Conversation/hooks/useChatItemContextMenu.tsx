@@ -1,15 +1,11 @@
-import {
-  type ActionIconGroupEvent,
-  type ActionIconGroupItemType,
-  type GenericItemType,
-} from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
-import { type MouseEvent, type ReactNode } from 'react';
+import { createElement, isValidElement, type MouseEvent } from 'react';
 import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ActionIconGroupItemType } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
 import { MSG_CONTENT_CLASSNAME } from '@/features/Conversation/ChatItem/components/MessageContent';
 import { resolveHeteroErroredStepId } from '@/features/Conversation/Error/heterogeneous';
 import { usePermission } from '@/hooks/usePermission';
@@ -31,15 +27,18 @@ import {
 import { useChatListActionsBar } from './useChatListActionsBar';
 import { useConversationResourceAccess } from './useConversationResourceAccess';
 
+interface ActionIconGroupEvent {
+  key: string;
+}
+
 interface ActionMenuItem extends ActionIconGroupItemType {
-  children?: { key: string; label: ReactNode }[];
   disable?: boolean;
   popupClassName?: string;
   sfSymbol?: SFSymbol;
 }
 
 type MenuItem = ActionMenuItem | { type: 'divider' };
-type ContextMenuEvent = ActionIconGroupEvent & { selectedText?: string };
+type ContextMenuEvent = ActionIconGroupEvent & { keyPath?: string[]; selectedText?: string };
 
 interface UseChatItemContextMenuProps {
   editing?: boolean;
@@ -141,9 +140,9 @@ export const useChatItemContextMenu = ({
 
     const withPermission = (items: MenuItem[]) =>
       !canEdit
-        ? items.filter((item) => 'key' in item && item.key === 'copy')
+        ? items.filter((item) => !('type' in item) && item.key === 'copy')
         : items.map((item) => {
-            if ('type' in item && item.type === 'divider') return item;
+            if ('type' in item) return item;
             if (['edit', 'del'].includes(String(item.key))) return { ...item, disabled: !canEdit };
             if (
               ['branching', 'delAndRegenerate', 'regenerate', 'translate', 'tts'].includes(
@@ -348,23 +347,24 @@ export const useChatItemContextMenu = ({
   );
 
   const handleMenuClick = useCallback(
-    (info: ActionIconGroupEvent) => {
+    (info: { key?: unknown }) => {
       handleAction({
         ...info,
+        key: String(info.key),
         selectedText: selectedTextRef.current,
       } as ContextMenuEvent);
     },
     [handleAction],
   );
 
-  const contextMenuItems = useMemo<GenericItemType[]>(() => {
+  const contextMenuItems = useMemo<NativeContextMenuItem[]>(() => {
     if (!menuItems) return [];
     return menuItems.filter(Boolean).map((item) => {
       if ('type' in item && item.type === 'divider') return { type: 'divider' as const };
 
       const actionItem = item as ActionMenuItem;
       const children = actionItem.children?.map((child) => ({
-        key: child.key,
+        key: String(child.key),
         label: child.label,
         onClick: handleMenuClick,
       }));
@@ -372,12 +372,13 @@ export const useChatItemContextMenu = ({
         actionItem.disabled ??
         (typeof actionItem.disable === 'boolean' ? actionItem.disable : undefined);
 
+      const icon = actionItem.icon;
       return {
         children,
         danger: actionItem.danger,
         disabled,
-        icon: actionItem.icon,
-        key: actionItem.key,
+        icon: isValidElement(icon) ? icon : typeof icon === 'function' ? createElement(icon) : icon,
+        key: String(actionItem.key),
         label: actionItem.label,
         onClick: children ? undefined : handleMenuClick,
         sfSymbol: actionItem.sfSymbol,

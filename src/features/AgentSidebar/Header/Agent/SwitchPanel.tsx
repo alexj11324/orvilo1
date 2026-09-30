@@ -53,9 +53,10 @@ const SwitchPanel = memo<PropsWithChildren>(({ children }) => {
 
   return (
     <SidebarHeaderSelectPopover
-      content={
+      content={(closePopover) => (
         <SwitcherMenu
           activeId={activeId}
+          closePopover={closePopover}
           error={error}
           isLoading={!isInit && !error}
           items={items}
@@ -64,7 +65,7 @@ const SwitchPanel = memo<PropsWithChildren>(({ children }) => {
           onRetry={() => mutate()}
           onSelect={handleSelect}
         />
-      }
+      )}
     >
       {children}
     </SidebarHeaderSelectPopover>

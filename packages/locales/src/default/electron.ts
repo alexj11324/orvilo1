@@ -1,4 +1,6 @@
 export default {
+  'navigation.back': 'Back',
+  'navigation.forward': 'Forward',
   'navigation.agentShare': 'Share',
   'navigation.agents': 'Agents',
   'navigation.channels': 'Channels',

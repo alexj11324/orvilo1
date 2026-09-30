@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
 import { useActivityTime } from '@/hooks/useActivityTime';
@@ -12,15 +11,13 @@ const Time = memo<TimeProps>(({ capturedAt }) => {
   if (!text) return null;
 
   return (
-    <Text
-      as={'time'}
-      fontSize={12}
+    <time
+      className="text-[12px] text-muted-foreground"
       style={{ display: 'block', flex: 'none' }}
       title={title}
-      type={'secondary'}
     >
       {text}
-    </Text>
+    </time>
   );
 });
 

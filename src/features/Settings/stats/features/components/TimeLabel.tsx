@@ -1,8 +1,7 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 const TimeLabel = memo<{
   date?: string;
@@ -11,19 +10,24 @@ const TimeLabel = memo<{
   title?: string;
 }>(({ date, icon, title }) => {
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={4}
+    <div
+      className={'flex min-w-0'}
       style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
         color: cssVar.colorTextDescription,
         fontSize: 12,
       }}
     >
-      <Icon icon={icon} />
+      {createElement(icon, {})}
       {title ? `${title}: ` : null}
-      {date ? <span style={{ fontWeight: 'bold' }}>{date}</span> : <Icon spin icon={Loader2} />}
-    </Flexbox>
+      {date ? (
+        <span style={{ fontWeight: 'bold' }}>{date}</span>
+      ) : (
+        createElement(Loader2, { className: 'animate-spin' })
+      )}
+    </div>
   );
 });
 

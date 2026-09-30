@@ -1,5 +1,4 @@
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
-import { Skeleton, Tag, Text } from '@lobehub/ui/base-ui';
+import { PreviewCard } from '@base-ui/react/preview-card';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicMetadata, ChatTopicStatus } from '@orvilo/types';
 import { formatElapsedClockTime } from '@orvilo/utils';
@@ -11,14 +10,18 @@ import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import dayjs from 'dayjs';
 import isEqual from 'fast-deep-equal';
 import { MessageSquareDashed } from 'lucide-react';
-import type { CSSProperties, DragEvent, RefObject } from 'react';
+import type { DragEvent, RefObject } from 'react';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import DotsLoading from '@/components/DotsLoading';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
+import { Badge } from '@/components/reui/badge';
 import RingLoadingIcon from '@/components/RingLoading';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import UnreadDot from '@/components/UnreadDot';
 import { isDesktop } from '@/const/version';
 import { TopicMigrationIndicator } from '@/features/AgentTransferMigration';
@@ -47,19 +50,6 @@ import {
   PR_STATE_VISUAL,
 } from './metaCardData';
 import MetaHoverCard from './MetaHoverCard';
-
-// Base UI Popover plays an opacity/scale enter+exit transition driven by these
-// CSS vars on the positioner. Zero them so the meta hover card appears instantly
-// instead of easing in — the hover-intent delay (`mouseEnterDelay`) still gates
-// when it shows. `styles.root` maps to the positioner (inline style → wins over
-// the library's default without a specificity fight).
-const META_HOVER_CARD_STYLES = {
-  content: { padding: 12 },
-  root: {
-    '--lobe-popover-animation-duration': '0ms',
-    '--lobe-popover-animation-duration-exit': '0ms',
-  } as CSSProperties,
-};
 
 const styles = createStaticStyles(({ css }) => ({
   ciBadge: css`
@@ -308,12 +298,12 @@ const TopicItemRow = memo<TopicItemRowProps>(
       [metadata, showWorkingDirectory],
     );
     const workingDirectoryNode = workingDirectoryDisplay ? (
-      <Flexbox horizontal align={'center'} gap={4} style={{ overflow: 'hidden' }}>
+      <div className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
         <DirIcon repoType={workingDirectoryDisplay.repoType} size={13} />
-        <Text ellipsis fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+        <div className="truncate text-[12px]" style={{ color: cssVar.colorTextDescription }}>
           {workingDirectoryDisplay.label}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
     ) : undefined;
 
     // Surface the unread dot right away during the masked tail instead of a
@@ -341,9 +331,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
     );
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
-      <Text fontSize={12} style={{ color: cssVar.colorError, flex: 'none' }}>
+      <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
         {t('draft')}
-      </Text>
+      </div>
     ) : undefined;
 
     // Codex-style hover detail card: when the topic carries git context, hovering
@@ -366,22 +356,20 @@ const TopicItemRow = memo<TopicItemRowProps>(
                 style={{ color: cssVar.colorWarning }}
               />
             ) : (
-              <Icon color={cssVar.colorTextDescription} icon={MessageSquareDashed} size={'small'} />
+              <MessageSquareDashed color={cssVar.colorTextDescription} size={'small'} />
             )
           }
           title={
-            <Flexbox horizontal align={'center'} flex={1} gap={6}>
+            <div className="flex items-center flex-1 gap-1.5">
               {t('defaultTitle')}
-              <Tag
-                size={'small'}
-                style={{
-                  color: cssVar.colorTextDescription,
-                  fontSize: 10,
-                }}
+              <Badge
+                size="sm"
+                style={{ color: cssVar.colorTextDescription, fontSize: 10 }}
+                variant="secondary"
               >
                 {t('temp')}
-              </Tag>
-            </Flexbox>
+              </Badge>
+            </div>
           }
           onClick={handleClick}
         />
@@ -396,10 +384,13 @@ const TopicItemRow = memo<TopicItemRowProps>(
       if (isScheduled) {
         const visual = TOPIC_STATUS_VISUALS.scheduled;
         const runAt = metadata?.scheduledRun?.runAt;
-        const icon = <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+        const icon = <visual.icon size={'small'} style={{ color: visual.color }} />;
         return runAt ? (
-          <Tooltip title={t('scheduledStatusTip', { time: dayjs(runAt).format('MM-DD HH:mm') })}>
-            {icon}
+          <Tooltip>
+            <TooltipTrigger render={<span>{icon}</span>} />
+            <TooltipContent>
+              {t('scheduledStatusTip', { time: dayjs(runAt).format('MM-DD HH:mm') })}
+            </TooltipContent>
           </Tooltip>
         ) : (
           icon
@@ -407,7 +398,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       }
       if (isWaitingForHuman) {
         const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-        return <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+        return <visual.icon size={'small'} style={{ color: visual.color }} />;
       }
       if (shouldShowRunningIcon) {
         return (
@@ -421,8 +412,15 @@ const TopicItemRow = memo<TopicItemRowProps>(
       if (isFailed) {
         const visual = TOPIC_STATUS_VISUALS.failed;
         return (
-          <Tooltip title={t('failedStatusTip')}>
-            <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span>
+                  <visual.icon size={'small'} style={{ color: visual.color }} />
+                </span>
+              }
+            />
+            <TooltipContent>{t('failedStatusTip')}</TooltipContent>
           </Tooltip>
         );
       }
@@ -437,7 +435,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       // the masked post-output tail cannot fall back to a static running icon.
       if (status && status !== 'active' && status !== 'running') {
         const visual = TOPIC_STATUS_VISUALS[status];
-        return <Icon icon={visual.icon} size={'small'} style={{ color: visual.color }} />;
+        return <visual.icon size={'small'} style={{ color: visual.color }} />;
       }
       return null;
     })();
@@ -458,20 +456,26 @@ const TopicItemRow = memo<TopicItemRowProps>(
           ? `${t(prVisual.labelKey)} · ${t(ciVisual.labelKey)}`
           : t(prVisual.labelKey);
         return (
-          <Tooltip title={tooltip}>
-            <span className={styles.prIcon}>
-              <Icon icon={prVisual.icon} size={'small'} style={{ color: prVisual.color }} />
-              {showCiBadge && (
-                <span className={styles.ciBadge}>
-                  <Icon
-                    className={ciStatus === 'pending' ? styles.ciPending : undefined}
-                    icon={ciVisual.icon}
-                    size={9}
-                    style={{ color: ciVisual.color }}
-                  />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span>
+                  <span className={styles.prIcon}>
+                    <prVisual.icon size={'small'} style={{ color: prVisual.color }} />
+                    {showCiBadge && (
+                      <span className={styles.ciBadge}>
+                        <ciVisual.icon
+                          className={ciStatus === 'pending' ? styles.ciPending : undefined}
+                          size={9}
+                          style={{ color: ciVisual.color }}
+                        />
+                      </span>
+                    )}
+                  </span>
                 </span>
-              )}
-            </span>
+              }
+            />
+            <TooltipContent>{tooltip}</TooltipContent>
           </Tooltip>
         );
       }
@@ -518,34 +522,46 @@ const TopicItemRow = memo<TopicItemRowProps>(
     );
 
     return (
-      <Flexbox data-testid="topic-item" data-topic-id={id} style={{ position: 'relative' }}>
+      <div
+        className="flex flex-col"
+        data-testid="topic-item"
+        data-topic-id={id}
+        style={{ position: 'relative' }}
+      >
         {metaCard ? (
-          <Popover
-            arrow={false}
-            content={<MetaHoverCard metadata={metadata} title={title} topicId={id} />}
-            mouseEnterDelay={0.8}
-            placement={'right'}
-            styles={META_HOVER_CARD_STYLES}
-            trigger={'hover'}
-          >
-            <div>{navItem}</div>
-          </Popover>
+          <PreviewCard.Root>
+            <PreviewCard.Trigger delay={800} render={<div>{navItem}</div>} />
+            <PreviewCard.Portal>
+              <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'right'} sideOffset={4}>
+                <PreviewCard.Popup
+                  className={
+                    'rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
+                  }
+                >
+                  <MetaHoverCard metadata={metadata} title={title} topicId={id} />
+                </PreviewCard.Popup>
+              </PreviewCard.Positioner>
+            </PreviewCard.Portal>
+          </PreviewCard.Root>
         ) : (
           navItem
         )}
         {showThreadList && (
           <Suspense
             fallback={
-              <Flexbox gap={8} paddingBlock={8} paddingInline={24} width={'100%'}>
-                <Skeleton height={18} width={'100%'} />
-                <Skeleton height={18} width={'100%'} />
-              </Flexbox>
+              <div
+                className="flex flex-col gap-2 w-full"
+                style={{ paddingBlock: 8, paddingInline: 24 }}
+              >
+                <Skeleton style={{ height: 18, width: '100%' }} />
+                <Skeleton style={{ height: 18, width: '100%' }} />
+              </div>
             }
           >
             <ThreadList topicId={id} />
           </Suspense>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

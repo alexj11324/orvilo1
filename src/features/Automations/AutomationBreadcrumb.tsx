@@ -1,10 +1,14 @@
-import { Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Breadcrumb as AntBreadcrumb } from 'antd';
 import { ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useTaskStore } from '@/store/task';
 
@@ -12,27 +16,25 @@ const AutomationBreadcrumb = memo<{ taskId: string }>(({ taskId }) => {
   const { t } = useTranslation('automation');
   const name = useTaskStore((s) => s.taskDetailMap[taskId]?.name);
   return (
-    <AntBreadcrumb
-      separator={<Icon icon={ChevronRight} />}
-      items={[
-        {
-          title: (
-            <WorkspaceLink to={'/automations'}>
-              <Text color={'inherit'} weight={500}>
-                {t('page.title')}
-              </Text>
-            </WorkspaceLink>
-          ),
-        },
-        {
-          title: (
-            <Text ellipsis color={'inherit'} style={{ maxWidth: 240 }} weight={500}>
-              {name || taskId}
-            </Text>
-          ),
-        },
-      ]}
-    />
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink render={<WorkspaceLink to={'/automations'} />}>
+            <div className="font-medium" style={{ color: 'inherit' }}>
+              {t('page.title')}
+            </div>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator>
+          <ChevronRight />
+        </BreadcrumbSeparator>
+        <BreadcrumbItem>
+          <div className="truncate min-w-0 font-medium" style={{ color: 'inherit', maxWidth: 240 }}>
+            {name || taskId}
+          </div>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 });
 

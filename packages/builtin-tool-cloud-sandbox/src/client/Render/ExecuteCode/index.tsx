@@ -1,9 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Highlighter } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import type { ExecuteCodeState } from '../../../types';
 
@@ -24,35 +25,29 @@ const ExecuteCode = memo<BuiltinRenderProps<ExecuteCodeParams, ExecuteCodeState>
     const language = args.language || 'python';
 
     return (
-      <Flexbox className={styles.container} gap={8}>
-        <Block gap={8} padding={8} variant={'outlined'}>
-          <Highlighter
+      <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className="rounded-md border bg-card flex flex-col" style={{ gap: 8, padding: 8 }}>
+          <CodeBlock
             wrap
+            code={args.code}
             language={language}
-            showLanguage={false}
             style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
-            variant={'borderless'}
-          >
-            {args.code}
-          </Highlighter>
+            variant={'ghost'}
+          />
           {pluginState?.output && (
-            <Highlighter
+            <CodeBlock
               wrap
+              code={pluginState.output}
               language={'text'}
-              showLanguage={false}
               style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
-              variant={'filled'}
-            >
-              {pluginState.output}
-            </Highlighter>
+              variant={'default'}
+            />
           )}
           {pluginState?.stderr && (
-            <Highlighter wrap language={'text'} showLanguage={false} variant={'filled'}>
-              {pluginState.stderr}
-            </Highlighter>
+            <CodeBlock wrap code={pluginState.stderr} language={'text'} variant={'default'} />
           )}
-        </Block>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

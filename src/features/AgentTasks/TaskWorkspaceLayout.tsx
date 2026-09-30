@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { Outlet } from 'react-router';
 
@@ -12,12 +11,12 @@ const TaskWorkspaceLayout = memo(() => {
   const isMobile = useIsMobile();
 
   return (
-    <Flexbox flex={1} height={'100%'} horizontal={!isMobile} width={'100%'}>
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
+    <div className={`flex h-full w-full flex-1${isMobile ? ' flex-col' : ''}`}>
+      <div className="flex flex-1 flex-col" style={{ minWidth: 0 }}>
         <Outlet />
-      </Flexbox>
+      </div>
       {isMobile ? <MobilePortal /> : <AgentTaskManager />}
-    </Flexbox>
+    </div>
   );
 });
 

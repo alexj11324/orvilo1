@@ -1,8 +1,9 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { KeyedMutator } from 'swr';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { useSingleton } from '@/hooks/useSingleton';
 import { agentDocumentService } from '@/services/agentDocument';
 

@@ -1,4 +1,4 @@
-import { Flexbox, Image, Markdown } from '@lobehub/ui';
+import { Image, Markdown } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { type MessageContentPart } from '@/types/index';
@@ -9,7 +9,7 @@ interface RichContentRendererProps {
 
 export const RichContentRenderer = memo<RichContentRendererProps>(({ parts }) => {
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {parts.map((part, index) => {
         if (part.type === 'text') {
           return (
@@ -27,7 +27,7 @@ export const RichContentRenderer = memo<RichContentRendererProps>(({ parts }) =>
 
         return null;
       })}
-    </Flexbox>
+    </div>
   );
 });
 

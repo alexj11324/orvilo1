@@ -1,6 +1,6 @@
 'use client';
 
-import { PopoverPopup, PopoverPortal, PopoverPositioner, PopoverRoot } from '@lobehub/ui';
+import { Popover } from '@base-ui/react/popover';
 
 import AgentContent from './AgentContent';
 import GroupContent from './GroupContent';
@@ -11,15 +11,15 @@ const EditingPopover = () => {
   const close = useEditingPopoverStore((s) => s.close);
 
   return (
-    <PopoverRoot
+    <Popover.Root
       open={target !== null}
       onOpenChange={(open) => {
         if (!open) close();
       }}
     >
-      <PopoverPortal>
-        <PopoverPositioner anchor={target?.anchor ?? document.body} placement="bottomLeft">
-          <PopoverPopup data-testid="editing-popover" style={{ padding: 4 }}>
+      <Popover.Portal>
+        <Popover.Positioner align="start" anchor={target?.anchor ?? document.body} side="bottom">
+          <Popover.Popup data-testid="editing-popover" style={{ padding: 4 }}>
             {target?.type === 'agent' ? (
               <AgentContent
                 avatar={target.avatar}
@@ -38,10 +38,10 @@ const EditingPopover = () => {
                 onClose={close}
               />
             ) : null}
-          </PopoverPopup>
-        </PopoverPositioner>
-      </PopoverPortal>
-    </PopoverRoot>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 };
 

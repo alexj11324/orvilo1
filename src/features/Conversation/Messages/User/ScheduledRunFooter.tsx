@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { BanIcon, ClockIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
@@ -44,18 +43,18 @@ const ScheduledRunFooter = memo<ScheduledRunFooterProps>(({ id }) => {
   if (!runAt) return null;
 
   return (
-    <Flexbox horizontal align={'center'} gap={4} justify={'flex-end'} paddingBlock={4}>
-      <Icon icon={ClockIcon} size={14} style={{ color: cssVar.colorTextQuaternary }} />
-      <Text style={{ fontSize: 12 }} type={'secondary'}>
+    <div className="flex items-center gap-1 justify-end py-1">
+      <ClockIcon size={14} style={{ color: cssVar.colorTextQuaternary }} />
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('input.schedule.pending', { time: dayjs(runAt).format('MM-DD HH:mm') })}
-      </Text>
+      </div>
       <ActionIcon
         icon={BanIcon}
         size={'small'}
         title={t('input.schedule.cancel')}
         onClick={() => void cancelScheduledRun()}
       />
-    </Flexbox>
+    </div>
   );
 });
 

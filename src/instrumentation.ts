@@ -22,6 +22,16 @@ export async function register() {
     })().catch((err) => {
       console.error('[Instrumentation] Failed to resume agent-transfer jobs:', err);
     });
+
+    // In-process reminder delivery — the queue runtime sweeps via Hatchet;
+    // without one this loop keeps reminders firing and catches up on
+    // anything that came due while the process was down. Dedupe by
+    // (userId, dedupeKey) makes running both harmless.
+    void import('@/server/services/taskReminder/localLoop')
+      .then(({ startTaskReminderLocalLoop }) => startTaskReminderLocalLoop())
+      .catch((err) => {
+        console.error('[Instrumentation] Failed to start task-reminder loop:', err);
+      });
   }
 
   if (process.env.NODE_ENV !== 'production' && !process.env.ENABLE_TELEMETRY_IN_DEV) {

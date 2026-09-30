@@ -1,8 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useMemo } from 'react';
 
+import { Badge } from '@/components/reui/badge';
 import { type SemanticSearchChunk } from '@/types/chunk';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -46,14 +45,14 @@ const SearchItem = memo<ChunkItemProps>(({ text, pageNumber, type, similarity })
   }, [type]);
 
   return (
-    <Flexbox className={cx(styles.container, typeClassName)} gap={8}>
+    <div className={cx('flex flex-col gap-2', cx(styles.container, typeClassName))}>
       {text}
 
-      <Flexbox horizontal align={'center'} distribution={'space-between'}>
-        <Tag variant={'filled'}>{similarity.toFixed(2)}</Tag>
-        <Flexbox className={styles.pageNumber}>第 {pageNumber} 页</Flexbox>
-      </Flexbox>
-    </Flexbox>
+      <div className="flex flex-row items-center justify-between">
+        <Badge variant="secondary">{similarity.toFixed(2)}</Badge>
+        <div className={cx('flex flex-col', styles.pageNumber)}>第 {pageNumber} 页</div>
+      </div>
+    </div>
   );
 });
 

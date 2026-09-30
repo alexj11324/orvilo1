@@ -1,14 +1,13 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { BrainOffIcon } from '@lobehub/ui/icons';
 import { type UserMemoryEffort } from '@orvilo/types';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { Brain } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import LevelSlider from '@/components/LevelSlider';
+import { Separator } from '@/components/ui/separator';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
@@ -69,11 +68,11 @@ const ToggleItem = memo<ToggleOption>(({ value, description, icon, label }) => {
   const isActive = value === 'on' ? isEnabled : !isEnabled;
 
   return (
-    <Flexbox
-      horizontal
-      align={'flex-start'}
-      className={cx(styles.option, isActive && styles.active)}
-      gap={12}
+    <div
+      className={cx(
+        'flex flex-row items-start gap-3',
+        cx(styles.option, isActive && styles.active),
+      )}
       style={{
         cursor: canCreate ? undefined : 'not-allowed',
         opacity: canCreate ? undefined : 0.5,
@@ -83,14 +82,21 @@ const ToggleItem = memo<ToggleOption>(({ value, description, icon, label }) => {
         await updateAgentChatConfig({ memory: { enabled: value === 'on' } });
       }}
     >
-      <Center className={styles.icon} flex={'none'} height={32} width={32}>
-        <Icon icon={icon} />
-      </Center>
-      <Flexbox flex={1}>
+      <div
+        className={cx(
+          'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
+          styles.icon,
+        )}
+      >
+        <span className="anticon" role="img">
+          {createElement(icon, { size: '1em', width: '1em', height: '1em', fill: 'transparent' })}
+        </span>
+      </div>
+      <div className="flex flex-col flex-1">
         <div className={styles.title}>{label}</div>
         <div className={styles.description}>{description}</div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -118,20 +124,20 @@ const Controls = memo(() => {
   ];
 
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       {toggleOptions.map((option) => (
         <ToggleItem {...option} key={option.value} />
       ))}
       {isEnabled && (
         <>
-          <Divider style={{ margin: 0 }} />
-          <Flexbox horizontal align={'center'} gap={16} padding={8}>
-            <Flexbox flex={1} gap={4} style={{ minWidth: 100 }}>
+          <Separator style={{ margin: 0 }} />
+          <div className="flex flex-row items-center gap-4 p-2">
+            <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 100 }}>
               <div className={styles.title}>{t('memory.effort.title')}</div>
               <div className={styles.description}>{t('memory.effort.desc')}</div>
-            </Flexbox>
-            <Flexbox
-              flex={1}
+            </div>
+            <div
+              className="flex flex-col flex-1"
               style={{
                 opacity: canCreate ? undefined : 0.5,
                 pointerEvents: canCreate ? undefined : 'none',
@@ -151,11 +157,11 @@ const Controls = memo(() => {
                   await updateAgentChatConfig({ memory: { effort: value, enabled: true } });
                 }}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

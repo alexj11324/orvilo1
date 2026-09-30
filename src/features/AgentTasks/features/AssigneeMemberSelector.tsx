@@ -1,7 +1,5 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Popover, Text } from '@lobehub/ui/base-ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { UserRoundX } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,6 +9,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
 import Avatar from '@/components/Avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { usePermission } from '@/hooks/usePermission';
@@ -21,6 +20,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { partitionSelfMember } from './assigneeMemberOptions';
 import { blockedPickerContentStyle, pickerTriggerStyle } from './pickerTriggerStyles';
+import { SimpleTooltip } from './SimpleTooltip';
 
 interface AssigneeMemberSelectorProps {
   children: ReactNode;
@@ -94,7 +94,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
   }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
-    const [key, setKey] = useState(0);
+    const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);
@@ -158,7 +158,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
     const handleMemberChange = useCallback(
       (userId: string | null, member?: WorkspaceMemberRow) => {
         if (!canEditTask || userId === (currentUserId ?? null)) return;
-        setKey((value) => value + 1);
+        setOpen(false);
         setSearch('');
         if (onChange) {
           onChange(userId, member);
@@ -230,19 +230,27 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
         >
           <NavItem
             active={active}
+            icon={member ? undefined : UserRoundX}
             style={{ flexShrink: 0 }}
             title={member ? memberName(member) : unassignedLabel}
-            icon={
-              member ? (
-                <Avatar
-                  avatar={member.user?.avatar || undefined}
-                  name={memberName(member)}
-                  shape={'circle'}
-                  size={22}
-                />
-              ) : (
-                <Icon color={cssVar.colorTextDescription} icon={UserRoundX} size={18} />
-              )
+            slots={
+              member
+                ? {
+                    iconPostfix: (
+                      <div
+                        className="flex flex-none items-center justify-center"
+                        style={{ height: 28, width: 28 }}
+                      >
+                        <Avatar
+                          avatar={member.user?.avatar || undefined}
+                          name={memberName(member)}
+                          shape={'circle'}
+                          size={22}
+                        />
+                      </div>
+                    ),
+                  }
+                : undefined
             }
             onClick={() => handleSelect(option)}
           />
@@ -254,69 +262,68 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
     const currentTriggerStyle = fullWidth
       ? { ...pickerTriggerStyle, width: '100%' }
       : pickerTriggerStyle;
-    const trigger = blocked ? (
-      <Tooltip title={disabled ? t('taskDetail.reassignDisabled') : reason}>
-        <div
-          style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <span style={blockedPickerContentStyle}>{children}</span>
-        </div>
-      </Tooltip>
-    ) : (
-      <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
-        {children}
-      </div>
-    );
+
+    if (blocked)
+      return (
+        <SimpleTooltip title={disabled ? t('taskDetail.reassignDisabled') : reason}>
+          <div
+            style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span style={blockedPickerContentStyle}>{children}</span>
+          </div>
+        </SimpleTooltip>
+      );
 
     return (
-      <Popover
-        disabled={blocked}
-        key={key}
-        placement={'bottomLeft'}
-        styles={{ content: { padding: 0, width: 260 } }}
-        trigger={'click'}
-        content={
-          <Flexbox onClick={(event) => event.stopPropagation()}>
-            {activeWorkspaceId && (
-              <input
-                autoFocus
-                className={styles.searchInput}
-                placeholder={t('taskList.assigneeSearch.memberPlaceholder')}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-            )}
-            {activeWorkspaceId && isLoading ? (
-              <SkeletonList rows={6} />
-            ) : flatOptions.length === 0 ? (
-              <Flexbox align={'center'} justify={'center'} padding={16}>
-                <Text fontSize={12} type={'secondary'}>
-                  {t('taskList.assigneeSearch.memberEmpty')}
-                </Text>
-              </Flexbox>
-            ) : (
-              <Flexbox
-                gap={4}
-                padding={8}
-                ref={listRef}
-                style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
-              >
-                {showUnassigned && renderOption({ key: 'unassigned', kind: 'unassigned' })}
-                {selfMember && renderOption(toMemberOption(selfMember))}
-                {otherMembers.length > 0 && (
-                  <div className={styles.sectionHeader}>
-                    {t('taskList.assigneeSelector.workspaceMemberGroup')}
-                  </div>
-                )}
-                {otherMembers.map((member) => renderOption(toMemberOption(member)))}
-              </Flexbox>
-            )}
-          </Flexbox>
-        }
-      >
-        {trigger}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
+              {children}
+            </div>
+          }
+        />
+        <PopoverContent
+          align="start"
+          className="w-65 gap-0 p-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {activeWorkspaceId && (
+            <input
+              autoFocus
+              className={styles.searchInput}
+              placeholder={t('taskList.assigneeSearch.memberPlaceholder')}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+          )}
+          {activeWorkspaceId && isLoading ? (
+            <SkeletonList rows={6} />
+          ) : flatOptions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-4">
+              <div className="text-[12px] text-muted-foreground">
+                {t('taskList.assigneeSearch.memberEmpty')}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="flex flex-col gap-1 p-2"
+              ref={listRef}
+              style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
+            >
+              {showUnassigned && renderOption({ key: 'unassigned', kind: 'unassigned' })}
+              {selfMember && renderOption(toMemberOption(selfMember))}
+              {otherMembers.length > 0 && (
+                <div className={styles.sectionHeader}>
+                  {t('taskList.assigneeSelector.workspaceMemberGroup')}
+                </div>
+              )}
+              {otherMembers.map((member) => renderOption(toMemberOption(member)))}
+            </div>
+          )}
+        </PopoverContent>
       </Popover>
     );
   },

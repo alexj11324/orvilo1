@@ -1,6 +1,5 @@
 'use client';
 
-import { Tooltip } from '@lobehub/ui';
 import { GroupBotIcon } from '@lobehub/ui/icons';
 import { AnimatedNumber } from '@orvilo/shared-tool-ui/components';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
@@ -9,6 +8,7 @@ import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { threadSelectors } from '@/store/chat/selectors';
 import { aggregateSubagentMetrics } from '@/utils/subagentMetrics';
@@ -166,7 +166,7 @@ export const AgentInspector = memo<BuiltinInspectorProps<AgentArgs>>(
 
     const metricsNode =
       metrics?.hasAny && (metrics.toolCalls > 0 || metrics.totalTokens > 0) ? (
-        <Tooltip title={tooltipLines.length > 0 ? tooltipLines.join(' · ') : undefined}>
+        <SimpleTooltip title={tooltipLines.length > 0 ? tooltipLines.join(' · ') : undefined}>
           <span className={styles.metrics}>
             {metrics.toolCalls > 0 && (
               <span>
@@ -186,7 +186,7 @@ export const AgentInspector = memo<BuiltinInspectorProps<AgentArgs>>(
               </span>
             )}
           </span>
-        </Tooltip>
+        </SimpleTooltip>
       ) : null;
 
     return (

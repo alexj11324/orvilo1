@@ -1,14 +1,15 @@
-import { Block, Flexbox, Icon, Input, stopPropagation, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Avatar, toast } from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
 import { Check, PaletteIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import EmojiPicker from '@/components/EmojiPicker';
+import { toast } from '@/components/toast';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';
 import GroupAvatar from '@/features/GroupAvatar';
-import { useIsDark } from '@/hooks/useIsDark';
 import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
@@ -30,7 +31,6 @@ const GroupContent = memo<GroupContentProps>(
   ({ id, title, avatar, backgroundColor, memberAvatars, type, onClose }) => {
     const { t } = useTranslation('setting');
     const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
-    const isDarkMode = useIsDark();
     const uploadWithProgress = useFileStore((s) => s.uploadWithProgress);
 
     const isAgentGroup = type === 'agentGroup';
@@ -103,7 +103,7 @@ const GroupContent = memo<GroupContentProps>(
       setNewAvatar(null);
     }, []);
 
-    const inputRef = useRef<InputRef>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -115,7 +115,11 @@ const GroupContent = memo<GroupContentProps>(
     }, []);
 
     return (
-      <Flexbox horizontal align={'center'} gap={4} style={{ width: 320 }} onClick={stopPropagation}>
+      <div
+        className="flex items-center gap-1"
+        style={{ width: 320 }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {isAgentGroup && (
           <EmojiPicker
             allowUpload
@@ -130,14 +134,10 @@ const GroupContent = memo<GroupContentProps>(
                 : undefined
             }
             customRender={(avatarValue) => (
-              <Block
-                clickable
-                align={'center'}
-                height={36}
-                justify={'center'}
-                variant={isDarkMode ? 'filled' : 'outlined'}
-                width={36}
-                onClick={stopPropagation}
+              <div
+                className="flex flex-col items-center justify-center"
+                style={{ cursor: 'pointer', height: 36, width: 36 }}
+                onClick={(e) => e.stopPropagation()}
               >
                 {avatarValue ? (
                   <Avatar
@@ -158,17 +158,26 @@ const GroupContent = memo<GroupContentProps>(
                     size={32}
                   />
                 )}
-              </Block>
+              </div>
             )}
             customTabs={[
               {
                 label: (
-                  <Tooltip title={t('settingAgent.backgroundColor.title')}>
-                    <Icon icon={PaletteIcon} size={{ size: 20, strokeWidth: 2.5 }} />
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <span style={{ display: 'inline-flex' }}>
+                            <PaletteIcon size={20} strokeWidth={2.5} />
+                          </span>
+                        }
+                      />
+                      <TooltipContent>{t('settingAgent.backgroundColor.title')}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ),
                 render: () => (
-                  <Flexbox padding={8} width={332}>
+                  <div className="flex flex-col p-2" style={{ width: 332 }}>
                     <BackgroundSwatches
                       gap={8}
                       shape={'square'}
@@ -176,7 +185,7 @@ const GroupContent = memo<GroupContentProps>(
                       value={newBackgroundColor}
                       onChange={setNewBackgroundColor}
                     />
-                  </Flexbox>
+                  </div>
                 ),
                 value: 'background',
               },
@@ -192,7 +201,9 @@ const GroupContent = memo<GroupContentProps>(
           ref={inputRef}
           style={{ flex: 1 }}
           onChange={(e) => setNewTitle(e.target.value)}
-          onPressEnter={handleUpdate}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleUpdate();
+          }}
         />
         <ActionIcon
           data-testid="editing-popover-save"
@@ -200,7 +211,7 @@ const GroupContent = memo<GroupContentProps>(
           size={'small'}
           onClick={handleUpdate}
         />
-      </Flexbox>
+      </div>
     );
   },
 );

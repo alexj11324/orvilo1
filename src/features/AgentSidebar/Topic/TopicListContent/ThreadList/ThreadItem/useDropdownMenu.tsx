@@ -1,10 +1,9 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { PanelRight, PencilLine, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 
@@ -18,7 +17,7 @@ export const useThreadItemDropdownMenu = ({
   id,
   sourceMessageId,
   toggleEditing,
-}: ThreadItemDropdownMenuProps): (() => MenuProps['items']) => {
+}: ThreadItemDropdownMenuProps): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['thread', 'common']);
   const { allowed: canEditThread } = usePermission('edit_own_content');
 
@@ -30,7 +29,7 @@ export const useThreadItemDropdownMenu = ({
   return useCallback(() => {
     return [
       {
-        icon: <Icon icon={PanelRight} />,
+        icon: <PanelRight />,
         key: 'openOnRight',
         label: t('openOnRight', { ns: 'common' }),
         onClick: () => {
@@ -42,7 +41,7 @@ export const useThreadItemDropdownMenu = ({
       },
       {
         disabled: !canEditThread,
-        icon: <Icon icon={PencilLine} />,
+        icon: <PencilLine />,
         key: 'rename',
         label: t('rename', { ns: 'common' }),
         onClick: () => {
@@ -56,7 +55,7 @@ export const useThreadItemDropdownMenu = ({
       {
         danger: true,
         disabled: !canEditThread,
-        icon: <Icon icon={Trash} />,
+        icon: <Trash />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: () => {
@@ -73,6 +72,6 @@ export const useThreadItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [id, sourceMessageId, canEditThread, removeThread, openThreadInPortal, toggleEditing, t]);
 };

@@ -1,10 +1,12 @@
 'use client';
 
-import { Center, Flexbox, Tooltip } from '@lobehub/ui';
-import { Avatar, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -91,8 +93,11 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
     children,
   }) => {
     return (
-      <Flexbox className={styles.container}>
-        <Center className={styles.banner} style={{ background: cssVar.colorFillTertiary }}>
+      <div className={`flex flex-col ${styles.container}`}>
+        <div
+          className={`flex flex-col items-center justify-center ${styles.banner}`}
+          style={{ background: cssVar.colorFillTertiary }}
+        >
           <Avatar
             emojiScaleWithBackground
             avatar={avatar || DEFAULT_AVATAR}
@@ -101,9 +106,9 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
             shape={'square'}
             size={400}
           />
-        </Center>
+        </div>
 
-        <Flexbox className={styles.header} gap={8}>
+        <div className={`flex flex-col gap-2 ${styles.header}`}>
           <Avatar
             emojiScaleWithBackground
             avatar={avatar || DEFAULT_AVATAR}
@@ -114,35 +119,42 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
             style={{ border: `2px solid ${cssVar.colorBgElevated}` }}
             onClick={onHeaderClick}
           />
-          <Flexbox gap={2}>
-            <Flexbox horizontal align={'center'} justify={'space-between'}>
-              <Text
-                ellipsis
-                className={`${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`}
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between">
+              <div
+                className={cn(
+                  'truncate',
+                  'block',
+                  `${styles.name} ${onHeaderClick ? styles.clickableTitle : ''}`,
+                )}
                 onClick={onHeaderClick}
               >
                 {title}
-              </Text>
+              </div>
               {headerAction}
-            </Flexbox>
+            </div>
             {description ? (
-              <Tooltip title={description}>
-                <Text className={styles.description} ellipsis={{ rows: 2 }}>
-                  {description}
-                </Text>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <div className={cn('line-clamp-2', styles.description)}>{description}</div>
+                    </span>
+                  }
+                />
+                <TooltipContent>{description}</TooltipContent>
               </Tooltip>
             ) : loading ? (
-              <Skeleton.Text
-                className={styles.descriptionSkeleton}
-                rows={2}
-                width={['100%', '60%']}
-              />
+              <div className={cn('flex flex-col gap-2', styles.descriptionSkeleton)}>
+                <Skeleton />
+                <Skeleton style={{ width: '60%' }} />
+              </div>
             ) : null}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
         {children}
-      </Flexbox>
+      </div>
     );
   },
 );

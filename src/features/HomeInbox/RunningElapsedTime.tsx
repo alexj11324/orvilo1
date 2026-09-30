@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { formatElapsedClockTime } from '@orvilo/utils';
 import { memo, useEffect, useState } from 'react';
 
@@ -28,13 +27,12 @@ export const RunningElapsedTime = memo<RunningElapsedTimeProps>(({ startTime }) 
   if (!hasValidStartTime) return null;
 
   return (
-    <Text
-      fontSize={12}
+    <div
+      className="text-[12px] text-muted-foreground"
       style={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
-      type={'secondary'}
     >
       {formatElapsedClockTime(now - startTimeMs)}
-    </Text>
+    </div>
   );
 });
 

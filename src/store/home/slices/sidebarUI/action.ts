@@ -1,6 +1,6 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { agentService } from '@/services/agent';
 import { chatGroupService } from '@/services/chatGroup';
 import { homeService } from '@/services/home';

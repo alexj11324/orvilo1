@@ -14,26 +14,25 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { type MenuProps } from '@lobehub/ui';
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import { Hash, LucideCheck, MoreHorizontalIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
-import NavItem from '@/features/NavPanel/components/NavItem';
+import { toast } from '@/components/toast';
+import {
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar';
+import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -49,6 +48,8 @@ import { SortableFavoriteRow } from './FavoriteRow';
 
 interface WorkFavoritesProps {
   itemKey: string;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
 }
 
 const PAGE_SIZE_OPTIONS = [5, 10, 15, 20] as const;
@@ -61,7 +62,7 @@ const cancelDropClick = (event: MouseEvent) => {
   event.preventDefault();
   event.stopPropagation();
 };
-const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
+const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey, open = true, onOpenChange }) => {
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const favoritePageSize = useGlobalStore(systemStatusSelectors.favoritePageSize);
@@ -154,7 +155,7 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
 
   const dropdownMenu = useMemo(() => {
     const pageSizeItems = PAGE_SIZE_OPTIONS.map((size) => ({
-      icon: favoritePageSize === size ? <Icon icon={LucideCheck} /> : <div />,
+      icon: favoritePageSize === size ? <LucideCheck /> : <div />,
       key: `pageSize-${size}`,
       label: t('pageSizeItem', { count: size }),
       onClick: () => {
@@ -166,106 +167,116 @@ const WorkFavorites = memo<WorkFavoritesProps>(({ itemKey }) => {
       {
         children: pageSizeItems,
         extra: favoritePageSize,
-        icon: <Icon icon={Hash} />,
+        icon: <Hash />,
         key: 'show',
         label: t('navPanel.show'),
       },
-    ] as MenuProps['items'];
+    ] as SidebarMenuItems;
   }, [favoritePageSize, t, updateSystemStatus]);
 
   // Linear keeps the Favorites section header mounted even when the workspace
   // has no pins — an empty panel is the correct shape, not a missing group.
   // Hiding the whole section is the user's call via Customize sidebar.
   return (
-    <AccordionItem className={cx(accordionStyles.item)} value={itemKey}>
-      <AccordionHeader>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-            {t('tab.favorites')}
-          </Text>
-        </AccordionTrigger>
-        <div
-          className={cx(
-            'accordion-action',
-            accordionStyles.action,
-            accordionStyles.actionBorderless,
-          )}
+    <SidebarGroup className="group/section group-data-[collapsible=icon]:hidden">
+      <SidebarGroupLabel
+        className="focus-visible:ring-sidebar-ring w-full cursor-pointer gap-0.5 whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none"
+        render={
+          <button
+            aria-controls={`sidebar-section-${itemKey}`}
+            aria-expanded={open}
+            onClick={() => onOpenChange?.(!open)}
+          />
+        }
+      >
+        {t('tab.favorites')}
+        <SidebarCollapseIcon open={open} />
+      </SidebarGroupLabel>
+      <SidebarDropdownMenu items={dropdownMenu}>
+        <SidebarGroupAction
+          aria-label={t('navPanel.more')}
+          className="opacity-0 group-hover/section:opacity-100 group-focus-within/section:opacity-100"
         >
-          <DropdownMenu items={dropdownMenu}>
-            <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
-          </DropdownMenu>
-        </div>
-      </AccordionHeader>
-      <AccordionPanel>
-        <Flexbox gap={1}>
-          {isLoading && !hasSettled ? (
-            <Flexbox aria-busy data-testid={'work-favorites-loading'}>
-              <SkeletonList rows={2} />
-            </Flexbox>
-          ) : error && !hasSettled ? (
-            <AsyncError error={error} retrying={isValidating} variant="inline" onRetry={refresh} />
-          ) : (
-            <>
-              <DndContext
-                collisionDetection={closestCenter}
-                sensors={sensors}
-                onDragCancel={releaseClickSuppression}
-                onDragEnd={handleDragEnd}
-                onDragStart={handleDragStart}
-              >
-                <SortableContext items={visibleKeys} strategy={verticalListSortingStrategy}>
-                  <Flexbox gap={1} role="list">
-                    {visibleItems.map((item, index) => (
-                      <SortableFavoriteRow
-                        index={index}
-                        item={item}
-                        itemCount={items.length}
-                        key={favoriteKey(item)}
-                        suppressClickRef={suppressClickRef}
-                        onMove={moveByDirection}
-                        onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
-                      />
-                    ))}
-                  </Flexbox>
-                </SortableContext>
-              </DndContext>
-              {items.length === 0 && (
-                <Text
-                  fontSize={12}
-                  style={{ paddingBlock: 4, paddingInline: 8 }}
-                  type={'secondary'}
-                >
-                  {t('favorites.empty')}
-                </Text>
-              )}
-              {error ? (
+          <MoreHorizontalIcon />
+        </SidebarGroupAction>
+      </SidebarDropdownMenu>
+      {open && (
+        <SidebarGroupContent id={`sidebar-section-${itemKey}`}>
+          <SidebarMenu className="gap-0.25">
+            {isLoading && !hasSettled ? (
+              <SidebarMenuItem aria-busy data-testid={'work-favorites-loading'}>
+                <SkeletonList rows={2} />
+              </SidebarMenuItem>
+            ) : error && !hasSettled ? (
+              <SidebarMenuItem>
                 <AsyncError
                   error={error}
                   retrying={isValidating}
-                  title={t('favorites.refreshFailed')}
                   variant="inline"
                   onRetry={refresh}
                 />
-              ) : null}
-              {hasMore && (
-                <NavItem
-                  icon={MoreHorizontalIcon}
-                  title={t('more')}
-                  onClick={() => setDrawerOpen(true)}
-                />
-              )}
-            </>
-          )}
-          <AllFavoritesDrawer
-            items={items}
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            onMove={moveByDirection}
-            onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
-          />
-        </Flexbox>
-      </AccordionPanel>
-    </AccordionItem>
+              </SidebarMenuItem>
+            ) : (
+              <>
+                <DndContext
+                  collisionDetection={closestCenter}
+                  sensors={sensors}
+                  onDragCancel={releaseClickSuppression}
+                  onDragEnd={handleDragEnd}
+                  onDragStart={handleDragStart}
+                >
+                  <SortableContext items={visibleKeys} strategy={verticalListSortingStrategy}>
+                    <div role="list">
+                      {visibleItems.map((item, index) => (
+                        <SortableFavoriteRow
+                          index={index}
+                          item={item}
+                          itemCount={items.length}
+                          key={favoriteKey(item)}
+                          suppressClickRef={suppressClickRef}
+                          onMove={moveByDirection}
+                          onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+                {items.length === 0 && (
+                  <SidebarMenuItem className="px-2 py-1 text-xs text-muted-foreground">
+                    {t('favorites.empty')}
+                  </SidebarMenuItem>
+                )}
+                {error ? (
+                  <SidebarMenuItem>
+                    <AsyncError
+                      error={error}
+                      retrying={isValidating}
+                      title={t('favorites.refreshFailed')}
+                      variant="inline"
+                      onRetry={refresh}
+                    />
+                  </SidebarMenuItem>
+                ) : null}
+                {hasMore && (
+                  <SidebarNavItem
+                    icon={MoreHorizontalIcon}
+                    title={t('more')}
+                    onClick={() => setDrawerOpen(true)}
+                  />
+                )}
+              </>
+            )}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      )}
+      <AllFavoritesDrawer
+        items={items}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onMove={moveByDirection}
+        onUnpin={(targetId, targetType) => void unpin(targetId, targetType)}
+      />
+    </SidebarGroup>
   );
 });
 

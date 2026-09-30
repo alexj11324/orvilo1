@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -39,9 +38,9 @@ export const FontSizeControl = memo<FontSizeControlProps>(({ onChange, value }) 
   }, [t]);
 
   return (
-    <Flexbox gap={16} width={'100%'}>
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 16, width: '100%' }}>
       <DiscreteSlider options={options} value={value} onChange={onChange} />
       <ChatPreview fontSize={value} />
-    </Flexbox>
+    </div>
   );
 });

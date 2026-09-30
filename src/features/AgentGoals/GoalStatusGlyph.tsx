@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import type { GoalStatus } from '@orvilo/const/goal';
 import { memo } from 'react';
 
@@ -18,7 +17,7 @@ const GoalStatusGlyph = memo<{ size?: number; status: GoalStatus }>(({ status, s
 
   const visual = TASK_STATUS_VISUALS[goalStatusToTaskStatus(status)] ?? TASK_STATUS_VISUALS.backlog;
 
-  return <Icon color={visual.color} icon={visual.icon} size={size} style={{ flexShrink: 0 }} />;
+  return <visual.icon color={visual.color} size={size} style={{ flexShrink: 0 }} />;
 });
 
 export default GoalStatusGlyph;

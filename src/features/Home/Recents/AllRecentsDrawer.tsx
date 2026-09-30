@@ -1,11 +1,12 @@
 'use client';
 
-import { Empty, Flexbox, SearchBar } from '@lobehub/ui';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, XIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import SideBarDrawer from '@/features/NavPanel/SideBarDrawer';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
@@ -45,29 +46,44 @@ const AllRecentsDrawer = memo<AllRecentsDrawerProps>(({ open, onClose }) => {
       open={open}
       title={t('recents')}
       subHeader={
-        <Flexbox paddingBlock={'0 8px'} paddingInline={8}>
-          <SearchBar
-            allowClear
-            defaultValue={searchKeyword}
-            placeholder={t('navPanel.searchRecent')}
-            onSearch={(keyword) => setSearchKeyword(keyword)}
-            onInputChange={(keyword) => {
-              setSearchKeyword(keyword);
-            }}
-          />
-        </Flexbox>
+        <div className="flex flex-col px-2" style={{ paddingBlock: '0 8px' }}>
+          <div className="relative">
+            <SearchIcon
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              size={14}
+            />
+            <Input
+              className="h-7 pl-8"
+              placeholder={t('navPanel.searchRecent')}
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+            />
+            {searchKeyword && (
+              <button
+                aria-label={t('navPanel.searchRecent')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                onClick={() => setSearchKeyword('')}
+              >
+                <XIcon size={12} />
+              </button>
+            )}
+          </div>
+        </div>
       }
       onClose={onClose}
     >
-      <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
+      <div className="flex flex-col gap-[1px] py-[1px] px-1">
         {isLoading && !query ? (
           <SkeletonList rows={5} />
         ) : filteredItems.length === 0 && searchKeyword.trim() ? (
-          <Empty
-            description={t('navPanel.searchResultEmpty')}
-            icon={SearchIcon}
-            style={{ paddingBlock: 24 }}
-          />
+          <Empty style={{ paddingBlock: 24 }}>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <SearchIcon />
+              </EmptyMedia>
+              <EmptyDescription>{t('navPanel.searchResultEmpty')}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           filteredItems.map((item) => {
             const itemRef = `${item.type}:${item.id}` as const;
@@ -76,7 +92,7 @@ const AllRecentsDrawer = memo<AllRecentsDrawerProps>(({ open, onClose }) => {
             );
           })
         )}
-      </Flexbox>
+      </div>
     </SideBarDrawer>
   );
 });

@@ -1,6 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { splitAssistantGroupFinalAnswer } from '@orvilo/conversation-flow';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Fragment, memo, useMemo } from 'react';
 
@@ -124,9 +124,9 @@ const Group = memo<GroupChildrenProps>(
     if (isCollapsed) {
       return (
         content && (
-          <Flexbox>
+          <div className="flex flex-col">
             <CollapsedMessage content={content} id={id} />
-          </Flexbox>
+          </div>
         )
       );
     }
@@ -183,13 +183,13 @@ const Group = memo<GroupChildrenProps>(
           key={view.id}
           stepCount={countAssistantLlmCalls(view.segments)}
         >
-          <Flexbox gap={8}>{renderChain(view, segments, 'process')}</Flexbox>
+          <div className="flex flex-col gap-2">{renderChain(view, segments, 'process')}</div>
         </ProcessFold>
       );
     };
 
     return (
-      <Flexbox className={styles.container} gap={4}>
+      <div className={cn('flex flex-col gap-1', styles.container)}>
         {views.map((view, index) => (
           <Fragment key={view.id}>
             {view.steerUserId && <SteerMessage id={view.steerUserId} />}
@@ -201,7 +201,7 @@ const Group = memo<GroupChildrenProps>(
           : lastView.showTailRunningIndicator && (
               <ContentLoading id={lastView.id} startTime={lastBlockCreatedAt} />
             )}
-      </Flexbox>
+      </div>
     );
   },
   isEqual,

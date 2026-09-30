@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
 import { memo, type ReactNode } from 'react';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
@@ -82,9 +81,12 @@ const AsyncBoundary = memo<AsyncBoundaryProps>(
     if (isLoading && !hasSettled) {
       return (
         loading ?? (
-          <Center flex={1} padding={48} width={'100%'}>
+          <div
+            className={'flex flex-col items-center justify-center flex-1'}
+            style={{ padding: 48, width: '100%' }}
+          >
             <NeuralNetworkLoading size={24} />
-          </Center>
+          </div>
         )
       );
     }
@@ -101,9 +103,9 @@ const AsyncBoundary = memo<AsyncBoundaryProps>(
     //    keeping intrinsic-height empty states unaffected.
     if (isEmpty)
       return (
-        <Flexbox flex={1} height={'100%'} width={'100%'}>
+        <div className={'flex flex-col flex-1'} style={{ height: '100%', width: '100%' }}>
           {empty}
-        </Flexbox>
+        </div>
       );
 
     // 4. Data.

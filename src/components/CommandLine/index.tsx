@@ -1,8 +1,11 @@
 'use client';
 
-import { CopyButton } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { CopyIcon } from 'lucide-react';
 import { memo } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const styles = createStaticStyles(({ css }) => ({
   codeBlock: css`
@@ -40,7 +43,16 @@ interface CommandLineProps {
 const CommandLine = memo<CommandLineProps>(({ command }) => (
   <div className={styles.codeBlock}>
     <code className={styles.command}>{command}</code>
-    <CopyButton content={command} size={'small'} />
+    <Button
+      className={'text-muted-foreground size-6'}
+      size={'icon'}
+      variant={'ghost'}
+      onClick={async () => {
+        await copyToClipboard(command);
+      }}
+    >
+      <CopyIcon size={12} />
+    </Button>
   </div>
 ));
 

@@ -1,14 +1,13 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckCircle2Icon, GitPullRequestIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { getWorkTypeDescriptor } from '@/features/Work/descriptors';
 import LinearIcon from '@/features/Work/icons/LinearIcon';
 
@@ -154,14 +153,14 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const getStatusColor = (status?: string | null) => {
+const getStatusVariant = (status?: string | null) => {
   const normalized = status?.toLowerCase();
-  if (!normalized) return undefined;
+  if (!normalized) return 'secondary';
   if (normalized.includes('done') || normalized.includes('complete') || normalized === 'merged')
     return 'success';
   if (normalized.includes('review') || normalized.includes('progress')) return 'warning';
   if (normalized.includes('open') || normalized.includes('todo')) return 'info';
-  return undefined;
+  return 'secondary';
 };
 
 interface WorkPreviewProps {
@@ -192,30 +191,30 @@ const WorkPreview = memo<WorkPreviewProps>(({ item, title }) => {
       <div className={styles.mockWindow}>
         {isLinear ? (
           <div className={styles.linearBody}>
-            <Flexbox horizontal align={'center'} justify={'space-between'}>
+            <div className="flex items-center justify-between">
               <span className={styles.linearId}>{identifier}</span>
-            </Flexbox>
+            </div>
             <div className={styles.linearTitle}>{title}</div>
             <div className={styles.previewDescription}>{description}</div>
           </div>
         ) : item.resourceType === 'task' ? (
-          <Flexbox className={styles.taskBody} gap={10}>
-            <Flexbox horizontal align={'center'} gap={8}>
+          <div className={cx('flex flex-col gap-2.5', styles.taskBody)}>
+            <div className="flex items-center gap-2">
               <CheckCircle2Icon color={cssVar.colorSuccess} size={22} />
-              <Text strong>{title}</Text>
-            </Flexbox>
+              <div className="font-semibold">{title}</div>
+            </div>
             <div className={styles.previewDescription}>{description}</div>
-          </Flexbox>
+          </div>
         ) : (
           <div className={styles.previewBody}>
-            <Flexbox horizontal align={'center'} gap={6}>
+            <div className="flex items-center gap-1.5">
               {item.resourceType === 'github_pull_request' && (
                 <GitPullRequestIcon color={cssVar.colorTextTertiary} size={11} />
               )}
               <span className={styles.previewIdentifier}>
                 {previewIdentifier || item.resourceType}
               </span>
-            </Flexbox>
+            </div>
             <div className={styles.previewTitle}>{title}</div>
             <div className={styles.previewDescription}>{description}</div>
           </div>
@@ -234,9 +233,9 @@ const WorkPreview = memo<WorkPreviewProps>(({ item, title }) => {
           exists, and the badge shares the top-right corner with the card's
           hover Remove action, so drop it once the resource is gone. */}
       {!isLinear && !isGithub && status && !item.resourceDeleted && (
-        <Tag className={styles.status} color={getStatusColor(status)} size={'small'}>
+        <Badge className={styles.status} size="sm" variant={getStatusVariant(status)}>
           {status}
-        </Tag>
+        </Badge>
       )}
     </div>
   );

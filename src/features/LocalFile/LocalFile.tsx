@@ -1,10 +1,10 @@
-import { Flexbox, Popover } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ExternalLink, EyeIcon, FolderOpen } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { useLocalFileActions } from './useLocalFileActions';
 
@@ -116,13 +116,8 @@ export const LocalFile = ({
     useLocalFileActions({ isDirectory, path, readonly });
 
   const fileContent = (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.container}
-      gap={4}
-      // Inline chip, not a <button> (block layout inside markdown prose) — so
-      // give the clickable state complete button semantics by hand.
+    <div
+      className={cx('flex flex-row items-center gap-1', styles.container)}
       role={handleClick ? 'button' : undefined}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
       tabIndex={handleClick ? 0 : undefined}
@@ -138,10 +133,13 @@ export const LocalFile = ({
       }
     >
       <FileIcon fileName={name} isDirectory={isDirectory} size={22} variant={'raw'} />
-      <Flexbox horizontal align={'baseline'} gap={4} style={{ overflow: 'hidden', width: '100%' }}>
+      <div
+        className="flex flex-row items-baseline gap-1"
+        style={{ overflow: 'hidden', width: '100%' }}
+      >
         <div className={styles.title}>{name}</div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   // Directory or readonly mode (e.g. share page): no popover, just display
@@ -171,13 +169,14 @@ export const LocalFile = ({
 
   return (
     <Popover
-      content={popoverContent}
-      trigger="hover"
-      styles={{
-        content: { padding: 0 },
+      onOpenChange={(open, eventDetails) => {
+        if (open && eventDetails?.reason === 'trigger-press') eventDetails.cancel();
       }}
     >
-      {fileContent}
+      <PopoverTrigger openOnHover render={fileContent} />
+      <PopoverContent align={'start'} className="w-auto p-0" side={'bottom'}>
+        {popoverContent}
+      </PopoverContent>
     </Popover>
   );
 };

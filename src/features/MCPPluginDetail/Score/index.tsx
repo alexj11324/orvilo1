@@ -1,4 +1,4 @@
-import { Block, Flexbox, Grid } from '@lobehub/ui';
+import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -51,7 +51,7 @@ const Score = memo(() => {
   const sortedScoreListItems = sortItemsByPriority(scoreListItems);
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       {/* Total score display */}
       <TotalScore
         isValidated={isValidated}
@@ -66,21 +66,38 @@ const Score = memo(() => {
 
       {/* Score details */}
 
-      <Grid rows={2}>
-        <Flexbox gap={16}>
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: 'repeat(auto-fill, minmax(max(240px, calc((100% - 1em) / 2)), 1fr))',
+        }}
+      >
+        <div className="flex flex-col gap-4">
           <Title>{t('mcp.details.score.listTitle')}</Title>
-          <Block variant={'outlined'}>
+          <div
+            className="flex flex-col"
+            style={{
+              border: `1px solid ${cssVar.colorBorder}`,
+              borderRadius: cssVar.borderRadiusLG,
+            }}
+          >
             <ScoreList items={sortedScoreListItems} />
-          </Block>
-        </Flexbox>
-        <Flexbox gap={16}>
+          </div>
+        </div>
+        <div className="flex flex-col gap-4">
           <Title>GitHub Badge</Title>
-          <Block gap={16} padding={16} variant={'outlined'}>
+          <div
+            className="flex flex-col gap-4 p-4"
+            style={{
+              border: `1px solid ${cssVar.colorBorder}`,
+              borderRadius: cssVar.borderRadiusLG,
+            }}
+          >
             <GithubBadge />
-          </Block>
-        </Flexbox>
-      </Grid>
-    </Flexbox>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 });
 

@@ -1,12 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { SkeletonText, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import { Badge } from '@/components/reui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { previewSections } from '../helpers';
@@ -92,12 +93,12 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
   const evidence = data?.hits.slice(0, MAX_EVIDENCE) ?? [];
 
   return (
-    <Flexbox className={styles.root} gap={10} padding={4}>
-      <Flexbox gap={6}>
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <Text fontSize={12} type={'secondary'} weight={600}>
+    <div className={cx(styles.root, 'flex flex-col gap-2.5 p-1')}>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-3 justify-between">
+          <div className="text-[12px] text-muted-foreground font-semibold">
             {t('rules.detail.eyebrow', { code })}
-          </Text>
+          </div>
           {/* The row underneath is no longer under the pointer once it moves in here. */}
           <Link
             className={styles.open}
@@ -109,12 +110,12 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
           >
             {t('preview.open')}
           </Link>
-        </Flexbox>
-        <Text className={styles.title} fontSize={15} lineHeight={1.45} weight={600}>
+        </div>
+        <div className={cn('text-[15px] font-semibold', styles.title)} style={{ lineHeight: 1.45 }}>
           {title}
-        </Text>
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-          <Text fontSize={12} type={'secondary'}>
+        </div>
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+          <div className="text-[12px] text-muted-foreground">
             {data
               ? t('rules.detail.meta', {
                   hits: data.lesson.hitCount,
@@ -123,74 +124,78 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
               : error
                 ? t('preview.failed')
                 : t('preview.loading')}
-          </Text>
-          {layer && <Tag size={'small'}>{layer}</Tag>}
-        </Flexbox>
-      </Flexbox>
+          </div>
+          {layer && (
+            <Badge size="sm" variant="secondary">
+              {layer}
+            </Badge>
+          )}
+        </div>
+      </div>
 
-      {isLoading && !data && <SkeletonText rows={3} />}
+      {isLoading && !data && (
+        <div className="flex flex-col gap-2">
+          <Skeleton style={{ height: 13 }} />
+          <Skeleton style={{ height: 13 }} />
+          <Skeleton style={{ height: 13, width: '60%' }} />
+        </div>
+      )}
 
       {/* Without this the card sits on "loading…" forever: SWR clears isLoading on failure. */}
       {!!error && !data && (
-        <Text
-          as={'button'}
-          className={styles.retry}
-          fontSize={12}
-          type={'info'}
-          onClick={() => void mutate()}
-        >
+        <button className={cn('text-[12px] text-info', styles.retry)} onClick={() => void mutate()}>
           {t('rules.detail.retry')}
-        </Text>
+        </button>
       )}
 
       {sections.length > 0 && (
         <>
           <div className={styles.separator} />
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-2">
             {sections.map(({ label, ...section }) => (
               <div className={styles.section} key={section.key}>
-                <Text fontSize={12} type={'secondary'} weight={600}>
+                <div className="text-[12px] text-muted-foreground font-semibold">
                   {label ? t(label) : section.key}
-                </Text>
-                <Text fontSize={12.5} lineClamp={3} lineHeight={1.6}>
+                </div>
+                <div className="line-clamp-3" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
                   {section.body}
-                </Text>
+                </div>
               </div>
             ))}
-          </Flexbox>
+          </div>
         </>
       )}
 
       {evidence.length > 0 && (
         <>
           <div className={styles.separator} />
-          <Flexbox gap={6}>
-            <Text fontSize={12} type={'secondary'} weight={600}>
+          <div className="flex flex-col gap-1.5">
+            <div className="text-[12px] text-muted-foreground font-semibold">
               {t('rules.detail.examples')}
-            </Text>
+            </div>
             {evidence.map((hit, index) => (
-              <Flexbox horizontal align={'flex-start'} gap={8} key={`${hit.createdAt}-${index}`}>
-                <Text
-                  fontSize={12}
+              <div className="flex items-start gap-2" key={`${hit.createdAt}-${index}`}>
+                <div
                   style={{ flex: 'none' }}
-                  type={hit.outcome === 'pass' ? 'secondary' : 'warning'}
+                  className={cn(
+                    'text-[12px]',
+                    hit.outcome === 'pass' ? 'text-muted-foreground' : 'text-warning',
+                  )}
                 >
                   {t(`rules.detail.outcome.${hit.outcome}`)}
-                </Text>
-                <Text fontSize={12} lineClamp={2} type={'secondary'}>
-                  {hit.example}
-                </Text>
-              </Flexbox>
+                </div>
+                <div className="text-[12px] line-clamp-2 text-muted-foreground">{hit.example}</div>
+              </div>
             ))}
             {data && data.hits.length > MAX_EVIDENCE && (
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {t('preview.moreEvidence', { count: data.hits.length - MAX_EVIDENCE })}
-              </Text>
+              </div>
             )}
-          </Flexbox>
+          </div>
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

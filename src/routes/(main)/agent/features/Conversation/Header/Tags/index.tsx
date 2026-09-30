@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,9 +32,9 @@ const TitleTags = memo(() => {
 
   if (isGroupSession) {
     return (
-      <Flexbox allowShrink horizontal align={'center'} gap={12} style={{ minWidth: 0 }}>
+      <div className="flex items-center gap-3" style={{ minWidth: 0 }}>
         <MemberCountTag />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -43,7 +42,7 @@ const TitleTags = memo(() => {
   const fallbackThreadTitle = threadTitle || t('thread.title', { ns: 'chat' });
 
   return (
-    <Flexbox allowShrink horizontal align={'center'} gap={6} style={{ marginLeft: 8, minWidth: 0 }}>
+    <div className="flex items-center gap-1.5" style={{ marginLeft: 8, minWidth: 0 }}>
       {threadId ? (
         <>
           {/* The topic crumb keeps the reference's title-trigger behavior:
@@ -63,7 +62,7 @@ const TitleTags = memo(() => {
       ) : (
         <ChatHistoryTitleMenu title={fallbackTopicTitle} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

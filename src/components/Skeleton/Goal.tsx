@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -18,51 +18,48 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const GoalSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => (
-  <Flexbox aria-busy flex={1} height={'100%'}>
+  <div aria-busy className={'flex flex-col flex-1'}>
     {chrome !== 'body' && <NavHeader />}
-    <WideScreenContainer
-      flex={1}
-      gap={20}
-      paddingBlock={16}
-      wrapperStyle={{ flex: 1, overflowY: 'auto' }}
-    >
-      <Flexbox horizontal align={'center'} justify={'space-between'} paddingBlock={'6px 18px'}>
-        <Flexbox gap={6}>
-          <SkeletonBar height={20} width={160} />
-          <SkeletonBar height={14} width={280} />
-        </Flexbox>
-        <Flexbox horizontal gap={20}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Flexbox gap={5} key={index} width={88}>
-              <SkeletonBar height={20} width={32} />
-              <SkeletonBar height={12} width={56} />
-            </Flexbox>
-          ))}
-        </Flexbox>
-      </Flexbox>
-      <Flexbox gap={10}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
-          <SkeletonBar height={18} width={112} />
-          <Flexbox horizontal gap={8}>
-            <SkeletonBar height={28} width={112} />
-            <SkeletonBar height={28} width={64} />
-          </Flexbox>
-        </Flexbox>
-        <Flexbox className={styles.listRows}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Flexbox horizontal align={'center'} gap={12} key={index} paddingBlock={14}>
-              <SkeletonBar height={20} radius={'50%'} width={20} />
-              <Flexbox flex={1} gap={7}>
-                <SkeletonBar height={16} width={`${36 + index * 8}%`} />
-                <SkeletonBar height={12} width={`${54 + index * 6}%`} />
-              </Flexbox>
-              <SkeletonBar height={24} width={72} />
-            </Flexbox>
-          ))}
-        </Flexbox>
-      </Flexbox>
+    <WideScreenContainer wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+      <div className={'flex flex-col gap-5 py-4'}>
+        <div className={'flex items-center justify-between'} style={{ paddingBlock: '6px 18px' }}>
+          <div className={'flex flex-col'} style={{ gap: 6 }}>
+            <SkeletonBar height={20} width={160} />
+            <SkeletonBar height={14} width={280} />
+          </div>
+          <div className={'flex gap-5'}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div className={'flex flex-col w-[88px]'} key={index} style={{ gap: 5 }}>
+                <SkeletonBar height={20} width={32} />
+                <SkeletonBar height={12} width={56} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={'flex flex-col'} style={{ gap: 10 }}>
+          <div className={'flex items-center justify-between'}>
+            <SkeletonBar height={18} width={112} />
+            <div className={'flex gap-2'}>
+              <SkeletonBar height={28} width={112} />
+              <SkeletonBar height={28} width={64} />
+            </div>
+          </div>
+          <div className={cn('flex', styles.listRows)}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div className={'flex gap-3 items-center'} key={index} style={{ paddingBlock: 14 }}>
+                <SkeletonBar height={20} radius={'50%'} width={20} />
+                <div className={'flex flex-col flex-1'} style={{ gap: 7 }}>
+                  <SkeletonBar height={16} width={`${36 + index * 8}%`} />
+                  <SkeletonBar height={12} width={`${54 + index * 6}%`} />
+                </div>
+                <SkeletonBar height={24} width={72} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </WideScreenContainer>
-  </Flexbox>
+  </div>
 );
 
 export default GoalSkeleton;

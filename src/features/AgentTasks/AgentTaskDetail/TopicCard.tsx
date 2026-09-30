@@ -1,12 +1,4 @@
-import {
-  Block,
-  type DropdownItem,
-  DropdownMenu,
-  Flexbox,
-  Markdown,
-  stopPropagation,
-} from '@lobehub/ui';
-import { ActionIcon, Avatar, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import {
@@ -17,16 +9,29 @@ import {
   CircleStop,
   Copy,
   ExternalLink,
+  type LucideIcon,
   MessageCircle,
   MessagesSquare,
   MoreHorizontal,
   Trash,
 } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import CollapsibleContent from '@/components/CollapsibleContent';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import { useActivityTime } from '@/hooks/useActivityTime';
@@ -217,7 +222,17 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
       ? formatDuration(finalDuration)
       : '';
 
-  const menuItems: DropdownItem[] = [
+  interface TopicMenuItem {
+    danger?: boolean;
+    disabled?: boolean;
+    icon?: LucideIcon;
+    key?: string;
+    label?: string;
+    onClick?: () => void;
+    type?: 'divider';
+  }
+
+  const menuItems: TopicMenuItem[] = [
     ...(isRunning && activity.id
       ? [
           {
@@ -286,15 +301,24 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
     // boxed activity row. The outline, the inner padding and the duplicated
     // summary line all belong to the list presentation; a report drops them and
     // lets the delivery own the surface.
-    <Block
-      gap={primary ? 12 : 8}
-      paddingBlock={primary ? 0 : 8}
-      paddingInline={primary ? 0 : 8}
-      style={primary ? undefined : { borderRadius: cssVar.borderRadiusLG }}
-      variant={primary ? 'borderless' : 'outlined'}
+    <div
+      className={
+        primary
+          ? 'flex flex-col gap-3'
+          : 'relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-2'
+      }
+      style={
+        primary
+          ? undefined
+          : {
+              borderColor: cssVar.colorBorderSecondary,
+              borderRadius: cssVar.borderRadiusLG,
+              background: cssVar.colorBgContainer,
+            }
+      }
     >
-      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0, overflow: 'hidden' }}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2" style={{ minWidth: 0, overflow: 'hidden' }}>
           {isAgent && activity.author?.id ? (
             <AgentProfilePopup
               agent={{ avatar: activity.author.avatar, title: activity.author.name }}
@@ -309,35 +333,34 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           <TopicStatusIcon size={16} status={activity.status} />
           {activity.sourceTaskIdentifier && (
             <Tag
-              size={'small'}
+              size="sm"
               style={{ flexShrink: 0 }}
               title={t('taskDetail.topicSource', { identifier: activity.sourceTaskIdentifier })}
             >
               {activity.sourceTaskIdentifier}
             </Tag>
           )}
-          <Text
-            ellipsis
+          <div
             aria-disabled={activity.id ? undefined : true}
+            className="truncate block font-medium"
             role={activity.id ? 'button' : undefined}
             style={{ cursor: activity.id ? 'pointer' : undefined }}
             tabIndex={activity.id ? 0 : -1}
-            weight={500}
             onClick={handleOpen}
             onKeyDown={handleTitleKeyDown}
           >
             {activity.title}
-          </Text>
+          </div>
           {activity.seq != null && (
-            <Text fontSize={12} style={{ flexShrink: 0 }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
               #{activity.seq}
-            </Text>
+            </div>
           )}
           {/* Only mark machine-opened rounds: a `manual` tag on every row the
               user started themselves is noise, absence already means manual. */}
           {activity.trigger && activity.trigger !== 'manual' && (
             <Tag
-              size={'small'}
+              size="sm"
               style={{ flexShrink: 0 }}
               title={t(`taskDetail.runTrigger.${activity.trigger}` as const)}
             >
@@ -345,9 +368,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             </Tag>
           )}
           {durationText && (
-            <Text fontSize={12} style={{ flexShrink: 0 }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
               · {durationText}
-            </Text>
+            </div>
           )}
           {/* The verdict rides the header only while the run is folded; once
               open it moves down to sit on the checklist that justifies it. */}
@@ -359,56 +382,73 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             taskId={runTaskId}
             topicId={activity.id}
           />
-        </Flexbox>
+        </div>
 
-        <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+        <div className="flex shrink-0 items-center gap-2">
           {startedAt && (
-            <Text fontSize={12} title={startedAtTitle} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" title={startedAtTitle}>
               {startedAt}
-            </Text>
+            </div>
           )}
           {hasBody && (
-            <Flexbox onClick={stopPropagation}>
+            <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
               <ActionIcon
                 icon={bodyExpanded ? ChevronDown : ChevronRight}
                 size={'small'}
                 title={t(bodyExpanded ? 'taskDetail.runCollapse' : 'taskDetail.runExpand')}
                 onClick={() => setBodyExpanded((open) => !open)}
               />
-            </Flexbox>
+            </div>
           )}
-          <Flexbox onClick={stopPropagation}>
-            <DropdownMenu items={menuItems}>
-              <ActionIcon icon={MoreHorizontal} size={'small'} />
+          <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+              <DropdownMenuContent align={'end'} className="min-w-40">
+                {menuItems.map((item, index) =>
+                  item.type === 'divider' ? (
+                    <DropdownMenuSeparator key={`divider-${index}`} />
+                  ) : (
+                    <DropdownMenuItem
+                      disabled={item.disabled}
+                      key={item.key}
+                      variant={item.danger ? 'destructive' : 'default'}
+                      onClick={item.onClick}
+                    >
+                      {item.icon && createElement(item.icon, { size: 16 })}
+                      <span className="flex-1">{item.label}</span>
+                    </DropdownMenuItem>
+                  ),
+                )}
+              </DropdownMenuContent>
             </DropdownMenu>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
 
       {hasBody && bodyExpanded && (
-        <Flexbox gap={primary ? 12 : 8} paddingInline={primary ? 0 : 4}>
+        <div className={primary ? 'flex flex-col gap-3' : 'flex flex-col gap-2 px-1'}>
           {activity.summary && !(primary && activity.content) && (
-            <Text
-              fontSize={13}
+            <div
+              className="text-[13px]"
               style={{ color: cssVar.colorTextDescription, whiteSpace: 'pre-wrap' }}
             >
               {activity.summary}
-            </Text>
+            </div>
           )}
           {activity.content && <RunContent content={activity.content} unclamped={primary} />}
           {/* The verdict's evidence, next to the delivery it judged — reading
               one should never require leaving for the acceptance page. */}
           {activity.verify && (
-            <Flexbox onClick={stopPropagation}>
+            <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
               <RunVerifyDetail
                 extra={<RunVerifyTag verify={activity.verify} />}
                 operationId={activity.operationId}
               />
-            </Flexbox>
+            </div>
           )}
           {showRunFollowUp &&
             (commenting ? (
-              <Flexbox onClick={stopPropagation}>
+              <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <RunReplyEditor
                   onCancel={() => setCommenting(false)}
                   onSubmit={async (text) => {
@@ -416,9 +456,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
                     setCommenting(false);
                   }}
                 />
-              </Flexbox>
+              </div>
             ) : (
-              <Flexbox horizontal gap={4} justify={'flex-end'} onClick={stopPropagation}>
+              <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                 {/* The run's own conversation was reachable only by clicking the
                     title, which said nothing about being a door. Asking the
                     agent a follow-up is the natural next move after reading a
@@ -435,11 +475,11 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
                   title={t('taskDetail.runFollowUp')}
                   onClick={() => setCommenting(true)}
                 />
-              </Flexbox>
+              </div>
             ))}
-        </Flexbox>
+        </div>
       )}
-    </Block>
+    </div>
   );
 });
 

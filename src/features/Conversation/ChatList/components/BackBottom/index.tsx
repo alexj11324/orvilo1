@@ -1,9 +1,9 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { ArrowDownIcon } from 'lucide-react';
 import { lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
 
 import { styles } from './style';
@@ -39,7 +39,6 @@ const BackBottom = memo<BackBottomProps>(
         )}
 
         <ActionIcon
-          glass
           className={cx(styles.container, visible && styles.visible)}
           icon={ArrowDownIcon}
           style={bottomOffset ? { insetBlockEnd: 16 + bottomOffset } : undefined}

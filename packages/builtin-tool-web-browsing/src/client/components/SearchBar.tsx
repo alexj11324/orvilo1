@@ -1,12 +1,13 @@
-// eslint-disable-next-line no-restricted-imports -- Base Select does not support multiple selection yet.
-import { Block, Flexbox, SearchBar as Search, Select, Tooltip } from '@lobehub/ui';
-import { CheckboxGroup, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { SearchQuery } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import SearchBarUI from '@/components/SearchBar';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';
 import { chatToolSelectors } from '@/store/chat/selectors';
@@ -39,7 +40,6 @@ const SearchBar = memo<SearchBarProps>(
     defaultCategories = [],
     defaultEngines = [],
     defaultTimeRange,
-    aiSummary = true,
     defaultQuery,
     tooltip = true,
     searchAddon,
@@ -67,7 +67,7 @@ const SearchBar = memo<SearchBarProps>(
     };
 
     const searchComponent = (
-      <Search
+      <SearchBarUI
         autoFocus
         loading={loading}
         placeholder={t('search.searchBar.placeholder')}
@@ -82,127 +82,129 @@ const SearchBar = memo<SearchBarProps>(
 
     return (
       <>
-        <Flexbox horizontal align={'center'} flex={1} gap={8} height={32} justify={'space-between'}>
+        <div className="flex flex-row items-center flex-1 gap-2 h-[32px] justify-between">
           {tooltip ? (
-            <Tooltip title={t('search.searchBar.tooltip')}>{searchComponent}</Tooltip>
+            <SimpleTooltip title={t('search.searchBar.tooltip')}>{searchComponent}</SimpleTooltip>
           ) : (
             searchComponent
           )}
           {searchAddon}
-        </Flexbox>
-        <Block gap={24} padding={12} variant={'outlined'}>
+        </div>
+        <div className="rounded-md border bg-card flex flex-col" style={{ gap: 24, padding: 12 }}>
           {isMobile ? (
-            <Select
-              mode={'multiple'}
-              placeholder={t('search.searchEngine.placeholder')}
-              size={'small'}
-              value={engines}
-              variant={'filled'}
-              optionRender={(item) => (
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <EngineAvatar engine={item.value as string} />
-                  {item.value}
-                </Flexbox>
-              )}
-              options={Object.keys(ENGINE_ICON_MAP).map((item) => ({
-                label: (
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <EngineAvatar engine={item} />
-                  </Flexbox>
-                ),
-                value: item,
-              }))}
-              onChange={(checkedValue) => {
-                setEngines(checkedValue);
-              }}
-            />
+            <div className="flex flex-row flex-wrap gap-3">
+              {Object.keys(ENGINE_ICON_MAP).map((item) => (
+                <label className="flex flex-row items-center gap-2" key={item}>
+                  <Checkbox
+                    checked={engines.includes(item)}
+                    onCheckedChange={(checked) => {
+                      setEngines(
+                        checked === true
+                          ? [...engines, item]
+                          : engines.filter((engine) => engine !== item),
+                      );
+                    }}
+                  />
+                  <EngineAvatar engine={item} />
+                  {item}
+                </label>
+              ))}
+            </div>
           ) : (
-            <Flexbox horizontal align={'flex-start'} gap={8}>
-              <Text className={styles.textHeader} type={'secondary'}>
+            <div className="flex flex-row items-start gap-2">
+              <div className={`text-muted-foreground ${styles.textHeader}`}>
                 {t('search.searchEngine.title')}
-              </Text>
-              <CheckboxGroup
-                value={engines}
-                options={Object.keys(ENGINE_ICON_MAP).map((item) => ({
-                  label: (
-                    <Flexbox horizontal align={'center'} gap={8}>
-                      <EngineAvatar engine={item} />
-                      {item}
-                    </Flexbox>
-                  ),
-                  value: item,
-                }))}
-                onChange={(checkedValue) => {
-                  setEngines(checkedValue);
-                }}
-              />
-            </Flexbox>
+              </div>
+              <div className="flex flex-row flex-wrap gap-3">
+                {Object.keys(ENGINE_ICON_MAP).map((item) => (
+                  <label className="flex flex-row items-center gap-2" key={item}>
+                    <Checkbox
+                      checked={engines.includes(item)}
+                      onCheckedChange={(checked) => {
+                        setEngines(
+                          checked === true
+                            ? [...engines, item]
+                            : engines.filter((engine) => engine !== item),
+                        );
+                      }}
+                    />
+                    <EngineAvatar engine={item} />
+                    {item}
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
 
           {isMobile ? (
-            <Select
-              mode="multiple"
-              placeholder={t('search.searchCategory.placeholder')}
-              size="small"
-              value={categories}
-              variant="filled"
-              optionRender={(item) => (
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <CategoryAvatar category={item.value as string} />
-                  {t(`search.searchCategory.value.${item.value}` as any)}
-                </Flexbox>
-              )}
-              options={Object.keys(CATEGORY_ICON_MAP).map((item) => ({
-                label: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+            <div className="flex flex-row flex-wrap gap-3">
+              {Object.keys(CATEGORY_ICON_MAP).map((item) => (
+                <label className="flex flex-row items-center gap-2" key={item}>
+                  <Checkbox
+                    checked={categories.includes(item)}
+                    onCheckedChange={(checked) => {
+                      setCategories(
+                        checked === true
+                          ? [...categories, item]
+                          : categories.filter((category) => category !== item),
+                      );
+                    }}
+                  />
+                  <CategoryAvatar category={item as any} />
+                  {t(`search.searchCategory.value.${item}` as any)}
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-row items-start gap-2">
+              <div className={`text-muted-foreground ${styles.textHeader}`}>
+                {t('search.searchCategory.title')}
+              </div>
+              <div className="flex flex-row flex-wrap gap-3">
+                {Object.keys(CATEGORY_ICON_MAP).map((item) => (
+                  <label className="flex flex-row items-center gap-2" key={item}>
+                    <Checkbox
+                      checked={categories.includes(item)}
+                      onCheckedChange={(checked) =>
+                        setCategories(
+                          checked === true
+                            ? [...categories, item]
+                            : categories.filter((category) => category !== item),
+                        )
+                      }
+                    />
                     <CategoryAvatar category={item as any} />
                     {t(`search.searchCategory.value.${item}` as any)}
-                  </Flexbox>
-                ),
-                value: item,
-              }))}
-              onChange={(checkedValue) => {
-                setCategories(checkedValue);
-              }}
-            />
-          ) : (
-            <Flexbox horizontal align="flex-start" gap={8}>
-              <Text className={styles.textHeader} type={'secondary'}>
-                {t('search.searchCategory.title')}
-              </Text>
-              <CheckboxGroup
-                value={categories}
-                options={Object.keys(CATEGORY_ICON_MAP).map((item) => ({
-                  label: (
-                    <Flexbox horizontal align={'center'} gap={8}>
-                      <CategoryAvatar category={item as any} />
-                      {t(`search.searchCategory.value.${item}` as any)}
-                    </Flexbox>
-                  ),
-                  value: item,
-                }))}
-                onChange={(checkedValue) => setCategories(checkedValue)}
-              />
-            </Flexbox>
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
 
-          <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
-            <Text className={styles.textHeader} type={'secondary'}>
+          <div className="flex flex-row items-center gap-4 flex-wrap">
+            <div className={`text-muted-foreground ${styles.textHeader}`}>
               {t('search.searchTimeRange.title')}
-            </Text>
-            <Segmented
-              value={time_range}
-              options={[
-                { label: t('search.searchTimeRange.value.anytime'), value: 'anytime' },
-                { label: t('search.searchTimeRange.value.day'), value: 'day' },
-                { label: t('search.searchTimeRange.value.week'), value: 'week' },
-                { label: t('search.searchTimeRange.value.month'), value: 'month' },
-                { label: t('search.searchTimeRange.value.year'), value: 'year' },
-              ]}
-              onChange={(e) => setTimeRange(e as any)}
-            />
-          </Flexbox>
-        </Block>
+            </div>
+            <ToggleGroup
+              value={time_range ? [time_range] : []}
+              onValueChange={(value) => value[0] && setTimeRange(value[0])}
+            >
+              <ToggleGroupItem value="anytime">
+                {t('search.searchTimeRange.value.anytime')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="day">{t('search.searchTimeRange.value.day')}</ToggleGroupItem>
+              <ToggleGroupItem value="week">
+                {t('search.searchTimeRange.value.week')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="month">
+                {t('search.searchTimeRange.value.month')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="year">
+                {t('search.searchTimeRange.value.year')}
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+        </div>
       </>
     );
   },

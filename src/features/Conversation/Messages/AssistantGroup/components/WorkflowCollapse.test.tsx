@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AssistantContentBlock } from '@/types/index';
@@ -11,30 +11,13 @@ import WorkflowCollapse from './WorkflowCollapse';
 
 let mockIsGenerating = true;
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Icon: ({ icon: IconComponent }: { icon?: ComponentType }) =>
-    IconComponent ? (
-      <div
-        data-icon={IconComponent.displayName || IconComponent.name || 'unknown'}
-        data-testid="icon"
-      >
-        <IconComponent />
-      </div>
-    ) : (
-      <div />
-    ),
-}));
-
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ...(await import('~base-ui-stubs')).baseUiStubs,
+vi.mock('@/components/ui/accordion', () => ({
   Accordion: ({
-    items,
+    children,
     onValueChange,
     value,
   }: {
-    items?: { action?: ReactNode; children?: ReactNode; key: string; title?: ReactNode }[];
+    children?: ReactNode;
     onValueChange?: (keys: string[]) => void;
     value?: string[];
   }) => {
@@ -46,16 +29,13 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
           type="button"
           onClick={() => onValueChange?.(isExpanded ? [] : ['workflow'])}
         />
-        {items?.map((item) => (
-          <div key={item.key}>
-            <div>{item.title}</div>
-            <div>{item.action}</div>
-            <div>{item.children}</div>
-          </div>
-        ))}
+        {children}
       </div>
     );
   },
+  AccordionContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AccordionItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AccordionTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('motion/react', () => ({
@@ -428,9 +408,8 @@ describe('WorkflowCollapse', () => {
       } as AssistantContentBlock,
     ];
 
-    render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
-    const icon = screen.getByTestId('icon');
-    expect(icon).toHaveAttribute('data-icon', 'Check');
+    const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
+    expect(container.querySelector('svg.lucide-check')).not.toBeNull();
   });
 
   it('shows only a check when some tools fail after completion', () => {
@@ -460,11 +439,9 @@ describe('WorkflowCollapse', () => {
       } as AssistantContentBlock,
     ];
 
-    render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
-    const icons = screen.getAllByTestId('icon');
-    const iconNames = icons.map((node) => node.getAttribute('data-icon'));
-    expect(iconNames).toContain('Check');
-    expect(iconNames).not.toContain('TriangleAlert');
+    const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
+    expect(container.querySelector('svg.lucide-check')).not.toBeNull();
+    expect(container.querySelector('svg.lucide-triangle-alert')).toBeNull();
   });
 
   it('shows red x when all tools fail after completion', () => {
@@ -494,8 +471,7 @@ describe('WorkflowCollapse', () => {
       } as AssistantContentBlock,
     ];
 
-    render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
-    const icon = screen.getByTestId('icon');
-    expect(icon).toHaveAttribute('data-icon', 'X');
+    const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
+    expect(container.querySelector('svg.lucide-x')).not.toBeNull();
   });
 });

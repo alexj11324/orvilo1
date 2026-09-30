@@ -1,9 +1,8 @@
 'use client';
 
-import { Center, type DropdownItem, DropdownMenu, Empty, Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { GitWorkingTreePatch } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
@@ -24,7 +23,12 @@ import path from 'path-browserify-esm';
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { useFetchGitBranch } from '@/store/device';
 
@@ -392,9 +396,9 @@ const Review = memo<ReviewProps>(
 
     if (!data && isLoading) {
       return (
-        <Center flex={1}>
+        <div className="flex flex-col items-center justify-center flex-1">
           <NeuralNetworkLoading size={48} />
-        </Center>
+        </div>
       );
     }
 
@@ -415,7 +419,7 @@ const Review = memo<ReviewProps>(
       { additions: 0, deletions: 0 },
     );
 
-    const moreMenuItems: DropdownItem[] = [
+    const moreMenuItems: NonNullable<SidebarDropdownMenuProps['items']> = [
       {
         icon: <RefreshCwIcon size={14} />,
         key: 'refresh',
@@ -450,7 +454,7 @@ const Review = memo<ReviewProps>(
       },
     ];
 
-    const modeMenuItems: DropdownItem[] = [
+    const modeMenuItems: NonNullable<SidebarDropdownMenuProps['items']> = [
       {
         key: 'unstaged',
         label: t('workingPanel.review.mode.unstaged'),
@@ -466,7 +470,7 @@ const Review = memo<ReviewProps>(
     // Branches are only loaded after the user opens the picker (see
     // `basePickerOpen`). While loading, render a single disabled placeholder
     // so the menu doesn't pop empty + jump to its final size.
-    const baseRefMenuItems: DropdownItem[] = remoteBranches
+    const baseRefMenuItems: NonNullable<SidebarDropdownMenuProps['items']> = remoteBranches
       ? [
           ...remoteBranches.map((branch) => ({
             key: branch.name,
@@ -508,25 +512,23 @@ const Review = memo<ReviewProps>(
         : t('workingPanel.review.empty');
 
     return (
-      <Flexbox style={{ overflow: 'hidden' }} width={'100%'}>
+      <div className="flex flex-col" style={{ width: '100%', overflow: 'hidden' }}>
         <div className={styles.subheader}>
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={8}
+          <div
+            className="flex items-center gap-2"
             style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}
           >
-            <DropdownMenu items={modeMenuItems} placement={'bottomLeft'}>
+            <SidebarDropdownMenu items={modeMenuItems} placement={'bottomLeft'}>
               <span className={styles.scopeChip} role={'button'} tabIndex={0}>
                 {mode === 'branch'
                   ? t('workingPanel.review.mode.branch')
                   : t('workingPanel.review.mode.unstaged')}
                 <ChevronDownIcon className={styles.caret} size={12} />
               </span>
-            </DropdownMenu>
+            </SidebarDropdownMenu>
             {mode === 'branch' && (baseRef || headRef) && (
               <span className={styles.compareChip}>
-                <DropdownMenu
+                <SidebarDropdownMenu
                   items={baseRefMenuItems}
                   placement={'bottomLeft'}
                   onOpenChange={setBasePickerOpen}
@@ -537,7 +539,7 @@ const Review = memo<ReviewProps>(
                     </span>
                     <ChevronDownIcon className={styles.caret} size={12} />
                   </span>
-                </DropdownMenu>
+                </SidebarDropdownMenu>
                 {headRef && (
                   <>
                     <ArrowLeftIcon className={styles.arrow} size={12} />
@@ -556,8 +558,8 @@ const Review = memo<ReviewProps>(
                 )}
               </span>
             )}
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={2}>
+          </div>
+          <div className="flex items-center gap-0.5">
             {totalEntryCount > 0 && (
               <ActionIcon
                 icon={allExpanded ? FoldVerticalIcon : UnfoldVerticalIcon}
@@ -581,23 +583,34 @@ const Review = memo<ReviewProps>(
                 onClick={onToggleTree}
               />
             )}
-            <DropdownMenu items={moreMenuItems} placement={'bottomRight'}>
+            <SidebarDropdownMenu items={moreMenuItems} placement={'bottomRight'}>
               <ActionIcon
                 icon={MoreHorizontalIcon}
                 loading={isValidating}
                 size={'small'}
                 title={t('workingPanel.review.more')}
               />
-            </DropdownMenu>
-          </Flexbox>
+            </SidebarDropdownMenu>
+          </div>
         </div>
         {isEmpty ? (
-          <Center flex={1} gap={8} paddingBlock={24}>
-            <Empty description={emptyText} icon={GitCompareIcon} />
-          </Center>
+          <div className="flex flex-col items-center justify-center flex-1 gap-2 py-6">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GitCompareIcon />
+                </EmptyMedia>
+                <EmptyDescription>{emptyText}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
         ) : (
-          <Flexbox horizontal className={styles.body} flex={1} width={'100%'}>
-            <Flexbox className={styles.list} flex={1} ref={listRef} style={{ overflow: 'auto' }}>
+          <div className={cn('flex flex-1', styles.body)} style={{ width: '100%' }}>
+            <div
+              className={cn('flex flex-col flex-1', styles.list)}
+              ref={listRef}
+              style={{ overflow: 'auto' }}
+            >
               {groups.map((group) => {
                 const groupTotals = group.patches.reduce(
                   (acc, p) => {
@@ -672,20 +685,20 @@ const Review = memo<ReviewProps>(
                   </Fragment>
                 );
               })}
-            </Flexbox>
+            </div>
             {showTree && (
-              <Flexbox className={styles.treeRail}>
+              <div className={cn('flex flex-col', styles.treeRail)}>
                 <FileTreeNav
                   activeFileKey={activeFileKey}
                   groups={groups}
                   showGroupHeaders={showGroupHeaders}
                   onSelectFile={handleSelectFile}
                 />
-              </Flexbox>
+              </div>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

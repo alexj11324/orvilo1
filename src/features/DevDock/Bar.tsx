@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDown, Wrench } from 'lucide-react';
 import { Fragment, memo } from 'react';
@@ -182,7 +181,7 @@ const Bar = memo(() => {
   const { center, right, tabs } = selectBarLayout(items, pinOverrides, activePanelId);
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.bar} gap={3}>
+    <div className={cx(styles.bar, 'flex items-center gap-[3px]')}>
       <button
         className={styles.iconButton}
         title={'Collapse DevDock'}
@@ -191,11 +190,11 @@ const Bar = memo(() => {
       >
         <ChevronDown size={12} />
       </button>
-      <Flexbox horizontal align={'center'} gap={2}>
+      <div className="flex items-center gap-0.5">
         {tabs.map((item) => (
           <PanelTab item={item} key={item.id} />
         ))}
-      </Flexbox>
+      </div>
       {center ? (
         <div className={styles.center}>
           <WidgetSlot item={center} />
@@ -215,7 +214,7 @@ const Bar = memo(() => {
       })}
       {right.length > 0 && <span className={styles.divider} />}
       <OverflowMenu />
-    </Flexbox>
+    </div>
   );
 });
 

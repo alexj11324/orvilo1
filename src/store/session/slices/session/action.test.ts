@@ -1,7 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toast } from '@/components/toast';
 import { chatGroupService } from '@/services/chatGroup';
 import { sessionService } from '@/services/session';
 import { useSessionStore } from '@/store/session';
@@ -30,7 +30,7 @@ vi.mock('@/services/chatGroup', () => ({
   },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   toast: {
     error: vi.fn(),

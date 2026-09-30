@@ -837,6 +837,8 @@ export interface TaskItem {
   deletedAt?: Date | null;
   description: string | null;
   domainRevision: number;
+  /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
+  dueDate: string | null;
   /**
    * Canonical task this row duplicates. Null unless triage marked it duplicate.
    * Never a hard-delete or merged execution history.
@@ -1254,6 +1256,8 @@ export interface TaskDetailData {
     workflowStateId?: string | null;
   }>;
   description?: string | null;
+  /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
+  dueDate?: string | null;
   /** Rich-editor JSON state for the instruction; preserves details markdown drops (image size, etc.). */
   editorData?: unknown;
   error?: string | null;

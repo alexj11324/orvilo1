@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { HotkeyScopeEnum } from '@orvilo/const/hotkeys';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { type CSSProperties, type FC } from 'react';
 import { Suspense } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
@@ -28,8 +28,8 @@ import TitleBar from '@/features/Electron/titlebar/TitleBar';
 import GlobalOverlays from '@/features/GlobalOverlays';
 import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostContext';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
-import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
+import { SidebarShell } from '@/features/ReUIShell/SidebarShell';
 import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { usePlatform } from '@/hooks/usePlatform';
 import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
@@ -80,19 +80,20 @@ const Layout: FC = () => {
             <TitleBar />
           </Suspense>
           <DndContextWrapper>
-            <Flexbox
-              horizontal
-              className={cx(isPWA ? styles.mainContainerPWA : styles.mainContainer)}
-              height={`calc(100% - ${TITLE_BAR_HEIGHT}px)`}
-              width={'100%'}
+            <div
+              className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
+              style={{ height: `calc(100% - ${TITLE_BAR_HEIGHT}px)`, width: '100%' }}
             >
-              <NavPanelShell />
+              <SidebarShell />
               <DesktopLayoutContainer>
-                <Flexbox height={'100%'} style={tabHostContainer} width={'100%'}>
+                <div
+                  className="flex flex-col"
+                  style={{ height: '100%', width: '100%', ...tabHostContainer }}
+                >
                   <TabHost />
-                </Flexbox>
+                </div>
               </DesktopLayoutContainer>
-            </Flexbox>
+            </div>
           </DndContextWrapper>
           <Suspense fallback={null}>
             <HotkeyHelperPanel />

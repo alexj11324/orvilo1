@@ -1,12 +1,11 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import type { AcceptanceBundle } from '@/services/verify';
 
 import InteractionCostPanel from '../../Report/InteractionCost';
@@ -63,12 +62,12 @@ const AcceptanceInteractionCost = memo<AcceptanceInteractionCostProps>(({ data }
   return (
     <>
       <Button
-        icon={<Icon className={styles.chevron} data-open={open} icon={ChevronRight} />}
-        size={'small'}
+        size="sm"
         style={{ alignSelf: 'flex-start' }}
-        type={'text'}
+        variant="ghost"
         onClick={() => setOpen((prev) => !prev)}
       >
+        <ChevronRight className={styles.chevron} data-open={open} />
         {t('report.interaction.title')}
         <span className={styles.total}>{formatSeconds(priced.cost.totalSeconds)}</span>
       </Button>

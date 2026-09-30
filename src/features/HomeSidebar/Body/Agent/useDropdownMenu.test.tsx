@@ -8,10 +8,6 @@ import { useAgentActionsDropdownMenu } from './useDropdownMenu';
 
 const updateSystemStatusMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@lobehub/ui', () => ({
-  Icon: () => null,
-}));
-
 vi.mock('@/features/HomeSidebar/Body/CustomizeSidebarModal', () => ({
   openCustomizeSidebarModal: vi.fn(),
 }));

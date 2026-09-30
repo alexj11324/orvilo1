@@ -31,19 +31,22 @@ afterEach(() => {
 
 describe('createPreferenceSlice', () => {
   describe('toggleLeftPanel', () => {
-    it('keeps the main sidebar open after explicit and implicit close requests', () => {
+    it('toggles the main sidebar open and closed', () => {
       useGlobalStore.setState({
         isStatusInit: true,
         status: { ...initialState.status, showLeftPanel: true },
       });
 
-      useGlobalStore.getState().toggleLeftPanel(false);
-      expect(useGlobalStore.getState().status.showLeftPanel).toBe(true);
+      useGlobalStore.getState().toggleLeftPanel();
+      expect(useGlobalStore.getState().status.showLeftPanel).toBe(false);
 
       useGlobalStore.getState().toggleLeftPanel();
       expect(useGlobalStore.getState().status.showLeftPanel).toBe(true);
 
-      useGlobalStore.getState().updateSystemStatus({ showLeftPanel: false });
+      useGlobalStore.getState().toggleLeftPanel(false);
+      expect(useGlobalStore.getState().status.showLeftPanel).toBe(false);
+
+      useGlobalStore.getState().updateSystemStatus({ showLeftPanel: true });
       expect(useGlobalStore.getState().status.showLeftPanel).toBe(true);
     });
   });

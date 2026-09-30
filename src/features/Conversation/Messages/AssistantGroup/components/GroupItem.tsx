@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -21,7 +20,8 @@ const GroupItem = memo<GroupItemProps>(
     const toggleMessageEditing = useConversationStore((s) => s.toggleMessageEditing);
 
     return item.id === contentId ? (
-      <Flexbox
+      <div
+        className="flex flex-col"
         onDoubleClick={(e) => {
           if (!canEdit || disableEditing || error || !e.altKey) return;
           toggleMessageEditing(item.id, true);
@@ -33,7 +33,7 @@ const GroupItem = memo<GroupItemProps>(
           disableEditing={disableEditing}
           error={error}
         />
-      </Flexbox>
+      </div>
     ) : (
       <ContentBlock
         {...item}

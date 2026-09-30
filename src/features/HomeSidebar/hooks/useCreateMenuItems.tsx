@@ -1,17 +1,16 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text, toast } from '@lobehub/ui/base-ui';
 import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import type { ItemType } from 'antd/es/menu/interface';
 import { BotIcon, FolderCogIcon, FolderPlus, ListPlusIcon, MonitorSmartphone } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWRMutation from 'swr/mutation';
 
 import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
+import { toast } from '@/components/toast';
 import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
+import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import type { CreateAgentParams } from '@/services/agent';
@@ -21,7 +20,18 @@ import { useAgentStore } from '@/store/agent';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { useHomeStore } from '@/store/home';
 
-type MenuItem = NonNullable<ItemType> & { sfSymbol?: SFSymbol };
+const stopMenuItemDomEvent = (domEvent: unknown) => {
+  if (
+    typeof domEvent === 'object' &&
+    domEvent !== null &&
+    'stopPropagation' in domEvent &&
+    typeof domEvent.stopPropagation === 'function'
+  ) {
+    domEvent.stopPropagation();
+  }
+};
+
+type MenuItem = SidebarMenuItemData & { sfSymbol?: SFSymbol };
 
 interface CreateAgentOptions {
   groupId?: string;
@@ -224,7 +234,7 @@ export const useCreateMenuItems = () => {
    */
   const createAgentMenuItem = useCallback(
     (options?: CreateAgentOptions): MenuItem => ({
-      icon: <Icon icon={BotIcon} />,
+      icon: <BotIcon size={14} />,
       disabled: !canCreate,
       // Key needs to vary by visibility so the public and private "New
       // Agent" entries can coexist (e.g. if a future menu lists both).
@@ -232,7 +242,7 @@ export const useCreateMenuItems = () => {
       label: t('newAgent'),
       sfSymbol: 'plus.bubble',
       onClick: async (info) => {
-        info.domEvent?.stopPropagation();
+        stopMenuItemDomEvent(info.domEvent);
         if (!canCreate) return;
 
         if (openCreateModal) {
@@ -254,12 +264,12 @@ export const useCreateMenuItems = () => {
    */
   const createAgentListMenuItem = useCallback(
     (options?: { visibility?: 'private' | 'public' }): MenuItem => ({
-      icon: <Icon icon={ListPlusIcon} />,
+      icon: <ListPlusIcon size={14} />,
       key: options?.visibility === 'private' ? 'addPrivateAgentFromList' : 'addAgentFromList',
       label: t('addAgentFromList'),
       sfSymbol: 'list.bullet',
       onClick: (info) => {
-        info.domEvent?.stopPropagation();
+        stopMenuItemDomEvent(info.domEvent);
         // Land the view-all page on the tab matching the caller's bucket.
         navigate(options?.visibility === 'private' ? '/agents?tab=private' : '/agents');
       },
@@ -274,20 +284,18 @@ export const useCreateMenuItems = () => {
   const createConnectAgentMenuItem = useCallback(
     (options?: CreateAgentOptions): MenuItem | null => {
       return {
-        icon: <Icon icon={MonitorSmartphone} />,
+        icon: <MonitorSmartphone size={14} />,
         disabled: !canCreate,
         key: 'newPlatformAgent',
         label: (
-          <Flexbox gap={1}>
-            <Text>{t('newPlatformAgent')}</Text>
-            <Text fontSize={12} type={'secondary'}>
-              {t('newPlatformAgentDesc')}
-            </Text>
-          </Flexbox>
+          <div className="flex flex-col gap-[1px]">
+            <div>{t('newPlatformAgent')}</div>
+            <div className="text-[12px] text-muted-foreground">{t('newPlatformAgentDesc')}</div>
+          </div>
         ),
         sfSymbol: 'laptopcomputer.and.iphone',
         onClick: (info) => {
-          info.domEvent?.stopPropagation();
+          stopMenuItemDomEvent(info.domEvent);
           if (!canCreate) return;
           openConnectAgentModal(
             options?.groupId || options?.visibility
@@ -306,13 +314,13 @@ export const useCreateMenuItems = () => {
    */
   const createGroupChatMenuItem = useCallback(
     (options?: CreateAgentOptions): MenuItem => ({
-      icon: <Icon icon={GroupBotSquareIcon} />,
+      icon: <GroupBotSquareIcon size={14} />,
       disabled: !canCreate,
       key: options?.visibility === 'private' ? 'newPrivateGroupChat' : 'newGroupChat',
       label: t('newGroupChat'),
       sfSymbol: 'person.2',
       onClick: async (info) => {
-        info.domEvent?.stopPropagation();
+        stopMenuItemDomEvent(info.domEvent);
         if (!canCreate) return;
 
         if (openCreateModal) {
@@ -333,13 +341,13 @@ export const useCreateMenuItems = () => {
    */
   const createSessionGroupMenuItem = useCallback(
     (options?: { visibility?: 'private' | 'public' }): MenuItem => ({
-      icon: <Icon icon={FolderPlus} />,
+      icon: <FolderPlus size={14} />,
       disabled: !canCreate,
       key: options?.visibility === 'private' ? 'addPrivateSessionGroup' : 'addSessionGroup',
       label: t('sessionGroup.createGroup'),
       sfSymbol: 'folder.badge.plus',
       onClick: async (info) => {
-        info.domEvent?.stopPropagation();
+        stopMenuItemDomEvent(info.domEvent);
         if (!canCreate) return;
 
         if (openCreateGroupModal) {
@@ -361,12 +369,12 @@ export const useCreateMenuItems = () => {
    */
   const configMenuItem = useCallback(
     (onOpenConfig: () => void): MenuItem => ({
-      icon: <Icon icon={FolderCogIcon} />,
+      icon: <FolderCogIcon size={14} />,
       key: 'config',
       label: t('sessionGroup.manageCategory'),
       sfSymbol: 'folder.badge.gearshape',
       onClick: (info) => {
-        info.domEvent?.stopPropagation();
+        stopMenuItemDomEvent(info.domEvent);
         onOpenConfig();
       },
     }),
@@ -376,7 +384,7 @@ export const useCreateMenuItems = () => {
   /**
    * Top-level create menu shown by the Agent section and header add buttons.
    */
-  const createTopLevelMenuItems = useCallback((): ItemType[] => {
+  const createTopLevelMenuItems = useCallback((): MenuItem[] => {
     const connectItem = createConnectAgentMenuItem();
 
     return [

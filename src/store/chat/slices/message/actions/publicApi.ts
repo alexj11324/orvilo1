@@ -1,4 +1,3 @@
-import { copyToClipboard } from '@lobehub/ui';
 import { type MessageMetadata, TraceEventType } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 
@@ -6,6 +5,7 @@ import { messageService } from '@/services/message';
 import { topicService } from '@/services/topic';
 import { type ChatStore } from '@/store/chat/store';
 import { type StoreSetter } from '@/store/types';
+import { copyToClipboard } from '@/utils/clipboard';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { dbMessageSelectors, displayMessageSelectors } from '../../../selectors';

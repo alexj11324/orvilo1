@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { History } from 'lucide-react';
 import { memo } from 'react';
@@ -87,7 +86,7 @@ const ChatHistoryUtilityRow = memo(() => {
           'type': 'button',
         }}
       >
-        <Icon icon={History} size={14} />
+        <History size={14} />
         <span>{t('chatHistory.title')}</span>
       </ChatHistoryMenu>
     </div>

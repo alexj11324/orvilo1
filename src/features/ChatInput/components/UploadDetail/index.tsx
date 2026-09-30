@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,18 +27,18 @@ const UploadDetail = memo<UploadDetailProps>(({ error, uploadState, status, size
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox horizontal align={'center'} gap={8} height={22}>
+    <div className="flex flex-row items-center gap-2 h-[22px]">
       <UploadStatus error={error} size={size} status={status} uploadState={uploadState} />
       {!!tasks && Object.keys(tasks).length === 0 ? (
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('upload.preview.prepareTasks')}
-        </Text>
+        </div>
       ) : (
         <div>
           <FileParsingStatus {...tasks} hideEmbeddingButton className={styles.status} />
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

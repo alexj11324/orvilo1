@@ -7,25 +7,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import TaskVisibilityTag from './TaskVisibilityTag';
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  DropdownMenu: ({
-    children,
-    items,
-  }: {
-    children: ReactNode;
-    items: Array<{ extra?: ReactNode; key: string }>;
-  }) => (
-    <>
-      {children}
-      {items.map((item) => (
-        <div data-testid={`extra-${item.key}`} key={item.key}>
-          {item.extra}
-        </div>
-      ))}
-    </>
-  ),
-  Icon: () => <span data-testid="menu-extra-icon" />,
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuItem: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ render: trigger }: { render: ReactNode }) => <>{trigger}</>,
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -55,10 +41,13 @@ describe('TaskVisibilityTag', () => {
       </TaskVisibilityTag>,
     );
 
-    expect(screen.getByTestId('extra-private')).toContainElement(
-      screen.getByTestId('menu-extra-icon'),
-    );
-    expect(screen.getByTestId('extra-public')).toBeEmptyDOMElement();
+    const privateRow = screen.getByText('Private').closest('div');
+    const publicRow = screen.getByText('Workspace').closest('div');
+
+    expect(privateRow).not.toBeNull();
+    expect(publicRow).not.toBeNull();
+    expect(privateRow!.querySelector('.lucide-check')).toBeInTheDocument();
+    expect(publicRow!.querySelector('.lucide-check')).not.toBeInTheDocument();
     expect(screen.queryByText('1')).not.toBeInTheDocument();
     expect(screen.queryByText('2')).not.toBeInTheDocument();
   });

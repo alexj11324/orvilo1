@@ -1,6 +1,5 @@
 // Note: To make the code more logic and readable, we just disable the auto sort key eslint rule
 // DON'T REMOVE THE FIRST LINE
-import { toast } from '@lobehub/ui/base-ui';
 import { INBOX_SESSION_ID, TRACING_SCENARIOS } from '@orvilo/const';
 import {
   chainSummaryTitle,
@@ -13,6 +12,7 @@ import { t } from 'i18next';
 import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
 
+import { toast } from '@/components/toast';
 import { LOADING_FLAT } from '@/const/message';
 import { mutate, useClientDataSWRWithSync } from '@/libs/swr';
 import { cronKeys, deviceKeys, topicKeys } from '@/libs/swr/keys';

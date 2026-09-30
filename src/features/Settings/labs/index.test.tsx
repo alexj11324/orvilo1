@@ -24,13 +24,6 @@ vi.mock('@orvilo/const', async (importOriginal) => ({
   isDesktop: true,
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Tooltip: ({ children, title }: { children: ReactNode; title: string }) => (
-    <span title={title}>{children}</span>
-  ),
-}));
-
 vi.mock('@/features/Settings/features/SettingHeader', () => ({
   default: ({ description, title }: { description?: string; title: string }) => (
     <header>
@@ -155,13 +148,13 @@ describe('Labs settings page', () => {
     expect(within(inputMarkdown).getByText('stage.beta.label')).toBeDefined();
   });
 
-  it('explains what each stage means via the tag tooltip', () => {
+  it('explains what each stage means via the accessible tag description', () => {
     renderPage();
 
     const alphaTag = screen.getAllByText('stage.alpha.label')[0];
-    expect(alphaTag.closest('[title="stage.alpha.desc"]')).not.toBeNull();
+    expect(alphaTag.closest('[aria-description="stage.alpha.desc"]')).not.toBeNull();
 
     const betaTag = screen.getAllByText('stage.beta.label')[0];
-    expect(betaTag.closest('[title="stage.beta.desc"]')).not.toBeNull();
+    expect(betaTag.closest('[aria-description="stage.beta.desc"]')).not.toBeNull();
   });
 });

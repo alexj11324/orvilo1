@@ -1,7 +1,6 @@
 'use client';
 
 import { FilePlugin, UploadPlugin, useLexicalComposerContext } from '@lobehub/editor';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { DownloadIcon } from 'lucide-react';
 import {
@@ -15,6 +14,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import { formatSize, formatSpeed, formatTime } from '@/utils/format';
 

@@ -1,22 +1,18 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import {
-  ActionIcon,
-  Avatar,
-  confirmModal,
-  DropdownMenu,
-  Tag,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentItem } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { Link2, MoreHorizontal, Trash2 } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -103,7 +99,7 @@ const CommentCard = memo<CommentCardProps>(
       ...(anchored
         ? [
             {
-              icon: <Icon icon={Link2} />,
+              icon: <Link2 />,
               key: 'copy-link',
               label: t('acceptance.comments.copyLink'),
               onClick: copyAnchor,
@@ -114,7 +110,7 @@ const CommentCard = memo<CommentCardProps>(
         ? [
             {
               danger: true,
-              icon: <Icon icon={Trash2} />,
+              icon: <Trash2 />,
               key: 'delete',
               // Taking down someone else's remark is a different act from
               // deleting your own, and the confirm says which one this is.
@@ -147,26 +143,27 @@ const CommentCard = memo<CommentCardProps>(
 
     return (
       <>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={variant === 'boxed' ? styles.boxHeader : undefined}
-          gap={8}
-          wrap={'wrap'}
+        <div
+          className={`flex items-center gap-2 flex-wrap ${variant === 'boxed' ? styles.boxHeader : undefined}`}
         >
           {variant === 'plain' && <CommentAvatar comment={comment} size={18} />}
-          <Text
-            className={nameOverride ? styles.headline : styles.authorName}
-            fontSize={13}
-            weight={600}
+          <div
+            className={cn(
+              'text-[13px] font-semibold',
+              nameOverride ? styles.headline : styles.authorName,
+            )}
           >
             {name}
-          </Text>
+          </div>
           {comment.author.type === 'agent' && (
-            <Tag size={'small'}>{t('acceptance.comments.author.agent')}</Tag>
+            <Badge size="sm" variant="secondary">
+              {t('acceptance.comments.author.agent')}
+            </Badge>
           )}
           {comment.author.status !== 'active' && (
-            <Tag size={'small'}>{t(`acceptance.comments.author.${comment.author.status}`)}</Tag>
+            <Badge size="sm" variant="secondary">
+              {t(`acceptance.comments.author.${comment.author.status}`)}
+            </Badge>
           )}
           {anchored ? (
             /*
@@ -195,21 +192,17 @@ const CommentCard = memo<CommentCardProps>(
           {badges}
           {menuItems.length > 0 && (
             <div data-comment-actions className={styles.rowActions}>
-              <DropdownMenu
-                items={menuItems}
-                placement={'bottomRight'}
-                popupProps={{ style: { minWidth: 140 } }}
-              >
+              <DropdownMenu items={menuItems} placement={'bottomRight'} style={{ minWidth: 140 }}>
                 <ActionIcon
                   icon={MoreHorizontal}
                   loading={deleting}
-                  size={'small'}
+                  size="small"
                   title={t('acceptance.comments.moreActions')}
                 />
               </DropdownMenu>
             </div>
           )}
-        </Flexbox>
+        </div>
         <div className={variant === 'boxed' ? styles.body : styles.panelBody}>
           {comment.deletedAt ? (
             <span className={styles.deleted}>{t('acceptance.comments.deleted')}</span>

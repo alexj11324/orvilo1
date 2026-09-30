@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarClockIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useConversationStore } from '@/features/Conversation';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -45,16 +45,16 @@ const ScheduledSendChip = memo(() => {
   if (!scheduledSendAt) return null;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.chip} gap={4}>
-      <Icon icon={CalendarClockIcon} size={12} style={{ color: cssVar.colorInfoText }} />
-      <Text className={styles.label}>{dayjs(scheduledSendAt).format('MM-DD HH:mm')}</Text>
+    <div className={cn('flex items-center gap-1', styles.chip)}>
+      <CalendarClockIcon size={12} style={{ color: cssVar.colorInfoText }} />
+      <div className={styles.label}>{dayjs(scheduledSendAt).format('MM-DD HH:mm')}</div>
       <ActionIcon
         icon={XIcon}
         size={'small'}
         title={t('input.schedule.clear')}
         onClick={() => setScheduledSendAt(undefined)}
       />
-    </Flexbox>
+    </div>
   );
 });
 

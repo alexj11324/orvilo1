@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL, GROUP_CHAT_TOPIC_URL, GROUP_CHAT_URL } from '@orvilo/const';
 import { agentDisplayName, type UIChatMessage } from '@orvilo/types';
 import { ArrowUpRight } from 'lucide-react';
@@ -8,6 +7,8 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { ConversationProvider } from '@/features/Conversation';
 import InterventionContent from '@/features/Conversation/InterventionBar/InterventionContent';
 import InterventionTabBar from '@/features/Conversation/InterventionBar/InterventionTabBar';

@@ -61,30 +61,34 @@ const serializeSize = (size: unknown) =>
 
 vi.mock('@lobehub/ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  copyToClipboard: vi.fn(),
-  DropdownMenu: ({
-    children,
-    items,
-  }: {
-    children?: ReactNode;
-    items?: { key: string; label?: ReactNode; onClick?: () => void; type?: string }[];
-  }) => (
-    <>
-      {children}
-      {items?.map((item) =>
-        item.type === 'divider' ? null : (
-          <button key={item.key} onClick={item.onClick}>
-            {item.label}
-          </button>
-        ),
-      )}
-    </>
-  ),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ActionIcon: ({
+vi.mock('@/utils/clipboard', () => ({
+  copyToClipboard: vi.fn(),
+}));
+
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  DropdownMenuItem: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children?: ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
+  ),
+  DropdownMenuSeparator: () => null,
+  DropdownMenuTrigger: ({ render }: { render?: ReactNode }) => render,
+}));
+
+vi.mock('@/components/ActionIcon', () => ({
+  default: ({
     disabled,
     icon,
     onClick,
@@ -108,6 +112,10 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
       {title}
     </button>
   ),
+}));
+
+vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   FloatingPanel: ({
     actions,
     children,

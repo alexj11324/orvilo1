@@ -1,10 +1,17 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { AutoComplete, Button, Modal, Text } from '@lobehub/ui/base-ui';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Modal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
 import { workAttentionService } from '@/services/workAttention';
 
 interface MarkDuplicateModalProps {
@@ -67,39 +74,57 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
 
   return (
     <Modal
-      destroyOnHidden
       open={open}
       title={t('teams.markDuplicate')}
       width={480}
       footer={
-        <Flexbox horizontal gap={8} justify="flex-end">
-          <Button onClick={onClose}>{t('cancel')}</Button>
-          <Button disabled={!selected} type="primary" onClick={confirm}>
+        <div className="flex flex-row justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            {t('cancel')}
+          </Button>
+          <Button disabled={!selected} onClick={confirm}>
             {t('teams.markDuplicateConfirm')}
           </Button>
-        </Flexbox>
+        </div>
       }
       onCancel={onClose}
     >
-      <Flexbox gap={8} paddingBlock={8}>
-        <Text fontSize={13} type="secondary">
-          {t('teams.markDuplicateHint')}
-        </Text>
-        <AutoComplete
-          options={options}
-          placeholder={t('teams.markDuplicatePlaceholder')}
-          style={{ width: '100%' }}
-          emptyText={
-            needle.trim()
-              ? searching
-                ? t('teams.loading')
-                : t('teams.markDuplicateEmpty')
-              : t('teams.markDuplicatePrompt')
+      <div className="flex flex-col gap-2 py-2">
+        <span className="text-sm text-muted-foreground">{t('teams.markDuplicateHint')}</span>
+        <Combobox
+          filter={null}
+          inputValue={needle}
+          items={options.map((option) => option.value)}
+          value={selected ?? null}
+          itemToStringLabel={(value) =>
+            options.find((option) => option.value === value)?.label ?? value
           }
-          onChange={(value) => setSelected(value)}
-          onSearch={setNeedle}
-        />
-      </Flexbox>
+          onInputValueChange={setNeedle}
+          onValueChange={(value) => setSelected(value ?? undefined)}
+        >
+          <ComboboxInput
+            aria-label={t('teams.markDuplicatePlaceholder')}
+            placeholder={t('teams.markDuplicatePlaceholder')}
+            showTrigger={false}
+          />
+          <ComboboxContent>
+            <ComboboxEmpty>
+              {needle.trim()
+                ? searching
+                  ? t('teams.loading')
+                  : t('teams.markDuplicateEmpty')
+                : t('teams.markDuplicatePrompt')}
+            </ComboboxEmpty>
+            <ComboboxList>
+              {(value: string) => (
+                <ComboboxItem key={value} value={value}>
+                  {options.find((option) => option.value === value)?.label ?? value}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      </div>
     </Modal>
   );
 });

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { useState } from 'react';
 import { useParams } from 'react-router';
@@ -76,21 +75,23 @@ const AcceptancePage = ({
     <AcceptanceScope embedded acceptanceId={acceptanceId}>
       <AcceptanceBundleGate>
         <FlowPanelHostContext value={flowPanelHost}>
-          <Flexbox horizontal className={styles.page}>
-            <Flexbox
-              horizontal
-              flex={1}
+          <div className={`flex ${styles.page}`}>
+            <div
+              className="flex flex-1"
               style={{ minHeight: 0, minWidth: 0, position: 'relative' }}
             >
-              <Flexbox className={styles.contentFrame} flex={1} style={{ minWidth: 0 }}>
-                <Flexbox gap={16} style={{ width: '100%' }}>
+              <div
+                className={`flex flex-col flex-1 ${styles.contentFrame}`}
+                style={{ minWidth: 0 }}
+              >
+                <div className="flex flex-col gap-4" style={{ width: '100%' }}>
                   <AcceptanceOverview onDraftToComposer={onDraftToComposer} />
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
               <AcceptanceLedgerRail />
-            </Flexbox>
+            </div>
             <div className={styles.flowPanel} ref={setFlowPanelHostContext} />
-          </Flexbox>
+          </div>
         </FlowPanelHostContext>
       </AcceptanceBundleGate>
     </AcceptanceScope>

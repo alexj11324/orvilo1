@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { useToolStore } from '@/store/tool';
 
 /**

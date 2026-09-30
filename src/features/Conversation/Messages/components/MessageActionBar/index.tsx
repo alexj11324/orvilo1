@@ -1,5 +1,5 @@
 import type { ActionIconGroupEvent, ActionIconGroupItemType } from '@lobehub/ui';
-import { ActionIconGroup, Block } from '@lobehub/ui';
+import { ActionIconGroup } from '@lobehub/ui';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo } from 'react';
 
@@ -121,7 +121,7 @@ export const MessageActionBar = memo<MessageActionBarProps>(({ ctx, bar, leading
   if (!leading) return actionGroup;
 
   return (
-    <Block horizontal align={'center'} padding={2}>
+    <div className="flex items-center p-0.5">
       {leading}
       <ActionIconGroup
         items={items}
@@ -131,7 +131,7 @@ export const MessageActionBar = memo<MessageActionBarProps>(({ ctx, bar, leading
         variant={'borderless'}
         onActionClick={handleAction}
       />
-    </Block>
+    </div>
   );
 });
 

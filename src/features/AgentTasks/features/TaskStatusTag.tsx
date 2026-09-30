@@ -1,13 +1,18 @@
-import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@lobehub/ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { StatusVisual } from '@/components/ExecutionStatus';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
 
 import {
@@ -19,6 +24,7 @@ import {
   taskStatusChoices,
 } from '../AgentTaskList/kanbanBoardModel';
 import { renderMenuExtra } from './menuExtra';
+import { SimpleTooltip } from './SimpleTooltip';
 import { STATUS_META } from './taskStatusMeta';
 import { useIssueStatusMove } from './useIssueStatusMove';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
@@ -237,95 +243,93 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       },
     });
 
-    const menuItems = useMemo<DropdownItem[]>(() => {
-      let pickIndex = 0;
-      return filteredChoices.map((choice) => {
-        const pickable = Boolean(choice.status || choice.workflowCategory);
-        const isCurrent = taskStatusChoiceIsCurrent(
-          { workflowStateId, workflowStateRefId },
-          choice,
-          currentColumnKey,
-        );
-        const visual = WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
-        if (pickable) pickIndex += 1;
-        return {
-          disabled: !pickable,
-          extra: pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined,
-          icon: <Icon color={visual.color} icon={visual.icon} size={16} />,
-          key: choice.state ? `ws:${choice.state.id}` : choice.column.key,
-          label: choiceLabel(choice),
-          onClick: ({ domEvent }: MenuInfo) => {
-            domEvent.stopPropagation();
-            void handlePick(choice);
-          },
-        };
-      });
-    }, [
-      choiceLabel,
-      currentColumnKey,
-      filteredChoices,
-      handlePick,
-      workflowStateId,
-      workflowStateRefId,
-    ]);
-
+    const TriggerIcon = (glyph ?? meta).icon;
     const triggerNode =
       children ||
       (loading ? (
-        <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+        <span className={styles.trigger}>
+          <Loader2Icon
+            className="animate-spin"
+            size={size}
+            style={{ color: cssVar.colorTextDescription }}
+          />
+        </span>
       ) : (
-        <Tooltip
-          title={glyph?.label ?? t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}
-        >
-          <span className={styles.trigger} onClick={(e) => e.stopPropagation()}>
-            <Icon color={(glyph ?? meta).color} icon={(glyph ?? meta).icon} size={size} />
-          </span>
-        </Tooltip>
+        <span className={styles.trigger}>
+          <SimpleTooltip
+            title={glyph?.label ?? t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}
+          >
+            <TriggerIcon color={(glyph ?? meta).color} size={size} />
+          </SimpleTooltip>
+        </span>
       ));
 
     if (disableDropdown) return <>{triggerNode}</>;
 
     if (!canEditTask)
       return (
-        <Tooltip title={reason}>
+        <SimpleTooltip title={reason}>
           <span className={styles.triggerDisabled} onClick={(e) => e.stopPropagation()}>
             {triggerNode}
           </span>
-        </Tooltip>
+        </SimpleTooltip>
       );
 
+    let pickIndex = 0;
     return (
-      <DropdownMenu
-        items={menuItems}
-        open={open}
-        header={
-          <>
-            <input
-              autoFocus
-              className={styles.searchInput}
-              value={query}
-              aria-label={t('taskDetail.changeStatusPlaceholder', {
-                defaultValue: 'Change status…',
-              })}
-              placeholder={t('taskDetail.changeStatusPlaceholder', {
-                defaultValue: 'Change status…',
-              })}
-              onChange={(event) => setQuery(event.target.value)}
-              onClick={(event) => event.stopPropagation()}
-            />
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuContent className="min-w-52">
+          <input
+            autoFocus
+            className={styles.searchInput}
+            value={query}
+            aria-label={t('taskDetail.changeStatusPlaceholder', {
+              defaultValue: 'Change status…',
+            })}
+            placeholder={t('taskDetail.changeStatusPlaceholder', {
+              defaultValue: 'Change status…',
+            })}
+            onChange={(event) => setQuery(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          />
+          {!!query.trim() && (
             <div className={styles.showingCaption}>
-              {query.trim()
-                ? t('taskDetail.showingItems', {
-                    count: filteredChoices.length,
-                    defaultValue: 'Showing {{count}} items',
-                  })
-                : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
+              {t('taskDetail.showingItems', {
+                count: filteredChoices.length,
+                defaultValue: 'Showing {{count}} items',
+              })}
             </div>
-          </>
-        }
-        onOpenChange={setOpen}
-      >
-        {triggerNode}
+          )}
+          {filteredChoices.map((choice) => {
+            const pickable = Boolean(choice.status || choice.workflowCategory);
+            const isCurrent = taskStatusChoiceIsCurrent(
+              { workflowStateId, workflowStateRefId },
+              choice,
+              currentColumnKey,
+            );
+            const visual =
+              WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+            const VisualIcon = visual.icon;
+            if (pickable) pickIndex += 1;
+            const label = choiceLabel(choice);
+            return (
+              <DropdownMenuItem
+                disabled={!pickable}
+                key={choice.state ? `ws:${choice.state.id}` : choice.column.key}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handlePick(choice);
+                }}
+              >
+                <VisualIcon color={visual.color} size={16} />
+                <span className="flex-1">{label}</span>
+                {pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
       </DropdownMenu>
     );
   },

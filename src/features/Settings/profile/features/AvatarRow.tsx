@@ -1,12 +1,10 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Upload } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon, PencilIcon } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Upload } from '@/components/Upload';
 import UserAvatar from '@/features/User/UserAvatar';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
@@ -15,37 +13,6 @@ import { imageToBase64 } from '@/utils/imageToBase64';
 import { createUploadImageHandler } from '@/utils/uploadFIle';
 
 import ProfileRow from './ProfileRow';
-
-const styles = createStaticStyles(({ css }) => ({
-  overlay: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 8px;
-
-    opacity: 0;
-    background: ${cssVar.colorBgMask};
-
-    transition: opacity ${cssVar.motionDurationMid} ease;
-  `,
-  wrapper: css`
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    border-radius: 8px;
-
-    &:hover .avatar-edit-overlay {
-      opacity: 1;
-    }
-  `,
-}));
 
 const AvatarRow = () => {
   const { t } = useTranslation('auth');
@@ -86,18 +53,17 @@ const AvatarRow = () => {
 
   const avatarContent = canUpload ? (
     <Upload beforeUpload={handleUploadAvatar} maxCount={1}>
-      <div className={styles.wrapper}>
+      <div className="group relative cursor-pointer overflow-hidden rounded-lg">
         <UserAvatar size={40} />
         <div
-          className={`${styles.overlay} avatar-edit-overlay`}
+          className={`${'absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-lg bg-black/50 opacity-0 transition-opacity group-hover:opacity-100'} avatar-edit-overlay`}
           style={uploading ? { opacity: 1 } : undefined}
         >
-          <Icon
-            color={cssVar.colorTextLightSolid}
-            icon={uploading ? Loader2Icon : PencilIcon}
-            size={16}
-            spin={uploading}
-          />
+          {uploading ? (
+            <Loader2Icon className="size-4 animate-spin text-white" />
+          ) : (
+            <PencilIcon className="size-4 text-white" />
+          )}
         </div>
       </div>
     </Upload>

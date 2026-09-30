@@ -317,6 +317,7 @@ When('用户在弹窗中确认删除', async function (this: CustomWorld) {
 
   const confirmButton = this.page
     .getByRole('dialog')
+    .or(this.page.getByRole('alertdialog'))
     .getByRole('button', { name: /^(ok|delete|删除|确认|确定)$/i });
   await expect(confirmButton).toBeVisible({ timeout: 5000 });
   await confirmButton.click();

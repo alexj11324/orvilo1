@@ -1,8 +1,8 @@
-import { Icon } from '@lobehub/ui';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+
+import type { DropdownItem } from '@/components/ItemsMenu';
 
 const styles = createStaticStyles(({ css }) => ({
   // The packaged `extra` slot is styled for keyboard hints, so it defaults to the
@@ -13,7 +13,11 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const checkIcon = <Icon icon={CheckIcon} size={16} />;
+const checkIcon = (
+  <span className="anticon" role="img">
+    <CheckIcon fill={'transparent'} height={16} size={16} width={16} />
+  </span>
+);
 
 export interface SelectorOption<T extends string> {
   desc?: string;

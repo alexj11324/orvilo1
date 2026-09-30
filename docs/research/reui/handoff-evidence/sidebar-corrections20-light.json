@@ -1,0 +1,573 @@
+{
+  "initial": {
+    "url": "app://renderer/agent-testing/my-issues",
+    "state": "expanded",
+    "width": 250,
+    "railCount": 0,
+    "drafts": 0,
+    "search": {
+      "rect": {
+        "x": 16,
+        "y": 110,
+        "width": 207,
+        "height": 32,
+        "top": 110,
+        "right": 223,
+        "bottom": 142,
+        "left": 16
+      },
+      "labelDisplay": "block"
+    },
+    "footer": {
+      "rect": {
+        "x": 16,
+        "y": 832,
+        "width": 218,
+        "height": 32,
+        "top": 832,
+        "right": 234,
+        "bottom": 864,
+        "left": 16
+      },
+      "avatar": {
+        "x": 24,
+        "y": 834,
+        "width": 28,
+        "height": 28,
+        "top": 834,
+        "right": 52,
+        "bottom": 862,
+        "left": 24
+      },
+      "metadataDisplay": "flex",
+      "overflow": "hidden",
+      "padding": "8px"
+    },
+    "inks": [
+      {
+        "text": "收件箱",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "我的事项",
+        "rgb": [9, 9, 11, 255],
+        "active": true
+      },
+      {
+        "text": "待审核",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "智能体",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "项目",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "视图",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "更多",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "Parity Test Project",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "Parity Test Team",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "Urgent: review release evidence",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "PParity Test Team",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      },
+      {
+        "text": "ATAgent Testing UserAAgent Testing",
+        "rgb": [63, 63, 71, 255],
+        "active": false
+      }
+    ],
+    "palette": false
+  },
+  "states": [
+    {
+      "folded": {
+        "url": "app://renderer/agent-testing/my-issues",
+        "state": "collapsed",
+        "width": 66,
+        "railCount": 0,
+        "drafts": 0,
+        "search": {
+          "rect": {
+            "x": 16,
+            "y": 146,
+            "width": 32,
+            "height": 32,
+            "top": 146,
+            "right": 48,
+            "bottom": 178,
+            "left": 16
+          },
+          "labelDisplay": "none"
+        },
+        "footer": {
+          "rect": {
+            "x": 16,
+            "y": 832,
+            "width": 32,
+            "height": 32,
+            "top": 832,
+            "right": 48,
+            "bottom": 864,
+            "left": 16
+          },
+          "avatar": {
+            "x": 20,
+            "y": 836,
+            "width": 24,
+            "height": 24,
+            "top": 836,
+            "right": 44,
+            "bottom": 860,
+            "left": 20
+          },
+          "metadataDisplay": "none",
+          "overflow": "hidden",
+          "padding": "0px"
+        },
+        "inks": [
+          {
+            "text": "收件箱",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "我的事项",
+            "rgb": [9, 9, 11, 255],
+            "active": true
+          },
+          {
+            "text": "待审核",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "智能体",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "项目",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "视图",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "更多",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Project",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Urgent: review release evidence",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "PParity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "ATAgent Testing UserAAgent Testing",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          }
+        ],
+        "palette": false
+      },
+      "expanded": {
+        "url": "app://renderer/agent-testing/my-issues",
+        "state": "expanded",
+        "width": 250,
+        "railCount": 0,
+        "drafts": 0,
+        "search": {
+          "rect": {
+            "x": 16,
+            "y": 110,
+            "width": 207,
+            "height": 32,
+            "top": 110,
+            "right": 223,
+            "bottom": 142,
+            "left": 16
+          },
+          "labelDisplay": "block"
+        },
+        "footer": {
+          "rect": {
+            "x": 16,
+            "y": 832,
+            "width": 218,
+            "height": 32,
+            "top": 832,
+            "right": 234,
+            "bottom": 864,
+            "left": 16
+          },
+          "avatar": {
+            "x": 24,
+            "y": 834,
+            "width": 28,
+            "height": 28,
+            "top": 834,
+            "right": 52,
+            "bottom": 862,
+            "left": 24
+          },
+          "metadataDisplay": "flex",
+          "overflow": "hidden",
+          "padding": "8px"
+        },
+        "inks": [
+          {
+            "text": "收件箱",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "我的事项",
+            "rgb": [9, 9, 11, 255],
+            "active": true
+          },
+          {
+            "text": "待审核",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "智能体",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "项目",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "视图",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "更多",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Project",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Urgent: review release evidence",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "PParity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "ATAgent Testing UserAAgent Testing",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          }
+        ],
+        "palette": false
+      }
+    },
+    {
+      "folded": {
+        "url": "app://renderer/agent-testing/my-issues",
+        "state": "collapsed",
+        "width": 66,
+        "railCount": 0,
+        "drafts": 0,
+        "search": {
+          "rect": {
+            "x": 16,
+            "y": 146,
+            "width": 32,
+            "height": 32,
+            "top": 146,
+            "right": 48,
+            "bottom": 178,
+            "left": 16
+          },
+          "labelDisplay": "none"
+        },
+        "footer": {
+          "rect": {
+            "x": 16,
+            "y": 832,
+            "width": 32,
+            "height": 32,
+            "top": 832,
+            "right": 48,
+            "bottom": 864,
+            "left": 16
+          },
+          "avatar": {
+            "x": 20,
+            "y": 836,
+            "width": 24,
+            "height": 24,
+            "top": 836,
+            "right": 44,
+            "bottom": 860,
+            "left": 20
+          },
+          "metadataDisplay": "none",
+          "overflow": "hidden",
+          "padding": "0px"
+        },
+        "inks": [
+          {
+            "text": "收件箱",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "我的事项",
+            "rgb": [9, 9, 11, 255],
+            "active": true
+          },
+          {
+            "text": "待审核",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "智能体",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "项目",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "视图",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "更多",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Project",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Urgent: review release evidence",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "PParity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "ATAgent Testing UserAAgent Testing",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          }
+        ],
+        "palette": false
+      },
+      "expanded": {
+        "url": "app://renderer/agent-testing/my-issues",
+        "state": "expanded",
+        "width": 250,
+        "railCount": 0,
+        "drafts": 0,
+        "search": {
+          "rect": {
+            "x": 16,
+            "y": 110,
+            "width": 207,
+            "height": 32,
+            "top": 110,
+            "right": 223,
+            "bottom": 142,
+            "left": 16
+          },
+          "labelDisplay": "block"
+        },
+        "footer": {
+          "rect": {
+            "x": 16,
+            "y": 832,
+            "width": 218,
+            "height": 32,
+            "top": 832,
+            "right": 234,
+            "bottom": 864,
+            "left": 16
+          },
+          "avatar": {
+            "x": 24,
+            "y": 834,
+            "width": 28,
+            "height": 28,
+            "top": 834,
+            "right": 52,
+            "bottom": 862,
+            "left": 24
+          },
+          "metadataDisplay": "flex",
+          "overflow": "hidden",
+          "padding": "8px"
+        },
+        "inks": [
+          {
+            "text": "收件箱",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "我的事项",
+            "rgb": [9, 9, 11, 255],
+            "active": true
+          },
+          {
+            "text": "待审核",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "智能体",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "项目",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "视图",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "更多",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Project",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Parity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "Urgent: review release evidence",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "PParity Test Team",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          },
+          {
+            "text": "ATAgent Testing UserAAgent Testing",
+            "rgb": [63, 63, 71, 255],
+            "active": false
+          }
+        ],
+        "palette": false
+      }
+    }
+  ]
+}

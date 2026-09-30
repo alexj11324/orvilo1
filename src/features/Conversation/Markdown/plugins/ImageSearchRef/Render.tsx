@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox, Popover } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import Image from '@/libs/next/Image';
 
 import { dataSelectors, useConversationStore } from '../../../store';
@@ -104,7 +104,7 @@ const Render = memo<MarkdownElementProps<ImageSearchRefProperties>>(({ node, id 
   if (!image) return <span>{originalText}</span>;
 
   const popoverContent = (
-    <Flexbox gap={4} style={{ maxWidth: 240 }}>
+    <div className="flex flex-col gap-1" style={{ maxWidth: 240 }}>
       {image.imageUri && (
         <a
           className={styles.imageCardLink}
@@ -126,10 +126,10 @@ const Render = memo<MarkdownElementProps<ImageSearchRefProperties>>(({ node, id 
         target="_blank"
         title={image.title ? stripHtml(image.title) : undefined}
       >
-        <Flexbox gap={2}>
+        <div className="flex flex-col gap-0.5">
           {image.title && <div className={styles.imageTitle}>{stripHtml(image.title)}</div>}
           {image.domain && (
-            <Flexbox horizontal align="center" gap={4}>
+            <div className="flex items-center gap-1">
               <Image
                 unoptimized
                 alt={image.domain}
@@ -139,20 +139,25 @@ const Render = memo<MarkdownElementProps<ImageSearchRefProperties>>(({ node, id 
                 width={12}
               />
               <div className={styles.imageDomain}>{image.domain}</div>
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       </a>
-    </Flexbox>
+    </div>
   );
 
   return (
-    <Popover content={popoverContent} trigger="hover">
-      <a
-        href={image.imageUri}
-        rel="noopener noreferrer"
-        style={{ color: 'inherit', textDecoration: 'none' }}
-        target="_blank"
+    <Popover>
+      <PopoverTrigger
+        openOnHover
+        render={
+          <a
+            href={image.imageUri}
+            rel="noopener noreferrer"
+            style={{ color: 'inherit', textDecoration: 'none', display: 'inline-flex' }}
+            target="_blank"
+          />
+        }
       >
         <span className={styles.refChip}>
           {image.imageUri && (
@@ -166,7 +171,8 @@ const Render = memo<MarkdownElementProps<ImageSearchRefProperties>>(({ node, id 
           )}
           {originalText}
         </span>
-      </a>
+      </PopoverTrigger>
+      <PopoverContent>{popoverContent}</PopoverContent>
     </Popover>
   );
 });

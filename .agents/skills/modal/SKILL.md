@@ -1,25 +1,24 @@
 ---
 name: modal
-description: 'Use for modals, dialogs and confirmations with createModal, confirmModal, ModalHost or base-ui modal APIs.'
+description: 'Use for modals, dialogs and confirmations with createModal, confirmModal, ModalHost or the local modal APIs.'
 user-invocable: false
 ---
 
 # Modal Imperative API Guide
 
-## Recommended: `@lobehub/ui/base-ui`
+## Recommended: `@/components/Modal`
 
-New code should use the **base-ui** modal stack (headless primitives, not antd `Modal`):
+New code uses the **local modal stack** (built on `ui/dialog` + `ui/alert-dialog`), which mirrors the old lobehub base-ui API 1:1:
 
-- `createModal`, `confirmModal`, `ModalHost` from `@lobehub/ui/base-ui`
-- `useModalContext` from `@lobehub/ui/base-ui` inside modal **content**
+- `createModal`, `confirmModal`, `ModalHost`, `Modal`, `ModalFooter` from `@/components/Modal`
+- `useModalContext` from `@/components/Modal` inside modal **content**
+- Types: `ModalInstance`, `ImperativeModalProps`, `ModalConfirmConfig`, `ModalContextValue`, `BaseModalProps`
 
 Body slot: pass **`content`** (or `children`; runtime uses `content ?? children`).
 
 ### Global `ModalHost` (required)
 
-Base-ui `createModal` renders through a **separate** host from the root package. The app must mount **`ModalHost`** from `@lobehub/ui/base-ui` once near the root (e.g. next to other global hosts). Without it, `createModal` calls will not appear.
-
-If the project only mounts `ModalHost` from `@lobehub/ui`, add a second lazy `ModalHost` from `@lobehub/ui/base-ui` until all imperative modals are migrated.
+`createModal` renders through the app-level **`ModalHost`** from `@/components/Modal`, already mounted once near the root in `SPAGlobalProvider` and every app shell (Auth, Share, Workbench). Without it, `createModal` calls will not appear. The lobehub base-ui host stays mounted until remaining legacy call sites migrate.
 
 ### Why imperative?
 
@@ -42,7 +41,7 @@ features/
 ```tsx
 'use client';
 
-import { useModalContext } from '@lobehub/ui/base-ui';
+import { useModalContext } from '@/components/Modal';
 import { useTranslation } from 'react-i18next';
 
 export const MyFeatureContent = () => {
@@ -58,7 +57,7 @@ export const MyFeatureContent = () => {
 ```tsx
 'use client';
 
-import { createModal } from '@lobehub/ui/base-ui';
+import { createModal } from '@/components/Modal';
 import { t } from 'i18next';
 
 import { MyFeatureContent } from './MyFeatureContent';
@@ -99,11 +98,13 @@ return <Button onClick={handleOpen}>Open</Button>;
 const { close, setCanDismissByClickOutside } = useModalContext();
 ```
 
+`setCanDismissByClickOutside(false)` maps to `maskClosable: false` — backdrop clicks stop dismissing; Escape still works.
+
 ### Closing: which callback actually fires
 
 `close()` — from `useModalContext()` inside the content, or from the returned
 `ModalInstance` — only flips the stack entry to `open: false`. It does **not** go
-through base-ui's dismissal path, so:
+through the dismissal path, so:
 
 | callback               | user dismissal (Esc / backdrop / header ✕) | `close()` from content or instance |
 | ---------------------- | ------------------------------------------ | ---------------------------------- |
@@ -116,9 +117,8 @@ correct until a footer button closes the modal, and then the caller never learns
 it went away — typically leaving a flag set so the modal cannot be reopened.
 
 `createModal` only ever completes with `false` (the imperative renderer supplies
-the argument itself and never forwards the prop to base-ui), but still guard on
-it — other base-ui primitives such as `DropdownMenu` do report both directions,
-and the guard keeps the call site from depending on that difference:
+the argument itself), but still guard on it — other primitives such as
+`DropdownMenu` do report both directions:
 
 ```tsx
 onOpenChangeComplete: (open) => {
@@ -126,41 +126,44 @@ onOpenChangeComplete: (open) => {
 },
 ```
 
-### Common options (base-ui)
+`ModalInstance` methods: `update(props)` merges props in place; `close()` animates out then removes; `destroy()` removes immediately.
 
-`ImperativeModalProps` builds on `BaseModalProps`: `title`, `width`, `maskClosable`, `open`, `onOpenChange`, `footer`, `styles` / `classNames` (keys: `backdrop`, `popup`, `header`, `title`, `close`, `content`, …).
+### Common options
 
-| Property       | Notes                                    |
-| -------------- | ---------------------------------------- |
-| `content`      | Main body (preferred name vs `children`) |
-| `maskClosable` | Click outside to dismiss                 |
-| `styles.*`     | Semantic regions, not antd `styles.body` |
+`ImperativeModalProps` builds on `BaseModalProps`: `title`, `width`, `maskClosable`, `open`, `onOpenChange`, `footer`, `styles` / `classNames` (keys: `backdrop`, `popup`, `header`, `title`, `close`, `content`, `footer`).
+
+| Property       | Notes                                     |
+| -------------- | ----------------------------------------- |
+| `content`      | Main body (preferred name vs `children`)  |
+| `maskClosable` | Click outside to dismiss (default true)   |
+| `styles.*`     | Semantic regions mapped onto dialog parts |
+
+Declarative `Modal` additionally supports `onCancel`, `onOk`, `okText`/`cancelText`, `okButtonProps`/`cancelButtonProps`, `confirmLoading`, `closable`, `keyboard`, `loading`, `zIndex`, `afterClose`/`afterOpenChange`, and a `footer` render-function form.
 
 ### Confirm
 
 ```tsx
-import { confirmModal } from '@lobehub/ui/base-ui';
+import { confirmModal } from '@/components/Modal';
 
 confirmModal({
   title: '…',
   content: '…',
   okText: '…',
   cancelText: '…',
+  okButtonProps: { danger: true }, // → destructive variant
   onOk: async () => {},
 });
 ```
 
----
-
-## Legacy: `@lobehub/ui` (root)
-
-Older call sites use **`createModal` from `@lobehub/ui`**, which is typed as **antd `Modal` props** (`children`, `allowFullscreen`, `getContainer`, `destroyOnHidden`, `styles.body`, etc.). Prefer migrating new work to **`@lobehub/ui/base-ui`**.
-
-Examples (legacy): `src/features/SkillStore/index.tsx`, `src/features/LibraryModal/CreateNew/index.tsx`.
+Async `onOk` shows a spinner on the OK button, closes on resolve, stays open on reject. `okText`/`cancelText` default to the common i18n keys.
 
 ---
+
+## Legacy: `@lobehub/ui` / `@lobehub/ui/base-ui`
+
+Older call sites import `createModal`/`confirmModal`/`useModalContext`/`ModalHost` from `@lobehub/ui/base-ui` (same API — migration is an import-path swap to `@/components/Modal`), or from `@lobehub/ui` root (typed as **antd `Modal` props**: `children`, `allowFullscreen`, `getContainer`, `destroyOnHidden`, `styles.body`). Prefer the local stack for new work.
 
 ## Examples
 
-- Base-ui (preferred): follow sections above; ensure **base-ui `ModalHost`** is mounted.
+- `@/components/Modal` (preferred): `createMyFeatureModal` above; host mounted in `SPAGlobalProvider`.
 - Legacy: `src/features/SkillStore/index.tsx`, `src/features/LibraryModal/CreateNew/index.tsx`

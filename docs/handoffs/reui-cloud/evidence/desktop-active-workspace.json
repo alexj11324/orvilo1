@@ -1,0 +1,18 @@
+{
+  "after": {
+    "activeWorkspaceId": "Kt03UCCZPLhqaJuJ",
+    "url": "app://renderer/settings/profile"
+  },
+  "before": {
+    "activeWorkspaceId": "Kt03UCCZPLhqaJuJ",
+    "url": "app://renderer/settings/profile"
+  },
+  "initialReloadObservation": {
+    "activeWorkspaceId": null,
+    "url": "app://renderer/settings/profile"
+  },
+  "reloaded": {
+    "activeWorkspaceId": "Kt03UCCZPLhqaJuJ",
+    "url": "app://renderer/settings/profile"
+  }
+}

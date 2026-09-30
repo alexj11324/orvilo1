@@ -1,12 +1,11 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CollapsibleContent from '@/components/CollapsibleContent';
+import { toast } from '@/components/toast';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { usePermission } from '@/hooks/usePermission';
 import { useGoalStore } from '@/store/goal';
@@ -112,7 +111,7 @@ const GoalRequirement = memo<GoalRequirementProps>(({ goalId, requirement }) => 
   );
 
   return (
-    <Flexbox gap={4} paddingBlock={'8px 0'}>
+    <div className="flex flex-col gap-1" style={{ paddingBlock: '8px 0' }}>
       <CollapsibleContent
         collapsed={!expanded}
         maxHeight={REQUIREMENT_MAX_HEIGHT}
@@ -130,7 +129,7 @@ const GoalRequirement = memo<GoalRequirementProps>(({ goalId, requirement }) => 
           />
         </div>
       </CollapsibleContent>
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,9 +1,8 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -45,25 +44,19 @@ export const CreatePlanStreaming = memo<BuiltinStreamingProps<CreatePlanParams>>
   if (!goal) return null;
 
   return (
-    <Flexbox className={styles.container} gap={8}>
+    <div className={cn('flex', 'flex-col', 'gap-2', styles.container)}>
       {/* Header */}
       <div className={styles.header}>
-        <Icon icon={ListChecksIcon} size={18} />
-        <Text ellipsis className={styles.title}>
-          {goal}
-        </Text>
+        <ListChecksIcon size={18} />
+        <div className={`truncate ${styles.title}`}>{goal}</div>
       </div>
 
       {/* Description */}
-      {description && (
-        <Text className={styles.description} ellipsis={{ rows: 2 }}>
-          {description}
-        </Text>
-      )}
+      {description && <div className={`line-clamp-2 ${styles.description}`}>{description}</div>}
 
       {/* Context content - streaming with animation */}
       <StreamingMarkdown maxHeight={100}>{context}</StreamingMarkdown>
-    </Flexbox>
+    </div>
   );
 });
 

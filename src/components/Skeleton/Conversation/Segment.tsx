@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 
 import SkeletonBar from '../Bar';
 import ConversationSkeletonContainer from './Container';
@@ -21,32 +21,32 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const ComposerSkeleton = () => (
-  <ConversationSkeletonContainer flex={'none'} paddingBlock={'0 8px'}>
-    <Flexbox className={styles.composer} data-testid={'conversation-composer-skeleton'}>
-      <Flexbox flex={1} paddingBlock={'12px 8px'} paddingInline={12}>
+  <ConversationSkeletonContainer flex={'none'} style={{ paddingBlock: '0 8px' }}>
+    <div className={cn('flex', styles.composer)} data-testid={'conversation-composer-skeleton'}>
+      <div className={'flex flex-col flex-1 px-3'} style={{ paddingBlock: '12px 8px' }}>
         <SkeletonBar height={14} width={'38%'} />
-      </Flexbox>
-      <Flexbox horizontal align={'center'} height={40} justify={'space-between'} paddingInline={8}>
-        <Flexbox horizontal gap={6}>
+      </div>
+      <div className={'flex items-center justify-between px-2'}>
+        <div className={'flex'} style={{ gap: 6 }}>
           <SkeletonBar height={28} radius={'50%'} width={28} />
           <SkeletonBar height={28} radius={'50%'} width={28} />
-        </Flexbox>
+        </div>
         <SkeletonBar height={32} radius={16} width={64} />
-      </Flexbox>
-    </Flexbox>
-    <Flexbox horizontal align={'center'} gap={8} height={36} paddingInline={4}>
+      </div>
+    </div>
+    <div className={'flex gap-2 items-center px-1'}>
       <SkeletonBar height={22} radius={11} width={72} />
       <SkeletonBar height={22} radius={11} width={104} />
       <SkeletonBar height={22} radius={11} width={88} />
-    </Flexbox>
+    </div>
   </ConversationSkeletonContainer>
 );
 
 const ConversationSegmentSkeleton = () => (
-  <Flexbox aria-busy flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+  <div aria-busy className={'flex flex-col flex-1'} style={{ minHeight: 0, overflow: 'hidden' }}>
     <ConversationListSkeleton />
     <ComposerSkeleton />
-  </Flexbox>
+  </div>
 );
 
 export default ConversationSegmentSkeleton;

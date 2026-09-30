@@ -1,10 +1,10 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
 
 const styles = createStaticStyles(({ css }) => ({
   list: css`
@@ -45,11 +45,10 @@ export const CriterionRequiredChip = ({ onToggle, required }: CriterionRequiredC
   const { t } = useTranslation('verify');
 
   return (
-    <Tag
-      color={required ? 'info' : undefined}
-      size={'small'}
+    <Badge
+      size="sm"
       style={onToggle ? { cursor: 'pointer' } : undefined}
-      variant={'filled'}
+      variant={required ? 'info' : 'secondary'}
       onClick={
         onToggle
           ? (event) => {
@@ -60,7 +59,7 @@ export const CriterionRequiredChip = ({ onToggle, required }: CriterionRequiredC
       }
     >
       {t(required ? 'criterion.required' : 'criterion.optional')}
-    </Tag>
+    </Badge>
   );
 };
 
@@ -106,11 +105,8 @@ export const CriterionRow = ({
   title,
   ...rest
 }: CriterionRowProps) => (
-  <Flexbox
-    horizontal
-    align={'center'}
-    className={cx(styles.row, onOpen && styles.rowClickable, className)}
-    gap={10}
+  <div
+    className={`flex items-center gap-2.5 ${cx(styles.row, onOpen && styles.rowClickable, className)}`}
     role={onOpen ? 'button' : undefined}
     tabIndex={onOpen ? 0 : undefined}
     onClick={onOpen}
@@ -119,12 +115,12 @@ export const CriterionRow = ({
   >
     {icon}
     {seq !== undefined && <span className={styles.seq}>C{seq}</span>}
-    <Text ellipsis style={{ flex: 1, minWidth: 0 }}>
+    <div className="truncate min-w-0" style={{ flex: 1, minWidth: 0 }}>
       {title}
-    </Text>
+    </div>
     {children}
     {actions}
-  </Flexbox>
+  </div>
 );
 
 interface CriterionListProps {
@@ -134,7 +130,7 @@ interface CriterionListProps {
 
 /** Outlined container that gives `CriterionRow` children their between-row borders. */
 export const CriterionList = ({ children, className }: CriterionListProps) => (
-  <Block className={cx(styles.list, className)} variant={'outlined'}>
+  <div className={`flex flex-col rounded-md border border-border ${cx(styles.list, className)}`}>
     {children}
-  </Block>
+  </div>
 );

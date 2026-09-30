@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import {
   File,
   FileArchive,
@@ -8,7 +7,7 @@ import {
   Folder,
   type LucideIcon,
 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import { getFileExtension } from './localFileDisplay';
 
@@ -62,7 +61,14 @@ interface LocalFileIconProps {
 }
 
 const LocalFileIcon = memo<LocalFileIconProps>(({ name, isDirectory }) => (
-  <Icon icon={resolveIcon(name, isDirectory)} size={16} />
+  <span className="anticon" role="img">
+    {createElement(resolveIcon(name, isDirectory), {
+      size: 16,
+      width: 16,
+      height: 16,
+      fill: 'transparent',
+    })}
+  </span>
 ));
 
 LocalFileIcon.displayName = 'LocalFileIcon';

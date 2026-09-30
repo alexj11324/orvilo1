@@ -1,11 +1,14 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Forward, Trash2, X } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 
 import { messageStateSelectors, useConversationStore, useConversationStoreApi } from '../store';
 import { openForwardModal } from './ForwardModal';
@@ -87,33 +90,22 @@ const SelectionFooterBar = memo(() => {
   };
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.bar} justify={'center'}>
-      <Text className={styles.count} type={'secondary'}>
+    <div className={cn('flex items-center justify-center', styles.bar)}>
+      <div className={cn('text-muted-foreground', styles.count)}>
         {t('messageForward.bar.selected', { count: selectedCount })}
-      </Text>
-      <Flexbox horizontal align={'center'} gap={4}>
-        <Button icon={<Icon icon={X} />} type={'text'} onClick={exitSelectionMode}>
-          {t('messageForward.bar.cancel')}
+      </div>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" onClick={exitSelectionMode}>
+          <X /> {t('messageForward.bar.cancel')}
         </Button>
-        <Button
-          danger
-          disabled={disabled}
-          icon={<Icon icon={Trash2} />}
-          type={'text'}
-          onClick={handleDelete}
-        >
-          {t('messageForward.bar.delete')}
+        <Button disabled={disabled} variant="destructive" onClick={handleDelete}>
+          <Trash2 /> {t('messageForward.bar.delete')}
         </Button>
-        <Button
-          disabled={disabled}
-          icon={<Icon icon={Forward} />}
-          type={'text'}
-          onClick={handleForward}
-        >
-          {t('messageForward.bar.forward')}
+        <Button disabled={disabled} variant="ghost" onClick={handleForward}>
+          <Forward /> {t('messageForward.bar.forward')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

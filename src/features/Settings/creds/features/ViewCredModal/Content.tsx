@@ -1,91 +1,17 @@
 'use client';
 
-import { CopyButton, Flexbox } from '@lobehub/ui';
-import { Alert } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import { useQuery } from '@tanstack/react-query';
-import { Descriptions, Typography } from 'antd';
-import { createStaticStyles, cx } from 'antd-style';
-import { Eye, EyeOff } from 'lucide-react';
+import { cx } from 'antd-style';
+import { Copy, Eye, EyeOff } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { type CredsApi } from '../useCredsApi';
-
-const { Text } = Typography;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  kvKey: css`
-    min-width: 140px;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadius} 0 0 ${cssVar.borderRadius};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  kvRow: css`
-    display: flex;
-    align-items: stretch;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    &:not(:last-child) {
-      margin-block-end: 8px;
-    }
-  `,
-  kvValue: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: 0 ${cssVar.borderRadius} ${cssVar.borderRadius} 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 13px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  maskedValue: css`
-    color: ${cssVar.colorTextQuaternary};
-    letter-spacing: 2px;
-  `,
-  toggleBtn: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 4px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  valuesSection: css`
-    margin-block-start: 16px;
-  `,
-  valuesTitle: css`
-    margin-block-end: 12px;
-    font-weight: 500;
-  `,
-}));
 
 const maskValue = (value: string): string => {
   if (value.length <= 4) return '••••••••';
@@ -98,29 +24,52 @@ interface KVRowProps {
 }
 
 const KVRow: FC<KVRowProps> = ({ keyName, value }) => {
+  const { t } = useTranslation('auth');
   const [visible, setVisible] = useState(false);
 
   return (
-    <div className={styles.kvRow}>
-      <div className={styles.kvKey}>{keyName}</div>
-      <div className={styles.kvValue}>
-        <Text
-          className={cx(!visible && styles.maskedValue)}
+    <div className="mb-2 flex items-stretch rounded-lg border border-border last:mb-0">
+      <div
+        className={
+          'min-w-35 rounded-l-lg bg-muted/50 px-3 py-2 font-mono text-[13px] text-muted-foreground'
+        }
+      >
+        {keyName}
+      </div>
+      <div
+        className={
+          'flex flex-1 items-center justify-between gap-2 rounded-r-lg bg-card px-3 py-2 font-mono text-[13px]'
+        }
+      >
+        <span
+          className={cx(!visible && 'text-muted-foreground tracking-widest')}
           style={{
             flex: 1,
-            fontFamily: 'var(--lobe-font-family-code)',
             fontSize: 13,
             wordBreak: 'break-all',
           }}
         >
           {visible ? value : maskValue(value)}
-        </Text>
-        <Flexbox horizontal align={'center'} gap={4}>
-          <div className={styles.toggleBtn} onClick={() => setVisible(!visible)}>
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            aria-label={visible ? t('apikey.display.hide') : t('apikey.display.show')}
+            className="text-muted-foreground"
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => setVisible(!visible)}
+          >
             {visible ? <EyeOff size={16} /> : <Eye size={16} />}
-          </div>
-          <CopyButton content={value} size={'small'} />
-        </Flexbox>
+          </Button>
+          <Button
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+            onClick={() => void copyToClipboard(value)}
+          >
+            <Copy size={14} />
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -159,36 +108,32 @@ const ViewCredModalContent: FC<ViewCredModalContentProps> = ({ cred, credsApi })
 
   if (error) {
     return (
-      <Alert
-        showIcon
-        description={(error as Error).message}
-        message={t('creds.view.error')}
-        type={'error'}
-      />
+      <div className="my-4 rounded-lg border border-border bg-muted/50 p-3 text-sm" role="alert">
+        {t('creds.view.error')}
+        <p className="mt-1 text-muted-foreground">{(error as Error).message}</p>
+      </div>
     );
   }
 
   return (
     <>
-      <Alert
-        showIcon
-        message={t('creds.view.warning')}
-        style={{ marginBottom: 16 }}
-        type={'warning'}
-      />
-      <Descriptions bordered column={1} size={'small'}>
-        <Descriptions.Item label={t('creds.table.name')}>{cred.name}</Descriptions.Item>
-        <Descriptions.Item label={t('creds.table.key')}>
+      <div className="my-4 rounded-lg border border-border bg-muted/50 p-3 text-sm" role="alert">
+        {t('creds.view.warning')}
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 rounded-lg border border-border p-3 text-sm">
+        <dt className="text-muted-foreground">{t('creds.table.name')}</dt>
+        <dd>{cred.name}</dd>
+        <dt className="text-muted-foreground">{t('creds.table.key')}</dt>
+        <dd>
           <code>{cred.key}</code>
-        </Descriptions.Item>
-        <Descriptions.Item label={t('creds.table.type')}>
-          {cred.type ? t(`creds.types.${cred.type}` as any) : '-'}
-        </Descriptions.Item>
-      </Descriptions>
+        </dd>
+        <dt className="text-muted-foreground">{t('creds.table.type')}</dt>
+        <dd>{cred.type ? t(`creds.types.${cred.type}` as any) : '-'}</dd>
+      </dl>
 
       {valueEntries.length > 0 && (
-        <div className={styles.valuesSection}>
-          <div className={styles.valuesTitle}>{t('creds.view.values')}</div>
+        <div className="mt-4">
+          <div className="mb-3 font-medium">{t('creds.view.values')}</div>
           {valueEntries.map(([key, value]) => (
             <KVRow key={key} keyName={key} value={String(value)} />
           ))}
@@ -196,13 +141,10 @@ const ViewCredModalContent: FC<ViewCredModalContentProps> = ({ cred, credsApi })
       )}
 
       {valueEntries.length === 0 && cred.type === 'oauth' && (
-        <Alert
-          showIcon
-          description={t('creds.view.oauthNote')}
-          message={t('creds.view.noValues')}
-          style={{ marginTop: 16 }}
-          type={'info'}
-        />
+        <div className="my-4 rounded-lg border border-border bg-muted/50 p-3 text-sm" role="alert">
+          {t('creds.view.noValues')}
+          <p className="mt-1 text-muted-foreground">{t('creds.view.oauthNote')}</p>
+        </div>
       )}
     </>
   );

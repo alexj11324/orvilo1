@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { TaskTemplateCard } from './TaskTemplateCard';
@@ -17,16 +16,16 @@ export const DailyBriefRecommendationsView = memo<DailyBriefRecommendationsViewP
     if (state.mode === 'hidden') return null;
     if (state.mode === 'skeleton') {
       return (
-        <Flexbox gap={gap}>
+        <div className="flex flex-col" style={{ gap }}>
           {Array.from({ length: state.skeletonCount }, (_, index) => (
             <TaskTemplateCardSkeleton compact={compact} key={`task-template-skeleton-${index}`} />
           ))}
-        </Flexbox>
+        </div>
       );
     }
 
     return (
-      <Flexbox gap={gap}>
+      <div className="flex flex-col" style={{ gap }}>
         {state.templates.map((tmpl) => (
           <TaskTemplateCard
             compact={compact}
@@ -36,7 +35,7 @@ export const DailyBriefRecommendationsView = memo<DailyBriefRecommendationsViewP
             onDismiss={state.onDismiss}
           />
         ))}
-      </Flexbox>
+      </div>
     );
   },
 );

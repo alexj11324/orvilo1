@@ -99,6 +99,12 @@ const startServer = async () => {
   await closePreviousServer(standaloneGlobal.__orviloHonoStandaloneServer);
   standaloneGlobal.__orviloHonoStandaloneServer = server;
 
+  // Queue-free reminder delivery alongside the Hatchet cron — deduped by
+  // (userId, dedupeKey), so running both is harmless. The global flag keeps
+  // a re-invoked startServer from stacking intervals.
+  const { startTaskReminderLocalLoop } = await import('@/server/services/taskReminder/localLoop');
+  startTaskReminderLocalLoop();
+
   process.title = `orvilo-dev-hono-${port}`;
   server.listen(port, host, () => {
     console.info(`Hono runtime ready at http://${host}:${port}`);

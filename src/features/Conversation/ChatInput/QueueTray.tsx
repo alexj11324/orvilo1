@@ -1,12 +1,12 @@
 'use client';
-
-import { Flexbox, Icon, Image } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
+import { Image } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowUp, ListEnd, Pencil, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import { useSingleton } from '@/hooks/useSingleton';
 import { useChatStore } from '@/store/chat';
@@ -118,10 +118,10 @@ const QueuedFilePreview = memo<QueuedFilePreviewProps>(({ file }) => {
   }
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.fileChip} gap={4} title={file.name}>
+    <div className={cn('flex items-center gap-1', styles.fileChip)} title={file.name}>
       <FileIcon fileName={file.name} fileType={file.mimeType} size={14} />
       <span className={styles.fileChipName}>{file.name}</span>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -239,32 +239,30 @@ const QueueTray = memo(() => {
   if (!canUseResource) return null;
 
   return (
-    <Flexbox className={styles.container} gap={0}>
+    <div className={cn('flex flex-col gap-0', styles.container)}>
       {queuedMessages.map((msg, index) => {
         const previews = msg.filesPreview ?? [];
         return (
-          <Flexbox
-            horizontal
-            align="center"
-            className={index > 0 ? `${styles.item} ${styles.itemDivider}` : styles.item}
-            gap={8}
+          <div
             key={msg.id}
+            className={cn(
+              'flex items-center gap-2',
+              index > 0 ? `${styles.item} ${styles.itemDivider}` : styles.item,
+            )}
           >
-            <Icon className={styles.icon} icon={ListEnd} size={14} />
-            <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ overflow: 'hidden' }}>
+            <ListEnd className={styles.icon} size={14} />
+            <div className="flex items-center flex-1 gap-2" style={{ overflow: 'hidden' }}>
               {previews.length > 0 && (
-                <Flexbox horizontal flex={'none'} gap={4}>
+                <div className="flex gap-1" style={{ flex: 'none' }}>
                   {previews.map((file) => (
                     <QueuedFilePreview file={file} key={file.id} />
                   ))}
-                </Flexbox>
+                </div>
               )}
               {msg.content && (
-                <Flexbox className={styles.text} flex={1}>
-                  {msg.content}
-                </Flexbox>
+                <div className={cn('flex flex-col flex-1', styles.text)}>{msg.content}</div>
               )}
-            </Flexbox>
+            </div>
             <ActionIcon
               icon={Pencil}
               size="small"
@@ -283,10 +281,10 @@ const QueueTray = memo(() => {
               title={t('inputQueue.delete')}
               onClick={() => removeQueuedMessage(contextKey, msg.id)}
             />
-          </Flexbox>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

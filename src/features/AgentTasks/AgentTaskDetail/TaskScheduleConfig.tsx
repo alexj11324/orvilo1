@@ -1,13 +1,20 @@
-import { Flexbox, Icon, InputNumber, Popover } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, Select, Switch, Tabs, Text } from '@lobehub/ui/base-ui';
 import type { TaskAutomationMode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarClockIcon, CalendarDays, Clock, RefreshCw, TimerIcon, Zap } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import InputNumber from '@/components/InputNumber';
+import Select from '@/components/Select';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -112,33 +119,31 @@ const IntervalTab = memo<IntervalTabProps>(({ currentInterval, disabled, taskId 
   );
 
   return (
-    <Flexbox gap={6}>
-      <Text className={styles.fieldLabel}>{t('taskSchedule.intervalLabel')}</Text>
-      <Flexbox horizontal align="center" gap={8}>
-        <Text type="secondary">{t('taskSchedule.every')}</Text>
+    <div className="flex flex-col gap-1.5">
+      <div className={cn(styles.fieldLabel)}>{t('taskSchedule.intervalLabel')}</div>
+      <div className="flex items-center gap-2">
+        <div className="text-muted-foreground">{t('taskSchedule.every')}</div>
         <InputNumber
           disabled={disabled}
           min={localUnit === 'minutes' ? MIN_MINUTES : 1}
           placeholder={localUnit === 'minutes' ? String(MIN_MINUTES) : '1'}
           style={{ width: 100 }}
           value={localValue}
-          variant="filled"
           onChange={handleValueChange}
         />
         <Select
           disabled={disabled}
           style={{ flex: 1 }}
           value={localUnit}
-          variant="filled"
           options={[
             { label: t('taskSchedule.minutes'), value: 'minutes' },
             { label: t('taskSchedule.hours'), value: 'hours' },
           ]}
-          onChange={handleUnitChange}
+          onChange={(value) => handleUnitChange(value as IntervalUnit)}
         />
-        <Text type="secondary">{t('taskSchedule.intervalSuffix')}</Text>
-      </Flexbox>
-    </Flexbox>
+        <div className="text-muted-foreground">{t('taskSchedule.intervalSuffix')}</div>
+      </div>
+    </div>
   );
 });
 
@@ -286,70 +291,60 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
   }, [canEditTask, finalTaskId, updateTaskStatus]);
 
   const content = (
-    <Flexbox gap={16} style={{ padding: 4, width: 440 }} onClick={(e) => e.stopPropagation()}>
-      <Flexbox horizontal align="center" gap={12}>
+    <div
+      className="flex flex-col gap-4"
+      style={{ padding: 4, width: 440 }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-3">
         <Avatar
-          avatar={<Icon color={cssVar.colorSuccess} icon={Zap} size={20} />}
+          avatar={<Zap color={cssVar.colorSuccess} size={20} />}
           background={cssVar.colorSuccessBg}
           shape="square"
           size={40}
         />
-        <Flexbox flex={1} gap={2}>
-          <Text weight={500}>{t('taskSchedule.heading')}</Text>
-          <Text style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
+        <div className="flex flex-1 flex-col gap-0.5">
+          <div className="font-medium">{t('taskSchedule.heading')}</div>
+          <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
             {summary?.primary ?? t('taskSchedule.summary.disabled')}
-          </Text>
+          </div>
           {summary?.secondary && (
-            <Text style={{ color: cssVar.colorTextDescription, fontSize: 11 }}>
+            <div style={{ color: cssVar.colorTextDescription, fontSize: 11 }}>
               {summary.secondary}
-            </Text>
+            </div>
           )}
-        </Flexbox>
-        <Switch checked={enabled} disabled={!canEditTask} onChange={handleEnableChange} />
-      </Flexbox>
+        </div>
+        <Switch checked={enabled} disabled={!canEditTask} onCheckedChange={handleEnableChange} />
+      </div>
 
       {enabled && nextRunText && (
-        <Flexbox horizontal align="center" className={styles.preview} gap={10}>
-          <Icon color={cssVar.colorTextDescription} icon={Clock} size={16} />
-          <Text style={{ color: cssVar.colorTextSecondary }}>{t('taskSchedule.nextRun')}</Text>
-          <Text style={{ flex: 1, textAlign: 'right' }} weight={500}>
+        <div className={`flex items-center gap-2.5 ${styles.preview}`}>
+          <Clock color={cssVar.colorTextDescription} size={16} />
+          <div style={{ color: cssVar.colorTextSecondary }}>{t('taskSchedule.nextRun')}</div>
+          <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
             {nextRunText}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
       )}
 
       {enabled && (
         <>
-          <Tabs
-            activeKey={automationMode ?? 'heartbeat'}
-            items={[
-              {
-                disabled: !canEditTask,
-                key: 'schedule',
-                label: (
-                  <Flexbox horizontal align="center" gap={6} justify="center">
-                    <Icon icon={CalendarDays} size={14} />
-                    <span>{t('taskSchedule.schedulerTab')}</span>
-                  </Flexbox>
-                ),
-              },
-              {
-                disabled: !canEditTask,
-                key: 'heartbeat',
-                label: (
-                  <Flexbox horizontal align="center" gap={6} justify="center">
-                    <Icon icon={RefreshCw} size={14} />
-                    <span>{t('taskSchedule.intervalTab')}</span>
-                  </Flexbox>
-                ),
-              },
-            ]}
-            styles={{
-              list: { display: 'flex', width: '100%' },
-              tab: { flex: 1 },
-            }}
-            onChange={handleModeChange}
-          />
+          <Tabs value={automationMode ?? 'heartbeat'} onValueChange={handleModeChange}>
+            <TabsList className="flex w-full">
+              <TabsTrigger className="flex-1" disabled={!canEditTask} value="schedule">
+                <div className="flex items-center justify-center gap-1.5">
+                  <CalendarDays size={14} />
+                  <span>{t('taskSchedule.schedulerTab')}</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger className="flex-1" disabled={!canEditTask} value="heartbeat">
+                <div className="flex items-center justify-center gap-1.5">
+                  <RefreshCw size={14} />
+                  <span>{t('taskSchedule.intervalTab')}</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           {automationMode === 'heartbeat' && (
             <IntervalTab
               currentInterval={finalCurrentInterval}
@@ -362,42 +357,43 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
           )}
           {canStartSchedule && (
             <Button
-              block
+              className="w-full"
               disabled={!canEditTask}
-              icon={CalendarClockIcon}
               loading={isStartingSchedule}
-              type="primary"
+              variant="default"
               onClick={handleStartScheduling}
             >
+              <CalendarClockIcon data-icon="inline-start" />
               {t('taskSchedule.startScheduling')}
             </Button>
           )}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 
-  return (
-    <Popover
-      className={styles.popover}
-      content={content}
+  const trigger = children ? (
+    <div title={canEditTask ? undefined : reason} onClick={(e) => e.stopPropagation()}>
+      {children}
+    </div>
+  ) : (
+    <ActionIcon
       disabled={!canEditTask}
-      placement="bottomRight"
-      trigger="click"
-    >
-      {children ? (
-        <div title={canEditTask ? undefined : reason} onClick={(e) => e.stopPropagation()}>
-          {children}
-        </div>
-      ) : (
-        <ActionIcon
-          disabled={!canEditTask}
-          icon={TimerIcon}
-          size="small"
-          title={t('taskSchedule.title')}
-          onClick={(e) => e.stopPropagation()}
-        />
-      )}
+      icon={TimerIcon}
+      size="small"
+      title={t('taskSchedule.title')}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+
+  if (!canEditTask) return trigger;
+
+  return (
+    <Popover>
+      <PopoverTrigger render={trigger} />
+      <PopoverContent align={'end'} className={`w-auto p-0 ${styles.popover}`}>
+        {content}
+      </PopoverContent>
     </Popover>
   );
 });

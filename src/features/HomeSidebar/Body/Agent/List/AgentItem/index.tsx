@@ -1,5 +1,3 @@
-import { Icon } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -138,16 +136,14 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
   // Memoize pin icon
   const pinIcon = useMemo(
     () =>
-      pinned ? (
-        <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
-      ) : undefined,
+      pinned ? <PinIcon size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} /> : undefined,
     [pinned],
   );
 
   // Memoize avatar icon (show loader when updating, running spinner or unread badge at bottom-right)
   const avatarIcon = useMemo(() => {
     if (isUpdating) {
-      return <Icon spin color={cssVar.colorTextDescription} icon={Loader2} size={18} />;
+      return <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={18} />;
     }
 
     const avatarNode = (
@@ -163,7 +159,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
         <span className={styles.wrapper}>
           {avatarNode}
           <span className={styles.runningBadge}>
-            <Icon spin icon={Loader2} size={9} />
+            <Loader2 className="animate-spin" size={9} />
           </span>
         </span>
       );

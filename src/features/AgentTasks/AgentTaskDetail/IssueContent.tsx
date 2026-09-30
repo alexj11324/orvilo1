@@ -1,12 +1,12 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
+import { Button } from '@/components/ui/button';
 
 import { TaskDetailScope } from './TaskDetailScope';
 import TaskDetailSections from './TaskDetailSections';
@@ -46,7 +46,7 @@ const IssueContentBody = memo<Required<Pick<IssueContentProps, 'detail'>>>(({ de
         title={t('taskDetail.notFound.title')}
         extra={
           <Link to={'/tasks'}>
-            <Button type={'primary'}>{t('taskDetail.notFound.backToTasks')}</Button>
+            <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
           </Link>
         }
       />

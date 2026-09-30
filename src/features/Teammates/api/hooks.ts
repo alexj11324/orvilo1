@@ -1,9 +1,9 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
+import { toast } from '@/components/toast';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 
 import { type InviteInput, teammatesClient } from './client';

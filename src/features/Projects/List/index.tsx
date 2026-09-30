@@ -1,18 +1,8 @@
 'use client';
 
-import { Center, ContextMenuTrigger, Empty, Flexbox, Icon, Input } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  confirmModal,
-  type DropdownItem,
-  DropdownMenu,
-  Popover,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   ArrowDownIcon,
@@ -24,16 +14,25 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
+import { type DropdownItem } from '@/components/ItemsMenu';
+import { ContextMenuTrigger } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
@@ -309,29 +308,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   sortHeaderActive: css`
     color: ${cssVar.colorText};
   `,
-  headerAction: css`
-    border: 0;
-    color: ${cssVar.colorTextSecondary};
-    background: transparent;
-    box-shadow: none;
-  `,
-  viewChip: css`
-    display: inline-flex;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 12px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  viewAction: css`
-    border-radius: 50%;
-  `,
 }));
 
 /**
@@ -359,6 +335,7 @@ const PROJECT_PRIORITY_LABEL_KEY = {
  */
 const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
   const { t } = useTranslation('project');
+  const theme = useTheme();
   const health: null | ProjectHealth =
     project.health && project.health in PROJECT_HEALTH_META ? project.health : null;
   return (
@@ -369,11 +346,18 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
       to={getProjectActivityPath(project.slug ?? project.id)}
     >
       <ProjectHealthIcon health={health} size={14} />
-      <Text fontSize={12} type={health ? undefined : 'secondary'} weight={health ? undefined : 500}>
+      <span
+        className="text-sm"
+        style={{
+          fontSize: 12,
+          fontWeight: health ? undefined : 500,
+          color: health ? theme[PROJECT_HEALTH_META[health].color] : 'var(--muted-foreground)',
+        }}
+      >
         {health
           ? t(PROJECT_HEALTH_META[health].key, { defaultValue: health })
           : t('list.health.noUpdates')}
-      </Text>
+      </span>
     </WorkspaceLink>
   );
 });
@@ -428,95 +412,104 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
     return (
       <Popover
         open={open}
-        placement="bottomLeft"
-        trigger="click"
-        content={
-          <Flexbox
-            className={styles.leadPopover}
-            gap={4}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Input
-              autoFocus
-              aria-label={t('list.lead.search')}
-              placeholder={t('list.lead.search')}
-              size="small"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-            />
-            <button
-              className={styles.leadOption}
-              disabled={saving}
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                void saveLead(null);
-              }}
-            >
-              <NoLeadIcon />
-              {t('properties.noLead')}
-            </button>
-            {members.isLoading ? (
-              <Text fontSize={12} type="secondary">
-                {t('list.lead.loading')}
-              </Text>
-            ) : members.error ? (
-              <AsyncError error={members.error} variant="inline" onRetry={() => members.mutate()} />
-            ) : availableMembers.length === 0 ? (
-              <Text fontSize={12} type="secondary">
-                {t('list.lead.noMatches')}
-              </Text>
-            ) : (
-              availableMembers.map((member) => {
-                const name = member.user?.fullName || member.user?.username || member.userId;
-                return (
-                  <button
-                    className={styles.leadOption}
-                    disabled={saving}
-                    key={member.userId}
-                    type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      void saveLead(member.userId);
-                    }}
-                  >
-                    <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
-                    {name}
-                  </button>
-                );
-              })
-            )}
-          </Flexbox>
-        }
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen);
           if (!nextOpen) setKeyword('');
         }}
       >
-        <button
-          aria-label={leadName ? `${t('properties.lead')}: ${leadName}` : t('properties.noLead')}
-          className={`${styles.leadTrigger} ${!project.leadUserId ? `${styles.leadEmpty} project-lead-empty` : ''} ${open ? styles.leadOpen : ''}`}
-          disabled={saving}
-          type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-        >
-          {project.leadUserId ? (
-            <Avatar
-              avatar={lead?.user?.avatar ?? undefined}
-              name={leadName}
-              shape="circle"
-              size={20}
-              title={leadName}
-            />
-          ) : (
-            <NoLeadIcon />
-          )}
-        </button>
+        <PopoverTrigger
+          render={
+            <button
+              className={`${styles.leadTrigger} ${!project.leadUserId ? `${styles.leadEmpty} project-lead-empty` : ''} ${open ? styles.leadOpen : ''}`}
+              disabled={saving}
+              type="button"
+              aria-label={
+                leadName ? `${t('properties.lead')}: ${leadName}` : t('properties.noLead')
+              }
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+            >
+              {project.leadUserId ? (
+                <Avatar
+                  avatar={lead?.user?.avatar ?? undefined}
+                  name={leadName}
+                  shape="circle"
+                  size={20}
+                  title={leadName}
+                />
+              ) : (
+                <NoLeadIcon />
+              )}
+            </button>
+          }
+        />
+        <PopoverContent align="start" side="bottom">
+          {
+            <div
+              className={cn('flex flex-col', styles.leadPopover)}
+              style={{ gap: 4 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Input
+                autoFocus
+                aria-label={t('list.lead.search')}
+                placeholder={t('list.lead.search')}
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+              />
+              <button
+                className={styles.leadOption}
+                disabled={saving}
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  void saveLead(null);
+                }}
+              >
+                <NoLeadIcon />
+                {t('properties.noLead')}
+              </button>
+              {members.isLoading ? (
+                <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                  {t('list.lead.loading')}
+                </span>
+              ) : members.error ? (
+                <AsyncError
+                  error={members.error}
+                  variant="inline"
+                  onRetry={() => members.mutate()}
+                />
+              ) : availableMembers.length === 0 ? (
+                <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                  {t('list.lead.noMatches')}
+                </span>
+              ) : (
+                availableMembers.map((member) => {
+                  const name = member.user?.fullName || member.user?.username || member.userId;
+                  return (
+                    <button
+                      className={styles.leadOption}
+                      disabled={saving}
+                      key={member.userId}
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void saveLead(member.userId);
+                      }}
+                    >
+                      <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
+                      {name}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          }
+        </PopoverContent>
       </Popover>
     );
   },
@@ -527,13 +520,13 @@ ProjectLeadCell.displayName = 'ProjectLeadCell';
 // `lll` needs the localizedFormat plugin, which src/initialize.ts does not
 // register — spell the same shape out in core tokens instead.
 const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) => (
-  <Text
-    className={styles.cell}
-    fontSize={12}
+  <span
+    className={cn('text-sm', styles.cell)}
+    style={{ fontSize: 12 }}
     title={value ? dayjs(value).format('MMM D, YYYY h:mm A') : undefined}
   >
     {value ? dayjs(value).format('MMM D') : '—'}
-  </Text>
+  </span>
 ));
 
 DateCell.displayName = 'DateCell';
@@ -569,7 +562,7 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
   const menuItems: DropdownItem[] = [
     {
       danger: true,
-      icon: <Icon icon={TrashIcon} />,
+      icon: <TrashIcon size={16} />,
       key: 'delete',
       label: t('list.deleteAction'),
       onClick: () => {
@@ -607,9 +600,13 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
       }
       case 'summary': {
         return (
-          <Text ellipsis className={styles.cell} fontSize={12} title={project.summary ?? undefined}>
+          <span
+            className={cn('text-sm truncate', styles.cell)}
+            style={{ fontSize: 12 }}
+            title={project.summary ?? undefined}
+          >
             {project.summary || '—'}
-          </Text>
+          </span>
         );
       }
       case 'startDate': {
@@ -620,9 +617,12 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
       }
       case 'issues': {
         return (
-          <Text className={styles.cell} color={cssVar.colorText} fontSize={12} weight={450}>
+          <span
+            className={cn('text-sm', styles.cell)}
+            style={{ fontSize: 12, fontWeight: 450, color: cssVar.colorText }}
+          >
             {typeof project.taskCount === 'number' ? project.taskCount : '—'}
-          </Text>
+          </span>
         );
       }
       case 'created': {
@@ -641,45 +641,50 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
             ? Math.min(100, Math.max(0, project.progressPercent))
             : null;
         return (
-          <Flexbox horizontal align={'center'} className={styles.cell} gap={6}>
+          <div
+            className={cn('flex flex-row', styles.cell)}
+            style={{ alignItems: 'center', gap: 6 }}
+          >
             <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
             <ProjectStatusIcon percent={percent ?? 0} size={14} status={status} />
-            <Text fontSize={12}>{percent == null ? '—' : `${percent}%`}</Text>
-          </Flexbox>
+            <span className="text-sm" style={{ fontSize: 12 }}>
+              {percent == null ? '—' : `${percent}%`}
+            </span>
+          </div>
         );
       }
     }
   };
 
   const row = (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={`${styles.row} ${styles.columns}`}
-      gap={0}
-      style={projectListGridTemplate(columns)}
+    <div
+      className={cn('flex flex-row', `${styles.row} ${styles.columns}`)}
+      style={{ alignItems: 'center', gap: 0, ...projectListGridTemplate(columns) }}
     >
       <WorkspaceLink
         aria-label={project.name}
         className={styles.link}
         to={`/project/${project.slug ?? project.id}`}
       />
-      <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
+      <div
+        className={cn('flex flex-row', styles.nameCell)}
+        style={{ alignItems: 'center', gap: 10 }}
+      >
         {project.avatar && project.avatar !== '📦' ? (
           <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
         ) : (
           <ProjectIcon color={cssVar.colorTextTertiary} size={16} />
         )}
         {properties.id ? (
-          <Text className={styles.identifier} fontSize={11}>
+          <span className={cn('text-sm', styles.identifier)} style={{ fontSize: 11 }}>
             {project.identifier}
-          </Text>
+          </span>
         ) : null}
-        <Text ellipsis fontSize={13} weight={500}>
+        <span className="text-sm truncate" style={{ fontSize: 13, fontWeight: 500 }}>
           {project.name}
-        </Text>
+        </span>
         {properties.milestones ? <ProjectMilestoneChip projectId={project.id} /> : null}
-      </Flexbox>
+      </div>
       {columns.map((column) => (
         <span
           className={cx(styles.owner, column.key === 'issues' && styles.numeric)}
@@ -691,16 +696,20 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
       {canDelete && (
         <span className={`${styles.actions} project-row-actions`}>
           <DropdownMenu items={menuItems} placement={'bottomRight'}>
-            <ActionIcon
+            <Button
+              aria-busy={deleting}
               aria-label={t('list.moreActions')}
-              icon={MoreHorizontalIcon}
-              loading={deleting}
-              size={'small'}
-            />
+              disabled={deleting}
+              size="icon-sm"
+              variant="ghost"
+            >
+              {createElement(MoreHorizontalIcon, { 'size': 16, 'aria-hidden': true })}
+              {deleting && <Spinner />}
+            </Button>
           </DropdownMenu>
         </span>
       )}
-    </Flexbox>
+    </div>
   );
 
   return canDelete ? <ContextMenuTrigger items={menuItems}>{row}</ContextMenuTrigger> : row;
@@ -736,9 +745,9 @@ export const SortableHeader = memo<{
 }>(({ label, onSort, orderBy, orderDirection, sortBy }) => {
   if (!sortBy) {
     return (
-      <Text fontSize={12} type={'secondary'}>
+      <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
         {label}
-      </Text>
+      </span>
     );
   }
   const active = orderBy === sortBy;
@@ -749,9 +758,12 @@ export const SortableHeader = memo<{
       onClick={() => onSort(sortBy)}
     >
       {label}
-      {active ? (
-        <Icon aria-hidden icon={orderDirection === 'asc' ? ArrowDownIcon : ArrowUpIcon} size={12} />
-      ) : null}
+      {active
+        ? createElement(orderDirection === 'asc' ? ArrowDownIcon : ArrowUpIcon, {
+            'aria-hidden': true,
+            'size': 12,
+          })
+        : null}
     </button>
   );
 });
@@ -771,14 +783,14 @@ export const ProjectListTableHeader = memo<{
 }>(({ columns, onSort, orderBy, orderDirection }) => {
   const { t } = useTranslation('project');
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={`${styles.headerRow} ${styles.columns}`}
-      gap={0}
-      style={projectListGridTemplate(columns)}
+    <div
+      className={cn('flex flex-row', `${styles.headerRow} ${styles.columns}`)}
+      style={{ alignItems: 'center', gap: 0, ...projectListGridTemplate(columns) }}
     >
-      <Flexbox horizontal align={'center'} className={styles.nameCell} gap={10}>
+      <div
+        className={cn('flex flex-row', styles.nameCell)}
+        style={{ alignItems: 'center', gap: 10 }}
+      >
         <SortableHeader
           label={t('list.columnName', { defaultValue: 'Name' })}
           orderBy={orderBy}
@@ -786,7 +798,7 @@ export const ProjectListTableHeader = memo<{
           sortBy="name"
           onSort={onSort}
         />
-      </Flexbox>
+      </div>
       {columns.map((column) => (
         <span
           className={cx(styles.owner, column.key === 'issues' && styles.numeric)}
@@ -801,7 +813,7 @@ export const ProjectListTableHeader = memo<{
           />
         </span>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -824,9 +836,9 @@ export const ProjectListGroupHeader = memo<{
     return (
       <>
         <ProjectStatusIcon size={14} status={status} />
-        <Text fontSize={12} weight={500}>
+        <span className="text-sm" style={{ fontSize: 12, fontWeight: 500 }}>
           {t(`status.${status}`)}
-        </Text>
+        </span>
       </>
     );
   }
@@ -835,9 +847,9 @@ export const ProjectListGroupHeader = memo<{
     return (
       <>
         <NoLeadIcon />
-        <Text fontSize={12} type="secondary" weight={500}>
+        <span className="text-sm text-muted-foreground" style={{ fontSize: 12, fontWeight: 500 }}>
           {t('properties.noLead')}
-        </Text>
+        </span>
       </>
     );
   }
@@ -845,9 +857,9 @@ export const ProjectListGroupHeader = memo<{
   return (
     <>
       <Avatar avatar={leadAvatar(userId)} name={name} shape="circle" size={16} />
-      <Text fontSize={12} weight={500}>
+      <span className="text-sm" style={{ fontSize: 12, fontWeight: 500 }}>
         {name}
-      </Text>
+      </span>
     </>
   );
 });
@@ -967,14 +979,14 @@ const ProjectListPage = memo(() => {
   return (
     <WorkSurface>
       <NavHeader
-        left={<Text weight={500}>{t('list.title')}</Text>}
+        left={
+          <span className="text-sm" style={{ fontWeight: 500 }}>
+            {t('list.title')}
+          </span>
+        }
         right={
-          <Button
-            className={styles.headerAction}
-            icon={PlusIcon}
-            size={'small'}
-            onClick={() => openCreateProjectModal()}
-          >
+          <Button size="sm" variant="ghost" onClick={() => openCreateProjectModal()}>
+            {createElement(PlusIcon, { 'size': 16, 'aria-hidden': true })}
             {t('create.title')}
           </Button>
         }
@@ -1003,15 +1015,19 @@ const ProjectListPage = memo(() => {
               </>
             }
           >
-            <span className={styles.viewChip}>{t('teams.viewAllProjects', { ns: 'common' })}</span>
-            <ActionIcon
+            <span className="inline-flex h-7 items-center rounded-full bg-muted px-3 text-xs font-medium text-foreground">
+              {t('teams.viewAllProjects', { ns: 'common' })}
+            </span>
+            <Button
               aria-label={t('savedViews.newView', { ns: 'common' })}
-              className={styles.viewAction}
-              icon={Layers2Icon}
-              size="small"
+              className="rounded-full"
+              size="icon-sm"
               title={t('savedViews.newView', { ns: 'common' })}
+              variant="ghost"
               onClick={() => setAdvancedFilterOpen(true)}
-            />
+            >
+              {createElement(Layers2Icon, { 'size': 16, 'aria-hidden': true })}
+            </Button>
             <ProjectListFilterChips
               filters={filters}
               memberName={memberName}
@@ -1025,16 +1041,26 @@ const ProjectListPage = memo(() => {
         {error ? (
           <AsyncError error={error} onRetry={() => mutate()} />
         ) : isLoading && projects.length === 0 ? (
-          <SkeletonList rows={8} />
+          <div aria-busy="true" className="flex flex-col gap-2" role="status">
+            {Array.from({ length: 8 }, (_, index) => (
+              <Skeleton className="h-8 w-full" key={index} />
+            ))}
+          </div>
         ) : visibleProjects.length === 0 ? (
-          <Center flex={1} padding={48}>
-            <Empty
-              icon={filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON}
-              description={
-                filters.length > 0 ? t('list.filter.noResults') : t('list.emptyDescription')
-              }
-            />
-          </Center>
+          <div
+            className="flex flex-col items-center justify-center"
+            style={{ flex: 1, padding: 48 }}
+          >
+            <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+              {createElement(filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON, {
+                'size': 40,
+                'aria-hidden': true,
+              })}
+              <div>
+                {filters.length > 0 ? t('list.filter.noResults') : t('list.emptyDescription')}
+              </div>
+            </div>
+          </div>
         ) : options.layout === 'board' ? (
           <ProjectBoard
             groups={groups}
@@ -1051,7 +1077,7 @@ const ProjectListPage = memo(() => {
             options={options}
           />
         ) : (
-          <Flexbox gap={0} style={{ minWidth: 'max-content' }}>
+          <div className="flex flex-col" style={{ gap: 0, minWidth: 'max-content' }}>
             <ProjectListTableHeader
               columns={columns}
               orderBy={options.orderBy}
@@ -1059,13 +1085,13 @@ const ProjectListPage = memo(() => {
               onSort={handleHeaderSort}
             />
             {groups.map((group) => (
-              <Flexbox gap={0} key={group.key}>
+              <div className="flex flex-col" key={group.key} style={{ gap: 0 }}>
                 {group.key !== 'all' ? (
                   <div className={styles.groupHeader}>
                     {groupHeader(group.key)}
-                    <Text fontSize={12} type="secondary">
+                    <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
                       {group.items.length}
-                    </Text>
+                    </span>
                   </div>
                 ) : null}
                 {group.items.map((project) => (
@@ -1077,9 +1103,9 @@ const ProjectListPage = memo(() => {
                     properties={options.properties}
                   />
                 ))}
-              </Flexbox>
+              </div>
             ))}
-          </Flexbox>
+          </div>
         )}
       </WorkSurfaceCollection>
       {/* "Advanced filter" lands here: the WorkQuery builder (AND/OR groups)

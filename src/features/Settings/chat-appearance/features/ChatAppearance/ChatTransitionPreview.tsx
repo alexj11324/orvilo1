@@ -1,4 +1,4 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { memo, useEffect, useMemo, useState } from 'react';
 
 import { type UserGeneralConfig } from '@/types/user/settings';
@@ -64,11 +64,11 @@ const ChatTransitionPreview = memo<ChatTransitionPreviewProps>(({ mode }) => {
   }, [isStreaming, streamedContent.length, chunkStep]);
 
   return (
-    <Flexbox height={180}>
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', height: 180 }}>
       <Markdown enableStream animated={mode === 'fadeIn'} variant={'chat'}>
         {streamedContent}
       </Markdown>
-    </Flexbox>
+    </div>
   );
 });
 

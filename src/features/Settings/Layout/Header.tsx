@@ -1,24 +1,21 @@
 'use client';
 
-import { type PropsWithChildren } from 'react';
-import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import SideBarHeaderLayout from '@/features/NavPanel/SideBarHeaderLayout';
+import { SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
+import BackButton from '@/features/NavPanel/components/BackButton';
 
-const Header = memo<PropsWithChildren>(() => {
+const Header = () => {
   const { t } = useTranslation('common');
 
   return (
-    <SideBarHeaderLayout
-      breadcrumb={[
-        {
-          href: '/settings',
-          title: t('tab.setting'),
-        },
-      ]}
-    />
+    <SidebarGroup>
+      <SidebarGroupLabel className="gap-2">
+        <BackButton />
+        <span>{t('tab.setting')}</span>
+      </SidebarGroupLabel>
+    </SidebarGroup>
   );
-});
+};
 
 export default Header;

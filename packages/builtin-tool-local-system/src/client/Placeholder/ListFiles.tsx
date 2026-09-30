@@ -1,23 +1,22 @@
-import { Center, Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { ListLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinPlaceholderProps } from '@orvilo/types';
 import React, { memo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { LocalFolder } from '@/features/LocalFile';
 
 export const ListFiles = memo<BuiltinPlaceholderProps<ListLocalFileParams>>(({ args }) => {
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {args?.path && <LocalFolder path={args.path} />}
-      <Center height={140}>
-        <Flexbox gap={4} width={'90%'}>
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-        </Flexbox>
-      </Center>
-    </Flexbox>
+      <div className="flex flex-col items-center justify-center h-[140px]">
+        <div className="flex flex-col gap-1 w-[90%]">
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+        </div>
+      </div>
+    </div>
   );
 });

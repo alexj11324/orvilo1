@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { DOWNLOAD_URL } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -12,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import CommandLine from '@/components/CommandLine';
 import ImperativeModal from '@/components/ImperativeModal';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const styles = createStaticStyles(({ css }) => ({
   footer: css`
@@ -52,21 +52,21 @@ interface StepProps {
 }
 
 const Step = memo<StepProps>(({ index, title, desc, children, last }) => (
-  <Flexbox horizontal gap={16}>
-    <Flexbox align={'center'}>
+  <div className="flex gap-4">
+    <div className="flex flex-col items-center">
       <span className={styles.index}>{index}</span>
       {!last && <span className={styles.line} />}
-    </Flexbox>
-    <Flexbox flex={1} gap={4} style={{ paddingBlockEnd: last ? 0 : 24 }}>
-      <Text weight={500}>{title}</Text>
+    </div>
+    <div className="flex flex-col flex-1 gap-1" style={{ paddingBlockEnd: last ? 0 : 24 }}>
+      <div className="font-medium">{title}</div>
       {desc && (
-        <Text color={cssVar.colorTextTertiary} lineHeight={1.6}>
+        <div className="leading-[1.6]" style={{ color: cssVar.colorTextTertiary }}>
           {desc}
-        </Text>
+        </div>
       )}
       {children && <div style={{ marginBlockStart: 12 }}>{children}</div>}
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 interface DeviceConnectModalProps {
@@ -109,7 +109,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
       : 'lh connect --daemon';
 
     const cliSteps = (
-      <Flexbox>
+      <div className="flex flex-col">
         <Step index={1} title={t('devices.connectWizard.cli.installTitle')}>
           <CommandLine command={'npm install -g @orvilo/cli'} />
         </Step>
@@ -128,7 +128,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
         >
           <CommandLine command={connectCommand} />
         </Step>
-      </Flexbox>
+      </div>
     );
 
     return (
@@ -147,43 +147,43 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
         }
         onCancel={onClose}
       >
-        <Flexbox gap={20}>
+        <div className="flex flex-col gap-5">
           {!isWorkspace && (
-            <Text color={cssVar.colorTextTertiary}>{t('devices.connectWizard.subtitle')}</Text>
+            <div style={{ color: cssVar.colorTextTertiary }}>
+              {t('devices.connectWizard.subtitle')}
+            </div>
           )}
 
           {isWorkspace ? null : (
             <Tabs
-              activeKey={active}
-              items={[
-                {
-                  icon: <Icon icon={MonitorDownIcon} />,
-                  key: 'desktop',
-                  label: t('devices.connectWizard.method.desktop'),
-                },
-                {
-                  icon: <Icon icon={TerminalIcon} />,
-                  key: 'cli',
-                  label: t('devices.connectWizard.method.cli'),
-                },
-              ]}
-              styles={{
-                list: { display: 'flex', width: '100%' },
-                tab: { flex: 1 },
+              value={active}
+              onValueChange={(key) => {
+                if (typeof key === 'string') setActive(key as 'cli' | 'desktop');
               }}
-              onChange={(key) => setActive(key as 'cli' | 'desktop')}
-            />
+            >
+              <TabsList style={{ display: 'flex', width: '100%' }}>
+                <TabsTrigger style={{ flex: 1 }} value="desktop">
+                  <MonitorDownIcon />
+                  {t('devices.connectWizard.method.desktop')}
+                </TabsTrigger>
+                <TabsTrigger style={{ flex: 1 }} value="cli">
+                  <TerminalIcon />
+                  {t('devices.connectWizard.method.cli')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           )}
 
           {!isWorkspace && active === 'desktop' ? (
-            <Flexbox>
+            <div className="flex flex-col">
               <Step
                 desc={t('devices.connectWizard.desktop.step1Desc')}
                 index={1}
                 title={t('devices.connectWizard.desktop.step1')}
               >
                 <a href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank">
-                  <Button icon={<Icon icon={DownloadIcon} />} type={'primary'}>
+                  <Button variant="default">
+                    {<DownloadIcon />}
                     {t('devices.connectWizard.desktop.downloadLink')}
                   </Button>
                 </a>
@@ -199,18 +199,18 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
                 index={3}
                 title={t('devices.connectWizard.desktop.step3')}
               />
-            </Flexbox>
+            </div>
           ) : (
             cliSteps
           )}
 
-          <Flexbox horizontal align={'center'} className={styles.footer} gap={8}>
-            <Icon icon={ShieldCheckIcon} size={14} style={{ color: cssVar.colorTextTertiary }} />
-            <Text color={cssVar.colorTextTertiary} fontSize={12}>
+          <div className={`flex items-center gap-2 ${styles.footer}`}>
+            <ShieldCheckIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
+            <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
               {t('devices.connectWizard.footer')}
-            </Text>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
       </ImperativeModal>
     );
   },

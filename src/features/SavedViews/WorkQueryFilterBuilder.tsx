@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Select, Tag, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryEntityType, WorkQueryValue } from '@orvilo/types';
 import { workQueryFieldSpec, workQueryFieldSpecs } from '@orvilo/types';
 import { PlusIcon, XIcon } from 'lucide-react';
@@ -9,6 +7,10 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { Badge as Tag } from '@/components/reui/badge';
+import Select from '@/components/Select';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys, workAttentionKeys } from '@/libs/swr/keys';
@@ -350,13 +352,13 @@ const FilterRowEditor = memo<{
   })();
 
   return (
-    <Flexbox horizontal align="center" gap={8}>
+    <div className="flex items-center gap-2">
       <Select
         options={fieldOptions}
         size="small"
         style={{ minWidth: 140 }}
         value={row.field}
-        onChange={changeField}
+        onChange={(value) => typeof value === 'string' && changeField(value)}
       />
       <Select
         size="small"
@@ -367,6 +369,7 @@ const FilterRowEditor = memo<{
           value: op,
         }))}
         onChange={(next) => {
+          if (typeof next !== 'string') return;
           const nextValue =
             next === 'in' || next === 'notIn'
               ? Array.isArray(row.value)
@@ -385,7 +388,7 @@ const FilterRowEditor = memo<{
         title={t('savedViews.filters.remove')}
         onClick={onRemove}
       />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -436,7 +439,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
     )?.value as string | undefined;
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {value.rows.map((row) => (
           <FilterRowEditor
             cycleTeamId={cycleTeamId}
@@ -449,7 +452,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
         ))}
         {value.slots.map((slot, index) =>
           slot.type === 'node' ? (
-            <Flexbox horizontal align="center" gap={8} key={`slot-${index}`}>
+            <div className="flex items-center gap-2" key={`slot-${index}`}>
               <Tag>
                 {t('savedViews.filters.advancedNode', {
                   field: 'field' in slot.node ? slot.node.field : 'any',
@@ -461,11 +464,11 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
                 title={t('savedViews.filters.remove')}
                 onClick={() => removeSlot(index)}
               />
-            </Flexbox>
+            </div>
           ) : null,
         )}
         {value.any.length > 0 ? (
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex items-center gap-2">
             <Tag>{t('savedViews.filters.advancedNode', { field: 'any' })}</Tag>
             <ActionIcon
               icon={XIcon}
@@ -473,26 +476,24 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
               title={t('savedViews.filters.remove')}
               onClick={() => onChange({ ...value, any: [] })}
             />
-          </Flexbox>
+          </div>
         ) : null}
-        <Flexbox horizontal>
+        <div className="flex">
           <Button
-            icon={PlusIcon}
-            size="small"
-            type="text"
+            size="sm"
+            variant="ghost"
             onClick={() => onChange({ ...value, rows: [...value.rows, newFilterRow(entityType)] })}
           >
+            <PlusIcon data-icon="inline-start" />
             {t('savedViews.filters.add')}
           </Button>
-        </Flexbox>
+        </div>
         {value.rows.length === 0 &&
         !value.slots.some((slot) => slot.type === 'node') &&
         value.any.length === 0 ? (
-          <Text fontSize={12} type="secondary">
-            {t('savedViews.filters.empty')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('savedViews.filters.empty')}</div>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

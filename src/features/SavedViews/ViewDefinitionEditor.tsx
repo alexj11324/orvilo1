@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import { Select, Text } from '@lobehub/ui/base-ui';
 import type {
   SavedViewVisibility,
   WorkQueryEntityType,
@@ -14,6 +12,8 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Select from '@/components/Select';
+import { Input } from '@/components/ui/input';
 import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -100,12 +100,12 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
     const set = (patch: Partial<ViewEditorState>) => onChange({ ...value, ...patch });
 
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         {showEntityPicker ? (
-          <Flexbox horizontal align="center" gap={8}>
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.entityType')}
-            </Text>
+            </div>
             <Select
               size="small"
               style={{ minWidth: 160 }}
@@ -123,41 +123,44 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 });
               }}
             />
-          </Flexbox>
+          </div>
         ) : null}
         {showName ? (
-          <Flexbox horizontal align="center" gap={8}>
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.name')}
-            </Text>
+            </div>
             <Input
+              className="h-7 text-[13px]"
               placeholder={t('savedViews.name')}
-              size="small"
               style={{ flex: 1 }}
               value={value.name}
               onChange={(event) => set({ name: event.target.value })}
             />
-          </Flexbox>
+          </div>
         ) : null}
         {showFilters ? (
-          <Flexbox horizontal align="flex-start" gap={8}>
-            <Text fontSize={13} style={{ paddingBlock: 4, width: 72 }} type="secondary">
+          <div className="flex items-start gap-2">
+            <div
+              className="text-[13px] text-muted-foreground"
+              style={{ paddingBlock: 4, width: 72 }}
+            >
               {t('savedViews.filters.label')}
-            </Text>
-            <Flexbox flex={1}>
+            </div>
+            <div className="flex flex-1 flex-col">
               <WorkQueryFilterBuilder
                 entityType={value.entityType}
                 value={value.builder}
                 onChange={(builder) => set({ builder })}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ) : null}
         {showDisplay ? (
-          <Flexbox horizontal align="center" gap={8} wrap="wrap">
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.display')}
-            </Text>
+            </div>
             <Select
               size="small"
               style={{ minWidth: 140 }}
@@ -220,13 +223,13 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 set({ sort: undefined, sortMode: undefined });
               }}
             />
-          </Flexbox>
+          </div>
         ) : null}
         {showShare ? (
-          <Flexbox horizontal align="center" gap={8} wrap="wrap">
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.share')}
-            </Text>
+            </div>
             <Select
               size="small"
               style={{ minWidth: 150 }}
@@ -258,9 +261,9 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 }}
               />
             ) : null}
-          </Flexbox>
+          </div>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

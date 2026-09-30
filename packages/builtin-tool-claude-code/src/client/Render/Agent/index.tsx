@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';
 
@@ -96,53 +97,50 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
     const showResultSection = !!result || !!subagentThread;
 
     return (
-      <Flexbox className={styles.container} gap={12}>
+      <div className={cx('flex flex-col gap-3', styles.container)}>
         {prompt && (
-          <Flexbox>
-            <Text className={styles.label} style={{ marginBlockEnd: 4 }}>
+          <div className="flex flex-col">
+            <div className={cn(styles.label)} style={{ marginBlockEnd: 4 }}>
               {t('builtins.orvilo-claude-code.agent.instruction')}
-            </Text>
-            <Flexbox className={styles.promptBox}>
+            </div>
+            <div className={cx('flex flex-col', styles.promptBox)}>
               <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
                 {prompt}
               </Markdown>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
 
         {showResultSection && (
-          <Flexbox>
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={styles.labelRow}
-              justify={'space-between'}
-            >
-              <Text className={styles.label}>{t('builtins.orvilo-claude-code.agent.result')}</Text>
+          <div className="flex flex-col">
+            <div className={cx('flex flex-row items-center justify-between', styles.labelRow)}>
+              <div className={cn(styles.label)}>
+                {t('builtins.orvilo-claude-code.agent.result')}
+              </div>
               {subagentThread && (
                 <Button
-                  className={styles.openThread}
-                  icon={ListTree}
-                  size={'small'}
-                  type={'text'}
+                  className={cn(styles.openThread)}
+                  size="sm"
+                  variant="ghost"
                   onClick={handleToggleThread}
                 >
+                  <ListTree data-icon="inline-start" />
                   {isOpenInPortal
                     ? tChat('thread.closeSubagentThread')
                     : tChat('thread.openSubagentThread')}
                 </Button>
               )}
-            </Flexbox>
+            </div>
             {result && (
-              <Flexbox className={styles.resultBox}>
+              <div className={cx('flex flex-col', styles.resultBox)}>
                 <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                   {result}
                 </Markdown>
-              </Flexbox>
+              </div>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

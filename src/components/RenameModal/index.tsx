@@ -1,17 +1,13 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface RenameModalContentProps {
   defaultValue: string;
@@ -25,11 +21,12 @@ const RenameModalContent = memo<RenameModalContentProps>(
     const { close } = useModalContext();
     const [value, setValue] = useState(defaultValue);
     const [loading, setLoading] = useState(false);
-    const inputRef = useRef<InputRef>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
       queueMicrotask(() => {
-        inputRef.current?.focus({ cursor: 'all' });
+        inputRef.current?.focus();
+        inputRef.current?.select();
       });
     }, []);
 
@@ -50,28 +47,30 @@ const RenameModalContent = memo<RenameModalContentProps>(
     }, [close, defaultValue, loading, onSave, value]);
 
     return (
-      <Flexbox gap={20}>
+      <div className={'flex flex-col gap-5'}>
         {description ? (
-          <Text style={{ marginTop: -8 }} type={'secondary'}>
+          <div className="text-muted-foreground" style={{ marginTop: -8 }}>
             {description}
-          </Text>
+          </div>
         ) : null}
         <Input
           autoFocus
           ref={inputRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          onPressEnter={handleSave}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave();
+          }}
         />
-        <Flexbox horizontal gap={8} justify={'flex-end'}>
+        <div className={'flex gap-2 justify-end'}>
           <Button disabled={loading} onClick={close}>
             {tCommon('cancel')}
           </Button>
-          <Button loading={loading} type={'primary'} onClick={handleSave}>
+          <Button loading={loading} onClick={handleSave}>
             {tCommon('save')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

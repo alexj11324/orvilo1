@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import DataStatistics from '@/features/User/DataStatistics';
@@ -15,14 +14,14 @@ const UserBanner = memo(() => {
   const [signIn] = useUserStore((s) => [s.openLogin]);
 
   return (
-    <Flexbox gap={12} paddingBlock={8}>
+    <div className="flex flex-col gap-3 py-2">
       {isLoginWithAuth ? (
         <>
           <WorkspaceLink style={{ color: 'inherit' }} to="/settings/profile">
             <UserInfo />
           </WorkspaceLink>
           <WorkspaceLink style={{ color: 'inherit' }} to="/settings/stats">
-            <DataStatistics paddingInline={12} />
+            <DataStatistics style={{ paddingInline: 12 }} />
           </WorkspaceLink>
         </>
       ) : (
@@ -32,7 +31,7 @@ const UserBanner = memo(() => {
           }}
         />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

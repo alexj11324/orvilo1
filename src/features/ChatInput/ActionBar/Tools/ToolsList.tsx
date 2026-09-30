@@ -1,11 +1,12 @@
-import type { ItemType } from '@lobehub/ui';
-import { Flexbox, Icon, Popover } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
-import type { ReactNode } from 'react';
-import { Fragment, isValidElement, memo } from 'react';
+import { cn } from 'cn';
+import type { ComponentType, ReactNode } from 'react';
+import { createElement, Fragment, isValidElement, memo } from 'react';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+
+import type { ActionMenuItem } from '../../menuItems';
 import { useDetailPopoverState } from '../components/useDetailPopoverState';
 import { useScrollSignal } from './ScrollSignalContext';
 
@@ -64,11 +65,11 @@ interface ToolItemData {
 
 interface ToolsListProps {
   detailPopoverDisabled?: boolean;
-  items: ItemType[];
+  items: ActionMenuItem[];
 }
 
-const DividerItem = memo<{ index: number }>(({ index }) => (
-  <Divider key={`divider-${index}`} style={{ margin: '4px 0' }} />
+const SeparatorItem = memo<{ index: number }>(({ index }) => (
+  <Separator key={`divider-${index}`} style={{ margin: '4px 0' }} />
 ));
 
 const RegularItem = memo<{
@@ -86,7 +87,17 @@ const RegularItem = memo<{
     isValidElement(item.icon) ? (
       item.icon
     ) : (
-      <Icon icon={item.icon as any} size={20} />
+      <span className="anticon" role="img">
+        {createElement(
+          item.icon as unknown as ComponentType<{
+            fill?: string;
+            height?: number | string;
+            size?: number | string;
+            width?: number | string;
+          }>,
+          { size: 20, width: 20, height: 20, fill: 'transparent' },
+        )}
+      </span>
     )
   ) : null;
 
@@ -110,18 +121,16 @@ const RegularItem = memo<{
   // (pointer-events: none) so a press can never land on the portal'd card and
   // be read as an outside press that dismisses the surrounding popover.
   return (
-    <Popover
-      arrow={false}
-      content={item.popoverContent}
-      disabled={detailPopoverDisabled}
-      mouseEnterDelay={0.3}
-      open={open}
-      placement={'rightTop'}
-      positionerProps={{ sideOffset: 8 }}
-      styles={{ content: { padding: 0 }, root: { pointerEvents: 'none' } }}
-      onOpenChange={onOpenChange}
-    >
-      {row}
+    <Popover open={!detailPopoverDisabled && open} onOpenChange={onOpenChange}>
+      <PopoverTrigger openOnHover delay={300} disabled={detailPopoverDisabled} render={row} />
+      <PopoverContent
+        align={'start'}
+        className={'pointer-events-none w-auto p-0'}
+        side={'right'}
+        sideOffset={8}
+      >
+        {item.popoverContent}
+      </PopoverContent>
     </Popover>
   );
 });
@@ -132,9 +141,9 @@ const GroupItem = memo<{
   item: ToolItemData;
 }>(({ detailPopoverDisabled, item, index }) => (
   <Fragment key={item.key || `group-${index}`}>
-    <Text className={toolsListStyles.groupLabel} fontSize={12} type="secondary">
+    <div className={cn('text-[12px] text-muted-foreground', toolsListStyles.groupLabel)}>
       {item.label}
-    </Text>
+    </div>
     {item.children?.map((child, childIndex) => (
       <ToolListItem
         detailPopoverDisabled={detailPopoverDisabled}
@@ -152,7 +161,7 @@ const ToolListItem = memo<{
   item: ToolItemData | null;
 }>(({ detailPopoverDisabled, item, index }) => {
   if (!item) return null;
-  if (item.type === 'divider') return <DividerItem index={index} />;
+  if (item.type === 'divider') return <SeparatorItem index={index} />;
   if (item.type === 'group')
     return <GroupItem detailPopoverDisabled={detailPopoverDisabled} index={index} item={item} />;
   return <RegularItem detailPopoverDisabled={detailPopoverDisabled} index={index} item={item} />;
@@ -160,7 +169,7 @@ const ToolListItem = memo<{
 
 const ToolsList = memo<ToolsListProps>(({ detailPopoverDisabled, items }) => {
   return (
-    <Flexbox gap={0} padding={4}>
+    <div className="flex flex-col gap-0 p-1">
       {items.map((item, index) => (
         <ToolListItem
           detailPopoverDisabled={detailPopoverDisabled}
@@ -169,7 +178,7 @@ const ToolsList = memo<ToolsListProps>(({ detailPopoverDisabled, items }) => {
           key={item?.key || `item-${index}`}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

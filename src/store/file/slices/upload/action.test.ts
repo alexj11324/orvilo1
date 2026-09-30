@@ -1,9 +1,9 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { act, renderHook } from '@testing-library/react';
 import { fileTypeFromBlob } from 'file-type';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { handleFileUploadError } from '@/business/client/handleFileUploadError';
+import { toast } from '@/components/toast';
 import { fileService } from '@/services/file';
 import { uploadService } from '@/services/upload';
 import { getAudioDuration } from '@/utils/client/audioDuration';
@@ -12,7 +12,7 @@ import { getImageDimensions } from '@/utils/client/imageDimensions';
 import { useFileStore as useStore } from '../../store';
 
 // Mock necessary modules
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));

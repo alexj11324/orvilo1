@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { getActivePluginIds } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Button } from '@/components/ui/button';
 import type { AgentToolProps } from '@/features/ProfileEditor/AgentTool';
 import SharedAgentTool from '@/features/ProfileEditor/AgentTool';
 import PluginTag from '@/features/ProfileEditor/PluginTag';
@@ -85,31 +84,31 @@ const UserToolsSection = memo<Props>(
 
     if (copyMode) {
       return (
-        <Flexbox gap={8}>
-          <Flexbox horizontal align={'center'} justify={'space-between'}>
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="text-[12px] text-muted-foreground">
               {t('settingAgent.agentTools.copyPick')}
-            </Text>
-            <Flexbox horizontal gap={8}>
-              <Button disabled={copying} size={'small'} type={'text'} onClick={onCancelCopy}>
+            </div>
+            <div className="flex gap-2">
+              <Button disabled={copying} size="sm" variant="ghost" onClick={onCancelCopy}>
                 {t('cancel', { ns: 'common' })}
               </Button>
               <Button
                 disabled={selected.size === 0 || copying}
                 loading={copying}
-                size={'small'}
-                type={'primary'}
+                size="sm"
+                variant="default"
                 onClick={onConfirmCopy}
               >
                 {t('settingAgent.agentTools.copyConfirm', { count: selected.size })}
               </Button>
-            </Flexbox>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
             {copyable.length === 0 && (
-              <Text style={{ fontSize: 12 }} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {t('settingAgent.agentTools.pickerEmpty')}
-              </Text>
+              </div>
             )}
             {copyable.map((c) => (
               <PluginTag
@@ -120,23 +119,23 @@ const UserToolsSection = memo<Props>(
                 onSelect={() => toggleSelected(c.id)}
               />
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       );
     }
 
     return (
-      <Flexbox gap={8}>
-        <Text style={{ fontSize: 12, fontWeight: 500 }} type={'secondary'}>
+      <div className="flex flex-col gap-2">
+        <div className="text-[12px] font-medium text-muted-foreground">
           {baseToolsLabel} · {userToolCount}
-        </Text>
+        </div>
         <SharedAgentTool
           {...toolProps}
           excludeAgentConnectors
           agentId={agentId}
           showAuthor={!!activeWorkspaceId}
         />
-      </Flexbox>
+      </div>
     );
   },
 );

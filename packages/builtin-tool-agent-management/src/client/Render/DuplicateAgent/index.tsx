@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
@@ -33,20 +32,20 @@ export const DuplicateAgentRender = memo<
 
   return (
     <div className={styles.container}>
-      <Flexbox gap={8}>
-        <Flexbox gap={2}>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5">
           <span className={styles.label}>
             {t('builtins.orvilo-agent-management.render.duplicateAgent.sourceId')}
           </span>
           <span className={styles.value}>{pluginState.sourceAgentId}</span>
-        </Flexbox>
-        <Flexbox gap={2}>
+        </div>
+        <div className="flex flex-col gap-0.5">
           <span className={styles.label}>
             {t('builtins.orvilo-agent-management.render.duplicateAgent.newId')}
           </span>
           <span className={styles.value}>{pluginState.newAgentId}</span>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </div>
   );
 });

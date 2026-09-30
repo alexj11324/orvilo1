@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
   installKeyboardHandlers: vi.fn(),
   navigate: vi.fn(),
   runReadySubtasks: vi.fn(),
-  showContextMenu: vi.fn(),
+  showContextMenuWithFallback: vi.fn((_items, _options, showWeb: () => void) => {
+    showWeb();
+  }),
   taskState: {
     activeTaskId: 'T-parent',
     taskDetailMap: {
@@ -36,7 +38,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/libs/contextMenu', () => ({
-  showContextMenu: mocks.showContextMenu,
+  showContextMenuWithFallback: mocks.showContextMenuWithFallback,
+}));
+
+vi.mock('@/features/NavPanel/components/SidebarContextMenu', () => ({
+  SidebarContextMenuPopup: () => null,
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) => ({
@@ -179,7 +185,7 @@ describe('TaskSubtasks', () => {
     mocks.buildContextMenuItems.mockClear();
     mocks.installKeyboardHandlers.mockClear();
     mocks.navigate.mockClear();
-    mocks.showContextMenu.mockClear();
+    mocks.showContextMenuWithFallback.mockClear();
     mocks.taskState.taskDetailMap['T-parent'].subtasks = [
       {
         assignee: { avatar: null, backgroundColor: null, id: 'agt_child', title: 'Child' },
@@ -207,7 +213,7 @@ describe('TaskSubtasks', () => {
 
     fireEvent.contextMenu(screen.getByTestId('subtask-tree-node'));
 
-    expect(mocks.showContextMenu).toHaveBeenCalledTimes(1);
+    expect(mocks.showContextMenuWithFallback).toHaveBeenCalledTimes(1);
   });
 
   it('forwards a member assignee to both subtask context-menu actions', () => {
@@ -228,7 +234,10 @@ describe('TaskSubtasks', () => {
       identifier: 'T-child',
     });
     expect(mocks.buildContextMenuItems).toHaveBeenCalledWith(expectedTarget);
-    expect(mocks.installKeyboardHandlers).toHaveBeenCalledWith(expectedTarget);
+    expect(mocks.installKeyboardHandlers).toHaveBeenCalledWith(
+      expectedTarget,
+      expect.any(Function),
+    );
   });
 
   it('shows the responsible assignee on an automated subtask', () => {

@@ -1,5 +1,6 @@
 import type { MetaData } from '@orvilo/types';
-import { type ItemType } from 'antd/es/menu/interface';
+
+import { type ItemType } from '@/components/Menu';
 
 import type { AgentTransferScope } from './useAgentTransferMenuItem';
 

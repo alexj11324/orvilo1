@@ -1,12 +1,12 @@
-import { Icon, stopPropagation, Tooltip } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
-import { Image } from 'antd';
+import { Image } from '@lobehub/ui';
 import { createStaticStyles, cx, keyframes } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
-import { memo, useRef, useState } from 'react';
+import { createElement, memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
 import { formatSize } from '@/utils/format';
@@ -202,8 +202,8 @@ const ImageFileItem = memo<ImageFileItemProps>(
     const imageLoaded = status === 'loaded';
 
     /**
-     * Read the bitmap through the wrapper rather than the load event: antd's
-     * `Image` renders the `<img>` inside its own wrapper, so the event's
+     * Read the bitmap through the wrapper rather than the load event: `Image`
+     * renders the `<img>` inside its own wrapper, so the event's
      * `currentTarget` is not the image and `naturalWidth` reads back undefined.
      * Silently skipping the correction left every upload with no stored
      * dimensions parked on the fallback ratio — and `object-fit: cover` then
@@ -223,11 +223,14 @@ const ImageFileItem = memo<ImageFileItemProps>(
             <div
               className={cx(styles.placeholder, status === 'loading' && styles.placeholderLoading)}
             >
-              <Icon
-                className={styles.placeholderIcon}
-                icon={readPlaceholderIcon(status)}
-                size={28}
-              />
+              <span className={cx('anticon', styles.placeholderIcon)} role="img">
+                {createElement(readPlaceholderIcon(status), {
+                  size: 28,
+                  width: 28,
+                  height: 28,
+                  fill: 'transparent',
+                })}
+              </span>
               {status === 'error' && (
                 <>
                   <div className={styles.placeholderReason}>
@@ -243,22 +246,29 @@ const ImageFileItem = memo<ImageFileItemProps>(
               alt={name}
               loading="lazy"
               src={url}
+              variant={'borderless'}
               preview={{
                 src: url,
               }}
               style={{
                 display: 'block',
                 height: '100%',
-                objectFit: 'cover',
-                opacity: imageLoaded ? 1 : 0,
-                transition: 'opacity 0.3s',
-                width: '100%',
-              }}
-              wrapperStyle={{
-                display: 'block',
-                height: '100%',
                 pointerEvents: imageLoaded ? 'auto' : 'none',
                 width: '100%',
+              }}
+              styles={{
+                image: {
+                  display: 'block',
+                  height: '100%',
+                  opacity: imageLoaded ? 1 : 0,
+                  transition: 'opacity 0.3s',
+                  width: '100%',
+                },
+                wrapper: {
+                  display: 'block',
+                  height: '100%',
+                  width: '100%',
+                },
               }}
               onError={() => setStatus('error')}
               onLoad={() => {
@@ -281,7 +291,7 @@ const ImageFileItem = memo<ImageFileItemProps>(
         {!isNull(chunkingStatus) && chunkingStatus ? (
           <div
             className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
-            onClick={stopPropagation}
+            onClick={(event) => event.stopPropagation()}
           >
             <ChunksBadge
               chunkCount={chunkCount}
@@ -295,7 +305,7 @@ const ImageFileItem = memo<ImageFileItemProps>(
           </div>
         ) : (
           isSupportedForChunking && (
-            <Tooltip title={t('FileManager.actions.chunkingTooltip')}>
+            <SimpleTooltip title={t('FileManager.actions.chunkingTooltip')}>
               <div
                 className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
                 style={{ cursor: 'pointer' }}
@@ -306,14 +316,11 @@ const ImageFileItem = memo<ImageFileItemProps>(
                   }
                 }}
               >
-                <Button
-                  icon={FileBoxIcon}
-                  loading={isCreatingFileParseTask}
-                  size={'small'}
-                  type={'text'}
-                />
+                <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                  <FileBoxIcon data-icon="inline-start" />
+                </Button>
               </div>
-            </Tooltip>
+            </SimpleTooltip>
           )
         )}
       </>

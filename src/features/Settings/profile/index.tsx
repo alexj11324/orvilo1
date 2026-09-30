@@ -1,13 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
-import { Divider } from 'antd';
-import { cssVar } from 'antd-style';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { SettingsProfileRowSkeleton } from '@/components/Skeleton/Settings/Profile';
+import { Separator } from '@/components/ui/separator';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
@@ -67,58 +65,48 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('profile.title')} />}
-      <Flexbox
-        style={{
-          width: '100%',
-          maxWidth: 640,
-          marginInline: 'auto',
-          paddingInline: 16,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: 12,
-          background: cssVar.colorBgContainer,
-        }}
-      >
-        <Flexbox style={{ display: isLoading ? 'flex' : 'none' }}>
+      <div className="mx-auto flex w-full max-w-160 flex-col rounded-xl border border-border bg-card px-4">
+        <div className="flex flex-col" style={{ display: isLoading ? 'flex' : 'none' }}>
           <SettingsProfileRowSkeleton />
-          <Divider style={{ margin: 0 }} />
+          <Separator />
           <SettingsProfileRowSkeleton />
-          <Divider style={{ margin: 0 }} />
+          <Separator />
           <SettingsProfileRowSkeleton />
-          <Divider style={{ margin: 0 }} />
+          <Separator />
           <SettingsProfileRowSkeleton />
-        </Flexbox>
-        <Flexbox style={{ display: isLoading ? 'none' : 'flex' }}>
+        </div>
+        <div className="flex flex-col" style={{ display: isLoading ? 'none' : 'flex' }}>
           <AvatarRow />
 
-          <Divider style={{ margin: 0 }} />
+          <Separator />
 
           {isLogin && userProfile?.email && (
             <>
               <EmailRow />
-              <Divider style={{ margin: 0 }} />
+              <Separator />
             </>
           )}
 
           <FullNameRow />
 
-          <Divider style={{ margin: 0 }} />
+          <Separator />
 
           <JobTitleRow />
 
-          <Divider style={{ margin: 0 }} />
+          <Separator />
 
           <UsernameRow />
 
           {!isDesktop && isLogin && !disableEmailPassword && (
             <>
-              <Divider style={{ margin: 0 }} />
+              <Separator />
               <PasswordRow />
             </>
           )}
 
           {isLogin && !isDesktop && isLoadedAuthProviders && (
             <>
-              <Divider style={{ margin: 0 }} />
+              <Separator />
               <ProfileRow anchor={'profile-connected-accounts'} label={t('profile.sso.providers')}>
                 <SSOProvidersList />
               </ProfileRow>
@@ -127,7 +115,7 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
 
           {enableComposio && isServersInit && connectedServers.length > 0 && (
             <>
-              <Divider style={{ margin: 0 }} />
+              <Separator />
               <ProfileRow
                 anchor={'profile-authorizations'}
                 label={t('profile.authorizations.title')}
@@ -136,8 +124,8 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
               </ProfileRow>
             </>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </>
   );
 };

@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, Button, Tag } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { CheckCircle, Download, Package, Search } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { useMarketAuth } from '@/layout/AuthProvider/MarketAuth';
 import { useAgentStore } from '@/store/agent';
 import { useToolStore } from '@/store/tool';
@@ -59,25 +60,20 @@ const ToolItem = memo<ToolItemProps>(({ tool }) => {
   };
 
   return (
-    <Flexbox
-      horizontal
-      gap={12}
-      style={{
-        background: 'var(--lobe-fill-tertiary)',
-        borderRadius: 8,
-        padding: 12,
-      }}
+    <div
+      className="flex gap-3"
+      style={{ background: 'var(--lobe-fill-tertiary)', borderRadius: 8, padding: 12 }}
     >
       <Avatar avatar={tool.icon || '🔧'} size={40} style={{ borderRadius: 8, flexShrink: 0 }} />
-      <Flexbox flex={1} gap={4} style={{ overflow: 'hidden' }}>
-        <Flexbox horizontal align="center" gap={8}>
+      <div className="flex flex-col flex-1 gap-1" style={{ overflow: 'hidden' }}>
+        <div className="flex items-center gap-2">
           <span style={{ fontWeight: 600 }}>{tool.name}</span>
           {tool.author && (
             <span style={{ color: 'var(--lobe-text-tertiary)', fontSize: 12 }}>
               by {tool.author}
             </span>
           )}
-        </Flexbox>
+        </div>
         {tool.description && (
           <div
             style={{
@@ -93,32 +89,33 @@ const ToolItem = memo<ToolItemProps>(({ tool }) => {
           </div>
         )}
         {tool.tags && tool.tags.length > 0 && (
-          <Flexbox horizontal gap={4} style={{ flexWrap: 'wrap', marginTop: 4 }}>
+          <div className="flex gap-1" style={{ flexWrap: 'wrap', marginTop: 4 }}>
             {tool.tags.slice(0, 3).map((tag) => (
               <Tag key={tag} style={{ fontSize: 10 }}>
                 {tag}
               </Tag>
             ))}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
-      <Flexbox align="center" justify="center" style={{ flexShrink: 0 }}>
+      </div>
+      <div className="flex flex-col items-center justify-center" style={{ flexShrink: 0 }}>
         {installed || tool.installed ? (
-          <Flexbox horizontal align="center" gap={4} style={{ color: 'var(--lobe-success-6)' }}>
+          <div className="flex items-center gap-1" style={{ color: 'var(--lobe-success-6)' }}>
             <CheckCircle size={14} />
             <span style={{ fontSize: 12 }}>Installed</span>
-          </Flexbox>
+          </div>
         ) : isInstalling ? (
-          <Button size="small" type="fill" onClick={handleCancel}>
+          <Button size="sm" variant="secondary" onClick={handleCancel}>
             Cancel
           </Button>
         ) : (
-          <Button icon={<Download size={14} />} size="small" type="primary" onClick={handleInstall}>
+          <Button size="sm" variant="default" onClick={handleInstall}>
+            {<Download size={14} />}
             Install
           </Button>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -128,18 +125,21 @@ const SearchMarketTools = memo<BuiltinRenderProps<SearchMarketToolsParams, Searc
 
     if (!tools || tools.length === 0) {
       return (
-        <Flexbox align="center" gap={8} style={{ color: 'var(--lobe-text-tertiary)', padding: 16 }}>
+        <div
+          className="flex flex-col items-center gap-2"
+          style={{ color: 'var(--lobe-text-tertiary)', padding: 16 }}
+        >
           <Search size={24} />
           <span>No tools found{query ? ` for "${query}"` : ''}.</span>
-        </Flexbox>
+        </div>
       );
     }
 
     const installedCount = tools.filter((t) => t.installed).length;
 
     return (
-      <Flexbox gap={12}>
-        <Flexbox horizontal align="center" gap={8}>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
           <Package size={16} style={{ color: 'var(--lobe-primary-6)' }} />
           <span style={{ fontWeight: 500 }}>
             {query ? `Search results for "${query}"` : 'Available Tools'}
@@ -147,13 +147,13 @@ const SearchMarketTools = memo<BuiltinRenderProps<SearchMarketToolsParams, Searc
           <span style={{ color: 'var(--lobe-text-tertiary)', fontSize: 12 }}>
             ({totalCount} total, {installedCount} installed)
           </span>
-        </Flexbox>
-        <Flexbox gap={8}>
+        </div>
+        <div className="flex flex-col gap-2">
           {tools.map((tool) => (
             <ToolItem key={tool.identifier} tool={tool} />
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

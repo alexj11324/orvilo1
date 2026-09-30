@@ -17,6 +17,7 @@ import Labs from '../labs';
 import Memory from '../memory';
 import { DesktopNotificationSettings } from '../notification';
 import Profile from '../profile';
+import ProviderBindings from '../ProviderBindings';
 import Proxy from '../proxy';
 import Security from '../security';
 import Stats from '../stats';
@@ -24,6 +25,7 @@ import Storage from '../storage';
 import SystemTools from '../system-tools';
 
 export const componentMap = {
+  [SettingsTabs.Provider]: ProviderBindings,
   [SettingsTabs.Advanced]: Advanced,
   [SettingsTabs.Labs]: Labs,
   [SettingsTabs.Appearance]: Appearance,

@@ -15,6 +15,8 @@ import { type StoreSetter } from '@/store/types';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type UserMemoryStore } from '../../store';
+import { invalidateMemoryCaches } from '../../utils/invalidate';
+import { getMemorySession, memorySessionKey, useMemorySession } from '../../utils/session';
 
 const n = setNamespace('userMemory/identity');
 
@@ -42,7 +44,9 @@ export class IdentityActionImpl {
   }
 
   createIdentity = async (data: NewUserMemoryIdentity): Promise<AddIdentityEntryResult> => {
+    const session = getMemorySession();
     const result = await memoryCRUDService.createIdentity(data);
+    if (session !== getMemorySession()) return result;
     // Reset list to refresh
     this.#get().resetIdentitiesList({
       q: this.#get().identitiesQuery,
@@ -50,11 +54,14 @@ export class IdentityActionImpl {
       sort: this.#get().identitiesSort,
       types: this.#get().identitiesTypes,
     });
+    await invalidateMemoryCaches(session);
     return result;
   };
 
   deleteIdentity = async (id: string): Promise<void> => {
+    const session = getMemorySession();
     await memoryCRUDService.deleteIdentity(id);
+    if (session !== getMemorySession()) return;
     // Reset list to refresh
     this.#get().resetIdentitiesList({
       q: this.#get().identitiesQuery,
@@ -62,6 +69,7 @@ export class IdentityActionImpl {
       sort: this.#get().identitiesSort,
       types: this.#get().identitiesTypes,
     });
+    await invalidateMemoryCaches(session);
   };
 
   loadMoreIdentities = (): void => {
@@ -94,7 +102,9 @@ export class IdentityActionImpl {
   };
 
   updateIdentity = async (id: string, data: UpdateUserMemoryIdentity): Promise<boolean> => {
+    const session = getMemorySession();
     const result = await memoryCRUDService.updateIdentity(id, data);
+    if (session !== getMemorySession()) return result;
     // Reset list to refresh
     this.#get().resetIdentitiesList({
       q: this.#get().identitiesQuery,
@@ -102,14 +112,16 @@ export class IdentityActionImpl {
       sort: this.#get().identitiesSort,
       types: this.#get().identitiesTypes,
     });
+    await invalidateMemoryCaches(session);
     return result;
   };
 
   useFetchIdentities = (params: IdentityQueryParams): SWRResponse<IdentityListResult> => {
     const page = params.page ?? 1;
+    const session = useMemorySession();
 
     return useSWR(
-      userMemoryKeys.identityList(params),
+      memorySessionKey(userMemoryKeys.identityList(params), session),
       async () => {
         // Use the new dedicated queryIdentities API
         return userMemoryService.queryIdentities({
@@ -123,6 +135,7 @@ export class IdentityActionImpl {
       },
       {
         onSuccess: (data: IdentityListResult) => {
+          if (session !== getMemorySession()) return;
           this.#set(
             produce((draft) => {
               draft.identitiesSearchLoading = false;
@@ -145,6 +158,7 @@ export class IdentityActionImpl {
             n('useFetchIdentities/onSuccess'),
           );
         },
+        keepPreviousData: false,
         revalidateOnFocus: false,
       },
     );

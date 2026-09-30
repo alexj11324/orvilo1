@@ -33,6 +33,9 @@ import { type z } from 'zod';
 import { lambdaClient } from '@/libs/trpc/client';
 
 class UserMemoryService {
+  createManual = (layer: LayersEnum, content: string) =>
+    lambdaClient.userMemory.createManual.mutate({ layer, content });
+
   addActivityMemory = async (
     params: z.infer<typeof ActivityMemoryItemSchema>,
   ): Promise<AddActivityMemoryResult> => {

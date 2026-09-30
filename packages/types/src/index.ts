@@ -76,6 +76,7 @@ export * from './acceptanceFlow';
 export * from './agentRuntime';
 export * from './openai/chat';
 export * from './openai/plugin';
+export * from './providerBinding';
 export * from './subscription';
 export * from './trace';
 export * from './understanding';

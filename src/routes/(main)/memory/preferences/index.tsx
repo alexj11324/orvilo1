@@ -1,11 +1,12 @@
 import { Flexbox, Icon } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
+import { Button, Tag } from '@lobehub/ui/base-ui';
 import { BrainCircuitIcon } from 'lucide-react';
 import { type FC } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MemoryListBoundary, useResetMemoryList } from '@/features/Memory';
+import { useScopedMemoryEditor } from '@/features/Memory/useScopedMemoryEditor';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import WideScreenButton from '@/features/WideScreenContainer/WideScreenButton';
@@ -13,6 +14,9 @@ import { useQueryState } from '@/hooks/useQueryParam';
 import ActionBar from '@/routes/(main)/memory/features/ActionBar';
 import { SCROLL_PARENT_ID } from '@/routes/(main)/memory/features/TimeLineView/useScrollParent';
 import { useUserMemoryStore } from '@/store/userMemory';
+import { createLegacyMemory } from '@/store/userMemory/useLegacyMemoryPage';
+import { getMemorySession } from '@/store/userMemory/utils/session';
+import { LayersEnum } from '@/types/userMemory';
 
 import EditableModal from '../features/EditableModal';
 import FilterBar from '../features/FilterBar';
@@ -23,6 +27,7 @@ import List from './features/List';
 import PreferenceRightPanel from './features/PreferenceRightPanel';
 
 const PreferencesArea = memo(() => {
+  const openEditor = useScopedMemoryEditor();
   const { t } = useTranslation('memory');
   const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [searchValueRaw, setSearchValueRaw] = useQueryState('q', { clearOnDefault: true });
@@ -88,6 +93,17 @@ const PreferencesArea = memo(() => {
         }
         right={
           <ActionBar showPurge>
+            <Button
+              onClick={() => {
+                const session = getMemorySession();
+                openEditor({
+                  value: '',
+                  onConfirm: (value) => createLegacyMemory(LayersEnum.Preference, value, session),
+                });
+              }}
+            >
+              {t('manager.create')}
+            </Button>
             <ViewModeSwitcher value={viewMode} onChange={setViewMode} />
             <WideScreenButton />
           </ActionBar>

@@ -78,6 +78,46 @@ async function readRouterSources() {
 }
 
 describe('desktop router shared definition', () => {
+  it.each(mainAreaVariants)(
+    '%s exposes every memory layer with a loading boundary',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+      for (const layer of [
+        'home',
+        'identities',
+        'contexts',
+        'experiences',
+        'activities',
+        'preferences',
+        'search',
+        'prime',
+      ]) {
+        const matches = matchRoutes(routes, `/memory/${layer}`);
+        expect(matches?.at(-1)?.route.path).toBe(layer);
+        expect(
+          resolveRouteSkeleton(matches?.map(({ route }) => ({ handle: route.handle })) ?? []),
+        ).toBe(MemorySkeleton);
+      }
+    },
+  );
+
+  it.each(mainAreaVariants)(
+    '%s exposes personal provider configuration without restoring workspace BYOK',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+      expect(matchRoutes(routes, '/settings/provider')?.at(-1)?.route.handle).toMatchObject({
+        settingsTab: 'provider',
+      });
+      expect(
+        (
+          matchRoutes(routes, '/settings/provider/legacy')?.at(-1)?.route.element as ReactElement<{
+            to: string;
+          }>
+        ).props.to,
+      ).toBe('/settings/provider');
+    },
+  );
+
   it('defers platform route factories until React renders their route elements', () => {
     const createHomeElement = vi.fn(() => <div>Home</div>);
     const createWorkspaceSettingsIndexElement = vi.fn(() => <div>Workspace settings</div>);

@@ -244,7 +244,7 @@ export function NavWorkspace() {
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
                 {t('reuiShell9.account')}
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
+              <DropdownMenuItem onClick={() => navigate('/settings/profile', { escape: true })}>
                 <UserIcon aria-hidden />
                 {t('userPanel.profile')}
               </DropdownMenuItem>

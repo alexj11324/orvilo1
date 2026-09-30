@@ -84,7 +84,7 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
             // Modifier clicks (cmd/ctrl) open a new tab via the href; don't also
             // navigate the current tab.
             if (isModifierClick(e)) return;
-            navigate(result.url);
+            navigate(result.url, { escape: true });
           }}
         />
       ))}

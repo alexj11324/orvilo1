@@ -52,7 +52,7 @@ const Body = memo(() => {
                     title={item.label}
                     onClick={(e) => {
                       if (isModifierClick(e)) return;
-                      navigate(url);
+                      navigate(url, { escape: true });
                     }}
                   />
                 );

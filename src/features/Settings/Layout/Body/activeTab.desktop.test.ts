@@ -1,11 +1,14 @@
 /**
  * @vitest-environment happy-dom
  */
-import { act, render, screen } from '@testing-library/react';
-import { createElement as h, type ReactNode } from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { createElement as h, type MouseEvent, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useElectronStore } from '@/store/electron';
+
+const navigateMock = vi.hoisted(() => vi.fn());
 
 // The settings sidebar is portal'd into the shell (frozen root router on
 // desktop). This binds `@/hooks/useActiveLocation` to the real desktop variant,
@@ -33,12 +36,26 @@ vi.mock('@/features/SettingsSearch', () => ({
 }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => vi.fn(),
+  useWorkspaceAwareNavigate: () => navigateMock,
 }));
 
 vi.mock('@/features/NavPanel/components/SidebarNavItem', () => ({
-  default: ({ active, title }: { active?: boolean; title: ReactNode }) =>
-    h('button', { 'data-active': String(!!active), 'type': 'button' }, title),
+  default: ({
+    active,
+    href,
+    onClick,
+    title,
+  }: {
+    active?: boolean;
+    href?: string;
+    onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+    title: ReactNode;
+  }) =>
+    h(
+      'button',
+      { 'data-active': String(!!active), 'data-href': href, onClick, 'type': 'button' },
+      title,
+    ),
 }));
 
 vi.mock('react-router', () => ({
@@ -52,6 +69,7 @@ const activeStateOf = (label: string) =>
 
 afterEach(() => {
   useElectronStore.setState({ activeTabId: null, tabs: [] });
+  navigateMock.mockClear();
 });
 
 describe('settings sidebar active tab (desktop)', () => {
@@ -71,5 +89,17 @@ describe('settings sidebar active tab (desktop)', () => {
 
     expect(activeStateOf('Profile')).toBe('false');
     expect(activeStateOf('Appearance')).toBe('true');
+  });
+
+  it('keeps personal settings navigation in the personal scope with an active workspace', async () => {
+    const { default: Body } = await import('./index');
+    render(h(Body));
+
+    const appearance = screen.getByRole('button', { name: 'Appearance' });
+    expect(appearance).toHaveAttribute('data-href', '/settings/appearance');
+    fireEvent.click(appearance);
+
+    const [destination, options] = navigateMock.mock.lastCall!;
+    expect(buildWorkspaceAwarePath(destination, 'acme', options)).toBe('/settings/appearance');
   });
 });

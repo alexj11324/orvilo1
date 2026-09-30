@@ -185,7 +185,7 @@ function createModalSystem(): ModalSystem {
       (nextOpen: boolean) => {
         if (nextOpen) return;
         onOpenChangeComplete?.(false);
-        destroyModal(id);
+        setTimeout(() => destroyModal(id), 0);
       },
       [id, onOpenChangeComplete],
     );

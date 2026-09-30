@@ -3,11 +3,11 @@
 import { SiDiscord, SiGithub, SiRss, SiX, SiYoutube } from '@icons-pack/react-simple-icons';
 import { Form } from '@lobehub/ui';
 import { BRANDING_EMAIL, BRANDING_NAME, SOCIAL_URL } from '@orvilo/business-const';
-import { Divider } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
 import { BLOG, DOWNLOAD_URL, mailTo, OFFICIAL_SITE, PRIVACY_URL, TERMS_URL } from '@/const/url';
 
 import AboutList from './AboutList';
@@ -39,7 +39,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
         style={{ flexDirection: 'column', gap: 20, width: '100%', paddingBlock: 20 }}
       >
         <Version mobile={mobile} />
-        <Divider style={{ marginBlock: 0 }} />
+        <Separator style={{ marginBlock: 0 }} />
         <AboutList
           grid
           ItemRender={ItemCard}
@@ -77,7 +77,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
             },
           ]}
         />
-        <Divider style={{ marginBlock: 0 }} />
+        <Separator style={{ marginBlock: 0 }} />
         <div className={styles.title}>{t('getApp')}</div>
         <AboutList
           ItemRender={ItemLink}
@@ -94,7 +94,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
             },
           ]}
         />
-        <Divider style={{ marginBlock: 0 }} />
+        <Separator style={{ marginBlock: 0 }} />
         <div className={styles.title}>{t('contact')}</div>
         <AboutList
           ItemRender={ItemLink}
@@ -116,7 +116,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
             },
           ]}
         />
-        <Divider style={{ marginBlock: 0 }} />
+        <Separator style={{ marginBlock: 0 }} />
         <div className={styles.title}>{t('legal')}</div>
         <AboutList
           ItemRender={ItemLink}

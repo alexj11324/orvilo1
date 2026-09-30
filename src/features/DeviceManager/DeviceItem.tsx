@@ -1,6 +1,5 @@
 'use client';
 
-import { DropdownMenu, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Avatar, Button, confirmModal, Tag, Text } from '@lobehub/ui/base-ui';
 import type { DeviceListItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -17,6 +16,13 @@ import {
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { lambdaQuery } from '@/libs/trpc/client';
 import { useUserStore } from '@/store/user';
@@ -206,7 +212,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
       ? device.visibility === 'private'
         ? [
             {
-              icon: <Icon icon={GlobeIcon} />,
+              icon: <GlobeIcon />,
               key: 'publish',
               label: t('devices.visibility.publish'),
               onClick: handlePublish,
@@ -214,7 +220,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
           ]
         : [
             {
-              icon: <Icon icon={EyeOffIcon} />,
+              icon: <EyeOffIcon />,
               key: 'makePrivate',
               label: tCommon('makePrivate'),
               onClick: handleMakePrivate,
@@ -231,7 +237,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
           {
             desc: online ? undefined : t('devices.share.offlineDesc'),
             disabled: !online,
-            icon: <Icon icon={Share2Icon} />,
+            icon: <Share2Icon />,
             key: 'share',
             label: t('devices.share.menu'),
             onClick: () => openShareDeviceModal(device),
@@ -253,12 +259,9 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
     });
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
+    <div
       aria-pressed={selected}
-      className={cx(styles.row, selected && styles.rowActive)}
-      gap={16}
+      className={`flex items-center gap-4 ${cx(styles.row, selected && styles.rowActive)}`}
       role={'button'}
       tabIndex={0}
       onClick={onSelect}
@@ -272,8 +275,8 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
     >
       <div className={styles.iconTile}>{getDeviceIcon(device.platform, 20)}</div>
 
-      <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-        <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+        <div className="flex items-center gap-2">
           <Text ellipsis fontSize={15} weight={500}>
             {displayName}
           </Text>
@@ -297,67 +300,84 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
             <Tag>{t('devices.share.badge', { count: device.sharedWorkspaces.length })}</Tag>
           )}
           {isFallback && (
-            <Tooltip title={t('devices.fallbackTooltip')}>
-              <Tag icon={<Icon icon={TriangleAlertIcon} />}>{t('devices.fallbackBadge')}</Tag>
+            <Tooltip>
+              <TooltipTrigger render={<span />}>
+                <Tag icon={<TriangleAlertIcon />}>{t('devices.fallbackBadge')}</Tag>
+              </TooltipTrigger>
+              <TooltipContent>{t('devices.fallbackTooltip')}</TooltipContent>
             </Tooltip>
           )}
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+        </div>
+        <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
           <Text className={styles.activity} type={'secondary'}>
             {activityText}
           </Text>
           {device.defaultCwd && (
             <>
               <span className={styles.metaDivider} />
-              <Icon icon={FolderIcon} size={12} style={{ color: cssVar.colorTextQuaternary }} />
+              <FolderIcon size={12} style={{ color: cssVar.colorTextQuaternary }} />
               <Text className={styles.cwd} type={'secondary'}>
                 {device.defaultCwd}
               </Text>
             </>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
-      <Flexbox horizontal align={'center'} gap={8} style={{ flex: 'none' }}>
+      <div className="flex items-center gap-2" style={{ flex: 'none' }}>
         {device.scope === 'workspace' && device.enroller && (
           // Enroller avatar — the at-a-glance "who put this here" answer for
           // shared workspace pools. Hidden in personal scope (always the
           // caller) and for ghost rows (no row yet).
-          <Tooltip
-            title={t('workspaceSetting.devices.enrolledBy', {
-              name:
-                device.enroller.fullName ||
-                device.enroller.username ||
-                t('workspaceSetting.devices.unknownEnroller'),
-            })}
-          >
-            <span onClick={(e) => e.stopPropagation()}>
+          <Tooltip>
+            <TooltipTrigger render={<span onClick={(e) => e.stopPropagation()} />}>
               <Avatar avatar={device.enroller.avatar ?? undefined} size={20} />
-            </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('workspaceSetting.devices.enrolledBy', {
+                name:
+                  device.enroller.fullName ||
+                  device.enroller.username ||
+                  t('workspaceSetting.devices.unknownEnroller'),
+              })}
+            </TooltipContent>
           </Tooltip>
         )}
         {canEdit && (
           <span onClick={(e) => e.stopPropagation()}>
-            <DropdownMenu
-              placement={'bottomRight'}
-              items={[
-                ...visibilityItems,
-                ...shareItems,
-                {
-                  danger: true,
-                  icon: <Icon icon={Trash2Icon} />,
-                  key: 'remove',
-                  label: t('devices.actions.remove'),
-                  onClick: handleRemove,
-                },
-              ]}
-            >
-              <Button icon={MoreHorizontalIcon} />
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<span />}>
+                <Button icon={MoreHorizontalIcon} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={'end'}>
+                {[
+                  ...visibilityItems,
+                  ...shareItems,
+                  {
+                    danger: true,
+                    icon: <Trash2Icon />,
+                    key: 'remove',
+                    label: t('devices.actions.remove'),
+                    onClick: handleRemove,
+                  },
+                ].map((item) => (
+                  <DropdownMenuItem
+                    disabled={item.disabled}
+                    key={item.key}
+                    title={item.desc}
+                    variant={item.danger ? 'destructive' : undefined}
+                    onClick={item.onClick}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
             </DropdownMenu>
           </span>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

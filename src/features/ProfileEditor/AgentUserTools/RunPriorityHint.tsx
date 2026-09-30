@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { InfoIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
@@ -26,22 +26,25 @@ const RunPriorityHint = memo<RunPriorityHintProps>(({ agentId }) => {
   const isWorkspaceAgent = useAgentStore(agentByIdSelectors.isWorkspaceAgentById(effectiveAgentId));
 
   return (
-    <Tooltip
-      title={t(
-        isWorkspaceAgent
-          ? 'settingAgent.agentTools.priorityTooltipWorkspace'
-          : 'settingAgent.agentTools.priorityTooltip',
-      )}
-    >
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={4}
-        style={{ cursor: 'help', fontSize: 12, opacity: 0.55 }}
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <div
+            className="flex items-center gap-1"
+            style={{ cursor: 'help', fontSize: 12, opacity: 0.55 }}
+          />
+        }
       >
-        <Icon icon={InfoIcon} size={14} />
+        <InfoIcon size={14} />
         {t('settingAgent.agentTools.priorityHint')}
-      </Flexbox>
+      </TooltipTrigger>
+      <TooltipContent>
+        {t(
+          isWorkspaceAgent
+            ? 'settingAgent.agentTools.priorityTooltipWorkspace'
+            : 'settingAgent.agentTools.priorityTooltip',
+        )}
+      </TooltipContent>
     </Tooltip>
   );
 });

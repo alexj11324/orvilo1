@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { EditableMessage } from '@lobehub/ui/chat';
 import { createStaticStyles } from 'antd-style';
@@ -55,7 +54,7 @@ const OpeningMessage = memo(() => {
 
   return (
     <div className={styles.wrapper}>
-      <Flexbox direction={'horizontal'}>
+      <div className="flex flex-col" direction={'horizontal'}>
         <EditableMessage
           editButtonSize={'small'}
           editing={editing}
@@ -79,7 +78,7 @@ const OpeningMessage = memo(() => {
           }}
         />
         {editIconButton}
-      </Flexbox>
+      </div>
     </div>
   );
 });

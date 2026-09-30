@@ -1,4 +1,3 @@
-import { Block } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
@@ -216,7 +215,7 @@ const Preview = memo(() => {
   );
 
   return (
-    <Block horizontal shadow className={styles.container} variant={'outlined'}>
+    <div className={`flex rounded-md border border-border ${styles.container}`}>
       {nav}
       {sidebar}
       <div
@@ -363,7 +362,7 @@ const Preview = memo(() => {
         </div>
         {input}
       </div>
-    </Block>
+    </div>
   );
 });
 

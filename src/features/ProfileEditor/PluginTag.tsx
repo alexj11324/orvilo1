@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
@@ -12,6 +11,7 @@ import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useDiscoverStore } from '@/store/discover';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -33,7 +33,7 @@ const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, labe
     return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
   }
 
-  return <Icon fill={cssVar.colorText} icon={icon} size={16} />;
+  return <icon fill={cssVar.colorText} size={16} />;
 });
 
 /**
@@ -44,7 +44,7 @@ const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(({
     return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
   }
 
-  return <Icon fill={cssVar.colorText} icon={icon} size={16} />;
+  return <icon fill={cssVar.colorText} size={16} />;
 });
 
 // Stable empty reference for the connector-list read when attribution is off,
@@ -355,7 +355,7 @@ const PluginTag = memo<PluginTagProps>(
 
       // Custom connector type
       if (meta.type === 'custom-connector') {
-        return <Icon fill={cssVar.colorText} icon={McpIcon} size={16} />;
+        return <McpIcon fill={cssVar.colorText} size={16} />;
       }
 
       // Builtin type has avatar
@@ -397,14 +397,18 @@ const PluginTag = memo<PluginTagProps>(
         variant={isDarkMode ? 'filled' : 'outlined'}
         icon={
           selectable ? (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon
-                icon={selected ? (indeterminate ? SquareMinus : SquareCheckBig) : Square}
-                size={14}
-                style={{ color: selected ? cssVar.colorPrimary : cssVar.colorTextQuaternary }}
-              />
+            <div className="flex items-center gap-1.5">
+              {selected ? (
+                indeterminate ? (
+                  <SquareMinus size={14} style={{ color: cssVar.colorPrimary }} />
+                ) : (
+                  <SquareCheckBig size={14} style={{ color: cssVar.colorPrimary }} />
+                )
+              ) : (
+                <Square size={14} style={{ color: cssVar.colorTextQuaternary }} />
+              )}
               {renderIcon()}
-            </Flexbox>
+            </div>
           ) : (
             renderIcon()
           )
@@ -422,17 +426,22 @@ const PluginTag = memo<PluginTagProps>(
         }}
       >
         {author ? (
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1">
             {getDisplayText()}
-            <Tooltip title={t('settingAgent.agentTools.authorizedBy', { name: author.name })}>
-              <Avatar
-                avatar={author.avatar}
-                size={16}
-                style={{ flexShrink: 0 }}
-                title={author.name}
-              />
+            <Tooltip>
+              <TooltipTrigger render={<span />}>
+                <Avatar
+                  avatar={author.avatar}
+                  size={16}
+                  style={{ flexShrink: 0 }}
+                  title={author.name}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('settingAgent.agentTools.authorizedBy', { name: author.name })}
+              </TooltipContent>
             </Tooltip>
-          </Flexbox>
+          </div>
         ) : (
           getDisplayText()
         )}

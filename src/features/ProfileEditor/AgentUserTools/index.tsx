@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { upsertPluginMode } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
@@ -79,7 +78,7 @@ const AgentUserTools = memo<AgentToolProps>((props) => {
   };
 
   return (
-    <Flexbox gap={16} width={'100%'}>
+    <div className="flex flex-col gap-4 w-full">
       <AgentToolsSection agentId={effectiveAgentId} onStartCopy={() => setCopyMode(true)} />
 
       <UserToolsSection
@@ -92,7 +91,7 @@ const AgentUserTools = memo<AgentToolProps>((props) => {
         onCancelCopy={resetCopy}
         onConfirmCopy={handleConfirmCopy}
       />
-    </Flexbox>
+    </div>
   );
 });
 

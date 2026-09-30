@@ -1,4 +1,3 @@
-import { Block } from '@lobehub/ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { getElectronIpc, type UpdaterState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
@@ -191,16 +190,11 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flex: 'none' }}
       >
         <a href={OFFICIAL_SITE} rel="noreferrer" target="_blank">
-          <Block
-            clickable
-            align={'center'}
-            className={styles.logo}
-            height={64}
-            justify={'center'}
-            width={64}
+          <div
+            className={`flex flex-col cursor-pointer items-center h-[64px] justify-center w-[64px] ${styles.logo}`}
           >
             <ProductLogo size={52} />
-          </Block>
+          </div>
         </a>
         <div
           className={'flex min-w-0'}

@@ -10,6 +10,7 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import spend from '@/locales/default/spend';
 
 import zhSpend from '../../../../../../locales/zh-CN/spend.json';
@@ -106,9 +107,11 @@ describe('UsageTable', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <TooltipGroup popupContainer={document.body}>
-          <MemoryRouter>
-            <UsageTable />
-          </MemoryRouter>
+          <TooltipProvider>
+            <MemoryRouter>
+              <UsageTable />
+            </MemoryRouter>
+          </TooltipProvider>
         </TooltipGroup>
       </I18nextProvider>,
     );

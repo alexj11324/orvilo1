@@ -1,10 +1,10 @@
 'use client';
-import { CopyButton } from '@lobehub/ui';
+
 import { useModalContext } from '@lobehub/ui/base-ui';
 import { Form } from 'antd';
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2, Copy, Loader2 } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { API_KEY_FULL_ACCESS_SCOPE, type ApiKeyScope } from '@/const/apiKeyScope';
 import { type CreateApiKeyParams } from '@/types/apiKey';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import ApiKeyDatePicker from '../ApiKeyDatePicker';
 import ScopeSelector from './ScopeSelector';
@@ -99,7 +100,15 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
           <span className="flex-1 break-all font-mono text-xs">{createdKey}</span>
-          <CopyButton content={createdKey} size={'small'} title={t('apikey.display.copy')} />
+          <Button
+            size="icon-sm"
+            title={t('apikey.display.copy')}
+            type="button"
+            variant="ghost"
+            onClick={() => void copyToClipboard(createdKey)}
+          >
+            <Copy />
+          </Button>
         </div>
         <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
           {t('apikey.created.hint')}

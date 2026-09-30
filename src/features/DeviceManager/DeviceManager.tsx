@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
@@ -168,11 +167,8 @@ interface ConnectOptionProps {
 }
 
 const ConnectOption = memo<ConnectOptionProps>(({ icon, title, desc, badge, onClick }) => (
-  <Flexbox
-    horizontal
-    align={'flex-start'}
-    className={styles.option}
-    gap={16}
+  <div
+    className={`flex items-start gap-4 ${styles.option}`}
     role={'button'}
     tabIndex={0}
     onClick={onClick}
@@ -184,19 +180,19 @@ const ConnectOption = memo<ConnectOptionProps>(({ icon, title, desc, badge, onCl
     }}
   >
     <span className={styles.optionIcon}>
-      <Icon icon={icon} size={20} />
+      <icon size={20} />
     </span>
-    <Flexbox flex={1} gap={4} style={{ minWidth: 0 }}>
-      <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
+      <div className="flex items-center gap-2">
         <Text weight={500}>{title}</Text>
         {badge && <span className={styles.badge}>{badge}</span>}
-      </Flexbox>
+      </div>
       <Text color={cssVar.colorTextTertiary} fontSize={12}>
         {desc}
       </Text>
-    </Flexbox>
-    <Icon icon={ChevronRightIcon} size={16} style={{ color: cssVar.colorTextQuaternary }} />
-  </Flexbox>
+    </div>
+    <ChevronRightIcon size={16} style={{ color: cssVar.colorTextQuaternary }} />
+  </div>
 ));
 
 const Capabilities = memo(() => {
@@ -219,37 +215,37 @@ const Capabilities = memo(() => {
     },
   ];
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       <Text fontSize={12} type={'secondary'} weight={500}>
         {t('devices.capabilities.title')}
       </Text>
-      <Flexbox horizontal gap={16}>
+      <div className="flex gap-4">
         {items.map((cap) => (
-          <Flexbox className={styles.capabilityCard} flex={1} gap={12} key={cap.title}>
+          <div className={`flex flex-col flex-1 gap-3 ${styles.capabilityCard}`} key={cap.title}>
             <span className={styles.capabilityIcon}>
-              <Icon icon={cap.icon} size={18} />
+              <cap.icon size={18} />
             </span>
-            <Flexbox gap={4}>
+            <div className="flex flex-col gap-1">
               <Text weight={500}>{cap.title}</Text>
               <Text color={cssVar.colorTextTertiary} fontSize={12}>
                 {cap.desc}
               </Text>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
 // Loading placeholder that reuses the list-card chrome and only skeletonises the
 // row text — loading → loaded is a content swap, not a relayout (ux §4.1).
 const ListSkeleton = memo<{ bordered?: boolean }>(({ bordered }) => (
-  <Flexbox className={bordered ? styles.listCol : styles.plainCol} flex={1}>
-    <Flexbox padding={bordered ? 4 : 0}>
+  <div className={`flex flex-col flex-1 ${bordered ? styles.listCol : styles.plainCol}`}>
+    <div className="flex flex-col" style={{ padding: bordered ? 4 : 0 }}>
       <SharedListSkeleton />
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 interface DeviceManagerProps {
@@ -306,11 +302,15 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
   // between the shared (server) and private (own machine) pools.
   const isPrivatePool = isWorkspace && visibility === 'private';
   const emptyState = (
-    <Flexbox gap={32}>
-      <Flexbox className={isWorkspace ? styles.emptyCard : styles.plainCol}>
-        <Flexbox align={'center'} className={styles.emptyHero} gap={12}>
+    <div className="flex flex-col gap-8">
+      <div className={`flex flex-col ${isWorkspace ? styles.emptyCard : styles.plainCol}`}>
+        <div className={`flex flex-col items-center gap-3 ${styles.emptyHero}`}>
           <span className={styles.heroIcon}>
-            <Icon icon={isWorkspace && !isPrivatePool ? ServerIcon : MonitorDownIcon} size={28} />
+            {isWorkspace && !isPrivatePool ? (
+              <ServerIcon size={28} />
+            ) : (
+              <MonitorDownIcon size={28} />
+            )}
           </span>
           <Text fontSize={18} weight={600}>
             {t(isWorkspace ? 'workspaceSetting.devices.heroTitle' : 'devices.empty.title')}
@@ -320,7 +320,7 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
           </Text>
           {isWorkspace && (
             <Button
-              icon={<Icon icon={TerminalIcon} />}
+              icon={<TerminalIcon />}
               style={{ marginBlockStart: 8 }}
               type={'primary'}
               onClick={() => onConnect('cli')}
@@ -328,7 +328,7 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
               {t('devices.empty.methodCli.title')}
             </Button>
           )}
-        </Flexbox>
+        </div>
 
         {!isWorkspace && (
           <div className={styles.optionGrid}>
@@ -347,10 +347,10 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
             />
           </div>
         )}
-      </Flexbox>
+      </div>
 
       {!isWorkspace && <Capabilities />}
-    </Flexbox>
+    </div>
   );
 
   const selected = selectedId ? devices.find((d) => d.deviceId === selectedId) : undefined;
@@ -367,9 +367,12 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
       loading={<ListSkeleton bordered={isWorkspace} />}
       onRetry={() => mutate()}
     >
-      <Flexbox horizontal align={'flex-start'} gap={16}>
-        <Flexbox className={isWorkspace ? styles.listCol : styles.plainCol} flex={1}>
-          <Flexbox className={styles.listScroll} gap={2} padding={isWorkspace ? 4 : 0}>
+      <div className="flex items-start gap-4">
+        <div className={`flex flex-col flex-1 ${isWorkspace ? styles.listCol : styles.plainCol}`}>
+          <div
+            className={`flex flex-col gap-0.5 ${styles.listScroll}`}
+            style={{ padding: isWorkspace ? 4 : 0 }}
+          >
             {devices.map((device) => (
               <DeviceItem
                 device={device}
@@ -381,10 +384,10 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
                 }
               />
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {selected && (
-          <Flexbox className={styles.detailCol} flex={1}>
+          <div className={`flex flex-col flex-1 ${styles.detailCol}`}>
             {/* keyed on deviceId so the form state resets when the selection changes */}
             <DeviceDetailPanel
               device={selected}
@@ -392,9 +395,9 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
               key={selected.deviceId}
               onClose={() => setSelectedId(undefined)}
             />
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     </AsyncBoundary>
   );
 });

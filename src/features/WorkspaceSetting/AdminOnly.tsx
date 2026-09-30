@@ -1,6 +1,6 @@
 'use client';
 
-import { FluentEmoji } from '@lobehub/ui';
+import { Ban } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -36,7 +36,7 @@ const Forbidden = memo(() => {
       >
         403
       </h1>
-      <FluentEmoji emoji={'🚫'} size={64} />
+      <Ban size={64} strokeWidth={1.5} />
       <h2 style={{ fontWeight: 'bold', marginTop: '1em', textAlign: 'center' }}>
         {t('forbidden.title')}
       </h2>

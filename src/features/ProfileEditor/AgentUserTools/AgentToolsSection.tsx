@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, confirmModal, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { upsertPluginMode } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -72,18 +71,13 @@ const AgentToolsSection = memo<{ agentId: string; onStartCopy: () => void }>(
     ];
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <Text style={{ fontSize: 12, fontWeight: 500 }} type={'secondary'}>
           {t('settingAgent.agentTools.tabAgent')} · {agentConnectors.length}
         </Text>
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+        <div className="flex items-center gap-2 flex-wrap">
           <DropdownMenu items={addMenuItems} placement={'bottomLeft'}>
-            <Button
-              disabled={!canEdit}
-              icon={<Icon icon={PlusIcon} />}
-              size={'small'}
-              type={'text'}
-            >
+            <Button disabled={!canEdit} icon={<PlusIcon />} size={'small'} type={'text'}>
               {t('settingAgent.agentTools.add')}
             </Button>
           </DropdownMenu>
@@ -117,8 +111,8 @@ const AgentToolsSection = memo<{ agentId: string; onStartCopy: () => void }>(
               />
             );
           })}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

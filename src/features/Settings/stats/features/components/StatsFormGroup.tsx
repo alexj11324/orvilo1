@@ -1,11 +1,9 @@
 'use client';
 
-import { type BlockProps } from '@lobehub/ui';
-import { Block } from '@lobehub/ui';
-import { type ReactNode } from 'react';
+import { type HTMLAttributes, type ReactNode } from 'react';
 import { memo } from 'react';
 
-interface StatsFormGroupProps extends Omit<BlockProps, 'title'> {
+interface StatsFormGroupProps extends HTMLAttributes<HTMLDivElement> {
   afterTitle?: ReactNode;
   children: ReactNode;
   extra?: ReactNode;
@@ -16,7 +14,7 @@ interface StatsFormGroupProps extends Omit<BlockProps, 'title'> {
 const StatsFormGroup = memo<StatsFormGroupProps>(
   ({ fontSize = 18, afterTitle, children, extra, title, ...rest }) => {
     return (
-      <Block gap={16} variant={'borderless'} {...rest}>
+      <div className="flex flex-col gap-4" {...rest}>
         <div
           className={'flex min-w-0'}
           style={{
@@ -41,7 +39,7 @@ const StatsFormGroup = memo<StatsFormGroupProps>(
           </div>
         </div>
         {children}
-      </Block>
+      </div>
     );
   },
 );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { getActivePluginIds } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -85,12 +84,12 @@ const UserToolsSection = memo<Props>(
 
     if (copyMode) {
       return (
-        <Flexbox gap={8}>
-          <Flexbox horizontal align={'center'} justify={'space-between'}>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
             <Text style={{ fontSize: 12 }} type={'secondary'}>
               {t('settingAgent.agentTools.copyPick')}
             </Text>
-            <Flexbox horizontal gap={8}>
+            <div className="flex gap-2">
               <Button disabled={copying} size={'small'} type={'text'} onClick={onCancelCopy}>
                 {t('cancel', { ns: 'common' })}
               </Button>
@@ -103,9 +102,9 @@ const UserToolsSection = memo<Props>(
               >
                 {t('settingAgent.agentTools.copyConfirm', { count: selected.size })}
               </Button>
-            </Flexbox>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
             {copyable.length === 0 && (
               <Text style={{ fontSize: 12 }} type={'secondary'}>
                 {t('settingAgent.agentTools.pickerEmpty')}
@@ -120,13 +119,13 @@ const UserToolsSection = memo<Props>(
                 onSelect={() => toggleSelected(c.id)}
               />
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       );
     }
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <Text style={{ fontSize: 12, fontWeight: 500 }} type={'secondary'}>
           {baseToolsLabel} · {userToolCount}
         </Text>
@@ -136,7 +135,7 @@ const UserToolsSection = memo<Props>(
           agentId={agentId}
           showAuthor={!!activeWorkspaceId}
         />
-      </Flexbox>
+      </div>
     );
   },
 );

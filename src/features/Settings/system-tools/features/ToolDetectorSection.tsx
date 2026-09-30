@@ -1,9 +1,9 @@
 'use client';
 
 import { type FormGroupItemType } from '@lobehub/ui';
-import { CopyButton, Form } from '@lobehub/ui';
+import { Form } from '@lobehub/ui';
 import { type BinaryStatus } from '@orvilo/electron-client-ipc';
-import { CheckCircle2, Loader2Icon, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, Copy, Loader2Icon, RefreshCw, XCircle } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +14,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { binaryService } from '@/services/electron/binary';
+import { copyToClipboard } from '@/utils/clipboard';
 
 /**
  * Predefined tool configurations by category
@@ -155,7 +156,14 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
                   <span className={'truncate text-muted-foreground'} style={{ fontSize: 12 }}>
                     {status.path}
                   </span>
-                  <CopyButton content={status.path} size="small" />
+                  <Button
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => void copyToClipboard(status.path)}
+                  >
+                    <Copy size={14} />
+                  </Button>
                 </div>
               </span>
             }

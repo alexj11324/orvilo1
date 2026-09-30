@@ -1,5 +1,4 @@
 import { ChatInput, ChatInputActionBar, SendButton, useEditor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { $getRoot } from 'lexical';
 import { ChevronDownIcon, MessageCirclePlus } from 'lucide-react';
@@ -101,17 +100,17 @@ const FeedbackInput = memo<FeedbackInputProps>(
     // work without expanding the composer.
     if (!expanded) {
       return (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <OpStatusTray seamless />
           <Button block icon={MessageCirclePlus} type={'fill'} onClick={() => setExpanded(true)}>
             {t('taskDetail.sendFollowUp')}
           </Button>
-        </Flexbox>
+        </div>
       );
     }
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <OpStatusTray seamless />
         <ChatInput
           maxHeight={240}
@@ -120,7 +119,7 @@ const FeedbackInput = memo<FeedbackInputProps>(
             <ChatInputActionBar
               style={{ paddingInline: 8 }}
               left={
-                <Flexbox horizontal align={'center'} gap={2}>
+                <div className="flex items-center gap-0.5">
                   {!disableCollapse && (
                     <Button
                       icon={ChevronDownIcon}
@@ -132,7 +131,7 @@ const FeedbackInput = memo<FeedbackInputProps>(
                     </Button>
                   )}
                   <AttachmentUploadButton onFiles={handleAttach} />
-                </Flexbox>
+                </div>
               }
               right={
                 <SendButton
@@ -161,7 +160,7 @@ const FeedbackInput = memo<FeedbackInputProps>(
             }}
           />
         </ChatInput>
-      </Flexbox>
+      </div>
     );
   },
 );

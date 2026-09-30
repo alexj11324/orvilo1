@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CircleDashed } from 'lucide-react';
@@ -34,12 +33,12 @@ export const PendingAcceptanceCheckList = memo<PendingAcceptanceCheckListProps>(
     return (
       <CriterionList>
         {grouped && (
-          <Flexbox horizontal align={'center'} className={styles.groupHeader} gap={8}>
+          <div className={`flex items-center gap-2 ${styles.groupHeader}`}>
             <Text fontSize={12}>{groupLabel}</Text>
             <Text fontSize={11} type={'secondary'}>
               {items.length}
             </Text>
-          </Flexbox>
+          </div>
         )}
         {items.map((item, index) => (
           <CriterionRow
@@ -48,12 +47,7 @@ export const PendingAcceptanceCheckList = memo<PendingAcceptanceCheckListProps>(
             seq={index + 1}
             title={item.title}
             icon={
-              <Icon
-                color={cssVar.colorTextQuaternary}
-                icon={CircleDashed}
-                size={16}
-                style={{ flex: 'none' }}
-              />
+              <CircleDashed color={cssVar.colorTextQuaternary} size={16} style={{ flex: 'none' }} />
             }
             onOpen={() => onOpen(item)}
           />

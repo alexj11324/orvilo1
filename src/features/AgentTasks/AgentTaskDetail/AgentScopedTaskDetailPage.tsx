@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import AgentTaskManager from '@/features/AgentTaskManager';
@@ -23,16 +22,16 @@ const AgentScopedTaskDetailPage = memo<AgentScopedTaskDetailPageProps>(({ agentI
   useCanonicalTaskSlug(taskId);
 
   return (
-    <Flexbox horizontal flex={1} height={'100%'} style={{ minHeight: 0 }} width={'100%'}>
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
+    <div className="flex flex-1" style={{ height: '100%', minHeight: 0, width: '100%' }}>
+      <div className="flex flex-1" style={{ minWidth: 0 }}>
         <TaskDetailPage showTaskAgentPanelToggle={!isMobile} taskId={taskId} />
-      </Flexbox>
+      </div>
       {isMobile ? (
         <MobilePortal />
       ) : (
         <AgentTaskManager preferredAgentId={agentId} viewedTaskId={taskId} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

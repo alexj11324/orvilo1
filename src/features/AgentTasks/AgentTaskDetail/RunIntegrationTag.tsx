@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { PreviewCard } from '@base-ui/react/preview-card';
 import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskTopicIntegration } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -17,6 +17,7 @@ import {
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 
@@ -87,7 +88,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
   };
 
   const tooltip = (
-    <Flexbox gap={4} style={{ maxWidth: 320 }}>
+    <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
       <Text fontSize={12} style={{ fontFamily: cssVar.fontFamilyCode }} type={'secondary'}>
         {integration.branch} → {integration.baseBranch}
         {integration.integratedSha ? ` @ ${integration.integratedSha.slice(0, 7)}` : ''}
@@ -140,27 +141,50 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
           )}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 
+  const StateGlyph = meta.icon;
+
+  const tag = (
+    <Tag
+      size={'small'}
+      style={{ cursor: integration.prUrl && !retryable ? 'pointer' : undefined, flexShrink: 0 }}
+      icon={
+        <StateGlyph
+          className={meta.spin ? 'animate-spin' : undefined}
+          color={meta.color}
+          size={12}
+        />
+      }
+      onClick={
+        integration.prUrl && !retryable
+          ? (event) => {
+              event.stopPropagation();
+              window.open(integration.prUrl, '_blank', 'noopener,noreferrer');
+            }
+          : undefined
+      }
+    >
+      {label}
+    </Tag>
+  );
+
+  // Hover card, not a tooltip: the popup carries a retry button and a PR link
+  // the reader can actually click, which a tooltip's dismiss-on-leave forbids.
   return (
-    <Tooltip title={tooltip}>
-      <Tag
-        icon={<Icon color={meta.color} icon={meta.icon} size={12} spin={meta.spin} />}
-        size={'small'}
-        style={{ cursor: integration.prUrl && !retryable ? 'pointer' : undefined, flexShrink: 0 }}
-        onClick={
-          integration.prUrl && !retryable
-            ? (event) => {
-                event.stopPropagation();
-                window.open(integration.prUrl, '_blank', 'noopener,noreferrer');
-              }
-            : undefined
-        }
-      >
-        {label}
-      </Tag>
-    </Tooltip>
+    <PreviewCard.Root>
+      <PreviewCard.Trigger render={<span style={{ display: 'inline-flex' }}>{tag}</span>} />
+      <PreviewCard.Portal>
+        <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
+          <PreviewCard.Popup
+            className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
+          >
+            {tooltip}
+          </PreviewCard.Popup>
+        </PreviewCard.Positioner>
+      </PreviewCard.Portal>
+    </PreviewCard.Root>
   );
 });
 

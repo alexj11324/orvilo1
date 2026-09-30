@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { CircleAlert } from 'lucide-react';
 import { memo } from 'react';
@@ -52,7 +51,8 @@ const TopicStatusIcon = memo<TopicStatusIconProps>(({ size = 16, status }) => {
   if (status === 'running') return <RunningIcon size={size} />;
   const key = (status ?? 'pending') as keyof typeof STATIC_META;
   const meta = STATIC_META[key] ?? STATIC_META.pending;
-  return <Icon color={meta.color} icon={meta.icon} size={size} />;
+  const StatusGlyph = meta.icon;
+  return <StatusGlyph color={meta.color} size={size} />;
 });
 
 export default TopicStatusIcon;

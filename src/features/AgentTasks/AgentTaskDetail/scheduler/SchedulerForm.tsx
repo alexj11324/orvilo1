@@ -1,4 +1,4 @@
-import { Flexbox, Icon, InputNumber } from '@lobehub/ui';
+import { InputNumber } from '@lobehub/ui';
 import { Accordion, Checkbox, Select, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -230,9 +230,9 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
   const showTimeRow = scheduleType !== 'hourly';
 
   return (
-    <Flexbox gap={16}>
-      <Flexbox horizontal gap={12}>
-        <Flexbox flex={1} gap={6}>
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-3">
+        <div className="flex flex-1 flex-col gap-1.5">
           <Text className={styles.fieldLabel}>{t('taskSchedule.frequency')}</Text>
           <Select
             value={scheduleType}
@@ -243,9 +243,9 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
             }))}
             onChange={handleScheduleTypeChange}
           />
-        </Flexbox>
+        </div>
         {showTimeRow && (
-          <Flexbox flex={1} gap={6}>
+          <div className="flex flex-1 flex-col gap-1.5">
             <Text className={styles.fieldLabel}>{t('taskSchedule.time')}</Text>
             <Select
               options={TIME_OPTIONS}
@@ -253,12 +253,12 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
               variant="filled"
               onChange={handleTimeChange}
             />
-          </Flexbox>
+          </div>
         )}
         {scheduleType === 'hourly' && (
-          <Flexbox flex={1} gap={6}>
+          <div className="flex flex-1 flex-col gap-1.5">
             <Text className={styles.fieldLabel}>{t('taskSchedule.every')}</Text>
-            <Flexbox horizontal align="center" gap={6}>
+            <div className="flex items-center gap-1.5">
               <InputNumber
                 max={24}
                 min={1}
@@ -280,15 +280,15 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
                 ]}
                 onChange={handleHourlyMinuteChange}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
-      </Flexbox>
+      </div>
 
       {scheduleType === 'weekly' && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text className={styles.fieldLabel}>{t('taskSchedule.weekday')}</Text>
-          <Flexbox horizontal gap={6}>
+          <div className="flex gap-1.5">
             {WEEKDAYS.map(({ key, label }) => (
               <div
                 key={key}
@@ -301,8 +301,8 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
                 {t(label as any)}
               </div>
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
 
       <Accordion
@@ -313,12 +313,12 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
         items={[
           {
             children: (
-              <Flexbox gap={14} paddingBlock={'8px 4px'}>
-                <Flexbox gap={6}>
-                  <Flexbox horizontal align="center" gap={6}>
-                    <Icon color={cssVar.colorTextDescription} icon={Globe} size={14} />
+              <div className="flex flex-col gap-3.5" style={{ paddingBlock: '8px 4px' }}>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Globe color={cssVar.colorTextDescription} size={14} />
                     <Text className={styles.fieldLabel}>{t('taskSchedule.timezone')}</Text>
-                  </Flexbox>
+                  </div>
                   <Select
                     showSearch
                     options={TIMEZONE_OPTIONS}
@@ -338,14 +338,14 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
                     }}
                     onChange={handleTimezoneChange}
                   />
-                </Flexbox>
+                </div>
 
-                <Flexbox gap={6}>
-                  <Flexbox horizontal align="center" gap={6}>
-                    <Icon color={cssVar.colorTextDescription} icon={Hash} size={14} />
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Hash color={cssVar.colorTextDescription} size={14} />
                     <Text className={styles.fieldLabel}>{t('taskSchedule.maxExecutions')}</Text>
-                  </Flexbox>
-                  <Flexbox horizontal align="center" gap={12}>
+                  </div>
+                  <div className="flex items-center gap-3">
                     <InputNumber
                       disabled={continuous}
                       min={1}
@@ -358,23 +358,23 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
                     <Checkbox checked={continuous} onChange={handleContinuousChange}>
                       {t('taskSchedule.continuous')}
                     </Checkbox>
-                  </Flexbox>
-                </Flexbox>
-              </Flexbox>
+                  </div>
+                </div>
+              </div>
             ),
             key: 'advanced',
             title: (
-              <Flexbox horizontal align="center" gap={8}>
-                <Icon color={cssVar.colorTextDescription} icon={SlidersHorizontal} size={14} />
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal color={cssVar.colorTextDescription} size={14} />
                 <Text style={{ color: cssVar.colorTextSecondary }}>
                   {t('taskSchedule.advancedSettings')}
                 </Text>
-              </Flexbox>
+              </div>
             ),
           },
         ]}
       />
-    </Flexbox>
+    </div>
   );
 });
 

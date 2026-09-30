@@ -1,4 +1,3 @@
-import { copyToClipboard } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +36,7 @@ export const useTaskCopyActions = () => {
   const copyId = useCallback(async () => {
     if (!taskId) return;
 
-    await copyToClipboard(taskId);
+    await navigator.clipboard.writeText(taskId);
     toast.success(t('taskList.contextMenu.copyIdSuccess'));
   }, [taskId, t]);
 
@@ -50,7 +49,7 @@ export const useTaskCopyActions = () => {
       activeWorkspaceSlug,
     )}`;
 
-    await copyToClipboard(taskUrl);
+    await navigator.clipboard.writeText(taskUrl);
     toast.success(t('taskList.contextMenu.copyLinkSuccess'));
   }, [taskId, taskAgentId, taskTitle, appOrigin, activeWorkspaceSlug, t]);
 
@@ -59,7 +58,7 @@ export const useTaskCopyActions = () => {
   const copyBranch = useCallback(async () => {
     if (!taskIdentifier) return;
 
-    await copyToClipboard(`task/${taskIdentifier}`);
+    await navigator.clipboard.writeText(`task/${taskIdentifier}`);
     toast.success(t('taskDetail.copyBranchSuccess'));
   }, [taskIdentifier, t]);
 

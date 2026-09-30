@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Check, ChevronDown, ChevronRight, CircleDashed, X } from 'lucide-react';
@@ -67,7 +66,7 @@ const RunVerifyDetail = memo<{
   if (!results?.length) return null;
 
   return (
-    <Flexbox gap={6}>
+    <div className="flex flex-col gap-1.5">
       <Button
         aria-expanded={expanded}
         className={styles.header}
@@ -75,20 +74,20 @@ const RunVerifyDetail = memo<{
         type={'text'}
         onClick={() => setExpanded((open) => !open)}
       >
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon
-            color={cssVar.colorTextQuaternary}
-            icon={expanded ? ChevronDown : ChevronRight}
-            size={12}
-          />
+        <div className="flex items-center gap-2">
+          {expanded ? (
+            <ChevronDown color={cssVar.colorTextQuaternary} size={12} />
+          ) : (
+            <ChevronRight color={cssVar.colorTextQuaternary} size={12} />
+          )}
           <Text fontSize={12} type={'secondary'}>
             {t('taskDetail.runVerify.checklist')}
           </Text>
           {extra}
-        </Flexbox>
+        </div>
       </Button>
       {expanded && (
-        <Flexbox className={styles.list}>
+        <div className={`flex flex-col ${styles.list}`}>
           {results.map((result) => {
             const meta = verdictIcon(result.verdict);
             // An LLM judge's reasoning IS its product; a programmatic check
@@ -96,24 +95,24 @@ const RunVerifyDetail = memo<{
             const reasoning = (result.toulmin as { reasoning?: string } | null)?.reasoning;
 
             return (
-              <Flexbox className={styles.check} gap={4} key={result.id}>
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <Icon color={meta.color} icon={meta.icon} size={14} style={{ flex: 'none' }} />
+              <div className={`flex flex-col gap-1 ${styles.check}`} key={result.id}>
+                <div className="flex items-center gap-2">
+                  <meta.icon color={meta.color} size={14} style={{ flex: 'none' }} />
                   <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }}>
                     {result.checkItemTitle}
                   </Text>
-                </Flexbox>
+                </div>
                 {reasoning && (
                   <Text className={styles.reason} style={{ whiteSpace: 'pre-wrap' }}>
                     {reasoning}
                   </Text>
                 )}
-              </Flexbox>
+              </div>
             );
           })}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

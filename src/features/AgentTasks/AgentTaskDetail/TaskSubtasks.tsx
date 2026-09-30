@@ -1,4 +1,3 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import type { TreeDataNode } from '@lobehub/ui/base-ui';
 import { ActionIcon, Collapsible, confirmModal, Text, toast, Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
@@ -70,13 +69,7 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
   const activeWorkspaceId = useActiveWorkspaceId();
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      gap={8}
-      justify="space-between"
-      style={{ minWidth: 0, width: '100%' }}
-    >
+    <div className="flex items-center justify-between gap-2" style={{ minWidth: 0, width: '100%' }}>
       <span
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
@@ -118,7 +111,7 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
           />
         </span>
       ) : null}
-      <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
+      <div className="flex flex-none items-center gap-1">
         {shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
           <AssigneeMemberSelector
             currentUserId={task.assigneeUserId ?? null}
@@ -160,8 +153,8 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
             <AssigneeAvatar agentId={task.assignee?.id} size={18} />
           </span>
         </AssigneeAgentSelector>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -323,23 +316,22 @@ const TaskSubtasks = memo(() => {
   const hasSubtasks = subtasks.length > 0;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {hasSubtasks ? (
         <>
-          <Flexbox horizontal align="center" justify="space-between">
-            <Flexbox horizontal align="center" gap={8}>
-              <Block
-                clickable
-                horizontal
-                align="center"
-                gap={8}
-                paddingBlock={4}
-                paddingInline={8}
-                style={{ cursor: 'pointer', width: 'fit-content' }}
-                variant="borderless"
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-2"
+                style={{
+                  cursor: 'pointer',
+                  paddingBlock: 4,
+                  paddingInline: 8,
+                  width: 'fit-content',
+                }}
                 onClick={() => setIsExpanded((prev) => !prev)}
               >
-                <Icon color={cssVar.colorTextDescription} icon={ListTodoIcon} size={16} />
+                <ListTodoIcon color={cssVar.colorTextDescription} size={16} />
                 <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
                   {t('taskDetail.subtasks')}
                 </Text>
@@ -347,14 +339,14 @@ const TaskSubtasks = memo(() => {
                   isOpen={isExpanded}
                   style={{ color: cssVar.colorTextDescription }}
                 />
-              </Block>
+              </div>
               <TaskSubtaskProgressTag
                 currentIdentifier={taskId}
                 subtasks={subtasks}
                 onSubtaskClick={handleNavigate}
               />
-            </Flexbox>
-            <Flexbox horizontal align="center" gap={4}>
+            </div>
+            <div className="flex items-center gap-1">
               <ActionIcon
                 disabled={!canEditTask || isPlanning}
                 icon={PlayCircle}
@@ -370,10 +362,10 @@ const TaskSubtasks = memo(() => {
                 title={canEditTask ? t('taskDetail.addSubtask') : reason}
                 onClick={toggleCreating}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
           <Collapsible open={isExpanded}>
-            <Flexbox gap={8}>
+            <div className="flex flex-col gap-2">
               {isCreating && (
                 <CreateTaskInlineEntry
                   autoFocus
@@ -405,28 +397,22 @@ const TaskSubtasks = memo(() => {
                   if (!open) setContextMenu(null);
                 }}
               />
-            </Flexbox>
+            </div>
           </Collapsible>
         </>
       ) : (
         <>
-          <Block
-            clickable
-            horizontal
-            align="center"
-            gap={8}
-            paddingBlock={4}
-            paddingInline={8}
-            style={{ width: 'fit-content' }}
+          <div
+            className="flex cursor-pointer items-center gap-2"
+            style={{ paddingBlock: 4, paddingInline: 8, width: 'fit-content' }}
             title={canEditTask ? undefined : reason}
-            variant="borderless"
             onClick={toggleCreating}
           >
-            <Icon color={cssVar.colorTextDescription} icon={Plus} size={16} />
+            <Plus color={cssVar.colorTextDescription} size={16} />
             <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
               {t('taskDetail.addSubtask')}
             </Text>
-          </Block>
+          </div>
           {isCreating && (
             <CreateTaskInlineEntry
               autoFocus
@@ -440,7 +426,7 @@ const TaskSubtasks = memo(() => {
           )}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

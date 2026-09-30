@@ -18,10 +18,10 @@ const mocks = vi.hoisted(() => ({
   workspaceSlug: 'ws-slug' as string | undefined,
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  copyToClipboard: mocks.copyToClipboard,
-}));
+Object.defineProperty(navigator, 'clipboard', {
+  configurable: true,
+  value: { writeText: mocks.copyToClipboard },
+});
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),

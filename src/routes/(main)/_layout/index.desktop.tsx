@@ -28,8 +28,8 @@ import TitleBar from '@/features/Electron/titlebar/TitleBar';
 import GlobalOverlays from '@/features/GlobalOverlays';
 import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostContext';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
-import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
+import { SidebarShell } from '@/features/ReUIShell/SidebarShell';
 import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { usePlatform } from '@/hooks/usePlatform';
 import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
@@ -86,7 +86,7 @@ const Layout: FC = () => {
               height={`calc(100% - ${TITLE_BAR_HEIGHT}px)`}
               width={'100%'}
             >
-              <NavPanelShell />
+              <SidebarShell />
               <DesktopLayoutContainer>
                 <Flexbox height={'100%'} style={tabHostContainer} width={'100%'}>
                   <TabHost />

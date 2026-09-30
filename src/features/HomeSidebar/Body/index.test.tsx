@@ -30,27 +30,8 @@ const mocks = vi.hoisted(() => ({
   updateSystemStatus: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Flexbox: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="sidebar-body">{children}</div>
-  ),
-}));
-
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  AccordionRoot: ({
-    children,
-    value,
-  }: {
-    children: React.ReactNode;
-    onValueChange?: (keys: string[]) => void;
-    value?: string[];
-  }) => (
-    <div data-expanded-keys={JSON.stringify(value)} data-testid="sidebar-accordion">
-      {children}
-    </div>
-  ),
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('react-router', () => ({
@@ -71,8 +52,8 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceId', async (importOriginal) =
   useActiveWorkspaceId: () => mocks.activeWorkspaceId,
 }));
 
-vi.mock('@/features/NavPanel/components/NavItem', () => ({
-  default: ({ title }: { title: string }) => <div>{title}</div>,
+vi.mock('@/features/NavPanel/components/SidebarNavItem', () => ({
+  default: ({ title }: { title: string }) => <li>{title}</li>,
 }));
 
 vi.mock('@/hooks/useActiveTabKey', () => ({
@@ -88,19 +69,27 @@ vi.mock('@/utils/navigation', () => ({
 }));
 
 vi.mock('./Agent', () => ({
-  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+  default: ({ itemKey, open }: { itemKey: string; open: boolean }) => (
+    <div data-open={open} data-testid={`sidebar-item-${itemKey}`} />
+  ),
 }));
 
 vi.mock('./WorkFavorites', () => ({
-  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+  default: ({ itemKey, open }: { itemKey: string; open: boolean }) => (
+    <div data-open={open} data-testid={`sidebar-item-${itemKey}`} />
+  ),
 }));
 
 vi.mock('./WorkspaceSection', () => ({
-  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+  default: ({ itemKey, open }: { itemKey: string; open: boolean }) => (
+    <div data-open={open} data-testid={`sidebar-item-${itemKey}`} />
+  ),
 }));
 
 vi.mock('./TeamsSection', () => ({
-  default: ({ itemKey }: { itemKey: string }) => <div data-testid={`sidebar-item-${itemKey}`} />,
+  default: ({ itemKey, open }: { itemKey: string; open: boolean }) => (
+    <div data-open={open} data-testid={`sidebar-item-${itemKey}`} />
+  ),
 }));
 
 vi.mock('./CustomizeSidebarModal', () => ({
@@ -155,7 +144,9 @@ describe('Home sidebar body', () => {
   it('renders the fixed IA regardless of a stale stored order', () => {
     render(<Body />);
 
-    const children = Array.from(screen.getByTestId('sidebar-body').children);
+    const children = Array.from(
+      screen.getByTestId('sidebar-body').querySelector('[data-sidebar=menu]')!.children,
+    );
     const texts = children.map((child) => child.textContent);
 
     // Core links first, in contract order — the stored legacy keys
@@ -174,7 +165,9 @@ describe('Home sidebar body', () => {
     // There is no personal mode — Your teams renders even while the
     // workspace is still being provisioned (empty-state row inside).
     expect(screen.getByTestId('sidebar-item-teams')).toBeInTheDocument();
-    expect(children.some((child) => child.hasAttribute('data-sidebar-bottom-spacer'))).toBe(true);
+    expect(
+      screen.getByTestId('sidebar-body').querySelector('[data-sidebar-bottom-spacer]'),
+    ).toBeInTheDocument();
   });
 
   it('always renders the Your teams section', () => {
@@ -194,20 +187,18 @@ describe('Home sidebar body', () => {
     expect(screen.queryByTestId('sidebar-item-workspace')).not.toBeInTheDocument();
     expect(screen.queryByTestId('sidebar-item-favorites')).not.toBeInTheDocument();
     // `inbox` is core — hidden sections cannot remove it.
-    const texts = Array.from(screen.getByTestId('sidebar-body').children).map(
-      (child) => child.textContent,
-    );
+    const texts = Array.from(
+      screen.getByTestId('sidebar-body').querySelector('[data-sidebar=menu]')!.children,
+    ).map((child) => child.textContent);
     expect(texts).toContain('Inbox');
   });
 
-  it('passes persisted expanded keys to the accordion', () => {
+  it('passes persisted expansion to sections', () => {
     mocks.globalState.status.sidebarExpandedKeys = ['workspace'];
 
     render(<Body />);
 
-    expect(screen.getByTestId('sidebar-accordion')).toHaveAttribute(
-      'data-expanded-keys',
-      '["workspace"]',
-    );
+    expect(screen.getByTestId('sidebar-item-workspace')).toHaveAttribute('data-open', 'true');
+    expect(screen.getByTestId('sidebar-item-favorites')).toHaveAttribute('data-open', 'false');
   });
 });

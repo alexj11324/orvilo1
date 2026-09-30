@@ -1,40 +1,26 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { HomeIcon } from 'lucide-react';
-import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
-import SideBarHeaderLayout from '@/features/NavPanel/SideBarHeaderLayout';
+import { SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
+import BackButton from '@/features/NavPanel/components/BackButton';
 
-const Header = memo(() => {
+const Header = () => {
   const { t } = useTranslation('setting');
-  const activeWorkspace = useActiveWorkspace();
-  const slug = activeWorkspace?.slug;
-  const name = activeWorkspace?.name ?? slug;
+  const workspace = useActiveWorkspace();
 
-  if (!slug) return null;
+  if (!workspace?.slug) return null;
 
   return (
-    <SideBarHeaderLayout
-      breadcrumb={[
-        {
-          href: `/${slug}/settings`,
-          title: t('workspaceSetting.breadcrumb.settings'),
-        },
-      ]}
-      homeItem={{
-        href: `/${slug}`,
-        title: (
-          <Flexbox horizontal align={'center'} gap={4}>
-            <Icon icon={HomeIcon} size={14} />
-            <span>{name}</span>
-          </Flexbox>
-        ),
-      }}
-    />
+    <SidebarGroup>
+      <SidebarGroupLabel className="gap-2">
+        <BackButton to={`/${workspace.slug}`} />
+        <span className="truncate">{workspace.name ?? workspace.slug}</span>
+        <span>{t('workspaceSetting.breadcrumb.settings')}</span>
+      </SidebarGroupLabel>
+    </SidebarGroup>
   );
-});
+};
 
 export default Header;

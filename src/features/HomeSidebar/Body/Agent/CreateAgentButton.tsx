@@ -1,42 +1,17 @@
 'use client';
 
-import { Block, Center, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { ActionIcon, DropdownMenu, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { ChevronDownIcon, PlusIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { SessionDefaultGroup } from '@/types/session';
 
 import { useCreateMenuItems } from '../../hooks';
-
-const ACTION_CLASS_NAME = 'create-agent-actions';
-
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    .${ACTION_CLASS_NAME} {
-      width: 0;
-      margin-inline-end: 2px;
-      opacity: 0;
-      transition: opacity 0.2s ${cssVar.motionEaseOut};
-
-      &:has([data-popup-open]) {
-        width: unset;
-        opacity: 1;
-      }
-    }
-
-    &:hover {
-      .${ACTION_CLASS_NAME} {
-        width: unset;
-        opacity: 1;
-      }
-    }
-  `,
-}));
 
 interface CreateAgentButtonProps {
   className?: string;
@@ -105,58 +80,29 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
     }
   };
 
-  const content = (
-    <Block
-      horizontal
-      align={'center'}
-      className={cx(styles.container, className)}
-      clickable={canCreate}
-      gap={8}
-      height={36}
-      paddingInline={4}
-      style={canCreate ? { height: 36 } : { cursor: 'not-allowed', height: 36, opacity: 0.5 }}
-      variant={'borderless'}
-      onClick={handleClick}
+  return (
+    <div
+      className={cx('flex items-center gap-1', className)}
+      title={!canCreate ? reason : undefined}
     >
-      <Center flex={'none'} height={28} width={28}>
-        {isMutatingAgent ? (
-          <NeuralNetworkLoading size={14} />
-        ) : (
-          <Icon icon={PlusIcon} size={'small'} />
-        )}
-      </Center>
-      <Text style={{ flex: 1 }} type={'secondary'}>
-        {t('addAgent')}
-      </Text>
+      <Button
+        className="min-w-0 flex-1 justify-start"
+        disabled={!canCreate || isMutatingAgent}
+        variant="ghost"
+        onClick={handleClick}
+      >
+        {isMutatingAgent ? <NeuralNetworkLoading size={14} /> : <PlusIcon />}
+        <span className="truncate">{t('addAgent')}</span>
+      </Button>
       {canCreate && (
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={ACTION_CLASS_NAME}
-          flex={'none'}
-          justify={'flex-end'}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
-          <DropdownMenu items={dropdownItems}>
-            <ActionIcon
-              color={cssVar.colorTextQuaternary}
-              icon={ChevronDownIcon}
-              size={'small'}
-              style={{ flex: 'none' }}
-            />
-          </DropdownMenu>
-        </Flexbox>
+        <SidebarDropdownMenu items={dropdownItems}>
+          <Button aria-label={t('addAgent')} size="icon" variant="ghost">
+            <ChevronDownIcon />
+          </Button>
+        </SidebarDropdownMenu>
       )}
-    </Block>
+    </div>
   );
-
-  // Wrap in Tooltip when the viewer/member lacks `create_content`. The
-  // dropdown is hidden in the disabled state (it'd let users bypass the
-  // gate); the main click target is intercepted in `handleClick`.
-  return canCreate ? content : <Tooltip title={reason}>{content}</Tooltip>;
 });
 
 export default CreateAgentButton;

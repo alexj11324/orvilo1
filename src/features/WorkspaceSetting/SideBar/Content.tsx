@@ -1,10 +1,15 @@
 'use client';
 
-import SideBarLayout from '@/features/NavPanel/SideBarLayout';
+import { Suspense } from 'react';
 
 import Body from './Body';
 import Header from './Header';
 
-const WorkspaceSettingsSideBarContent = () => <SideBarLayout body={<Body />} header={<Header />} />;
+const SidebarContent = () => (
+  <Suspense>
+    <Header />
+    <Body />
+  </Suspense>
+);
 
-export default WorkspaceSettingsSideBarContent;
+export default SidebarContent;

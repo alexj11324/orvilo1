@@ -1,5 +1,4 @@
 import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { type SidebarVisibility } from '@orvilo/types';
@@ -65,7 +64,7 @@ export const useGroupDropdownMenu = ({
     const publishItem = showPublishAction
       ? {
           disabled: !canEdit,
-          icon: <Icon icon={GlobeIcon} />,
+          icon: <GlobeIcon size={16} />,
           key: 'publishToWorkspace',
           sfSymbol: 'globe' as SFSymbol,
           label: t('sessionGroup.publishToWorkspace', {

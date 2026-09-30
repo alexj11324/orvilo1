@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { VList } from 'virtua';
@@ -52,9 +51,9 @@ const Content = memo<ContentProps>(({ searchKeyword }) => {
   // Show loading skeleton when searching
   if (isSearching && (isSearchLoading || !searchResults)) {
     return (
-      <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
+      <div className="flex flex-col gap-[1px] py-[1px] px-[4px]">
         <SkeletonList rows={5} />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -69,13 +68,13 @@ const Content = memo<ContentProps>(({ searchKeyword }) => {
       style={{ height: '100%' }}
     >
       {displayItems.map((item) => (
-        <Flexbox key={item.id} paddingBlock={1} paddingInline={4}>
+        <div className="flex flex-col py-[1px] px-[4px]" key={item.id}>
           {item.type === 'group' ? (
             <GroupItem item={item} onNavigate={handleNavigate} />
           ) : (
             <AgentItem item={item} onNavigate={handleNavigate} />
           )}
-        </Flexbox>
+        </div>
       ))}
     </VList>
   );

@@ -313,14 +313,14 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
               onChange={(event) => setQuery(event.target.value)}
               onClick={(event) => event.stopPropagation()}
             />
-            <div className={styles.showingCaption}>
-              {query.trim()
-                ? t('taskDetail.showingItems', {
-                    count: filteredChoices.length,
-                    defaultValue: 'Showing {{count}} items',
-                  })
-                : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
-            </div>
+            {!!query.trim() && (
+              <div className={styles.showingCaption}>
+                {t('taskDetail.showingItems', {
+                  count: filteredChoices.length,
+                  defaultValue: 'Showing {{count}} items',
+                })}
+              </div>
+            )}
           </>
         }
         onOpenChange={setOpen}

@@ -36,7 +36,7 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => vi.fn(),
 }));
 
-vi.mock('@/features/NavPanel/components/NavItem', () => ({
+vi.mock('@/features/NavPanel/components/SidebarNavItem', () => ({
   default: ({ active, title }: { active?: boolean; title: ReactNode }) =>
     h('button', { 'data-active': String(!!active), 'type': 'button' }, title),
 }));

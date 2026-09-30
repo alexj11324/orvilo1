@@ -1,5 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
 import { GROUP_CHAT_URL } from '@orvilo/const';
 import { type SidebarAgentItem } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -38,14 +36,14 @@ const GroupItem = memo<GroupItemProps>(({ item, style, className, onNavigate }) 
 
   // Group conversations show a "群组" tag so they stand out from single agents.
   const titleNode = (
-    <Flexbox horizontal align="center" gap={4}>
+    <div className="flex items-center gap-[4px]">
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {displayTitle}
       </span>
-      <Tag size={'small'} style={{ flexShrink: 0 }}>
+      <span className="shrink-0 rounded-md bg-muted px-1.5 text-xs text-muted-foreground">
         {t('group.title')}
-      </Tag>
-    </Flexbox>
+      </span>
+    </div>
   );
 
   // Get URL for this group
@@ -75,16 +73,14 @@ const GroupItem = memo<GroupItemProps>(({ item, style, className, onNavigate }) 
   // Memoize pin icon
   const pinIcon = useMemo(
     () =>
-      pinned ? (
-        <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
-      ) : undefined,
+      pinned ? <PinIcon size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} /> : undefined,
     [pinned],
   );
 
   // Memoize avatar icon (show loader when updating)
   const avatarIcon = useMemo(() => {
     if (isUpdating) {
-      return <Icon spin color={cssVar.colorTextDescription} icon={Loader2} size={18} />;
+      return <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={18} />;
     }
 
     // If avatar is a string, it's a custom group avatar

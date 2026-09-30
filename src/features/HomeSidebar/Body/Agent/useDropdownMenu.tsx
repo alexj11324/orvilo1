@@ -1,5 +1,4 @@
 import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { Hash, LucideCheck, SlidersHorizontalIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +30,7 @@ export const useAgentActionsDropdownMenu = ({
 
     const pageSizeOptions = [5, 10, 15, 20];
     const pageSizeItems = pageSizeOptions.map((size) => ({
-      icon: agentPageSize === size ? <Icon icon={LucideCheck} /> : <div />,
+      icon: agentPageSize === size ? <LucideCheck size={16} /> : <div />,
       key: `pageSize-${size}`,
       label: t('pageSizeItem', { count: size }),
       onClick: () => {
@@ -46,13 +45,13 @@ export const useAgentActionsDropdownMenu = ({
       {
         children: pageSizeItems,
         extra: agentPageSize,
-        icon: <Icon icon={Hash} />,
+        icon: <Hash size={16} />,
         key: 'show',
         label: t('navPanel.show'),
       },
       { type: 'divider' as const },
       {
-        icon: <Icon icon={SlidersHorizontalIcon} />,
+        icon: <SlidersHorizontalIcon size={16} />,
         key: 'customizeSidebar',
         label: t('navPanel.customizeSidebar'),
         onClick: () => openCustomizeSidebarModal(),

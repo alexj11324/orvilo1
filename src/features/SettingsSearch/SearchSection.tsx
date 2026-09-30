@@ -1,8 +1,10 @@
 'use client';
 
-import { Flexbox, SearchBar } from '@lobehub/ui';
 import { memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
+import { SidebarGroup, SidebarGroupContent } from '@/components/ui/sidebar';
 
 import SearchResults from './SearchResults';
 import { useSettingsSearch } from './useSettingsSearch';
@@ -23,15 +25,18 @@ const SearchSection = memo<PropsWithChildren>(({ children }) => {
 
   return (
     <>
-      <Flexbox paddingInline={4}>
-        <SearchBar
-          allowClear
-          placeholder={t('settingsSearch.placeholder')}
-          value={query}
-          variant={'filled'}
-          onInputChange={setQuery}
-        />
-      </Flexbox>
+      <SidebarGroup className="py-1">
+        <SidebarGroupContent>
+          <Input
+            aria-label={t('settingsSearch.placeholder')}
+            className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-[var(--sidebar-muted)]"
+            placeholder={t('settingsSearch.placeholder')}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </SidebarGroupContent>
+      </SidebarGroup>
       {showResults ? (
         <SearchResults isIndexing={isIndexing} query={query} results={results} />
       ) : (

@@ -16,8 +16,8 @@ import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
 import GlobalOverlays from '@/features/GlobalOverlays';
 import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostContext';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
-import NavPanelShell from '@/features/NavPanel/Shell';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
+import { SidebarShell } from '@/features/ReUIShell/SidebarShell';
 import { RouteMetaBridge } from '@/features/RouteMeta';
 import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { usePlatform } from '@/hooks/usePlatform';
@@ -62,7 +62,7 @@ const Layout: FC = () => {
               height={showCloudPromotion ? `calc(100% - ${BANNER_HEIGHT}px)` : '100%'}
               width={'100%'}
             >
-              <NavPanelShell />
+              <SidebarShell />
               <DesktopLayoutContainer>
                 <Suspense fallback={<RouteSegmentSkeleton />}>
                   <Outlet />

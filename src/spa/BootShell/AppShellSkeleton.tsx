@@ -119,16 +119,14 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
         height={isDesktop ? `calc(100% - ${TITLE_BAR_HEIGHT}px)` : '100%'}
         width={'100%'}
       >
-        {showLeftPanel && (
-          <div
-            style={{
-              background: navPanelBackground,
-              flexShrink: 0,
-              height: '100%',
-              width: navPanelWidth,
-            }}
-          />
-        )}
+        <div
+          style={{
+            background: navPanelBackground,
+            flexShrink: 0,
+            height: '100%',
+            width: navPanelWidth,
+          }}
+        />
         <Flexbox
           className={containerStyles.outerContainer}
           height={'100%'}

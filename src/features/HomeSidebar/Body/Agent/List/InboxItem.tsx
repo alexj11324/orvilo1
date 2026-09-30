@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
@@ -83,7 +82,7 @@ const InboxItem = memo<InboxItemProps>(({ className, style }) => {
             <span className={styles.wrapper}>
               {avatarNode}
               <span className={styles.runningBadge}>
-                <Icon spin icon={Loader2} size={9} />
+                <Loader2 className="animate-spin" size={9} />
               </span>
             </span>
           ) : (

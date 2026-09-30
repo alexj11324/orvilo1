@@ -1,7 +1,8 @@
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 import WorkFavorites from './WorkFavorites';
 
@@ -56,6 +57,14 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => 'ws-1',
 }));
 
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock('@/features/NavPanel/components/SidebarNavItem', () => ({
+  default: ({ title }: { title: string }) => <li>{title}</li>,
+}));
+
 vi.mock('@/libs/swr', () => ({
   mutate: mocks.mutate,
   useClientDataSWR: () =>
@@ -93,9 +102,9 @@ vi.mock('./FavoriteRow', () => {
 
 const renderSection = () =>
   render(
-    <AccordionRoot value={['favorites']}>
+    <SidebarProvider>
       <WorkFavorites itemKey="favorites" />
-    </AccordionRoot>,
+    </SidebarProvider>,
   );
 
 afterEach(() => {

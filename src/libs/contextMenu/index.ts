@@ -92,3 +92,5 @@ export const registerNativeContextMenuInterceptor = (): void => {
     show: routeShow,
   });
 };
+
+export { routeShow as showContextMenuWithFallback };

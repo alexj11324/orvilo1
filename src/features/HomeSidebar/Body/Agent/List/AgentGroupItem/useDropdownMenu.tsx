@@ -1,5 +1,4 @@
 import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { LucideCopy, Pen, PictureInPicture2Icon, Pin, PinOff, Trash } from 'lucide-react';
 import { useMemo } from 'react';
@@ -70,14 +69,14 @@ export const useGroupDropdownMenu = ({
         ...(canConfigure
           ? [
               {
-                icon: <Icon icon={pinned ? PinOff : Pin} />,
+                icon: pinned ? <PinOff size={16} /> : <Pin size={16} />,
                 key: 'pin',
                 label: t(pinned ? 'pinOff' : 'pin'),
                 onClick: () => pinAgentGroup(id, !pinned),
                 sfSymbol: pinned ? 'pin.slash' : 'pin',
               },
               {
-                icon: <Icon icon={Pen} />,
+                icon: <Pen size={16} />,
                 key: 'rename',
                 label: t('rename', { ns: 'common' }),
                 onClick: (info: any) => {
@@ -97,7 +96,7 @@ export const useGroupDropdownMenu = ({
                 sfSymbol: 'pencil',
               },
               {
-                icon: <Icon icon={LucideCopy} />,
+                icon: <LucideCopy size={16} />,
                 key: 'duplicate',
                 label: t('duplicate', { ns: 'common' }),
                 onClick: ({ domEvent }: any) => {
@@ -109,7 +108,7 @@ export const useGroupDropdownMenu = ({
             ]
           : []),
         {
-          icon: <Icon icon={PictureInPicture2Icon} />,
+          icon: <PictureInPicture2Icon size={16} />,
           key: 'openInNewWindow',
           label: t('openInNewWindow'),
           onClick: ({ domEvent }: any) => {
@@ -130,7 +129,7 @@ export const useGroupDropdownMenu = ({
               { type: 'divider' as const },
               {
                 danger: true,
-                icon: <Icon icon={Trash} />,
+                icon: <Trash size={16} />,
                 key: 'delete',
                 label: t('delete', { ns: 'common' }),
                 onClick: ({ domEvent }: any) => {

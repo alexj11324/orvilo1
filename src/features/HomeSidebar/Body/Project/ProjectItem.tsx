@@ -1,13 +1,15 @@
 'use client';
 
 import type { MenuProps } from '@lobehub/ui';
-import { DropdownMenu, Icon } from '@lobehub/ui';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
+import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon, PencilIcon, TrashIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { openRenameProjectModal } from '@/features/Projects/RenameProjectModal';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -42,7 +44,7 @@ const ProjectItem = memo<ProjectItemProps>(({ project }) => {
   const menuItems: MenuProps['items'] = canManage
     ? [
         {
-          icon: <Icon icon={PencilIcon} />,
+          icon: <PencilIcon size={16} />,
           key: 'rename',
           label: t('rename.action'),
           onClick: () => openRenameProjectModal(project),
@@ -50,7 +52,7 @@ const ProjectItem = memo<ProjectItemProps>(({ project }) => {
         { type: 'divider' },
         {
           danger: true,
-          icon: <Icon icon={TrashIcon} />,
+          icon: <TrashIcon size={16} />,
           key: 'delete',
           label: t('list.deleteAction'),
           onClick: () =>
@@ -75,9 +77,17 @@ const ProjectItem = memo<ProjectItemProps>(({ project }) => {
         title={project.name}
         actions={
           canManage ? (
-            <DropdownMenu items={menuItems}>
-              <ActionIcon icon={MoreHorizontalIcon} loading={deleting} size={'small'} />
-            </DropdownMenu>
+            <SidebarDropdownMenu items={menuItems}>
+              <Button
+                aria-busy={deleting}
+                aria-label={t('more', { ns: 'common' })}
+                disabled={deleting}
+                size="icon"
+                variant="ghost"
+              >
+                {deleting ? <Spinner /> : <MoreHorizontalIcon />}
+              </Button>
+            </SidebarDropdownMenu>
           ) : undefined
         }
       />

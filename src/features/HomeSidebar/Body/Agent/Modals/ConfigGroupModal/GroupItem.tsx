@@ -1,10 +1,11 @@
 import { EditableText, SortableList } from '@lobehub/ui';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
+import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { PencilLine, Trash } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useHomeStore } from '@/store/home';
 import type { SessionGroupItemBase } from '@/types/session';
 
@@ -37,20 +38,26 @@ const GroupItem = memo<GroupItemProps>(({ id, name, disabled }) => {
       {!editing ? (
         <>
           <span className={styles.title}>{name}</span>
-          <ActionIcon
+          <Button
+            aria-label={t('edit', { ns: 'common' })}
             disabled={disabled}
-            icon={PencilLine}
-            size={'small'}
+            size="icon"
+
+            variant="ghost"
             onClick={() => {
               if (disabled) return;
 
               setEditing(true);
             }}
-          />
-          <ActionIcon
+          >
+            <PencilLine />
+          </Button>
+          <Button
+            aria-label={t('delete', { ns: 'common' })}
             disabled={disabled}
-            icon={Trash}
-            size={'small'}
+            size="icon"
+
+            variant="ghost"
             onClick={() => {
               if (disabled) return;
 
@@ -67,7 +74,9 @@ const GroupItem = memo<GroupItemProps>(({ id, name, disabled }) => {
                 title: t('delete', { ns: 'common' }),
               });
             }}
-          />
+          >
+            <Trash />
+          </Button>
         </>
       ) : (
         <EditableText

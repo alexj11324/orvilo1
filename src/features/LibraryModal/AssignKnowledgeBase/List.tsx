@@ -1,5 +1,5 @@
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
-import { BookOpen, ServerCrash } from 'lucide-react';
+import { BookOpen, InfoIcon, ServerCrash } from 'lucide-react';
 import React, { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';

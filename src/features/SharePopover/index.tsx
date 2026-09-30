@@ -1,6 +1,7 @@
 'use client';
 
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   FileOutputIcon,
   ImageIcon,

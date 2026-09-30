@@ -212,11 +212,9 @@ const InlineToolbar = memo<InlineToolbarProps>(
     // Fixed toolbar - wrap in a styled container
     return (
       <div
-        shadow
-        className={cn('flex flex-col p-1', className)}
+        className={cn('flex flex-col p-1 shadow-md', className)}
         style={{
           border: `1px solid ${cssVar.colorBorder}`,
-          borderRadius: cssVar.borderRadiusLG,
 
           background: cssVar.colorBgElevated,
           borderRadius: 8,

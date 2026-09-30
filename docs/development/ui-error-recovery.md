@@ -20,6 +20,10 @@ The legacy task board still limits each column to 100 cards. Its footer shows th
 
 Desktop shortcut settings normalize Electron accelerator names for the platform-aware `HotkeyInput`, including its named form binding and reset value. The stored shortcut and Electron IPC registration format are unchanged.
 
+## New topic navigation
+
+The agent sidebar completes the new-topic action against the source conversation before navigating to the bare agent URL. The action awaits topic switching and message refresh. Pending clicks are disabled; a failed action shows an error, keeps the current URL and allows retry. The explicit SWR data mutation propagates rejection without replaying the action as a revalidation.
+
 ## Regression coverage
 
 Targeted tests cover duplicate creation, handoff preflight rejection, user-state failure/retry, 401/403 recovery and the Electron explicit-action gate, capped-column list switching, and accelerator display normalization. Native authenticated Electron flows and healthy-gateway successor execution require separate runtime validation.

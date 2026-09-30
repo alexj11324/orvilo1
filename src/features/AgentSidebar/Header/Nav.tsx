@@ -1,9 +1,10 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
+import { toast } from '@lobehub/ui/base-ui';
 import { BotPromptIcon } from '@lobehub/ui/icons';
 import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
@@ -54,21 +55,30 @@ const Nav = memo(() => {
   const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
 
   const { mutate } = useActionSWR(topicActionKeys.openNewOrSave(), openNewTopicOrSaveTopic);
-  const handleNewTopic = () => {
-    if (!canCreateTopic || isNewTopicSendInFlight) return;
-    // Always navigate to the bare agent chat URL — drops any sub-route
-    // (/profile, /channel, /page, /cron/:cronId, …) and any `:topicId`
-    // segment so the new topic isn't conflated with the previous URL.
-    if (agentId) {
-      router.push(urlJoin('/agent', agentId));
+  const newTopicPending = useRef(false);
+  const [isOpeningTopic, setIsOpeningTopic] = useState(false);
+  const handleNewTopic = async () => {
+    if (!canCreateTopic || isNewTopicSendInFlight || newTopicPending.current) return;
+    newTopicPending.current = true;
+    setIsOpeningTopic(true);
+    try {
+      // Execute against the source conversation before the route clears its
+      // activeTopicId. Passing the action promise also propagates failures;
+      // SWR revalidation alone resolves even when its fetcher fails.
+      await mutate(openNewTopicOrSaveTopic(), { revalidate: false });
+      if (agentId) router.push(urlJoin('/agent', agentId));
+    } catch {
+      toast.error(t('unknownError', { ns: 'common' }));
+    } finally {
+      newTopicPending.current = false;
+      setIsOpeningTopic(false);
     }
-    mutate();
   };
 
   return (
     <Flexbox gap={1} paddingInline={4}>
       <NavItem
-        disabled={!canCreateTopic || isNewTopicSendInFlight}
+        disabled={!canCreateTopic || isNewTopicSendInFlight || isOpeningTopic}
         icon={MessageSquarePlusIcon}
         title={tTopic('actions.addNewTopic')}
         onClick={handleNewTopic}

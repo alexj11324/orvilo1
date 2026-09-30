@@ -129,6 +129,35 @@ describe('topic action', () => {
       expect(switchTopicSpy).toHaveBeenCalled();
     });
 
+    it.each(['switchTopic', 'refreshMessages'] as const)(
+      'waits for %s before completing the new-topic action',
+      async (action) => {
+        const { result } = renderHook(() => useChatStore());
+        act(() =>
+          useChatStore.setState({ activeTopicId: action === 'switchTopic' ? 'old' : null }),
+        );
+        let complete!: () => void;
+        const pending = new Promise<void>((resolve) => {
+          complete = resolve;
+        });
+        vi.spyOn(result.current, action).mockReturnValue(pending);
+        vi.spyOn(result.current, 'saveToTopic').mockResolvedValue(undefined);
+        let finished = false;
+        const request = result.current.openNewTopicOrSaveTopic().then(() => {
+          finished = true;
+        });
+        await act(async () => {
+          await Promise.resolve();
+        });
+        expect(finished).toBe(false);
+        await act(async () => {
+          complete();
+          await request;
+        });
+        expect(finished).toBe(true);
+      },
+    );
+
     it('should call saveToTopic if activeTopicId does not exist', async () => {
       const { result } = renderHook(() => useChatStore());
       await act(async () => {

@@ -196,7 +196,7 @@ export class ChatTopicActionImpl {
     const { switchTopic, saveToTopic, refreshMessages, activeTopicId } = this.#get();
     const hasTopic = !!activeTopicId;
 
-    if (hasTopic) switchTopic(null);
+    if (hasTopic) await switchTopic(null);
     else {
       // A send from the new-topic view may still be in flight (the `_new`
       // context holds only optimistic tmp_* messages while the run itself
@@ -208,7 +208,7 @@ export class ChatTopicActionImpl {
       if (topicSelectors.isNewTopicSendInFlight(this.#get())) return;
 
       await saveToTopic();
-      refreshMessages();
+      await refreshMessages();
     }
   };
 

@@ -152,7 +152,7 @@ export function NavWorkspace() {
   const { mainItems } = useMenu();
   const workspaces = useWorkspaces();
   const activeWorkspaceId = useActiveWorkspaceId();
-  const { switchToPersonal, switchWorkspace } = useSwitchWorkspace();
+  const { switchWorkspace } = useSwitchWorkspace();
   const [displayName, isSignedIn, openLogin] = useUserStore((state) => [
     userProfileSelectors.displayUserName(state),
     authSelectors.isLoginWithAuth(state),
@@ -163,7 +163,8 @@ export function NavWorkspace() {
     id: null,
     name: t('workspaceSwitcher.personal'),
   };
-  const workspaceOptions: WorkspaceOption[] = [personalWorkspace, ...workspaces];
+  // Root routes reconcile to a membership; Personal is not a persistent destination.
+  const workspaceOptions: WorkspaceOption[] = workspaces;
   const activeWorkspace =
     workspaceOptions.find((workspace) => workspace.id === activeWorkspaceId) ?? personalWorkspace;
   const initials = displayName
@@ -175,7 +176,6 @@ export function NavWorkspace() {
 
   const handleWorkspaceSelect = (id: string | null) => {
     if (id) void switchWorkspace(id);
-    else void switchToPersonal();
   };
 
   return (
@@ -224,21 +224,25 @@ export function NavWorkspace() {
             side={isMobile ? 'top' : 'right'}
             sideOffset={8}
           >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                {t('reuiShell9.organizations')}
-              </DropdownMenuLabel>
-              {workspaceOptions.map((workspace) => (
-                <WorkspaceItem
-                  isActive={activeWorkspaceId === workspace.id}
-                  key={workspace.id ?? 'personal'}
-                  workspace={workspace}
-                  onSelect={handleWorkspaceSelect}
-                />
-              ))}
-            </DropdownMenuGroup>
+            {workspaceOptions.length > 0 && (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    {t('reuiShell9.organizations')}
+                  </DropdownMenuLabel>
+                  {workspaceOptions.map((workspace) => (
+                    <WorkspaceItem
+                      isActive={activeWorkspaceId === workspace.id}
+                      key={workspace.id ?? 'personal'}
+                      workspace={workspace}
+                      onSelect={handleWorkspaceSelect}
+                    />
+                  ))}
+                </DropdownMenuGroup>
 
-            <DropdownMenuSeparator />
+                <DropdownMenuSeparator />
+              </>
+            )}
 
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">

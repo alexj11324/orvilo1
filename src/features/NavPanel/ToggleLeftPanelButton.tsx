@@ -40,7 +40,9 @@ interface ToggleLeftPanelButtonProps {
 const ToggleLeftPanelButton = memo<ToggleLeftPanelButtonProps>(
   ({ title, showActive, icon, size = 'small', id = TOGGLE_BUTTON_ID, forceVisible }) => {
     const [expand, togglePanel] = useGlobalStore((s) => [
-      systemStatusSelectors.showLeftPanel(s),
+      s.leftPanelDrawerMode
+        ? (s.leftPanelDrawerOpen ?? false)
+        : systemStatusSelectors.showLeftPanel(s),
       s.toggleLeftPanel,
     ]);
 

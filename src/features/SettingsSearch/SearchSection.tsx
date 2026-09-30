@@ -1,10 +1,16 @@
 'use client';
 
-import { memo, type PropsWithChildren, useState } from 'react';
+import { SearchIcon } from 'lucide-react';
+import { memo, type PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
-import { SidebarGroup, SidebarGroupContent } from '@/components/ui/sidebar';
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenuButton,
+  useSidebar,
+} from '@/components/ui/sidebar';
 
 import SearchResults from './SearchResults';
 import { useSettingsSearch } from './useSettingsSearch';
@@ -18,7 +24,18 @@ import { useSettingsSearch } from './useSettingsSearch';
  */
 const SearchSection = memo<PropsWithChildren>(({ children }) => {
   const { t } = useTranslation('setting');
+  const { state, isMobile, setOpen } = useSidebar();
+  const collapsed = !isMobile && state === 'collapsed';
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [focusOnExpand, setFocusOnExpand] = useState(false);
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (focusOnExpand && !collapsed) {
+      inputRef.current?.focus();
+      setFocusOnExpand(false);
+    }
+  }, [collapsed, focusOnExpand]);
   const { isIndexing, results } = useSettingsSearch(query);
 
   const showResults = !!query.trim();
@@ -27,17 +44,31 @@ const SearchSection = memo<PropsWithChildren>(({ children }) => {
     <>
       <SidebarGroup className="py-1">
         <SidebarGroupContent>
-          <Input
-            aria-label={t('settingsSearch.placeholder')}
-            className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-[var(--sidebar-muted)]"
-            placeholder={t('settingsSearch.placeholder')}
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          {collapsed ? (
+            <SidebarMenuButton
+              aria-label={t('settingsSearch.placeholder')}
+              tooltip={t('settingsSearch.placeholder')}
+              onClick={() => {
+                setFocusOnExpand(true);
+                setOpen(true);
+              }}
+            >
+              <SearchIcon aria-hidden />
+            </SidebarMenuButton>
+          ) : (
+            <Input
+              aria-label={t('settingsSearch.placeholder')}
+              className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground placeholder:text-[var(--sidebar-muted)]"
+              placeholder={t('settingsSearch.placeholder')}
+              ref={inputRef}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          )}
         </SidebarGroupContent>
       </SidebarGroup>
-      {showResults ? (
+      {showResults && !collapsed ? (
         <SearchResults isIndexing={isIndexing} query={query} results={results} />
       ) : (
         children

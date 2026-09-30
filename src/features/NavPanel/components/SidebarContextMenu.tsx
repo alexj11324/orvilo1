@@ -7,12 +7,18 @@ import { useState } from 'react';
 
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { closeContextMenu, showContextMenuWithFallback } from '@/libs/contextMenu';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
 import { renderSidebarMenuItems } from './SidebarDropdownMenu';
 
+type SidebarContextMenuItems =
+  | MenuProps['items']
+  | NativeContextMenuItem[]
+  | (() => MenuProps['items'] | NativeContextMenuItem[]);
+
 export interface SidebarContextMenuProps {
   children: ReactElement;
-  items: MenuProps['items'] | (() => MenuProps['items']);
+  items: SidebarContextMenuItems;
   /**
    * Called once the context menu actually opens — for the native popup on
    * desktop and for the web menu elsewhere. Receives the right close function
@@ -70,7 +76,7 @@ export interface SidebarContextMenuPopupProps {
    * opened imperatively and has no trigger to anchor to.
    */
   anchor?: ContextMenuPrimitive.Positioner.Props['anchor'];
-  items: MenuProps['items'] | (() => MenuProps['items']);
+  items: SidebarContextMenuItems;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }

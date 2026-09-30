@@ -41,8 +41,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
-type MenuItems = (NonNullable<MenuProps['items']>[number] | DropdownItem)[];
+type MenuItems = (NonNullable<MenuProps['items']>[number] | DropdownItem | NativeContextMenuItem)[];
 
 interface RenderableItem {
   children?: MenuItems;

@@ -1,4 +1,3 @@
-import { copyToClipboard } from '@lobehub/ui';
 import { PROJECT_CREATABLE_STATUSES } from '@orvilo/types';
 import { Command } from 'cmdk';
 import {
@@ -38,6 +37,7 @@ import { projectService } from '@/services/project';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useCommandMenuContext } from './CommandMenuContext';
 import { styles } from './styles';

@@ -1,4 +1,3 @@
-import { stopPropagation } from '@lobehub/ui';
 import { Check, PaletteIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -116,7 +115,11 @@ const GroupContent = memo<GroupContentProps>(
     }, []);
 
     return (
-      <div className="flex items-center gap-1" style={{ width: 320 }} onClick={stopPropagation}>
+      <div
+        className="flex items-center gap-1"
+        style={{ width: 320 }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {isAgentGroup && (
           <EmojiPicker
             allowUpload
@@ -134,7 +137,7 @@ const GroupContent = memo<GroupContentProps>(
               <div
                 className="flex flex-col items-center justify-center"
                 style={{ cursor: 'pointer', height: 36, width: 36 }}
-                onClick={stopPropagation}
+                onClick={(e) => e.stopPropagation()}
               >
                 {avatarValue ? (
                   <Avatar

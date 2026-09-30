@@ -1,4 +1,3 @@
-import { stopPropagation } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { Check, PaletteIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -98,7 +97,11 @@ const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) =>
   }, []);
 
   return (
-    <div className="flex items-center gap-1" style={{ width: 320 }} onClick={stopPropagation}>
+    <div
+      className="flex items-center gap-1"
+      style={{ width: 320 }}
+      onClick={(e) => e.stopPropagation()}
+    >
       <EmojiPicker
         allowUpload
         allowDelete={!!newAvatar}
@@ -115,7 +118,7 @@ const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) =>
           <div
             className="flex flex-col items-center justify-center"
             style={{ cursor: 'pointer', height: 36, width: 36 }}
-            onClick={stopPropagation}
+            onClick={(e) => e.stopPropagation()}
           >
             <Avatar
               emojiScaleWithBackground

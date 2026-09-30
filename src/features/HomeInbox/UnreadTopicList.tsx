@@ -1,4 +1,3 @@
-import { stopPropagation } from '@lobehub/ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext } from '@orvilo/types';
 import { agentDisplayName } from '@orvilo/types';
@@ -216,7 +215,7 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
             )}
 
             {replying ? (
-              <div className="flex flex-col" onClick={stopPropagation}>
+              <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <Suspense fallback={<div aria-hidden className={styles.replyEditorFallback} />}>
                   <RunReplyEditor
                     placeholder={t('inbox.unread.followUpPlaceholder')}

@@ -1,7 +1,5 @@
 'use client';
 
-import type { TabsItem } from '@lobehub/ui/base-ui';
-import { Tabs } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -11,6 +9,7 @@ import { Wrench } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import RunPriorityHint from '@/features/ProfileEditor/AgentUserTools/RunPriorityHint';
 import { usePermission } from '@/hooks/usePermission';
@@ -94,7 +93,12 @@ const ProfileEditor = memo(() => {
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
   const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';
-  const heterogeneousTabItems: TabsItem[] = heterogeneousProvider
+  const heterogeneousTabItems: {
+    children: ReactNode;
+    disabled?: boolean;
+    key: string;
+    label: ReactNode;
+  }[] = heterogeneousProvider
     ? [
         ...(showCloudHeterogeneousTab
           ? [
@@ -157,11 +161,20 @@ const ProfileEditor = memo(() => {
             />
           ) : isHeterogeneous && heterogeneousProvider ? (
             // Local CLI agents: Claude Code supports cloud config; Codex is desktop-only for now.
-            <Tabs
-              defaultActiveKey={isDesktop || !showCloudHeterogeneousTab ? 'desktop' : 'cloud'}
-              items={heterogeneousTabItems}
-              size="small"
-            />
+            <Tabs defaultValue={isDesktop || !showCloudHeterogeneousTab ? 'desktop' : 'cloud'}>
+              <TabsList>
+                {heterogeneousTabItems.map((item) => (
+                  <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {heterogeneousTabItems.map((item) => (
+                <TabsContent key={item.key} value={item.key}>
+                  {item.children}
+                </TabsContent>
+              ))}
+            </Tabs>
           ) : isWorkspaceAgent ? (
             <>
               <div className="flex gap-2 flex-wrap">

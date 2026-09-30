@@ -1,7 +1,5 @@
 'use client';
 
-import { copyToClipboard } from '@lobehub/ui';
-import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { type BinaryStatus, type ClaudeAuthStatus } from '@orvilo/electron-client-ipc';
 import {
@@ -15,6 +13,7 @@ import { Copy, Loader2Icon, PencilLine, RefreshCw, XCircle } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
@@ -25,6 +24,7 @@ import {
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { binaryService } from '@/services/electron/binary';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const COMMAND_LINE_HEIGHT = 28;
 
@@ -74,7 +74,7 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     min-width: 0;
-    max-width: 100%;
+    max-width: '100%';
   `,
   detailList: css`
     margin-block-start: 4px;
@@ -119,7 +119,7 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   commandInput: css`
-    width: 100%;
+    width: '100%';
     font-family: ${cssVar.fontFamilyCode};
 
     &,
@@ -171,7 +171,7 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     width: min(320px, 100%);
-    max-width: 100%;
+    max-width: '100%';
     height: ${COMMAND_LINE_HEIGHT}px;
   `,
   commandDisplay: css`
@@ -179,7 +179,7 @@ const styles = createStaticStyles(({ css }) => ({
     align-items: center;
 
     box-sizing: border-box;
-    max-width: 100%;
+    max-width: '100%';
     height: ${COMMAND_LINE_HEIGHT}px;
     padding-block: 0;
     padding-inline: 12px;
@@ -372,24 +372,24 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const renderStatusTag = () => {
       if (detecting) {
         return (
-          <Tag color="default" style={{ marginInlineEnd: 0 }}>
+          <Badge style={{ marginInlineEnd: 0 }} variant="secondary">
             {t('settingSystemTools.detecting')}
-          </Tag>
+          </Badge>
         );
       }
 
       if (!status || !status.available) {
         return (
-          <Tag color="error" style={{ marginInlineEnd: 0 }}>
+          <Badge style={{ marginInlineEnd: 0 }} variant="destructive-light">
             {t('settingSystemTools.status.unavailable')}
-          </Tag>
+          </Badge>
         );
       }
 
       return (
-        <Tag color="success" style={{ marginInlineEnd: 0 }}>
+        <Badge style={{ marginInlineEnd: 0 }} variant="success-light">
           {t('settingSystemTools.status.available')}
-        </Tag>
+        </Badge>
       );
     };
 
@@ -398,9 +398,9 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
         return (
           <div className="flex items-center gap-2">
             <Loader2Icon className="animate-spin" size={16} style={{ opacity: 0.6 }} />
-            <Text className={styles.metaText}>
+            <div className={styles.metaText}>
               {t('heterogeneousStatus.detecting', { name: displayName })}
-            </Text>
+            </div>
           </div>
         );
       }
@@ -409,9 +409,9 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
         return (
           <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
             <XCircle color="var(--ant-color-error)" size={16} />
-            <Text className={styles.unavailableText}>
+            <div className={styles.unavailableText}>
               {t('heterogeneousStatus.unavailable', { name: displayName })}
-            </Text>
+            </div>
           </div>
         );
       }
@@ -419,9 +419,9 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       return (
         <div className={cn('flex items-center gap-2', styles.metaRow)}>
           {status.version && (
-            <Tag color="processing" style={{ marginInlineEnd: 0 }}>
+            <Badge style={{ marginInlineEnd: 0 }} variant="info-light">
               {status.version}
-            </Tag>
+            </Badge>
           )}
           {status.path && (
             <TooltipProvider>
@@ -430,9 +430,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                   render={
                     <span style={{ display: 'inline-flex' }}>
                       <div className={cn('flex items-center gap-1', styles.pathWrap)}>
-                        <Text ellipsis className={styles.path}>
-                          {status.path}
-                        </Text>
+                        <div className={cn('truncate', styles.path)}>{status.path}</div>
                         <button
                           className="inline-flex items-center"
                           style={{ opacity: 0.6 }}
@@ -456,7 +454,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const renderCommandEditor = () => {
       return (
         <div className={`${styles.detailRow} ${styles.commandField}`}>
-          <Text className={styles.detailLabel}>{t('heterogeneousStatus.command.label')}</Text>
+          <div className={styles.detailLabel}>{t('heterogeneousStatus.command.label')}</div>
           <div className={styles.detailContent}>
             {isEditingCommand ? (
               <div className={styles.commandInputWrap}>
@@ -488,9 +486,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
               </div>
             ) : (
               <div className={styles.commandDisplay}>
-                <Text ellipsis className={styles.commandText}>
-                  {resolvedCommand}
-                </Text>
+                <div className={cn('truncate', styles.commandText)}>{resolvedCommand}</div>
               </div>
             )}
             {!isEditingCommand && !savingCommand && (
@@ -526,20 +522,18 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       return (
         <>
           <div className={styles.detailRow}>
-            <Text className={styles.detailLabel}>{t('heterogeneousStatus.account.label')}</Text>
+            <div className={styles.detailLabel}>{t('heterogeneousStatus.account.label')}</div>
             <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
               {auth.email && (
-                <Text ellipsis className={styles.accountValue}>
-                  {auth.email}
-                </Text>
+                <div className={cn('truncate', styles.accountValue)}>{auth.email}</div>
               )}
             </div>
           </div>
           {auth.subscriptionType && (
             <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.plan.label')}</Text>
+              <div className={styles.detailLabel}>{t('heterogeneousStatus.plan.label')}</div>
               <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                <Text className={styles.accountValue}>{auth.subscriptionType.toUpperCase()}</Text>
+                <div className={styles.accountValue}>{auth.subscriptionType.toUpperCase()}</div>
               </div>
             </div>
           )}
@@ -553,7 +547,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
           <div className={styles.cardTitleWrap}>
             <div className={styles.cardTitle}>
               {AgentIcon && <AgentIcon size={16} />}
-              <Text strong>{`${displayName} CLI`}</Text>
+              <div className="font-semibold">{`${displayName} CLI`}</div>
             </div>
             <div className={styles.metaRow}>
               {renderStatusTag()}

@@ -3,16 +3,17 @@
 import type { IEditor } from '@lobehub/editor';
 import { ReactMentionPlugin, ReactTablePlugin, ReactToolbarPlugin } from '@lobehub/editor';
 import { Editor } from '@lobehub/editor/react';
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { CodeXmlIcon, LetterTextIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import CodeEditorPane from '@/components/CodeEditorPane';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import InfoTooltip from '@/components/InfoTooltip';
+import { toast } from '@/components/toast';
 import { createChatInputRichPlugins } from '@/features/ChatInput/InputEditor/plugins';
 import { EditingIndicator } from '@/features/EditLock';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';

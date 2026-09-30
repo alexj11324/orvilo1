@@ -1,14 +1,8 @@
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionTrigger,
-  Text,
-} from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { type GroupedTopic } from '@/types/topic';
 
 import TopicItem from '../../List/Item';
@@ -30,16 +24,17 @@ const GroupItem = memo<GroupItemProps>(({ group, activeTopicId, activeThreadId }
 
   return (
     <AccordionItem value={id}>
-      <AccordionHeader>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <div className="flex items-center gap-1.5" style={{ height: 24, overflow: 'hidden' }}>
-            <Text ellipsis fontSize={12} style={{ flex: 1 }} type={'secondary'} weight={500}>
-              {title || timeTitle}
-            </Text>
+      <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+        <div className="flex items-center gap-1.5" style={{ height: 24, overflow: 'hidden' }}>
+          <div
+            className="truncate text-[12px] text-muted-foreground font-medium"
+            style={{ flex: 1 }}
+          >
+            {title || timeTitle}
           </div>
-        </AccordionTrigger>
-      </AccordionHeader>
-      <AccordionPanel contentStyle={{ padding: 0 }}>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="[&>div]:p-0">
         <div className="flex flex-col" style={{ gap: 1, paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
@@ -54,7 +49,7 @@ const GroupItem = memo<GroupItemProps>(({ group, activeTopicId, activeThreadId }
             />
           ))}
         </div>
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

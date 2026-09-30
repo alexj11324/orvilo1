@@ -1,4 +1,3 @@
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ReactNode } from 'react';
@@ -57,19 +56,19 @@ const TimeLineCard = memo<TimeLineCardProps>(
             }}
           >
             {title && typeof title === 'string' ? (
-              <Text as={'h2'} fontSize={16} style={{ lineHeight: 1.5, margin: 0 }} weight={500}>
+              <h2 className="text-[16px] font-medium" style={{ lineHeight: 1.5, margin: 0 }}>
                 {title}
-              </Text>
+              </h2>
             ) : (
               title
             )}
-            {!!titleAddon ? <Tag>{titleAddon}</Tag> : titleAddon}
+            {!!titleAddon ? <Badge variant="primary-light">{titleAddon}</Badge> : titleAddon}
           </div>
         )}
         {typeof children === 'string' ? (
-          <Text as={'p'} color={cssVar.colorTextSecondary} ellipsis={{ rows: 3 }}>
+          <p className="line-clamp-3" style={{ color: cssVar.colorTextSecondary }}>
             {children}
-          </Text>
+          </p>
         ) : (
           children
         )}

@@ -1,4 +1,3 @@
-import { ActionIcon, confirmModal, type ModalInstance, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { getActivePluginIds, type OrviloAgentConfig } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -23,6 +22,10 @@ import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import { useBusinessAgentImportMenuItem } from '@/business/client/hooks/useBusinessAgentImportMenuItem';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import { useAgentShareSupported } from '@/business/client/useAgentShareSupported';
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { type ModalInstance } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import AgentProfileTabs, { AGENT_PROFILE_TABS_CENTER_STYLE } from '@/features/AgentProfileTabs';

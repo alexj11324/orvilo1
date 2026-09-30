@@ -1,10 +1,10 @@
 'use client';
 
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import NavItem from '@/features/NavPanel/components/NavItem';
 
@@ -39,9 +39,9 @@ const GroupMemberItem = memo<GroupMemberItemProps>(
               {title}
             </span>
             {isExternal && (
-              <Tag size="small" style={{ flexShrink: 0 }}>
+              <Badge size="sm" style={{ flexShrink: 0 }} variant="primary-light">
                 {t('group.profile.external')}
-              </Tag>
+              </Badge>
             )}
           </div>
         }

@@ -1,10 +1,10 @@
 'use client';
 
-import { Tabs } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useState } from 'react';
 
 import MobileContentLayout from '@/components/server/MobileNavLayout';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCategory } from '@/features/AgentSetting/AgentCategory/useCategory';
 import AgentSettings from '@/features/AgentSetting/AgentSettings';
 import Footer from '@/features/Setting/Footer';
@@ -33,13 +33,21 @@ export default memo(() => {
   return (
     <MobileContentLayout header={<MobileHeader />}>
       <Tabs
-        activeKey={tab}
-        items={cateItems as any}
+        value={tab}
         style={{
           borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
         }}
-        onChange={(value) => setTab(value as ChatSettingsTabs)}
-      />
+        onValueChange={(value) => setTab(value as ChatSettingsTabs)}
+      >
+        <TabsList>
+          {cateItems.map((item) => (
+            <TabsTrigger key={item.key} value={item.key}>
+              {item.icon}
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       <AgentSettings
         config={config}
         disabled={!canEdit}

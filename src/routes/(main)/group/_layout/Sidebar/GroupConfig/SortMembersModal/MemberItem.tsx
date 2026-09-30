@@ -1,11 +1,11 @@
 'use client';
 
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { GripVertical } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { SortableItemHandle } from '@/components/reui/sortable';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
@@ -45,9 +45,9 @@ const MemberItem = memo<MemberItemProps>(({ avatar, background, disabled, isExte
       />
       <span className={styles.title}>{title}</span>
       {isExternal && (
-        <Tag size={'small'} style={{ flexShrink: 0 }}>
+        <Badge size="sm" style={{ flexShrink: 0 }} variant="primary-light">
           {t('group.profile.external')}
-        </Tag>
+        </Badge>
       )}
     </>
   );

@@ -1,9 +1,10 @@
-import { Select } from '@lobehub/ui/base-ui';
 import { ArrowDownNarrowWide, Search } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SortOption {
   label: string;
@@ -43,12 +44,18 @@ const FilterBar = memo<FilterBarProps>(
         </div>
         {sortOptions && sortOptions.length > 0 && onSortChange && (
           <Select
-            options={sortOptions}
-            prefix={<ArrowDownNarrowWide style={{ marginRight: 4 }} />}
-            style={{ minWidth: 150 }}
+            items={selectItems(sortOptions)}
             value={sortValue}
-            onChange={(value) => onSortChange(value as string)}
-          />
+            onValueChange={(value) => onSortChange(value)}
+          >
+            <SelectTrigger style={{ minWidth: 150 }}>
+              <ArrowDownNarrowWide style={{ marginRight: 4 }} />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectOptionItems options={sortOptions} />
+            </SelectContent>
+          </Select>
         )}
       </div>
     );

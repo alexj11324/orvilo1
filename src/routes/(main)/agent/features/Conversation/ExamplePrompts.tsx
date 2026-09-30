@@ -1,12 +1,12 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, keyframes } from 'antd-style';
 import { cn } from 'cn';
 import { FileText, FolderPlus, Search, X } from 'lucide-react';
 import { createElement, memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useConversationStore } from '@/features/Conversation/store';
 import { useGlobalStore } from '@/store/global';
 

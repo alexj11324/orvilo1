@@ -1,8 +1,8 @@
-import type { DropdownItem } from '@lobehub/ui/base-ui';
 import { LucideCheck } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { DropdownItem } from '@/components/ItemsMenu';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
 import type { TopicGroupMode, TopicSortBy } from '@/types/topic';

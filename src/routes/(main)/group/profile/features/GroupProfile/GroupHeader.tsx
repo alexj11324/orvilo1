@@ -1,6 +1,5 @@
 'use client';
 
-import { Skeleton, toast } from '@lobehub/ui/base-ui';
 import { EDITOR_DEBOUNCE_TIME } from '@orvilo/const';
 import { debounce } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
@@ -10,7 +9,9 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import EmojiPicker from '@/components/EmojiPicker';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';
 import { usePermission } from '@/hooks/usePermission';
@@ -174,8 +175,8 @@ const GroupHeader = memo(() => {
                 <Suspense
                   fallback={
                     <div className="flex flex-col gap-2">
-                      <Skeleton height={38} />
-                      <Skeleton height={38} />
+                      <Skeleton style={{ height: 38 }} />
+                      <Skeleton style={{ height: 38 }} />
                     </div>
                   }
                 >

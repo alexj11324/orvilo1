@@ -1,4 +1,3 @@
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ReactNode } from 'react';
@@ -84,30 +83,27 @@ const GridCard = memo<GridCardProps>(
             <>
               <div className="flex items-center gap-2 flex-wrap">
                 {title && typeof title === 'string' ? (
-                  <Text
-                    as={'h2'}
-                    ellipsis={{ rows: 2 }}
-                    fontSize={16}
+                  <h2
+                    className="line-clamp-2 text-[16px] font-medium"
                     style={{ lineHeight: 1.5, margin: 0 }}
-                    weight={500}
                   >
                     {title}
-                  </Text>
+                  </h2>
                 ) : (
                   title
                 )}
               </div>
               {typeof titleAddon === 'string' ? (
-                <Tag variant="borderless">{titleAddon}</Tag>
+                <Badge variant="secondary">{titleAddon}</Badge>
               ) : (
                 titleAddon
               )}
             </>
           )}
           {typeof children === 'string' ? (
-            <Text as={'p'} color={cssVar.colorTextSecondary} ellipsis={{ rows: 4 }}>
+            <p className="line-clamp-4" style={{ color: cssVar.colorTextSecondary }}>
               {children}
-            </Text>
+            </p>
           ) : (
             children
           )}
@@ -140,16 +136,15 @@ const GridCard = memo<GridCardProps>(
             {badges}
           </div>
           <div className="flex flex-col items-center justify-center" style={{ flex: 'none' }}>
-            <Text
-              align={'center'}
-              color={cateColor?.backgroundTextColor || cssVar.colorTextSecondary}
-              weight={'bold'}
+            <div
+              className="text-center font-bold"
               style={{
                 opacity: 0.5,
+                color: cateColor?.backgroundTextColor || cssVar.colorTextSecondary,
               }}
             >
               {cate?.toUpperCase() || 'CHORE'}
-            </Text>
+            </div>
           </div>
           <div
             className={cn(

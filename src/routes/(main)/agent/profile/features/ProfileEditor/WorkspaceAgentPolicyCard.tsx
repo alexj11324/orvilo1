@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
@@ -19,11 +18,11 @@ const styles = createStaticStyles(({ css }) => ({
     background: ${cssVar.colorBgContainer};
 
     @container (max-width: 840px) {
-      width: 100%;
+      width: '100%';
     }
   `,
   fullWidth: css`
-    width: 100%;
+    width: '100%';
   `,
   title: css`
     font-size: 14px;
@@ -45,7 +44,7 @@ export const WorkspaceAgentPolicyCard = memo<WorkspaceAgentPolicyCardProps>(
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {createElement(icon, { size: 16 })}
-          <Text className={styles.title}>{title}</Text>
+          <div className={styles.title}>{title}</div>
         </div>
         {action}
       </div>

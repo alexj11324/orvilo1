@@ -1,4 +1,3 @@
-import { Skeleton, Tag, Text } from '@lobehub/ui/base-ui';
 import { GROUP_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, useTheme } from 'antd-style';
@@ -12,6 +11,7 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import DotsLoading from '@/components/DotsLoading';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import RingLoadingIcon from '@/components/RingLoading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isDesktop } from '@/const/version';
 import { TopicMigrationIndicator } from '@/features/AgentTransferMigration';
@@ -243,9 +243,9 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
   );
   const hasDraft = useHasDraft(draftKey);
   const draftPrefix = hasDraft ? (
-    <Text fontSize={12} style={{ color: cssVar.colorError, flex: 'none' }}>
+    <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
       {t('draft')}
-    </Text>
+    </div>
   ) : undefined;
 
   // For default topic (no id)
@@ -263,21 +263,19 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
               style={{ color: cssVar.colorWarning }}
             />
           ) : (
-            <MessageSquareDashed color={cssVar.colorTextDescription} size={'small'} />
+            <MessageSquareDashed color={cssVar.colorTextDescription} size="sm" />
           )
         }
         title={
           <div className="flex items-center flex-1 gap-1.5">
             {t('defaultTitle')}
-            <Tag
-              size={'small'}
-              style={{
-                color: cssVar.colorTextDescription,
-                fontSize: 10,
-              }}
+            <Badge
+              size="sm"
+              style={{ color: cssVar.colorTextDescription, fontSize: 10 }}
+              variant="primary-light"
             >
               {t('temp')}
-            </Tag>
+            </Badge>
           </div>
         }
         onClick={handleClick}
@@ -290,7 +288,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
   const statusIconNode = (() => {
     if (isWaitingForHuman) {
       const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-      return <visual.icon size={'small'} style={{ color: visual.color }} />;
+      return <visual.icon size="sm" style={{ color: visual.color }} />;
     }
     if (isLoading || isRunning) {
       return (
@@ -309,7 +307,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
             <TooltipTrigger
               render={
                 <span style={{ display: 'inline-flex' }}>
-                  <visual.icon size={'small'} style={{ color: visual.color }} />
+                  <visual.icon size="sm" style={{ color: visual.color }} />
                 </span>
               }
             />
@@ -320,7 +318,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
     }
     if (isCompleted) {
       const visual = TOPIC_STATUS_VISUALS.completed;
-      return <visual.icon size={'small'} style={{ color: visual.color }} />;
+      return <visual.icon size="sm" style={{ color: visual.color }} />;
     }
     return null;
   })();
@@ -347,7 +345,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
             <TopicCreatorAvatar corner={statusIconNode} userId={userId} />
           ) : (
             (statusIconNode ?? (
-              <HashIcon size={'small'} style={{ color: cssVar.colorTextDescription }} />
+              <HashIcon size="sm" style={{ color: cssVar.colorTextDescription }} />
             ))
           )
         }
@@ -363,8 +361,8 @@ const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, stat
         <Suspense
           fallback={
             <div className="flex flex-col gap-2 py-2 px-6" style={{ width: '100%' }}>
-              <Skeleton height={18} width={'100%'} />
-              <Skeleton height={18} width={'100%'} />
+              <Skeleton style={{ height: 18, width: '100%' }} />
+              <Skeleton style={{ height: 18, width: '100%' }} />
             </div>
           }
         >

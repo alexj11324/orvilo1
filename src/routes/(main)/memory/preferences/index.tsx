@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { BrainCircuitIcon } from 'lucide-react';
 import { type FC } from 'react';
 import { memo, useCallback, useState } from 'react';
@@ -81,7 +80,12 @@ const PreferencesArea = memo(() => {
     <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
         left={
-          Boolean(preferencesTotal) && <Tag icon={<BrainCircuitIcon />}>{preferencesTotal}</Tag>
+          Boolean(preferencesTotal) && (
+            <Badge variant="primary-light">
+              <BrainCircuitIcon />
+              {preferencesTotal}
+            </Badge>
+          )
         }
         right={
           <ActionBar showPurge>

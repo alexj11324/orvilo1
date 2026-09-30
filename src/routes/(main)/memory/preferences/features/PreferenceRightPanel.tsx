@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { BotIcon } from 'lucide-react';
@@ -49,17 +48,9 @@ const PreferenceRightPanel = memo(() => {
   const content = preference && (
     <>
       <CateTag cate={preference.type} />
-      <Text
-        as={'h1'}
-        fontSize={20}
-        weight={'bold'}
-        style={{
-          lineHeight: 1.4,
-          marginBottom: 0,
-        }}
-      >
+      <h1 className="text-[20px] font-bold" style={{ lineHeight: 1.4, marginBottom: 0 }}>
         {preference.title || preference.type || t('preference.defaultType')}
-      </Text>
+      </h1>
       <div className="flex items-center gap-4 justify-between">
         <ProgressIcon
           showInfo

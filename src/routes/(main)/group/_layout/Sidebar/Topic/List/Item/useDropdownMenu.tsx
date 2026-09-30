@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { GROUP_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
 import {
@@ -17,6 +16,7 @@ import { createElement, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';

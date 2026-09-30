@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -9,6 +8,7 @@ import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 
+import Avatar from '@/components/Avatar';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';

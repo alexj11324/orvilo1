@@ -1,14 +1,17 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { Avatar, Button, Select, Spin, Tag, Text } from '@lobehub/ui/base-ui';
 import { type HeterogeneousProviderConfig, type OwnCredSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { CheckCircle2, KeyRound, X } from 'lucide-react';
+import { CheckCircle2, KeyRound, X, XIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient, lambdaQuery } from '@/libs/trpc/client';
@@ -172,13 +175,10 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
 
       {existingCred && !editing ? (
         <div className="flex items-center gap-2">
-          <Tag
-            color="success"
-            icon={<CheckCircle2 size={11} />}
-            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-          >
+          <Badge style={{ display: 'flex', alignItems: 'center', gap: 4 }} variant="success-light">
+            <CheckCircle2 size={11} />
             {existingCred.maskedPreview ?? existingCred.name}
-          </Tag>
+          </Badge>
         </div>
       ) : (
         <div className="flex gap-2">
@@ -195,7 +195,7 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
               if (e.key === 'Enter') handleSave();
             }}
           />
-          <Button disabled={!canEdit} loading={saving} type="primary" onClick={handleSave}>
+          <Button disabled={!canEdit} loading={saving} onClick={handleSave}>
             {t('heterogeneousStatus.cloud.tokenSave')}
           </Button>
           {existingCred && (
@@ -254,9 +254,9 @@ const RepoListSection = memo<RepoListSectionProps>(({ repos, onReposChange }) =>
           {repos.map((repo) => (
             <div className={styles.repoItem} key={repo}>
               <Github size={14} style={{ flexShrink: 0 }} />
-              <Text ellipsis style={{ flex: 1, fontSize: 13 }}>
+              <div className="truncate" style={{ flex: 1, fontSize: 13 }}>
                 {repo}
-              </Text>
+              </div>
               <button
                 className={`${styles.repoDeleteBtn} repo-delete-btn`}
                 disabled={!canEdit}
@@ -320,9 +320,9 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
           {cred.oauthAvatar ? <Avatar avatar={cred.oauthAvatar} size={16} /> : <Github size={14} />}
           <span>{cred.name}</span>
           {cred.oauthUsername && (
-            <Text style={{ fontSize: 12 }} type="secondary">
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               @{cred.oauthUsername}
-            </Text>
+            </div>
           )}
         </span>
       ),
@@ -343,7 +343,7 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
     if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 32 }}>
-          <Spin size="small" />
+          <Spinner className="size-4" />
         </div>
       );
     }
@@ -375,18 +375,33 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
             </div>
 
             <Select
-              allowClear
               disabled={!canEdit}
-              options={githubCredOptions}
-              style={{ width: '100%' }}
+              items={selectItems(githubCredOptions)}
               value={storedGithubCredKey || null}
-              placeholder={
-                githubCredOptions.length > 0
-                  ? t('heterogeneousStatus.cloud.githubPlaceholder')
-                  : t('heterogeneousStatus.cloud.githubNoCreds')
-              }
-              onChange={(key) => saveEnv({ GITHUB_CRED_KEY: typeof key === 'string' ? key : '' })}
-            />
+              onValueChange={(key) => saveEnv({ GITHUB_CRED_KEY: key ?? '' })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue
+                  placeholder={
+                    githubCredOptions.length > 0
+                      ? t('heterogeneousStatus.cloud.githubPlaceholder')
+                      : t('heterogeneousStatus.cloud.githubNoCreds')
+                  }
+                />
+                {canEdit && storedGithubCredKey ? (
+                  <XIcon
+                    className="size-3.5 opacity-60 hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveEnv({ GITHUB_CRED_KEY: '' });
+                    }}
+                  />
+                ) : null}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectOptionItems options={githubCredOptions} />
+              </SelectContent>
+            </Select>
 
             <span className={styles.sectionDesc}>{t('heterogeneousStatus.cloud.githubDesc')}</span>
           </div>

@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
 import { useCateColor } from './useCateColor';
@@ -10,8 +9,9 @@ interface CateTagProps {
 const CateTag = memo<CateTagProps>(({ cate }) => {
   const cateColor = useCateColor(cate);
   return (
-    <Tag
-      size={'large'}
+    <Badge
+      size="lg"
+      variant="primary-light"
       style={{
         background: cateColor?.backgroundColor,
         borderRadius: 16,
@@ -21,7 +21,7 @@ const CateTag = memo<CateTagProps>(({ cate }) => {
       }}
     >
       {cate?.toUpperCase() || 'CHORE'}
-    </Tag>
+    </Badge>
   );
 });
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { AgentMigrationBadge, useAgentTransferJob } from '@/features/AgentTransferMigration';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
 import NavHeader from '@/features/NavHeader';

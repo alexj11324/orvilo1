@@ -1,9 +1,9 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { Link2 } from 'lucide-react';
 import { memo } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { type MemorySource } from '@/database/repositories/userMemory';
 import Link from '@/libs/router/Link';
 
@@ -22,19 +22,19 @@ const SourceLink = memo<{ source?: MemorySource | null }>(({ source }) => {
       }}
     >
       <Button
-        icon={<Link2 />}
-        size={'small'}
+        size="sm"
         title={title}
-        type={'text'}
+        variant="ghost"
         style={{
           flex: 1,
           maxWidth: '100%',
           overflow: 'hidden',
         }}
       >
-        <Text ellipsis color={cssVar.colorTextSecondary}>
+        <Link2 data-icon="inline-start" />
+        <div className="truncate" style={{ color: cssVar.colorTextSecondary }}>
           {title}
-        </Text>
+        </div>
       </Button>
     </Link>
   );

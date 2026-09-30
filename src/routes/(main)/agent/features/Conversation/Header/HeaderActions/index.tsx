@@ -1,9 +1,9 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import {
   DropdownMenu,
   DropdownMenuContent,

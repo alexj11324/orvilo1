@@ -1,6 +1,5 @@
 'use client';
 
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { InfoIcon, PlayIcon } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useMemo } from 'react';
@@ -8,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import urlJoin from 'url-join';
 
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { usePermission } from '@/hooks/usePermission';
@@ -104,13 +105,10 @@ const MemberProfile = memo(() => {
       {/* External agent warning or AutoSaveHint */}
       <div className="flex flex-col" style={{ height: 66, width: '100%' }}>
         {isExternal && !isSupervisor && (
-          <Alert
-            icon={<InfoIcon />}
-            style={{ width: '100%' }}
-            title={t('group.profile.externalAgentWarning', { ns: 'chat' })}
-            type="secondary"
-            variant={'outlined'}
-          />
+          <Alert style={{ width: '100%' }} variant="info">
+            <InfoIcon />
+            <AlertTitle>{t('group.profile.externalAgentWarning', { ns: 'chat' })}</AlertTitle>
+          </Alert>
         )}
         <div className="flex flex-col py-3">
           <AutoSaveHint />
@@ -129,13 +127,12 @@ const MemberProfile = memo(() => {
         <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
           <Button
             disabled={!canEdit}
-            icon={PlayIcon}
-            type={'primary'}
             onClick={() => {
               if (!groupId) return;
               router.push(urlJoin('/group', groupId));
             }}
           >
+            <PlayIcon data-icon="inline-start" />
             {t('startConversation')}
           </Button>
         </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -11,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
 
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import AgentSelectionEmpty from '@/features/AgentSelectionEmpty';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -112,9 +112,9 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
       <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
         {isLoading ? (
           <div className="flex flex-col gap-2 p-2">
-            <Skeleton.Text rows={1} />
-            <Skeleton.Text rows={1} />
-            <Skeleton.Text rows={1} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
           </div>
         ) : filteredAgents.length === 0 ? (
           <AgentSelectionEmpty
@@ -129,9 +129,9 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
               const row = rows[index];
               if (row.type === 'header') {
                 return (
-                  <Text className={styles.sectionHeader} fontSize={12} type="secondary">
+                  <div className={cn('text-[12px] text-muted-foreground', styles.sectionHeader)}>
                     {row.label}
-                  </Text>
+                  </div>
                 );
               }
               return (

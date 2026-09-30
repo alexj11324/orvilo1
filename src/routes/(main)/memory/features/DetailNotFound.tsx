@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { FileQuestionIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -22,17 +21,13 @@ const DetailNotFound = memo(() => {
     >
       <FileQuestionIcon size={32} style={{ color: cssVar.colorTextTertiary }} />
       <div className="flex flex-col items-center gap-1">
-        <Text fontSize={16} weight={600}>
-          {t('detail.notFound.title')}
-        </Text>
-        <Text
-          align={'center'}
-          color={cssVar.colorTextTertiary}
-          fontSize={13}
-          style={{ maxWidth: 320 }}
+        <div className="text-[16px] font-semibold">{t('detail.notFound.title')}</div>
+        <div
+          className="text-center text-[13px]"
+          style={{ maxWidth: 320, color: cssVar.colorTextTertiary }}
         >
           {t('detail.notFound.desc')}
-        </Text>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Skeleton, toast } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR, EDITOR_DEBOUNCE_TIME } from '@orvilo/const';
 import { debounce } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
@@ -9,7 +8,9 @@ import { memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react
 import { useTranslation } from 'react-i18next';
 
 import EmojiPicker from '@/components/EmojiPicker';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';
 import { usePermission } from '@/hooks/usePermission';
@@ -213,8 +214,8 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
                 <Suspense
                   fallback={
                     <div className="flex flex-col gap-2">
-                      <Skeleton height={38} />
-                      <Skeleton height={38} />
+                      <Skeleton style={{ height: 38 }} />
+                      <Skeleton style={{ height: 38 }} />
                     </div>
                   }
                 >

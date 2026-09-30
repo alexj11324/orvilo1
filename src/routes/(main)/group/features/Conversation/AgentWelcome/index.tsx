@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -72,9 +71,7 @@ const InboxWelcome = memo(() => {
         }}
       >
         <SupervisorAvatar size={78} />
-        <Text fontSize={32} weight={'bold'}>
-          {displayTitle}
-        </Text>
+        <div className="text-[32px] font-bold">{displayTitle}</div>
         <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
           <Markdown fontSize={fontSize} variant={'chat'}>
             {isInbox ? t('guide.defaultMessageWithoutCreate', { appName: 'Orvilo AI' }) : message}

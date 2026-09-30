@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { Users } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,10 +22,10 @@ const MemberCountTag = memo(() => {
           render={
             <span style={{ display: 'inline-flex' }}>
               <div className="flex flex-col" style={{ height: 22 }}>
-                <Tag>
+                <Badge variant="primary-light">
                   <Users />
                   <span>{memberCount}</span>
-                </Tag>
+                </Badge>
               </div>
             </span>
           }

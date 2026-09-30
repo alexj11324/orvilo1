@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { HashIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -14,10 +13,9 @@ const HashTags = memo<HashTagsProps>(({ hashTags }) => {
     hashTags.length > 0 && (
       <div className="flex flex-wrap">
         {hashTags.map((tag, index) => (
-          <Tag
-            icon={<HashIcon />}
+          <Badge
             key={index}
-            variant={'borderless'}
+            variant="secondary"
             style={{
               color: cssVar.colorTextDescription,
               gap: 2,
@@ -25,8 +23,9 @@ const HashTags = memo<HashTagsProps>(({ hashTags }) => {
               paddingInline: 0,
             }}
           >
+            <HashIcon />
             {tag}
-          </Tag>
+          </Badge>
         ))}
       </div>
     )

@@ -1,7 +1,7 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { BotMessageSquareIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import { useGroupProfileStore } from '@/store/groupProfile';
 

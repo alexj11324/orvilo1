@@ -1,12 +1,14 @@
 'use client';
 
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
+import { TriangleAlertIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useHeteroAgentCloudConfig } from '@/business/client/hooks/useHeteroAgentCloudConfig';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import { type ActionKeys } from '@/features/ChatInput';
 import HeteroControlBar from '@/features/ChatInput/ControlBar/HeteroControlBar';
@@ -47,17 +49,16 @@ const GuardBanner = memo<{ action?: ReactNode; hint?: string; title: string }>(
   ({ title, hint, action }) => (
     <WideScreenContainer>
       <div className="flex flex-col items-center px-3" style={{ paddingBlock: '0 8px' }}>
-        <Alert
-          action={action}
-          style={{ maxWidth: 880, width: '100%' }}
-          type={'warning'}
-          title={
+        <Alert style={{ maxWidth: 880, width: '100%' }} variant="warning">
+          <TriangleAlertIcon />
+          <AlertTitle>
             <div className="flex items-baseline gap-1.5" style={{ flexWrap: 'wrap' }}>
               <span>{title}</span>
               {hint && <span style={{ fontWeight: 400, opacity: 0.75 }}>{hint}</span>}
             </div>
-          }
-        />
+          </AlertTitle>
+          {action ? <AlertAction>{action}</AlertAction> : null}
+        </Alert>
       </div>
     </WideScreenContainer>
   ),
@@ -157,10 +158,10 @@ const HeterogeneousChatInput = memo(() => {
         title={title}
         action={
           <div className="flex gap-1">
-            <Button size={'small'} type={'fill'} onClick={refresh}>
+            <Button size="sm" variant="secondary" onClick={refresh}>
               {t('platformAgent.deviceGuard.refresh')}
             </Button>
-            <Button size={'small'} type={'primary'} onClick={goToAgentProfile}>
+            <Button size="sm" onClick={goToAgentProfile}>
               {t('platformAgent.deviceGuard.configure')}
             </Button>
           </div>
@@ -181,7 +182,7 @@ const HeterogeneousChatInput = memo(() => {
         hint={t('heteroAgent.cloudNotConfigured.desc')}
         title={t('heteroAgent.cloudNotConfigured.title')}
         action={
-          <Button size={'small'} type={'primary'} onClick={goToConfig}>
+          <Button size="sm" onClick={goToConfig}>
             {t('heteroAgent.cloudNotConfigured.action')}
           </Button>
         }

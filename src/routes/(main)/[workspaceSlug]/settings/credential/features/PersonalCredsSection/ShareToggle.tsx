@@ -1,11 +1,13 @@
 'use client';
 
-import { Segmented, Switch, Text, toast } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Switch } from '@/components/ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { lambdaClient } from '@/libs/trpc/client';
 
 interface ShareToggleProps {
@@ -106,22 +108,21 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
 
   return (
     <div className="flex items-center gap-2">
-      <Text fontSize={12} type={'secondary'}>
-        {t('creds.share.toggle')}
-      </Text>
+      <div className="text-[12px] text-muted-foreground">{t('creds.share.toggle')}</div>
       {shared && (
-        <Segmented
+        <ToggleGroup
           disabled={isPending}
-          size={'small'}
+          size="sm"
           value={visibility}
-          options={[
-            { label: t('creds.share.visibility.private'), value: 'private' },
-            { label: t('creds.share.visibility.public'), value: 'public' },
-          ]}
-          onChange={handleVisibilityChange}
-        />
+          onValueChange={(value) => {
+            if (value === 'private' || value === 'public') handleVisibilityChange(value);
+          }}
+        >
+          <ToggleGroupItem value="private">{t('creds.share.visibility.private')}</ToggleGroupItem>
+          <ToggleGroupItem value="public">{t('creds.share.visibility.public')}</ToggleGroupItem>
+        </ToggleGroup>
       )}
-      <Switch checked={shared} loading={isPending} onChange={handleSwitchChange} />
+      <Switch checked={shared} disabled={isPending} onCheckedChange={handleSwitchChange} />
     </div>
   );
 };

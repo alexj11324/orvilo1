@@ -1,7 +1,5 @@
 'use client';
 
-import { copyToClipboard } from '@lobehub/ui';
-import { confirmModal, type ModalInstance, Text, toast } from '@lobehub/ui/base-ui';
 import {
   Clock3Icon,
   Copy,
@@ -20,7 +18,10 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useParams } from 'react-router';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import { confirmModal } from '@/components/Modal';
+import { type ModalInstance } from '@/components/Modal';
 import { openRenameModal } from '@/components/RenameModal';
+import { toast } from '@/components/toast';
 import { DOCUMENT_HISTORY_QUERY_LIST_LIMIT } from '@/const/documentHistory';
 import { isDesktop } from '@/const/version';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
@@ -39,6 +40,7 @@ import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useDocumentStore } from '@/store/document';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { buildChatMarkdownTranscript } from './copyChatAsMarkdown';
 
@@ -51,12 +53,12 @@ interface TopicInfoHeaderProps {
 const TopicInfoHeader = ({ authorName, title, updatedAtLabel }: TopicInfoHeaderProps) => (
   <div className="flex items-center gap-3 py-2 px-3" style={{ minWidth: 240 }}>
     <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0, overflow: 'hidden' }}>
-      <Text ellipsis style={{ lineHeight: 1.4 }} weight={'bold'}>
+      <div className="truncate font-bold" style={{ lineHeight: 1.4 }}>
         {title}
-      </Text>
-      <Text ellipsis fontSize={12} style={{ lineHeight: 1.4 }} type={'secondary'}>
+      </div>
+      <div className="truncate text-[12px] text-muted-foreground" style={{ lineHeight: 1.4 }}>
         {updatedAtLabel ? `${authorName} ${updatedAtLabel}` : authorName}
-      </Text>
+      </div>
     </div>
   </div>
 );

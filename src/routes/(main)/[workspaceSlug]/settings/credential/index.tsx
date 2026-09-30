@@ -1,12 +1,13 @@
 'use client';
 
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Plus, UserRoundIcon, UsersIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createCreateCredModal } from '@/features/Settings/creds/features/CreateCredModal';
 import CredsList from '@/features/Settings/creds/features/CredsList';
@@ -26,7 +27,7 @@ const personalCredsApi: CredsApi = {
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
     overflow: hidden;
-    width: 100%;
+    width: '100%';
     padding-block: 4px;
     padding-inline: 16px;
   `,
@@ -116,7 +117,8 @@ const WorkspaceCredsSetting = () => {
   };
 
   const createButton = (
-    <Button disabled={!canCreate} icon={<Plus />} type={'primary'} onClick={handleCreate}>
+    <Button disabled={!canCreate} onClick={handleCreate}>
+      <Plus data-icon="inline-start" />
       {t('creds.create')}
     </Button>
   );
@@ -124,22 +126,18 @@ const WorkspaceCredsSetting = () => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4 justify-between">
-        <Tabs
-          activeKey={scope}
-          items={[
-            {
-              icon: <UsersIcon />,
-              key: 'workspace',
-              label: t('creds.tabs.workspace'),
-            },
-            {
-              icon: <UserRoundIcon />,
-              key: 'personal',
-              label: t('creds.tabs.personal'),
-            },
-          ]}
-          onChange={(key) => setScope(key as CredsScope)}
-        />
+        <Tabs value={scope} onValueChange={(key) => setScope(key as CredsScope)}>
+          <TabsList>
+            <TabsTrigger value="workspace">
+              <UsersIcon />
+              {t('creds.tabs.workspace')}
+            </TabsTrigger>
+            <TabsTrigger value="personal">
+              <UserRoundIcon />
+              {t('creds.tabs.personal')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         {
           // Disabled buttons swallow hover events, so the tooltip needs the
           // span wrapper to fire (see the usePermission docstring pattern).
@@ -162,11 +160,11 @@ const WorkspaceCredsSetting = () => {
         }
       </div>
       <div className="flex flex-col gap-3">
-        <Text className={styles.desc}>
+        <div className={styles.desc}>
           {scope === 'workspace'
             ? t('creds.workspaceSection.desc')
             : t('creds.personalSection.desc')}
-        </Text>
+        </div>
         <div
           className={cn('flex flex-col', styles.container)}
           style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}

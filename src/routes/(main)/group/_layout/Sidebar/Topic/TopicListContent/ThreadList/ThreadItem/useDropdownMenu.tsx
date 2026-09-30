@@ -1,8 +1,8 @@
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { PencilLine, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
 import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';

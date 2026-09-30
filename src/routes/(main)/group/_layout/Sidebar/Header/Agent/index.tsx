@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { SkeletonItem } from '@/features/NavPanel/components/SkeletonList';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import SupervisorAvatar from '@/routes/(main)/group/features/GroupAvatar';
@@ -39,9 +39,7 @@ const Agent = memo<PropsWithChildren>(() => {
         }}
       >
         <SupervisorAvatar size={28} />
-        <Text ellipsis weight={500}>
-          {displayTitle}
-        </Text>
+        <div className="truncate font-medium">{displayTitle}</div>
         <ActionIcon
           icon={ChevronsUpDownIcon}
           size={{

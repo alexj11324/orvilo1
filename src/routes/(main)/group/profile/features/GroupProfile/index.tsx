@@ -1,8 +1,7 @@
 'use client';
 
-import { ActionIcon, Button, type ModalInstance } from '@lobehub/ui/base-ui';
 import { useTheme } from 'antd-style';
-import { MoreHorizontalIcon, PlayIcon, Settings2Icon, UsersIcon } from 'lucide-react';
+import { MoreHorizontalIcon, PlayIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -11,6 +10,9 @@ import urlJoin from 'url-join';
 import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentGroupTransferMenuItem';
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
+import ActionIcon from '@/components/ActionIcon';
+import { type ModalInstance } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
 import { EditorCanvas } from '@/features/EditorCanvas';
@@ -203,13 +205,12 @@ const GroupProfile = memo(() => {
         {/* Start Conversation Button */}
         <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
           <Button
-            icon={PlayIcon}
-            type={'primary'}
             onClick={() => {
               if (!groupId) return;
               router.push(urlJoin('/group', groupId));
             }}
           >
+            <PlayIcon data-icon="inline-start" />
             {t('startConversation')}
           </Button>
           {moreMenuItems.length > 0 && (
@@ -223,10 +224,9 @@ const GroupProfile = memo(() => {
           )}
           <Button
             disabled={!canEdit}
-            icon={Settings2Icon}
-            size={'small'}
+            size="sm"
             style={{ color: theme.colorTextSecondary }}
-            type={'text'}
+            variant="ghost"
             onClick={() => {
               if (!canEdit) return;
 

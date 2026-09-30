@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Button } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -8,7 +7,9 @@ import { LucideArrowUpRightFromSquare, TelescopeIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import Notification from '@/components/Notification';
+import { Button } from '@/components/ui/button';
 import { PRIVACY_URL } from '@/const/url';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
@@ -65,7 +66,6 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
         </div>
         <div className="flex gap-2">
           <Button
-            type={'primary'}
             onClick={() => {
               updateTelemetry(true);
             }}
@@ -73,7 +73,7 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
             {t('telemetry.allow')}
           </Button>
           <Button
-            type={'text'}
+            variant="ghost"
             onClick={() => {
               updateTelemetry(false);
             }}

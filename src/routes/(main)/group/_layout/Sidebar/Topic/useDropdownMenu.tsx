@@ -1,4 +1,3 @@
-import { confirmModal, createModal, toast, Upload } from '@lobehub/ui/base-ui';
 import { css, cx } from 'antd-style';
 import { Archive, Hash, Import, LucideCheck, Trash } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
@@ -6,6 +5,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useIsWorkspaceOwner } from '@/business/client/hooks/useIsWorkspaceOwner';
+import { confirmModal, createModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Upload } from '@/components/Upload';
 import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openWorkspaceDeleteAllModal } from '@/features/WorkspaceDeleteAllModal';
 import { usePermission } from '@/hooks/usePermission';

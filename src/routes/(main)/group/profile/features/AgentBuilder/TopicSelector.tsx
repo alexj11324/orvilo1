@@ -1,9 +1,9 @@
-import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Clock3Icon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -84,11 +84,11 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
       styles={{ right: { flex: 'none' } }}
       left={
         activeTopic?.title ? (
-          <Tag className={styles.tag}>
+          <Badge className={styles.tag} variant="primary-light">
             <span className={styles.title} title={activeTopic.title}>
               {activeTopic.title}
             </span>
-          </Tag>
+          </Badge>
         ) : undefined
       }
       right={

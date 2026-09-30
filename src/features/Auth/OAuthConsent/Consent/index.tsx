@@ -51,7 +51,12 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
         subtitle={t('consent.description', { clientName: clientDisplayName })}
         title={t('consent.title', { clientName: clientDisplayName })}
         footer={
-          <form action="/oidc/consent" method="post" style={{ width: '100%' }}>
+          <form
+            action="/oidc/consent"
+            method="post"
+            style={{ width: '100%' }}
+            onSubmit={() => setIsLoading(true)}
+          >
             <input name="uid" type="hidden" value={uid} />
             <input defaultValue="accept" name="consent" ref={consentInputRef} type="hidden" />
             <div className="flex flex-col gap-3">
@@ -63,7 +68,6 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
                 variant="default"
                 onClick={() => {
                   if (consentInputRef.current) consentInputRef.current.value = 'accept';
-                  setIsLoading(true);
                 }}
               >
                 {t('consent.buttons.accept')}

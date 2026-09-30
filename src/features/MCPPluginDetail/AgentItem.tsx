@@ -1,8 +1,10 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
+import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 import { itemStyles } from './style';
 

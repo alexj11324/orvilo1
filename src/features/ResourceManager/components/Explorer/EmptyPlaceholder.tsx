@@ -1,6 +1,7 @@
 import { FileTypeIcon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ArrowUpIcon, PlusIcon } from 'lucide-react';
+import { memo, type ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -180,10 +181,7 @@ const EmptyPlaceholder = () => {
             />
           </div>
         </Upload>
-        <Upload
-          directory
-          multiple={true}
-
+        <DirectoryUpload
           beforeUpload={async (file) => {
             // Directory upload keeps its own path — the whole tree inherits
             // its root's visibility, so we skip the mode-driven default and
@@ -216,10 +214,42 @@ const EmptyPlaceholder = () => {
               }
             />
           </div>
-        </Upload>
+        </DirectoryUpload>
       </div>
     </div>
   );
 };
+
+const DirectoryUpload = memo<{
+  beforeUpload: (file: File) => Promise<boolean>;
+  children: ReactNode;
+}>(({ beforeUpload, children }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <span style={{ display: 'inline-block' }} onClick={() => inputRef.current?.click()}>
+      <input
+        multiple
+        aria-hidden="true"
+        style={{ display: 'none' }}
+        tabIndex={-1}
+        type={'file'}
+        ref={(el) => {
+          inputRef.current = el;
+          el?.setAttribute('webkitdirectory', '');
+        }}
+        onChange={async (event) => {
+          const files = event.target.files ? [...event.target.files] : [];
+          event.target.value = '';
+          for (const file of files) {
+            await beforeUpload(file);
+          }
+        }}
+      />
+      {children}
+    </span>
+  );
+});
+DirectoryUpload.displayName = 'DirectoryUpload';
 
 export default EmptyPlaceholder;

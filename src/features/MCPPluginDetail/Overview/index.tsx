@@ -1,7 +1,13 @@
 import { Markdown } from '@lobehub/ui';
-import { Accordion } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 import { useDetailContext } from '../DetailProvider';
 import TagList from './TagList';
@@ -14,19 +20,14 @@ const Overview = memo<{ inModal?: boolean }>(() => {
 
   return (
     <div className="flex flex-col gap-12">
-      <Accordion
-        defaultValue={['summary']}
-        indicatorPlacement={'end'}
-        styles={{ content: { padding: '12px 16px' } }}
-        variant={'outlined'}
-        items={[
-          {
-            children: !!summary ? <Markdown>{summary}</Markdown> : summary,
-            key: 'summary',
-            title: t('mcp.details.summary.title'),
-          },
-        ]}
-      />
+      <Accordion defaultValue={['summary']}>
+        <AccordionItem value="summary">
+          <AccordionTrigger>{t('mcp.details.summary.title')}</AccordionTrigger>
+          <AccordionContent className="px-4 py-3">
+            {!!summary ? <Markdown>{summary}</Markdown> : summary}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
       <div className="flex flex-col gap-4">
         {overview?.readme && (
           <Markdown allowHtml enableImageGallery={false} enableLatex={false}>

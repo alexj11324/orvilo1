@@ -14,7 +14,7 @@ const ActionIconWithChevron = memo<ActionIconWithChevronProps>(
   ({ icon, title, style, disabled, className, ...rest }) => {
     return (
       <Button
-        rest
+        {...rest}
         className={className}
         disabled={disabled}
         style={{ paddingInline: 4, ...style }}

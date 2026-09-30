@@ -97,11 +97,9 @@ const FileDetail = memo<FileDetailProps>((props) => {
               ? 'success-light'
               : embeddingStatus === 'error'
                 ? 'destructive-light'
-                : embeddingStatus === 'warning'
-                  ? 'warning-light'
-                  : embeddingStatus === 'processing'
-                    ? 'info-light'
-                    : 'secondary'
+                : embeddingStatus === 'processing'
+                  ? 'info-light'
+                  : 'secondary'
           }
         >
           {t(`detail.data.embedding.${embeddingStatus || 'default'}`)}

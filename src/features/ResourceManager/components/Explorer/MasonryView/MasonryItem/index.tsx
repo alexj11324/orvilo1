@@ -16,7 +16,8 @@ import {
   useDragActive,
   useSetCurrentDrag,
 } from '@/features/ResourceManager/DndContextWrapper';
-import { type NativeContextMenuItem, showContextMenu } from '@/libs/contextMenu';
+import { showContextMenu } from '@/libs/contextMenu';
+import { type NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { getChunkTargetId, useFileStore } from '@/store/file';
 import { type FileListItem } from '@/types/files';
 

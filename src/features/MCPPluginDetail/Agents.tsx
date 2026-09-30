@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { InboxIcon, ServerCrash } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -91,7 +90,7 @@ const Agents = memo<AgentsProps>(({ inModal }) => {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-10">
         <ServerCrash color={cssVar.colorTextDescription} size={80} />
-        <Text type={'secondary'}>{t('mcp.details.agents.networkError')}</Text>
+        <span className="text-muted-foreground">{t('mcp.details.agents.networkError')}</span>
       </div>
     );
   }
@@ -101,7 +100,7 @@ const Agents = memo<AgentsProps>(({ inModal }) => {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-10">
         <InboxIcon color={cssVar.colorTextDescription} size={80} />
-        <Text type={'secondary'}>{t('mcp.details.agents.empty')}</Text>
+        <span className="text-muted-foreground">{t('mcp.details.agents.empty')}</span>
       </div>
     );
   }

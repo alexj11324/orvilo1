@@ -133,21 +133,13 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
           <div className="relative">
             <Input
               aria-invalid={!!errors.title || undefined}
+              className="pr-16"
               maxLength={200}
               placeholder={t('feedback.fields.title.placeholder')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-            <span
-              style={{
-                color: 'var(--colorTextSecondary)',
-                fontSize: 12,
-                position: 'absolute',
-                right: 8,
-                top: '50%',
-                transform: 'translateY(-50%)',
-              }}
-            >
+            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
               {title.length}/200
             </span>
           </div>
@@ -159,21 +151,14 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
           <div className="relative">
             <TextArea
               aria-invalid={!!errors.message || undefined}
+              className="pb-7"
               maxLength={5000}
               placeholder={t('feedback.fields.message.placeholder')}
               rows={6}
               value={message}
               onChange={(v) => setMessage(v)}
             />
-            <span
-              style={{
-                bottom: 8,
-                color: 'var(--colorTextSecondary)',
-                fontSize: 12,
-                position: 'absolute',
-                right: 8,
-              }}
-            >
+            <span className="pointer-events-none absolute right-2 bottom-2 text-xs text-muted-foreground">
               {message.length}/5000
             </span>
           </div>

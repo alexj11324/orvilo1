@@ -195,9 +195,9 @@ const DatePicker = memo<DatePickerProps>(
         {isDayPicker ? (
           <Calendar
             defaultMonth={value?.toDate() ?? minDate?.toDate()}
+            disabled={minDate ? { before: minDate.startOf('day').toDate() } : undefined}
             mode="single"
             selected={value?.toDate()}
-            disabled={minDate ? { before: minDate.startOf('day').toDate() } : undefined}
             onSelect={(date) => pick(date ? dayjs(date) : null)}
           />
         ) : (

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import IssueRowChip from '@/components/IssueRowChip';
-import { DropdownMenu, type DropdownMenuProps } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { toast } from '@/components/toast';
 
 import TaskStatusIcon from './TaskStatusIcon';
@@ -160,7 +160,7 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
             subtask.task.name ?? undefined,
           ),
       };
-    }) as DropdownMenuProps['items'];
+    });
 
     const hasDropdown = Boolean(onSubtaskClick) && navigationItems.length > 0;
 

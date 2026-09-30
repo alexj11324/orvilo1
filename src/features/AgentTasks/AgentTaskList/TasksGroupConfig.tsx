@@ -130,10 +130,10 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
           size={'small'}
           style={{ width: 150 }}
           value={groupingValue}
-          onChange={(value: TaskGroupBy) => {
+          onChange={(value) => {
             setOptions((prev) => ({
               ...prev,
-              groupBy: value,
+              groupBy: value as TaskGroupBy,
               subGroupBy: prev.subGroupBy === value ? 'none' : prev.subGroupBy,
             }));
           }}
@@ -166,8 +166,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                   size={'small'}
                   style={{ width: 150 }}
                   value={subGroupingValue}
-                  onChange={(value: TaskGroupBy) => {
-                    setOptions((prev) => ({ ...prev, subGroupBy: value }));
+                  onChange={(value) => {
+                    setOptions((prev) => ({ ...prev, subGroupBy: value as TaskGroupBy }));
                   }}
                 />
               ),
@@ -199,8 +199,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                     size={'small'}
                     style={{ width: 112 }}
                     value={options.orderBy}
-                    onChange={(value: TaskOrderBy) => {
-                      setOptions((prev) => ({ ...prev, orderBy: value }));
+                    onChange={(value) => {
+                      setOptions((prev) => ({ ...prev, orderBy: value as TaskOrderBy }));
                     }}
                   />
                 </div>

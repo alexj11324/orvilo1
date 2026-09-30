@@ -2,7 +2,6 @@
 
 import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar, useResponsive } from 'antd-style';
-import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,8 +25,8 @@ const RatingOverview = memo<RatingOverviewProps>(
     const stars = [5, 4, 3, 2, 1] as const;
 
     return (
-      <div className={cn('flex gap-8', !mobile ? 'flex-row' : 'flex-col')}>
-        <div className={'flex flex-col items-center'} style={{ gap: 6, minWidth: 120 }}>
+      <div className={mobile ? 'flex flex-col gap-8' : 'flex flex-row gap-8'}>
+        <div className="flex flex-col items-center gap-1.5" style={{ minWidth: 120 }}>
           <Text style={{ fontSize: 48, fontWeight: 'bold', lineHeight: 1.2 }}>
             {displayAverage.toFixed(1)}
           </Text>
@@ -40,12 +39,12 @@ const RatingOverview = memo<RatingOverviewProps>(
               : t('skills.details.rating.noRatings')}
           </Text>
         </div>
-        <div className={'flex flex-col justify-center flex-1'}>
+        <div className="flex flex-1 flex-col justify-center">
           {stars.map((star) => {
             const count = distribution?.[star] ?? 0;
             const percent = totalCount > 0 ? (count / totalCount) * 100 : 0;
             return (
-              <div className={'flex gap-2 items-center'} key={star}>
+              <div className="flex items-center gap-2" key={star}>
                 <Text style={{ flexShrink: 0, width: 16 }} type={'secondary'}>
                   {star}
                 </Text>

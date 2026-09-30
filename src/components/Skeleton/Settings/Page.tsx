@@ -16,7 +16,11 @@ const SettingsPageSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => {
   const profile = tab === 'profile';
 
   return (
-    <div aria-busy className={'flex flex-col flex-1'} style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div
+      aria-busy
+      className="flex flex-col flex-1 h-full"
+      style={{ minHeight: 0, overflow: 'hidden' }}
+    >
       {chrome !== 'body' && (
         <NavHeader styles={{ center: { alignItems: 'center' } }}>
           <SkeletonBar height={16} width={profile ? 52 : 88} />

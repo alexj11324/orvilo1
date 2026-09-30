@@ -1,7 +1,8 @@
 'use client';
 
-import { FormGroup } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+
+import { FormGroup } from '@/components/GroupForm';
 
 import SkeletonBar from '../Bar';
 
@@ -24,7 +25,7 @@ const styles = createStaticStyles(({ css }) => ({
 
 const Row = ({ index }: { index: number }) => (
   <div className={styles.row}>
-    <div className={'flex flex-col gap-2'}>
+    <div className="flex flex-col gap-2">
       <SkeletonBar height={16} width={112 + (index % 2) * 40} />
       <SkeletonBar height={12} width={224 + (index % 3) * 36} />
     </div>
@@ -38,9 +39,9 @@ const Group = ({ rows, titleWidth }: { rows: number; titleWidth: number }) => (
     title={<SkeletonBar height={18} width={titleWidth} />}
     variant={'filled'}
   >
-    <div className={'flex flex-col'}>
+    <div className="flex flex-col">
       {Array.from({ length: rows }).map((_, index) => (
-        <div className={'flex flex-col'} key={index}>
+        <div className="flex flex-col" key={index}>
           {index > 0 && <div className={styles.divider} />}
           <Row index={index} />
         </div>
@@ -50,7 +51,7 @@ const Group = ({ rows, titleWidth }: { rows: number; titleWidth: number }) => (
 );
 
 const SettingsSectionSkeleton = () => (
-  <div aria-busy className={'flex flex-col gap-9'} data-testid={'settings-section-skeleton'}>
+  <div aria-busy className="flex flex-col gap-9" data-testid={'settings-section-skeleton'}>
     <Group rows={2} titleWidth={104} />
     <Group rows={3} titleWidth={136} />
   </div>

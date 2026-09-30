@@ -1,8 +1,8 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useMergeState from 'use-merge-value';
 
-import { NumberField } from '@/components/reui/number-field';
+import InputNumber from '@/components/InputNumber';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import DiscreteSlider from './DiscreteSlider';
@@ -63,9 +63,25 @@ const MaxTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defaultValu
     [isMobile],
   );
 
+  const inputStep = 4 * Kibi;
+  const inputWrapperRef = useRef<HTMLDivElement>(null);
+
+  // changeOnWheel parity: scrolling on the field steps the value. Needs a
+  // non-passive native listener so the page does not scroll while stepping.
+  useEffect(() => {
+    const element = inputWrapperRef.current;
+    if (!element) return;
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      updateWithRealValue(Math.max(0, token + (e.deltaY < 0 ? inputStep : -inputStep)));
+    };
+    element.addEventListener('wheel', handleWheel, { passive: false });
+    return () => element.removeEventListener('wheel', handleWheel);
+  });
+
   return (
-    <div className={'flex gap-3 items-center'}>
-      <div className={'flex flex-1 flex-col'}>
+    <div className="flex items-center gap-3">
+      <div className="flex flex-1 flex-col">
         <DiscreteSlider
           options={options}
           value={powValue}
@@ -80,14 +96,14 @@ const MaxTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defaultValu
           onChange={updateWithPowValue}
         />
       </div>
-      <div>
-        <NumberField
+      <div ref={inputWrapperRef}>
+        <InputNumber
           min={0}
-          step={4 * Kibi}
+          step={inputStep}
           value={token}
-          onValueChange={(e) => {
-            if (e === null || e === undefined) return;
-            updateWithRealValue(e);
+          onChange={(e) => {
+            if (!e && e !== 0) return;
+            updateWithRealValue(e as number);
           }}
         />
       </div>

@@ -1,9 +1,8 @@
-import { type MenuItemType } from 'antd/es/menu/interface';
 import { Activity, Bot, Handshake, LinkIcon, NotebookText } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type MenuProps } from '@/components/Menu';
+import { type MenuItemType, type MenuProps } from '@/components/Menu';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { ChatSettingsTabs } from '@/store/global/initialState';

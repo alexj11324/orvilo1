@@ -1,10 +1,10 @@
-import { type ItemType } from '@lobehub/ui';
-import { Flexbox, Icon, SearchBar, stopPropagation } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { type ItemType } from 'antd/es/menu/interface';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ExternalLink, Settings } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import SearchBar from '@/components/SearchBar';
 import { ScrollSignalProvider } from '@/features/ChatInput/ActionBar/Tools/ScrollSignalContext';
 import ToolsList, { toolsListStyles } from '@/features/ChatInput/ActionBar/Tools/ToolsList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -75,17 +75,14 @@ const PopoverContent = memo<PopoverContentProps>(({ items, onClose }) => {
   const isEmpty = filteredItems.length === 0;
 
   return (
-    <Flexbox style={{ maxHeight: 500, width: '100%' }}>
-      <div className={styles.header} onClick={stopPropagation}>
+    <div className="flex flex-col" style={{ maxHeight: 500, width: '100%' }}>
+      <div className={styles.header} onClick={(event) => event.stopPropagation()}>
         <SearchBar
-          allowClear
           placeholder={t('tools.search')}
-          size="small"
           style={{ flex: 1 }}
           value={searchKeyword}
-          variant="borderless"
           onChange={(e) => setSearchKeyword(e.target.value)}
-          onKeyDown={stopPropagation}
+          onKeyDown={(event) => event.stopPropagation()}
         />
       </div>
       <ScrollSignalProvider className={styles.scroller} style={{ flex: 1 }}>
@@ -102,13 +99,22 @@ const PopoverContent = memo<PopoverContentProps>(({ items, onClose }) => {
           }}
         >
           <div className={toolsListStyles.itemIcon}>
-            <Icon icon={Settings} size={SKILL_ICON_SIZE} />
+            <span className="anticon" role="img">
+              <Settings
+                fill={'transparent'}
+                height={SKILL_ICON_SIZE}
+                size={SKILL_ICON_SIZE}
+                width={SKILL_ICON_SIZE}
+              />
+            </span>
           </div>
           <div className={toolsListStyles.itemContent}>{t('tools.plugins.management')}</div>
-          <Icon className={styles.trailingIcon} icon={ExternalLink} size={16} />
+          <span className={cx('anticon', styles.trailingIcon)} role="img">
+            <ExternalLink fill={'transparent'} height={16} size={16} width={16} />
+          </span>
         </div>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

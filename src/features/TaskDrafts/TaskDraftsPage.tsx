@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
@@ -11,6 +10,7 @@ import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
@@ -309,7 +309,7 @@ const TaskDraftsPage = () => {
   const isEmpty = drafts.length === 0 && issueDrafts.length === 0;
 
   return (
-    <Flexbox flex={1} height="100%" style={{ minHeight: 0 }}>
+    <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0 }}>
       <NavHeader
         className={styles.header}
         left={<Text weight={500}>{t('drafts.title')}</Text>}
@@ -337,9 +337,9 @@ const TaskDraftsPage = () => {
       ) : isLoading ? (
         <DraftsSkeleton />
       ) : isEmpty ? (
-        <Center flex={1} padding={48}>
-          <Empty description={t('drafts.empty')} icon={FilePenLineIcon} />
-        </Center>
+        <div className="flex flex-col items-center justify-center flex-1 p-12">
+          <SimpleEmpty description={t('drafts.empty')} icon={FilePenLineIcon} />
+        </div>
       ) : (
         <div style={{ overflowY: 'auto' }}>
           {issueDrafts.length > 0 && (
@@ -476,7 +476,7 @@ const TaskDraftsPage = () => {
           )}
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

@@ -1,9 +1,8 @@
-import { Block, Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
+import { Separator } from '@/components/ui/separator';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
 import { RECOMMENDATION_ICON_SIZE } from '@/features/Recommendations/iconSize';
 
@@ -18,12 +17,9 @@ export const TaskTemplateCardSkeleton = memo<TaskTemplateCardSkeletonProps>(
   ({ compact, descriptionRows = 1 }) => {
     if (compact)
       return (
-        <Flexbox
-          horizontal
-          align={'center'}
+        <div
+          className="flex flex-row items-center gap-2.5 py-[6px]"
           data-testid={'task-template-card-skeleton'}
-          gap={10}
-          paddingBlock={6}
         >
           <Skeleton.Avatar
             shape={'square'}
@@ -31,23 +27,23 @@ export const TaskTemplateCardSkeleton = memo<TaskTemplateCardSkeletonProps>(
             style={{ borderRadius: cssVar.borderRadius, flex: 'none' }}
           />
           <Skeleton height={16} width={'70%'} />
-        </Flexbox>
+        </div>
       );
 
     return (
-      <Block
+      <div
         className={cx(briefStyles.card, styles.card)}
         data-testid={'task-template-card-skeleton'}
-        gap={12}
-        padding={12}
         style={{ borderRadius: cssVar.borderRadiusLG }}
-        variant={'outlined'}
+        className={cx(
+          briefStyles.card,
+          styles.card,
+          'rounded-md border bg-card flex flex-col gap-3 p-3',
+        )}
       >
-        <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={8}
+        <div className="flex flex-row items-center gap-4 justify-between">
+          <div
+            className="flex flex-row items-center gap-2"
             style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
           >
             <Skeleton.Avatar
@@ -55,30 +51,27 @@ export const TaskTemplateCardSkeleton = memo<TaskTemplateCardSkeletonProps>(
               size={RECOMMENDATION_ICON_SIZE.regular}
               style={{ borderRadius: cssVar.borderRadius, flex: 'none' }}
             />
-            <Flexbox
-              horizontal
-              align={'center'}
-              flex={1}
-              gap={6}
+            <div
+              className="flex flex-row items-center flex-1 gap-1.5"
               style={{ minWidth: 0, overflow: 'hidden' }}
             >
               <Skeleton height={20} width={180} />
               <Skeleton.Avatar shape={'circle'} size={12} style={{ flex: 'none' }} />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
 
           <Skeleton.Avatar shape={'circle'} size={24} style={{ flex: 'none' }} />
-        </Flexbox>
+        </div>
 
-        <Divider dashed style={{ marginBlock: 0 }} />
+        <Separator className="border-dashed" style={{ marginBlock: 0 }} />
 
         <Skeleton.Text fontSize={14} rows={descriptionRows} style={{ marginBottom: 0 }} />
 
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
+        <div className="flex flex-row items-center gap-2 justify-between flex-wrap">
           <Skeleton height={22} width={72} />
           <Skeleton height={32} width={96} />
-        </Flexbox>
-      </Block>
+        </div>
+      </div>
     );
   },
 );

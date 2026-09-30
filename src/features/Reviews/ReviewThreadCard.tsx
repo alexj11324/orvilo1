@@ -1,6 +1,6 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Button, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -45,8 +45,8 @@ const styles = createStaticStyles(({ css }) => ({
 const ThreadComment = memo<{ comment: ReviewThreadComment }>(({ comment }) => {
   const { t } = useTranslation('common');
   return (
-    <Flexbox gap={4} padding={12}>
-      <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex flex-col gap-1 p-3">
+      <div className="flex flex-row items-center gap-2">
         <Avatar avatar={comment.authorAvatar ?? undefined} name={comment.author ?? '?'} size={20} />
         <Text fontSize={12} weight={500}>
           {comment.author}
@@ -66,11 +66,11 @@ const ThreadComment = memo<{ comment: ReviewThreadComment }>(({ comment }) => {
             {dayjs(comment.createdAt).fromNow()}
           </Text>
         ) : null}
-      </Flexbox>
+      </div>
       <Markdown fontSize={13} variant={'chat'}>
         {comment.body}
       </Markdown>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -99,13 +99,13 @@ const ReviewThreadCard = memo<{
   const comments = thread.comments;
 
   return (
-    <Flexbox className={styles.card}>
+    <div className={cx('flex flex-col', styles.card)}>
       {anchor ? (
-        <Flexbox horizontal align={'center'} className={styles.cardHeader} gap={8}>
+        <div className={cx('flex flex-row items-center gap-2', styles.cardHeader)}>
           <Text className={styles.threadHeader}>{anchor}</Text>
           {thread.isOutdated ? <Tag>{t('reviews.threadOutdated')}</Tag> : null}
           {thread.isResolved ? <Tag color={'green'}>{t('reviews.threadResolved')}</Tag> : null}
-        </Flexbox>
+        </div>
       ) : null}
       {comments.items.map((comment, index) => (
         <ThreadComment comment={comment} key={comment.id ?? `${comment.createdAt}-${index}`} />
@@ -131,7 +131,7 @@ const ReviewThreadCard = memo<{
             : undefined
         }
       />
-      <Flexbox className={styles.commentBox}>
+      <div className={cx('flex flex-col', styles.commentBox)}>
         {replyOpen ? (
           <CommentComposer
             disabled={writeDisabled}
@@ -158,8 +158,8 @@ const ReviewThreadCard = memo<{
             {t('reviews.reply')}
           </Button>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

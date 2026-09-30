@@ -1,12 +1,11 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
 import { ActionIcon, Button, Popover, Select, Switch, Text } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { ListTodoIcon, PlusIcon, SearchXIcon, Settings2Icon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
@@ -14,6 +13,8 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
+import SearchBar from '@/components/SearchBar';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import NavHeader from '@/features/NavHeader';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -303,7 +304,15 @@ const SavedViewsPage = memo(() => {
         listSlot: 'title',
         render: (view) => (
           <div className={styles.nameCell}>
-            <Icon color={cssVar.colorTextSecondary} icon={viewIcon(view)} size={16} />
+            <span className="anticon" role="img">
+              {createElement(viewIcon(view), {
+                size = 16,
+                width = 16,
+                height = 16,
+                color = cssVar.colorTextSecondary,
+                fill = 'transparent',
+              })}
+            </span>
             {/* A real anchor keeps open-in-new-tab and middle-click working;
                 stopPropagation keeps the row's own onRowClick from
                 double-navigating. */}
@@ -362,13 +371,12 @@ const SavedViewsPage = memo(() => {
       placement="bottomRight"
       trigger="click"
       content={
-        <Flexbox className={styles.displayPopover} gap={10}>
+        <div className={cx('flex flex-col gap-2.5', styles.displayPopover)}>
           <Text fontSize={12} type="secondary" weight={500}>
             {t('savedViews.ordering')}
           </Text>
           <Select
             aria-label={t('savedViews.ordering')}
-            size="small"
             style={{ width: '100%' }}
             value={prefs.ordering}
             options={(['name', 'owner', 'updated', 'created'] as const).map((value) => ({
@@ -387,7 +395,6 @@ const SavedViewsPage = memo(() => {
           />
           <Select
             aria-label={t('savedViews.direction')}
-            size="small"
             style={{ width: '100%' }}
             value={prefs.direction}
             options={(['asc', 'desc'] as const).map((value) => ({
@@ -408,16 +415,15 @@ const SavedViewsPage = memo(() => {
               ['showUpdated', 'savedViews.column.updated'],
             ] as const
           ).map(([key, labelKey]) => (
-            <Flexbox horizontal align="center" justify="space-between" key={key}>
+            <div className="flex flex-row items-center justify-between" key={key}>
               <Text fontSize={13}>{t(labelKey)}</Text>
               <Switch
                 checked={prefs[key]}
-                size="small"
                 onChange={(checked) => updatePrefs({ [key]: checked })}
               />
-            </Flexbox>
+            </div>
           ))}
-        </Flexbox>
+        </div>
       }
     >
       <ActionIcon
@@ -439,9 +445,13 @@ const SavedViewsPage = memo(() => {
         }
         right={
           <Button
-            icon={<Icon icon={PlusIcon} size={16} />}
             size={'small'}
             type="primary"
+            icon={
+              <span className="anticon" role="img">
+                <PlusIcon fill={'transparent'} height={16} size={16} width={16} />
+              </span>
+            }
             onClick={() => setCreating(true)}
           >
             {t('savedViews.newView')}
@@ -451,7 +461,7 @@ const SavedViewsPage = memo(() => {
       <WorkSurfaceCollection
         toolbar={
           <WorkSurfaceToolbar>
-            <Flexbox horizontal align="center" gap={6}>
+            <div className="flex flex-row items-center gap-1.5">
               <WorkspaceLink
                 aria-current={entityType === 'task' ? 'page' : undefined}
                 className={`${styles.entityTab} ${entityType === 'task' ? styles.entityTabActive : ''}`}
@@ -466,9 +476,8 @@ const SavedViewsPage = memo(() => {
               >
                 {t('savedViews.entityProject')}
               </WorkspaceLink>
-            </Flexbox>
+            </div>
             <SearchBar
-              allowClear
               placeholder={t('savedViews.searchPlaceholder')}
               style={{ marginInlineStart: 'auto', maxWidth: 280 }}
               value={keyword}
@@ -484,17 +493,25 @@ const SavedViewsPage = memo(() => {
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
         ) : filteredViews.length === 0 ? (
           keyword.trim() ? (
-            <Center flex={1} padding={48}>
-              <Empty description={t('savedViews.searchEmpty')} icon={SearchXIcon} />
-            </Center>
+            <div className="flex flex-col items-center justify-center flex-1 p-12">
+              <SimpleEmpty description={t('savedViews.searchEmpty')} icon={SearchXIcon} />
+            </div>
           ) : (
             /* Reference empty state: left-aligned block, 340px wide,
                horizontally centered. The ⌥V shortcut line is intentionally
                absent — Orvilo has no such hotkey (honest UI over copied
                chrome). */
-            <Center flex={1} padding={48}>
+            <div className="flex flex-col items-center justify-center flex-1 p-12">
               <div className={styles.emptyBlock}>
-                <Icon color={cssVar.colorTextTertiary} icon={ListTodoIcon} size={56} />
+                <span className="anticon" role="img">
+                  <ListTodoIcon
+                    color={cssVar.colorTextTertiary}
+                    fill={'transparent'}
+                    height={56}
+                    size={56}
+                    width={56}
+                  />
+                </span>
                 <Text fontSize={15} weight={600}>
                   {t('tab.views')}
                 </Text>
@@ -505,24 +522,26 @@ const SavedViewsPage = memo(() => {
                       : 'teams.viewDirectoryDescriptionIssues',
                   )}
                 </Text>
-                <Flexbox horizontal gap={8}>
+                <div className="flex flex-row gap-2">
                   <Button
-                    icon={<Icon icon={PlusIcon} size={14} />}
-                    size="small"
                     type="primary"
+                    icon={
+                      <span className="anticon" role="img">
+                        <PlusIcon fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    }
                     onClick={() => setCreating(true)}
                   >
                     {t('teams.viewCreateNew')}
                   </Button>
                   <Button
-                    size="small"
                     onClick={() => window.open(DIRECTORY_DOC_URL, '_blank', 'noopener,noreferrer')}
                   >
                     {t('teams.viewDocumentation')}
                   </Button>
-                </Flexbox>
+                </div>
               </div>
-            </Center>
+            </div>
           )
         ) : (
           <LiteTable

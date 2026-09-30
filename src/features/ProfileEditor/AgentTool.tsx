@@ -1,11 +1,10 @@
 'use client';
 
-import type { ItemType } from '@lobehub/ui';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Button } from '@lobehub/ui/base-ui';
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog } from '@orvilo/const';
 import { getActivePluginIds, upsertPluginMode } from '@orvilo/types';
+import type { ItemType } from 'antd/es/menu/interface';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { PlusIcon } from 'lucide-react';
@@ -412,7 +411,14 @@ const AgentTool = memo<AgentToolProps>(
           icon: skill.avatar ? (
             <Avatar avatar={skill.avatar} size={SKILL_ICON_SIZE} style={{ marginInlineEnd: 0 }} />
           ) : (
-            <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />
+            <span className="anticon" role="img">
+              <SkillsIcon
+                fill={'transparent'}
+                height={SKILL_ICON_SIZE}
+                size={SKILL_ICON_SIZE}
+                width={SKILL_ICON_SIZE}
+              />
+            </span>
           ),
           key: skill.identifier,
           label: (
@@ -442,7 +448,9 @@ const AgentTool = memo<AgentToolProps>(
                     style={{ flex: 'none', marginInlineEnd: 0 }}
                   />
                 ) : (
-                  <Icon icon={SkillsIcon} size={36} />
+                  <span className="anticon" role="img">
+                    <SkillsIcon fill={'transparent'} height={36} size={36} width={36} />
+                  </span>
                 )
               }
               title={t(`tools.builtins.${skill.identifier}.title` as any, {
@@ -531,7 +539,14 @@ const AgentTool = memo<AgentToolProps>(
         const isCustom = item.type === 'customPlugin';
         return {
           icon: isMcp ? (
-            <Icon icon={McpIcon} size={SKILL_ICON_SIZE} />
+            <span className="anticon" role="img">
+              <McpIcon
+                fill={'transparent'}
+                height={SKILL_ICON_SIZE}
+                size={SKILL_ICON_SIZE}
+                width={SKILL_ICON_SIZE}
+              />
+            </span>
           ) : (
             <Avatar avatar={item.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
           ),
@@ -556,7 +571,9 @@ const AgentTool = memo<AgentToolProps>(
               title={item.title}
               icon={
                 isMcp ? (
-                  <Icon icon={McpIcon} size={36} />
+                  <span className="anticon" role="img">
+                    <McpIcon fill={'transparent'} height={36} size={36} width={36} />
+                  </span>
                 ) : (
                   <Avatar
                     avatar={item.avatar}
@@ -593,7 +610,16 @@ const AgentTool = memo<AgentToolProps>(
       () =>
         customConnectors.map((connector) => {
           return {
-            icon: <Icon icon={McpIcon} size={SKILL_ICON_SIZE} style={{ marginInlineEnd: 0 }} />,
+            icon: (
+              <span className="anticon" role="img" style={{ marginInlineEnd: 0 }}>
+                <McpIcon
+                  fill={'transparent'}
+                  height={SKILL_ICON_SIZE}
+                  size={SKILL_ICON_SIZE}
+                  width={SKILL_ICON_SIZE}
+                />
+              </span>
+            ),
             key: connector.identifier,
             label: (
               <ToolItem
@@ -610,10 +636,14 @@ const AgentTool = memo<AgentToolProps>(
             popoverContent: (
               <ToolItemDetailPopover
                 description={connector.mcpServerUrl ?? ''}
-                icon={<Icon icon={McpIcon} size={36} />}
                 identifier={connector.identifier}
                 sourceLabel={t('skillStore.tabs.custom')}
                 title={connector.name || connector.identifier}
+                icon={
+                  <span className="anticon" role="img">
+                    <McpIcon fill={'transparent'} height={36} size={36} width={36} />
+                  </span>
+                }
               />
             ),
           };
@@ -765,7 +795,7 @@ const AgentTool = memo<AgentToolProps>(
     return (
       <>
         {/* Plugin Selector and Tags */}
-        <Flexbox horizontal align="center" gap={8} wrap={'wrap'}>
+        <div className="flex flex-row items-center gap-2 flex-wrap">
           <Suspense fallback={button}>
             {/* Plugin Selector Dropdown - Using Action component pattern */}
             <ActionDropdown
@@ -819,7 +849,7 @@ const AgentTool = memo<AgentToolProps>(
               />
             );
           })}
-        </Flexbox>
+        </div>
       </>
     );
   },

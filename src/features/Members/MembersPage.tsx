@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Button, DropdownMenu, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { MoreHorizontal, RefreshCw, Settings2, Trash2, UserPlus } from 'lucide-react';
@@ -13,6 +12,9 @@ import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCa
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
+import SearchBar from '@/components/SearchBar';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -353,7 +355,11 @@ const MembersPage = memo(() => {
               <DropdownMenu
                 items={[
                   {
-                    icon: <Icon icon={Settings2} size={14} />,
+                    icon: (
+                      <span className="anticon" role="img">
+                        <Settings2 fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    ),
                     key: 'manage',
                     label: t('members.manageInSettings', { ns: 'common' }),
                     onClick: () => navigate(settingsPath),
@@ -373,14 +379,22 @@ const MembersPage = memo(() => {
               <DropdownMenu
                 items={[
                   {
-                    icon: <Icon icon={RefreshCw} size={14} />,
+                    icon: (
+                      <span className="anticon" role="img">
+                        <RefreshCw fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    ),
                     key: 'resend',
                     label: t('members.resendInvitation', { ns: 'common' }),
                     onClick: () => void resendInvitation(row.value.id),
                   },
                   {
                     danger: true,
-                    icon: <Icon icon={Trash2} size={14} />,
+                    icon: (
+                      <span className="anticon" role="img">
+                        <Trash2 fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    ),
                     key: 'revoke',
                     label: t('members.revokeInvitation', { ns: 'common' }),
                     onClick: () => void revokeInvitation(row.value.id),
@@ -417,28 +431,32 @@ const MembersPage = memo(() => {
           </Text>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-row items-center gap-2">
             {capabilities.canManageMembers ? (
-              <Tooltip title={t('members.manageInSettings', { ns: 'common' })}>
+              <SimpleTooltip title={t('members.manageInSettings', { ns: 'common' })}>
                 <ActionIcon
                   aria-label={t('members.manageInSettings', { ns: 'common' })}
                   icon={Settings2}
                   size={'small'}
                   onClick={() => navigate(settingsPath)}
                 />
-              </Tooltip>
+              </SimpleTooltip>
             ) : null}
             {capabilities.canInvite ? (
               <Button
-                icon={<Icon icon={UserPlus} size={16} />}
                 size={'small'}
                 type="primary"
+                icon={
+                  <span className="anticon" role="img">
+                    <UserPlus fill={'transparent'} height={16} size={16} width={16} />
+                  </span>
+                }
                 onClick={() => openInviteTeammateModal()}
               >
                 {t('workspaceSetting.members.inviteButton', { ns: 'setting' })}
               </Button>
             ) : null}
-          </Flexbox>
+          </div>
         }
       />
       <WorkSurfaceCollection
@@ -461,7 +479,6 @@ const MembersPage = memo(() => {
             }
           >
             <SearchBar
-              allowClear
               placeholder={t('members.searchPlaceholder', { ns: 'common' })}
               style={{ maxWidth: 280 }}
               value={query}
@@ -471,13 +488,15 @@ const MembersPage = memo(() => {
         }
       >
         {!workspace ? (
-          <Center padding={48}>
-            <Empty description={t('workspaceSetting.members.noWorkspace', { ns: 'setting' })} />
-          </Center>
+          <div className="flex flex-col items-center justify-center p-12">
+            <SimpleEmpty
+              description={t('workspaceSetting.members.noWorkspace', { ns: 'setting' })}
+            />
+          </div>
         ) : loadError ? (
           /* The directory joins three queries — retry revalidates all of them,
              matching every other surface's AsyncError+retry contract. */
-          <Center padding={48}>
+          <div className="flex flex-col items-center justify-center p-12">
             <AsyncError
               error={loadError}
               onRetry={() => {
@@ -486,19 +505,19 @@ const MembersPage = memo(() => {
                 void invitationsQuery.mutate();
               }}
             />
-          </Center>
+          </div>
         ) : loading ? (
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
         ) : sections.length === 0 ? (
-          <Center padding={48}>
-            <Empty
+          <div className="flex flex-col items-center justify-center p-12">
+            <SimpleEmpty
               description={
                 needle || groupFilter !== 'all'
                   ? t('members.emptySearch', { ns: 'common' })
                   : t('workspaceSetting.members.empty', { ns: 'setting' })
               }
             />
-          </Center>
+          </div>
         ) : (
           <LiteTable
             className={styles.directoryTable}

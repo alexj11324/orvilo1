@@ -1,12 +1,22 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button, Drawer, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { type OrviloToolCustomPlugin } from '@orvilo/types';
-import { Form, Popconfirm } from 'antd';
 import { useResponsive } from 'antd-style';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Form from '@/components/GroupForm';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogConfirm,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 import MCPManifestForm from './MCPManifestForm';
 import PluginPreview from './PluginPreview';
@@ -113,31 +123,38 @@ const DevModal = memo<DevModalProps>(
     const buttonStyle = mobile ? { flex: 1 } : { margin: 0 };
 
     const footer = (
-      <Flexbox horizontal flex={1} gap={12} justify={'space-between'}>
+      <div className="flex flex-row flex-1 gap-3 justify-between">
         {isEditMode ? (
-          <Popconfirm
-            arrow={false}
-            cancelText={t('cancel', { ns: 'common' })}
-            okText={t('ok', { ns: 'common' })}
-            placement={'topLeft'}
-            title={t('dev.confirmDeleteDevPlugin')}
-            okButtonProps={{
-              danger: true,
-              type: 'primary',
-            }}
-            onConfirm={() => {
-              onDelete?.();
-              toast.success(t('dev.deleteSuccess'));
-            }}
-          >
-            <Button danger style={buttonStyle}>
-              {t('delete', { ns: 'common' })}
-            </Button>
-          </Popconfirm>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button danger style={buttonStyle}>
+                  {t('delete', { ns: 'common' })}
+                </Button>
+              }
+            />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('dev.confirmDeleteDevPlugin')}</AlertDialogTitle>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
+                <AlertDialogConfirm
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete?.();
+                    toast.success(t('dev.deleteSuccess'));
+                  }}
+                >
+                  {t('ok', { ns: 'common' })}
+                </AlertDialogConfirm>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         ) : (
           <div />
         )}
-        <Flexbox horizontal gap={12}>
+        <div className="flex flex-row gap-3">
           <Button
             style={buttonStyle}
             onClick={() => {
@@ -154,8 +171,8 @@ const DevModal = memo<DevModalProps>(
           >
             {t(isEditMode ? 'dev.update' : 'dev.save')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
 
     return (
@@ -186,24 +203,22 @@ const DevModal = memo<DevModalProps>(
             onOpenChange(false);
           }}
         >
-          <Flexbox
-            horizontal
-            gap={0}
-            height={'100%'}
+          <div
+            className="flex flex-row gap-0 h-[100%]"
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
-            <Flexbox flex={3} gap={16} padding={24} style={{ overflowY: 'auto' }}>
+            <div className="flex flex-col gap-4 p-6" style={{ overflowY: 'auto', flex: 3 }}>
               <MCPManifestForm
                 enableOAuth={enableOAuth}
                 form={form}
                 isEditMode={isEditMode}
                 onAuthorizeOAuth={runOAuthFlow}
               />
-            </Flexbox>
+            </div>
             <PluginPreview form={form} />
-          </Flexbox>
+          </div>
         </Drawer>
       </Form.Provider>
     );

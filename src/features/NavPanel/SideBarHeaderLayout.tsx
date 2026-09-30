@@ -1,15 +1,19 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import type { BreadcrumbProps } from 'antd';
-import { Breadcrumb } from 'antd';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRightIcon, HomeIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { memo } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
+import { Fragment, memo } from 'react';
 import { flushSync } from 'react-dom';
 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { isModifierClick } from '@/utils/navigation';
@@ -43,11 +47,15 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-type BreadcrumbItem = NonNullable<BreadcrumbProps['items']>[number];
+interface BreadcrumbItem {
+  href?: string;
+  onClick?: (event: MouseEvent) => void;
+  title: ReactNode;
+}
 
 interface SideBarHeaderLayoutProps {
   backTo?: string;
-  breadcrumb?: BreadcrumbProps['items'];
+  breadcrumb?: BreadcrumbItem[];
   /** Override the leading home breadcrumb item (defaults to home icon → `/`). */
   homeItem?: BreadcrumbItem;
   left?: ReactNode;
@@ -59,11 +67,8 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
   ({ left, right, backTo = '/', showBack = true, breadcrumb = [], homeItem }) => {
     const navigate = useWorkspaceAwareNavigate();
     const leftContent = left ? (
-      <Flexbox
-        horizontal
-        align={'center'}
-        flex={1}
-        gap={2}
+      <div
+        className="flex flex-row items-center flex-1 gap-0.5"
         style={{
           overflow: 'hidden',
         }}
@@ -76,49 +81,68 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
         ) : (
           left
         )}
-      </Flexbox>
+      </div>
     ) : (
-      <Flexbox flex={1} paddingInline={6}>
-        <Breadcrumb
-          className={styles.breadcrumb}
-          separator={<Icon icon={ChevronRightIcon} />}
-          items={[
-            homeItem ?? {
-              href: '/',
-              title: <Icon icon={HomeIcon} />,
-            },
-            ...breadcrumb,
-          ].map((item) => ({
-            ...item,
-            onClick: (event) => {
-              if (isModifierClick(event)) return;
-              const href = item.href;
-              if (href) {
-                event.preventDefault();
-                event.stopPropagation();
-                // eslint-disable-next-line @eslint-react/dom/no-flush-sync
-                flushSync(() => navigate(href));
-              }
-            },
-          }))}
-        />
-      </Flexbox>
+      <div className="flex flex-col flex-1 px-[6px]">
+        <Breadcrumb className={styles.breadcrumb}>
+          <BreadcrumbList>
+            {[
+              homeItem ?? {
+                href: '/',
+                title: (
+                  <span className="anticon" role="img">
+                    <HomeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
+                ),
+              },
+              ...breadcrumb,
+            ].map((item, index, all) => (
+              <Fragment key={index}>
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    href={item.href}
+                    onClick={(event) => {
+                      item.onClick?.(event);
+                      if (isModifierClick(event)) return;
+                      const href = item.href;
+                      if (href) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        // eslint-disable-next-line @eslint-react/dom/no-flush-sync
+                        flushSync(() => navigate(href));
+                      }
+                    }}
+                  >
+                    {item.title}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                {index < all.length - 1 && (
+                  <BreadcrumbSeparator>
+                    <span className="anticon" role="img">
+                      <ChevronRightIcon
+                        fill={'transparent'}
+                        height={'1em'}
+                        size={'1em'}
+                        width={'1em'}
+                      />
+                    </span>
+                  </BreadcrumbSeparator>
+                )}
+              </Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
     );
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.container}
-        flex={'none'}
-        justify={'space-between'}
-        padding={'8px 6px'}
+      <div
+        className={cx('flex flex-row items-center flex-none justify-between', styles.container)}
+        style={{ padding: '8px 6px' }}
       >
         {leftContent}
-        <Flexbox horizontal align={'center'} gap={2} justify={'flex-end'}>
-          {right}
-        </Flexbox>
-      </Flexbox>
+        <div className="flex flex-row items-center gap-0.5 justify-end">{right}</div>
+      </div>
     );
   },
 );

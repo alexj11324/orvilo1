@@ -3,7 +3,7 @@ import { CircleAlert } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 
 import ConfigForm from './ConfigForm';
 import SearchQueryView from './SearchQuery';
@@ -26,7 +26,6 @@ const Search = memo<BuiltinRenderProps<SearchQuery, UniformSearchResponse>>(
             {
               <div className="flex flex-col">
                 <CodeBlock
-                  actionIconSize={'small'}
                   code={JSON.stringify(pluginError.body?.data || pluginError.body, null, 2)}
                   language={'json'}
                   variant={'ghost'}

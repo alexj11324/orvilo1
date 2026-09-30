@@ -26,6 +26,7 @@ export const FormAction = memo<
     avatar: ReactNode;
     background?: string;
     description: string;
+    gap?: number;
     title: string;
   } & ComponentProps<'div'>
 >(

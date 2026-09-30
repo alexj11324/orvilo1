@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,9 +50,9 @@ const AgentSkillStoreContent = memo<{ agentId: string }>(({ agentId }) => {
           </div>
         </div>
       ) : (
-        <Text style={{ padding: 24 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ padding: 24 }}>
           {t('settingAgent.agentTools.pickerEmpty')}
-        </Text>
+        </div>
       )}
     </div>
   );

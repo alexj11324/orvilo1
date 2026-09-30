@@ -1,11 +1,12 @@
 'use client';
 
-import { ActionIcon, confirmModal } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Loader2, MoreVerticalIcon, Plus, Unplug } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
 import {
   DropdownMenu,
   DropdownMenuContent,

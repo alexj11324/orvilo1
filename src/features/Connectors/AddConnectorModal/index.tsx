@@ -1,10 +1,10 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { type TFunction } from 'i18next';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { ConnectorSourceType } from '@/database/schemas';
 import { lambdaClient } from '@/libs/trpc/client';

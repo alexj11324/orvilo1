@@ -1,11 +1,12 @@
 'use client';
 
-import { ActionIcon, DropdownMenu } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { EllipsisIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { useGroupDropdownMenu } from '@/features/HomeSidebar/Body/Agent/List/AgentGroupItem/useDropdownMenu';
 import { useAgentDropdownMenu } from '@/features/HomeSidebar/Body/Agent/List/AgentItem/useDropdownMenu';
 import { useAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';

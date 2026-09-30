@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { Carousel as AntCarousel } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -18,6 +17,8 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAnalytics } from '@/libs/analytics/client';
 import type { GlobalBillboard, GlobalBillboardItem } from '@/types/serverConfig';
@@ -234,7 +235,11 @@ const ItemContent = memo<{
             descNode
           ))}
         {action ? (
-          <Button block className={styles.action} type="primary" onClick={handleActionClick}>
+          <Button
+            className={cn('w-full', styles.action)}
+            variant="default"
+            onClick={handleActionClick}
+          >
             {resolved.linkLabel ?? t('billboard.learnMore')}
           </Button>
         ) : (
@@ -246,7 +251,7 @@ const ItemContent = memo<{
               target="_blank"
               onClick={handleLinkClick}
             >
-              <Button block type="primary">
+              <Button className="w-full" variant="default">
                 {resolved.linkLabel ?? t('billboard.learnMore')}
               </Button>
             </a>

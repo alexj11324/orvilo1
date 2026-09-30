@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
@@ -10,6 +9,8 @@ import dayjs from 'dayjs';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -132,11 +133,11 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
               {/* Single-line row (Linear-style density) — the description only
                 renders in card mode, where there is room to browse. */}
               <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-                <Text ellipsis className={'agent-row-title'} weight={500}>
+                <div className={cn('truncate', 'block', 'font-medium', 'agent-row-title')}>
                   {displayTitle}
-                </Text>
+                </div>
                 {roleTag ? (
-                  <Tag size={'small'} style={{ flex: 'none' }}>
+                  <Tag size="sm" style={{ flex: 'none' }}>
                     {roleTag}
                   </Tag>
                 ) : null}
@@ -173,13 +174,12 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
                 )}
               </div>
             )}
-            <Text
-              className={styles.updatedAt}
-              fontSize={12}
+            <div
+              className={cn('text-[12px]', styles.updatedAt)}
               title={updatedAt ? dayjs(updatedAt).format('YYYY-MM-DD HH:mm') : undefined}
             >
               {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
-            </Text>
+            </div>
           </div>
           <div
             className="flex items-center gap-1"

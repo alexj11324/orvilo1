@@ -1,10 +1,11 @@
 'use client';
 
-import { Segmented, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { snakeCase } from 'es-toolkit/compat';
 import { memo, useMemo } from 'react';
 
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { type FeatureFlagKey } from '@/store/serverConfig/slices/featureFlagOverride/action';
 
@@ -88,18 +89,21 @@ const FlagRow = memo<FlagRowProps>(({ flagKey }) => {
   return (
     <div className={cx(styles.row, isOverridden && styles.rowOverridden)}>
       <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
-        <Text ellipsis className={styles.name}>
-          {snakeCase(flagKey as string)}
-        </Text>
+        <div className={cn('truncate', 'block', styles.name)}>{snakeCase(flagKey as string)}</div>
         <span className={styles.meta}>server: {String(original)}</span>
       </div>
-      <Segmented
+      <ToggleGroup
         className={styles.control}
-        options={segmentOptions}
-        size={'small'}
-        value={value}
-        onChange={handleChange}
-      />
+        size="sm"
+        value={[value]}
+        onValueChange={(next) => next[0] && handleChange(next[0] as SegmentedValue)}
+      >
+        {segmentOptions.map((o) => (
+          <ToggleGroupItem key={o.value} value={o.value}>
+            {o.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
     </div>
   );
 });

@@ -1,7 +1,8 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import type { CSSProperties } from 'react';
 import { memo } from 'react';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 interface HeterogeneousTagProps {
   style?: CSSProperties;
@@ -21,7 +22,7 @@ const HeterogeneousTag = memo<HeterogeneousTagProps>(({ type, style }) => {
   if (!label) return null;
 
   return (
-    <Tag size={'small'} style={{ flexShrink: 0, ...style }}>
+    <Tag size="sm" style={{ flexShrink: 0, ...style }}>
       {label}
     </Tag>
   );

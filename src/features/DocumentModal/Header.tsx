@@ -1,19 +1,16 @@
 'use client';
 
-import {
-  ActionIcon,
-  Avatar,
-  DropdownMenu,
-  Skeleton,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { MoreHorizontal, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ShareButton from '@/business/client/features/PageShare/ShareButton';
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { useModalContext } from '@/components/Modal';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DESKTOP_HEADER_ICON_SIZE, DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { AutoSaveHint } from '@/features/EditorCanvas';
 import { useMenu } from '@/features/PageEditor/Header/useMenu';
@@ -61,9 +58,9 @@ const DocumentModalHeader = memo<DocumentModalHeaderProps>(({ onDeleted }) => {
         {isDocumentLoading && !title ? (
           <Skeleton style={{ height: 14, minWidth: 120, width: 120 }} />
         ) : (
-          <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+          <div className="truncate block font-medium" style={{ minWidth: 0 }}>
             {title || t('pageEditor.titlePlaceholder')}
-          </Text>
+          </div>
         )}
         {documentId && !isDocumentLoading && (
           <AutoSaveHint documentId={documentId} style={{ marginLeft: 4 }} />

@@ -1,13 +1,15 @@
 'use client';
 
-import { ActionIcon, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ShareButton from '@/business/client/features/PageShare/ShareButton';
+import ActionIcon from '@/components/ActionIcon';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { AutoSaveHint } from '@/features/EditorCanvas';
 import NavHeader from '@/features/NavHeader';
@@ -56,18 +58,17 @@ const Header = memo<HeaderProps>(
               style={{ cursor: 'pointer', flexShrink: 0 }}
               onClick={onBack}
             >
-              <Text style={{ color: cssVar.colorTextSecondary }}>
+              <div style={{ color: cssVar.colorTextSecondary }}>
                 {agentDisplayName(meta, t('untitledAgent', { ns: 'chat' }))}
-              </Text>
+              </div>
             </div>
-            <Text style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>/</Text>
-            <Text
-              className={cx(oneLineEllipsis)}
+            <div style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>/</div>
+            <div
+              className={cn('font-medium', cx(oneLineEllipsis))}
               style={{ color: showTitleError ? cssVar.colorError : undefined, minWidth: 0 }}
-              weight={500}
             >
               {resolvedTitle}
-            </Text>
+            </div>
             <DropdownMenu
               iconSpaceMode={'group'}
               items={menuItems}

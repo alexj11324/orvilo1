@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useEffect, useRef } from 'react';
 
@@ -136,9 +135,7 @@ const ApiList = memo<ApiListProps>(({ apis, activeApiName, onSelect }) => {
   return (
     <aside className={styles.column}>
       <div className={devDockPanelStyles.paneHeader}>
-        <Text fontSize={12} type={'secondary'} weight={600}>
-          APIs · {apis.length}
-        </Text>
+        <div className="text-[12px] text-muted-foreground font-semibold">APIs · {apis.length}</div>
       </div>
       <div className={cx(styles.list, 'flex flex-col')} ref={listRef}>
         {apis.map((api) => {

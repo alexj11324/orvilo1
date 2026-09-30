@@ -1,13 +1,5 @@
 'use client';
 
-import {
-  ActionIcon,
-  createModal,
-  type ModalInstance,
-  Segmented,
-  Skeleton,
-  Text,
-} from '@lobehub/ui/base-ui';
 import type { QuotaLimitReading } from '@orvilo/heterogeneous-agents/quota';
 import { projectWindows } from '@orvilo/heterogeneous-agents/quota';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -18,6 +10,10 @@ import { BanIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, RotateCcwIcon } f
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, type ModalInstance } from '@/components/Modal';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { agentQuotaService } from '@/services/agentQuota';
 
@@ -447,10 +443,10 @@ const BurnChart = memo<{
         <div className="flex items-center gap-2.5">
           <CapacityRing utilization={last.utilization} />
           <div className="flex flex-col gap-0.5">
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {t('heteroAgent.claudeQuota.calendar.usedOfWindow')}
-            </Text>
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            </div>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {spend.tokens > 0
                 ? t('heteroAgent.claudeQuota.calendar.windowSpend', {
                     // One convention for every amount on this surface; the
@@ -459,7 +455,7 @@ const BurnChart = memo<{
                     tokens: formatTokens(spend.tokens),
                   })
                 : t('heteroAgent.claudeQuota.calendar.noLedgerSpend')}
-            </Text>
+            </div>
           </div>
         </div>
         <span
@@ -535,15 +531,15 @@ const BurnChart = memo<{
       </div>
 
       <div className="flex items-center justify-between">
-        <Text style={{ fontSize: 11 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
           {dayjs(window.windowStartAt).format(timeFormat)}
-        </Text>
-        <Text style={{ color: cssVar.colorTextQuaternary, fontSize: 11 }}>
+        </div>
+        <div style={{ color: cssVar.colorTextQuaternary, fontSize: 11 }}>
           {t('heteroAgent.claudeQuota.calendar.pace')}
-        </Text>
-        <Text style={{ fontSize: 11 }} type={'secondary'}>
+        </div>
+        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
           {dayjs(window.resetsAt).format(timeFormat)}
-        </Text>
+        </div>
       </div>
     </div>
   );
@@ -641,12 +637,12 @@ const WindowHistory = memo<{
     return (
       <div className={`flex flex-col gap-2 ${styles.sectionPanel}`}>
         <div className="flex items-baseline justify-between">
-          <Text strong style={{ fontSize: 13 }}>
+          <div className="font-semibold" style={{ fontSize: 13 }}>
             {t('heteroAgent.claudeQuota.calendar.sessionHistory')}
-          </Text>
-          <Text style={{ fontSize: 11 }} type={'secondary'}>
+          </div>
+          <div className="text-muted-foreground" style={{ fontSize: 11 }}>
             {t('heteroAgent.claudeQuota.calendar.sessionHistoryHint')}
-          </Text>
+          </div>
         </div>
         <div className={styles.windowGrid}>
           {grid.columns.map((column) => (
@@ -689,34 +685,40 @@ const WindowHistory = memo<{
   return (
     <div className={`flex flex-col gap-1.5 ${styles.sectionPanel}`}>
       <div className="flex items-baseline justify-between">
-        <Text strong style={{ fontSize: 13 }}>
+        <div className="font-semibold" style={{ fontSize: 13 }}>
           {t('heteroAgent.claudeQuota.calendar.weeklyHistory')}
-        </Text>
-        <Text style={{ fontSize: 11 }} type={'secondary'}>
+        </div>
+        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
           {t('heteroAgent.claudeQuota.calendar.weeklyHistoryHint')}
-        </Text>
+        </div>
       </div>
       <div className="flex flex-col">
         {stats.map((stat) => (
           <div className={styles.windowListRow} key={stat.resetsAt}>
             <div className="flex items-baseline gap-1.5">
-              <Text style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                 {dayjs(stat.windowStartAt).format('M/D')} – {dayjs(stat.resetsAt).format('M/D')}
-              </Text>
+              </div>
               {/* Only the live window needs naming; the rest are read as history. */}
               {stat.isLive && (
-                <Text style={{ fontSize: 10, whiteSpace: 'nowrap' }} type={'secondary'}>
+                <div
+                  className="text-muted-foreground"
+                  style={{ fontSize: 10, whiteSpace: 'nowrap' }}
+                >
                   {t('heteroAgent.claudeQuota.calendar.currentWindow')}
-                </Text>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-2">
               <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
                 <CapacityMeter utilization={stat.peakUtilization} />
               </div>
-              <Text strong style={{ flex: 'none', fontSize: 12, textAlign: 'right', width: 34 }}>
+              <div
+                className="font-semibold"
+                style={{ flex: 'none', fontSize: 12, textAlign: 'right', width: 34 }}
+              >
                 {Math.round(stat.peakUtilization)}%
-              </Text>
+              </div>
             </div>
             {stat.tokens > 0 ? (
               /* The `+` is the compact bound; hovering spells it out, the way
@@ -725,9 +727,12 @@ const WindowHistory = memo<{
                 <TooltipTrigger
                   render={
                     <span>
-                      <Text style={{ fontSize: 11, textAlign: 'right' }} type={'secondary'}>
+                      <div
+                        className="text-muted-foreground"
+                        style={{ fontSize: 11, textAlign: 'right' }}
+                      >
                         {formatTokens(stat.tokens)} · {formatTrackedCost(stat, t, true)}
-                      </Text>
+                      </div>
                     </span>
                   }
                 />
@@ -740,9 +745,9 @@ const WindowHistory = memo<{
                     <span>
                       <div className="flex items-center gap-1 justify-end">
                         <InfoIcon color={cssVar.colorTextTertiary} size={11} />
-                        <Text style={{ fontSize: 11 }} type={'secondary'}>
+                        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                           {t('heteroAgent.claudeQuota.calendar.noLedgerSpendShort')}
-                        </Text>
+                        </div>
                       </div>
                     </span>
                   }
@@ -899,20 +904,20 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
   if (loading)
     return (
       <div className="flex flex-col gap-3">
-        <Skeleton height={170} />
-        <Skeleton height={320} />
+        <Skeleton style={{ height: 170 }} />
+        <Skeleton style={{ height: 320 }} />
       </div>
     );
 
   if (readings.length === 0 && windows.length === 0)
     return (
-      <Text style={{ paddingBlock: 24, textAlign: 'center' }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ paddingBlock: 24, textAlign: 'center' }}>
         {t(
           accountUnavailable
             ? 'heteroAgent.claudeQuota.calendar.accountUnavailable'
             : 'heteroAgent.claudeQuota.calendar.empty',
         )}
-      </Text>
+      </div>
     );
 
   /**
@@ -937,16 +942,22 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
         <div className="flex flex-col gap-4">
           {/* The series switcher heads the window column, so the calendar beside
               it starts at the body top instead of below a full-width control. */}
-          <Segmented
-            options={seriesOptions}
-            size={'small'}
+          <ToggleGroup
+            size="sm"
             style={{ alignSelf: 'flex-start' }}
-            value={seriesId(series)}
-            onChange={(value) => {
-              const [type, scopeKey = ''] = String(value).split(':');
+            value={[seriesId(series)]}
+            onValueChange={(value) => {
+              if (!value[0]) return;
+              const [type, scopeKey = ''] = String(value[0]).split(':');
               setSeries({ scopeKey, type: type === 'session' ? 'session' : 'weekly' });
             }}
-          />
+          >
+            {seriesOptions.map((o) => (
+              <ToggleGroupItem key={o.value} value={o.value}>
+                {o.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
 
           {chartWindow && (
             <BurnChart
@@ -964,12 +975,12 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
         <div className={`flex flex-col gap-2 ${styles.sectionPanel}`}>
           <div className="flex items-center gap-1 justify-between">
             <div className="flex items-baseline gap-2">
-              <Text strong style={{ fontSize: 13 }}>
+              <div className="font-semibold" style={{ fontSize: 13 }}>
                 {t('heteroAgent.claudeQuota.calendar.monthSpend')}
-              </Text>
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+              </div>
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {month.format('YYYY/MM')}
-              </Text>
+              </div>
             </div>
             <div className="flex gap-0.5">
               <ActionIcon
@@ -1056,9 +1067,9 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
 
           <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: 11 }}>
             <div className="flex items-center gap-1">
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {t('heteroAgent.claudeQuota.calendar.legendLess')}
-              </Text>
+              </div>
               {[1, 2, 3, 4].map((level) => (
                 <span
                   className={styles.heatDot}
@@ -1067,23 +1078,23 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
                   key={level}
                 />
               ))}
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {t('heteroAgent.claudeQuota.calendar.legendMore')}
-              </Text>
+              </div>
             </div>
             <div className="flex items-center gap-1">
               <span className={styles.legendSwatch} data-rate-limited={'true'} />
               <BanIcon color={cssVar.colorError} size={11} />
-              <Text style={{ fontSize: 11 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                 {t('heteroAgent.claudeQuota.calendar.rateLimited')}
-              </Text>
+              </div>
             </div>
             {series.type !== 'session' && (
               <div className="flex items-center gap-1">
                 <RotateCcwIcon color={cssVar.colorTextSecondary} size={11} />
-                <Text style={{ fontSize: 11 }} type={'secondary'}>
+                <div className="text-muted-foreground" style={{ fontSize: 11 }}>
                   {t('heteroAgent.claudeQuota.calendar.legendReset')}
-                </Text>
+                </div>
               </div>
             )}
           </div>

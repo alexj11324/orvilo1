@@ -1,18 +1,13 @@
 'use client';
 
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { Sparkles } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useClientDataSWR } from '@/libs/swr';
@@ -195,18 +190,21 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
       <div className="flex flex-col gap-4">
         {onGenerate ? (
           <div className="flex items-center gap-2 justify-between">
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {generating
                 ? tChat('workingPanel.skills.convert.generating')
                 : tChat('workingPanel.skills.convert.generateHint')}
-            </Text>
-            <Button icon={Sparkles} loading={generating} size={'small'} onClick={handleRegenerate}>
+            </div>
+            <Button loading={generating} size="sm" onClick={handleRegenerate}>
+              <Sparkles data-icon="inline-start" />
               {tChat('workingPanel.skills.convert.regenerate')}
             </Button>
           </div>
         ) : null}
         <div className="flex flex-col gap-1.5">
-          <Text type={'secondary'}>{tChat('workingPanel.skills.convert.nameLabel')}</Text>
+          <div className="text-muted-foreground">
+            {tChat('workingPanel.skills.convert.nameLabel')}
+          </div>
           <Input
             disabled={generating}
             placeholder={tChat('workingPanel.skills.convert.namePlaceholder')}
@@ -218,17 +216,19 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
             }}
           />
           {nameInvalid ? (
-            <Text style={{ color: cssVar.colorError, fontSize: 12 }}>
+            <div style={{ color: cssVar.colorError, fontSize: 12 }}>
               {tChat('workingPanel.skills.convert.nameInvalid')}
-            </Text>
+            </div>
           ) : (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {tChat('workingPanel.skills.convert.nameHint')}
-            </Text>
+            </div>
           )}
         </div>
         <div className="flex flex-col gap-1.5">
-          <Text type={'secondary'}>{tChat('workingPanel.skills.convert.titleLabel')}</Text>
+          <div className="text-muted-foreground">
+            {tChat('workingPanel.skills.convert.titleLabel')}
+          </div>
           <Input
             disabled={generating}
             placeholder={tChat('workingPanel.skills.convert.titlePlaceholder')}
@@ -240,7 +240,9 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Text type={'secondary'}>{tChat('workingPanel.skills.convert.descriptionLabel')}</Text>
+          <div className="text-muted-foreground">
+            {tChat('workingPanel.skills.convert.descriptionLabel')}
+          </div>
           <Textarea
             disabled={generating}
             placeholder={tChat('workingPanel.skills.convert.descriptionPlaceholder')}
@@ -252,7 +254,7 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
             }}
           />
         </div>
-        {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
+        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
         <div className="flex gap-2 justify-end">
           <Button disabled={busy} onClick={close}>
             {tCommon('cancel')}
@@ -260,7 +262,7 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
           <Button
             disabled={!canSubmit || generating}
             loading={loading}
-            type={'primary'}
+            variant="default"
             onClick={handleSubmit}
           >
             {tChat('workingPanel.skills.convert.action')}

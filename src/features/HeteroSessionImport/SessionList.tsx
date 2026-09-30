@@ -1,5 +1,4 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
-import { Button, Checkbox, Tag, Text } from '@lobehub/ui/base-ui';
 import type { HeteroSessionDigest } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import dayjs from 'dayjs';
@@ -8,6 +7,9 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { baseName, fmtTokens, type ImportRowState, selectable, type SessionStatus } from './utils';
@@ -39,7 +41,7 @@ const StatusTag = memo<{ status: SessionStatus }>(({ status }) => {
             <TooltipTrigger
               render={
                 <span className="inline-flex">
-                  <Tag color="blue" size="small">
+                  <Tag size="sm" variant="info-light">
                     {t('heteroImport.badge.syncable')}
                   </Tag>
                 </span>
@@ -51,7 +53,7 @@ const StatusTag = memo<{ status: SessionStatus }>(({ status }) => {
       );
     }
     case 'imported': {
-      return <Tag size="small">{t('heteroImport.badge.imported')}</Tag>;
+      return <Tag size="sm">{t('heteroImport.badge.imported')}</Tag>;
     }
     case 'linked': {
       return (
@@ -60,7 +62,7 @@ const StatusTag = memo<{ status: SessionStatus }>(({ status }) => {
             <TooltipTrigger
               render={
                 <span className="inline-flex">
-                  <Tag size="small">{t('heteroImport.badge.linked')}</Tag>
+                  <Tag size="sm">{t('heteroImport.badge.linked')}</Tag>
                 </span>
               }
             />
@@ -80,40 +82,35 @@ const ImportState = memo<{ onRetry: () => void; showRetry: boolean; state?: Impo
     const { t } = useTranslation('topic');
     if (!state || state === 'pending')
       return (
-        <Text fontSize={12} type="secondary">
-          {t('heteroImport.state.pending')}
-        </Text>
+        <div className="text-[12px] text-muted-foreground">{t('heteroImport.state.pending')}</div>
       );
     if (state === 'running')
       return (
         <div className="flex items-center gap-1.5">
           <NeuralNetworkLoading size={14} />
-          <Text fontSize={12} type="secondary">
-            {t('heteroImport.state.running')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('heteroImport.state.running')}</div>
         </div>
       );
     if (state.ok)
       return (
         <div className="flex items-center gap-1">
           <Check size={14} style={{ color: 'var(--lobe-color-success, #52c41a)' }} />
-          <Text fontSize={12} type="success">
+          <div className="text-[12px] text-success">
             {t('heteroImport.state.inserted', { count: state.inserted })}
-          </Text>
+          </div>
         </div>
       );
     if (showRetry)
       return (
-        <Button icon={<RotateCcw size={13} />} size="small" onClick={onRetry}>
+        <Button size="sm" onClick={onRetry}>
+          <RotateCcw size={13} />
           {t('heteroImport.retry')}
         </Button>
       );
     return (
       <div className="flex items-center gap-1">
         <X size={14} style={{ color: 'var(--lobe-color-error, #ff4d4f)' }} />
-        <Text fontSize={12} type="danger">
-          {t('heteroImport.state.failed')}
-        </Text>
+        <div className="text-[12px] text-destructive">{t('heteroImport.state.failed')}</div>
       </div>
     );
   },
@@ -154,39 +151,41 @@ export const SessionRow = memo<SessionRowProps>(
           <Checkbox
             checked={checked}
             disabled={!selectable(status)}
-            onChange={() => onToggle(digest.sessionId)}
+            onCheckedChange={() => onToggle(digest.sessionId)}
             onClick={(e) => e.stopPropagation()}
           />
         )}
         <div className="flex flex-col gap-0.5" style={{ flex: 1, minWidth: 0 }}>
           <div className="flex items-center gap-2">
             {showDir && <Brand size={13} style={{ flex: 'none', opacity: 0.75 }} />}
-            <Text ellipsis>{digest.title || digest.firstPrompt || digest.sessionId}</Text>
+            <div className="truncate block">
+              {digest.title || digest.firstPrompt || digest.sessionId}
+            </div>
             <StatusTag status={status} />
           </div>
           <div className="flex items-center gap-2.5">
             {digest.endAt && (
-              <Text fontSize={12} type="secondary">
+              <div className="text-[12px] text-muted-foreground">
                 {dayjs(digest.endAt).format('MM-DD HH:mm')}
-              </Text>
+              </div>
             )}
-            <Text fontSize={12} type="secondary">
+            <div className="text-[12px] text-muted-foreground">
               {t('heteroImport.meta.messages', { count: digest.messageCount })}
-            </Text>
+            </div>
             {digest.tokens ? (
-              <Text fontSize={12} type="secondary">
+              <div className="text-[12px] text-muted-foreground">
                 {t('heteroImport.meta.tokens', { tokens: fmtTokens(digest.tokens) })}
-              </Text>
+              </div>
             ) : null}
             {digest.gitBranch && (
-              <Text ellipsis fontSize={12} type="secondary">
+              <div className="truncate block text-[12px] text-muted-foreground">
                 {digest.gitBranch}
-              </Text>
+              </div>
             )}
             {showDir && (
-              <Text fontSize={12} type="secondary">
+              <div className="text-[12px] text-muted-foreground">
                 {baseName(digest.workingDirectory ?? '')}
-              </Text>
+              </div>
             )}
           </div>
         </div>

@@ -1,10 +1,10 @@
 'use client';
 
-import { Segmented, Text } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import AgentProfileTabs, { AGENT_PROFILE_TABS_CENTER_STYLE } from '@/features/AgentProfileTabs';
 import NavHeader from '@/features/NavHeader';
@@ -90,40 +90,43 @@ const AgentUsage = memo(() => {
             >
               <div className="flex items-center gap-4 justify-between flex-wrap">
                 <div className="flex items-center gap-2">
-                  <Text fontSize={13} type={'secondary'}>
+                  <div className="text-[13px] text-muted-foreground">
                     {t('usageStats.dimension')}
-                  </Text>
-                  <Segmented
-                    size={'small'}
-                    value={granularity}
-                    options={[
-                      { label: t('usageStats.byDay'), value: 'day' },
-                      { label: t('usageStats.byWeek'), value: 'week' },
-                    ]}
-                    onChange={(v) => handleGranularityChange(v as AgentUsageGranularity)}
-                  />
+                  </div>
+                  <ToggleGroup
+                    size="sm"
+                    value={[granularity]}
+                    onValueChange={(v) =>
+                      v[0] && handleGranularityChange(v[0] as AgentUsageGranularity)
+                    }
+                  >
+                    <ToggleGroupItem value="day">{t('usageStats.byDay')}</ToggleGroupItem>
+                    <ToggleGroupItem value="week">{t('usageStats.byWeek')}</ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Text fontSize={13} type={'secondary'}>
-                    {t('usageStats.range')}
-                  </Text>
-                  <Segmented
-                    size={'small'}
-                    value={range}
-                    options={
-                      granularity === 'week'
-                        ? [
-                            { label: '30d', value: '30d' },
-                            { label: '90d', value: '90d' },
-                          ]
-                        : [
-                            { label: '7d', value: '7d' },
-                            { label: '30d', value: '30d' },
-                            { label: '90d', value: '90d' },
-                          ]
-                    }
-                    onChange={(v) => setRange(v as TimeRange)}
-                  />
+                  <div className="text-[13px] text-muted-foreground">{t('usageStats.range')}</div>
+                  <ToggleGroup
+                    size="sm"
+                    value={[range]}
+                    onValueChange={(v) => v[0] && setRange(v[0] as TimeRange)}
+                  >
+                    {(granularity === 'week'
+                      ? [
+                          { label: '30d', value: '30d' },
+                          { label: '90d', value: '90d' },
+                        ]
+                      : [
+                          { label: '7d', value: '7d' },
+                          { label: '30d', value: '30d' },
+                          { label: '90d', value: '90d' },
+                        ]
+                    ).map((o) => (
+                      <ToggleGroupItem key={o.value} value={o.value}>
+                        {o.label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
                 </div>
               </div>
               {showError ? (

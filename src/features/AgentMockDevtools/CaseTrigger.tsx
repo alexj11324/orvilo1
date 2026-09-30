@@ -1,6 +1,6 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { MockCase } from '@orvilo/agent-mock';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 
@@ -218,7 +218,7 @@ export const CaseTrigger = memo<CaseTriggerProps>(({ children, placement = 'bott
               {current ? (
                 <span className={styles.triggerName}>{current.name}</span>
               ) : (
-                <Text className={styles.triggerPlaceholder}>Pick a case</Text>
+                <div className={cn(styles.triggerPlaceholder)}>Pick a case</div>
               )}
               <ChevronDown size={12} />
             </span>

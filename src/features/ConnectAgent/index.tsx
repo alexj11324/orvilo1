@@ -1,15 +1,5 @@
 'use client';
 
-import {
-  Alert,
-  Button,
-  Checkbox,
-  createModal,
-  type ModalInstance,
-  ScrollArea,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type {
   HeterogeneousAgentScanStatus,
@@ -24,6 +14,7 @@ import { t as i18nT } from 'i18next';
 import {
   ArrowLeft,
   CheckCircle2,
+  CircleAlert,
   Download,
   LaptopIcon,
   RefreshCw,
@@ -35,7 +26,12 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import CommandLine from '@/components/CommandLine';
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DOWNLOAD_URL } from '@/const/url';
@@ -271,9 +267,9 @@ interface CreatedAgent {
 }
 
 const SectionLabel = memo<{ children: ReactNode }>(({ children }) => (
-  <Text fontSize={12} style={{ paddingInline: 4 }} type={'secondary'}>
+  <div className="text-[12px] text-muted-foreground" style={{ paddingInline: 4 }}>
     {children}
-  </Text>
+  </div>
 ));
 
 const SkeletonRow = memo<{ squareIcon?: boolean; width: number }>(({ squareIcon, width }) => (
@@ -323,18 +319,12 @@ const DeviceRow = memo<{
   >
     <div className={styles.iconBox}>{icon}</div>
     <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-      <Text ellipsis strong>
-        {title}
-      </Text>
-      <Text fontSize={12} type={'secondary'}>
-        {subtitle}
-      </Text>
+      <div className="truncate block font-semibold">{title}</div>
+      <div className="text-[12px] text-muted-foreground">{subtitle}</div>
     </div>
     <div className="flex items-center gap-1.5" style={{ flex: 'none' }}>
       <div className={offline ? styles.dotOff : styles.dot} />
-      <Text fontSize={12} type={'secondary'}>
-        {statusText}
-      </Text>
+      <div className="text-[12px] text-muted-foreground">{statusText}</div>
     </div>
   </div>
 ));
@@ -357,10 +347,8 @@ const AgentScanRow = memo<{
     >
       <provider.brand.Avatar size={32} />
       <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
-        <Text strong>{provider.title}</Text>
-        <Text ellipsis fontSize={12} type={'secondary'}>
-          {subtitle}
-        </Text>
+        <div className="font-semibold">{provider.title}</div>
+        <div className="truncate block text-[12px] text-muted-foreground">{subtitle}</div>
       </div>
       {available ? (
         <>
@@ -368,9 +356,7 @@ const AgentScanRow = memo<{
           <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
         </>
       ) : (
-        <Text fontSize={12} type={'secondary'}>
-          {unavailableText}
-        </Text>
+        <div className="text-[12px] text-muted-foreground">{unavailableText}</div>
       )}
     </div>
   );
@@ -614,23 +600,21 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
               <div className={`${styles.row} ${styles.rowStatic}`} key={agent.agentId}>
                 <agent.provider.brand.Avatar size={32} />
                 <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
-                  <Text strong fontSize={13}>
-                    {agentDisplayName(agent)}
-                  </Text>
-                  <Text ellipsis fontSize={12} type={'secondary'}>
+                  <div className="font-semibold text-[13px]">{agentDisplayName(agent)}</div>
+                  <div className="truncate block text-[12px] text-muted-foreground">
                     {agent.provider.title}
                     {agent.version ? ` ${agent.version}` : ''} · {agent.locationLabel}
-                  </Text>
+                  </div>
                 </div>
                 <div className={styles.dot} />
-                <Button size={'small'} onClick={() => openChat(agent.agentId)}>
+                <Button size="sm" onClick={() => openChat(agent.agentId)}>
                   {t('connectAgent.create.openChat')}
                 </Button>
               </div>
             ))}
           </div>
           <div className="flex justify-end" style={{ paddingBlockStart: 8 }}>
-            <Button type={'primary'} onClick={close}>
+            <Button variant="default" onClick={close}>
               {t('connectAgent.create.done')}
             </Button>
           </div>
@@ -656,12 +640,12 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                 <span className={styles.heroIcon}>
                   <LaptopIcon size={26} />
                 </span>
-                <Text fontSize={17} weight={600}>
+                <div className="text-[17px] font-semibold">
                   {t('connectAgent.create.noDevices')}
-                </Text>
-                <Text style={{ maxWidth: 400 }} type={'secondary'}>
+                </div>
+                <div className="text-muted-foreground" style={{ maxWidth: 400 }}>
                   {t('connectAgent.create.noDevicesDesc')}
-                </Text>
+                </div>
               </div>
               <div className={styles.emptyOptions}>
                 <div className={styles.emptyOption}>
@@ -669,18 +653,15 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                     <Download size={20} />
                   </span>
                   <div className="flex flex-col gap-[3px]">
-                    <Text weight={500}>{t('connectAgent.create.downloadDesktop')}</Text>
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="font-medium">{t('connectAgent.create.downloadDesktop')}</div>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('connectAgent.create.noDevicesDesktopHint')}
-                    </Text>
+                    </div>
                   </div>
                   <div className={styles.emptyOptionAction}>
                     <a href={DOWNLOAD_URL.default} rel={'noreferrer'} target={'_blank'}>
-                      <Button
-                        icon={<Download size={14} />}
-                        style={{ width: '100%' }}
-                        type={'primary'}
-                      >
+                      <Button style={{ width: '100%' }} variant="default">
+                        <Download data-icon="inline-start" size={14} />
                         {t('connectAgent.create.download')}
                       </Button>
                     </a>
@@ -691,10 +672,10 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                     <TerminalIcon size={20} />
                   </span>
                   <div className="flex flex-col gap-[3px]">
-                    <Text weight={500}>{t('connectAgent.create.connectCli')}</Text>
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="font-medium">{t('connectAgent.create.connectCli')}</div>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('connectAgent.create.noDevicesCliHint')}
-                    </Text>
+                    </div>
                   </div>
                   <div className={styles.emptyOptionAction}>
                     <CommandLine command={t('connectAgent.create.noDevicesCmd')} />
@@ -703,12 +684,12 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
               </div>
               <div className="flex justify-end" style={{ padding: 8 }}>
                 <Button
-                  icon={<RefreshCw size={13} />}
                   loading={isRefreshing}
-                  size={'small'}
-                  type={'text'}
+                  size="sm"
+                  variant="ghost"
                   onClick={() => void refetchDevices()}
                 >
+                  <RefreshCw data-icon="inline-start" size={13} />
                   {t('connectAgent.create.refresh')}
                 </Button>
               </div>
@@ -720,7 +701,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                   <SectionLabel>{t('connectAgent.create.thisDevice')}</SectionLabel>
                   <div className={styles.groupList}>
                     <DeviceRow
-                      icon={<LaptopIcon size={18} />}
+                      icon=<LaptopIcon data-icon="inline-start" size={18} />
                       statusText={t('connectAgent.create.online')}
                       subtitle={t('connectAgent.create.localDeviceDesc')}
                       title={t('connectAgent.create.localDevice')}
@@ -734,12 +715,12 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                   <div className="flex items-center justify-between">
                     <SectionLabel>{t('connectAgent.create.connectedDevices')}</SectionLabel>
                     <Button
-                      icon={<RefreshCw size={13} />}
                       loading={isRefreshing}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={() => void refetchDevices()}
                     >
+                      <RefreshCw data-icon="inline-start" size={13} />
                       {t('connectAgent.create.refresh')}
                     </Button>
                   </div>
@@ -768,7 +749,9 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
               )}
               {isDesktop && deviceListState === 'empty' && (
                 <div className={styles.commandHint}>
-                  <Text type={'secondary'}>{t('connectAgent.create.noDevicesCliHint')}</Text>
+                  <div className="text-muted-foreground">
+                    {t('connectAgent.create.noDevicesCliHint')}
+                  </div>
                   <CommandLine command={t('connectAgent.create.noDevicesCmd')} />
                 </div>
               )}
@@ -792,13 +775,8 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             </SectionLabel>
             {!(scanState.status === 'success' && detectedCount === 0) &&
               scanState.status !== 'error' && (
-                <Button
-                  disabled={scanning}
-                  icon={<RefreshCw size={13} />}
-                  size={'small'}
-                  type={'text'}
-                  onClick={rescan}
-                >
+                <Button disabled={scanning} size="sm" variant="ghost" onClick={rescan}>
+                  <RefreshCw data-icon="inline-start" size={13} />
                   {t('connectAgent.create.rescan')}
                 </Button>
               )}
@@ -818,32 +796,27 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           )}
 
           {scanState.status === 'error' && (
-            <Alert
-              showIcon
-              description={scanState.error}
-              message={t('connectAgent.create.scanFailed')}
-              type={'error'}
-              action={
-                <Button size={'small'} onClick={rescan}>
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t('connectAgent.create.scanFailed')}</AlertTitle>
+              <AlertDescription>{scanState.error}</AlertDescription>
+              <AlertAction>
+                <Button size="sm" onClick={rescan}>
                   {t('connectAgent.create.rescan')}
                 </Button>
-              }
-            />
+              </AlertAction>
+            </Alert>
           )}
 
           {scanState.status === 'success' && detectedCount === 0 && (
             <div className="flex flex-col items-center gap-3" style={{ paddingBlock: 24 }}>
               <ScanSearch size={28} />
-              <Text strong>{t('connectAgent.create.noneDetected')}</Text>
-              <Text style={{ textAlign: 'center' }} type={'secondary'}>
+              <div className="font-semibold">{t('connectAgent.create.noneDetected')}</div>
+              <div className="text-muted-foreground" style={{ textAlign: 'center' }}>
                 {t('connectAgent.create.noneDetectedHint')}
-              </Text>
-              <Button
-                icon={<RefreshCw size={13} />}
-                size={'small'}
-                type={'primary'}
-                onClick={rescan}
-              >
+              </div>
+              <Button size="sm" variant="default" onClick={rescan}>
+                <RefreshCw data-icon="inline-start" size={13} />
                 {t('connectAgent.create.rescanDevice')}
               </Button>
             </div>
@@ -871,21 +844,21 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           )}
 
           {createError && (
-            <Alert
-              showIcon
-              description={createError}
-              message={t('connectAgent.create.createFailed')}
-              type={'error'}
-            />
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t('connectAgent.create.createFailed')}</AlertTitle>
+              <AlertDescription>{createError}</AlertDescription>
+            </Alert>
           )}
 
           <div className="flex items-center gap-2 justify-between">
-            <Button icon={<ArrowLeft size={14} />} type={'text'} onClick={() => setStep(0)}>
+            <Button variant="ghost" onClick={() => setStep(0)}>
+              <ArrowLeft data-icon="inline-start" size={14} />
               {t('connectAgent.create.back')}
             </Button>
             <div className="flex items-center gap-2">
               {single && (
-                <Button type={'text'} onClick={goConfirm}>
+                <Button variant="ghost" onClick={goConfirm}>
                   {t('connectAgent.create.customizeName')}
                 </Button>
               )}
@@ -896,7 +869,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                       <Button
                         disabled={selectedProviders.length === 0}
                         loading={creating}
-                        type={'primary'}
+                        variant="default"
                         onClick={() => void handleCreate()}
                       >
                         {selectedProviders.length === 0
@@ -956,34 +929,34 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                 )}
               </div>
               <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
-                <Text fontSize={13}>
+                <div className="text-[13px]">
                   {t('connectAgent.create.runsOn', { device: targetLabel })}
-                </Text>
-                <Text fontSize={12} type={'secondary'}>
+                </div>
+                <div className="text-[12px] text-muted-foreground">
                   {single.title}
                   {singleVersion ? ` ${singleVersion}` : ''} ·{' '}
                   {t('connectAgent.create.detectedInScan')}
-                </Text>
+                </div>
               </div>
               <CheckCircle2 color={cssVar.colorSuccess} size={16} />
             </div>
           </div>
           {createError && (
-            <Alert
-              showIcon
-              description={createError}
-              message={t('connectAgent.create.createFailed')}
-              type={'error'}
-            />
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{t('connectAgent.create.createFailed')}</AlertTitle>
+              <AlertDescription>{createError}</AlertDescription>
+            </Alert>
           )}
           <div className="flex items-center justify-between">
-            <Button icon={<ArrowLeft size={14} />} type={'text'} onClick={() => setStep(1)}>
+            <Button variant="ghost" onClick={() => setStep(1)}>
+              <ArrowLeft data-icon="inline-start" size={14} />
               {t('connectAgent.create.back')}
             </Button>
             <Button
               disabled={!name.trim()}
               loading={creating}
-              type={'primary'}
+              variant="default"
               onClick={() => void handleCreate({ description, name })}
             >
               {t('connectAgent.create.connectOne', { name: single.title })}

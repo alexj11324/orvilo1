@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
@@ -60,9 +59,12 @@ const GroupBreadcrumb = memo<GroupBreadcrumbProps>(({ groupId, title }) => {
         {
           title: (
             <Link to={groupHomePath}>
-              <Text ellipsis as={'span'} color={'inherit'} style={{ maxWidth: 200 }} weight={500}>
+              <span
+                className="truncate block font-medium"
+                style={{ maxWidth: 200, color: 'inherit' }}
+              >
                 {displayTitle}
-              </Text>
+              </span>
             </Link>
           ),
         },
@@ -71,9 +73,9 @@ const GroupBreadcrumb = memo<GroupBreadcrumbProps>(({ groupId, title }) => {
           : [
               {
                 title: (
-                  <Text as={'span'} color={'inherit'} weight={500}>
+                  <span className="font-medium" style={{ color: 'inherit' }}>
                     {title}
-                  </Text>
+                  </span>
                 ),
               },
             ]),

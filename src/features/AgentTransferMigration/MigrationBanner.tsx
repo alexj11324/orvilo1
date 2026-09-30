@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2 } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
@@ -78,16 +77,19 @@ export const TopicMigrationPlaceholder = memo<MigrationBannerProps>(
         style={{ padding: 24 }}
       >
         <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={20} />
-        <Text type={'secondary'} weight={500}>
+        <div className="text-muted-foreground font-medium">
           {t(
             data?.type === 'copy'
               ? 'transferMigration.topicPendingCopy.title'
               : 'transferMigration.topicPending.title',
           )}
-        </Text>
-        <Text fontSize={12} style={{ maxWidth: 420, textAlign: 'center' }} type={'secondary'}>
+        </div>
+        <div
+          className="text-[12px] text-muted-foreground"
+          style={{ maxWidth: 420, textAlign: 'center' }}
+        >
           {t('transferMigration.topicPending.desc')}
-        </Text>
+        </div>
       </div>
     );
   },

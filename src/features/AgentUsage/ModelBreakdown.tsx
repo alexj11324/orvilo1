@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,9 +18,7 @@ const ModelBreakdown = memo<ModelBreakdownProps>(({ rows, isLoading }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <Text fontSize={16} weight={500}>
-        {t('usageStats.breakdown.title')}
-      </Text>
+      <div className="text-[16px] font-medium">{t('usageStats.breakdown.title')}</div>
       {isLoading ? (
         <div className="flex items-center justify-center" style={{ paddingBlock: 24 }}>
           <Spinner />
@@ -45,10 +42,8 @@ const ModelBreakdown = memo<ModelBreakdownProps>(({ rows, isLoading }) => {
                   <div className="flex items-center gap-2">
                     <ModelIcon model={record.model} size={20} />
                     <div className="flex flex-col">
-                      <Text ellipsis>{record.model}</Text>
-                      <Text fontSize={12} type={'secondary'}>
-                        {record.provider}
-                      </Text>
+                      <div className="truncate block">{record.model}</div>
+                      <div className="text-[12px] text-muted-foreground">{record.provider}</div>
                     </div>
                   </div>
                 </td>

@@ -1,11 +1,12 @@
 'use client';
 
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { FileTextIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyDescription,
@@ -70,7 +71,8 @@ const AgentDocumentsEmpty = memo(() => {
             <EmptyDescription>{t('agentDocument.emptyDescription')}</EmptyDescription>
           </EmptyHeader>
         </Empty>
-        <Button icon={<PlusIcon />} loading={creating} type={'primary'} onClick={handleCreate}>
+        <Button loading={creating} variant="default" onClick={handleCreate}>
+          {<PlusIcon />}
           {t('workingPanel.resources.tree.newDocument')}
         </Button>
       </div>

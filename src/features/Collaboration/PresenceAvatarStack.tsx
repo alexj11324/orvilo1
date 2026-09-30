@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Bot } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -136,7 +135,7 @@ export const PresenceAvatarStack = memo<{ room: CollaborationRoom | null }>(({ r
       })}
       {overflow > 0 && (
         <span className={styles.countChip}>
-          <Text as="span">+{overflow}</Text>
+          <span>+{overflow}</span>
         </span>
       )}
     </div>

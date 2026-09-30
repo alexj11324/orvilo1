@@ -1,9 +1,10 @@
-import { Button, DropdownMenu } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Button } from '@/components/ui/button';
 import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorTool } from '@/store/tool/slices/connector';
 
@@ -99,7 +100,7 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
           {!disabled && (
             <DropdownMenu items={batchItems}>
               <Button
-                size="small"
+                size="sm"
                 style={{ fontSize: 12, height: 26 }}
                 onClick={(e) => e.stopPropagation()}
               >

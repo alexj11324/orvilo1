@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Button, DropdownMenu, Segmented, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -14,6 +13,9 @@ import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import Avatar from '@/components/Avatar';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyDescription,
@@ -22,6 +24,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
@@ -118,12 +121,8 @@ const GroupHeader = memo<GroupHeaderProps>(
           }}
         />
       ) : null}
-      <Text fontSize={13} weight={500}>
-        {label}
-      </Text>
-      <Text fontSize={12} type={'secondary'}>
-        {count}
-      </Text>
+      <div className="text-[13px] font-medium">{label}</div>
+      <div className="text-[12px] text-muted-foreground">{count}</div>
     </div>
   ),
 );
@@ -135,9 +134,7 @@ GroupHeader.displayName = 'AgentViewAllGroupHeader';
 const SegmentLabel = memo<{ count: number; label: string }>(({ count, label }) => (
   <div className="flex items-center gap-1.5">
     {label}
-    <Text fontSize={12} type={'secondary'}>
-      {count}
-    </Text>
+    <div className="text-[12px] text-muted-foreground">{count}</div>
   </div>
 ));
 
@@ -430,9 +427,9 @@ const AgentViewAllPage = memo(() => {
     <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
             {t('agentViewAll.title')}
-          </Text>
+          </div>
         }
         right={
           <ListConfig
@@ -449,30 +446,17 @@ const AgentViewAllPage = memo(() => {
           {/* The workspace/private split only exists inside a workspace;
               personal mode leads with the search box instead. */}
           {activeWorkspaceId ? (
-            <Segmented
-              value={segment}
-              options={[
-                {
-                  label: (
-                    <SegmentLabel
-                      count={bucketCounts.workspace}
-                      label={t('navPanel.publicAgents')}
-                    />
-                  ),
-                  value: 'workspace',
-                },
-                {
-                  label: (
-                    <SegmentLabel
-                      count={bucketCounts.private}
-                      label={t('navPanel.privateAgents')}
-                    />
-                  ),
-                  value: 'private',
-                },
-              ]}
-              onChange={(value) => handleSegmentChange(value as SegmentValue)}
-            />
+            <ToggleGroup
+              value={[segment]}
+              onValueChange={(value) => value[0] && handleSegmentChange(value[0] as SegmentValue)}
+            >
+              <ToggleGroupItem value="workspace">
+                <SegmentLabel count={bucketCounts.workspace} label={t('navPanel.publicAgents')} />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="private">
+                <SegmentLabel count={bucketCounts.private} label={t('navPanel.privateAgents')} />
+              </ToggleGroupItem>
+            </ToggleGroup>
           ) : (
             <div className="relative" style={{ maxWidth: 240 }}>
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 opacity-60" size={14} />
@@ -498,7 +482,8 @@ const AgentViewAllPage = memo(() => {
             )}
             {canCreate ? (
               <DropdownMenu items={createMenuItems}>
-                <Button icon={PlusIcon} loading={isMutatingAgent}>
+                <Button loading={isMutatingAgent}>
+                  <PlusIcon data-icon="inline-start" />
                   <ChevronDownIcon size={14} />
                 </Button>
               </DropdownMenu>
@@ -508,7 +493,8 @@ const AgentViewAllPage = memo(() => {
                   <TooltipTrigger
                     render={
                       <span style={{ display: 'inline-flex' }}>
-                        <Button disabled icon={PlusIcon}>
+                        <Button disabled>
+                          <PlusIcon data-icon="inline-start" />
                           <ChevronDownIcon size={14} />
                         </Button>
                       </span>

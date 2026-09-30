@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { isChatGroupSessionId } from '@orvilo/types';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -35,9 +34,9 @@ const Welcome = memo(() => {
   const { t } = useTranslation('topic');
   return (
     <div className="flex flex-col flex-1 items-center justify-center p-6">
-      <Text style={{ fontSize: 15 }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ fontSize: 15 }}>
         {t('taskManager.welcome')}
-      </Text>
+      </div>
     </div>
   );
 });

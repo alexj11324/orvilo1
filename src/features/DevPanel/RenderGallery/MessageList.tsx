@@ -1,9 +1,9 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { LOADING_FLAT } from '@orvilo/const';
 import type { ChatToolPayload, UIChatMessage } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 
 import {
@@ -166,7 +166,7 @@ const MessageList = memo<MessageListProps>(({ apis, mode }) => {
   );
 
   if (messages.length === 0) {
-    return <Text className={styles.empty}>No renderable APIs in this toolset.</Text>;
+    return <div className={cn(styles.empty)}>No renderable APIs in this toolset.</div>;
   }
 
   return (

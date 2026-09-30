@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import { type ErrorShape, type ImportFileUploadState } from '@orvilo/types';
 import { ImportStage } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -10,6 +9,9 @@ import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import DataStyleModal from '@/components/DataStyleModal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Upload } from '@/components/Upload';
 import { importService } from '@/services/import';
 import { useChatStore } from '@/store/chat';
 import { useHomeStore } from '@/store/home';

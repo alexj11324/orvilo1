@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,11 +14,7 @@ interface StatCardsProps {
   summary: AgentUsageStats['summary'];
 }
 
-const desc = (text: string) => (
-  <Text fontSize={12} type={'secondary'}>
-    {text}
-  </Text>
-);
+const desc = (text: string) => <div className="text-[12px] text-muted-foreground">{text}</div>;
 
 const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
   const { t } = useTranslation('spend');

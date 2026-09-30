@@ -1,7 +1,6 @@
 'use client';
 
 import { lobeStaticStylish } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { useSize } from 'ahooks';
 import { createStaticStyles, cx } from 'antd-style';
@@ -11,6 +10,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import Marquee from 'react-fast-marquee';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { OFFICIAL_URL } from '@/const/url';
 import { useIsDark } from '@/hooks/useIsDark';
 import { isOnServerSide } from '@/utils/env';
@@ -92,7 +92,7 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
           rel="noreferrer"
           target="_blank"
         >
-          <Button size={'small'} type="primary">
+          <Button size="sm" variant="default">
             {t('alert.cloud.action')} <ArrowRightIcon />
           </Button>
         </a>

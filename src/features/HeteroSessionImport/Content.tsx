@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Checkbox, Progress, Text, useModalContext } from '@lobehub/ui/base-ui';
 import type {
   HeteroSessionDigest,
   HeteroSessionDirGroup,
@@ -12,8 +11,12 @@ import { Check, FolderSearch, TriangleAlert, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { electronHeteroSessionService } from '@/services/electron/heteroSession';
 import { topicService } from '@/services/topic';
@@ -246,7 +249,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
         style={{ height: CONTENT_HEIGHT }}
       >
         <NeuralNetworkLoading size={48} />
-        <Text type="secondary">{t('heteroImport.scanning')}</Text>
+        <div className="text-muted-foreground">{t('heteroImport.scanning')}</div>
       </div>
     );
 
@@ -257,11 +260,14 @@ const Content = memo<ContentProps>(({ agentId }) => {
         style={{ height: CONTENT_HEIGHT }}
       >
         <FolderSearch size={40} style={{ opacity: 0.4 }} />
-        <Text weight={500}>{t('heteroImport.empty.title')}</Text>
-        <Text fontSize={13} style={{ maxWidth: 380, textAlign: 'center' }} type="secondary">
+        <div className="font-medium">{t('heteroImport.empty.title')}</div>
+        <div
+          className="text-[13px] text-muted-foreground"
+          style={{ maxWidth: 380, textAlign: 'center' }}
+        >
           {t('heteroImport.empty.desc')}
-        </Text>
-        <Button size="small" onClick={scan}>
+        </div>
+        <Button size="sm" onClick={scan}>
           {t('heteroImport.footer.rescan')}
         </Button>
       </div>
@@ -274,11 +280,14 @@ const Content = memo<ContentProps>(({ agentId }) => {
         style={{ height: CONTENT_HEIGHT }}
       >
         <TriangleAlert size={40} style={{ opacity: 0.5 }} />
-        <Text weight={500}>{t('heteroImport.error.title')}</Text>
-        <Text fontSize={13} style={{ maxWidth: 380, textAlign: 'center' }} type="secondary">
+        <div className="font-medium">{t('heteroImport.error.title')}</div>
+        <div
+          className="text-[13px] text-muted-foreground"
+          style={{ maxWidth: 380, textAlign: 'center' }}
+        >
           {t('heteroImport.error.desc')}
-        </Text>
-        <Button size="small" onClick={scan}>
+        </div>
+        <Button size="sm" onClick={scan}>
           {t('heteroImport.footer.rescan')}
         </Button>
       </div>
@@ -306,20 +315,22 @@ const Content = memo<ContentProps>(({ agentId }) => {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Checkbox
-                  checked={allChecked}
-                  indeterminate={!allChecked && someChecked}
-                  onChange={toggleAll}
-                >
-                  <Text fontSize={13} type="secondary">
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allChecked}
+                    indeterminate={!allChecked && someChecked}
+                    onCheckedChange={toggleAll}
+                  />
+                  <div className="text-[13px] text-muted-foreground">
                     {t('heteroImport.selectAll')}
-                  </Text>
-                </Checkbox>
-                <Checkbox checked={hideImported} onChange={setHideImported}>
-                  <Text fontSize={13} type="secondary">
+                  </div>
+                </label>
+                <label className="flex items-center gap-2">
+                  <Checkbox checked={hideImported} onCheckedChange={setHideImported} />
+                  <div className="text-[13px] text-muted-foreground">
                     {t('heteroImport.hideImported')}
-                  </Text>
-                </Checkbox>
+                  </div>
+                </label>
               </div>
             </div>
           )}
@@ -339,7 +350,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
             ))}
             {rows.length === 0 && (
               <div className="flex flex-col items-center py-12">
-                <Text type="secondary">{t('heteroImport.searchEmpty')}</Text>
+                <div className="text-muted-foreground">{t('heteroImport.searchEmpty')}</div>
               </div>
             )}
           </ScrollArea>
@@ -348,7 +359,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
 
       {phase === 'select' && (
         <div className={cx(styles.footer, 'flex items-center justify-between')}>
-          <Text fontSize={13} type="secondary">
+          <div className="text-[13px] text-muted-foreground">
             {selected.size > 0
               ? t('heteroImport.footer.selected', {
                   messages: estMessages.toLocaleString(),
@@ -356,10 +367,10 @@ const Content = memo<ContentProps>(({ agentId }) => {
                   tokens: fmtTokens(estTokens),
                 })
               : t('heteroImport.footer.hint')}
-          </Text>
+          </div>
           <div className="flex gap-2">
             <Button onClick={scan}>{t('heteroImport.footer.rescan')}</Button>
-            <Button disabled={selected.size === 0} type="primary" onClick={runImport}>
+            <Button disabled={selected.size === 0} variant="default" onClick={runImport}>
               {selected.size > 0
                 ? t('heteroImport.footer.import', { count: selected.size })
                 : t('heteroImport.footer.importEmpty')}
@@ -371,14 +382,12 @@ const Content = memo<ContentProps>(({ agentId }) => {
       {phase === 'importing' && (
         <div className={cx(styles.footer, 'flex flex-col gap-1')} style={{ width: '100%' }}>
           <div className="flex items-center justify-between">
-            <Text fontSize={13} type="secondary">
+            <div className="text-[13px] text-muted-foreground">
               {t('heteroImport.progress', { done: doneStates.length, total: selectedItems.length })}
-            </Text>
-            <Text fontSize={13} type="secondary">
-              {pct}%
-            </Text>
+            </div>
+            <div className="text-[13px] text-muted-foreground">{pct}%</div>
           </div>
-          <Progress percent={pct} showInfo={false} size="small" status="active" />
+          <Progress value={pct} />
         </div>
       )}
 
@@ -393,15 +402,15 @@ const Content = memo<ContentProps>(({ agentId }) => {
                   : 'var(--lobe-color-success, #52c41a)',
               },
             })}
-            <Text fontSize={13}>
+            <div className="text-[13px]">
               {t('heteroImport.done.summary', {
                 messages: doneStats.inserted.toLocaleString(),
                 sessions: doneStats.ok,
               })}
               {doneStats.failed > 0 && t('heteroImport.done.failed', { count: doneStats.failed })}
-            </Text>
+            </div>
           </div>
-          <Button type="primary" onClick={close}>
+          <Button variant="default" onClick={close}>
             {t('heteroImport.done.cta')}
           </Button>
         </div>

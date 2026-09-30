@@ -113,7 +113,9 @@ it.each(privateReads)(
           finish = resolve;
         }) as never,
     );
-    const { unmount } = renderHook(run);
+    const { unmount } = renderHook(() => {
+      run();
+    });
     await waitFor(() => expect(finish).toBeTypeOf('function'));
     const finishAlice = finish;
     act(() => switchUser('bob'));

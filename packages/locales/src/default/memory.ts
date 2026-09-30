@@ -102,7 +102,8 @@ export default {
   'prime.create': 'Add experience',
   'prime.description': 'Save experiences and find them with keyword search.',
   'prime.legacy': 'From your existing memories. Edit it in Experiences.',
-  'prime.truncated': 'Results are limited. Use a more specific query.',
+  'prime.truncated':
+    'Only the most recently updated memories were searched. Older memories may be missing.',
   'manager.details': 'Details',
   'manager.close': 'Close',
 };

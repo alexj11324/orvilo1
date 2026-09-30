@@ -14,6 +14,7 @@ import { createLegacyMemory, useLegacyMemoryPage } from '@/store/userMemory/useL
 import { getMemorySession, useMemorySession } from '@/store/userMemory/utils/session';
 import { LayersEnum } from '@/types/userMemory';
 
+import { loadMemoryEditValue } from './loadEditValue';
 import MemoryDetail from './MemoryDetail';
 
 interface Props {
@@ -131,7 +132,7 @@ function MemoryCollection({ layer }: Props) {
                       : row.preference;
             const content =
               row.layer === LayersEnum.Activity
-                ? row.activity.narrative
+                ? ''
                 : row.layer === LayersEnum.Context
                   ? row.context.description
                   : row.layer === LayersEnum.Experience
@@ -150,18 +151,27 @@ function MemoryCollection({ layer }: Props) {
                     <Button onClick={() => setSelected(entry.id)}>{t('manager.details')}</Button>
                     <Button
                       disabled={pending === entry.id}
-                      onClick={() =>
-                        openEditorModal({
-                          value: content || '',
-                          onConfirm: async (value) => {
-                            if (session !== getMemorySession()) return;
-                            await useUserMemoryStore
-                              .getState()
-                              .updateMemory(entry.id, value, layer);
-                            if (session === getMemorySession()) await mutate();
-                          },
-                        })
-                      }
+                      onClick={async () => {
+                        setPending(entry.id);
+                        try {
+                          const value = await loadMemoryEditValue(entry.id, layer, content || '');
+                          if (session !== getMemorySession()) return;
+                          openEditorModal({
+                            value,
+                            onConfirm: async (value) => {
+                              if (session !== getMemorySession()) return;
+                              await useUserMemoryStore
+                                .getState()
+                                .updateMemory(entry.id, value, layer);
+                              if (session === getMemorySession()) await mutate();
+                            },
+                          });
+                        } catch {
+                          if (session === getMemorySession()) setFeedback(t('manager.failed'));
+                        } finally {
+                          if (session === getMemorySession()) setPending(undefined);
+                        }
+                      }}
                     >
                       {t('manager.edit')}
                     </Button>

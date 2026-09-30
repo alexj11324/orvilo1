@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, type ExecFileOptionsWithStringEncoding } from 'node:child_process';
 
 import type { ExperienceMemoryItem } from '@/database/models/experienceMemory';
 
@@ -26,20 +26,25 @@ export async function primeLexicalSearch(
   active++;
   try {
     const output = await new Promise<string>((resolve, reject) => {
+      // Application ambient types require browser debug variables on ProcessEnv.
+      // A child environment is deliberately sparse; none of those host values belong here.
+      const environment: Record<string, string> = {
+        LANG: 'C.UTF-8',
+        PATH: '/usr/bin:/bin',
+        PYTHONNOUSERSITE: '1',
+        GIT_NO_LAZY_FETCH: '1',
+      };
+      const options: ExecFileOptionsWithStringEncoding = {
+        encoding: 'utf8',
+        env: environment as NodeJS.ProcessEnv,
+        maxBuffer: 65536,
+        timeout: 15000,
+        killSignal: 'SIGKILL',
+      };
       const child = execFile(
         process.env.PRIME_MEMORY_PYTHON || '/usr/bin/python3',
         ['-I', '-c', pythonSource, root],
-        {
-          env: {
-            LANG: 'C.UTF-8',
-            PATH: '/usr/bin:/bin',
-            PYTHONNOUSERSITE: '1',
-            GIT_NO_LAZY_FETCH: '1',
-          },
-          maxBuffer: 65536,
-          timeout: 15000,
-          killSignal: 'SIGKILL',
-        },
+        options,
         (error, stdout) =>
           error ? reject(new Error('Prime lexical execution unavailable')) : resolve(stdout),
       );

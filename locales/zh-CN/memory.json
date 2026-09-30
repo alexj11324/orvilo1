@@ -82,7 +82,7 @@
   "prime.description": "保存经验，通过关键词检索。",
   "prime.legacy": "来自原有记忆，请在「经历」中编辑。",
   "prime.title": "经验记忆",
-  "prime.truncated": "结果数量受限，请使用更具体的关键词。",
+  "prime.truncated": "仅搜索了最近更新的记忆，较早的记忆可能未包含在结果中。",
   "purge.action": "清除全部",
   "purge.confirm": "您确定要删除所有记忆吗？这将永久移除每一条记忆记录，且无法撤销。",
   "purge.error": "清除记忆失败。请重试。",

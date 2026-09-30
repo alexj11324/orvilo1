@@ -82,7 +82,7 @@
   "prime.description": "Save experiences and find them with keyword search.",
   "prime.legacy": "From your existing memories. Edit it in Experiences.",
   "prime.title": "Experience memory",
-  "prime.truncated": "Results are limited. Use a more specific query.",
+  "prime.truncated": "Only the most recently updated memories were searched. Older memories may be missing.",
   "purge.action": "Purge All",
   "purge.confirm": "Are you sure you want to delete all memories? This will permanently remove every memory entry and cannot be undone.",
   "purge.error": "Failed to purge memories. Please try again.",

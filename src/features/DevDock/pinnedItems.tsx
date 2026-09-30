@@ -78,7 +78,7 @@ export const PinnedSelect = memo<{ item: DevDockSelectItem }>(({ item }) => {
     <DropdownMenu
       items={buildItems}
       placement={'topRight'}
-      popupProps={{ style: { maxHeight: 360, minWidth: 180, overflow: 'auto' } }}
+      popupClassName={'max-h-90 min-w-45 overflow-auto'}
     >
       <span className={barButtonStyles.button} title={item.label}>
         <Icon size={11} />

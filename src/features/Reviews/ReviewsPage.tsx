@@ -13,7 +13,7 @@ import AsyncError from '@/components/AsyncError';
 import { Badge as Tag } from '@/components/reui/badge';
 import SimpleEmpty from '@/components/SimpleEmpty';
 import { Button } from '@/components/ui/button';
-import { TabsList } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NavHeader from '@/features/NavHeader';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -576,7 +576,7 @@ const ReviewsPage = memo(() => {
   const detailPane = selectedId ? (
     <ReviewPullRequestPage embedded showBack={surface === 'detail'} />
   ) : queue.isLoading ? (
-    <SkeletonList padding={24} rows={5} />
+    <SkeletonList rows={5} style={{ padding: 24 }} />
   ) : notConnected ? (
     <div className={cx('flex flex-col items-center justify-center gap-2 p-6', styles.detailEmpty)}>
       <SimpleEmpty description={t('reviews.connectGitHub')} icon={PlugIcon} />

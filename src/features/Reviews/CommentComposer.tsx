@@ -1,6 +1,7 @@
 import { memo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { WriteOutcome } from './types';
 
@@ -24,7 +25,7 @@ const CommentComposer = memo<{
         placeholder={placeholder}
         rows={3}
         value={body}
-        onChange={setBody}
+        onChange={(e) => setBody(e.target.value)}
       />
       {unconfirmed && unknownHint ? (
         <div className="text-[12px] text-warning">{unknownHint}</div>

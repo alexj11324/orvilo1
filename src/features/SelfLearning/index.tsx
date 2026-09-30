@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { DnaIcon, MoreHorizontalIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import urlJoin from 'url-join';
 
 import ActionIcon from '@/components/ActionIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
-import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

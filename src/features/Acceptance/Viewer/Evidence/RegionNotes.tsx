@@ -82,8 +82,7 @@ const RegionNoteRow = memo<RegionNoteRowProps>(
             aria-label={t('acceptance.review.annotationPlaceholder', { index })}
             placeholder={placeholder}
             rows={1}
-            style={{ maxHeight: '5lh' }}
-            style={{ flex: 1, fontSize }}
+            style={{ flex: 1, fontSize, maxHeight: '5lh' }}
             value={value}
             onChange={(event) => onChange(event.target.value)}
           />

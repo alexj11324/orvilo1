@@ -37,7 +37,7 @@ const TeachBox = memo<TeachBoxProps>(({ autoFocus, onSubmit, placeholder }) => {
         disabled={busy}
         placeholder={placeholder}
         rows={1}
-        style={{ flex: 1, maxHeight: 96 }}
+        style={{ flex: 1, maxHeight: 96, minHeight: 0 }}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {

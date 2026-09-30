@@ -197,8 +197,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
             aria-label={t('acceptance.review.supplement')}
             placeholder={t('acceptance.review.rejectPlaceholder')}
             rows={4}
-            style={{ maxHeight: '10lh' }}
-            style={{ fontSize: 16 }}
+            style={{ fontSize: 16, maxHeight: '10lh' }}
             value={comment}
             onChange={(event) => model.setComment(event.target.value)}
             onPaste={handlePaste}

@@ -628,7 +628,7 @@ const TaskVerifyConfig = memo(() => {
           <Textarea
             placeholder={t('verifyConfig.requirementPlaceholder')}
             rows={2}
-            style={{ maxHeight: '8em' }}
+            style={{ maxHeight: '4lh' }}
             value={requirement}
             onChange={(e) => handleRequirementChange(e.target.value)}
             onBlur={() => {

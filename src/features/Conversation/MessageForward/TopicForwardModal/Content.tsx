@@ -165,7 +165,7 @@ export const TopicForwardContent = ({
         <Textarea
           placeholder={t('messageForward.modal.notePlaceholder')}
           rows={2}
-          style={{ resize: 'none' }}
+          style={{ maxHeight: '4lh', resize: 'none' }}
           value={note}
           onChange={(event) => setNote(event.target.value)}
         />

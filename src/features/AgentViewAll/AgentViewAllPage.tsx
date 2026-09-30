@@ -14,7 +14,6 @@ import { useSearchParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
 import Avatar from '@/components/Avatar';
-import { DropdownMenu } from '@/components/ItemsMenu';
 import { Button } from '@/components/ui/button';
 import {
   Empty,
@@ -29,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import NavHeader from '@/features/NavHeader';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
@@ -481,12 +481,12 @@ const AgentViewAllPage = memo(() => {
               </div>
             )}
             {canCreate ? (
-              <DropdownMenu items={createMenuItems}>
+              <SidebarDropdownMenu items={createMenuItems}>
                 <Button loading={isMutatingAgent}>
                   <PlusIcon data-icon="inline-start" />
                   <ChevronDownIcon size={14} />
                 </Button>
-              </DropdownMenu>
+              </SidebarDropdownMenu>
             ) : (
               <TooltipProvider>
                 <Tooltip>

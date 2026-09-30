@@ -102,7 +102,6 @@ export const RemoteDirectoryBrowser = ({
               <NavItem
                 aria-disabled={loading || !entry.readable}
                 disabled={loading || !entry.readable}
-                flex={'none'}
                 icon={FolderIcon}
                 key={entry.path + entry.name}
                 role={'button'}

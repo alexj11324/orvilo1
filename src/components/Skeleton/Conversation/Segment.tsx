@@ -21,7 +21,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const ComposerSkeleton = () => (
-  <ConversationSkeletonContainer flex={'none'} paddingBlock={'0 8px'}>
+  <ConversationSkeletonContainer flex={'none'} style={{ paddingBlock: '0 8px' }}>
     <div className={cn('flex', styles.composer)} data-testid={'conversation-composer-skeleton'}>
       <div className={'flex flex-col flex-1 px-3'} style={{ paddingBlock: '12px 8px' }}>
         <SkeletonBar height={14} width={'38%'} />

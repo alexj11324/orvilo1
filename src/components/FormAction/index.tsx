@@ -28,6 +28,7 @@ const FormAction = memo<
     avatar: ReactNode;
     background?: string;
     description: ReactNode;
+    gap?: number;
     title: string;
   } & HTMLAttributes<HTMLDivElement>
 >(

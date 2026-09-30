@@ -26,7 +26,7 @@ const SettingsPageSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => {
           <SkeletonBar height={16} width={profile ? 52 : 88} />
         </NavHeader>
       )}
-      <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+      <SettingContainer maxWidth={1024} style={{ paddingBlock: '24px 128px', paddingInline: 24 }}>
         {profile ? <SettingsProfileSkeleton /> : <SettingsSectionSkeleton />}
       </SettingContainer>
     </div>

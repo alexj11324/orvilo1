@@ -2,7 +2,7 @@
 
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
-import type { HTMLAttributes } from 'react';
+import type { CSSProperties, HTMLAttributes } from 'react';
 
 import { CONVERSATION_MIN_WIDTH } from '@/const/layoutTokens';
 import { useGlobalStore } from '@/store/global';
@@ -21,7 +21,10 @@ const ConversationSkeletonContainer = ({
   flex,
   height,
   ...rest
-}: HTMLAttributes<HTMLDivElement>) => {
+}: HTMLAttributes<HTMLDivElement> & {
+  flex?: CSSProperties['flex'];
+  height?: CSSProperties['height'];
+}) => {
   const wideScreen = useGlobalStore(systemStatusSelectors.wideScreen);
 
   return (

@@ -36,8 +36,10 @@ const GoalDetailSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => (
   <div className={'flex flex-col flex-1'} style={{ height: '100%' }}>
     {chrome !== 'body' && <NavHeader />}
     <div className={'flex flex-col flex-1'} style={{ overflowY: 'auto' }}>
-      <WideScreenContainer gap={20} paddingBlock={16}>
-        <GoalDetailContentSkeleton />
+      <WideScreenContainer>
+        <div className={'flex flex-col gap-5 py-4'}>
+          <GoalDetailContentSkeleton />
+        </div>
       </WideScreenContainer>
     </div>
   </div>

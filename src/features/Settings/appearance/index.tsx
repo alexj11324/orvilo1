@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import SettingHeader from '@/features/Settings/features/SettingHeader';
+import SettingsUserStateBoundary from '@/features/Settings/features/SettingsUserStateBoundary';
 
 import ChatAppearance from '../chat-appearance/features/ChatAppearance';
 import Appearance from '../common/features/Appearance';
@@ -18,12 +19,14 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('tab.appearance')} />}
-      <Common />
-      <Appearance />
-      <Collaboration />
-      <Desktop />
-      <Font />
-      <ChatAppearance />
+      <SettingsUserStateBoundary localContent={<Desktop />}>
+        <Common />
+        <Appearance />
+        <Collaboration />
+        <Desktop />
+        <Font />
+        <ChatAppearance />
+      </SettingsUserStateBoundary>
     </>
   );
 };

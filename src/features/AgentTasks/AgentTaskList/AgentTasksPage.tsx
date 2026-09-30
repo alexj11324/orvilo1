@@ -781,6 +781,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     ? 'taskList.mine.emptyCreated'
                     : 'taskList.mine.emptyAssigned',
                 )}
+                onViewAll={() =>
+                  updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
+                }
               />
             </Flexbox>
           ) : isScheduledCollection ? (
@@ -851,6 +854,9 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 options={viewOptions}
                 projectId={projectId}
                 routeScope={routeScope}
+                onViewAll={() =>
+                  updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
+                }
               />
             </Flexbox>
           ) : (

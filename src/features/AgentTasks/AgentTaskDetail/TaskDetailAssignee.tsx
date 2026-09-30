@@ -42,7 +42,7 @@ const TaskDetailAssignee = memo(() => {
         // A running task's agent is its incumbent executor — changing it is
         // an execution-ownership handoff (confirmed in the selector), not a
         // bare assignee edit.
-        status === 'running' ? (agentId) => void handoffTask(taskId, agentId) : undefined
+        status === 'running' ? (agentId) => handoffTask(taskId, agentId) : undefined
       }
     >
       <Tooltip title={assigneeAgentId ? undefined : t('taskList.unassignedAgentHint')}>

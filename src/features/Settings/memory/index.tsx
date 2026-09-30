@@ -3,6 +3,7 @@
 import { useTranslation } from 'react-i18next';
 
 import SettingHeader from '@/features/Settings/features/SettingHeader';
+import SettingsUserStateBoundary from '@/features/Settings/features/SettingsUserStateBoundary';
 
 import InterestsRow from '../profile/features/InterestsRow';
 import { ManageMemoryButton } from './features/ManageMemoryButton';
@@ -19,8 +20,10 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
       {showSettingHeader && (
         <SettingHeader extra={<ManageMemoryButton />} title={t('tab.memory')} />
       )}
-      <InterestsRow />
-      <Memory />
+      <SettingsUserStateBoundary>
+        <InterestsRow />
+        <Memory />
+      </SettingsUserStateBoundary>
     </>
   );
 };

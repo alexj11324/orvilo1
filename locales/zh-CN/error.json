@@ -1,6 +1,9 @@
 {
   "asyncState.desc": "加载时出了点问题，请重试。",
   "asyncState.metricLabel": "加载失败",
+  "asyncState.signIn": "重新登录",
+  "asyncState.signInDesc": "当前会话无法完成身份验证。重新登录后可继续访问此页面。",
+  "asyncState.signInRequired": "需要登录",
   "asyncState.title": "加载失败",
   "error.backHome": "返回首页",
   "error.desc": "页面暂时不可用。你可以返回首页，或稍后重试（你的设置不会因此丢失）",

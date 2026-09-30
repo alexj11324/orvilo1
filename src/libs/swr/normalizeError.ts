@@ -37,7 +37,13 @@ const extractStatus = (error: any): number | undefined => {
     error?.status ??
     error?.response?.status ??
     error?.cause?.status;
-  return typeof status === 'number' ? status : undefined;
+  if (typeof status === 'number') return status;
+
+  // Some adapters preserve only the tRPC code, without HTTP metadata.
+  const code = error?.data?.code ?? error?.code;
+  if (code === 'UNAUTHORIZED') return 401;
+  if (code === 'FORBIDDEN') return 403;
+  return undefined;
 };
 
 /**

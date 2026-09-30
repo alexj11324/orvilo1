@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { isDesktop } from '@/const/version';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
+import SettingsUserStateBoundary from '@/features/Settings/features/SettingsUserStateBoundary';
 
 import Conversation from './features/Conversation';
 import Desktop from './features/Desktop';
@@ -17,8 +18,10 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
     <>
       {showSettingHeader && <SettingHeader title={t('tab.hotkey')} />}
       {isDesktop && <Desktop />}
-      <Essential />
-      <Conversation />
+      <SettingsUserStateBoundary>
+        <Essential />
+        <Conversation />
+      </SettingsUserStateBoundary>
     </>
   );
 };

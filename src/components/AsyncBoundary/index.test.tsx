@@ -1,5 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+
+import AsyncError from '@/components/AsyncError';
 
 import AsyncBoundary from './index';
 
@@ -116,7 +119,8 @@ describe('AsyncBoundary', () => {
         {DATA}
       </AsyncBoundary>,
     );
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'error.retry' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'asyncState.signIn' })).toBeInTheDocument();
     expect(screen.queryByText('EMPTY_ONBOARDING')).not.toBeInTheDocument();
   });
 
@@ -141,4 +145,50 @@ describe('AsyncBoundary', () => {
       expect(onRetry).toHaveBeenCalledTimes(1);
     },
   );
+});
+
+const { recoverAuthentication } = vi.hoisted(() => ({ recoverAuthentication: vi.fn() }));
+vi.mock('@/components/AsyncError/recoverAuthentication', () => ({ recoverAuthentication }));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+
+const renderError = (props: Parameters<typeof AsyncError>[0]) =>
+  render(
+    <MemoryRouter>
+      <AsyncError {...props} />
+    </MemoryRouter>,
+  );
+
+describe('AsyncError recovery', () => {
+  it.each(['block', 'page', 'inline', 'metric'] as const)(
+    'offers sign-in instead of another failing request in %s',
+    (variant) => {
+      const onRetry = vi.fn();
+      renderError({ error: { status: 401 }, onRetry, variant });
+      fireEvent.click(screen.getByRole('button', { name: 'asyncState.signIn' }));
+      expect(recoverAuthentication).toHaveBeenCalled();
+      expect(onRetry).not.toHaveBeenCalled();
+      expect(screen.queryByText('error.retry')).not.toBeInTheDocument();
+    },
+  );
+
+  it('explains permissions and offers a safe destination without reauthentication', () => {
+    renderError({ error: { data: { code: 'FORBIDDEN' } }, onRetry: vi.fn() });
+    expect(screen.getByText('forbidden.desc')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'forbidden.backHome' })).toHaveAttribute('href', '/');
+    expect(screen.queryByText('asyncState.signIn')).not.toBeInTheDocument();
+    expect(screen.queryByText('error.retry')).not.toBeInTheDocument();
+  });
+
+  it.each(['block', 'inline', 'metric'] as const)('preserves a caller action in %s', (variant) => {
+    renderError({ action: <button>Switch workspace</button>, error: { status: 403 }, variant });
+    expect(screen.getByRole('button', { name: 'Switch workspace' })).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('keeps retry for transient failures', () => {
+    const onRetry = vi.fn();
+    renderError({ error: { status: 503 }, onRetry });
+    fireEvent.click(screen.getByRole('button', { name: 'error.retry' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
 });

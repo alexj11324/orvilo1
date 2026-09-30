@@ -314,6 +314,8 @@ export class TaskDetailSliceActionImpl {
     visibility?: 'private' | 'public';
     workflowCategory?: TaskWorkflowCategory;
   }): Promise<CreatedTask | null> => {
+    // Guard the action itself: keyboard submit can bypass a disabled button.
+    if (this.#get().isCreatingTask) return null;
     this.#set({ isCreatingTask: true }, false, 'createTask/start');
     try {
       const result = await taskService.create(params);
@@ -642,21 +644,23 @@ export class TaskDetailSliceActionImpl {
    * server-side, nothing here is optimistic.
    */
   handoffTask = async (id: string, toAgentId: string | null): Promise<void> => {
-    const current = this.#get().taskDetailMap[id];
-    let taskId = current?.id;
-    let domainRevision: number | undefined;
-    // Subtask rows hand off without their detail record loaded — resolve the
-    // incumbent agent from the same fresh row read as the CAS instead of
-    // asserting `null` (which the server would reject against a real owner).
-    let fromAgentId = current?.agentId;
-    if (!taskId || domainRevision === undefined || fromAgentId === undefined) {
-      const found = await Promise.resolve(taskService.find(id)).catch(() => undefined);
-      taskId ??= found?.data?.id;
-      domainRevision ??= found?.data?.domainRevision;
-      fromAgentId ??= found?.data?.assigneeAgentId;
-    }
-    if (!taskId || domainRevision === undefined) return;
     try {
+      const current = this.#get().taskDetailMap[id];
+      let taskId = current?.id;
+      let domainRevision: number | undefined;
+      let fromAgentId = current?.agentId;
+      // Lookup failures must remain failures so the confirmation stays open.
+      // Preserve the incumbent shown in loaded details; unloaded subtask rows
+      // resolve their incumbent from the same read as the revision CAS.
+      if (!taskId || domainRevision === undefined || fromAgentId === undefined) {
+        const found = await taskService.find(id);
+        taskId ??= found?.data?.id;
+        domainRevision ??= found?.data?.domainRevision;
+        fromAgentId ??= found?.data?.assigneeAgentId;
+      }
+      if (!taskId || domainRevision === undefined) {
+        throw new Error(t('operationFailed', { ns: 'common' }));
+      }
       await taskService.handoff({
         expectedDomainRevision: domainRevision,
         fromAgentId,
@@ -665,7 +669,7 @@ export class TaskDetailSliceActionImpl {
       });
     } catch (error) {
       saveToast(error);
-      return;
+      throw error;
     }
     await Promise.all([this.#get().refreshTaskList(), this.internal_refreshTaskDetail(id)]).catch(
       () => {},

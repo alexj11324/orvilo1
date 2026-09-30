@@ -1,12 +1,12 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useParams } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
+import { Button } from '@/components/ui/button';
 import RegisterHotkeys from '@/features/ResourceLibrary/RegisterHotkeys';
 import { useKnowledgeBaseItem } from '@/features/ResourceManager/hooks/useKnowledgeItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -33,7 +33,7 @@ const LibraryLayout: FC = () => {
         error={error}
         variant={'page'}
         action={
-          <Button size={'small'} onClick={() => navigate('/resource', { replace: true })}>
+          <Button size="sm" onClick={() => navigate('/resource', { replace: true })}>
             {t('library.backToResources')}
           </Button>
         }

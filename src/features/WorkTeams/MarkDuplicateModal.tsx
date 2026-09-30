@@ -1,8 +1,8 @@
 'use client';
-import { Modal } from '@lobehub/ui/base-ui';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Modal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import {
   Combobox,

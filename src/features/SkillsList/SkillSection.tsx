@@ -1,9 +1,14 @@
-import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo, type ReactNode, useState } from 'react';
 
 import AsyncError from '@/components/AsyncError';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 export interface SkillSectionHeader {
   /** Wrap the section in a collapsible Accordion. Defaults to true. */
@@ -62,9 +67,7 @@ interface HeaderRowProps {
 
 const HeaderRow = memo<HeaderRowProps>(({ count, title }) => (
   <div className="flex items-center gap-1.5">
-    <Text className={styles.label} type={'secondary'}>
-      {title}
-    </Text>
+    <div className={cn('text-muted-foreground', styles.label)}>{title}</div>
     {typeof count === 'number' && count > 0 && <span className={styles.count}>{count}</span>}
   </div>
 ));
@@ -99,7 +102,7 @@ const Body = memo<BodyProps>(({ children, emptyText, error, isEmpty, isLoading, 
   if (isEmpty) {
     return (
       <div className="flex flex-col items-center justify-center py-2">
-        <Text className={styles.empty}>{emptyText}</Text>
+        <div className={cn(styles.empty)}>{emptyText}</div>
       </div>
     );
   }
@@ -142,15 +145,16 @@ const SkillSection = memo<SkillSectionProps>(
 
     return (
       <Accordion
-        gap={4}
-        indicatorPlacement="inline"
-        styles={{ trigger: { paddingBlock: 2, paddingInline: 4 } }}
         value={expanded ? [ITEM_KEY] : []}
-        items={[
-          { key: ITEM_KEY, title: <HeaderRow count={count} title={title} />, children: body },
-        ]}
         onValueChange={(keys) => setExpanded(keys.length > 0)}
-      />
+      >
+        <AccordionItem value={ITEM_KEY}>
+          <AccordionTrigger style={{ paddingBlock: 2, paddingInline: 4 }}>
+            <HeaderRow count={count} title={title} />
+          </AccordionTrigger>
+          <AccordionContent>{body}</AccordionContent>
+        </AccordionItem>
+      </Accordion>
     );
   },
 );

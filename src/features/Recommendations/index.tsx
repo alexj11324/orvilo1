@@ -1,4 +1,3 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +7,7 @@ import {
   type DailyBriefRecommendationsUIState,
   useDailyBriefRecommendationsUI,
 } from '@/business/client/useDailyBriefRecommendationsUI';
+import { Button } from '@/components/ui/button';
 import GroupBlock from '@/features/Home/components/GroupBlock';
 import RailCard from '@/features/Home/components/RailCard';
 import { useGlobalStore } from '@/store/global';
@@ -84,12 +84,17 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   const refresh = showTaskTemplates && (
     <Button
       disabled={!canRefresh && !isRefreshing}
-      icon={<RefreshCw className={isRefreshing ? styles.refreshSpin : undefined} size={12} />}
-      size={'small'}
+      size="sm"
       title={tCommon('taskTemplate.action.refresh.button')}
-      type={'text'}
+      variant="ghost"
       onClick={handleRefresh}
-    />
+    >
+      <RefreshCw
+        className={isRefreshing ? styles.refreshSpin : undefined}
+        data-icon="inline-start"
+        size={12}
+      />
+    </Button>
   );
 
   const compact = variant === 'rail';
@@ -134,16 +139,10 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 justify-between">
-        <Text className={styles.subtitle} fontSize={12}>
-          {t('recommendations.subtitle')}
-        </Text>
+        <div className={cn('text-[12px]', styles.subtitle)}>{t('recommendations.subtitle')}</div>
         {taskTemplatesState.mode === 'cards' && (
-          <Button
-            icon={<RefreshCw size={12} />}
-            size={'small'}
-            type={'text'}
-            onClick={taskTemplatesState.onRefresh}
-          >
+          <Button size="sm" variant="ghost" onClick={taskTemplatesState.onRefresh}>
+            <RefreshCw data-icon="inline-start" size={12} />
             {tCommon('taskTemplate.action.refresh.button')}
           </Button>
         )}

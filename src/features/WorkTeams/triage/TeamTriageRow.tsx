@@ -1,5 +1,4 @@
 'use client';
-import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ClockIcon, MoreHorizontalIcon } from 'lucide-react';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';

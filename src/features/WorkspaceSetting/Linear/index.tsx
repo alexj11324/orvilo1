@@ -1,6 +1,5 @@
 'use client';
 
-import { Alert, toast } from '@lobehub/ui/base-ui';
 import type {
   LinearInstallationRecoveryState,
   LinearProjectBindingSettings,
@@ -15,12 +14,14 @@ import {
   CircleCheck,
   CircleDashed,
   GitBranch,
+  Info,
   Link2,
   ListChecks,
   Loader2,
   RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
+  TriangleAlert,
   Upload,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -28,6 +29,8 @@ import { createElement, memo, useCallback, useEffect, useMemo, useState } from '
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -1234,12 +1237,11 @@ const LinearWorkspaceSettings = memo(() => {
             </div>
           </div>
           {selectedInstallationRecovery?.lastError && (
-            <Alert
-              showIcon
-              description={selectedInstallationRecovery.lastError}
-              title={t('workspaceSetting.linear.operations.lastSafeError')}
-              type={'error'}
-            />
+            <Alert variant="destructive">
+              <CircleAlert aria-hidden className="size-4" />
+              <AlertTitle>{t('workspaceSetting.linear.operations.lastSafeError')}</AlertTitle>
+              <AlertDescription>{selectedInstallationRecovery.lastError}</AlertDescription>
+            </Alert>
           )}
           {recoveryRows.length === 0 ? (
             <span className={styles.muted}>{t('workspaceSetting.linear.operations.empty')}</span>
@@ -1387,11 +1389,12 @@ const LinearWorkspaceSettings = memo(() => {
                       </div>
                     ))}
                     {conflict.localRevision === undefined ? (
-                      <Alert
-                        showIcon
-                        description={t('workspaceSetting.linear.conflicts.refreshRequired')}
-                        type={'warning'}
-                      />
+                      <Alert variant="warning">
+                        <TriangleAlert aria-hidden className="size-4" />
+                        <AlertDescription>
+                          {t('workspaceSetting.linear.conflicts.refreshRequired')}
+                        </AlertDescription>
+                      </Alert>
                     ) : (
                       <div
                         style={{
@@ -1477,29 +1480,31 @@ const LinearWorkspaceSettings = memo(() => {
             : t('workspaceSetting.linear.connectionDescription')}
         </span>
         {!isConnected ? (
-          <Alert
-            showIcon
-            description={t('workspaceSetting.linear.wizard.installationRequired')}
-            type={'info'}
-          />
+          <Alert variant="info">
+            <Info aria-hidden className="size-4" />
+            <AlertDescription>
+              {t('workspaceSetting.linear.wizard.installationRequired')}
+            </AlertDescription>
+          </Alert>
         ) : catalogError ? (
-          <Alert
-            showIcon
-            description={catalogError}
-            title={t('workspaceSetting.linear.loadFailed')}
-            type={'error'}
-            action={
-              <Button
-                aria-busy={action === 'load'}
-                disabled={action === 'load'}
-                variant="outline"
-                onClick={() => void loadCatalog()}
-              >
-                {action === 'load' && <Loader2 aria-hidden className="size-4 animate-spin" />}
-                {t('workspaceSetting.linear.retryLoad')}
-              </Button>
-            }
-          />
+          <Alert variant="destructive">
+            <CircleAlert aria-hidden className="size-4" />
+            <AlertTitle>{t('workspaceSetting.linear.loadFailed')}</AlertTitle>
+            <AlertDescription>{catalogError}</AlertDescription>
+            <AlertAction>
+              {
+                <Button
+                  aria-busy={action === 'load'}
+                  disabled={action === 'load'}
+                  variant="outline"
+                  onClick={() => void loadCatalog()}
+                >
+                  {action === 'load' && <Loader2 aria-hidden className="size-4 animate-spin" />}
+                  {t('workspaceSetting.linear.retryLoad')}
+                </Button>
+              }
+            </AlertAction>
+          </Alert>
         ) : (
           <>
             <div className={styles.row}>
@@ -1530,12 +1535,19 @@ const LinearWorkspaceSettings = memo(() => {
                 )}
                 {selectedInstallation.status !== 'active' && (
                   <Alert
-                    showIcon
-                    type={selectedInstallation.status === 'paused' ? 'warning' : 'error'}
-                    description={t(
-                      `workspaceSetting.linear.installationAction.${selectedInstallation.status}` as never,
+                    variant={selectedInstallation.status === 'paused' ? 'warning' : 'destructive'}
+                  >
+                    {selectedInstallation.status === 'paused' ? (
+                      <TriangleAlert aria-hidden className="size-4" />
+                    ) : (
+                      <CircleAlert aria-hidden className="size-4" />
                     )}
-                  />
+                    <AlertDescription>
+                      {t(
+                        `workspaceSetting.linear.installationAction.${selectedInstallation.status}` as never,
+                      )}
+                    </AlertDescription>
+                  </Alert>
                 )}
               </div>
             )}
@@ -1745,11 +1757,12 @@ const LinearWorkspaceSettings = memo(() => {
       }
     >
       {!selectedInstallation || selectedInstallation.status !== 'active' ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeInstallation')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>
+            {t('workspaceSetting.linear.wizard.completeInstallation')}
+          </AlertDescription>
+        </Alert>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <span style={{ color: 'var(--muted-foreground)' }}>
@@ -1840,11 +1853,10 @@ const LinearWorkspaceSettings = memo(() => {
             </div>
           </div>
           {!catalog?.teams.length || !scopedRemoteProjects.length ? (
-            <Alert
-              showIcon
-              description={t('workspaceSetting.linear.scopeCatalogEmpty')}
-              type={'warning'}
-            />
+            <Alert variant="warning">
+              <TriangleAlert aria-hidden className="size-4" />
+              <AlertDescription>{t('workspaceSetting.linear.scopeCatalogEmpty')}</AlertDescription>
+            </Alert>
           ) : null}
         </div>
       )}
@@ -1874,11 +1886,10 @@ const LinearWorkspaceSettings = memo(() => {
       }
     >
       {!hasScope ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeScope')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.completeScope')}</AlertDescription>
+        </Alert>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className={styles.field}>
@@ -1989,19 +2000,19 @@ const LinearWorkspaceSettings = memo(() => {
       }
     >
       {!hasBinding || !selectedBinding ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeBinding')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.completeBinding')}</AlertDescription>
+        </Alert>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Alert
-            showIcon
-            description={t('workspaceSetting.linear.mappingCatalogUnavailable')}
-            title={t('workspaceSetting.linear.mappingReadOnlyTitle')}
-            type={'info'}
-          />
+          <Alert variant="info">
+            <Info aria-hidden className="size-4" />
+            <AlertTitle>{t('workspaceSetting.linear.mappingReadOnlyTitle')}</AlertTitle>
+            <AlertDescription>
+              {t('workspaceSetting.linear.mappingCatalogUnavailable')}
+            </AlertDescription>
+          </Alert>
           {mappingStateIds.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontWeight: 600 }}>
@@ -2092,11 +2103,12 @@ const LinearWorkspaceSettings = memo(() => {
         }
       >
         {!hasBinding || !selectedBinding ? (
-          <Alert
-            showIcon
-            description={t('workspaceSetting.linear.wizard.completeBinding')}
-            type={'warning'}
-          />
+          <Alert variant="warning">
+            <TriangleAlert aria-hidden className="size-4" />
+            <AlertDescription>
+              {t('workspaceSetting.linear.wizard.completeBinding')}
+            </AlertDescription>
+          </Alert>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className={styles.statusPanel}>
@@ -2125,17 +2137,21 @@ const LinearWorkspaceSettings = memo(() => {
               )}
             </div>
             {issueLinksError && (
-              <Alert
-                showIcon
-                description={issueLinksError}
-                title={t('workspaceSetting.linear.issueLinksLoadFailed')}
-                type={'error'}
-                action={
-                  <Button variant="outline" onClick={() => void loadIssueLinks(selectedBinding.id)}>
-                    {t('workspaceSetting.linear.retryLoad')}
-                  </Button>
-                }
-              />
+              <Alert variant="destructive">
+                <CircleAlert aria-hidden className="size-4" />
+                <AlertTitle>{t('workspaceSetting.linear.issueLinksLoadFailed')}</AlertTitle>
+                <AlertDescription>{issueLinksError}</AlertDescription>
+                <AlertAction>
+                  {
+                    <Button
+                      variant="outline"
+                      onClick={() => void loadIssueLinks(selectedBinding.id)}
+                    >
+                      {t('workspaceSetting.linear.retryLoad')}
+                    </Button>
+                  }
+                </AlertAction>
+              </Alert>
             )}
             <div className={styles.statusGrid}>
               {(
@@ -2209,11 +2225,10 @@ const LinearWorkspaceSettings = memo(() => {
       }
     >
       {!hasBinding || !selectedBinding ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.completeBinding')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.completeBinding')}</AlertDescription>
+        </Alert>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className={styles.statusPanel}>
@@ -2260,11 +2275,10 @@ const LinearWorkspaceSettings = memo(() => {
       title={t(STEP_COPY.automation.title as never)}
     >
       {!hasBinding || !selectedBinding || !syncEnabled ? (
-        <Alert
-          showIcon
-          description={t('workspaceSetting.linear.wizard.enableSyncFirst')}
-          type={'warning'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertDescription>{t('workspaceSetting.linear.wizard.enableSyncFirst')}</AlertDescription>
+        </Alert>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className={styles.gate}>
@@ -2343,21 +2357,29 @@ const LinearWorkspaceSettings = memo(() => {
                 </span>
                 {latestProposalRevision?.proposal ? (
                   <Alert
-                    title={latestProposalRevision.proposal.explanation}
-                    type={latestProposalRevision.proposal.requiresApproval ? 'warning' : 'info'}
-                    description={
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {latestProposalRevision.proposal.actions.map((proposalAction, index) => (
-                          <span
-                            key={`${latestProposalRevision.id}-${index}`}
-                            style={{ color: 'var(--muted-foreground)' }}
-                          >
-                            {proposalAction.action}: {proposalAction.reason}
-                          </span>
-                        ))}
-                      </div>
-                    }
-                  />
+                    variant={latestProposalRevision.proposal.requiresApproval ? 'warning' : 'info'}
+                  >
+                    {latestProposalRevision.proposal.requiresApproval ? (
+                      <TriangleAlert aria-hidden className="size-4" />
+                    ) : (
+                      <Info aria-hidden className="size-4" />
+                    )}
+                    <AlertTitle>{latestProposalRevision.proposal.explanation}</AlertTitle>
+                    <AlertDescription>
+                      {
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {latestProposalRevision.proposal.actions.map((proposalAction, index) => (
+                            <span
+                              key={`${latestProposalRevision.id}-${index}`}
+                              style={{ color: 'var(--muted-foreground)' }}
+                            >
+                              {proposalAction.action}: {proposalAction.reason}
+                            </span>
+                          ))}
+                        </div>
+                      }
+                    </AlertDescription>
+                  </Alert>
                 ) : (
                   <span style={{ color: 'var(--muted-foreground)' }}>
                     {t('workspaceSetting.linear.noProposal')}
@@ -2443,11 +2465,11 @@ const LinearWorkspaceSettings = memo(() => {
 
         {renderOperations()}
 
-        <Alert
-          description={t('workspaceSetting.linear.wizard.scopeBoundary')}
-          title={t('workspaceSetting.linear.wizard.scopeBoundaryTitle')}
-          type={'info'}
-        />
+        <Alert variant="info">
+          <Info aria-hidden className="size-4" />
+          <AlertTitle>{t('workspaceSetting.linear.wizard.scopeBoundaryTitle')}</AlertTitle>
+          <AlertDescription>{t('workspaceSetting.linear.wizard.scopeBoundary')}</AlertDescription>
+        </Alert>
       </div>
     </div>
   );

@@ -1,13 +1,14 @@
 'use client';
 
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { type ComposioAppType } from '@orvilo/const';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { createElement, memo, useMemo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
+import { Badge } from '@/components/reui/badge';
 import { useDiscoverStore } from '@/store/discover';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
@@ -151,13 +152,10 @@ const ToolTag = memo<ToolTagProps>(({ identifier, variant = 'default' }) => {
   };
 
   return (
-    <Tag
-      className={isCompact ? styles.compact : styles.tag}
-      icon={renderIcon()}
-      variant={isCompact ? 'borderless' : 'filled'}
-    >
+    <Badge className={isCompact ? styles.compact : styles.tag} variant="secondary">
+      {renderIcon()}
       {displayTitle}
-    </Tag>
+    </Badge>
   );
 });
 

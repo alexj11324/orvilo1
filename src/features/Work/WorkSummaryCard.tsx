@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
 import { createStaticStyles, cx } from 'antd-style';
@@ -217,15 +216,11 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
           <Icon className={styles.inlineIcon} size={17} />
           <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
             <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-              <Text ellipsis className={styles.inlineTitle}>
-                {title}
-              </Text>
+              <div className={cn('truncate min-w-0', styles.inlineTitle)}>{title}</div>
               {showIdentifier && <span className={styles.inlineIdentifier}>{identifier}</span>}
             </div>
             {description && (
-              <Text ellipsis className={styles.inlineDescription}>
-                {description}
-              </Text>
+              <div className={cn('truncate min-w-0', styles.inlineDescription)}>{description}</div>
             )}
           </div>
           {usage && (
@@ -257,13 +252,13 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
         <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-              <Text ellipsis className={styles.title}>
-                {title}
-              </Text>
+              <div className={cn('truncate min-w-0', styles.title)}>{title}</div>
               {showIdentifier && (
-                <Text code className={styles.identifier} fontSize={12}>
+                <div
+                  className={cn('font-mono rounded bg-muted px-1 text-[12px]', styles.identifier)}
+                >
                   {identifier}
-                </Text>
+                </div>
               )}
             </div>
             {usage && (
@@ -277,9 +272,9 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
             )}
           </div>
           {description && (
-            <Text ellipsis className={styles.description} fontSize={12}>
+            <div className={cn('truncate min-w-0 text-[12px]', styles.description)}>
               {description}
-            </Text>
+            </div>
           )}
         </div>
       </div>

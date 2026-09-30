@@ -1,15 +1,5 @@
 'use client';
 
-import {
-  confirmModal,
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   FilePlus2Icon,
@@ -23,6 +13,13 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { confirmModal } from '@/components/Modal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { createDocumentModal } from '@/features/DocumentModal';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -277,7 +274,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
           (resource.kind === 'link' ||
             !resource.ownedByTeam ||
             (!documentsOnly && sections.length > 0)) && (
-            <DropdownMenuRoot>
+            <DropdownMenu>
               <DropdownMenuTrigger>
                 <button
                   aria-label={t('teams.resources.moreActions')}
@@ -287,48 +284,44 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                   <MoreHorizontalIcon size={16} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner placement="bottomRight" sideOffset={4}>
-                  <DropdownMenuPopup className={styles.menu}>
-                    {resource.kind === 'link' && (
-                      <DropdownMenuItem
-                        onClick={() =>
-                          openTeamLinkDialog({ link: resource, onChanged: refresh, teamId })
-                        }
-                      >
-                        {t('teams.resources.editLink')}
+              <DropdownMenuContent align="end" className={styles.menu} side="bottom" sideOffset={4}>
+                {resource.kind === 'link' && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      openTeamLinkDialog({ link: resource, onChanged: refresh, teamId })
+                    }
+                  >
+                    {t('teams.resources.editLink')}
+                  </DropdownMenuItem>
+                )}
+                {!documentsOnly && sections.length > 0 && (
+                  <>
+                    <div className={styles.menuDivider} />
+                    {resource.sectionId && (
+                      <DropdownMenuItem onClick={() => void moveToSection(resource, null)}>
+                        {t('teams.resources.moveToMain')}
                       </DropdownMenuItem>
                     )}
-                    {!documentsOnly && sections.length > 0 && (
-                      <>
-                        <div className={styles.menuDivider} />
-                        {resource.sectionId && (
-                          <DropdownMenuItem onClick={() => void moveToSection(resource, null)}>
-                            {t('teams.resources.moveToMain')}
-                          </DropdownMenuItem>
-                        )}
-                        {sections
-                          .filter((section) => section.id !== resource.sectionId)
-                          .map((section) => (
-                            <DropdownMenuItem
-                              key={section.id}
-                              onClick={() => void moveToSection(resource, section.id)}
-                            >
-                              {t('teams.resources.moveToSection', { name: section.name })}
-                            </DropdownMenuItem>
-                          ))}
-                      </>
-                    )}
-                    {(resource.kind === 'link' ||
-                      (resource.kind === 'document' && !resource.ownedByTeam)) && (
-                      <DropdownMenuItem onClick={() => remove(resource)}>
-                        {t('teams.resources.remove')}
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuRoot>
+                    {sections
+                      .filter((section) => section.id !== resource.sectionId)
+                      .map((section) => (
+                        <DropdownMenuItem
+                          key={section.id}
+                          onClick={() => void moveToSection(resource, section.id)}
+                        >
+                          {t('teams.resources.moveToSection', { name: section.name })}
+                        </DropdownMenuItem>
+                      ))}
+                  </>
+                )}
+                {(resource.kind === 'link' ||
+                  (resource.kind === 'document' && !resource.ownedByTeam)) && (
+                  <DropdownMenuItem onClick={() => remove(resource)}>
+                    {t('teams.resources.remove')}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
       </div>
     ));
@@ -339,7 +332,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         <span>{documentsOnly ? t('teams.homeTabs.documents') : t('teams.resources')}</span>
         <div className={styles.actions}>
           {(canWrite || canCreateDocument) && (
-            <DropdownMenuRoot open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger>
                 <button
                   aria-label={t('teams.resources.addResources')}
@@ -350,46 +343,42 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                   <PlusIcon size={16} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner placement="bottomRight" sideOffset={5}>
-                  <DropdownMenuPopup className={styles.menu}>
-                    {canCreateDocument && (
-                      <DropdownMenuItem onClick={() => void createDocument()}>
-                        <span className={styles.action}>
-                          <FilePlus2Icon size={16} />
-                          {t('teams.resources.newDocument')}
-                        </span>
-                      </DropdownMenuItem>
-                    )}
-                    {canWrite && (
-                      <DropdownMenuItem
-                        onClick={() =>
-                          openExistingDocumentPicker({ attachedIds, onChanged: refresh, teamId })
-                        }
-                      >
-                        <span className={styles.action}>
-                          <FileTextIcon size={16} />
-                          {t('teams.resources.existingDocuments')}
-                        </span>
-                      </DropdownMenuItem>
-                    )}
-                    {canWrite && !documentsOnly && (
-                      <>
-                        <div className={styles.menuDivider} />
-                        <DropdownMenuItem
-                          onClick={() => openTeamLinkDialog({ onChanged: refresh, teamId })}
-                        >
-                          <span className={styles.action}>
-                            <Link2Icon size={16} />
-                            {t('teams.resources.newLink')}
-                          </span>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuRoot>
+              <DropdownMenuContent align="end" className={styles.menu} side="bottom" sideOffset={5}>
+                {canCreateDocument && (
+                  <DropdownMenuItem onClick={() => void createDocument()}>
+                    <span className={styles.action}>
+                      <FilePlus2Icon size={16} />
+                      {t('teams.resources.newDocument')}
+                    </span>
+                  </DropdownMenuItem>
+                )}
+                {canWrite && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      openExistingDocumentPicker({ attachedIds, onChanged: refresh, teamId })
+                    }
+                  >
+                    <span className={styles.action}>
+                      <FileTextIcon size={16} />
+                      {t('teams.resources.existingDocuments')}
+                    </span>
+                  </DropdownMenuItem>
+                )}
+                {canWrite && !documentsOnly && (
+                  <>
+                    <div className={styles.menuDivider} />
+                    <DropdownMenuItem
+                      onClick={() => openTeamLinkDialog({ onChanged: refresh, teamId })}
+                    >
+                      <span className={styles.action}>
+                        <Link2Icon size={16} />
+                        {t('teams.resources.newLink')}
+                      </span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {!documentsOnly && canWrite && (
             <button
@@ -413,7 +402,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         </div>
       )}
       {data && visible.length === 0 && (documentsOnly || sections.length === 0) && (
-        <Text className={styles.muted} type="secondary">
+        <div className={cn('text-muted-foreground', styles.muted)}>
           {t(
             documentsOnly
               ? 'teams.documentsEmpty'
@@ -421,7 +410,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                 ? 'teams.resourcesEmpty'
                 : 'teams.resourcesEmptyReadOnly',
           )}
-        </Text>
+        </div>
       )}
       {data &&
         visible.length > 0 &&
@@ -444,7 +433,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                   </button>
                 )}
                 {canWrite && (
-                  <DropdownMenuRoot>
+                  <DropdownMenu>
                     <DropdownMenuTrigger>
                       <button
                         aria-label={t('teams.resources.sectionActions', { name: section.name })}
@@ -454,72 +443,73 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                         <MoreHorizontalIcon size={14} />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuPositioner placement="bottomRight" sideOffset={4}>
-                        <DropdownMenuPopup className={styles.menu}>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              openTeamLinkDialog({
-                                onChanged: refresh,
-                                sectionId: section.id,
-                                teamId,
-                              })
-                            }
-                          >
-                            {t('teams.resources.newLink')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              openExistingDocumentPicker({
-                                attachedIds,
-                                onChanged: refresh,
-                                sectionId: section.id,
-                                teamId,
-                              })
-                            }
-                          >
-                            {t('teams.resources.existingDocuments')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              openTeamSectionDialog({
-                                name: section.name,
-                                onChanged: refresh,
-                                sectionId: section.id,
-                                teamId,
-                              })
-                            }
-                          >
-                            {t('teams.resources.renameSection')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              confirmModal({
-                                cancelText: t('cancel'),
-                                content: t('teams.resources.deleteSectionConfirm'),
-                                okText: t('teams.resources.deleteSection'),
-                                onOk: async () => {
-                                  try {
-                                    await lambdaClient.teamResource.deleteSection.mutate({
-                                      sectionId: section.id,
-                                      teamId,
-                                    });
-                                    await refresh();
-                                  } catch (failure) {
-                                    setWriteError(failure);
-                                    throw failure;
-                                  }
-                                },
-                                title: t('teams.resources.deleteSection'),
-                              })
-                            }
-                          >
-                            {t('teams.resources.deleteSection')}
-                          </DropdownMenuItem>
-                        </DropdownMenuPopup>
-                      </DropdownMenuPositioner>
-                    </DropdownMenuPortal>
-                  </DropdownMenuRoot>
+                    <DropdownMenuContent
+                      align="end"
+                      className={styles.menu}
+                      side="bottom"
+                      sideOffset={4}
+                    >
+                      <DropdownMenuItem
+                        onClick={() =>
+                          openTeamLinkDialog({
+                            onChanged: refresh,
+                            sectionId: section.id,
+                            teamId,
+                          })
+                        }
+                      >
+                        {t('teams.resources.newLink')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          openExistingDocumentPicker({
+                            attachedIds,
+                            onChanged: refresh,
+                            sectionId: section.id,
+                            teamId,
+                          })
+                        }
+                      >
+                        {t('teams.resources.existingDocuments')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          openTeamSectionDialog({
+                            name: section.name,
+                            onChanged: refresh,
+                            sectionId: section.id,
+                            teamId,
+                          })
+                        }
+                      >
+                        {t('teams.resources.renameSection')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          confirmModal({
+                            cancelText: t('cancel'),
+                            content: t('teams.resources.deleteSectionConfirm'),
+                            okText: t('teams.resources.deleteSection'),
+                            onOk: async () => {
+                              try {
+                                await lambdaClient.teamResource.deleteSection.mutate({
+                                  sectionId: section.id,
+                                  teamId,
+                                });
+                                await refresh();
+                              } catch (failure) {
+                                setWriteError(failure);
+                                throw failure;
+                              }
+                            },
+                            title: t('teams.resources.deleteSection'),
+                          })
+                        }
+                      >
+                        {t('teams.resources.deleteSection')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
             </div>

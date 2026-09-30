@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Avatar, Tag } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatTokenNumber } from '@orvilo/utils/format';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -8,6 +7,9 @@ import { Trash2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { Badge } from '@/components/reui/badge';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { getWorkTypeDescriptor } from '@/features/Work/descriptors';
@@ -252,9 +254,9 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
               </div>
             )}
           {item.resourceType === 'github_issue' && item.status && (
-            <Tag size={'small'} style={{ marginInlineStart: 'auto' }}>
+            <Badge size="sm" style={{ marginInlineStart: 'auto' }}>
               {item.status}
-            </Tag>
+            </Badge>
           )}
         </div>
         <div className={styles.title}>{title}</div>

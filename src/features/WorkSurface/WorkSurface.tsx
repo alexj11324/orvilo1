@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { SlidersHorizontalIcon } from 'lucide-react';
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import {

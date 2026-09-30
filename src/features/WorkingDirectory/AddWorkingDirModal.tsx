@@ -1,12 +1,12 @@
 'use client';
 
-import type { ModalInstance } from '@lobehub/ui/base-ui';
-import { Button, createModal, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { createModal, ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { RemoteDirectoryBrowser } from './RemoteDirectoryBrowser';
@@ -83,7 +83,7 @@ const AddWorkingDirContent = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <Text type={'secondary'}>{tPlugin('workingDirectory.addFolderDesc')}</Text>
+      <div className="text-muted-foreground">{tPlugin('workingDirectory.addFolderDesc')}</div>
       <div className="flex flex-col gap-2">
         <Input
           aria-label={tPlugin('workingDirectory.current')}
@@ -97,7 +97,7 @@ const AddWorkingDirContent = ({
             setError(undefined);
           }}
         />
-        {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
+        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         {deviceId && (
@@ -114,12 +114,7 @@ const AddWorkingDirContent = ({
         <Button disabled={loading} onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button
-          disabled={!value.trim()}
-          loading={loading}
-          type={'primary'}
-          onClick={() => handleSubmit(value)}
-        >
+        <Button disabled={!value.trim()} loading={loading} onClick={() => handleSubmit(value)}>
           {tPlugin('workingDirectory.useFolder')}
         </Button>
       </div>

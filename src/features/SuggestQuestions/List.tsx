@@ -1,10 +1,11 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { RefreshCw } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import Item from './Item';
 import { type SuggestMode } from './useRandomQuestions';
@@ -54,9 +55,9 @@ const List = memo<ListProps>(({ mode, count = 3, disabled }) => {
         }}
       >
         <ActionIcon disabled={disabled} icon={RefreshCw} size={'small'} />
-        <Text color={cssVar.colorTextSecondary} fontSize={12}>
+        <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
           {tCommon('switch')}
-        </Text>
+        </div>
       </div>
     </div>
   );

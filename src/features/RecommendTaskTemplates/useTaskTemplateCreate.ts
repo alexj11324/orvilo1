@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type { TaskTemplate } from '@orvilo/const';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';

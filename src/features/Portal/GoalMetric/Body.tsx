@@ -289,21 +289,24 @@ const BudgetField = memo<{
         <div className={cn('text-muted-foreground', styles.mono)} style={{ fontSize: 20 }}>
           /
         </div>
-        <InputNumber
-          className={styles.mono}
-          controls={false}
-          disabled={!canEdit || saving}
-          min={meta.min}
-          placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
-          prefix={money ? <div className="text-[12px] text-muted-foreground">$</div> : undefined}
-          size="sm"
-          style={{ width: 120 }}
-
-          value={draft}
+        <div
           onBlur={() => void commit()}
-          onChange={setDraft}
-          onPressEnter={() => void commit()}
-        />
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void commit();
+          }}
+        >
+          <InputNumber
+            className={styles.mono}
+            controls={false}
+            disabled={!canEdit || saving}
+            min={meta.min}
+            placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
+            prefix={money ? <div className="text-[12px] text-muted-foreground">$</div> : undefined}
+            style={{ width: 120 }}
+            value={draft}
+            onChange={setDraft}
+          />
+        </div>
       </div>
     </div>
   );

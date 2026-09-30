@@ -34,7 +34,7 @@ const GuideActions = ({
   return (
     <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
       {showRetryButton && (
-        <Button size="sm" type={retryPrimary ? 'primary' : undefined} onClick={onRetry}>
+        <Button size="sm" variant={retryPrimary ? 'default' : 'outline'} onClick={onRetry}>
           <RotateCcw size={14} /> {retryLabel}
         </Button>
       )}

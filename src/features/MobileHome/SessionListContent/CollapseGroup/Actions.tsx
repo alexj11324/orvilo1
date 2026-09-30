@@ -1,24 +1,20 @@
-import { createStaticStyles } from 'antd-style';
 import { MoreVertical, PencilLine, Plus, Settings2, Trash, UsersRound } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { MemberSelectionModal } from '@/components/MemberSelectionModal';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
-import SidebarDropdownMenu, {
-  type SidebarDropdownMenuProps,
+import type {
+  SidebarDropdownMenuProps,
+  SidebarMenuItemData,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { useSessionStore } from '@/store/session';
 
-const styles = createStaticStyles(({ css }) => ({
-  modalRoot: css`
-    z-index: 2000;
-  `,
-}));
 interface ActionsProps extends Pick<SidebarDropdownMenuProps, 'onOpenChange'> {
   id?: string;
   isCustomGroup?: boolean;
@@ -26,8 +22,6 @@ interface ActionsProps extends Pick<SidebarDropdownMenuProps, 'onOpenChange'> {
   openConfigModal: () => void;
   openRenameModal?: () => void;
 }
-
-type MenuItemType = Exclude<SidebarDropdownMenuProps['items'], () => unknown>[number];
 
 const Actions = memo<ActionsProps>(
   ({ id, openRenameModal, openConfigModal, onOpenChange, isCustomGroup, isPinned }) => {
@@ -44,7 +38,7 @@ const Actions = memo<ActionsProps>(
 
     const [createGroup] = useAgentGroupStore((s) => [s.createGroup]);
 
-    const sessionGroupConfigPublicItem: MenuItemType = {
+    const sessionGroupConfigPublicItem: SidebarMenuItemData = {
       icon: <Settings2 size={14} />,
       key: 'config',
       label: t('sessionGroup.config'),
@@ -54,7 +48,7 @@ const Actions = memo<ActionsProps>(
       },
     };
 
-    const newAgentPublicItem: MenuItemType = {
+    const newAgentPublicItem: SidebarMenuItemData = {
       icon: <Plus size={14} />,
       key: 'newAgent',
       label: t('newAgent'),
@@ -69,7 +63,7 @@ const Actions = memo<ActionsProps>(
       },
     };
 
-    const newGroupChatItem: MenuItemType = {
+    const newGroupChatItem: SidebarMenuItemData = {
       icon: <UsersRound size={14} />,
       key: 'newGroupChat',
       label: t('newGroupChat'),
@@ -118,58 +112,48 @@ const Actions = memo<ActionsProps>(
       setIsGroupModalOpen(false);
     };
 
-    const customGroupItems: Exclude<SidebarDropdownMenuProps['items'], () => unknown> = useMemo(
-      () => [
-        {
-          icon: <PencilLine size={14} />,
-          key: 'rename',
-          label: t('sessionGroup.rename'),
-          onClick: ({ domEvent }) => {
-            domEvent.stopPropagation();
-            openRenameModal?.();
-          },
+    const customGroupItems: SidebarMenuItemData[] = [
+      {
+        icon: <PencilLine size={14} />,
+        key: 'rename',
+        label: t('sessionGroup.rename'),
+        onClick: ({ domEvent }) => {
+          domEvent.stopPropagation();
+          openRenameModal?.();
         },
-        sessionGroupConfigPublicItem,
-        {
-          type: 'divider',
+      },
+      sessionGroupConfigPublicItem,
+      {
+        type: 'divider',
+      },
+      {
+        danger: true,
+        icon: <Trash size={14} />,
+        key: 'delete',
+        label: t('delete', { ns: 'common' }),
+        onClick: ({ domEvent }) => {
+          domEvent.stopPropagation();
+          confirmModal({
+            cancelText: t('cancel', { ns: 'common' }),
+            content: t('sessionGroup.confirmRemoveGroupAlert'),
+            okButtonProps: { danger: true },
+            okText: t('delete', { ns: 'common' }),
+            onOk: async () => {
+              if (!id) return;
+              await removeSessionGroup(id);
+            },
+            title: t('delete', { ns: 'common' }),
+          });
         },
-        {
-          danger: true,
-          icon: <Trash size={14} />,
-          key: 'delete',
-          label: t('delete', { ns: 'common' }),
-          onClick: ({ domEvent }) => {
-            domEvent.stopPropagation();
-            confirmModal({
-              cancelText: t('cancel', { ns: 'common' }),
-              content: t('sessionGroup.confirmRemoveGroupAlert'),
-              okButtonProps: { danger: true },
-              okText: t('delete', { ns: 'common' }),
-              onOk: async () => {
-                if (!id) return;
-                await removeSessionGroup(id);
-              },
-              title: t('delete', { ns: 'common' }),
-            });
-          },
-        },
-      ],
-      [],
-    );
+      },
+    ];
 
-    const defaultItems: Exclude<SidebarDropdownMenuProps['items'], () => unknown> = useMemo(
-      () => [sessionGroupConfigPublicItem],
-      [],
-    );
-
-    const tailItems = useMemo(
-      () => (isCustomGroup ? customGroupItems : defaultItems),
-      [isCustomGroup, customGroupItems, defaultItems],
-    );
-
-    const menuItems = useMemo(() => {
-      return [newAgentPublicItem, newGroupChatItem, { type: 'divider' as const }, ...tailItems];
-    }, [newAgentPublicItem, newGroupChatItem, tailItems]);
+    const menuItems: SidebarMenuItemData[] = [
+      newAgentPublicItem,
+      newGroupChatItem,
+      { type: 'divider' },
+      ...(isCustomGroup ? customGroupItems : [sessionGroupConfigPublicItem]),
+    ];
 
     return (
       <>

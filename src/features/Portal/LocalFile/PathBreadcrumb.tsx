@@ -86,6 +86,7 @@ interface CrumbMenuItem {
   key: string;
   label: ReactNode;
   onClick?: () => void;
+  openOnHover?: boolean;
   type?: 'submenu';
 }
 
@@ -132,7 +133,7 @@ const buildFolderItems = ({
   deviceId,
   openFile,
   parentRelativePath,
-}: BuildMenuParams): DropdownItem[] => {
+}: BuildMenuParams): CrumbMenuItem[] => {
   const children = byParent.get(parentRelativePath) ?? [];
 
   return children.flatMap((child): CrumbMenuItem[] => {

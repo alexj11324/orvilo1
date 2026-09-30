@@ -171,7 +171,7 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
         ) : (
           <ActionIcon
             icon={PencilIcon}
-            size="sm"
+            size="small"
             title={t('skillFrontmatter.edit')}
             onClick={handleEdit}
           />

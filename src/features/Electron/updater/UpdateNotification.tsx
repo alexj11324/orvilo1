@@ -113,7 +113,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
         </BaseButton>
         <BaseButton
           loading={isInstalling}
-          type={'primary'}
+          variant={'default'}
           onClick={() => {
             setIsInstalling(true);
             autoUpdateService.installNow();
@@ -161,13 +161,13 @@ export const UpdateNotification: React.FC = () => {
     return (
       <div className={styles.installLaterToast}>
         <span>{tElectron('updater.rendererReady', { version: updateInfo.version })}</span>
-        <BaseButton size={'small'} type={'text'} onClick={() => setUpdateInfo(null)}>
+        <BaseButton size={'sm'} variant={'ghost'} onClick={() => setUpdateInfo(null)}>
           {tElectron('updater.ignore')}
         </BaseButton>
         <BaseButton
           loading={isInstalling}
-          size={'small'}
-          type={'primary'}
+          size={'sm'}
+          variant={'default'}
           onClick={async () => {
             setIsInstalling(true);
             try {
@@ -219,8 +219,8 @@ export const UpdateNotification: React.FC = () => {
           {isDevMode && updateInfo?.version ? ` · ${updateInfo.version}` : ''}
         </span>
         <BaseButton
-          size={'small'}
-          type={'text'}
+          size={'sm'}
+          variant={'ghost'}
           onClick={() => {
             autoUpdateService.installLater();
           }}
@@ -229,8 +229,8 @@ export const UpdateNotification: React.FC = () => {
         </BaseButton>
         <BaseButton
           loading={isInstalling}
-          size={'small'}
-          type={'primary'}
+          size={'sm'}
+          variant={'default'}
           onClick={() => {
             setIsInstalling(true);
             autoUpdateService.installNow();

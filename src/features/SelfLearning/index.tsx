@@ -9,7 +9,8 @@ import urlJoin from 'url-join';
 
 import ActionIcon from '@/components/ActionIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
-import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

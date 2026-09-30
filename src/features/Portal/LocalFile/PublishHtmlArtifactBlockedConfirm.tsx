@@ -40,10 +40,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
   const failedPaths = new Set(failed.map((item) => item.absolutePath));
   return (
     <>
-      <ScrollArea
-        style={{ maxHeight: BODY_MAX_HEIGHT, overflow: 'hidden' }}
-        viewportProps={{ style: { height: 'auto', maxHeight: BODY_MAX_HEIGHT } }}
-      >
+      <ScrollArea style={{ maxHeight: BODY_MAX_HEIGHT, overflow: 'hidden' }}>
         <div className="flex flex-col gap-3" style={{ paddingBlock: 12, paddingInline: 16 }}>
           <div>
             {t('workingPanel.localFile.publish.outsideWorkspace.description', {

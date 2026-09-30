@@ -221,7 +221,7 @@ const TabItem = memo<TabItemProps>(
             size={16}
           />
         ) : (
-          meta.icon && <Icon className={styles.tabIcon} icon={meta.icon} size="small" />
+          meta.icon && <meta.icon className={styles.tabIcon} size={14} />
         )}
         {isRunning && <span aria-label={t('tab.running')} className={styles.runningDot} />}
         {showUnreadDot && <span aria-label={t('tab.unread')} className={styles.unreadDot} />}

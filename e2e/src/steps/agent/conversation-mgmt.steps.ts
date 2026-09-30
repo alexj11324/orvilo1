@@ -597,6 +597,7 @@ When('用户确认删除', async function (this: CustomWorld) {
   // DeleteTopicConfirm modal (#16030) instead of a generic ok/删除 button.
   const confirmButton = this.page
     .getByRole('dialog')
+    .or(this.page.getByRole('alertdialog'))
     .getByRole('button', { name: /^(ok|delete( topic)?|删除(话题)?|确认|确定)$/i });
 
   await expect(confirmButton).toBeVisible({ timeout: 5000 });

@@ -306,15 +306,17 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
           <div className="flex gap-6">
             <div className="flex flex-col gap-1">
               <div className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</div>
-              <InputNumber
-                min={2}
-                style={{ width: 120 }}
-                value={args.maxIterations ?? undefined}
-                onChange={(value) => patch({ maxIterations: value })}
-              />
-              <span className="text-muted-foreground">
-                {t('builtins.orvilo-task.goal.roundsUnit')}
-              </span>
+              <div className="flex items-center gap-2">
+                <InputNumber
+                  min={2}
+                  style={{ width: 120 }}
+                  value={args.maxIterations ?? undefined}
+                  onChange={(value) => patch({ maxIterations: value })}
+                />
+                <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+                  {t('builtins.orvilo-task.goal.roundsUnit')}
+                </span>
+              </div>
             </div>
             <div className="flex flex-col gap-1">
               <div className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</div>

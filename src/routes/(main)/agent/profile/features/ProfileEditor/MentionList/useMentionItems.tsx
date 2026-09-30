@@ -1,6 +1,5 @@
 import { type IEditor } from '@lobehub/editor';
 import { INSERT_MENTION_COMMAND } from '@lobehub/editor';
-import { Image } from '@lobehub/ui';
 import { type ComposioAppType } from '@orvilo/const';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { ToolNameResolver } from '@orvilo/context-engine';
@@ -34,7 +33,7 @@ const getComposioAppType = (identifier: string) =>
  */
 const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, label }) => {
   if (typeof icon === 'string') {
-    return <Image alt={label} height={20} src={icon} style={{ flex: 'none' }} width={20} />;
+    return <img alt={label} height={20} src={icon} style={{ flex: 'none' }} width={20} />;
   }
 
   // Fill with theme color, automatically adapts in dark mode

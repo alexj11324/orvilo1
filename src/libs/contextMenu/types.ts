@@ -1,6 +1,7 @@
 import type { ContextMenuItem, showContextMenu as showWebContextMenu } from '@lobehub/ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import type { ItemType } from 'antd/es/menu/interface';
+
+import type { ItemType } from '@/components/Menu';
 
 type NativeMenuIcon = {
   sfSymbol?: SFSymbol;

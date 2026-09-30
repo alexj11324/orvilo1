@@ -1,13 +1,13 @@
 'use client';
 
 import { confirmModal, Text, toast, Upload } from '@lobehub/ui/base-ui';
-import { Form } from 'antd';
 import { cssVar } from 'antd-style';
 import { CircleHelp, Globe, ImagePlus, Trash2 } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import EmojiPicker from '@/components/EmojiPicker';
+import Form from '@/components/GroupForm';
 import ImperativeModal from '@/components/ImperativeModal';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

@@ -1,6 +1,5 @@
 import { ActionIcon, Tabs, Text } from '@lobehub/ui/base-ui';
 import { ArtifactType } from '@orvilo/types';
-import { ConfigProvider } from 'antd';
 import { cx } from 'antd-style';
 import { ArrowLeft, CodeIcon, EyeIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -50,56 +49,47 @@ const Title = () => {
           {artifactTitle}
         </Text>
       </div>
-      <ConfigProvider
-        theme={{
-          token: {
-            borderRadiusSM: 16,
-            borderRadiusXS: 16,
-            fontSize: 12,
-          },
-        }}
-      >
-        <div className="flex flex-row items-center gap-1">
-          <ArtifactDeploymentActions
-            artifactIdentifier={artifactIdentifier}
-            artifactTitle={artifactTitle}
-            artifactType={artifactType}
-            displayMode={displayMode}
-            isArtifactTagClosed={isArtifactTagClosed}
-            messageId={messageId}
-            topicId={topicId}
+
+      <div className="flex flex-row items-center gap-1">
+        <ArtifactDeploymentActions
+          artifactIdentifier={artifactIdentifier}
+          artifactTitle={artifactTitle}
+          artifactType={artifactType}
+          displayMode={displayMode}
+          isArtifactTagClosed={isArtifactTagClosed}
+          messageId={messageId}
+          topicId={topicId}
+        />
+        {showSwitch && (
+          <Tabs
+            activeKey={displayMode}
+            size={'small'}
+            items={[
+              {
+                icon: (
+                  <span className="anticon" role="img">
+                    <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
+                ),
+                key: ArtifactDisplayMode.Preview,
+                label: t('artifacts.display.preview'),
+              },
+              {
+                icon: (
+                  <span className="anticon" role="img">
+                    <CodeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
+                ),
+                key: ArtifactDisplayMode.Code,
+                label: t('artifacts.display.code'),
+              },
+            ]}
+            onChange={(key) => {
+              useChatStore.setState({ portalArtifactDisplayMode: key as ArtifactDisplayMode });
+            }}
           />
-          {showSwitch && (
-            <Tabs
-              activeKey={displayMode}
-              size={'small'}
-              items={[
-                {
-                  icon: (
-                    <span className="anticon" role="img">
-                      <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                    </span>
-                  ),
-                  key: ArtifactDisplayMode.Preview,
-                  label: t('artifacts.display.preview'),
-                },
-                {
-                  icon: (
-                    <span className="anticon" role="img">
-                      <CodeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                    </span>
-                  ),
-                  key: ArtifactDisplayMode.Code,
-                  label: t('artifacts.display.code'),
-                },
-              ]}
-              onChange={(key) => {
-                useChatStore.setState({ portalArtifactDisplayMode: key as ArtifactDisplayMode });
-              }}
-            />
-          )}
-        </div>
-      </ConfigProvider>
+        )}
+      </div>
     </div>
   );
 };

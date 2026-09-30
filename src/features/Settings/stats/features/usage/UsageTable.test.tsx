@@ -1,7 +1,6 @@
 /**
  * @vitest-environment happy-dom
  */
-import { TooltipGroup } from '@lobehub/ui';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
@@ -106,13 +105,11 @@ describe('UsageTable', () => {
     });
     render(
       <I18nextProvider i18n={i18n}>
-        <TooltipGroup popupContainer={document.body}>
-          <TooltipProvider>
-            <MemoryRouter>
-              <UsageTable />
-            </MemoryRouter>
-          </TooltipProvider>
-        </TooltipGroup>
+        <TooltipProvider>
+          <MemoryRouter>
+            <UsageTable />
+          </MemoryRouter>
+        </TooltipProvider>
       </I18nextProvider>,
     );
 

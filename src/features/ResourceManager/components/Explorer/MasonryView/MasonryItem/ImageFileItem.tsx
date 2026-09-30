@@ -1,4 +1,4 @@
-import { Image } from 'antd';
+import { Image } from '@lobehub/ui';
 import { createStaticStyles, cx, keyframes } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
@@ -202,8 +202,8 @@ const ImageFileItem = memo<ImageFileItemProps>(
     const imageLoaded = status === 'loaded';
 
     /**
-     * Read the bitmap through the wrapper rather than the load event: antd's
-     * `Image` renders the `<img>` inside its own wrapper, so the event's
+     * Read the bitmap through the wrapper rather than the load event: `Image`
+     * renders the `<img>` inside its own wrapper, so the event's
      * `currentTarget` is not the image and `naturalWidth` reads back undefined.
      * Silently skipping the correction left every upload with no stored
      * dimensions parked on the fallback ratio — and `object-fit: cover` then
@@ -246,22 +246,29 @@ const ImageFileItem = memo<ImageFileItemProps>(
               alt={name}
               loading="lazy"
               src={url}
+              variant={'borderless'}
               preview={{
                 src: url,
               }}
               style={{
                 display: 'block',
                 height: '100%',
-                objectFit: 'cover',
-                opacity: imageLoaded ? 1 : 0,
-                transition: 'opacity 0.3s',
-                width: '100%',
-              }}
-              wrapperStyle={{
-                display: 'block',
-                height: '100%',
                 pointerEvents: imageLoaded ? 'auto' : 'none',
                 width: '100%',
+              }}
+              styles={{
+                image: {
+                  display: 'block',
+                  height: '100%',
+                  opacity: imageLoaded ? 1 : 0,
+                  transition: 'opacity 0.3s',
+                  width: '100%',
+                },
+                wrapper: {
+                  display: 'block',
+                  height: '100%',
+                  width: '100%',
+                },
               }}
               onError={() => setStatus('error')}
               onLoad={() => {

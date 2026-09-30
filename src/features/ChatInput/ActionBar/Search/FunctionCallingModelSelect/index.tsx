@@ -1,10 +1,10 @@
-import { TooltipGroup } from '@lobehub/ui';
 import { Select, type SelectProps } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { type WorkingModel } from '@/types/agent';
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
@@ -70,7 +70,7 @@ const ModelSelect = memo<ModelSelectProps>(({ value, onChange, ...rest }) => {
   }, [enabledList]);
 
   return (
-    <TooltipGroup>
+    <TooltipProvider>
       <Select
         options={options}
         popupClassName={styles.select}
@@ -84,7 +84,7 @@ const ModelSelect = memo<ModelSelectProps>(({ value, onChange, ...rest }) => {
         }}
         {...rest}
       />
-    </TooltipGroup>
+    </TooltipProvider>
   );
 });
 

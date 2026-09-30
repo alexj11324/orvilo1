@@ -112,7 +112,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') (() => void submit())(event);
+              if (event.key === 'Enter') void submit();
             }}
           />
         </div>

@@ -168,15 +168,15 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
                         {t('goalProcess.attempts.nth', { index: attempt.index })}
                       </div>
                       <div
-                        className="text-[12px]"
                         style={{ flex: 'none' }}
-                        type={
+                        className={cn(
+                          'text-[12px]',
                           attempt.outcome === 'passed'
-                            ? 'success'
+                            ? 'text-success'
                             : attempt.outcome === 'failed'
-                              ? 'danger'
-                              : 'secondary'
-                        }
+                              ? 'text-destructive'
+                              : 'text-muted-foreground',
+                        )}
                       >
                         {t(`goalProcess.attempts.${attempt.outcome}` as const)}
                       </div>

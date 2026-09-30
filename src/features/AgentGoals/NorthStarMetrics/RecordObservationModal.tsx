@@ -54,7 +54,7 @@ const RecordObservationContent = memo<{ goalId: string; metricKey: string; metri
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') (() => void submit())(event);
+              if (event.key === 'Enter') void submit();
             }}
           />
         </div>

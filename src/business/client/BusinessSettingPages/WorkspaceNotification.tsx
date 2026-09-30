@@ -2,6 +2,7 @@
 
 import type { NotificationChannelSettings, NotificationSettings } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Bell, Mail, Smartphone } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

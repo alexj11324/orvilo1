@@ -106,11 +106,11 @@ const WorkspaceMembers = memo(() => {
                   render={
                     <span>
                       <Button
-                        danger
                         disabled={!capabilities.canLeave}
-                        icon={<LogOut size={16} />}
+                        variant="destructive"
                         onClick={handleLeave}
                       >
+                        <LogOut size={16} />
                         {t('workspaceSetting.members.leave')}
                       </Button>
                     </span>
@@ -123,11 +123,8 @@ const WorkspaceMembers = memo(() => {
             </TooltipProvider>
           )}
           {capabilities.canInvite && (
-            <Button
-              icon={<UserPlus size={16} />}
-              type="primary"
-              onClick={() => openInviteTeammateModal()}
-            >
+            <Button variant="default" onClick={() => openInviteTeammateModal()}>
+              <UserPlus size={16} />
               {t('workspaceSetting.members.inviteButton')}
             </Button>
           )}

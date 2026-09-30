@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert, Text, toast } from '@lobehub/ui/base-ui';
+import { cssVar } from 'antd-style';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

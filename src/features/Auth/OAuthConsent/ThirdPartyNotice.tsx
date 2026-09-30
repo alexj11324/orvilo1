@@ -5,7 +5,7 @@ import { ExternalLinkIcon, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ThirdPartyNoticeProps {
   developerName?: string;

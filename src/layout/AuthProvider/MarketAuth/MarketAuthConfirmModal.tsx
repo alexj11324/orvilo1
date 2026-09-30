@@ -99,10 +99,9 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
       >
         <AuthCard
           footer={footer}
-          paddingBlock={'40px 20px'}
+          style={{ paddingBlock: '40px 20px', width: '100%' }}
           subtitle={ts('subtitle')}
           title={ts('title')}
-          width={'100%'}
         >
           <div
             style={{

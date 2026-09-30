@@ -103,10 +103,10 @@ const UserAvatar = ({
   return (
     <Avatar
       alt={altText}
-      avatar={remoteAvatarSrc(avatarValue) ? avatarValue : undefined}
+      avatar={remoteAvatarSrc(avatarValue) ? (avatarValue ?? undefined) : undefined}
       background={background}
       className={clickable ? styles.clickable : className}
-      name={avatarValue}
+      name={avatarValue ?? undefined}
       ref={ref}
       shape={'square'}
       size={size}

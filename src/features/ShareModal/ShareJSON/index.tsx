@@ -138,10 +138,11 @@ const ShareJSON = memo(() => {
         <div className={cx('flex flex-col gap-3', styles.sidebar)}>
           <Form
             initialValues={DEFAULT_FIELD_VALUE}
+            itemMinWidth={FORM_STYLE.itemMinWidth}
             items={settings}
             itemsType={'flat'}
+            style={FORM_STYLE.style}
             onValuesChange={(_, v) => setFieldValue(v)}
-            {...FORM_STYLE}
           />
           {!isMobile && button}
         </div>

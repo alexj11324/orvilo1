@@ -54,6 +54,7 @@ interface ProfileSetupModalProps {
 interface CountedControlProps {
   maxLength?: number;
   onChange?: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  placeholder?: string;
   prefix?: ReactNode;
   rows?: number;
   value?: string;
@@ -93,7 +94,7 @@ const CountedInput = ({ maxLength, prefix, ...rest }: CountedControlProps) => (
   </div>
 );
 
-const CountedTextArea = ({ maxLength, ...rest }: CountedControlProps) => (
+const CountedTextArea = ({ maxLength, prefix: _prefix, ...rest }: CountedControlProps) => (
   <div className="relative">
     <Textarea maxLength={maxLength} rows={rest.rows} {...rest} />
     {maxLength !== undefined && (

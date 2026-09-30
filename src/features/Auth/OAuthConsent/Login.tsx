@@ -1,5 +1,6 @@
 'use client';
 
+import { cssVar } from 'antd-style';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';

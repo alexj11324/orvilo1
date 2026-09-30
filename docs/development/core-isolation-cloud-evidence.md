@@ -123,3 +123,15 @@ PID 1 between Docker inspection and SIGKILL. A failed kill is now reconciled onl
 when a fresh owned-container inspection proves exited state, PID zero and not
 running. The normal stopped inspection and broker drain still run. Actual
 Docker tests passed 12/12 at 16:50:11 UTC including closing stdin during shutdown.
+
+## Crash recovery before tree receipt persistence
+
+A trusted optional `containerName` now supplies the run identity that the host
+persists **before** launching. Docker creation refuses collisions without replacing
+or stopping the existing tree. A new supervisor instance uses `recover()` to resolve
+only that exact name, verify the immutable ID and supervisor ownership label, and
+return the ID for termination. Only the daemon's explicit missing-container response
+returns absence; daemon failures and ownership mismatch remain errors. No broad
+container kill or enumeration is used. Actual Docker tests passed 13/13 at 17:00:13
+UTC, including fresh-instance recovery/termination, duplicate-name rejection and
+foreign-supervisor rejection.

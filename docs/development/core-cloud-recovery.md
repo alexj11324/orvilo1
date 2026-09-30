@@ -64,3 +64,45 @@ not establish production authority integration or real provider execution. See
 No Mac execution, push, PR, merge, deployment, production credential creation,
 external subscription, migration allocation or persistent permission change was
 performed. Existing ACP integrations and canonical task completion remain unchanged.
+
+## Canonical integration checkpoint after 940c450a
+
+The server now has an opt-in `CanonicalCoreRuntimeHost` composed with canonical
+TaskDispatch/task/topic/grant/member row admission, the actual Docker Prime runtime,
+private durable action receipts and brokered file capabilities. `requestStop` waits
+for admitted effects and persists its fence advance before drain proof. A persisted
+exact container name closes the launch-before-tree-journal crash seam. This supports
+explicit bounded leased registrations; it does not reinterpret legacy provisioning
+leases as runtime ownership or auto-enable legacy runners.
+
+`CanonicalVerifyCompletion` uses explicitly registered frozen-criterion/receipt
+mappings and invokes existing Verify convergence. Its guard executes inside the
+actual TaskModel execution-contract status CAS transaction, rechecking canonical
+scope, epoch, grant, membership, Verify and receipt identities. Missing mappings
+fail closed. Runtime end_turn has no completion authority. The host exposes this
+reconciliation without accepting runtime-supplied loaders or mappings.
+
+2026-09-30 validation: Core 142 tests/14 files; canonical authority 12 actual
+PostgreSQL tests; completion 10 actual PostgreSQL tests; existing Verify28 tests;
+existing TaskDispatch29 tests in both PGlite and PostgreSQL. Independent review
+reproduced the real Prime+PostgreSQL host effect/drain/recovery acceptance and all
+canonical authority/completion tests. See docs/core-runtime-host-acceptance.md for
+fixture boundaries. The existing cross-workflow task/dispatch lock-order inversion
+is a reliability risk; errors fail closed, not a second mutation admission path.
+
+Full owner handoff is still unavailable. The proposal is one new handoff-history
+table plus two execution-control columns on task_topics, preserving its existing
+epoch/grant authority. Together with the earlier receipt proposal there are two
+new proposed tables. No numbered migration was created. Runtime registration and
+all legacy cancellation/revocation/epoch writers must share the hold before atomic
+owner transfer can be enabled. Prime resume probes establish empty-session metadata
+restore only; same-path restart locking failed, so runtime.resume remains none.
+
+Type-check scope: the standalone Core strict check passed; the host-only graph
+passed before its completion import. The complete canonical/Verify dependency graph
+reported missing Electron/desktop aliases and other outside-scope diagnostics plus
+one new fixture enum error (operation `completed` corrected to `done`). Therefore no
+whole-application or final full imported-graph typecheck pass is claimed. The final
+fixture is rechecked by its actual completion tests. The owned disposable PostgreSQL
+container and test runtime containers were removed after acceptance; no existing
+container or database was modified.

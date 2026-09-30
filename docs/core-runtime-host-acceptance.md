@@ -1,0 +1,25 @@
+# Canonical Core runtime host
+
+`apps/server/src/services/controlPlane/coreRuntimeHost.ts` composes the existing canonical run guard, typed action gateway, direct-child file capability, durable local receipts, Docker process-tree supervisor and pinned Prime ACP runtime. It is an opt-in trusted server composition, not an enabled replacement for existing runners or an unauthenticated runtime endpoint.
+
+The server supplies a registration already matching the canonical task, dispatch, task topic, bounded user grant and live lease. No provisioning owner is guessed to be a runtime owner. Each file action holds canonical database row locks through admission, receipt persistence, filesystem mutation and postcondition verification. The grant must explicitly permit `file.write`. The host also requires an explicitly configured trusted `file.sha256` commitment; empty configuration denies mutation. These configured commitments do not become authoritative task-completion decisions.
+
+The runtime receives a read-only credential-free workspace snapshot. Private control storage and the separately approved output capability remain outside its mount. The file executor only replaces direct-child files and verifies SHA-256; nested paths, symlinks and unsupported action kinds are refused. Private filesystem receipts commit independently of the canonical database transaction, so rolling back that transaction cannot erase an already prepared receipt after an ambiguous effect.
+
+Before launching, the host persists a unique exact container name in its private journal. On restart it does not launch again or reopen action admission. It can recover that exact owned container and stop it, including the window where Docker started but the returned tree identity had not yet reached the journal. Recovery establishes container ownership only; it does not manufacture isolation evidence or restart authority. A daemon or ownership mismatch remains a failure.
+
+The supervisor's drain callback commits the existing `TaskDispatchModel.requestStop` fence advance and `cancel_requested` state. This waits behind already admitted actions holding the same canonical rows. It then checks durable receipts. An incomplete/missing receipt prevents a zero-pending-actions proof and requires trusted reconciliation. This is cancellation and drain, not handoff ownership transfer. Call `recoverStop` or the runtime's shutdown and inspect its result before `close`; `close` only releases the file capability handle.
+
+`reconcileCompletion()` explicitly invokes the canonical Verify adapter with mappings supplied only by trusted server registration. It takes no runtime receipt loader or runtime mapping. Receipt lookup remains inside this host's private durable directory; missing mappings deny completion. `end_turn` never invokes reconciliation automatically. The canonical Verify adapter remains responsible for confirmed persisted criteria, current run binding and the final status CAS.
+
+## Actual cloud acceptance
+
+On Linux, the opt-in `coreRuntimeHost.acceptance.test.ts` passed against a disposable PostgreSQL 18 database with the repository's real migrations and canonical grant service, plus the locally built Prime v0.9.8 image pinned to commit `7d442aafa985f9342134fac16c2ef41f03fb45c1`.
+
+It exercised a real ACP session, wrong-tenant rejection, a real file write and digest receipt, deterministic IO delay while the actual PostgreSQL row lock was held, recovered cancellation waiting for that write, durable cancel fence advancement, denial of the stale host, and idempotent stop. It also simulated the pre-result-journal crash seam by retaining the persisted launch intent while removing only the returned isolation record; the restarted host found and stopped the actual container by its precommitted name. No provider request or prompt was sent. The IO gate delays the actual filesystem operation; it does not replace the executor, database or supervisor.
+
+The test requires `TEST_SERVER_DB=1`, a disposable `DATABASE_TEST_URL`, and `CORE_DOCKER_IMAGE` naming a trusted locally built immutable image whose labels match the pinned source. Without those inputs it skips rather than claiming cloud acceptance. Final host acceptance log: `/workspace/scratch/core-validation/host-acceptance.log`. ESLint passed for the final host files. The host graph passed scoped TypeScript checking before the completion adapter was added; the larger imported Verify graph requires the separately reported canonical-service typecheck result.
+
+## Remaining integration boundaries
+
+Legacy runners are not automatically enabled. Durable live runtime-owner registration/renewal and atomic handoff ownership transfer still need the separately reviewed canonical schema and lifecycle implementation. A host without the bounded leased registration fails closed. Configured file commitments are not a substitute for persisted authoritative commitments, accepted decisions or completion verification. No numbered migration, production registration, credential, provider subscription, deployment or external side effect was created by this acceptance.

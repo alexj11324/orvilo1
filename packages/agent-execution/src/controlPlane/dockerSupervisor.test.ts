@@ -181,6 +181,34 @@ describe('real Docker isolation and tree cancellation', () => {
     expect((await supervisor.terminate(treeId)).ok).toBe(true);
   });
 
+  it('recovers the exact journaled name with a fresh supervisor and refuses duplicate launch', async () => {
+    const options = {
+      imageId,
+      supervisorId: `recovery-${Date.now()}`,
+      containerName: `orvilo-recovery-${Date.now()}`,
+      workspace: directory,
+      executable: '/bin/sh',
+      drainActions: async () => ({ pendingActions: 0 }),
+    };
+    supervisor = new DockerProcessTreeSupervisor(options);
+    expect(await supervisor.recover()).toBeUndefined();
+    const input = {
+      executable: '/bin/sh',
+      args: ['-c', 'sleep 300'],
+      workspace: directory,
+      environment,
+    };
+    const result = await supervisor.launch(input);
+    if (!result.ok) throw new Error(result.error.message);
+    treeId = result.value.treeId;
+    const restarted = new DockerProcessTreeSupervisor(options);
+    expect(await restarted.recover()).toBe(treeId);
+    expect((await restarted.launch(input)).ok).toBe(false);
+    const foreign = new DockerProcessTreeSupervisor({ ...options, supervisorId: 'foreign-owner' });
+    await expect(foreign.recover()).rejects.toThrow('not owned');
+    expect((await restarted.terminate(treeId)).ok).toBe(true);
+  });
+
   it('withholds quiescence when broker actions have not drained', async () => {
     const result = await supervisor.launch({
       executable: '/bin/sh',

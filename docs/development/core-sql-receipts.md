@@ -19,3 +19,16 @@ node ../../node_modules/vitest/vitest.mjs run src/controlPlane/sqlReceiptStore.t
 passed 7 tests in 6.56 seconds. These use actual disk-backed PGlite SQL, database close/reopen, eight concurrent reservation attempts, losing-instance and durable-token fences, immutable identity and invalid transition rejection, and retained ambiguous statuses. The integrated test executes `createActionGateway` with the concrete file executor and `ScopedFileWriter`, verifies actual file bytes, reopens the database and file capability, proves verified replay does not overwrite a later edit, and rejects replay after grant revocation.
 
 The integrated test's authority and isolation snapshots are explicitly fixtures. These results prove SQL receipt persistence and real file effects; they do not prove canonical task authority, OS process-tree isolation, live Prime execution, or production deployment. ESLint passes for the adapter and test without warnings.
+
+## Independent PostgreSQL connection crash probe
+
+The manual script `scripts/acceptance/sql-receipt-recovery.ts` additionally passed
+against a newly created disposable PostgreSQL 18 container on 2026-09-30. It uses
+eight pool connections to race one reservation, then terminates the backend of a
+separate open authority transaction. The independently committed `applied` receipt
+survives that rollback and a recreated adapter cannot take ownership or reapply it.
+The probe creates and drops only its own random schema and accepts an explicit
+loopback URL. The authority transaction in this probe is deliberately inert: this
+proves receipt durability across another connection's crash, not canonical task
+admission. Never put the initial durable reservation solely inside a transaction
+that could roll back after an external effect.

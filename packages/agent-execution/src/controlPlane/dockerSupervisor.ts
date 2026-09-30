@@ -14,12 +14,15 @@ const fail = (message: string): ControlResult<never> => ({
 interface Inspection {
   Config: { Labels: Record<string, string> };
   Id: string;
+  Name: string;
   State: { Running: boolean; Pid: number; Status: string };
 }
 
 /** Trusted host configuration only. Workspace must be a dedicated credential-free
  * snapshot, never a control-plane checkout, home directory, or vault mount. */
 export interface DockerSupervisorOptions {
+  /** Persist this trusted run identity before launch to recover an unjournaled tree. */
+  containerName?: string;
   dockerPath?: string;
   /** Close mutation admission and await all broker effects, including during recovery. */
   drainActions: (treeId: string) => Promise<{ pendingActions: number }>;
@@ -60,9 +63,37 @@ export class DockerProcessTreeSupervisor implements ProcessTreeSupervisor {
     return info;
   }
 
+  /** Resolve only the exact persisted run name. A daemon/ownership error is not absence. */
+  async recover(): Promise<string | undefined> {
+    const name = this.options.containerName;
+    if (!name || !/^[a-z0-9][\w.-]{0,127}$/i.test(name)) throw new Error('Invalid recovery name');
+    let value: string;
+    try {
+      value = await this.command(['container', 'inspect', name]);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        'stderr' in error &&
+        typeof error.stderr === 'string' &&
+        error.stderr.trim() === `Error response from daemon: No such container: ${name}`
+      )
+        return undefined;
+      throw error;
+    }
+    const [candidate] = JSON.parse(value) as Inspection[];
+    const owned = await this.inspect(candidate.Id);
+    if (owned.Name !== `/${name}`) throw new Error('Recovery name changed');
+    return owned.Id;
+  }
+
   async launch(input: IsolatedLaunch): Promise<ControlResult<IsolationEvidence>> {
     let treeId: string | undefined;
     try {
+      if (
+        this.options.containerName !== undefined &&
+        !/^[a-z0-9][\w.-]{0,127}$/i.test(this.options.containerName)
+      )
+        return fail('Invalid container name');
       const memoryMiB = this.options.memoryMiB ?? 256;
       if (!Number.isSafeInteger(memoryMiB) || memoryMiB < 64 || memoryMiB > 4096) {
         return fail('Memory budget must be an integer from 64 to 4096 MiB');
@@ -89,6 +120,7 @@ export class DockerProcessTreeSupervisor implements ProcessTreeSupervisor {
         return fail('Dedicated workspace required');
       treeId = await this.command([
         'create',
+        ...(this.options.containerName ? ['--name', this.options.containerName] : []),
         '--interactive',
         '--network',
         'none',

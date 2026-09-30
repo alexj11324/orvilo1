@@ -15,6 +15,7 @@ import { useElectronStore } from '@/store/electron';
 import { desktopHotkeysSelectors } from '@/store/electron/selectors';
 import { type DesktopHotkeyItem } from '@/types/hotkey';
 
+import { desktopHotkeyDisplay } from './desktopHotkeyDisplay';
 import { hotkeyFormStyles } from './styles';
 
 const HotkeySetting = memo(() => {
@@ -67,10 +68,13 @@ const HotkeySetting = memo(() => {
         placeholder={t('hotkey.record')}
         resetValue={item.keys}
         texts={{ clear: t('hotkey.clearBinding') }}
-        value={hotkeys[item.id]}
+        value={desktopHotkeyDisplay(hotkeys[item.id] ?? '')}
         onChange={(value) => void updateHotkey(item.id, value)}
       />
     ),
+
+    // Named Form items inject their own value, so normalize that binding too.
+    getValueProps: (value: string) => ({ value: desktopHotkeyDisplay(value ?? '') }),
 
     label: t(`desktop.${item.id}.title`, { ns: 'hotkey' }),
     name: item.id,

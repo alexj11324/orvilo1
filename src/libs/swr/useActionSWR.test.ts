@@ -65,6 +65,21 @@ describe('useActionSWR', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it('propagates explicit action failures without replaying the fetcher', async () => {
+    const fetcher = vi.fn();
+    const error = new Error('action failed');
+    const { result } = renderHook(() => useActionSWR('action:explicit-failure', fetcher));
+    await act(async () => {
+      await expect(
+        result.current.mutate(Promise.reject(error), { revalidate: false }),
+      ).rejects.toBe(error);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('still lets a caller opt back into retry via config', async () => {
     const fetcher = vi
       .fn()

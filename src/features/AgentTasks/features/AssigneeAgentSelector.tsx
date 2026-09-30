@@ -33,7 +33,7 @@ interface AssigneeAgentSelectorProps {
    * through `task.handoff` — an execution-ownership transfer that fences
    * the incumbent's run. The user confirms the transfer first.
    */
-  onHandoff?: (agentId: string | null) => void;
+  onHandoff?: (agentId: string | null) => Promise<void>;
   taskIdentifier?: string;
   taskVisibility?: 'private' | 'public' | null;
 }

@@ -2009,6 +2009,7 @@
   "taskList.kanban.showColumn": "显示分组",
   "taskList.kanban.todo": "待处理",
   "taskList.kanban.triage": "待分流",
+  "taskList.kanban.viewAllInList": "在列表中查看全部（已显示 {{shown}}/{{total}}）",
   "taskList.milestoneFilter": "里程碑：{{name}}",
   "taskList.milestoneFilterClear": "清除里程碑筛选",
   "taskList.mine.assigned": "分配给我",

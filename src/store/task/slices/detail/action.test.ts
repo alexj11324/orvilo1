@@ -99,6 +99,41 @@ describe('TaskDetailSliceAction', () => {
   });
 
   describe('createTask', () => {
+    it('ignores another submit while creation is in flight and allows the next create', async () => {
+      let finish!: (value: any) => void;
+      vi.mocked(taskService.create)
+        .mockResolvedValue({ data: { identifier: 'T-duplicate' } } as any)
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finish = resolve;
+            }),
+        );
+      const first = useTaskStore.getState().createTask({ instruction: 'Same draft' });
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Same draft' }),
+      ).resolves.toBeNull();
+      expect(taskService.create).toHaveBeenCalledTimes(1);
+      expect(useTaskStore.getState().isCreatingTask).toBe(true);
+      finish({ data: { identifier: 'T-1' }, success: true });
+      await first;
+      vi.mocked(taskService.create).mockResolvedValueOnce({ data: { identifier: 'T-2' } } as any);
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Next draft' }),
+      ).resolves.toMatchObject({ identifier: 'T-2' });
+    });
+
+    it('allows retrying the same draft after creation fails', async () => {
+      vi.mocked(taskService.create).mockRejectedValueOnce(new Error('offline'));
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Retry draft' }),
+      ).rejects.toThrow('offline');
+      vi.mocked(taskService.create).mockResolvedValueOnce({ data: { identifier: 'T-1' } } as any);
+      await expect(
+        useTaskStore.getState().createTask({ instruction: 'Retry draft' }),
+      ).resolves.toMatchObject({ identifier: 'T-1' });
+    });
+
     it('should call service and return identifier', async () => {
       vi.mocked(taskService.create).mockResolvedValue({
         data: { identifier: 'T-1' },
@@ -644,6 +679,21 @@ describe('TaskDetailSliceAction', () => {
   });
 
   describe('handoffTask', () => {
+    it('reports and rejects a failed ownership lookup so confirmation can retry', async () => {
+      const error = new Error('offline');
+      vi.mocked(taskService.find).mockRejectedValue(error);
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow('offline');
+      expect(toast.error).toHaveBeenCalled();
+      expect(taskService.handoff).not.toHaveBeenCalled();
+    });
+
+    it('reports a missing task instead of silently resolving the transfer', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({ data: null } as any);
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow();
+      expect(toast.error).toHaveBeenCalled();
+      expect(taskService.handoff).not.toHaveBeenCalled();
+    });
+
     it('forwards the row id and domainRevision to taskService.handoff, then refreshes', async () => {
       useTaskStore.setState({
         taskDetailMap: {
@@ -688,13 +738,15 @@ describe('TaskDetailSliceAction', () => {
       );
     });
 
-    it('resolves without refreshing when the handoff CAS is rejected', async () => {
+    it('rejects without refreshing when the handoff CAS is rejected', async () => {
       vi.mocked(taskService.find).mockResolvedValue({
         data: { domainRevision: 3, id: 'task-uuid-1' },
       } as any);
       vi.mocked(taskService.handoff).mockRejectedValue(new Error('TASK_REVISION_CONFLICT'));
 
-      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).resolves.toBeUndefined();
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow(
+        'TASK_REVISION_CONFLICT',
+      );
       const { mutate } = await import('@/libs/swr');
       expect(mutate).not.toHaveBeenCalled();
     });

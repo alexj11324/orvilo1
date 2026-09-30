@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initialState';
 
+import { kanbanColumnPagingAction } from './kanbanBoardModel';
 import {
   buildKanbanColumnMap,
   buildKanbanColumns,
@@ -935,5 +936,16 @@ describe('taskStatusChoiceIsCurrent', () => {
     expect(choice.state).toBeUndefined();
     expect(taskStatusChoiceIsCurrent({}, choice, choice.column.key)).toBe(true);
     expect(taskStatusChoiceIsCurrent({}, choice, 'elsewhere')).toBe(false);
+  });
+});
+
+describe('column paging recovery', () => {
+  it('offers the list when an internal column reaches its server limit', () => {
+    expect(kanbanColumnPagingAction({ atLimit: true, external: false })).toBe('viewAll');
+    expect(kanbanColumnPagingAction({ atLimit: false, external: false })).toBe('loadMore');
+  });
+
+  it('does not cap externally paginated cursor boards', () => {
+    expect(kanbanColumnPagingAction({ atLimit: true, external: true })).toBe('loadMore');
   });
 });

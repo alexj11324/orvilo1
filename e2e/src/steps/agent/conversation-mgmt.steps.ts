@@ -199,10 +199,19 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     });
   }
 
-  await this.page.waitForURL(
-    (url) => url.pathname.startsWith(`${agentPath}/tpc_`) && url.pathname !== firstTopicPath,
-    { timeout: 30_000 },
-  );
+  try {
+    await this.page.waitForURL(
+      (url) => url.pathname.startsWith(`${agentPath}/tpc_`) && url.pathname !== firstTopicPath,
+      { timeout: 30_000 },
+    );
+  } catch (error) {
+    console.log('   📍 Second-topic route at failure:', {
+      firstTopicPath,
+      currentPath: new URL(this.page.url()).pathname,
+      topicCount: await this.page.locator('[data-testid="topic-item"]').count(),
+    });
+    throw error;
+  }
 
   // Confirm the second topic actually registered in the sidebar before the
   // scenario proceeds to click it. The sidebar is SWR-driven and only refetches

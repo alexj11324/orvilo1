@@ -28,6 +28,19 @@ describe('normalizeAsyncError', () => {
     expect(normalizeAsyncError({ status: 403 }).retryable).toBe(false);
   });
 
+  it('recognizes code-only authentication and permission errors', () => {
+    expect(normalizeAsyncError({ data: { code: 'UNAUTHORIZED' } })).toMatchObject({
+      status: 401,
+      retryable: false,
+    });
+    expect(normalizeAsyncError({ code: 'FORBIDDEN' })).toMatchObject({
+      status: 403,
+      retryable: false,
+    });
+    expect(isAutoRetryable({ data: { code: 'UNAUTHORIZED' } })).toBe(false);
+    expect(isAutoRetryable({ code: 'FORBIDDEN' })).toBe(false);
+  });
+
   it('honors an explicit non-retryable marker regardless of status', () => {
     expect(normalizeAsyncError({ meta: { shouldRetry: false }, status: 500 }).retryable).toBe(
       false,

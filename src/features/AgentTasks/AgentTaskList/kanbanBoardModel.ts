@@ -881,3 +881,11 @@ export const preserveKanbanColumnOrder = (
       .filter((key) => key in refreshed)
       .map((key) => [key, refreshed[key]!]),
   );
+
+export const kanbanColumnPagingAction = ({
+  atLimit,
+  external,
+}: {
+  atLimit: boolean;
+  external: boolean;
+}): 'loadMore' | 'viewAll' => (atLimit && !external ? 'viewAll' : 'loadMore');

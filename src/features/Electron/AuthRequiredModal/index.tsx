@@ -187,7 +187,8 @@ const AuthRequiredModal = memo(() => {
       // live" from "never signed in" — boot-time 401 probes fire inside this
       // window. Drop them (same gate the broadcast path above already uses);
       // a genuinely expired session keeps emitting 401s after init resolves.
-      if (!isInitRemoteServerConfig) {
+      // A deliberate sign-in must remain available even if config loading failed.
+      if (!isInitRemoteServerConfig && source !== 'user-action') {
         log(
           'session-auth-expired ignored (remote server config not initialized). source=%s reason=%s',
           source,
@@ -202,7 +203,7 @@ const AuthRequiredModal = memo(() => {
       // to the login surface instead of an expiry modal. `/onboarding`
       // renders LoginStep on signed-out desktop; the current location is
       // threaded as the post-login callback.
-      if (!dataSyncConfig?.active) {
+      if (!isInitRemoteServerConfig || !dataSyncConfig?.active) {
         log(
           'session-auth-expired with no live session — redirecting to login. source=%s reason=%s',
           source,

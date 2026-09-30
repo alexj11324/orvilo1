@@ -38,10 +38,7 @@ const ContextList = memo(() => {
   if (inputFilesList.length === 0 && !hasSelections) return null;
 
   return (
-    <ScrollArea
-      className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}
-      orientation={'horizontal'}
-    >
+    <ScrollArea className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}>
       <div className="flex flex-row gap-1 px-0 flex-wrap" style={{ paddingBlockStart: 8 }}>
         {selectionList.map((item) =>
           item.source === 'element' ? (

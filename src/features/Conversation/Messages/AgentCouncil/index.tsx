@@ -5,7 +5,7 @@ import isEqual from 'fast-deep-equal';
 import { BotIcon, Columns2, Layers } from 'lucide-react';
 import { memo, useState } from 'react';
 
-import { Tabs } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WideScreenContainer from '@/features/WideScreenContainer';
 
 import { dataSelectors, useConversationStore } from '../../store';
@@ -42,26 +42,12 @@ const AgentCouncilMessage = memo<AgentCouncilMessageProps>(({ id }) => {
                     label: null,
                   }))
                   .map((item) => (
-                    <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                    <TabsTrigger key={item.key} value={item.key}>
                       {item.icon}
                       {item.label}
                     </TabsTrigger>
                   ))}
               </TabsList>
-              {(
-                members.map((_, idx) => ({
-                  icon: <BotIcon size={14} />,
-                  key: String(idx),
-                  label: null,
-                })) as { children?: React.ReactNode; key: string }[]
-              ).map(
-                (item) =>
-                  item.children != null && (
-                    <TabsContent key={item.key} value={item.key}>
-                      {item.children}
-                    </TabsContent>
-                  ),
-              )}
             </Tabs>
           ) : (
             <div />

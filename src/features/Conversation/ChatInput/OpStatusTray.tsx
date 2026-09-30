@@ -202,8 +202,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 const ActivityGlyph = () => (
   <svg aria-hidden className={styles.activityGlyph} viewBox="0 0 16 16">
-    {createElement(circle, { className: styles.glyphOrbit, cx: '8', cy: '8', r: '6.1' })}
-    {createElement(circle, { className: styles.glyphCore, cx: '8', cy: '8', r: '2.7' })}
+    {createElement('circle', { className: styles.glyphOrbit, cx: '8', cy: '8', r: '6.1' })}
+    {createElement('circle', { className: styles.glyphCore, cx: '8', cy: '8', r: '2.7' })}
   </svg>
 );
 

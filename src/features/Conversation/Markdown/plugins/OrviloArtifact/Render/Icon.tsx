@@ -30,7 +30,7 @@ const ArtifactIcon = memo<ArtifactProps>(({ type }) => {
       return <GlobeIcon size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
     }
     default: {
-      return <OrigamiIcon color={cssVar.purple} size={{ size: SIZE, strokeWidth: 1.2 }} />;
+      return <OrigamiIcon color={cssVar.purple} size={SIZE} strokeWidth={1.2} />;
     }
   }
 });

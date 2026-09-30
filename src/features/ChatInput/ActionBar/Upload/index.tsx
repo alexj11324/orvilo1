@@ -224,7 +224,7 @@ const FileUpload = memo(() => {
       open={dropdownOpen}
       showTooltip={false}
       title={t('upload.action.tooltip')}
-      trigger={'both'}
+      trigger={['click', 'hover']}
       dropdown={{
         maxHeight: 500,
         maxWidth: 480,

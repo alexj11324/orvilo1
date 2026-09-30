@@ -4,7 +4,7 @@ import Picker from '@emoji-mart/react';
 import { createStaticStyles, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { PlusIcon, SmilePlus } from 'lucide-react';
-import { type FC, memo, type ReactNode, useState } from 'react';
+import { type FC, isValidElement, memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
@@ -121,7 +121,9 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
-          trigger || (
+          isValidElement(trigger) ? (
+            trigger
+          ) : (
             <span {...(open ? { 'data-popup-open': '' } : {})}>
               <TooltipProvider>
                 <Tooltip>

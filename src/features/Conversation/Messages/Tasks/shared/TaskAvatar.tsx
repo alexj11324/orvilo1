@@ -7,7 +7,7 @@ const TaskAvatar: FC<PropsWithChildren> = ({ children }) => {
   return (
     <div className="flex flex-col" style={{flex: 'none', height: 28, width: 28,  position: 'relative' }}>
       {children}
-      <div className="flex flex-col items-center justify-center" style={{flex: 'none', height: 16, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 16, 
+      <div className="flex flex-col items-center justify-center" style={{flex: 'none', height: 16, border: `1px solid ${cssVar.colorBorder}`,  width: 16, 
           borderRadius: 4,
           position: 'absolute',
           right: -4,

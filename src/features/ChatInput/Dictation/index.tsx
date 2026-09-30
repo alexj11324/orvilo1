@@ -176,7 +176,7 @@ const Dictation = memo(() => {
   }, [client, setActiveAudioInputMode]);
 
   const handleStart = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
+    (event: MouseEvent<HTMLElement>) => {
       preserveFocusOnActivation(event);
       start();
     },
@@ -184,7 +184,7 @@ const Dictation = memo(() => {
   );
 
   const handleStop = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
+    (event: MouseEvent<HTMLElement>) => {
       preserveFocusOnActivation(event);
       void client?.stop();
     },
@@ -192,7 +192,7 @@ const Dictation = memo(() => {
   );
 
   const handleCancel = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
+    (event: MouseEvent<HTMLElement>) => {
       preserveFocusOnActivation(event);
       void client?.cancel();
     },
@@ -200,7 +200,7 @@ const Dictation = memo(() => {
   );
 
   const handleDismiss = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
+    (event: MouseEvent<HTMLElement>) => {
       preserveFocusOnActivation(event);
       dismiss();
     },

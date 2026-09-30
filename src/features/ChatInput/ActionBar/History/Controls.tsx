@@ -30,7 +30,7 @@ const HistoryCountSlider = ({
       min={0}
       step={1}
       value={value}
-      onValueChange={(v) => onChange?.(v)}
+      onValueChange={(v) => onChange?.(Array.isArray(v) ? v[0] : v)}
     />
     <InputNumber
       disabled={disabled}

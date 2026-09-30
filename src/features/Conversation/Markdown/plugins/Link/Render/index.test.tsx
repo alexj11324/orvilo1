@@ -3,6 +3,7 @@
  */
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import { fireEvent, render } from '@testing-library/react';
+import { type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Render from './index';

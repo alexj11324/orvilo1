@@ -1,8 +1,7 @@
-import { type FormInstance } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { LucidePlus, LucideTrash } from 'lucide-react';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
@@ -75,8 +74,6 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
   const { t } = useTranslation(['tool', 'common']);
   const [form] = Form.useForm();
 
-  const formRef = useRef<FormInstance>(null);
-
   useEffect(() => {
     form.setFieldsValue({ items: recordToFormList(initialValue) });
   }, [initialValue, form]);
@@ -118,7 +115,6 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
       className={styles.form}
       form={form}
       initialValues={{ items: recordToFormList(initialValue) }}
-      ref={formRef}
     >
       <div className={cn('flex gap-2', styles.title)}>
         <div className="flex flex-col flex-1">key</div>

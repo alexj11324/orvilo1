@@ -99,8 +99,7 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
       >
         {canScrollLeft && (
           <Button
-            className={cx(styles.button, styles.leftButton, 'scroll-button')}
-            className="rounded-full"
+            className={cx(styles.button, styles.leftButton, 'scroll-button', 'rounded-full')}
             variant="outline"
             onClick={() => handleScroll('left')}
           >
@@ -119,8 +118,7 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
         </ScrollAreaPrimitive.Root>
         {canScrollRight && (
           <Button
-            className={cx(styles.button, styles.rightButton, 'scroll-button')}
-            className="rounded-full"
+            className={cx(styles.button, styles.rightButton, 'scroll-button', 'rounded-full')}
             variant="outline"
             onClick={() => handleScroll('right')}
           >

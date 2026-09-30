@@ -1,5 +1,4 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
-import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { getWorkingDirEffectivePath } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -62,7 +61,6 @@ import { useDeferredMount } from '@/hooks/useDeferredMount';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
-import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -687,7 +685,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
     })
     .filter((tab): tab is SidebarTabDescriptor => Boolean(tab));
   const createTabContextMenuItems = useCallback(
-    (tab: string, index: number): NativeContextMenuItem[] => {
+    (tab: string, index: number): DropdownItem[] => {
       const pinned = pinnedTabsSet.has(tab);
       const leftTabs = openedTabs.slice(0, index);
       const rightTabs = openedTabs.slice(index + 1);
@@ -698,18 +696,17 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
         ...(!isBrowserTab(tab)
           ? [
               {
-                icon: pinned ? PinOffIcon : PinIcon,
+                icon: pinned ? <PinOffIcon size={14} /> : <PinIcon size={14} />,
                 key: pinned ? 'unpin' : 'pin',
                 label: t(pinned ? 'workingPanel.tabs.unpin' : 'workingPanel.tabs.pin'),
                 onClick: () => (pinned ? unpinTab(tab) : pinTab(tab)),
-                sfSymbol: (pinned ? 'pin.slash' : 'pin') satisfies SFSymbol,
-              } as NativeContextMenuItem,
+              },
               { type: 'divider' as const },
             ]
           : []),
         {
           disabled: pinned,
-          icon: XIcon,
+          icon: <XIcon size={14} />,
           key: 'close',
           label: t('workingPanel.tabs.close'),
           onClick: () => closeTab(tab),
@@ -1028,7 +1025,9 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
             />
           </div>
           <div className={cn('flex flex-col', styles.body)} style={{ width: '100%' }}>
-            {!contentReady && <SkeletonList paddingBlock={8} paddingInline={8} rows={6} />}
+            {!contentReady && (
+              <SkeletonList rows={6} style={{ paddingBlock: 8, paddingInline: 8 }} />
+            )}
             {contentReady && (
               <>
                 {commentsAvailable && (

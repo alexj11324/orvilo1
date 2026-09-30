@@ -42,7 +42,7 @@ const CouncilList = memo<CouncilListProps>(({ members, displayMode, activeTab })
     default: {
       if (members.length < 2) {
         return (
-          <WideScreenContainer gap={16}>
+          <WideScreenContainer className="gap-4">
             {members.map((member, idx) => {
               if (!member) return null;
               return <CouncilMember index={idx} item={member} key={member.id} />;
@@ -79,7 +79,7 @@ const CouncilList = memo<CouncilListProps>(({ members, displayMode, activeTab })
                   </div>
                   {idx < members?.length - 1 && (
                     <Separator
-                      dashed
+                      className={'bg-transparent border-l border-dashed'}
                       orientation={'vertical'}
                       style={{ height: 'unset', marginInline: 16 }}
                     />

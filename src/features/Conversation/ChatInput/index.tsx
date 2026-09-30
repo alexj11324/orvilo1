@@ -2,7 +2,7 @@
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { type VoiceMessageRecording } from '@orvilo/types';
-import { Info } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

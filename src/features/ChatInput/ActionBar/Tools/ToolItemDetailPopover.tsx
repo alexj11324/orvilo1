@@ -2,6 +2,8 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
+import { Badge } from '@/components/reui/badge';
+
 const styles = createStaticStyles(({ css }) => ({
   container: css`
     width: 320px;

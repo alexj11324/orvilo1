@@ -70,7 +70,7 @@ const SelectToHereButton = memo(() => {
   return (
     <div className={cn('flex items-center gap-3 px-4', styles.wrap)} ref={wrapRef}>
       <div className={styles.line} />
-      <Button className={styles.button} className="rounded-full" size="sm" onClick={handleClick}>
+      <Button className={cn(styles.button, 'rounded-full')} size="sm" onClick={handleClick}>
         <ArrowDownToLine /> {t('messageForward.bar.selectToHere')}
       </Button>
       <div className={styles.line} />

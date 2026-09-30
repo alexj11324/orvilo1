@@ -1,6 +1,7 @@
 'use client';
 
 
+import { cssVar } from 'antd-style';
 import { memo, useMemo, useState } from 'react';
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';

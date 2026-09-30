@@ -1,6 +1,6 @@
 'use client';
 
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';

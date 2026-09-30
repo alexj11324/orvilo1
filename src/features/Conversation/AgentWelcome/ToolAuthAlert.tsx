@@ -471,7 +471,10 @@ const ToolAuthAlert = memo(() => {
         {
           <>
             {t('toolAuth.hint')}
-            <Separator dashed style={{ marginBlock: 12 }} />
+            <Separator
+              className={'bg-transparent border-t border-dashed'}
+              style={{ marginBlock: 12 }}
+            />
             <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
               {pendingAuthTools.map((tool) => {
                 if (tool.authType === 'composio') {

@@ -64,11 +64,7 @@ const ChatInputNotice = memo(() => {
   if (!notice) return null;
 
   return (
-    <Alert
-      className={styles.alert}
-      style={alertStyle}
-      variant={notice.type === 'error' ? 'destructive' : notice.type}
-    >
+    <Alert className={styles.alert} style={alertStyle} variant={notice.type}>
       <AlertTitle className={styles.title}>{t(notice.key)}</AlertTitle>
     </Alert>
   );

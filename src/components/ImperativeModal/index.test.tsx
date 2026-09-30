@@ -1,9 +1,11 @@
-import { Input, MotionProvider } from '@lobehub/ui';
+import { MotionProvider } from '@lobehub/ui';
 import { ModalHost } from '@lobehub/ui/base-ui';
 import { act, render, screen } from '@testing-library/react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { Input } from '@/components/ui/input';
 
 import ImperativeModal from '.';
 

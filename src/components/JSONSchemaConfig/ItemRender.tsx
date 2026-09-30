@@ -1,7 +1,9 @@
-import { Input, InputNumber, InputPassword } from '@lobehub/ui';
 import { Select, Slider, Switch } from '@lobehub/ui/base-ui';
 import { type JSONSchema7Type } from 'json-schema';
 import { memo } from 'react';
+
+import { NumberField } from '@/components/reui/number-field';
+import { Input } from '@/components/ui/input';
 
 interface JSONSchemaItemRenderProps {
   defaultValue?: any;
@@ -21,7 +23,7 @@ const JSONSchemaItemRender = memo<JSONSchemaItemRenderProps>(
       case 'string': {
         switch (format) {
           case 'password': {
-            return <InputPassword {...props} autoComplete={'new-password'} />;
+            return <Input {...props} autoComplete={'new-password'} type={'password'} />;
           }
         }
 
@@ -42,7 +44,7 @@ const JSONSchemaItemRender = memo<JSONSchemaItemRenderProps>(
       case 'number': {
         if (typeof minimum === 'number' || typeof maximum === 'number')
           return <Slider max={maximum} min={minimum} {...props} />;
-        return <InputNumber {...props} />;
+        return <NumberField {...props} />;
       }
       case 'boolean': {
         return <Switch {...props} />;

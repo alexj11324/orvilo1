@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button, createModal, type ModalInstance, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -44,30 +44,23 @@ const GuideModalContent = memo<GuideModalContentProps>(
     };
 
     return (
-      <Flexbox className={styles.body}>
+      <div className={cn('flex', styles.body)}>
         {cover}
-        <Flexbox gap={4} padding={16}>
+        <div className={'flex flex-col gap-1 p-4'}>
           <h3>{title}</h3>
           <p>{desc}</p>
-        </Flexbox>
+        </div>
         {(okText || cancelText) && (
-          <Flexbox
-            horizontal
-            gap={8}
-            justify={'flex-end'}
-            paddingBlock={16}
-            paddingInline={16}
-            style={{ paddingTop: 0 }}
-          >
+          <div className={'flex gap-2 justify-end py-4 px-4'} style={{ paddingTop: 0 }}>
             {cancelText ? <Button onClick={handleCancel}>{cancelText}</Button> : null}
             {okText ? (
               <Button type={'primary'} onClick={handleOk}>
                 {okText}
               </Button>
             ) : null}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

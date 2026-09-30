@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 
 /** Avoid importing the skeleton barrel from a component it re-exports. */
@@ -15,18 +14,18 @@ const ConversationListSkeleton = () => (
     padding={12}
     style={{ marginTop: 24 }}
   >
-    <Flexbox gap={8} style={{ paddingLeft: '25%' }} width={'100%'}>
+    <div className={'flex flex-col gap-2'} style={{ paddingLeft: '25%', width: '100%' }}>
       <Skeleton.Text rows={3} style={{ alignItems: 'flex-end' }} />
-    </Flexbox>
+    </div>
     {Array.from({ length: 2 }).map((_, index) => (
-      <Flexbox gap={8} key={index} width={'100%'}>
+      <div className={'flex flex-col gap-2'} key={index} style={{ width: '100%' }}>
         <ArticleSkeleton avatar={28} rows={0} />
         <Skeleton.Text />
-        <Flexbox horizontal gap={8}>
+        <div className={'flex gap-2'}>
           <Skeleton height={22} radius={4} width={48} />
           <Skeleton height={22} radius={4} width={48} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     ))}
   </ConversationSkeletonContainer>
 );

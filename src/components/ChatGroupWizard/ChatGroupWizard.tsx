@@ -1,15 +1,18 @@
 'use client';
 
-import { Empty, Flexbox, List, SearchBar, stopPropagation, Tooltip } from '@lobehub/ui';
 import { Accordion, Avatar, Button, Checkbox, Switch, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { omit } from 'es-toolkit/compat';
-import { Users } from 'lucide-react';
+import { SearchIcon, Users } from 'lucide-react';
 import { type ChangeEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import GroupAvatar from '@/features/GroupAvatar';
 import { useSessionStore } from '@/store/session';
@@ -30,11 +33,11 @@ const TemplateItem = memo<{
 
   return (
     <div className={cx(styles.listItem)} onClick={() => onToggle(template.id)}>
-      <Flexbox horizontal align="center" gap={12} width="100%">
+      <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
           onChange={() => onToggle(template.id)}
-          onClick={stopPropagation}
+          onClick={(e) => e.stopPropagation()}
         />
         <GroupAvatar
           size={40}
@@ -45,12 +48,12 @@ const TemplateItem = memo<{
               background: member.backgroundColor || undefined,
             }))}
         />
-        <Flexbox flex={1} gap={2}>
+        <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
           <Text className={styles.title}>{template.title}</Text>
           <Text ellipsis className={styles.description}>
             {template.description}
           </Text>
-          <Flexbox horizontal align="center" gap={4}>
+          <div className={'flex gap-1 items-center'}>
             <Users size={11} style={{ color: '#999' }} />
             <Text style={{ fontSize: 11 }} type="secondary">
               {t('groupWizard.memberCount', {
@@ -58,9 +61,9 @@ const TemplateItem = memo<{
                   .length,
               })}
             </Text>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
     </div>
   );
 });
@@ -83,22 +86,22 @@ const ExistingMemberItem = memo<{
 
   return (
     <div className={cx(styles.listItem)} onClick={() => onToggle(agentId)}>
-      <Flexbox horizontal align="center" gap={12} width="100%">
+      <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
           onChange={() => onToggle(agentId)}
-          onClick={stopPropagation}
+          onClick={(e) => e.stopPropagation()}
         />
         <Avatar avatar={avatar} background={avatarBackground} size={40} />
-        <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+        <div className={'flex flex-1 flex-col'} style={{ gap: 2, minWidth: 0 }}>
           <Text className={styles.title}>{title}</Text>
           {description && (
             <Text ellipsis className={styles.description}>
               {description}
             </Text>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </div>
   );
 });
@@ -420,10 +423,13 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
             ),
             avatar: <Avatar avatar={avatar} background={avatarBackground} size={40} />,
             description: description ? (
-              <Tooltip title={description}>
-                <Text className={memberDescriptionClass} ellipsis={{ rows: 1 }}>
-                  {description}
-                </Text>
+              <Tooltip>
+                <TooltipTrigger render={<span />}>
+                  <Text className={memberDescriptionClass} ellipsis={{ rows: 1 }}>
+                    {description}
+                  </Text>
+                </TooltipTrigger>
+                <TooltipContent>{description}</TooltipContent>
               </Tooltip>
             ) : null,
             key: agentId,
@@ -494,7 +500,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
         title={t('groupWizard.title')}
         width={900}
         footer={
-          <Flexbox horizontal gap={8} justify="end">
+          <div className={'flex gap-2 justify-end'}>
             <Button onClick={handleCancel}>{t('cancel', { ns: 'common' })}</Button>
             <Button
               disabled={confirmDisabled}
@@ -504,21 +510,32 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
             >
               {t('groupWizard.createGroup')}
             </Button>
-          </Flexbox>
+          </div>
         }
         onCancel={handleCancel}
       >
-        <Flexbox horizontal className={styles.container}>
-          <Flexbox className={styles.leftColumn} flex={1} gap={12}>
-            <SearchBar
-              allowClear
-              placeholder={t('memberSelection.searchAgents')}
+        <div className={cn('flex', styles.container)}>
+          <div className={cn('flex flex-col gap-3 flex-1', styles.leftColumn)}>
+            <div
+              className={'relative'}
               style={{ margin: `${cssVar.paddingSM} ${cssVar.paddingSM} 0 ${cssVar.paddingSM}` }}
-              value={inputValue}
-              variant="filled"
-              onChange={handleSearchChange}
-            />
-            <Flexbox flex={1} style={{ overflowY: 'auto', padding: `0 ${cssVar.paddingSM}` }}>
+            >
+              <SearchIcon
+                className={
+                  'text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2'
+                }
+              />
+              <Input
+                className={'pl-8'}
+                placeholder={t('memberSelection.searchAgents')}
+                value={inputValue}
+                onChange={handleSearchChange}
+              />
+            </div>
+            <div
+              className={'flex flex-1 flex-col'}
+              style={{ overflowY: 'auto', padding: `0 ${cssVar.paddingSM}` }}
+            >
               <Accordion
                 gap={12}
                 indicatorPlacement="end"
@@ -529,18 +546,20 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                   {
                     children:
                       filteredTemplates.length === 0 ? (
-                        <Empty
-                          descriptionProps={{ fontSize: 14 }}
-                          icon={Users}
-                          style={{ maxWidth: 400 }}
-                          description={
-                            searchTerm
-                              ? t('groupWizard.noMatchingTemplates')
-                              : t('groupWizard.noTemplates')
-                          }
-                        />
+                        <Empty style={{ maxWidth: 400 }}>
+                          <EmptyHeader>
+                            <EmptyMedia variant={'icon'}>
+                              <Users />
+                            </EmptyMedia>
+                            <EmptyDescription style={{ fontSize: 14 }}>
+                              {searchTerm
+                                ? t('groupWizard.noMatchingTemplates')
+                                : t('groupWizard.noTemplates')}
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
                       ) : (
-                        <Flexbox gap={4}>
+                        <div className={'flex flex-col gap-1'}>
                           {filteredTemplates.map((template) => (
                             <TemplateItem
                               cx={cx}
@@ -551,7 +570,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                               onToggle={handleTemplateToggle}
                             />
                           ))}
-                        </Flexbox>
+                        </div>
                       ),
                     key: 'templates',
                     title: t('groupWizard.useTemplate'),
@@ -559,18 +578,20 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                   {
                     children:
                       filteredAgents.length === 0 ? (
-                        <Empty
-                          descriptionProps={{ fontSize: 14 }}
-                          icon={Users}
-                          style={{ maxWidth: 400 }}
-                          description={
-                            searchTerm
-                              ? t('noMatchingAgents', { ns: 'chat' })
-                              : t('noAvailableAgents', { ns: 'chat' })
-                          }
-                        />
+                        <Empty style={{ maxWidth: 400 }}>
+                          <EmptyHeader>
+                            <EmptyMedia variant={'icon'}>
+                              <Users />
+                            </EmptyMedia>
+                            <EmptyDescription style={{ fontSize: 14 }}>
+                              {searchTerm
+                                ? t('noMatchingAgents', { ns: 'chat' })
+                                : t('noAvailableAgents', { ns: 'chat' })}
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
                       ) : (
-                        <Flexbox gap={4}>
+                        <div className={'flex flex-col gap-1'}>
                           {filteredAgents.map((agent) => (
                             <ExistingMemberItem
                               agent={agent}
@@ -581,7 +602,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                               onToggle={handleAgentToggle}
                             />
                           ))}
-                        </Flexbox>
+                        </div>
                       ),
                     key: 'agents',
                     title: t('groupWizard.existingMembers'),
@@ -592,13 +613,13 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                 }}
                 onValueChange={handlePanelChange}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
 
-          <Flexbox className={styles.rightColumn} flex={1}>
-            <Flexbox flex={1} gap={16} style={{ overflowY: 'auto' }}>
-              <Flexbox horizontal align="center" className={styles.hostCard} gap={12}>
-                <Flexbox flex={1} gap={2}>
+          <div className={cn('flex flex-1 flex-col', styles.rightColumn)}>
+            <div className={'flex flex-col gap-4 flex-1'} style={{ overflowY: 'auto' }}>
+              <div className={cn('flex gap-3 items-center', styles.hostCard)}>
+                <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
                   <Text
                     style={{ fontSize: 14, fontWeight: 500 }}
                     type={isHostRemoved ? 'secondary' : undefined}
@@ -611,81 +632,117 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                   >
                     {t('groupWizard.host.description')}
                   </Text>
-                </Flexbox>
-                <Flexbox horizontal align="center" gap={12}>
-                  <Tooltip title={t('groupWizard.host.tooltip')}>
-                    <Switch
-                      checked={!isHostRemoved}
-                      size="small"
-                      onChange={(checked) => handleHostToggle(checked)}
-                    />
+                </div>
+                <div className={'flex gap-3 items-center'}>
+                  <Tooltip>
+                    <TooltipTrigger render={<span />}>
+                      <Switch
+                        checked={!isHostRemoved}
+                        size="small"
+                        onChange={(checked) => handleHostToggle(checked)}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>{t('groupWizard.host.tooltip')}</TooltipContent>
                   </Tooltip>
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
 
-              <Flexbox style={{ padding: `0 ${cssVar.paddingSM}` }}>
+              <div className={'flex flex-col'} style={{ padding: `0 ${cssVar.paddingSM}` }}>
                 {selectedTemplate ? (
                   templateMemberItems.length > 0 ? (
-                    <List
-                      items={templateMemberItems.map((member) => ({
-                        actions: (
-                          <Switch
-                            checked={!member.isRemoved}
-                            size="small"
-                            onChange={(checked) =>
-                              handleToggleMember(selectedTemplate, member.title, checked)
-                            }
-                          />
-                        ),
-                        avatar: (
-                          <Avatar
-                            avatar={member.avatar}
-                            background={member.backgroundColor}
-                            size={40}
-                          />
-                        ),
-                        description: member.systemRole ? (
-                          <Tooltip title={member.systemRole}>
-                            <Text
-                              className={memberDescriptionClass}
-                              ellipsis={{ rows: 1 }}
-                              type={member.isRemoved ? 'secondary' : undefined}
-                            >
-                              {member.systemRole}
+                    <div className={'flex w-full flex-col'}>
+                      {templateMemberItems
+                        .map((member) => ({
+                          actions: (
+                            <Switch
+                              checked={!member.isRemoved}
+                              size="small"
+                              onChange={(checked) =>
+                                handleToggleMember(selectedTemplate, member.title, checked)
+                              }
+                            />
+                          ),
+                          avatar: (
+                            <Avatar
+                              avatar={member.avatar}
+                              background={member.backgroundColor}
+                              size={40}
+                            />
+                          ),
+                          description: member.systemRole ? (
+                            <Tooltip>
+                              <TooltipTrigger render={<span />}>
+                                <Text
+                                  className={memberDescriptionClass}
+                                  ellipsis={{ rows: 1 }}
+                                  type={member.isRemoved ? 'secondary' : undefined}
+                                >
+                                  {member.systemRole}
+                                </Text>
+                              </TooltipTrigger>
+                              <TooltipContent>{member.systemRole}</TooltipContent>
+                            </Tooltip>
+                          ) : null,
+                          key: member.key,
+                          showAction: true,
+                          title: (
+                            <Text type={member.isRemoved ? 'secondary' : undefined}>
+                              {member.title}
                             </Text>
-                          </Tooltip>
-                        ) : null,
-                        key: member.key,
-                        showAction: true,
-                        title: (
-                          <Text type={member.isRemoved ? 'secondary' : undefined}>
-                            {member.title}
-                          </Text>
-                        ),
-                      }))}
-                    />
+                          ),
+                        }))
+                        .map((item) => (
+                          <div className={'flex items-center gap-3 py-2'} key={item.key}>
+                            {item.avatar}
+                            <div className={'flex flex-1 flex-col'}>
+                              {item.title}
+                              {item.description}
+                            </div>
+                            {item.showAction !== false && item.actions}
+                          </div>
+                        ))}
+                    </div>
                   ) : (
-                    <Empty
-                      description={t('groupWizard.noTemplateMembers')}
-                      descriptionProps={{ fontSize: 14 }}
-                      icon={Users}
-                      style={{ maxWidth: 400 }}
-                    />
+                    <Empty style={{ maxWidth: 400 }}>
+                      <EmptyHeader>
+                        <EmptyMedia variant={'icon'}>
+                          <Users />
+                        </EmptyMedia>
+                        <EmptyDescription style={{ fontSize: 14 }}>
+                          {t('groupWizard.noTemplateMembers')}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   )
                 ) : selectedAgentListItems.length > 0 ? (
-                  <List items={selectedAgentListItems} />
+                  <div className={'flex w-full flex-col'}>
+                    {selectedAgentListItems.map((item) => (
+                      <div className={'flex items-center gap-3 py-2'} key={item.key}>
+                        {item.avatar}
+                        <div className={'flex flex-1 flex-col'}>
+                          {item.title}
+                          {item.description}
+                        </div>
+                        {item.showAction !== false && item.actions}
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <Empty
-                    description={t('memberSelection.noSelectedAgents')}
-                    descriptionProps={{ fontSize: 14 }}
-                    icon={Users}
-                    style={{ maxWidth: 400 }}
-                  />
+                  <Empty style={{ maxWidth: 400 }}>
+                    <EmptyHeader>
+                      <EmptyMedia variant={'icon'}>
+                        <Users />
+                      </EmptyMedia>
+                      <EmptyDescription style={{ fontSize: 14 }}>
+                        {t('memberSelection.noSelectedAgents')}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 )}
-              </Flexbox>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+              </div>
+            </div>
+          </div>
+        </div>
       </ImperativeModal>
     );
   },

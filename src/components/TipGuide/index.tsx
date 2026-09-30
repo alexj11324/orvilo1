@@ -1,8 +1,6 @@
-import { Flexbox, Popover } from '@lobehub/ui';
+import { PreviewCard } from '@base-ui/react/preview-card';
 import { ActionIcon } from '@lobehub/ui/base-ui';
-import { type TooltipProps } from 'antd';
-import { ConfigProvider } from 'antd';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { type CSSProperties, type FC, type ReactNode } from 'react';
 
@@ -68,7 +66,7 @@ export interface TipGuideProps {
   /**
    * Tooltip placement, defaults to bottom
    */
-  placement?: TooltipProps['placement'];
+  placement?: 'bottom' | 'left' | 'right' | 'top';
   /**
    * style
    */
@@ -91,37 +89,22 @@ const TipGuide: FC<TipGuideProps> = ({
   open,
   onOpenChange: setOpen,
 }) => {
-  return (
-    <ConfigProvider
-      theme={{
-        components: {
-          Badge: { fontSize: 12, lineHeight: 1 },
-          Button: { colorPrimary: cssVar.blue7 },
-          Checkbox: {
-            colorPrimary: cssVar.blue7,
-            colorText: cssVar.colorTextLightSolid,
-          },
-          Popover: { colorText: cssVar.colorTextLightSolid },
-        },
-      }}
-    >
-      {open ? (
-        <div className={styles.container}>
-          <div
-            style={{
-              marginTop: offsetY,
-            }}
-          >
-            <Popover
-              arrow={true}
-              open={open}
-              placement={placement}
-              trigger="hover"
-              classNames={{
-                root: cx(className, styles.overlay),
-              }}
-              content={
-                <Flexbox horizontal gap={24} style={{ userSelect: 'none' }}>
+  return open ? (
+    <div className={cx(styles.container, className)} style={style}>
+      <div
+        style={{
+          marginTop: offsetY,
+        }}
+      >
+        <PreviewCard.Root defaultOpen={open} open={open} onOpenChange={setOpen}>
+          <PreviewCard.Trigger render={<span />}>{children}</PreviewCard.Trigger>
+          <PreviewCard.Portal>
+            <PreviewCard.Positioner side={placement} sideOffset={4}>
+              <PreviewCard.Popup
+                className={styles.overlay}
+                style={{ maxWidth, userSelect: 'none', zIndex: 1000 }}
+              >
+                <div className={'flex gap-6'}>
                   <div>{title}</div>
                   <ActionIcon
                     className={styles.close}
@@ -131,20 +114,15 @@ const TipGuide: FC<TipGuideProps> = ({
                       setOpen(false);
                     }}
                   />
-                </Flexbox>
-              }
-              styles={{
-                root: { maxWidth, zIndex: 1000, ...style },
-              }}
-            >
-              {children}
-            </Popover>
-          </div>
-        </div>
-      ) : (
-        children
-      )}
-    </ConfigProvider>
+                </div>
+              </PreviewCard.Popup>
+            </PreviewCard.Positioner>
+          </PreviewCard.Portal>
+        </PreviewCard.Root>
+      </div>
+    </div>
+  ) : (
+    children
   );
 };
 

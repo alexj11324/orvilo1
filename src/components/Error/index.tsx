@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox, FluentEmoji } from '@lobehub/ui';
 import { Accordion, Button } from '@lobehub/ui/base-ui';
 import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +24,10 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
   const isExpanded = expandedKeys.includes('stack');
 
   return (
-    <Flexbox align={'center'} justify={'center'} style={{ minHeight: '100dvh', width: '100%' }}>
+    <div
+      className={'flex flex-col items-center justify-center'}
+      style={{ minHeight: '100dvh', width: '100%' }}
+    >
       <h1
         style={{
           filter: 'blur(8px)',
@@ -39,19 +41,19 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
       >
         ERROR
       </h1>
-      <FluentEmoji emoji={'🤧'} size={64} />
+      <span style={{ fontSize: 64, lineHeight: 1 }}>🤧</span>
       <h2 style={{ fontWeight: 'bold', marginTop: '1em', textAlign: 'center' }}>
         {t('error.title')}
       </h2>
       <p style={{ marginBottom: '2em' }}>{t('error.desc')}</p>
-      <Flexbox horizontal gap={12} style={{ marginBottom: '2em' }}>
+      <div className={'flex gap-3'} style={{ marginBottom: '2em' }}>
         <Button onClick={() => window.location.reload()}>{t('error.retry')}</Button>
         <Button type={'primary'} onClick={() => (window.location.href = resetPath)}>
           {t('error.backHome')}
         </Button>
-      </Flexbox>
+      </div>
       {hasStack && (
-        <Block
+        <div
           variant={isExpanded ? 'outlined' : 'filled'}
           style={{
             marginBottom: '1em',
@@ -80,9 +82,9 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
             ]}
             onValueChange={setExpandedKeys}
           />
-        </Block>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

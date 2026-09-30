@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -93,13 +93,7 @@ const TablePagination = memo<TablePaginationProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={cx(styles.root, className)}
-        gap={12}
-        justify={'space-between'}
-      >
+      <div className={cn('flex gap-3 items-center justify-between', cx(styles.root, className))}>
         <span className={styles.total}>
           {t('table.pagination.range', {
             from: formatIntergerNumber(from),
@@ -107,7 +101,7 @@ const TablePagination = memo<TablePaginationProps>(
             total: formatIntergerNumber(total),
           })}
         </span>
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className={'flex gap-1 items-center'}>
           <PageSizeSelect
             value={pageSize}
             options={pageSizeOptions.map((size) => ({
@@ -153,8 +147,8 @@ const TablePagination = memo<TablePaginationProps>(
             type={'text'}
             onClick={() => goTo(page + 1)}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

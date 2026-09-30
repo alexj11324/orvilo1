@@ -1,10 +1,10 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { RotateCwIcon, TriangleAlertIcon } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { createElement, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
@@ -86,8 +86,8 @@ const AsyncError = memo<AsyncErrorProps>(
     // ─── metric: a failed marker where a number would render (never a fake $0) ───
     if (variant === 'metric') {
       return (
-        <Flexbox horizontal align={'center'} className={styles.metric} gap={6}>
-          <Icon icon={TriangleAlertIcon} size={14} />
+        <div className={cn('flex items-center', styles.metric)} style={{ gap: 6 }}>
+          {createElement(TriangleAlertIcon, { size: 14 })}
           <Text color={cssVar.colorTextQuaternary} fontSize={13}>
             {t('asyncState.metricLabel')}
           </Text>
@@ -102,15 +102,15 @@ const AsyncError = memo<AsyncErrorProps>(
               {t('error.retry')}
             </Button>
           )}
-        </Flexbox>
+        </div>
       );
     }
 
     // ─── inline: single-line row failure with a retry link ───
     if (variant === 'inline') {
       return (
-        <Flexbox horizontal align={'center'} className={styles.inline} gap={8} justify={'center'}>
-          <Icon className={styles.icon} icon={TriangleAlertIcon} size={14} />
+        <div className={cn('inline-flex gap-2 items-center justify-center', styles.inline)}>
+          {createElement(TriangleAlertIcon, { size: 14 })}
           <Text color={cssVar.colorTextSecondary} fontSize={13}>
             {heading}
           </Text>
@@ -125,19 +125,20 @@ const AsyncError = memo<AsyncErrorProps>(
               {t('error.retry')}
             </Button>
           )}
-        </Flexbox>
+        </div>
       );
     }
 
     // ─── page / block: centered hero, sized by variant ───
     return (
-      <Center className={variant === 'page' ? styles.page : styles.block} gap={12}>
-        <Icon
-          className={styles.icon}
-          icon={TriangleAlertIcon}
-          size={variant === 'page' ? 32 : 24}
-        />
-        <Flexbox align={'center'} gap={4}>
+      <div
+        className={cn(
+          'flex items-center justify-center gap-3',
+          variant === 'page' ? styles.page : styles.block,
+        )}
+      >
+        {createElement(TriangleAlertIcon, { size: 16 })}
+        <div className={'flex flex-col gap-1 items-center'}>
           <Text fontSize={variant === 'page' ? 16 : 15} weight={600}>
             {heading}
           </Text>
@@ -149,12 +150,12 @@ const AsyncError = memo<AsyncErrorProps>(
           >
             {reason}
           </Text>
-        </Flexbox>
+        </div>
         {action ??
           (showRetry && (
             <Button
               disabled={retrying}
-              icon={<Icon icon={RotateCwIcon} />}
+              icon={createElement(RotateCwIcon, { size: 16 })}
               loading={retrying}
               size={'small'}
               onClick={onRetry}
@@ -162,7 +163,7 @@ const AsyncError = memo<AsyncErrorProps>(
               {t('error.retry')}
             </Button>
           ))}
-      </Center>
+      </div>
     );
   },
 );

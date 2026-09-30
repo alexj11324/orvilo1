@@ -1,9 +1,8 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { LockIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import LibIcon from './index';
 
@@ -44,9 +43,7 @@ interface LockedLibIconProps {
 const LockedLibIcon = memo<LockedLibIconProps>(({ size = 20 }) => (
   <span className={styles.root}>
     <LibIcon size={size} />
-    <span className={styles.badge}>
-      <Icon icon={LockIcon} size={Math.min(12, Math.round(size / 2))} />
-    </span>
+    <span className={styles.badge}>{createElement(LockIcon, { size: 16 })}</span>
   </span>
 ));
 

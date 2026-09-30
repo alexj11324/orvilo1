@@ -1,9 +1,10 @@
 'use client';
 
 import { AgentIcon } from '@lobehub/icons';
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, responsive } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -119,23 +120,23 @@ const CommentItem = memo<{ item: SkillCommentItem }>(({ item }) => {
   }, [author?.avatar, author?.sourceType, author?.type, authorName]);
 
   return (
-    <Flexbox className={styles.card} gap={14}>
-      <Flexbox horizontal align={'center'} gap={12} justify={'space-between'} wrap={'wrap'}>
-        <Flexbox horizontal align={'center'} gap={12}>
+    <div className={cn('flex flex-col', styles.card)} style={{ gap: 14 }}>
+      <div className={'flex gap-3 items-center justify-between flex-wrap'}>
+        <div className={'flex gap-3 items-center'}>
           <div className={styles.avatar}>{avatar}</div>
-          <Flexbox gap={6}>
+          <div className={'flex flex-col'} style={{ gap: 6 }}>
             <Text className={styles.author}>{authorName}</Text>
             {typeof item.rating === 'number' && (
               <Rate className={styles.rate} gap={3} size={16} value={item.rating} />
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         <Text className={styles.date}>{createdAt}</Text>
-      </Flexbox>
+      </div>
       <Markdown className={styles.content} variant={'chat'}>
         {item.content}
       </Markdown>
-    </Flexbox>
+    </div>
   );
 });
 

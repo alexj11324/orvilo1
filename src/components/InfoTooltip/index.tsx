@@ -1,23 +1,23 @@
-import { type IconSize, type TooltipProps } from '@lobehub/ui';
-import { Icon, Tooltip } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { CircleHelp } from 'lucide-react';
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { memo } from 'react';
 
-interface InfoTooltipProps extends Omit<TooltipProps, 'children'> {
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+interface InfoTooltipProps {
   iconStyle?: CSSProperties;
-  size?: IconSize;
+  size?: number;
+  title?: ReactNode;
 }
 
-const InfoTooltip = memo<InfoTooltipProps>(({ size, iconStyle, ...res }) => {
+const InfoTooltip = memo<InfoTooltipProps>(({ size, iconStyle, title }) => {
   return (
-    <Tooltip {...res}>
-      <Icon
-        icon={CircleHelp}
-        size={size}
-        style={{ color: cssVar.colorTextTertiary, ...iconStyle }}
-      />
+    <Tooltip>
+      <TooltipTrigger render={<span />}>
+        <CircleHelp size={size ?? 16} style={{ color: cssVar.colorTextTertiary, ...iconStyle }} />
+      </TooltipTrigger>
+      <TooltipContent>{title}</TooltipContent>
     </Tooltip>
   );
 });

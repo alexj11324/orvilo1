@@ -18,9 +18,9 @@ import {
   SiRust,
   SiYarn,
 } from '@icons-pack/react-simple-icons';
-import { Icon, Tooltip } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import Java from './Java';
 import PowerShell from './PowerShell';
@@ -62,8 +62,15 @@ const InstallationIcon = memo<{ size?: number; type: string }>(({ type, size = 2
   const iconType = type.split(' ')[0];
   if (iconType === 'none') return;
   return (
-    <Tooltip title={iconType}>
-      <Icon fill={cssVar.colorTextDescription} icon={icons?.[iconType] || Terminal} size={size} />
+    <Tooltip>
+      <TooltipTrigger render={<span />}>
+        {createElement(icons?.[iconType] || Terminal, {
+          size,
+          style: { color: cssVar.colorTextDescription },
+          fill: cssVar.colorTextDescription,
+        })}
+      </TooltipTrigger>
+      <TooltipContent>{iconType}</TooltipContent>
     </Tooltip>
   );
 });

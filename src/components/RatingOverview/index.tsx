@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,8 +26,8 @@ const RatingOverview = memo<RatingOverviewProps>(
     const stars = [5, 4, 3, 2, 1] as const;
 
     return (
-      <Flexbox gap={32} horizontal={!mobile}>
-        <Flexbox align={'center'} gap={6} style={{ minWidth: 120 }}>
+      <div className={cn('flex gap-8', !mobile ? 'flex-row' : 'flex-col')}>
+        <div className={'flex flex-col items-center'} style={{ gap: 6, minWidth: 120 }}>
           <Text style={{ fontSize: 48, fontWeight: 'bold', lineHeight: 1.2 }}>
             {displayAverage.toFixed(1)}
           </Text>
@@ -39,13 +39,13 @@ const RatingOverview = memo<RatingOverviewProps>(
                 } as any)
               : t('skills.details.rating.noRatings')}
           </Text>
-        </Flexbox>
-        <Flexbox flex={1} justify={'center'}>
+        </div>
+        <div className={'flex flex-col justify-center flex-1'}>
           {stars.map((star) => {
             const count = distribution?.[star] ?? 0;
             const percent = totalCount > 0 ? (count / totalCount) * 100 : 0;
             return (
-              <Flexbox horizontal align={'center'} gap={8} key={star}>
+              <div className={'flex gap-2 items-center'} key={star}>
                 <Text style={{ flexShrink: 0, width: 16 }} type={'secondary'}>
                   {star}
                 </Text>
@@ -56,11 +56,11 @@ const RatingOverview = memo<RatingOverviewProps>(
                   strokeColor={cssVar.colorWarning}
                   style={{ flex: 1, marginBottom: 0 }}
                 />
-              </Flexbox>
+              </div>
             );
           })}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

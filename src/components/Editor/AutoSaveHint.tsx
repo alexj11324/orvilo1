@@ -1,10 +1,9 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { CloudIcon, Loader2Icon, TriangleAlertIcon } from 'lucide-react';
-import { type CSSProperties } from 'react';
+import { createElement, type CSSProperties } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +29,7 @@ const AutoSaveHint = memo<AutoSaveHintProps>(({ style, saveStatus, lastUpdatedTi
 
   if (saveStatus === 'saving')
     return (
-      <Tag icon={<Icon spin icon={Loader2Icon} />} style={style}>
+      <Tag icon={createElement(Loader2Icon, { size: 16 })} style={style}>
         {t('autoSave.saving')}
       </Tag>
     );
@@ -39,7 +38,7 @@ const AutoSaveHint = memo<AutoSaveHintProps>(({ style, saveStatus, lastUpdatedTi
     return (
       <Tag
         color={'error'}
-        icon={<Icon icon={TriangleAlertIcon} />}
+        icon={createElement(TriangleAlertIcon, { size: 16 })}
         style={{ cursor: onRetry ? 'pointer' : undefined, ...style }}
         onClick={onRetry}
       >
@@ -50,13 +49,13 @@ const AutoSaveHint = memo<AutoSaveHintProps>(({ style, saveStatus, lastUpdatedTi
 
   if (saveStatus === 'saved' && lastUpdatedTime)
     return (
-      <Tag icon={<Icon icon={CloudIcon} />} style={style}>
+      <Tag icon={createElement(CloudIcon, { size: 16 })} style={style}>
         {t('autoSave.saved')} {dayjs(lastUpdatedTime).fromNow()}
       </Tag>
     );
 
   return (
-    <Tag icon={<Icon icon={CloudIcon} />} style={style}>
+    <Tag icon={createElement(CloudIcon, { size: 16 })} style={style}>
       {t('autoSave.latest')}
     </Tag>
   );

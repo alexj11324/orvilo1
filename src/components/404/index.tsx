@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, FluentEmoji } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
@@ -17,7 +16,10 @@ const NotFound = memo<{
 }>(({ extra, hideWatermark, status = 404, title, desc }) => {
   const { t } = useTranslation('error');
   return (
-    <Flexbox align={'center'} justify={'center'} style={{ minHeight: '100%', width: '100%' }}>
+    <div
+      className={'flex flex-col items-center justify-center'}
+      style={{ minHeight: '100%', width: '100%' }}
+    >
       {!hideWatermark && (
         <h1
           style={{
@@ -33,7 +35,7 @@ const NotFound = memo<{
           {status}
         </h1>
       )}
-      <FluentEmoji emoji={'👀'} size={64} />
+      <span style={{ fontSize: 64, lineHeight: 1 }}>👀</span>
       <h2 style={{ fontWeight: 'bold', marginTop: '1em', textAlign: 'center' }}>
         {title || t('notFound.title')}
       </h2>
@@ -46,7 +48,7 @@ const NotFound = memo<{
           {t('notFound.backHome')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

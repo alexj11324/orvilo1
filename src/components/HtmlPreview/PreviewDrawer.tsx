@@ -1,4 +1,4 @@
-import { Block, Flexbox, Highlighter, HtmlPreview } from '@lobehub/ui';
+import { HtmlPreview } from '@lobehub/ui';
 import { Button, Drawer, Tabs } from '@lobehub/ui/base-ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { extractHtmlTitle } from '@orvilo/html-artifact';
@@ -8,6 +8,7 @@ import { Code2, Download, Eye } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { isDesktop } from '@/const/version';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -43,26 +44,26 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
   }, [content, sanitizeFileName]);
 
   const extra = (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className={'flex gap-2 items-center'}>
       <Tabs
         activeKey={mode}
         items={[
           {
             key: 'preview',
             label: (
-              <Flexbox horizontal align={'center'} gap={6}>
+              <div className={'flex items-center'} style={{ gap: 6 }}>
                 <Eye size={16} />
                 {t('HtmlPreview.mode.preview')}
-              </Flexbox>
+              </div>
             ),
           },
           {
             key: 'code',
             label: (
-              <Flexbox horizontal align={'center'} gap={6}>
+              <div className={'flex items-center'} style={{ gap: 6 }}>
                 <Code2 size={16} />
                 {t('HtmlPreview.mode.code')}
-              </Flexbox>
+              </div>
             ),
           },
         ]}
@@ -71,7 +72,7 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
       <Button icon={<Download size={16} />} type={'fill'} onClick={onDownload}>
         {t('HtmlPreview.actions.download')}
       </Button>
-    </Flexbox>
+    </div>
   );
 
   return (
@@ -89,7 +90,7 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
       onClose={onClose}
     >
       {mode === 'preview' ? (
-        <Block className={styles.container}>
+        <div className={styles.container}>
           <HtmlPreview
             actionsRender={hideHtmlPreviewActions}
             copyable={false}
@@ -101,17 +102,15 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
           >
             {content}
           </HtmlPreview>
-        </Block>
+        </div>
       ) : (
-        <Block className={styles.container}>
-          <Highlighter
+        <div className={styles.container}>
+          <CodeBlock
+            code={content}
             language={'html'}
-            showLanguage={false}
             style={{ height: '100%', overflow: 'auto' }}
-          >
-            {content}
-          </Highlighter>
-        </Block>
+          />
+        </div>
       )}
     </Drawer>
   );

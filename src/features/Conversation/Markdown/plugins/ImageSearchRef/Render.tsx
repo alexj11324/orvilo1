@@ -146,34 +146,32 @@ const Render = memo<MarkdownElementProps<ImageSearchRefProperties>>(({ node, id 
     </div>
   );
 
-  const trigger = (
-    <a
-      href={image.imageUri}
-      rel="noopener noreferrer"
-      style={{ color: 'inherit', textDecoration: 'none' }}
-      target="_blank"
-    >
-      <span className={styles.refChip}>
-        {image.imageUri && (
-          <span className={styles.thumbWrap}>
-            <img
-              alt=""
-              src={image.imageUri}
-              style={{ height: '100%', objectFit: 'cover', width: '100%' }}
-            />
-          </span>
-        )}
-        {originalText}
-      </span>
-    </a>
-  );
-
   return (
     <Popover>
       <PopoverTrigger
         openOnHover
-        render={<span style={{ display: 'inline-flex' }}>{trigger}</span>}
-      />
+        render={
+          <a
+            href={image.imageUri}
+            rel="noopener noreferrer"
+            style={{ color: 'inherit', textDecoration: 'none', display: 'inline-flex' }}
+            target="_blank"
+          />
+        }
+      >
+        <span className={styles.refChip}>
+          {image.imageUri && (
+            <span className={styles.thumbWrap}>
+              <img
+                alt=""
+                src={image.imageUri}
+                style={{ height: '100%', objectFit: 'cover', width: '100%' }}
+              />
+            </span>
+          )}
+          {originalText}
+        </span>
+      </PopoverTrigger>
       <PopoverContent>{popoverContent}</PopoverContent>
     </Popover>
   );

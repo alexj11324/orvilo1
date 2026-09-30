@@ -70,9 +70,10 @@ describe('ImageSearchRef Render', () => {
 
     it('should render an anchor chip linking to imageUri', () => {
       render(<Render {...(makeProps(0, 'image_0.png') as any)} />);
-      // Popover wraps the trigger <a> and adds role="button" via base-ui,
-      // so query by role "button" (the chip) and verify href/target attributes.
-      const chip = screen.getByRole('button', { name: 'image_0.png' });
+      // The chip itself is the popover trigger anchor — it keeps link
+      // semantics and carries the popover-trigger attributes.
+      const chip = screen.getByRole('link', { name: 'image_0.png' });
+      expect(chip).toHaveAttribute('aria-haspopup', 'dialog');
       expect(chip).toHaveAttribute('href', imageResult.imageUri);
       expect(chip).toHaveAttribute('target', '_blank');
     });

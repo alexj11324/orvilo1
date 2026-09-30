@@ -1,4 +1,3 @@
-import { Button, Switch, Tabs, toast } from '@lobehub/ui/base-ui';
 import { FORM_STYLE } from '@orvilo/const';
 import { type TopicExportMode } from '@orvilo/types';
 import { exportFile } from '@orvilo/utils/client';
@@ -8,6 +7,10 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form, { type FormItemProps } from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { copyToClipboard } from '@/utils/clipboard';
 
@@ -17,6 +20,15 @@ import { generateFullExport } from './generateFullExport';
 import { generateMessages } from './generateMessages';
 import Preview from './Preview';
 import { type FieldType } from './type';
+
+interface FieldSwitchProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+}
+
+const FieldSwitch = ({ checked, onChange }: FieldSwitchProps) => (
+  <Switch checked={checked} onCheckedChange={onChange} />
+);
 
 const DEFAULT_FIELD_VALUE: FieldType = {
   exportMode: 'full',
@@ -40,16 +52,19 @@ const ShareJSON = memo(() => {
     {
       children: (
         <Tabs
-          activeKey={fieldValue.exportMode}
-          items={exportModeOptions}
-          styles={{
-            list: { display: 'flex', width: '100%' },
-            tab: { flex: 1 },
-          }}
-          onChange={(key) =>
+          value={fieldValue.exportMode}
+          onValueChange={(key) =>
             setFieldValue((prev) => ({ ...prev, exportMode: key as TopicExportMode }))
           }
-        />
+        >
+          <TabsList className="flex w-full">
+            {exportModeOptions.map((item) => (
+              <TabsTrigger className="flex-1" key={item.key} value={item.key}>
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       ),
       label: t('shareModal.exportMode.label'),
       layout: 'vertical',
@@ -57,7 +72,7 @@ const ShareJSON = memo(() => {
       name: 'exportMode',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.withSystemRole'),
       layout: 'horizontal',
       minWidth: undefined,
@@ -92,20 +107,21 @@ const ShareJSON = memo(() => {
   const button = (
     <>
       <Button
-        block
-        icon={CopyIcon}
-        size={isMobile ? undefined : 'large'}
-        type={'primary'}
+        className="w-full"
+        size={isMobile ? undefined : 'lg'}
+        variant="default"
         onClick={async () => {
           await copyToClipboard(content);
           toast.success(t('copySuccess', { ns: 'common' }));
         }}
       >
+        <CopyIcon data-icon="inline-start" />
         {t('copy', { ns: 'common' })}
       </Button>
       <Button
-        block
-        size={isMobile ? undefined : 'large'}
+        className="w-full"
+        size={isMobile ? undefined : 'lg'}
+        variant="outline"
         onClick={() => {
           exportFile(content, `${title}.json`);
         }}

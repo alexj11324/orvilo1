@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { LockIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
@@ -64,14 +64,10 @@ const PluginItem = memo<PluginItemProps>(
                   />
                 </span>
               )}
-              <Text ellipsis className={styles.title}>
-                {name}
-              </Text>
+              <div className={cn('truncate min-w-0', styles.title)}>{name}</div>
             </div>
             {description && (
-              <Text ellipsis className={styles.desc}>
-                {description}
-              </Text>
+              <div className={cn('truncate min-w-0', styles.desc)}>{description}</div>
             )}
           </div>
         </div>

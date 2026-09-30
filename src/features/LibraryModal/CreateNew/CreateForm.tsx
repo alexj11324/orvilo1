@@ -1,7 +1,7 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
@@ -86,7 +86,7 @@ const CreateForm = memo<CreateFormProps>(({ id, initialValues, onClose, onSucces
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
-      <Button block loading={loading} type={'primary'} onClick={handleSubmit}>
+      <Button className="w-full" loading={loading} variant="default" onClick={handleSubmit}>
         {isEditMode ? t('createNew.edit.confirm') : t('createNew.confirm')}
       </Button>
     </div>

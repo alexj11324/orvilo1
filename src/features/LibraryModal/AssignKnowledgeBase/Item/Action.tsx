@@ -1,9 +1,10 @@
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { InfoIcon, MoreVerticalIcon, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DropdownMenu } from '@/components/ItemsMenu';
+import { Button } from '@/components/ui/button';
 import { useAgentStore } from '@/store/agent';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { KnowledgeType } from '@/types/knowledgeBase';
@@ -94,7 +95,7 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
         <Button
           loading={loading}
           size={mobile ? 'small' : undefined}
-          type={'primary'}
+          variant="default"
           onClick={assignKnowledge}
         >
           {t('knowledgeBase.library.action.add')}

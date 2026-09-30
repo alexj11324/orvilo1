@@ -1,4 +1,3 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { MessageCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { Button } from '@/components/ui/button';
 import {
   useTopicCommentDetail,
   useTopicCommentReplies,
@@ -122,9 +122,9 @@ const ThreadBody = memo(() => {
             void root.mutate();
           }}
         />
-        <Text fontSize={12} style={{ marginTop: 16 }} type={'secondary'} weight={500}>
+        <div className="text-[12px] text-muted-foreground font-medium" style={{ marginTop: 16 }}>
           {t('topicComment.repliesTitle')}
-        </Text>
+        </div>
         {visibleReplies.map((reply) => (
           <CommentCard
             replyStyle
@@ -147,7 +147,7 @@ const ThreadBody = memo(() => {
             <div className="flex flex-col items-center justify-center py-3">
               <Button
                 loading={replies.isLoadingMore}
-                type={'text'}
+                variant="ghost"
                 onClick={() => void replies.loadMore()}
               >
                 {t('topicComment.loadMore')}

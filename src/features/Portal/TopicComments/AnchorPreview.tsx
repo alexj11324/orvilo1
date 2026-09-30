@@ -1,10 +1,10 @@
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { TopicCommentItem } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { MessageSquareText } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { useChatStore } from '@/store/chat';
 import { displayMessageSelectors } from '@/store/chat/selectors';
 
@@ -58,14 +58,16 @@ const AnchorPreview = memo<{ comment: TopicCommentItem }>(({ comment }) => {
         <span className="anticon" role="img">
           <MessageSquareText fill={'transparent'} height={14} size={14} width={14} />
         </span>
-        <Text fontSize={12} weight={500}>
-          {t('topicComment.anchor')}
-        </Text>
-        {isDeleted && <Tag size={'small'}>{t('topicComment.anchorDeletedTag')}</Tag>}
+        <div className="text-[12px] font-medium">{t('topicComment.anchor')}</div>
+        {isDeleted && (
+          <Badge size="sm" variant="secondary">
+            {t('topicComment.anchorDeletedTag')}
+          </Badge>
+        )}
       </div>
-      <Text ellipsis={{ rows: 2 }} fontSize={12} type={'secondary'}>
+      <div className="line-clamp-2 text-[12px] text-muted-foreground">
         {comment.anchorPreview.excerpt || t('topicComment.anchorEmpty')}
-      </Text>
+      </div>
     </div>
   );
 });

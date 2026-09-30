@@ -1,9 +1,9 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { type ChatFileItem } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
 import FileIcon from '@/components/FileIcon';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { formatSize } from '@/utils/format';
 
@@ -38,8 +38,13 @@ const FileItem = memo<ChatFileItem>(({ name, fileType, size, id }) => {
     >
       <FileIcon fileName={name} fileType={fileType} />
       <div className="flex flex-col">
-        <Text ellipsis={{ tooltip: true }}>{name}</Text>
-        <Text type={'secondary'}>{formatSize(size)}</Text>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger render={<div className="truncate min-w-0" />}>{name}</TooltipTrigger>
+            <TooltipContent>{name}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <div className="text-muted-foreground">{formatSize(size)}</div>
       </div>
     </div>
   );

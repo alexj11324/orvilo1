@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,9 +14,9 @@ const Title = memo(() => {
   });
 
   return (
-    <Text ellipsis style={{ fontSize: 14, fontWeight: 500 }}>
+    <div className="truncate min-w-0" style={{ fontSize: 14, fontWeight: 500 }}>
       {title || t('defaultTitle')}
-    </Text>
+    </div>
   );
 });
 

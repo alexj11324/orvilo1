@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Skeleton, Text, toast } from '@lobehub/ui/base-ui';
 import type { DocumentLikeSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -10,6 +9,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
 import { documentLikeKeys } from '@/libs/swr/keys';
@@ -208,8 +210,8 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
   if (isLoading && !data)
     return (
       <div data-document-likes className={cn('flex flex-col items-center gap-4', styles.section)}>
-        <Skeleton.Avatar shape={'circle'} size={BUTTON_SIZE} />
-        <Skeleton height={20} width={200} />
+        <Skeleton className="rounded-full" style={{ height: BUTTON_SIZE, width: BUTTON_SIZE }} />
+        <Skeleton style={{ height: 20, width: 200 }} />
       </div>
     );
 
@@ -244,9 +246,9 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
         />
       </button>
       <span className={styles.caption}>
-        <Text as={'span'} color={'inherit'} fontSize={13}>
+        <span className="text-[13px]" style={{ color: 'inherit' }}>
           {label}
-        </Text>
+        </span>
       </span>
       {(likers.length > 0 || overflow > 0) && (
         <div className={cn('flex gap-2', styles.avatars)}>
@@ -268,9 +270,9 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
             );
           })}
           {overflow > 0 && (
-            <Text fontSize={13} type={'secondary'}>
+            <div className="text-[13px] text-muted-foreground">
               {t('pageEditor.likes.more', { count: overflow })}
-            </Text>
+            </div>
           )}
         </div>
       )}

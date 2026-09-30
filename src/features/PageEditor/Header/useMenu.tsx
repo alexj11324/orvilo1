@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { cssVar, useResponsive } from 'antd-style';
 import {
@@ -17,6 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { type SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { usePermission } from '@/hooks/usePermission';

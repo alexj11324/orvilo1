@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -10,6 +9,8 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import type { DocumentHistorySaveSource } from '@/server/routers/lambda/_schema/documentHistory';
@@ -17,14 +18,12 @@ import type { DocumentHistorySaveSource } from '@/server/routers/lambda/_schema/
 import { formatHistoryAbsoluteTime, formatHistoryRowTime } from './formatHistoryDate';
 import { historyItemSelectors, useHistoryItemsStore } from './HistoryItemsProvider';
 
-type TagColor = 'default' | 'success' | 'purple' | 'geekblue' | 'gold' | 'processing';
-
-const SOURCE_TAG_COLOR: Record<DocumentHistorySaveSource, TagColor> = {
-  autosave: 'default',
-  llm_call: 'purple',
-  manual: 'success',
-  restore: 'geekblue',
-  system: 'gold',
+const SOURCE_TAG_CLASS: Record<DocumentHistorySaveSource, string> = {
+  autosave: 'text-muted-foreground',
+  llm_call: 'text-primary',
+  manual: 'text-success',
+  restore: 'text-info',
+  system: 'text-warning',
 };
 
 const styles = createStaticStyles(({ css }) => ({
@@ -189,25 +188,28 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
 
       <div className={styles.rowRight}>
         {item.isCurrent && (
-          <Tag
-            className={styles.currentBadge}
-            color={'processing'}
-            size={'small'}
-            variant={'borderless'}
+          <Badge
+            className={cn(styles.currentBadge, 'bg-transparent text-info')}
+            size="sm"
+            variant="secondary"
           >
             {t('pageEditor.history.current', { ns: 'file' })}
-          </Tag>
+          </Badge>
         )}
 
         {!item.isCurrent && (
-          <Tag
-            className={cx(styles.sourceTag, 'history-source-tag')}
-            color={SOURCE_TAG_COLOR[item.saveSource]}
-            size={'small'}
-            variant={'borderless'}
+          <Badge
+            size="sm"
+            variant="secondary"
+            className={cn(
+              styles.sourceTag,
+              'history-source-tag',
+              'bg-transparent',
+              SOURCE_TAG_CLASS[item.saveSource],
+            )}
           >
             {saveSourceLabel}
-          </Tag>
+          </Badge>
         )}
         {!item.isCurrent && (
           <div

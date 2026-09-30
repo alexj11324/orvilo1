@@ -1,10 +1,11 @@
-import { Avatar, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Origami } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Balancer from 'react-wrap-balancer';
 
+import Avatar from '@/components/Avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useChatStore } from '@/store/chat';
 import { dbMessageSelectors, displayMessageSelectors } from '@/store/chat/selectors';
 
@@ -18,7 +19,7 @@ const ArtifactList = () => {
   return !isCurrentChatLoaded ? (
     <div className="flex flex-col gap-3 px-3">
       {[1, 1, 1, 1, 1, 1].map((key, index) => (
-        <Skeleton height={68} key={`${key}-${index}`} radius={8} />
+        <Skeleton key={`${key}-${index}`} style={{ borderRadius: 8, height: 68 }} />
       ))}
     </div>
   ) : messages.length === 0 ? (
@@ -37,7 +38,7 @@ const ArtifactList = () => {
         }
       />
       <Balancer>
-        <Text type={'secondary'}>{t('emptyArtifactList')}</Text>
+        <div className="text-muted-foreground">{t('emptyArtifactList')}</div>
       </Balancer>
     </div>
   ) : (

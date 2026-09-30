@@ -1,11 +1,11 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import { EyeIcon, PlayIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
+import { Badge } from '@/components/reui/badge';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import type { PermissionResourceType } from '@/services/resourcePermission';
 
@@ -36,20 +36,17 @@ const AccessLevelTag = memo<AccessLevelTagProps>(({ resourceId, resourceType }) 
     <SimpleTooltip
       title={t(viewOnly ? 'permission.accessTag.viewOnlyTip' : 'permission.accessTag.useOnlyTip')}
     >
-      <Tag
-        icon={
-          <span className="anticon" role="img">
-            {createElement(viewOnly ? EyeIcon : PlayIcon, {
-              size: '1em',
-              width: '1em',
-              height: '1em',
-              fill: 'transparent',
-            })}
-          </span>
-        }
-      >
+      <Badge variant="secondary">
+        <span className="anticon" role="img">
+          {createElement(viewOnly ? EyeIcon : PlayIcon, {
+            size: '1em',
+            width: '1em',
+            height: '1em',
+            fill: 'transparent',
+          })}
+        </span>
         {t(viewOnly ? 'permission.generalAccess.viewable' : 'permission.generalAccess.usable')}
-      </Tag>
+      </Badge>
     </SimpleTooltip>
   );
 });

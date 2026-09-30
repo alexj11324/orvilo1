@@ -1,11 +1,13 @@
-import { Button, Switch, toast } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { DownloadIcon, FileText } from 'lucide-react';
 import { cloneElement, memo, type ReactElement, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -17,6 +19,15 @@ import { type FieldType } from '../ShareText/type';
 import { containerStyles, styles } from '../style';
 import PdfPreview from './PdfPreview';
 import { usePdfGeneration } from './usePdfGeneration';
+
+interface FieldSwitchProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+}
+
+const FieldSwitch = ({ checked, onChange }: FieldSwitchProps) => (
+  <Switch checked={checked} onCheckedChange={onChange} />
+);
 
 interface ShareFormItem {
   children: ReactElement<Record<string, unknown>>;
@@ -42,28 +53,28 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   const settings: ShareFormItem[] = [
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.withSystemRole'),
       layout: 'horizontal',
       name: 'withSystemRole',
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.withRole'),
       layout: 'horizontal',
       name: 'withRole',
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.includeUser'),
       layout: 'horizontal',
       name: 'includeUser',
       valuePropName: 'checked',
     },
     {
-      children: <Switch />,
+      children: <FieldSwitch />,
       label: t('shareModal.includeTool'),
       layout: 'horizontal',
       name: 'includeTool',
@@ -112,14 +123,14 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   const generateButton = (
     <Button
-      block
+      className="w-full"
       disabled={loading}
-      icon={loading ? undefined : FileText}
       loading={loading}
-      size={isMobile ? undefined : 'large'}
-      type="primary"
+      size={isMobile ? undefined : 'lg'}
+      variant="default"
       onClick={handleGeneratePdf}
     >
+      {loading ? undefined : <FileText data-icon="inline-start" />}
       {loading
         ? t('shareModal.generatingPdf')
         : pdfData
@@ -130,12 +141,12 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   const downloadButton = pdfData ? (
     <Button
-      block
-      icon={DownloadIcon}
-      size={isMobile ? undefined : 'large'}
-      type="default"
+      className="w-full"
+      size={isMobile ? undefined : 'lg'}
+      variant="default"
       onClick={handleDownload}
     >
+      <DownloadIcon data-icon="inline-start" />
       {t('shareModal.downloadPdf')}
     </Button>
   ) : null;

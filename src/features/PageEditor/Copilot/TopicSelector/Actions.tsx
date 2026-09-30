@@ -1,7 +1,7 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';

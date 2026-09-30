@@ -1,9 +1,9 @@
 'use client';
 
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { DEFAULT_INBOX_AVATAR } from '@/const/index';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
 import SuggestQuestions from '@/features/SuggestQuestions';
@@ -27,9 +27,7 @@ const AgentBuilderWelcome = memo(() => {
         }}
       >
         <Avatar avatar={agent?.avatar || DEFAULT_INBOX_AVATAR} shape={'square'} size={78} />
-        <Text fontSize={24} weight={'bold'}>
-          {t('pageCopilot.title')}
-        </Text>
+        <div className="text-[24px] font-bold">{t('pageCopilot.title')}</div>
         <SuggestQuestions count={3} mode="write" />
       </div>
     </>

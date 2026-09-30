@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { getBuiltinPortalTitle } from '@orvilo/builtin-tools/portals';
 import type { BuiltinPortalTitle } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -39,9 +38,9 @@ const Title = () => {
   return (
     <div className="flex flex-row items-center gap-2">
       <PluginAvatar identifier={toolUIIdentifier} size={28} />
-      <Text style={{ fontSize: 16 }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ fontSize: 16 }}>
         {pluginTitle}
-      </Text>
+      </div>
     </div>
   );
 };

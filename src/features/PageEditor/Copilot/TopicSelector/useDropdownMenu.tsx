@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
 import {
@@ -20,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { openRenameModal } from '@/components/RenameModal';
+import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import { type SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';

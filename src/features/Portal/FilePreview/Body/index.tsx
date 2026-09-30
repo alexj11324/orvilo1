@@ -1,11 +1,11 @@
 import { Markdown } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
 import { BoltIcon, FileIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Loading from '@/components/Loading/CircleLoading';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileNotFound from '@/features/FileNotFound';
 import FileViewer from '@/features/FileViewer';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
@@ -60,35 +60,26 @@ const FilePreview = () => {
     >
       {chunkText && (
         <Tabs
-          activeKey={tab}
-          items={[
-            {
-              icon: (
-                <span className="anticon" role="img">
-                  <BoltIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                </span>
-              ),
-              key: FilePreviewTab.Chunk,
-              label: t('FilePreview.tabs.chunk'),
-            },
-            {
-              icon: (
-                <span className="anticon" role="img">
-                  <FileIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                </span>
-              ),
-              key: FilePreviewTab.File,
-              label: t('FilePreview.tabs.file'),
-            },
-          ]}
-          styles={{
-            list: { display: 'flex', width: '100%' },
-            tab: { flex: 1 },
-          }}
-          onChange={(key) =>
+          value={tab}
+          onValueChange={(key) =>
             setTabByTopic((prev) => ({ ...prev, [topicKey]: key as FilePreviewTab }))
           }
-        />
+        >
+          <TabsList className="flex w-full">
+            <TabsTrigger className="flex-1" value={FilePreviewTab.Chunk}>
+              <span className="anticon" role="img">
+                <BoltIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+              {t('FilePreview.tabs.chunk')}
+            </TabsTrigger>
+            <TabsTrigger className="flex-1" value={FilePreviewTab.File}>
+              <span className="anticon" role="img">
+                <FileIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+              {t('FilePreview.tabs.file')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       )}
 
       {showChunk ? (

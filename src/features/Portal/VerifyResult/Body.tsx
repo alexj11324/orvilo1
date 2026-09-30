@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { VerifierType } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ListTree } from 'lucide-react';
@@ -7,6 +6,7 @@ import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import {
   useVerifierTracing,
   useVerifyInstruction,
@@ -218,12 +218,13 @@ const Body = () => {
       )}
 
       {canOpenTrace && (
-        <Button block icon={ListTree} onClick={openTrace}>
+        <Button className="w-full" variant="outline" onClick={openTrace}>
+          <ListTree data-icon="inline-start" />
           {t('detail.openTrace')}
         </Button>
       )}
 
-      {!result && <Text type={'secondary'}>{t('detail.pending')}</Text>}
+      {!result && <div className="text-muted-foreground">{t('detail.pending')}</div>}
 
       {/* Judgment outcome */}
       {sections.map((s) => (

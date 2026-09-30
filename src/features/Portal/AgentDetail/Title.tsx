@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -24,9 +23,7 @@ const Title = memo(() => {
         shape="square"
         size={24}
       />
-      <Text ellipsis weight={500}>
-        {displayName}
-      </Text>
+      <div className="truncate min-w-0 font-medium">{displayName}</div>
     </div>
   );
 });

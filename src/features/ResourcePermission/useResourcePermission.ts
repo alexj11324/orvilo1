@@ -1,7 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { useClientDataSWR } from '@/libs/swr';
 import type { PermissionResourceType, ResourceAccessLevel } from '@/services/resourcePermission';
 import { resourcePermissionService } from '@/services/resourcePermission';

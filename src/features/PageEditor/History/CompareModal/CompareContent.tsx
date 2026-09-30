@@ -1,13 +1,14 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import { Button } from '@/components/ui/button';
 import type {
   DocumentHistoryListItem,
   DocumentHistorySaveSource,
@@ -125,22 +126,26 @@ const CompareContent = memo<CompareContentProps>(
           <div className={styles.cmpbar}>
             <div className="flex items-center gap-1">
               <span className={styles.badgeNew}>{t('pageEditor.history.compareCurrentLabel')}</span>
-              <Text className={styles.arrow}>→</Text>
+              <div className={cn(styles.arrow)}>→</div>
               <span className={styles.badgeOld}>
                 {formatHistoryAbsoluteTime(selectedItem.savedAt)}
               </span>
-              <Text className={styles.meta} type={'secondary'}>
+              <div className={cn('text-muted-foreground', styles.meta)}>
                 {dayjs(selectedItem.savedAt).fromNow()} ·{' '}
                 {saveSourceLabels[selectedItem.saveSource]}
-              </Text>
+              </div>
               {authorInfo?.fullName && (
-                <Text className={styles.meta} title={authorInfo.fullName} type={'secondary'}>
+                <div
+                  className={cn('text-muted-foreground', styles.meta)}
+                  title={authorInfo.fullName}
+                >
                   · {authorInfo.fullName}
-                </Text>
+                </div>
               )}
             </div>
             {canRestore && (
-              <Button icon={RotateCcwIcon} size={'small'} onClick={() => onRestore(selectedItem)}>
+              <Button size="sm" variant="outline" onClick={() => onRestore(selectedItem)}>
+                <RotateCcwIcon data-icon="inline-start" />
                 {t('pageEditor.history.restore')} {formatHistoryAbsoluteTime(selectedItem.savedAt)}
               </Button>
             )}

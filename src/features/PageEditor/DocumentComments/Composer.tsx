@@ -1,5 +1,4 @@
 import { ChatInput, ChatInputActionBar, SendButton, useEditor } from '@lobehub/editor/react';
-import { Avatar, toast } from '@lobehub/ui/base-ui';
 import type { DocumentCommentJson } from '@orvilo/types';
 import { cn } from 'cn';
 import { nanoid } from 'nanoid';
@@ -7,6 +6,8 @@ import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
 import { AttachmentMenu } from '@/features/AttachmentInput';
 import { TypoBar } from '@/features/EditorCanvas';
 import {

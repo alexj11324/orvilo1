@@ -1,8 +1,8 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { ListTodo } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 
@@ -20,11 +20,11 @@ const Header = memo(() => {
       rightExtra={
         <Button
           disabled={!taskId}
-          icon={ListTodo}
-          size={'small'}
-          type={'text'}
+          size="sm"
+          variant="ghost"
           onClick={() => taskId && openTaskDetail(taskId)}
         >
+          <ListTodo data-icon="inline-start" />
           {t('goalDetail.viewOriginalTask')}
         </Button>
       }

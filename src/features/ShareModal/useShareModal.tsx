@@ -1,8 +1,9 @@
 'use client';
 
-import { type ModalInstance } from '@lobehub/ui/base-ui';
 import { type ConversationContext } from '@orvilo/types';
 import { useCallback, useEffect, useRef } from 'react';
+
+import type { ModalInstance } from '@/components/Modal';
 
 import { openShareModal as createShareModal } from './loader';
 

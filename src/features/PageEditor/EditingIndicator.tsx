@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Loader2Icon, PencilIcon } from 'lucide-react';
 import { type CSSProperties, memo } from 'react';
@@ -52,9 +51,9 @@ const EditingIndicator = memo(() => {
     return (
       <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
         <Loader2Icon className="animate-spin" size={14} />
-        <Text ellipsis style={labelStyle}>
+        <div className="truncate min-w-0" style={{ labelStyle }} style={labelStyle}>
           {t('pageEditor.editMode.checking')}
-        </Text>
+        </div>
       </div>
     );
   }
@@ -75,9 +74,9 @@ const EditingIndicator = memo(() => {
             <span style={{ display: 'inline-flex' }}>
               <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
                 <PencilIcon size={14} />
-                <Text ellipsis style={labelStyle}>
+                <div className="truncate min-w-0" style={{ labelStyle }} style={labelStyle}>
                   {label}
-                </Text>
+                </div>
               </div>
             </span>
           }

@@ -1,4 +1,4 @@
-import { type ModalInstance } from '@lobehub/ui/base-ui';
+import type { ModalInstance } from '@/components/Modal';
 
 import { type OpenShareModalOptions } from './Modal';
 

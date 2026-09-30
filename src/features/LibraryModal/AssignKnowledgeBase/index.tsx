@@ -1,7 +1,8 @@
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { memo } from 'react';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal } from '@/components/Modal';
 import { useServerConfigStore } from '@/store/serverConfig';
 
 import List from './List';

@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Skeleton, Text, toast } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import { memo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { documentCommentService } from '@/services/documentComment';
 
 import Composer from './Composer';
@@ -224,18 +226,14 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
       <div className={cn('flex items-center gap-2', styles.header)}>
         {isHeaderLoading ? (
           <>
-            <Skeleton height={28} width={48} />
-            <Skeleton height={20} width={16} />
+            <Skeleton style={{ height: 28, width: 48 }} />
+            <Skeleton style={{ height: 20, width: 16 }} />
           </>
         ) : (
           <>
-            <Text as={'h2'} fontSize={20} weight={600}>
-              {t('pageEditor.comments.title')}
-            </Text>
+            <h2 className="text-[20px] font-semibold">{t('pageEditor.comments.title')}</h2>
             {summary.data && (
-              <Text className={styles.meta} fontSize={14}>
-                {summary.data.total}
-              </Text>
+              <div className={cn('text-[14px]', styles.meta)}>{summary.data.total}</div>
             )}
           </>
         )}
@@ -298,7 +296,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
               <div className="flex flex-col items-center justify-center py-3">
                 <Button
                   loading={threads.isLoadingMore}
-                  type={'text'}
+                  variant="ghost"
                   onClick={() => void threads.loadMore()}
                 >
                   {t('pageEditor.comments.loadMore')}

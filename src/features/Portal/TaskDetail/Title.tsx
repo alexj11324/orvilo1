@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { useChatStore } from '@/store/chat';
@@ -33,12 +33,12 @@ const Title = memo(() => {
     <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
       {identifier && <span className={styles.identifier}>{identifier}</span>}
       {name && (
-        <Text
-          className={oneLineEllipsis}
+        <div
+          className={cn(oneLineEllipsis)}
           style={{ color: cssVar.colorText, flex: 1, fontSize: 14, minWidth: 0 }}
         >
           {name}
-        </Text>
+        </div>
       )}
     </div>
   );

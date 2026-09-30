@@ -1,10 +1,10 @@
 import { ChatInput, ChatInputActionBar, SendButton } from '@lobehub/editor/react';
-import { toast } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { useActiveConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
 import { useTopicCommentMutations } from '@/features/TopicComment/hooks';
 import { useEnterToSend } from '@/hooks/useEnterToSend';

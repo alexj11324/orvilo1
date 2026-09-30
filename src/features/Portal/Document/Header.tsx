@@ -1,8 +1,9 @@
 'use client';
 
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useClientDataSWR } from '@/libs/swr';
 import { portalKeys } from '@/libs/swr/keys';
 import { documentService } from '@/services/document';
@@ -29,7 +30,7 @@ const Header = () => {
     return (
       <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
         <div className="flex flex-col flex-1">
-          <Skeleton height={16} width={180} />
+          <Skeleton style={{ height: 16, width: 180 }} />
         </div>
       </div>
     );
@@ -38,9 +39,7 @@ const Header = () => {
   return (
     <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
       <div className="flex flex-col flex-1">
-        <Text className={cx(oneLineEllipsis)} type={'secondary'}>
-          {title}
-        </Text>
+        <div className={cn('text-muted-foreground', cx(oneLineEllipsis))}>{title}</div>
       </div>
       {!isReadonly && (
         <div className="flex flex-row items-center gap-2">

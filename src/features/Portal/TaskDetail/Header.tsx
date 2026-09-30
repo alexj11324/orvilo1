@@ -1,10 +1,10 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE, isDesktop } from '@orvilo/const';
 import { ExternalLink } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { electronSystemService } from '@/services/electron/system';
 import { useChatStore } from '@/store/chat';

@@ -3,7 +3,6 @@
 import { type IEditor } from '@lobehub/editor';
 import { HIDE_TOOLBAR_COMMAND } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -11,6 +10,7 @@ import { cn } from 'cn';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { useConversationStore } from '@/features/Conversation/store';
 import type { ComposerTarget } from '@/features/Conversation/types';
 import { useFileStore } from '@/store/file';

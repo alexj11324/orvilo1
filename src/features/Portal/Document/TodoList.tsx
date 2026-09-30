@@ -1,12 +1,13 @@
 'use client';
 
-import { Checkbox, Tag } from '@lobehub/ui/base-ui';
 import { AGENT_PLAN_FILE_TYPE } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDown, ChevronUp, ListTodo } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useNotebookStore } from '@/store/notebook';
@@ -159,11 +160,11 @@ const TodoList = memo(() => {
             <span className={styles.header}>
               {currentPendingTask?.text || t('document.todos.allCompleted')}
             </span>
-            <Tag size="small" style={{ flexShrink: 0 }}>
+            <Badge size="sm" style={{ flexShrink: 0 }} variant="secondary">
               <span className={styles.count}>
                 {completed}/{total}
               </span>
-            </Tag>
+            </Badge>
           </div>
           <span
             className="anticon"
@@ -189,22 +190,25 @@ const TodoList = memo(() => {
         {/* Expandable Todo List */}
         <div className={cx(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}>
           {items.map((item, index) => (
-            <Checkbox
-              backgroundColor={cssVar.colorSuccess}
-              checked={item.completed}
-              key={index}
-              shape="circle"
-              style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
-              classNames={{
-                text: item.completed ? styles.textChecked : undefined,
-                wrapper: styles.itemRow,
-              }}
-              textProps={{
-                type: item.completed ? 'secondary' : undefined,
-              }}
-            >
-              {item.text}
-            </Checkbox>
+            <div className={cx('flex items-center gap-2', styles.itemRow)} key={index}>
+              <Checkbox
+                checked={item.completed}
+                className="rounded-full"
+                style={{
+                  backgroundColor: item.completed ? cssVar.colorSuccess : undefined,
+                  borderWidth: 1.5,
+                  cursor: 'default',
+                  pointerEvents: 'none',
+                }}
+              />
+              <div
+                className={
+                  item.completed ? cx('text-muted-foreground', styles.textChecked) : undefined
+                }
+              >
+                {item.text}
+              </div>
+            </div>
           ))}
         </div>
       </div>

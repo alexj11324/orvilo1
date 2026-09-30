@@ -1,10 +1,11 @@
-import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import NavHeader from '@/features/NavHeader';
 import { useAgentGroupStore } from '@/store/agentGroup';

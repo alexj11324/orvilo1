@@ -1,10 +1,16 @@
 'use client';
 
-import type { SelectOptions } from '@lobehub/ui/base-ui';
-import { Select } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
-import { memo, useCallback, useMemo } from 'react';
+import { memo } from 'react';
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const styles = createStaticStyles(({ css }) => ({
   option: css`
@@ -85,64 +91,52 @@ const PolicySelectInner = <Value extends string>({
   options,
   value,
 }: PolicySelectProps<Value>) => {
-  const selectOptions = useMemo<SelectOptions<Value>>(
-    () =>
-      options.map((option) => ({
-        disabled: option.disabled,
-        label: (
-          <span className={styles.option}>
-            <span aria-hidden className={styles.optionIcon}>
-              <span className="anticon" role="img">
-                <option.icon fill={'transparent'} height={16} size={16} width={16} />
-              </span>
-            </span>
-            <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-              <span className={styles.optionLabel}>{option.label}</span>
-              {option.desc ? <span className={styles.optionDesc}>{option.desc}</span> : null}
-            </div>
-          </span>
-        ),
-        title: option.label,
-        value: option.value,
-      })),
-    [options],
-  );
-
-  const labelRender = useCallback(
-    ({ value: optionValue }: { value: Value }) => {
-      const option = options.find((item) => item.value === optionValue);
-      if (!option) return null;
-
-      return (
-        <span className={styles.trigger}>
-          <span aria-hidden className={styles.optionIcon}>
-            <span className="anticon" role="img">
-              <option.icon fill={'transparent'} height={16} size={16} width={16} />
-            </span>
-          </span>
-          <span className={styles.triggerLabel}>{option.label}</span>
-        </span>
-      );
-    },
-    [options],
-  );
-
   return (
     <Select
-      classNames={{ popup: styles.popup }}
-      disabled={disabled}
-      labelRender={labelRender}
-      loading={loading}
-      optionRender={(option) => option.label}
-      options={selectOptions}
-      popupMatchSelectWidth={true}
-      style={{ width: '100%' }}
+      disabled={disabled || loading}
       value={value}
-      onChange={(next) => {
+      onValueChange={(next) => {
         if (typeof next !== 'string' || next === value) return;
         onChange(next as Value);
       }}
-    />
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue>
+          {(optionValue) => {
+            const option = options.find((item) => item.value === optionValue);
+            if (!option) return null;
+
+            return (
+              <span className={styles.trigger}>
+                <span aria-hidden className={styles.optionIcon}>
+                  <span className="anticon" role="img">
+                    <option.icon fill={'transparent'} height={16} size={16} width={16} />
+                  </span>
+                </span>
+                <span className={styles.triggerLabel}>{option.label}</span>
+              </span>
+            );
+          }}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent className={styles.popup}>
+        {options.map((option) => (
+          <SelectItem disabled={option.disabled} key={option.value} value={option.value}>
+            <span className={styles.option}>
+              <span aria-hidden className={styles.optionIcon}>
+                <span className="anticon" role="img">
+                  <option.icon fill={'transparent'} height={16} size={16} width={16} />
+                </span>
+              </span>
+              <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+                <span className={styles.optionLabel}>{option.label}</span>
+                {option.desc ? <span className={styles.optionDesc}>{option.desc}</span> : null}
+              </div>
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
 

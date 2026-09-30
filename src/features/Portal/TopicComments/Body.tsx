@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { MessageCircle } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { Button } from '@/components/ui/button';
 import { useTopicCommentThreads } from '@/features/TopicComment/hooks';
 import { mutate } from '@/libs/swr';
 import { topicCommentKeys } from '@/libs/swr/keys';
@@ -89,7 +89,7 @@ const Body = memo(() => {
         ) : (
           hasMore && (
             <div className="flex flex-col items-center justify-center py-3">
-              <Button loading={isLoadingMore} type={'text'} onClick={() => void loadMore()}>
+              <Button loading={isLoadingMore} variant="ghost" onClick={() => void loadMore()}>
                 {t('topicComment.loadMore')}
               </Button>
             </div>

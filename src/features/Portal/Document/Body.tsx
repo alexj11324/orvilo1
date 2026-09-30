@@ -1,15 +1,17 @@
 'use client';
 
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { EDITOR_DEBOUNCE_TIME, EDITOR_MAX_WAIT } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { debounce } from 'es-toolkit/compat';
 import { CheckIcon, PencilIcon, XIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import CodeEditorPane from '@/components/CodeEditorPane';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import FloatingChatPanel from '@/features/FloatingChatPanel';
 import { useDocumentChatTopic } from '@/features/FloatingChatPanel/useDocumentChatTopic';
@@ -154,26 +156,22 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
   return (
     <div className={cx('flex flex-col', styles.frontmatter)}>
       <div className={cx('flex flex-row items-center justify-between', styles.sectionHeader)}>
-        <Text type="secondary">{t('skillFrontmatter.title')}</Text>
+        <div className="text-muted-foreground">{t('skillFrontmatter.title')}</div>
         {editing ? (
           <div className="flex flex-row gap-2">
-            <Button icon={XIcon} size="small" onClick={handleCancel}>
+            <Button size="sm" variant="outline" onClick={handleCancel}>
+              <XIcon data-icon="inline-start" />
               {t('cancel')}
             </Button>
-            <Button
-              icon={CheckIcon}
-              loading={saving}
-              size="small"
-              type="primary"
-              onClick={handleSave}
-            >
+            <Button loading={saving} size="sm" variant="default" onClick={handleSave}>
+              <CheckIcon data-icon="inline-start" />
               {t('confirm')}
             </Button>
           </div>
         ) : (
           <ActionIcon
             icon={PencilIcon}
-            size="small"
+            size="sm"
             title={t('skillFrontmatter.edit')}
             onClick={handleEdit}
           />
@@ -195,18 +193,18 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
               setError(undefined);
             }}
           />
-          {error && <Text type="danger">{error}</Text>}
+          {error && <div className="text-destructive">{error}</div>}
         </div>
       ) : metadata.length > 0 ? (
         metadata.map((item) => (
           <div className={cx('flex flex-row items-start', styles.metadataRow)} key={item.key}>
-            <Text className={styles.metadataKey}>{item.key}</Text>
-            <Text className={styles.metadataValue}>{item.value}</Text>
+            <div className={cn(styles.metadataKey)}>{item.key}</div>
+            <div className={cn(styles.metadataValue)}>{item.value}</div>
           </div>
         ))
       ) : (
         <div className={cx('flex flex-col', styles.metadataRow)}>
-          <Text type="secondary">{t('skillFrontmatter.empty')}</Text>
+          <div className="text-muted-foreground">{t('skillFrontmatter.empty')}</div>
         </div>
       )}
     </div>

@@ -3,13 +3,13 @@
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
 import Loading from '@/components/Loading/CircleLoading';
+import { Button } from '@/components/ui/button';
 import { Document, Page, pdfjs } from '@/libs/pdfjs';
 import { localFileService } from '@/services/electron/localFileService';
 
@@ -277,15 +277,22 @@ const DocumentPreview = memo<DocumentPreviewProps>(
           <FileIcon fileName={filename} size={40} />
         </div>
         <div className="flex flex-col items-center gap-1">
-          <Text style={{ fontWeight: 500 }}>{filename}</Text>
-          <Text type={'secondary'}>{t('workingPanel.localFile.document.unsupported')}</Text>
+          <div style={{ fontWeight: 500 }}>{filename}</div>
+          <div className="text-muted-foreground">
+            {t('workingPanel.localFile.document.unsupported')}
+          </div>
         </div>
         {isLocalFile ? (
-          <Button onClick={() => localFileService.openLocalFile({ path: filePath })}>
+          <Button
+            variant="outline"
+            onClick={() => localFileService.openLocalFile({ path: filePath })}
+          >
             {t('workingPanel.localFile.document.openWithDefaultApp')}
           </Button>
         ) : (
-          <Button onClick={handleDownload}>{t('workingPanel.localFile.document.download')}</Button>
+          <Button variant="outline" onClick={handleDownload}>
+            {t('workingPanel.localFile.document.download')}
+          </Button>
         )}
       </div>
     );

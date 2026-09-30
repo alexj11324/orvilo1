@@ -1,13 +1,15 @@
-import {
-  Accordion,
-  Button,
-  createModal,
-  ScrollArea,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, useModalContext } from '@/components/Modal';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import type { ReadyWorkspaceHtmlPublishPlan } from './prepareWorkspaceHtmlPublish';
 import { WORKSPACE_HTML_ARTIFACT_INLINE_MAX_BYTES } from './readWorkspaceAsset';
@@ -17,9 +19,9 @@ const CONFIRM_BODY_MAX_HEIGHT = 'min(52vh, 360px)';
 const PathList = ({ items }: { items: string[] }) => (
   <div className="flex flex-col gap-1">
     {items.map((item) => (
-      <Text key={item} style={{ wordBreak: 'break-all' }} type={'secondary'}>
+      <div className="text-muted-foreground" key={item} style={{ wordBreak: 'break-all' }}>
         {item}
-      </Text>
+      </div>
     ))}
   </div>
 );
@@ -50,81 +52,76 @@ const PublishHtmlArtifactConfirmContent = ({
 
   return (
     <ScrollArea
-      disableContentFit
-      scrollFade
       style={{ maxHeight: CONFIRM_BODY_MAX_HEIGHT, overflow: 'hidden' }}
       viewportProps={{ style: { height: 'auto', maxHeight: CONFIRM_BODY_MAX_HEIGHT } }}
     >
       <div className="flex flex-col gap-2" style={{ paddingBlock: 12, paddingInline: 16 }}>
-        <Text>{t('workingPanel.localFile.publish.privacy')}</Text>
+        <div>{t('workingPanel.localFile.publish.privacy')}</div>
         {showDetails && (
-          <Accordion
-            indicatorPlacement={'start'}
-            variant={'borderless'}
-            items={[
-              {
-                children: (
-                  <div className="flex flex-col gap-2" style={{ paddingBlock: '4px 0' }}>
-                    {inlinedPaths.length > 0 && (
-                      <>
-                        <Text>
-                          {t('workingPanel.localFile.publish.inline', {
-                            count: inlinedPaths.length,
-                            limit: inlineLimit,
-                          })}
-                        </Text>
-                        <PathList items={inlinedPaths} />
-                      </>
-                    )}
-                    {uploadedPaths.length > 0 && (
-                      <>
-                        <Text>
-                          {t('workingPanel.localFile.publish.upload', {
-                            count: uploadedPaths.length,
-                          })}
-                        </Text>
-                        <PathList items={uploadedPaths} />
-                      </>
-                    )}
-                    {missing.length > 0 && (
-                      <Text type={'secondary'}>
-                        {t('workingPanel.localFile.publish.missing', { list: missing.join(', ') })}
-                      </Text>
-                    )}
-                    {oversized.length > 0 && (
-                      <Text type={'secondary'}>
-                        {t('workingPanel.localFile.publish.oversized', {
-                          list: oversized.join(', '),
+          <Accordion>
+            <AccordionItem className="border-b-0" value="details">
+              <AccordionTrigger>
+                <div className="text-[12px] text-muted-foreground font-medium">
+                  {t('workingPanel.localFile.publish.details')}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col gap-2" style={{ paddingBlock: '4px 0' }}>
+                  {inlinedPaths.length > 0 && (
+                    <>
+                      <div>
+                        {t('workingPanel.localFile.publish.inline', {
+                          count: inlinedPaths.length,
+                          limit: inlineLimit,
                         })}
-                      </Text>
-                    )}
-                    {unsupported.length > 0 && (
-                      <Text type={'secondary'}>
-                        {t('workingPanel.localFile.publish.unsupported', {
-                          list: unsupported.join(', '),
+                      </div>
+                      <PathList items={inlinedPaths} />
+                    </>
+                  )}
+                  {uploadedPaths.length > 0 && (
+                    <>
+                      <div>
+                        {t('workingPanel.localFile.publish.upload', {
+                          count: uploadedPaths.length,
                         })}
-                      </Text>
-                    )}
-                    {remotes.length > 0 && (
-                      <>
-                        <Text>{t('workingPanel.localFile.publish.remotes')}</Text>
-                        <PathList items={remotes} />
-                      </>
-                    )}
-                    <Text type={'secondary'}>{t('workingPanel.localFile.publish.dynamic')}</Text>
+                      </div>
+                      <PathList items={uploadedPaths} />
+                    </>
+                  )}
+                  {missing.length > 0 && (
+                    <div className="text-muted-foreground">
+                      {t('workingPanel.localFile.publish.missing', { list: missing.join(', ') })}
+                    </div>
+                  )}
+                  {oversized.length > 0 && (
+                    <div className="text-muted-foreground">
+                      {t('workingPanel.localFile.publish.oversized', {
+                        list: oversized.join(', '),
+                      })}
+                    </div>
+                  )}
+                  {unsupported.length > 0 && (
+                    <div className="text-muted-foreground">
+                      {t('workingPanel.localFile.publish.unsupported', {
+                        list: unsupported.join(', '),
+                      })}
+                    </div>
+                  )}
+                  {remotes.length > 0 && (
+                    <>
+                      <div>{t('workingPanel.localFile.publish.remotes')}</div>
+                      <PathList items={remotes} />
+                    </>
+                  )}
+                  <div className="text-muted-foreground">
+                    {t('workingPanel.localFile.publish.dynamic')}
                   </div>
-                ),
-                key: 'details',
-                title: (
-                  <Text fontSize={12} type={'secondary'} weight={500}>
-                    {t('workingPanel.localFile.publish.details')}
-                  </Text>
-                ),
-              },
-            ]}
-          />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         )}
-        <Text type={'secondary'}>{t('workingPanel.localFile.publish.note')}</Text>
+        <div className="text-muted-foreground">{t('workingPanel.localFile.publish.note')}</div>
       </div>
     </ScrollArea>
   );
@@ -146,6 +143,7 @@ const PublishHtmlArtifactConfirmFooter = ({
       style={{ paddingBlock: 12, paddingInline: 16 }}
     >
       <Button
+        variant="outline"
         onClick={() => {
           close();
         }}
@@ -153,7 +151,7 @@ const PublishHtmlArtifactConfirmFooter = ({
         {t('cancel')}
       </Button>
       <Button
-        type={'primary'}
+        variant="default"
         onClick={() => {
           close();
           onOk();

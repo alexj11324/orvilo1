@@ -60,14 +60,15 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
             <TooltipTrigger render={<span />}>
               <Badge className={className} variant="destructive">
                 {t('FileParsingStatus.chunks.embeddingStatus.error')}{' '}
-                {createElement(RotateCwIcon, {
-                  size: 16,
-                  style: { cursor: 'pointer' },
-                  title: t('retry', { ns: 'common' }),
-                  onClick: () => {
+                <span
+                  style={{ cursor: 'pointer' }}
+                  title={t('retry', { ns: 'common' })}
+                  onClick={() => {
                     onErrorClick?.('embedding');
-                  },
-                })}
+                  }}
+                >
+                  <RotateCwIcon size={16} />
+                </span>
               </Badge>
             </TooltipTrigger>
             <TooltipContent style={{ maxWidth: 340 }}>

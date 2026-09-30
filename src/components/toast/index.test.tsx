@@ -4,7 +4,15 @@ import { toast, ToastHost, useToast } from '.';
 
 const sonnerCalls = vi.hoisted(() => ({
   custom: vi.fn(() => 'custom-id'),
-  default: vi.fn(() => 'default-id'),
+  default: vi.fn(
+    (
+      _title: unknown,
+      _data?: {
+        action?: { label: string; onClick: () => void };
+        cancel?: { label: string; onClick: () => void };
+      },
+    ) => 'default-id',
+  ),
   dismiss: vi.fn(),
   error: vi.fn(() => 'error-id'),
   info: vi.fn(() => 'info-id'),
@@ -61,6 +69,7 @@ describe('toast', () => {
       title: 'pick',
     });
     const [, data] = sonnerCalls.default.mock.calls[0];
+    if (!data?.action || !data.cancel) throw new Error('expected sonner options');
     expect(data.action.label).toBe('yes');
     expect(data.cancel.label).toBe('no');
     data.action.onClick();

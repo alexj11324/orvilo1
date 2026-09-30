@@ -129,11 +129,11 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
       return (
         <DropdownMenuCheckboxItem
           checked={item.checked}
+          className={item.danger ? 'text-destructive' : undefined}
           closeOnClick={item.closeOnClick}
           defaultChecked={item.defaultChecked}
           disabled={item.disabled}
           key={itemKey}
-          variant={item.danger ? 'destructive' : 'default'}
           onCheckedChange={(checked) => item.onCheckedChange?.(checked)}
         >
           <ItemContent

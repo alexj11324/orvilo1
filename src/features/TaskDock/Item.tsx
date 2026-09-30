@@ -107,8 +107,11 @@ const Item = memo<ItemProps>(
             style={{ paddingInlineEnd: 8, paddingInlineStart: solo ? 12 : 48 }}
           >
             <div
-              className={cn('truncate min-w-0', styles.resultLabel)}
-              type={result.onOpen ? undefined : 'secondary'}
+              className={cn(
+                'truncate min-w-0',
+                styles.resultLabel,
+                !result.onOpen && 'text-muted-foreground',
+              )}
             >
               {result.label}
             </div>

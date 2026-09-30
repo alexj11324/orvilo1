@@ -1,11 +1,11 @@
 'use client';
-import { Hotkey, KeyMapEnum } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { Check, PenLine, Replace, Send, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Button } from '@/components/ui/button';
+import { Kbd } from '@/components/ui/kbd';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -287,7 +287,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
       <div className="flex gap-2">
         <Button disabled={submitting} onClick={handleSkip}>
           <X /> {labels.skip}
-          <Hotkey compact keys={KeyMapEnum.Esc} variant="borderless" />
+          <Kbd>Esc</Kbd>
         </Button>
         <Button
           disabled={isSubmitDisabled}
@@ -296,7 +296,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
           onClick={handleSubmit}
         >
           <Send /> {labels.submit}
-          <Hotkey compact inverseTheme keys={KeyMapEnum.Enter} variant="borderless" />
+          <Kbd className="bg-background/20 text-primary-foreground">Enter</Kbd>
         </Button>
       </div>
     </div>

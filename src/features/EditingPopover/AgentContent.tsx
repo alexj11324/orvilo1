@@ -11,7 +11,6 @@ import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';
-import { useIsDark } from '@/hooks/useIsDark';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useFileStore } from '@/store/file';
@@ -31,7 +30,6 @@ interface AgentContentProps {
 const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) => {
   const { t } = useTranslation('setting');
   const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
-  const isDarkMode = useIsDark();
   const uploadWithProgress = useFileStore((s) => s.uploadWithProgress);
 
   const meta = useAgentStore(agentSelectors.getAgentMetaById(id));
@@ -140,7 +138,7 @@ const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) =>
                   <TooltipTrigger
                     render={
                       <span style={{ display: 'inline-flex' }}>
-                        <PaletteIcon size={{ size: 20, strokeWidth: 2.5 }} />
+                        <PaletteIcon size={20} strokeWidth={2.5} />
                       </span>
                     }
                   />

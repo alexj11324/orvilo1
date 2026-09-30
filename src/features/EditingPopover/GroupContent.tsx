@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';
 import GroupAvatar from '@/features/GroupAvatar';
-import { useIsDark } from '@/hooks/useIsDark';
 import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
@@ -33,7 +32,6 @@ const GroupContent = memo<GroupContentProps>(
   ({ id, title, avatar, backgroundColor, memberAvatars, type, onClose }) => {
     const { t } = useTranslation('setting');
     const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
-    const isDarkMode = useIsDark();
     const uploadWithProgress = useFileStore((s) => s.uploadWithProgress);
 
     const isAgentGroup = type === 'agentGroup';
@@ -167,7 +165,7 @@ const GroupContent = memo<GroupContentProps>(
                       <TooltipTrigger
                         render={
                           <span style={{ display: 'inline-flex' }}>
-                            <PaletteIcon size={{ size: 20, strokeWidth: 2.5 }} />
+                            <PaletteIcon size={20} strokeWidth={2.5} />
                           </span>
                         }
                       />

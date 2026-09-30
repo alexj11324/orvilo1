@@ -53,7 +53,7 @@ const InboxPage = memo(() => {
           </div>
         }
       />
-      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+      <WideScreenContainer className="gap-4 py-4" wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
         <HomeInbox
           inlineRail
           variant={'main'}

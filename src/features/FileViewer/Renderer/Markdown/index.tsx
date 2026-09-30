@@ -78,7 +78,7 @@ const MarkdownViewer = memo<MarkdownViewerProps>(({ url }) => {
             if (typeof key === 'string') setMode(key as PreviewMode);
           }}
         >
-          <TabsList size="sm">
+          <TabsList>
             <TabsTrigger value="render">
               <EyeIcon />
               {t('preview.render')}

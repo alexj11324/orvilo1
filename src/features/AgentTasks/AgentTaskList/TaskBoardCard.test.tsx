@@ -2,6 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -160,7 +161,7 @@ vi.mock('@/components/ActionIcon', () => ({
     title,
   }: {
     'aria-label'?: string;
-    'icon'?: unknown;
+    'icon'?: LucideIcon;
     'onClick'?: () => void;
     'title'?: string;
   }) => (

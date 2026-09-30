@@ -94,8 +94,6 @@ const sweep = keyframes`
   }
 `;
 
-/* Ported verbatim from lobehub base-ui textStyles.shiny: dimmed rest color,
- * gradient sweep clipped to glyphs via -webkit-mask-clip where supported. */
 const localShinyText = createStaticStyles(({ css, cssVar }) => ({
   shiny: css`
     --shiny-duration: 1.5s;

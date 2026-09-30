@@ -65,7 +65,7 @@ const LibraryList = memo(() => {
       errorVariant={'inline'}
       isEmpty={isEmpty}
       isLoading={showSkeleton}
-      loading={<SkeletonList paddingInline={4} rows={3} />}
+      loading={<SkeletonList className="px-1" rows={3} />}
       empty={
         <EmptyNavItem
           disabled={!canCreate}

@@ -630,7 +630,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
             getItemValue={(milestone) => milestone.id}
             style={{ gap: 4 }}
             value={milestones}
-            onValueCommit={(items) => {
+            onValueChange={(items) => {
               const ids = items.map((item) => item.id);
               if (ids.join('') === milestones.map((milestone) => milestone.id).join('')) return;
               void runMutation(

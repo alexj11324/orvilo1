@@ -104,7 +104,7 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
                   <ActionIcon
                     disabled={mutating}
                     icon={XIcon}
-                    size="sm"
+                    size="small"
                     title={t('permission.collaborators.remove')}
                   />
                 }

@@ -86,6 +86,7 @@ const ProjectLabelPicker = memo<ProjectLabelPickerProps>(
           mode="multiple"
           options={options.map((label) => ({ label: label.name, value: label.id }))}
           placeholder={placeholder}
+          popupClassName="w-auto! min-w-(--anchor-width)"
           size="small"
           value={[...labelIds]}
           onChange={(value) => {

@@ -1,10 +1,17 @@
 'use client';
 
-import { DropdownMenu } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { renderSidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import HeaderSlot from '@/routes/(main)/agent/(chat)/_layout/HeaderSlot';
 
 import { useMenu } from './useMenu';
@@ -15,8 +22,16 @@ const HeaderActions = memo(() => {
   return (
     <>
       <HeaderSlot.Outlet />
-      <DropdownMenu header={menuHeader} items={menuItems}>
-        <ActionIcon icon={MoreHorizontal} size={'small'} />
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+        <DropdownMenuContent align="end" side="bottom">
+          {menuHeader && (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>{menuHeader}</DropdownMenuLabel>
+            </DropdownMenuGroup>
+          )}
+          {renderSidebarMenuItems(typeof menuItems === 'function' ? menuItems() : menuItems)}
+        </DropdownMenuContent>
       </DropdownMenu>
     </>
   );

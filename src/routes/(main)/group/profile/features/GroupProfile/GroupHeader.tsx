@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
 import { Skeleton, toast } from '@lobehub/ui/base-ui';
 import { EDITOR_DEBOUNCE_TIME } from '@orvilo/const';
 import { debounce } from 'es-toolkit/compat';
@@ -11,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import EmojiPicker from '@/components/EmojiPicker';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';
 import { usePermission } from '@/hooks/usePermission';
 import GroupAvatar from '@/routes/(main)/group/features/GroupAvatar';
@@ -113,9 +114,8 @@ const GroupHeader = memo(() => {
   };
 
   return (
-    <Flexbox
-      gap={16}
-      paddingBlock={16}
+    <div
+      className="flex flex-col gap-4 py-4"
       style={{
         cursor: 'default',
       }}
@@ -144,27 +144,39 @@ const GroupHeader = memo(() => {
             ? undefined
             : () => {
                 return (
-                  <Block clickable height={72} width={72}>
+                  <div
+                    className="flex flex-col"
+                    style={{ cursor: 'pointer', height: 72, width: 72 }}
+                  >
                     <GroupAvatar size={72} />
-                  </Block>
+                  </div>
                 );
               }
         }
         customTabs={[
           {
             label: (
-              <Tooltip title={t('backgroundColor.title')}>
-                <Icon icon={PaletteIcon} size={{ size: 20, strokeWidth: 2.5 }} />
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <PaletteIcon size={{ size: 20, strokeWidth: 2.5 }} />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{t('backgroundColor.title')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ),
             render: () => (
-              <Flexbox padding={8} width={332}>
+              <div className="flex flex-col p-2" style={{ width: 332 }}>
                 <Suspense
                   fallback={
-                    <Flexbox gap={8}>
+                    <div className="flex flex-col gap-2">
                       <Skeleton height={38} />
                       <Skeleton height={38} />
-                    </Flexbox>
+                    </div>
                   }
                 >
                   <BackgroundSwatches
@@ -176,7 +188,7 @@ const GroupHeader = memo(() => {
                     onChange={handleBackgroundColorChange}
                   />
                 </Suspense>
-              </Flexbox>
+              </div>
             ),
             value: 'background',
           },
@@ -189,12 +201,11 @@ const GroupHeader = memo(() => {
         onUpload={handleAvatarUpload}
       />
       {/* Title Section */}
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
         <Input
           disabled={!canEdit}
           placeholder={t('name.placeholder')}
           value={localTitle}
-          variant={'borderless'}
           style={{
             fontSize: 36,
             fontWeight: 600,
@@ -208,8 +219,8 @@ const GroupHeader = memo(() => {
             debouncedSaveTitle(gid, e.target.value);
           }}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -1,7 +1,8 @@
-import { Input, Popover, stopPropagation } from '@lobehub/ui';
+import { stopPropagation } from '@lobehub/ui';
 import { memo, useCallback, useState } from 'react';
 
-import { useOverlayPopoverPortalProps } from '@/features/NavPanel/OverlayContainer';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useChatStore } from '@/store/chat';
 
 interface EditingProps {
@@ -16,7 +17,6 @@ const Editing = memo<EditingProps>(({ id, title, toggleEditing }) => {
     s.threadRenamingId === id,
     s.updateThreadTitle,
   ]);
-  const popoverPortalProps = useOverlayPopoverPortalProps();
 
   const handleUpdate = useCallback(async () => {
     if (newTitle && title !== newTitle) {
@@ -28,10 +28,13 @@ const Editing = memo<EditingProps>(({ id, title, toggleEditing }) => {
   return (
     <Popover
       open={editing}
-      placement="bottomLeft"
-      portalProps={popoverPortalProps}
-      trigger="click"
-      content={
+      onOpenChange={(open) => {
+        if (!open) handleUpdate();
+        toggleEditing(open);
+      }}
+    >
+      <PopoverTrigger render={<div />} />
+      <PopoverContent align="start" side="bottom" style={{ padding: 4, width: 320 }}>
         <Input
           autoFocus
           defaultValue={title}
@@ -41,24 +44,14 @@ const Editing = memo<EditingProps>(({ id, title, toggleEditing }) => {
             handleUpdate();
             toggleEditing(false);
           }}
-          onPressEnter={() => {
-            handleUpdate();
-            toggleEditing(false);
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleUpdate();
+              toggleEditing(false);
+            }
           }}
         />
-      }
-      styles={{
-        content: {
-          padding: 4,
-          width: 320,
-        },
-      }}
-      onOpenChange={(open) => {
-        if (!open) handleUpdate();
-        toggleEditing(open);
-      }}
-    >
-      <div />
+      </PopoverContent>
     </Popover>
   );
 });

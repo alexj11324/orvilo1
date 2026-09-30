@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Input, Popover, Tooltip } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
@@ -10,6 +9,9 @@ import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useParams } from 'react-router';
 
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@/const/meta';
 import { type SidebarAgentItem } from '@/database/repositories/home';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -192,37 +194,46 @@ const QuickChatAgentSwitcher = memo(() => {
   if (!isReady) return null;
 
   return (
-    <Flexbox horizontal align={'center'} gap={6} justify={'flex-start'}>
+    <div className="flex items-center gap-1.5 justify-start">
       {visible.map((item) => (
-        <Tooltip key={item.id} title={item.title}>
-          <button
-            aria-label={item.title}
-            className={cx(styles.itemBtn, isActive(item) && styles.active)}
-            type={'button'}
-            onClick={() => handleSelect(item)}
-          >
-            <Avatar
-              avatar={item.avatar}
-              background={item.background}
-              shape={'square'}
-              size={AVATAR_SIZE}
+        <TooltipProvider key={item.id}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <button
+                    aria-label={item.title}
+                    className={cx(styles.itemBtn, isActive(item) && styles.active)}
+                    type={'button'}
+                    onClick={() => handleSelect(item)}
+                  >
+                    <Avatar
+                      avatar={item.avatar}
+                      background={item.background}
+                      shape={'square'}
+                      size={AVATAR_SIZE}
+                    />
+                  </button>
+                </span>
+              }
             />
-          </button>
-        </Tooltip>
+            <TooltipContent>{item.title}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ))}
       {remaining.length > 0 && (
-        <Popover
-          arrow={false}
-          classNames={{ content: styles.popover }}
-          open={popoverOpen}
-          placement={'bottom'}
-          trigger={'click'}
-          content={
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger
+            render={
+              <button aria-label={'More agents'} className={styles.more} type={'button'}>
+                <MoreHorizontalIcon size={16} />
+              </button>
+            }
+          />
+          <PopoverContent align="center" className={styles.popover} side="bottom">
             <div className={styles.popoverContent}>
               <Input
-                allowClear
                 placeholder={'Search agents...'}
-                size={'small'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -256,15 +267,10 @@ const QuickChatAgentSwitcher = memo(() => {
                 )}
               </div>
             </div>
-          }
-          onOpenChange={setPopoverOpen}
-        >
-          <button aria-label={'More agents'} className={styles.more} type={'button'}>
-            <Icon icon={MoreHorizontalIcon} size={16} />
-          </button>
+          </PopoverContent>
         </Popover>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { memo, Suspense } from 'react';
 
@@ -19,10 +18,8 @@ const Header = memo(() => {
   return (
     <NavHeader
       right={
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
+        <div
+          className="flex items-center gap-2"
           style={{ backgroundColor: cssVar.colorBgContainer }}
         >
           {/* Progress chip for a heavy group transfer/copy still filling in its
@@ -32,7 +29,7 @@ const Header = memo(() => {
           <Suspense>
             <ShareButton />
           </Suspense>
-        </Flexbox>
+        </div>
       }
     />
   );

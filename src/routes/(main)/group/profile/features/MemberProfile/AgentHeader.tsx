@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
 import { Skeleton, toast } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR, EDITOR_DEBOUNCE_TIME } from '@orvilo/const';
 import { debounce } from 'es-toolkit/compat';
@@ -10,6 +9,8 @@ import { memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react
 import { useTranslation } from 'react-i18next';
 
 import EmojiPicker from '@/components/EmojiPicker';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BackgroundSwatches from '@/features/AgentSetting/AgentMeta/BackgroundSwatches';
 import { usePermission } from '@/hooks/usePermission';
 import SupervisorAvatar from '@/routes/(main)/group/features/GroupAvatar';
@@ -124,9 +125,8 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
   // ReadOnly mode: show fixed avatar and title (for supervisor)
   if (readOnly) {
     return (
-      <Flexbox
-        gap={16}
-        paddingBlock={16}
+      <div
+        className="flex flex-col gap-4 py-4"
         style={{
           cursor: 'default',
         }}
@@ -135,25 +135,25 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
           e.preventDefault();
         }}
       >
-        <Block height={72} width={72}>
+        <div className="flex flex-col" style={{ height: 72, width: 72 }}>
           <SupervisorAvatar size={72} />
-        </Block>
-        <Flexbox
+        </div>
+        <div
+          className="flex flex-col"
           style={{
             fontSize: 36,
             fontWeight: 600,
           }}
         >
           {t('group.profile.supervisor', { ns: 'chat' })}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox
-      gap={16}
-      paddingBlock={16}
+    <div
+      className="flex flex-col gap-4 py-4"
       style={{
         cursor: 'default',
       }}
@@ -181,27 +181,41 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
             ? undefined
             : () => {
                 return (
-                  <Block clickable height={72} width={72}>
+                  <div
+                    className="flex flex-col"
+                    style={{ cursor: 'pointer', height: 72, width: 72 }}
+                  >
                     <SupervisorAvatar size={72} />
-                  </Block>
+                  </div>
                 );
               }
         }
         customTabs={[
           {
             label: (
-              <Tooltip title={t('settingAgent.backgroundColor.title', { ns: 'setting' })}>
-                <Icon icon={PaletteIcon} size={{ size: 20, strokeWidth: 2.5 }} />
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <PaletteIcon size={{ size: 20, strokeWidth: 2.5 }} />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {t('settingAgent.backgroundColor.title', { ns: 'setting' })}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ),
             render: () => (
-              <Flexbox padding={8} width={332}>
+              <div className="flex flex-col p-2" style={{ width: 332 }}>
                 <Suspense
                   fallback={
-                    <Flexbox gap={8}>
+                    <div className="flex flex-col gap-2">
                       <Skeleton height={38} />
                       <Skeleton height={38} />
-                    </Flexbox>
+                    </div>
                   }
                 >
                   <BackgroundSwatches
@@ -213,7 +227,7 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
                     onChange={handleBackgroundColorChange}
                   />
                 </Suspense>
-              </Flexbox>
+              </div>
             ),
             value: 'background',
           },
@@ -229,7 +243,6 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
         disabled={disabled}
         placeholder={t('settingAgent.name.placeholder', { ns: 'setting' })}
         value={localTitle}
-        variant={'borderless'}
         style={{
           fontSize: 36,
           fontWeight: 600,
@@ -243,7 +256,7 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
           debouncedSaveTitle(agentId, e.target.value);
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

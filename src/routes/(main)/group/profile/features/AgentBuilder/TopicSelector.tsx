@@ -1,11 +1,15 @@
-import { type DropdownMenuCheckboxItem } from '@lobehub/ui';
-import { DropdownMenu } from '@lobehub/ui';
 import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Clock3Icon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import NavHeader from '@/features/NavHeader';
 import { useFetchAgentChatTopics } from '@/hooks/useFetchChatTopics';
@@ -58,20 +62,18 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
     [topics, activeTopicId],
   );
 
-  const items = useMemo<DropdownMenuCheckboxItem[]>(
+  const items = useMemo(
     () =>
       (topics || []).map((topic) => ({
         checked: topic.id === activeTopicId,
-        closeOnClick: true,
         key: topic.id,
         label: topic.title,
-        onCheckedChange: (checked) => {
+        onCheckedChange: (checked: boolean) => {
           if (disabled) return;
           if (checked) {
             handleSwitchTopic(topic.id);
           }
         },
-        type: 'checkbox',
       })),
     [topics, handleSwitchTopic, activeTopicId],
   );
@@ -102,17 +104,33 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
               handleSwitchTopic(undefined);
             }}
           />
-          <DropdownMenu
-            items={items}
-            placement="bottomRight"
-            popupProps={{ style: { maxHeight: 600, minWidth: 200, overflowY: 'auto' } }}
-            triggerProps={{ disabled: disabled || isEmpty }}
-          >
-            <ActionIcon
+          <DropdownMenu>
+            <DropdownMenuTrigger
               disabled={disabled || isEmpty}
-              icon={Clock3Icon}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              render={
+                <ActionIcon
+                  disabled={disabled || isEmpty}
+                  icon={Clock3Icon}
+                  size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                />
+              }
             />
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              style={{ maxHeight: 600, minWidth: 200, overflowY: 'auto' }}
+            >
+              {items.map((item) => (
+                <DropdownMenuCheckboxItem
+                  closeOnClick
+                  checked={item.checked}
+                  key={item.key}
+                  onCheckedChange={item.onCheckedChange}
+                >
+                  {item.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
           </DropdownMenu>
         </>
       }

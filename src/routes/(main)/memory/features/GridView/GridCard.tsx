@@ -1,6 +1,6 @@
-import { Block, Center, Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -59,24 +59,22 @@ const GridCard = memo<GridCardProps>(
   }) => {
     const cateColor = useCateColor(cate);
     return (
-      <Block
-        className={styles.masonryCard}
-        gap={4}
-        height={'100%'}
-        padding={4}
-        variant={'filled'}
+      <div
+        className={cn('flex flex-col gap-1 p-1', styles.masonryCard)}
         style={{
+          height: '100%',
+          background: cssVar.colorFillSecondary,
+
           background: cateColor?.backgroundColor,
         }}
         onClick={onClick}
       >
-        <Block
-          flex={1}
-          gap={12}
-          paddingBlock={16}
-          paddingInline={12}
-          variant={'outlined'}
+        <div
+          className="flex flex-col flex-1 gap-3 py-4 px-3"
           style={{
+            border: `1px solid ${cssVar.colorBorder}`,
+            borderRadius: cssVar.borderRadiusLG,
+
             boxShadow: `0 4px 16px -4px ${cateColor?.shadowColor || 'rgba(0, 0, 0, 0.2)'}`,
             overflow: 'hidden',
             position: 'relative',
@@ -84,7 +82,7 @@ const GridCard = memo<GridCardProps>(
         >
           {(title || titleAddon) && (
             <>
-              <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+              <div className="flex items-center gap-2 flex-wrap">
                 {title && typeof title === 'string' ? (
                   <Text
                     as={'h2'}
@@ -98,7 +96,7 @@ const GridCard = memo<GridCardProps>(
                 ) : (
                   title
                 )}
-              </Flexbox>
+              </div>
               {typeof titleAddon === 'string' ? (
                 <Tag variant="borderless">{titleAddon}</Tag>
               ) : (
@@ -114,11 +112,8 @@ const GridCard = memo<GridCardProps>(
             children
           )}
           <HashTags hashTags={hashTags} />
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={12}
-            justify={'space-between'}
+          <div
+            className="flex items-center gap-3 justify-between"
             style={{
               overflow: 'hidden',
               position: 'relative',
@@ -126,22 +121,14 @@ const GridCard = memo<GridCardProps>(
           >
             {footer}
             <Time capturedAt={capturedAt} />
-          </Flexbox>
-        </Block>
-        <Flexbox
-          horizontal
-          align={'center'}
-          justify={'space-between'}
-          paddingBlock={8}
-          paddingInline={8}
-          style={{ overflow: 'hidden', position: 'relative' }}
-          width={'100%'}
+          </div>
+        </div>
+        <div
+          className="flex items-center justify-between py-2 px-2"
+          style={{ width: '100%', overflow: 'hidden', position: 'relative' }}
         >
-          <Flexbox
-            horizontal
-            align={'center'}
-            flex={1}
-            gap={8}
+          <div
+            className="flex items-center flex-1 gap-2"
             style={{
               overflow: 'hidden',
             }}
@@ -151,8 +138,8 @@ const GridCard = memo<GridCardProps>(
             }}
           >
             {badges}
-          </Flexbox>
-          <Center flex={'none'}>
+          </div>
+          <div className="flex items-center justify-center" style={{ flex: 'none' }}>
             <Text
               align={'center'}
               color={cateColor?.backgroundTextColor || cssVar.colorTextSecondary}
@@ -163,14 +150,12 @@ const GridCard = memo<GridCardProps>(
             >
               {cate?.toUpperCase() || 'CHORE'}
             </Text>
-          </Center>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(ACTION_CLASSNAME, styles.actions)}
-            flex={1}
-            gap={4}
-            justify={'flex-end'}
+          </div>
+          <div
+            className={cn(
+              'flex items-center flex-1 gap-1 justify-end',
+              cx(ACTION_CLASSNAME, styles.actions),
+            )}
             style={{
               overflow: 'hidden',
             }}
@@ -180,9 +165,9 @@ const GridCard = memo<GridCardProps>(
             }}
           >
             {actions}
-          </Flexbox>
-        </Flexbox>
-      </Block>
+          </div>
+        </div>
+      </div>
     );
   },
 );

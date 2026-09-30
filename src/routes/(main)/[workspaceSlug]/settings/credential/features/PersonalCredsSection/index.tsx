@@ -1,12 +1,12 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import ListSkeleton from '@/components/ListSkeleton';
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
 import CredItem from '@/features/Settings/creds/features/CredItem';
 import { lambdaQuery } from '@/libs/trpc/client';
 
@@ -64,15 +64,21 @@ const PersonalCredsSection: FC<PersonalCredsSectionProps> = ({ onWorkspaceCredsC
   return (
     <AsyncBoundary
       data={data}
-      empty={<Empty className={styles.empty} description={t('creds.empty')} />}
       error={error}
       errorVariant={'block'}
       isEmpty={credentials.length === 0}
       isLoading={isLoading}
       loading={<ListSkeleton paddingInline={0} />}
+      empty={
+        <Empty className={styles.empty}>
+          <EmptyHeader>
+            <EmptyDescription>{t('creds.empty')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      }
       onRetry={() => refetch()}
     >
-      <Flexbox gap={0}>
+      <div className="flex flex-col gap-0">
         {credentials.map((cred) => (
           <CredItem
             cred={cred}
@@ -80,7 +86,7 @@ const PersonalCredsSection: FC<PersonalCredsSectionProps> = ({ onWorkspaceCredsC
             key={cred.id}
           />
         ))}
-      </Flexbox>
+      </div>
     </AsyncBoundary>
   );
 };

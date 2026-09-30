@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
@@ -35,7 +34,7 @@ const GroupMemberItem = memo<GroupMemberItemProps>(
           />
         }
         title={
-          <Flexbox horizontal align="center" gap={4}>
+          <div className="flex items-center gap-1">
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {title}
             </span>
@@ -44,7 +43,7 @@ const GroupMemberItem = memo<GroupMemberItemProps>(
                 {t('group.profile.external')}
               </Tag>
             )}
-          </Flexbox>
+          </div>
         }
       />
     );

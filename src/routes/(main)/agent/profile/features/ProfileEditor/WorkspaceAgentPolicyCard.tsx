@@ -1,11 +1,11 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -41,16 +41,16 @@ interface WorkspaceAgentPolicyCardProps {
 
 export const WorkspaceAgentPolicyCard = memo<WorkspaceAgentPolicyCardProps>(
   ({ action, children, fullWidth, icon, title }) => (
-    <Flexbox className={cx(styles.card, fullWidth && styles.fullWidth)} gap={12}>
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon icon={icon} size={16} />
+    <div className={cn('flex flex-col gap-3', cx(styles.card, fullWidth && styles.fullWidth))}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {createElement(icon, { size: 16 })}
           <Text className={styles.title}>{title}</Text>
-        </Flexbox>
+        </div>
         {action}
-      </Flexbox>
+      </div>
       {children}
-    </Flexbox>
+    </div>
   ),
 );
 

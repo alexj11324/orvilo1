@@ -1,7 +1,8 @@
-import { ScrollShadow } from '@lobehub/ui';
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import { ThreadType } from '@orvilo/types';
 import { memo } from 'react';
 
+import { ScrollBar } from '@/components/ui/scroll-area';
 import { useFetchThreads } from '@/hooks/useFetchThreads';
 import { useScrollActiveThreadIntoView } from '@/hooks/useScrollActiveThreadIntoView';
 import { useChatStore } from '@/store/chat';
@@ -25,23 +26,24 @@ const ThreadList = memo(() => {
   if (!threads || threads.length === 0) return;
 
   return (
-    <ScrollShadow
-      gap={1}
-      paddingBlock={1}
-      ref={containerRef}
-      size={12}
-      style={{ maxHeight: MAX_HEIGHT }}
-    >
-      {threads?.map((item, index) => (
-        <ThreadItem
-          id={item.id}
-          index={index}
-          isSubagent={item.type === ThreadType.Isolation}
-          key={item.id}
-          title={item.title}
-        />
-      ))}
-    </ScrollShadow>
+    <ScrollAreaPrimitive.Root style={{ maxHeight: MAX_HEIGHT }}>
+      <ScrollAreaPrimitive.Viewport
+        ref={containerRef}
+        style={{ display: 'flex', flexDirection: 'column', gap: 1, paddingBlock: 1 }}
+      >
+        {threads?.map((item, index) => (
+          <ThreadItem
+            id={item.id}
+            index={index}
+            isSubagent={item.type === ThreadType.Isolation}
+            key={item.id}
+            title={item.title}
+          />
+        ))}
+      </ScrollAreaPrimitive.Viewport>
+      <ScrollBar />
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
   );
 });
 

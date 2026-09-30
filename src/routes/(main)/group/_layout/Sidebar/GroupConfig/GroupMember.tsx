@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -109,7 +108,7 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
 
   return (
     <>
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         {/* User */}
         <NavItem icon={<UserAvatar size={24} />} title={nickname || username || 'User'} />
         {groupId &&
@@ -143,7 +142,7 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
               </div>
             </AgentProfilePopup>
           ))}
-      </Flexbox>
+      </div>
 
       {groupId && (
         <AddGroupMemberModal

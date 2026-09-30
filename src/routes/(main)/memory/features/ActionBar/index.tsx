@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type PropsWithChildren } from 'react';
 import { memo } from 'react';
 
@@ -13,10 +12,10 @@ interface Props extends PropsWithChildren {
 
 const ActionBar = memo<Props>(({ children, gap = 8, showPurge }) => {
   return (
-    <Flexbox horizontal gap={gap}>
+    <div className="flex" style={{ gap }}>
       {showPurge && <PurgeButton iconOnly />}
       {children}
-    </Flexbox>
+    </div>
   );
 });
 

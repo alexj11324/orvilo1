@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { AccordionRoot } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
@@ -49,7 +48,7 @@ const ByTimeMode = memo(() => {
   const { expandedKeys, setExpandedKeys } = useTopicGroupCollapse(topicGroupMode, groupIds);
 
   return (
-    <Flexbox gap={2}>
+    <div className="flex flex-col gap-0.5">
       {/* Grouped topics */}
       <AccordionRoot
         indicatorPlacement="inline"
@@ -70,7 +69,7 @@ const ByTimeMode = memo(() => {
       {hasMore && !isExpandingPageSize && (
         <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

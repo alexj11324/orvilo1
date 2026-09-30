@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { FileQuestionIcon } from 'lucide-react';
@@ -17,9 +16,9 @@ const DetailNotFound = memo(() => {
   const { t } = useTranslation('memory');
 
   return (
-    <Center flex={1} gap={12} padding={48} width={'100%'}>
-      <Icon icon={FileQuestionIcon} size={32} style={{ color: cssVar.colorTextTertiary }} />
-      <Flexbox align={'center'} gap={4}>
+    <div className="flex items-center justify-center flex-1 gap-3 p-12" style={{ width: '100%' }}>
+      <FileQuestionIcon size={32} style={{ color: cssVar.colorTextTertiary }} />
+      <div className="flex flex-col items-center gap-1">
         <Text fontSize={16} weight={600}>
           {t('detail.notFound.title')}
         </Text>
@@ -31,8 +30,8 @@ const DetailNotFound = memo(() => {
         >
           {t('detail.notFound.desc')}
         </Text>
-      </Flexbox>
-    </Center>
+      </div>
+    </div>
   );
 });
 

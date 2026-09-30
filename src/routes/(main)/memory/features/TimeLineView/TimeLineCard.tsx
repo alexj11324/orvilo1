@@ -1,6 +1,6 @@
-import { Block, Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -42,22 +42,17 @@ interface TimeLineCardProps {
 const TimeLineCard = memo<TimeLineCardProps>(
   ({ title, titleAddon, cate, children, actions, onClick, capturedAt, hashTags }) => {
     return (
-      <Block
-        clickable
-        className={styles.timelineCard}
-        gap={12}
-        padding={16}
-        variant={'borderless'}
+      <div
+        className={cn('flex flex-col gap-3 p-4', styles.timelineCard)}
+        style={{ cursor: 'pointer' }}
         onClick={onClick}
       >
         {(title || titleAddon) && (
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={4}
-            width={'100%'}
-            wrap={'wrap'}
+          <div
+            className="flex items-center gap-1 flex-wrap"
             style={{
+              width: '100%',
+
               overflow: 'hidden',
             }}
           >
@@ -69,7 +64,7 @@ const TimeLineCard = memo<TimeLineCardProps>(
               title
             )}
             {!!titleAddon ? <Tag>{titleAddon}</Tag> : titleAddon}
-          </Flexbox>
+          </div>
         )}
         {typeof children === 'string' ? (
           <Text as={'p'} color={cssVar.colorTextSecondary} ellipsis={{ rows: 3 }}>
@@ -79,25 +74,22 @@ const TimeLineCard = memo<TimeLineCardProps>(
           children
         )}
         <HashTags hashTags={hashTags} />
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2 justify-between">
+          <div className="flex items-center gap-2">
             <CateTag cate={cate} />
             <Time capturedAt={capturedAt} />
-          </Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(ACTION_CLASSNAME, styles.actions)}
-            gap={4}
+          </div>
+          <div
+            className={cn('flex items-center gap-1', cx(ACTION_CLASSNAME, styles.actions))}
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
             }}
           >
             {actions}
-          </Flexbox>
-        </Flexbox>
-      </Block>
+          </div>
+        </div>
+      </div>
     );
   },
 );

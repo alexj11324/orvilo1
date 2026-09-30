@@ -1,7 +1,8 @@
-import { Flexbox, Tooltip } from '@lobehub/ui';
 import { Progress, type ProgressProps, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ProgressIconProps extends Omit<ProgressProps, 'percent'> {
   percent?: number | null;
@@ -24,15 +25,22 @@ const ProgressIcon = memo<ProgressIconProps>(({ showInfo, format, percent, ...re
 
   if (showInfo)
     return (
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex items-center gap-2">
         <div style={{ width: 24 }}>{content}</div>
         <Text color={cssVar.colorTextSecondary} fontSize={12}>
           {format?.(percent)}
         </Text>
-      </Flexbox>
+      </div>
     );
 
-  return <Tooltip title={format?.(percent)}>{content}</Tooltip>;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{content}</span>} />
+        <TooltipContent>{format?.(percent)}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 });
 
 export default ProgressIcon;

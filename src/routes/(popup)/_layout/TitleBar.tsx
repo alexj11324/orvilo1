@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { useWatchThemeUpdate } from '@/features/Electron/system/useWatchThemeUpdate';
@@ -49,23 +49,23 @@ const PopupTitleBar = memo<PopupTitleBarProps>(({ title }) => {
   const rightSpacer = isWindows ? WINDOWS_NATIVE_CONTROL_WIDTH : 0;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.container, electronStylish.draggable)}
-      flex={'none'}
-      gap={4}
-      height={TITLE_BAR_HEIGHT}
-      style={{ minHeight: TITLE_BAR_HEIGHT, paddingInline: 8 }}
-      width={'100%'}
+    <div
+      className={cn('flex items-center gap-1', cx(styles.container, electronStylish.draggable))}
+      style={{
+        flex: 'none',
+        height: TITLE_BAR_HEIGHT,
+        width: '100%',
+        minHeight: TITLE_BAR_HEIGHT,
+        paddingInline: 8,
+      }}
     >
       <div style={{ flex: `0 0 ${leftSpacer}px` }} />
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
         {title && <div className={styles.title}>{title}</div>}
-      </Flexbox>
+      </div>
       <PinOnTopButton />
       {showWinControl ? <WinControl /> : <div style={{ flex: `0 0 ${rightSpacer}px` }} />}
-    </Flexbox>
+    </div>
   );
 });
 

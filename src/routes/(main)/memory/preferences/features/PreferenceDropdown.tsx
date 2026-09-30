@@ -1,10 +1,10 @@
-import { DropdownMenu } from '@lobehub/ui';
 import { ActionIcon, type ActionIconProps, confirmModal } from '@lobehub/ui/base-ui';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { type KeyboardEvent, type MouseEvent } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useUserMemoryStore } from '@/store/userMemory';
 
 interface PreferenceDropdownProps {
@@ -58,9 +58,9 @@ const PreferenceDropdown = memo<PreferenceDropdownProps>(({ id, size = 'small' }
   ];
 
   return (
-    <DropdownMenu items={menuItems}>
+    <SidebarDropdownMenu items={menuItems}>
       <ActionIcon icon={MoreHorizontal} size={size} />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

@@ -1,12 +1,15 @@
 'use client';
 
-import { DropdownMenu, Flexbox, type MenuProps, Tooltip } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { Plus } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 const styles = createStaticStyles(({ css, cssVar: cv }) => ({
   addButton: css`
@@ -119,7 +122,7 @@ interface ChromeTabsProps {
    * When provided, the add button becomes a dropdown trigger showing these items.
    * Otherwise it falls back to calling `onAdd` directly on click.
    */
-  addMenuItems?: MenuProps['items'];
+  addMenuItems?: SidebarMenuItems;
   items: ChromeTabItem[];
   onAdd?: () => void;
   onChange: (id: string) => void;
@@ -158,7 +161,7 @@ const ChromeTabs = memo<ChromeTabsProps>(
               key={item.id}
               onClick={() => onChange(item.id)}
             >
-              <Flexbox horizontal align="center" gap={6}>
+              <div className="flex items-center gap-1.5">
                 {item.icon ? (
                   item.icon
                 ) : item.avatar ? (
@@ -168,38 +171,47 @@ const ChromeTabs = memo<ChromeTabsProps>(
                 {item.isExternal && (
                   <span className={styles.externalTag}>{t('group.profile.external')}</span>
                 )}
-              </Flexbox>
+              </div>
             </div>
           );
         })}
         {(addMenuItems || onAdd) &&
           (addMenuItems ? (
-            <DropdownMenu
-              disabled={addDisabled}
-              items={addMenuItems}
-              nativeButton={false}
-              placement="bottomLeft"
-              trigger={['click']}
-            >
+            addDisabled ? (
               <div
-                className={cx(styles.addButton, addDisabled && styles.addButtonDisabled)}
-                title={addDisabled ? addDisabledReason : undefined}
+                className={cx(styles.addButton, styles.addButtonDisabled)}
+                title={addDisabledReason}
               >
                 <Plus size={16} />
               </div>
-            </DropdownMenu>
+            ) : (
+              <SidebarDropdownMenu items={addMenuItems} placement="bottomLeft">
+                <div className={styles.addButton}>
+                  <Plus size={16} />
+                </div>
+              </SidebarDropdownMenu>
+            )
           ) : (
-            <Tooltip title={addDisabled ? addDisabledReason : undefined}>
-              <div
-                className={cx(styles.addButton, addDisabled && styles.addButtonDisabled)}
-                onClick={() => {
-                  if (addDisabled) return;
-                  onAdd?.();
-                }}
-              >
-                <Plus size={16} />
-              </div>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <div
+                        className={cx(styles.addButton, addDisabled && styles.addButtonDisabled)}
+                        onClick={() => {
+                          if (addDisabled) return;
+                          onAdd?.();
+                        }}
+                      >
+                        <Plus size={16} />
+                      </div>
+                    </span>
+                  }
+                />
+                <TooltipContent>{addDisabled ? addDisabledReason : undefined}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ))}
       </div>
     );

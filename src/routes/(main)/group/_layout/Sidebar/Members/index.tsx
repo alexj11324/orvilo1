@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -75,7 +74,7 @@ const Members = memo<MembersProps>(({ itemKey }) => {
             accordionStyles.actionBorderless,
           )}
         >
-          <Flexbox horizontal align="center" gap={4}>
+          <div className="flex items-center gap-1">
             {isRevalidating && <ActionIcon loading icon={Loader2Icon} size={'small'} />}
             {memberCount > 1 && (
               <ActionIcon
@@ -93,17 +92,17 @@ const Members = memo<MembersProps>(({ itemKey }) => {
               title={canEdit ? t('groupSidebar.members.addMember') : reason}
               onClick={handleAddMember}
             />
-          </Flexbox>
+          </div>
         </div>
       </AccordionHeader>
       <AccordionPanel contentStyle={{ padding: 0 }}>
-        <Flexbox gap={1} paddingBlock={1}>
+        <div className="flex flex-col" style={{ gap: 1, paddingBlock: 1 }}>
           <GroupMember
             addModalOpen={addModalOpen}
             groupId={activeGroupId}
             onAddModalOpenChange={setAddModalOpen}
           />
-        </Flexbox>
+        </div>
         {activeGroupId && (
           <SortMembersModal
             groupId={activeGroupId}

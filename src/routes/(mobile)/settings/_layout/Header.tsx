@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -75,9 +74,9 @@ const Header = memo(() => {
       center={
         <ChatHeader.Title
           title={
-            <Flexbox horizontal align={'center'} gap={8}>
+            <div className="flex items-center gap-2">
               <span style={{ lineHeight: 1.2 }}>{tabTitle}</span>
-            </Flexbox>
+            </div>
           }
         />
       }

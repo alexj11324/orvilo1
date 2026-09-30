@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Segmented, Switch, Text, toast } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import { useMutation } from '@tanstack/react-query';
@@ -106,7 +105,7 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
   };
 
   return (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-center gap-2">
       <Text fontSize={12} type={'secondary'}>
         {t('creds.share.toggle')}
       </Text>
@@ -123,7 +122,7 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
         />
       )}
       <Switch checked={shared} loading={isPending} onChange={handleSwitchChange} />
-    </Flexbox>
+    </div>
   );
 };
 

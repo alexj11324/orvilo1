@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { HotkeyScopeEnum } from '@orvilo/const/hotkeys';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { type CSSProperties, type FC } from 'react';
 import { Suspense } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
@@ -80,19 +80,20 @@ const Layout: FC = () => {
             <TitleBar />
           </Suspense>
           <DndContextWrapper>
-            <Flexbox
-              horizontal
-              className={cx(isPWA ? styles.mainContainerPWA : styles.mainContainer)}
-              height={`calc(100% - ${TITLE_BAR_HEIGHT}px)`}
-              width={'100%'}
+            <div
+              className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
+              style={{ height: `calc(100% - ${TITLE_BAR_HEIGHT}px)`, width: '100%' }}
             >
               <SidebarShell />
               <DesktopLayoutContainer>
-                <Flexbox height={'100%'} style={tabHostContainer} width={'100%'}>
+                <div
+                  className="flex flex-col"
+                  style={{ height: '100%', width: '100%', ...tabHostContainer }}
+                >
                   <TabHost />
-                </Flexbox>
+                </div>
               </DesktopLayoutContainer>
-            </Flexbox>
+            </div>
           </DndContextWrapper>
           <Suspense fallback={null}>
             <HotkeyHelperPanel />

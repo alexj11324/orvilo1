@@ -1,7 +1,6 @@
 'use client';
 
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import { memo, type ReactNode, useMemo } from 'react';
@@ -47,19 +46,19 @@ const rightActions: ActionKeys[] = ['agent'];
 const GuardBanner = memo<{ action?: ReactNode; hint?: string; title: string }>(
   ({ title, hint, action }) => (
     <WideScreenContainer>
-      <Flexbox align={'center'} paddingBlock={'0 8px'} paddingInline={12}>
+      <div className="flex flex-col items-center px-3" style={{ paddingBlock: '0 8px' }}>
         <Alert
           action={action}
           style={{ maxWidth: 880, width: '100%' }}
           type={'warning'}
           title={
-            <Flexbox horizontal align={'baseline'} gap={6} style={{ flexWrap: 'wrap' }}>
+            <div className="flex items-baseline gap-1.5" style={{ flexWrap: 'wrap' }}>
               <span>{title}</span>
               {hint && <span style={{ fontWeight: 400, opacity: 0.75 }}>{hint}</span>}
-            </Flexbox>
+            </div>
           }
         />
-      </Flexbox>
+      </div>
     </WideScreenContainer>
   ),
 );
@@ -157,14 +156,14 @@ const HeterogeneousChatInput = memo(() => {
         hint={desc}
         title={title}
         action={
-          <Flexbox horizontal gap={4}>
+          <div className="flex gap-1">
             <Button size={'small'} type={'fill'} onClick={refresh}>
               {t('platformAgent.deviceGuard.refresh')}
             </Button>
             <Button size={'small'} type={'primary'} onClick={goToAgentProfile}>
               {t('platformAgent.deviceGuard.configure')}
             </Button>
-          </Flexbox>
+          </div>
         }
       />
     );
@@ -216,7 +215,7 @@ const HeterogeneousChatInput = memo(() => {
     deviceSelectionRequired || deviceBlocked || (!isConfigured && !isDeviceExecution);
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       {renderDeviceSelectionGuard()}
       {renderCloudConfigGuard()}
       {renderDeviceGuard()}
@@ -238,7 +237,7 @@ const HeterogeneousChatInput = memo(() => {
           useChatStore.setState({ mainInputEditor: instance });
         }}
       />
-    </Flexbox>
+    </div>
   );
 });
 

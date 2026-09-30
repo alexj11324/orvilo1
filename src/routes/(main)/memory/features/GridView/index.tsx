@@ -1,6 +1,4 @@
-import { type DivProps } from '@lobehub/ui';
-import { Grid } from '@lobehub/ui';
-import { type ReactNode } from 'react';
+import { type ComponentProps, type ReactNode } from 'react';
 import { memo } from 'react';
 import { VirtuosoGrid } from 'react-virtuoso';
 
@@ -68,13 +66,20 @@ function GridViewInner<T extends { id: string }>({
           ? () => <Loading rows={defaultColumnCount} viewMode={'grid'} />
           : undefined,
         // eslint-disable-next-line @eslint-react/no-nested-component-definitions
-        List: (({ ref, ...props }: DivProps & { ref?: React.RefObject<HTMLDivElement | null> }) => (
-          <Grid
-            gap={8}
-            maxItemWidth={maxItemWidth}
+        List: (({
+          ref,
+          ...props
+        }: ComponentProps<'div'> & {
+          ref?: React.RefObject<HTMLDivElement | null>;
+        }) => (
+          <div
+            className="grid gap-2"
             ref={ref}
-            rows={defaultColumnCount}
             {...props}
+            style={{
+              gridTemplateColumns: `repeat(auto-fill, minmax(max(${maxItemWidth}px, calc((100% - 8px * ${defaultColumnCount - 1}) / ${defaultColumnCount})), 1fr))`,
+              ...props.style,
+            }}
           />
         )) as any,
       }}

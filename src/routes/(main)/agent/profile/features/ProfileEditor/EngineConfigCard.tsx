@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import type { SelectOptions } from '@lobehub/ui/base-ui';
 import { Button, Select, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
@@ -25,6 +24,7 @@ import {
   normalizeHeterogeneousProviderConfig,
 } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Cpu } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
@@ -523,7 +523,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const rows: { content: ReactNode; key: string; label: string }[] = [
     {
       content: legacyRuntime ? (
-        <Flexbox align={'flex-start'} gap={8}>
+        <div className="flex flex-col items-start gap-2">
           <Text>{t('agentEngine.legacy.name')}</Text>
           <Text className={styles.hint}>{t('agentEngine.legacy.description')}</Text>
           <Button
@@ -536,7 +536,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
           >
             {t('agentEngine.legacy.migrate')}
           </Button>
-        </Flexbox>
+        </div>
       ) : (
         <Select
           className={styles.select}
@@ -722,14 +722,14 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   }
 
   return (
-    <Flexbox className={styles.card} gap={0}>
+    <div className={cn('flex flex-col gap-0', styles.card)}>
       <div className={styles.cardHeader}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon icon={Cpu} size={16} />
+        <div className="flex items-center gap-2">
+          <Cpu size={16} />
           <Text strong className={styles.title}>
             {t('agentEngine.title')}
           </Text>
-        </Flexbox>
+        </div>
       </div>
       <div className={styles.detailList}>
         {rows.map((row) => (
@@ -739,7 +739,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
           </div>
         ))}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

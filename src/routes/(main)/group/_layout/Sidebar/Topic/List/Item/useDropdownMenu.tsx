@@ -1,5 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { GROUP_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
@@ -15,12 +13,13 @@ import {
   Trash,
   Wand2,
 } from 'lucide-react';
-import { useCallback } from 'react';
+import { createElement, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { isDesktop } from '@/const/version';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
@@ -40,7 +39,7 @@ export const useTopicItemDropdownMenu = ({
   id,
   status,
   toggleEditing,
-}: TopicItemDropdownMenuProps): (() => MenuProps['items']) => {
+}: TopicItemDropdownMenuProps): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['topic', 'common']);
 
   const navigate = useWorkspaceAwareNavigate();
@@ -75,7 +74,7 @@ export const useTopicItemDropdownMenu = ({
     return [
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={isCompleted ? ArchiveRestore : Archive} />,
+        icon: createElement(isCompleted ? ArchiveRestore : Archive, {}),
         key: 'markCompleted',
         label: isCompleted ? t('actions.unmarkCompleted') : t('actions.markCompleted'),
         onClick: () => {
@@ -92,7 +91,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={Wand2} />,
+        icon: <Wand2 />,
         key: 'autoRename',
         label: t('actions.autoRename'),
         onClick: () => {
@@ -102,7 +101,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canEditTopic,
-        icon: <Icon icon={PencilLine} />,
+        icon: <PencilLine />,
         key: 'rename',
         label: t('rename', { ns: 'common' }),
         onClick: () => {
@@ -116,7 +115,7 @@ export const useTopicItemDropdownMenu = ({
       ...(isDesktop
         ? [
             {
-              icon: <Icon icon={PanelTop} />,
+              icon: <PanelTop />,
               key: 'openInNewTab',
               label: t('actions.openInNewTab'),
               onClick: () => {
@@ -130,7 +129,7 @@ export const useTopicItemDropdownMenu = ({
               },
             },
             {
-              icon: <Icon icon={ExternalLink} />,
+              icon: <ExternalLink />,
               key: 'openInNewWindow',
               label: t('actions.openInNewWindow'),
               onClick: () => {
@@ -143,7 +142,7 @@ export const useTopicItemDropdownMenu = ({
           ]
         : []),
       {
-        icon: <Icon icon={Hash} />,
+        icon: <Hash />,
         key: 'copySessionId',
         label: t('actions.copySessionId'),
         onClick: () => {
@@ -152,7 +151,7 @@ export const useTopicItemDropdownMenu = ({
         },
       },
       {
-        icon: <Icon icon={Link2} />,
+        icon: <Link2 />,
         key: 'copyLink',
         label: t('actions.copyLink'),
         onClick: () => {
@@ -164,7 +163,7 @@ export const useTopicItemDropdownMenu = ({
       },
       {
         disabled: !canCreateTopic,
-        icon: <Icon icon={LucideCopy} />,
+        icon: <LucideCopy />,
         key: 'duplicate',
         label: t('actions.duplicate'),
         onClick: () => {
@@ -177,7 +176,7 @@ export const useTopicItemDropdownMenu = ({
       {
         danger: true,
         disabled: !canEditTopic,
-        icon: <Icon icon={Trash} />,
+        icon: <Trash />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: () => {
@@ -190,7 +189,7 @@ export const useTopicItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     id,
     isCompleted,

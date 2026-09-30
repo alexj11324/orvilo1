@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import { cssVar } from 'antd-style';
@@ -23,7 +22,7 @@ const SourceLink = memo<{ source?: MemorySource | null }>(({ source }) => {
       }}
     >
       <Button
-        icon={<Icon icon={Link2} />}
+        icon={<Link2 />}
         size={'small'}
         title={title}
         type={'text'}

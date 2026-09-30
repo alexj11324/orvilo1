@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
@@ -7,14 +6,14 @@ const DetailLoading = memo(() => {
     <>
       <Skeleton height={28} radius={999} width={64} />
       <Skeleton.Text fontSize={20} lineHeight={1.4} />
-      <Flexbox horizontal gap={8}>
+      <div className="flex gap-2">
         <Skeleton height={22} radius={4} width={48} />
         <Skeleton height={22} radius={4} width={48} />
-      </Flexbox>
-      <Flexbox horizontal align="center" gap={16} justify="space-between">
+      </div>
+      <div className="flex items-center gap-4 justify-between">
         <Skeleton height={22} radius={4} width={48} />
         <Skeleton height={22} radius={4} width={48} />
-      </Flexbox>
+      </div>
       <Skeleton.Text fontSize={16} rows={6} />
     </>
   );

@@ -1,6 +1,6 @@
 import { type IEditor } from '@lobehub/editor';
 import { INSERT_MENTION_COMMAND } from '@lobehub/editor';
-import { Icon, Image } from '@lobehub/ui';
+import { Image } from '@lobehub/ui';
 import { type ComposioAppType } from '@orvilo/const';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { ToolNameResolver } from '@orvilo/context-engine';
@@ -9,7 +9,7 @@ import { apiPrompt, toolPrompt } from '@orvilo/prompts';
 import { type ToolManifest } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { memo, useCallback, useMemo } from 'react';
+import { createElement, memo, useCallback, useMemo } from 'react';
 
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import { applyToolNameMaxLength } from '@/helpers/applyToolNameMaxLength';
@@ -38,7 +38,7 @@ const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, labe
   }
 
   // Fill with theme color, automatically adapts in dark mode
-  return <Icon fill={cssVar.colorText} icon={icon} size={20} />;
+  return createElement(icon, { fill: cssVar.colorText, size: 20 });
 });
 
 const toolNameResolver = new ToolNameResolver();

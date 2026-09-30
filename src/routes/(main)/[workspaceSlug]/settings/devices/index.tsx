@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Tabs } from '@lobehub/ui/base-ui';
 import type { DeviceVisibility } from '@orvilo/types';
 import { LockIcon, RefreshCwIcon, TerminalIcon, UsersIcon } from 'lucide-react';
@@ -28,40 +27,36 @@ const WorkspaceDevicesSetting = memo(() => {
 
   return (
     <>
-      <Flexbox gap={16}>
-        <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4 justify-between">
           <Tabs
             activeKey={visibility}
             items={[
               {
-                icon: <Icon icon={UsersIcon} />,
+                icon: <UsersIcon />,
                 key: 'public',
                 label: t('devices.visibilityTabs.workspace'),
               },
               {
-                icon: <Icon icon={LockIcon} />,
+                icon: <LockIcon />,
                 key: 'private',
                 label: t('devices.visibilityTabs.private'),
               },
             ]}
             onChange={(key) => setVisibility(key as DeviceVisibility)}
           />
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex items-center gap-2">
             <Button
-              icon={<Icon icon={RefreshCwIcon} />}
+              icon={<RefreshCwIcon />}
               loading={isValidating}
               title={t('devices.actions.refresh')}
               onClick={() => mutate()}
             />
-            <Button
-              icon={<Icon icon={TerminalIcon} />}
-              type={'primary'}
-              onClick={() => setOpen(true)}
-            >
+            <Button icon={<TerminalIcon />} type={'primary'} onClick={() => setOpen(true)}>
               {t('devices.empty.methodCli.title')}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
         <DeviceManager
           key={visibility}
@@ -69,7 +64,7 @@ const WorkspaceDevicesSetting = memo(() => {
           visibility={visibility}
           onConnect={() => setOpen(true)}
         />
-      </Flexbox>
+      </div>
 
       <DeviceConnectModal
         open={open}

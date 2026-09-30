@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { HotkeyScopeEnum } from '@orvilo/const/hotkeys';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { type FC } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 import { Outlet } from 'react-router';
@@ -29,18 +29,19 @@ const PopupLayout: FC = () => {
 
   return (
     <HotkeysProvider initiallyActiveScopes={[HotkeyScopeEnum.Global]}>
-      <Flexbox
-        className={styles.container}
-        height={'100%'}
-        style={{ overflow: 'hidden' }}
-        width={'100%'}
+      <div
+        className={cn('flex flex-col', styles.container)}
+        style={{ height: '100%', width: '100%', overflow: 'hidden' }}
       >
         <PopupTitleBar title={topicTitle} />
-        <Flexbox flex={1} style={{ minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+        <div
+          className="flex flex-col flex-1"
+          style={{ minHeight: 0, overflow: 'hidden', position: 'relative' }}
+        >
           <Outlet />
-        </Flexbox>
+        </div>
         <ProtocolUrlHandler />
-      </Flexbox>
+      </div>
     </HotkeysProvider>
   );
 };

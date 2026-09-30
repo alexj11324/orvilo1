@@ -1,6 +1,5 @@
 'use client';
 
-import { DropdownMenu, Empty, Flexbox, Icon } from '@lobehub/ui';
 import {
   Alert,
   Button,
@@ -19,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -163,7 +164,7 @@ const MemberRow = memo<MemberRowProps>(
       }[] = [];
       if (transferEligible) {
         items.push({
-          icon: <Icon icon={Repeat} />,
+          icon: <Repeat />,
           key: 'transfer',
           label: t('workspaceSetting.members.transferOwnership'),
           onClick: () => onTransfer(member),
@@ -171,7 +172,7 @@ const MemberRow = memo<MemberRowProps>(
       }
       if (manageable && status === 'active') {
         items.push({
-          icon: <Icon icon={PauseCircle} />,
+          icon: <PauseCircle />,
           key: 'suspend',
           label: t('workspaceSetting.members.suspend'),
           onClick: () => void suspend(member.userId),
@@ -179,7 +180,7 @@ const MemberRow = memo<MemberRowProps>(
       }
       if (manageable && status === 'suspended') {
         items.push({
-          icon: <Icon icon={PlayCircle} />,
+          icon: <PlayCircle />,
           key: 'resume',
           label: t('workspaceSetting.members.resume'),
           onClick: () => void resume(member.userId),
@@ -188,7 +189,7 @@ const MemberRow = memo<MemberRowProps>(
       if (manageable) {
         items.push({
           danger: true,
-          icon: <Icon icon={UserMinus} />,
+          icon: <UserMinus />,
           key: 'remove',
           label: t('workspaceSetting.members.remove'),
           onClick: () => onRemove(member),
@@ -206,19 +207,15 @@ const MemberRow = memo<MemberRowProps>(
             size={32}
             title={member.user?.email ?? displayName(member)}
           />
-          <Flexbox flex={1} gap={0} style={{ minWidth: 0 }}>
+          <div className="flex flex-col flex-1 gap-[0px]" style={{ minWidth: 0 }}>
             <span className={styles.name}>
               {displayName(member)}
               {member.role === 'owner' && (
-                <Icon
-                  icon={Crown}
-                  size={12}
-                  style={{ color: cssVar.colorWarning, marginInlineStart: 6 }}
-                />
+                <Crown size={12} style={{ color: cssVar.colorWarning, marginInlineStart: 6 }} />
               )}
             </span>
             {member.user?.email && <span className={styles.email}>{member.user.email}</span>}
-          </Flexbox>
+          </div>
         </div>
 
         <div>
@@ -262,11 +259,11 @@ const MemberRow = memo<MemberRowProps>(
 
         <div>
           {menuItems.length > 0 && (
-            <DropdownMenu items={menuItems}>
+            <SidebarDropdownMenu items={menuItems}>
               <Button disabled={mutating} size="small" type="text">
                 ⋯
               </Button>
-            </DropdownMenu>
+            </SidebarDropdownMenu>
           )}
         </div>
       </div>
@@ -355,15 +352,15 @@ export const MembersPanel = memo(() => {
 
   if (isLoading) {
     return (
-      <Flexbox gap={16} style={{ paddingBlock: 8 }}>
+      <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <Flexbox horizontal align="center" gap={10} key={i}>
+          <div className="flex items-center gap-2.5" key={i}>
             <SkeletonText style={{ marginBottom: 0, width: '40%' }} />
             <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
             <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
-          </Flexbox>
+          </div>
         ))}
-      </Flexbox>
+      </div>
     );
   }
   if (error) {
@@ -398,7 +395,7 @@ export const MembersPanel = memo(() => {
       pendingTransfer?.transfer.fromUserId);
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {transferError && (
         // A failed pending-transfer lookup is NOT "no transfer" — hiding it
         // would let the owner open a second request and leave the recipient
@@ -423,7 +420,7 @@ export const MembersPanel = memo(() => {
               { name: counterpartName },
             )}
           </span>
-          <Flexbox horizontal gap={8}>
+          <div className="flex gap-2">
             {isTransferRecipient && (
               <>
                 <Button
@@ -448,7 +445,7 @@ export const MembersPanel = memo(() => {
                 {t('workspaceSetting.members.transferCancel')}
               </Button>
             )}
-          </Flexbox>
+          </div>
         </div>
       )}
       <div className={styles.tableScroll}>
@@ -491,9 +488,13 @@ export const MembersPanel = memo(() => {
         </div>
       </div>
       {rows.length === 0 && (
-        <Empty description={t('workspaceSetting.members.empty')} style={{ paddingBlock: 32 }} />
+        <Empty style={{ paddingBlock: 32 }}>
+          <EmptyHeader>
+            <EmptyDescription>{t('workspaceSetting.members.empty')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

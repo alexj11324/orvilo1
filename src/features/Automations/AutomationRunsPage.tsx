@@ -1,6 +1,5 @@
-import { Block, Center, Flexbox, Icon, Input } from '@lobehub/ui';
 import { ActionIcon, Button, DropdownMenu, Pagination, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -11,12 +10,14 @@ import {
   MessageSquareIcon,
   SearchIcon,
   XCircleIcon,
+  XIcon,
 } from 'lucide-react';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
+import { Input } from '@/components/ui/input';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -92,17 +93,20 @@ const StatCard = memo<{
   label: string;
   value: number;
 }>(({ danger, icon, label, value }) => (
-  <Block className={styles.statCard} gap={8} padding={16} variant={'outlined'}>
-    <Flexbox horizontal align={'center'} gap={8}>
-      <Icon color={danger ? cssVar.colorError : cssVar.colorSuccess} icon={icon} size={16} />
+  <div
+    className={cx(styles.statCard, 'flex flex-col gap-2 p-4 border')}
+    style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+  >
+    <div className="flex items-center gap-2">
+      {createElement(icon, { color: danger ? cssVar.colorError : cssVar.colorSuccess, size: 16 })}
       <Text fontSize={12} type={'secondary'}>
         {label}
       </Text>
-    </Flexbox>
+    </div>
     <Text fontSize={22} weight={600}>
       {value}
     </Text>
-  </Block>
+  </div>
 ));
 
 const AutomationRunsPage = memo(() => {
@@ -158,29 +162,40 @@ const AutomationRunsPage = memo(() => {
   );
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1 h-full">
       <NavHeader
         styles={{ left: { paddingLeft: 8 } }}
         left={
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Icon color={cssVar.colorTextTertiary} icon={HistoryIcon} size={16} />
+          <div className="flex items-center gap-2">
+            <HistoryIcon color={cssVar.colorTextTertiary} size={16} />
             <Text fontSize={15} weight={600}>
               {t('runs.title')}
             </Text>
-          </Flexbox>
+          </div>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={6}>
-            <Input
-              allowClear
-              placeholder={t('run_history.search_placeholder')}
-              prefix={<Icon icon={SearchIcon} size={14} />}
-              size={'small'}
-              style={{ width: 220 }}
-              value={search}
-              variant={'filled'}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-1.5">
+            <div className="relative" style={{ width: 220 }}>
+              <SearchIcon
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                size={14}
+              />
+              <Input
+                className="h-7 pl-7"
+                placeholder={t('run_history.search_placeholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  aria-label={t('run_history.search_placeholder')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setSearch('')}
+                >
+                  <XIcon size={12} />
+                </button>
+              )}
+            </div>
             <DropdownMenu
               items={[
                 {
@@ -199,13 +214,13 @@ const AutomationRunsPage = memo(() => {
                 {statusFilter ? t(`run_status.${statusFilter}`) : t('overview.all_statuses')}
               </Button>
             </DropdownMenu>
-          </Flexbox>
+          </div>
         }
       />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
         <WideScreenContainer fullWidth paddingBlock={16} paddingInline={24}>
           {stats && (
-            <Flexbox horizontal gap={12} style={{ marginBlockEnd: 16 }} wrap={'wrap'}>
+            <div className="flex gap-3" style={{ flexWrap: 'wrap', marginBlockEnd: 16 }}>
               <StatCard
                 icon={CheckCircle2Icon}
                 label={t('runs.stat.completed_24h')}
@@ -228,21 +243,21 @@ const AutomationRunsPage = memo(() => {
                 label={t('runs.stat.failed_7d')}
                 value={stats.failed7d}
               />
-            </Flexbox>
+            </div>
           )}
           {error ? (
             <AsyncError error={error} onRetry={() => void mutate()} />
           ) : isLoading && runs.length === 0 ? (
-            <Flexbox padding={24}>
+            <div className="flex flex-col p-6">
               <Text type={'secondary'}>{t('runs.title')}…</Text>
-            </Flexbox>
+            </div>
           ) : runs.length === 0 ? (
-            <Center paddingBlock={48}>
-              <Flexbox align={'center'} gap={8}>
-                <Icon color={cssVar.colorTextQuaternary} icon={BotMessageSquare} size={32} />
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-2">
+                <BotMessageSquare color={cssVar.colorTextQuaternary} size={32} />
                 <Text type={'secondary'}>{t('run_history.no_matches')}</Text>
-              </Flexbox>
-            </Center>
+              </div>
+            </div>
           ) : (
             <>
               <div className={styles.headerRow}>
@@ -303,7 +318,7 @@ const AutomationRunsPage = memo(() => {
                 </div>
               ))}
               {total > PAGE_SIZE && (
-                <Flexbox horizontal justify={'center'} paddingBlock={16}>
+                <div className="flex justify-center py-4">
                   <Pagination
                     current={page}
                     pageSize={PAGE_SIZE}
@@ -311,13 +326,13 @@ const AutomationRunsPage = memo(() => {
                     total={total}
                     onChange={setPage}
                   />
-                </Flexbox>
+                </div>
               )}
             </>
           )}
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

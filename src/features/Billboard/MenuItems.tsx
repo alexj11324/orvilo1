@@ -1,16 +1,15 @@
-import type { MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { Megaphone } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useGlobalStore } from '@/store/global';
 import { useServerConfigStore } from '@/store/serverConfig';
 
 import { billboardDismissKey } from './index';
 import { resolveBillboardTitle } from './locale';
 
-export const useBillboardMenuItems = (): MenuProps['items'] => {
+export const useBillboardMenuItems = (): SidebarDropdownMenuProps['items'] => {
   const billboard = useServerConfigStore((s) => s.billboard);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const { i18n } = useTranslation();
@@ -25,7 +24,7 @@ export const useBillboardMenuItems = (): MenuProps['items'] => {
     const title = resolveBillboardTitle(billboard, i18n.language);
     return [
       {
-        icon: <Icon icon={Megaphone} />,
+        icon: <Megaphone />,
         key: `billboard-${billboard.slug}`,
         label: (
           <span

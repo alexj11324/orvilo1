@@ -1,9 +1,8 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import { memo, type ReactNode, useState } from 'react';
+import { createElement, memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
@@ -113,12 +112,12 @@ const RunningAgentAvatars = memo<{ running: InboxTopic[] }>(({ running }) => {
   if (shown.length === 0) return null;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.avatars} flex={'none'}>
+    <div className={cx(styles.avatars, 'flex items-center flex-none')}>
       {shown.map((agentId) => (
         <StackedAgentAvatar agentId={agentId} key={agentId} />
       ))}
       {overflow > 0 && <span className={styles.overflowCount}>+{overflow}</span>}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -143,31 +142,30 @@ const RunningTasksCard = memo<RunningTasksCardProps>(({ action, bare, running, s
   if (running.length === 0) return null;
 
   return (
-    <Flexbox className={bare ? styles.bareRoot : styles.card}>
-      <Flexbox horizontal align={'center'}>
+    <div className={cx(bare ? styles.bareRoot : styles.card, 'flex flex-col')}>
+      <div className="flex items-center">
         <Button
           className={cx(styles.head, bare && styles.bareHead)}
           type={'text'}
           onClick={() => setOpen((v) => !v)}
         >
-          <Flexbox horizontal align={'center'} gap={10} style={{ width: '100%' }}>
+          <div className="flex items-center gap-2.5" style={{ width: '100%' }}>
             <RunningGlyph />
             <Text className={homeType.itemTitle} style={{ flex: 1 }}>
               {t('inbox.running.title', { count: running.length })}
             </Text>
             <RunningAgentAvatars running={running} />
-            <Icon
-              color={cssVar.colorTextQuaternary}
-              icon={open ? ChevronDownIcon : ChevronRightIcon}
-              size={14}
-            />
-          </Flexbox>
+            {createElement(open ? ChevronDownIcon : ChevronRightIcon, {
+              color: cssVar.colorTextQuaternary,
+              size: 14,
+            })}
+          </div>
         </Button>
         {action}
-      </Flexbox>
+      </div>
 
       {open && (
-        <Flexbox className={cx(styles.body, bare && styles.bareBody)}>
+        <div className={cx(cx(styles.body, bare && styles.bareBody), 'flex flex-col')}>
           {running.map((topic) => (
             <TopicRow
               key={topic.id}
@@ -180,9 +178,9 @@ const RunningTasksCard = memo<RunningTasksCardProps>(({ action, bare, running, s
               }
             />
           ))}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,9 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { type TopicPopupInfo } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ExternalLinkIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -48,20 +47,18 @@ const TopicInPopupGuard = memo<TopicInPopupGuardProps>(({ popup }) => {
   };
 
   return (
-    <Flexbox
-      align={'center'}
-      className={styles.wrapper}
-      flex={1}
-      gap={16}
-      justify={'center'}
-      width={'100%'}
+    <div
+      className={cx(
+        styles.wrapper,
+        'flex flex-col items-center flex-1 gap-4 justify-center w-full',
+      )}
     >
       <h2 className={styles.title}>{t('inPopup.title')}</h2>
       <p className={styles.description}>{t('inPopup.description')}</p>
       <Button icon={ExternalLinkIcon} type={'primary'} onClick={handleFocus}>
         {t('inPopup.focus')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 

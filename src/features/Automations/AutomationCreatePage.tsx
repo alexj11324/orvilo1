@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Input } from '@lobehub/ui';
 import { Button, Text, TextArea, toast } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
@@ -8,6 +7,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import { Input } from '@/components/ui/input';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -118,12 +118,12 @@ const AutomationCreatePage = memo(() => {
   ]);
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1 h-full">
       <NavHeader
         styles={{ left: { paddingLeft: 4 } }}
         left={
           <AntBreadcrumb
-            separator={<Icon icon={ChevronRight} />}
+            separator={<ChevronRight />}
             items={[
               {
                 title: (
@@ -156,27 +156,24 @@ const AutomationCreatePage = memo(() => {
           </Button>
         }
       />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
         <WideScreenContainer>
-          <Flexbox gap={24} paddingBlock={16} style={{ maxWidth: 768 }}>
+          <div className="flex flex-col gap-6 py-4" style={{ maxWidth: 768 }}>
             <Input
               autoFocus
+              className="h-auto border-0 px-0 focus-visible:ring-0"
               placeholder={t('create.title_placeholder')}
-              size={'large'}
               style={{ fontSize: 20, fontWeight: 600 }}
               value={name}
-              variant={'borderless'}
               onChange={(e) => setNameOverride(e.target.value)}
             />
-            <Flexbox horizontal>
+            <div className="flex">
               <AssigneeAgentSelector
                 currentAgentId={assigneeAgentId}
                 onChange={(agentId) => setAssigneeAgentId(agentId)}
               >
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  gap={8}
+                <div
+                  className="flex items-center gap-2"
                   style={{
                     border: `1px solid ${cssVar.colorBorderSecondary}`,
                     borderRadius: 8,
@@ -192,12 +189,12 @@ const AutomationCreatePage = memo(() => {
                       ? agentDisplayName(assigneeMeta)
                       : t('instructions.agent_placeholder')}
                   </Text>
-                  <Icon color={cssVar.colorTextTertiary} icon={ChevronRight} size={14} />
-                </Flexbox>
+                  <ChevronRight color={cssVar.colorTextTertiary} size={14} />
+                </div>
               </AssigneeAgentSelector>
-            </Flexbox>
+            </div>
             <AutomationTriggerDraft draft={draft} onChange={setDraft} />
-            <Flexbox gap={8}>
+            <div className="flex flex-col gap-2">
               <Text fontSize={13} weight={600}>
                 {t('instructions.section')}
               </Text>
@@ -208,11 +205,11 @@ const AutomationCreatePage = memo(() => {
                 variant={'filled'}
                 onChange={(e) => setInstructions(e.target.value)}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

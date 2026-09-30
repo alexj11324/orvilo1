@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Alert, Button, SkeletonText, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Users } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,19 +15,22 @@ import type { WorkspaceRole } from '../api/contract';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
+    width: 100%;
+    max-width: 480px;
+    margin-block: 48px;
+    margin-inline: auto;
     padding: 32px;
-    margin: 48px auto;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadiusLG};
-    max-width: 480px;
-    width: 100%;
   `,
   projectRow: css`
     padding-block: 4px;
     padding-inline: 12px;
     border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
+
     font-size: 13px;
+
+    background: ${cssVar.colorFillTertiary};
   `,
 }));
 
@@ -46,9 +48,12 @@ const InviteAcceptPage = memo(() => {
   const navigate = useNavigate();
   const token = useParams<{ token: string }>().token ?? '';
 
-  const { data: preview, error, isLoading } = useSWR(
-    token ? invitePreviewKey(token) : null,
-    () => teammatesClient.invitation.preview.query({ token }),
+  const {
+    data: preview,
+    error,
+    isLoading,
+  } = useSWR(token ? invitePreviewKey(token) : null, () =>
+    teammatesClient.invitation.preview.query({ token }),
   );
 
   const [accepting, setAccepting] = useState(false);
@@ -90,40 +95,40 @@ const InviteAcceptPage = memo(() => {
 
   if (!token) {
     return (
-      <Flexbox className={styles.card} gap={16}>
+      <div className={cx(styles.card, 'flex flex-col gap-4')}>
         <Alert title={t('workspaceSetting.invite.invalidLink')} type="error" />
-      </Flexbox>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <Flexbox className={styles.card} gap={16}>
+      <div className={cx(styles.card, 'flex flex-col gap-4')}>
         <SkeletonText style={{ width: 200 }} />
         <SkeletonText style={{ width: 320 }} />
         <SkeletonText style={{ width: 120 }} />
-      </Flexbox>
+      </div>
     );
   }
 
   if (error || !preview) {
     return (
-      <Flexbox className={styles.card} gap={16}>
+      <div className={cx(styles.card, 'flex flex-col gap-4')}>
         <Alert title={t('workspaceSetting.invite.loadFailed')} type="error" />
         <Button onClick={() => navigate('/', { replace: true })}>
           {t('workspaceSetting.invite.backHome')}
         </Button>
-      </Flexbox>
+      </div>
     );
   }
 
   const terminal = preview.status !== 'pending';
 
   return (
-    <Flexbox className={styles.card} gap={20}>
-      <Flexbox horizontal align="center" gap={12}>
+    <div className={cx(styles.card, 'flex flex-col gap-5')}>
+      <div className="flex items-center gap-3">
         <Avatar avatar={preview.workspace.avatar} name={preview.workspace.name} size={48} />
-        <Flexbox gap={2}>
+        <div className="flex flex-col gap-0.5">
           <Text fontSize={18} weight={600}>
             {preview.workspace.name}
           </Text>
@@ -132,16 +137,16 @@ const InviteAcceptPage = memo(() => {
               name: preview.inviter.name ?? t('workspaceSetting.invite.unknownInviter'),
             })}
           </Text>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <Text fontSize={13}>
           {t('workspaceSetting.invite.roleLine', { role: roleLabel })}
           {preview.emailHint ? ` · ${preview.emailHint}` : ''}
         </Text>
         {preview.projects.length > 0 && (
-          <Flexbox gap={6}>
+          <div className="flex flex-col gap-1.5">
             <Text fontSize={12} type="secondary">
               {t('workspaceSetting.invite.projectAccess')}
             </Text>
@@ -150,13 +155,14 @@ const InviteAcceptPage = memo(() => {
                 {project.name} · {project.role}
               </div>
             ))}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
 
       {terminal ? (
         <Alert
           showIcon
+          type={preview.acceptedByCurrentUser ? 'success' : 'warning'}
           title={
             preview.acceptedByCurrentUser
               ? t('workspaceSetting.invite.alreadyJoined')
@@ -164,14 +170,13 @@ const InviteAcceptPage = memo(() => {
                   defaultValue: preview.status,
                 })
           }
-          type={preview.acceptedByCurrentUser ? 'success' : 'warning'}
         />
       ) : (
         <>
           {acceptError && <Alert title={acceptError} type="error" />}
           <Button
             disabled={accepting}
-            icon={<Icon icon={Users} size={16} />}
+            icon={<Users size={16} />}
             loading={accepting}
             type="primary"
             onClick={handleAccept}
@@ -186,7 +191,7 @@ const InviteAcceptPage = memo(() => {
           {t('workspaceSetting.invite.goToWorkspace')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

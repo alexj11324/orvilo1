@@ -1,9 +1,8 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import { lazy, memo, Suspense, useCallback, useState } from 'react';
+import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BriefCardArtifacts from '@/features/DailyBrief/BriefCardArtifacts';
@@ -104,9 +103,9 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
   }, [brief.id, markBriefRead, read]);
 
   return (
-    <Flexbox className={bare ? undefined : styles.section}>
+    <div className={cx(bare ? undefined : styles.section, 'flex flex-col')}>
       <Button className={cx(styles.row, bare && styles.bareRow)} type={'text'} onClick={toggle}>
-        <Flexbox horizontal align={'center'} gap={ROW_GAP} style={{ width: '100%' }}>
+        <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
           {brief.agent?.avatar ? (
             <Avatar
               avatar={brief.agent.avatar}
@@ -134,16 +133,15 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
             {brief.title}
           </Text>
           {showTime && <Time date={brief.createdAt} />}
-          <Icon
-            color={cssVar.colorTextQuaternary}
-            icon={expanded ? ChevronDownIcon : ChevronRightIcon}
-            size={14}
-          />
-        </Flexbox>
+          {createElement(expanded ? ChevronDownIcon : ChevronRightIcon, {
+            color: cssVar.colorTextQuaternary,
+            size: 14,
+          })}
+        </div>
       </Button>
 
       {expanded && (brief.summary || brief.artifacts) && (
-        <Flexbox className={bare ? styles.bareBody : styles.body} gap={8}>
+        <div className={cx(bare ? styles.bareBody : styles.body, 'flex flex-col gap-2')}>
           {brief.summary && (
             <Suspense fallback={null}>
               <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
@@ -152,9 +150,9 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
             </Suspense>
           )}
           <BriefCardArtifacts artifacts={brief.artifacts} />
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -183,7 +181,7 @@ const NewsList = memo<NewsListProps>(({ bare, news, showTime }) => {
   const shown = collapsed ? news.slice(0, RAIL_COLLAPSED_COUNT) : news;
 
   return (
-    <Flexbox className={bare ? styles.bareList : styles.list}>
+    <div className={cx(bare ? styles.bareList : styles.list, 'flex flex-col')}>
       {shown.map((brief) => (
         <NewsItem bare={bare} brief={brief} key={brief.id} showTime={showTime} />
       ))}
@@ -196,7 +194,7 @@ const NewsList = memo<NewsListProps>(({ bare, news, showTime }) => {
           {t('inbox.news.showAll', { count: news.length })}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

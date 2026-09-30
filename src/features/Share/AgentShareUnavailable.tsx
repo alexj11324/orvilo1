@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +25,7 @@ const AgentShareUnavailable = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
 
   return (
-    <Center height={'100%'} padding={48}>
+    <div className="flex items-center justify-center h-full p-12">
       <NotFound
         desc={t('share.unavailable.desc')}
         status={404}
@@ -39,7 +38,7 @@ const AgentShareUnavailable = memo(() => {
           ) : undefined
         }
       />
-    </Center>
+    </div>
   );
 });
 

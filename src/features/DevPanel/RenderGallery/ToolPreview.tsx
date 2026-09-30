@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Tabs, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { useMemo, useState } from 'react';
 
 import {
@@ -85,9 +84,9 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
   const derived = useMemo(() => deriveFixtureProps(activeVariant, mode), [activeVariant, mode]);
 
   return (
-    <Flexbox className={styles.card} id={toApiAnchor(api.apiName)}>
-      <Flexbox className={styles.cardHeader}>
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+    <div className={cx(styles.card, 'flex flex-col')} id={toApiAnchor(api.apiName)}>
+      <div className={cx(styles.cardHeader, 'flex flex-col')}>
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
           <Text fontSize={18} weight={600}>
             {api.apiName}
           </Text>
@@ -103,21 +102,21 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
               onChange={(key) => setActiveVariantId(key)}
             />
           )}
-        </Flexbox>
+        </div>
         {(api.description || activeVariant.description) && (
           <Text fontSize={13} type={'secondary'}>
             {activeVariant.description ?? api.description}
           </Text>
         )}
-      </Flexbox>
+      </div>
 
-      <Flexbox className={styles.cardBody}>
-        <Flexbox className={styles.previewSection}>
-          <Flexbox horizontal className={styles.sectionLabel}>
+      <div className={cx(styles.cardBody, 'flex flex-col')}>
+        <div className={cx(styles.previewSection, 'flex flex-col')}>
+          <div className={cx(styles.sectionLabel, 'flex')}>
             <Text fontSize={12} type={'secondary'} weight={600}>
               Inspector
             </Text>
-          </Flexbox>
+          </div>
           <div className={styles.previewShell}>
             <ToolInspectorSlot
               api={api}
@@ -126,15 +125,15 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
               variant={activeVariant}
             />
           </div>
-        </Flexbox>
+        </div>
 
-        <Flexbox className={styles.previewSection}>
-          <Flexbox horizontal className={styles.sectionLabel}>
+        <div className={cx(styles.previewSection, 'flex flex-col')}>
+          <div className={cx(styles.sectionLabel, 'flex')}>
             <Text fontSize={12} type={'secondary'} weight={600}>
               Body
             </Text>
             <Tag>{bodyKindForMode(mode)}</Tag>
-          </Flexbox>
+          </div>
           <div className={styles.previewShell}>
             <ToolBodySlot
               api={api}
@@ -144,7 +143,7 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
               toolCallId={toolCallId}
             />
           </div>
-        </Flexbox>
+        </div>
 
         <details className={styles.fixture}>
           <summary className={styles.fixtureSummary}>Fixture payload</summary>
@@ -164,8 +163,8 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
             )}
           </pre>
         </details>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

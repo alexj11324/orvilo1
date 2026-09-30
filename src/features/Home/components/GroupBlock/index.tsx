@@ -1,15 +1,13 @@
-import { type FlexboxProps, type IconProps } from '@lobehub/ui';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import { type ReactNode } from 'react';
-import { memo, Suspense, useState } from 'react';
+import { ChevronDownIcon, ChevronRightIcon, type LucideIcon } from 'lucide-react';
+import { type ComponentProps, type ReactNode } from 'react';
+import { createElement, memo, Suspense, useState } from 'react';
 
 import CountBadge from '../CountBadge';
 import { homeType } from '../homeType';
 
-interface GroupBlockProps extends Omit<FlexboxProps, 'title'> {
+interface GroupBlockProps extends Omit<ComponentProps<'div'>, 'title'> {
   action?: ReactNode;
   actionAlwaysVisible?: boolean;
   /**
@@ -18,7 +16,7 @@ interface GroupBlockProps extends Omit<FlexboxProps, 'title'> {
    */
   collapsed?: boolean;
   count?: number;
-  icon?: IconProps['icon'];
+  icon?: LucideIcon;
   onCollapsedChange?: (collapsed: boolean) => void;
   title?: ReactNode;
 }
@@ -57,55 +55,46 @@ const GroupBlock = memo<GroupBlockProps>(
     const [isHovered, setIsHovered] = useState(false);
 
     return (
-      <Flexbox
-        gap={12}
+      <div
+        className="flex flex-col gap-3"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         {...rest}
       >
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
-          <Flexbox
-            horizontal
-            align={'center'}
+        <div className="flex items-center justify-between">
+          <div
             aria-expanded={onCollapsedChange ? !collapsed : undefined}
-            className={cx(onCollapsedChange && styles.heading)}
-            flex={1}
-            gap={6}
-            justify={'flex-start'}
             role={onCollapsedChange ? 'button' : undefined}
             style={{ overflow: 'hidden' }}
             tabIndex={onCollapsedChange ? 0 : undefined}
+            className={cx(
+              cx(onCollapsedChange && styles.heading),
+              'flex items-center flex-1 gap-1.5 justify-start',
+            )}
             onClick={onCollapsedChange ? () => onCollapsedChange(!collapsed) : undefined}
           >
-            {icon && <Icon color={cssVar.colorTextDescription} icon={icon} size={16} />}
+            {icon && createElement(icon, { color: cssVar.colorTextDescription, size: 16 })}
             <Text ellipsis className={homeType.sectionLabel}>
               {title}
             </Text>
             {count !== undefined && <CountBadge count={count} />}
-            {onCollapsedChange && (
-              <Icon
-                color={cssVar.colorTextQuaternary}
-                icon={collapsed ? ChevronRightIcon : ChevronDownIcon}
-                size={14}
-              />
-            )}
-          </Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            flex={'none'}
-            gap={2}
-            justify={'flex-end'}
+            {onCollapsedChange &&
+              createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {
+                color: cssVar.colorTextQuaternary,
+                size: 14,
+              })}
+          </div>
+          <div
             className={cx(
-              styles.action,
-              (isHovered || actionAlwaysVisible) && styles.actionVisible,
+              cx(styles.action, (isHovered || actionAlwaysVisible) && styles.actionVisible),
+              'flex items-center flex-none gap-0.5 justify-end',
             )}
           >
             {action}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {!collapsed && <Suspense fallback={'loading'}>{children}</Suspense>}
-      </Flexbox>
+      </div>
     );
   },
 );

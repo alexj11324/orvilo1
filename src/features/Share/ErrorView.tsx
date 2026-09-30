@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { TRPCClientError } from '@trpc/client';
 import { memo } from 'react';
@@ -21,7 +20,7 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
 
   if (errorCode === 'UNAUTHORIZED') {
     return (
-      <Center height={'100%'} padding={48}>
+      <div className="flex items-center justify-center h-full p-12">
         <NotFound
           desc={t('sharePage.error.unauthorized.subtitle')}
           status={''}
@@ -45,29 +44,29 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
             </Button>
           }
         />
-      </Center>
+      </div>
     );
   }
 
   if (errorCode === 'FORBIDDEN') {
     return (
-      <Center height={'100%'} padding={48}>
+      <div className="flex items-center justify-center h-full p-12">
         <NotFound
           desc={t('sharePage.error.forbidden.subtitle')}
           status={403}
           title={t('sharePage.error.forbidden.title')}
         />
-      </Center>
+      </div>
     );
   }
 
   return (
-    <Center height={'100%'} padding={48}>
+    <div className="flex items-center justify-center h-full p-12">
       <NotFound
         desc={t('sharePage.error.notFound.subtitle')}
         title={t('sharePage.error.notFound.title')}
       />
-    </Center>
+    </div>
   );
 });
 

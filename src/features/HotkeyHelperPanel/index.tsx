@@ -1,6 +1,5 @@
 'use client';
 
-import { Grid, Icon } from '@lobehub/ui';
 import { Tabs } from '@lobehub/ui/base-ui';
 import { HotkeyGroupEnum } from '@orvilo/const/hotkeys';
 import { MessageSquare, Settings2 } from 'lucide-react';
@@ -40,12 +39,12 @@ const HotkeyHelperPanel = memo(() => {
           activeKey={active}
           items={[
             {
-              icon: <Icon icon={Settings2} />,
+              icon: <Settings2 />,
               key: HotkeyGroupEnum.Essential,
               label: t('hotkey.group.essential'),
             },
             {
-              icon: <Icon icon={MessageSquare} />,
+              icon: <MessageSquare />,
               key: HotkeyGroupEnum.Conversation,
               label: t('hotkey.group.conversation'),
             },
@@ -55,9 +54,9 @@ const HotkeyHelperPanel = memo(() => {
       }
       onCancel={handleClose}
     >
-      <Grid gap={32}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))]" style={{ gap: 32 }}>
         <HotkeyContent groupId={active} />
-      </Grid>
+      </div>
     </ImperativeModal>
   );
 });

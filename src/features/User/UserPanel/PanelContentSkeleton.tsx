@@ -1,16 +1,15 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 const PanelContentSkeleton = memo(() => {
   return (
-    <Flexbox gap={2} style={{ minWidth: 300 }}>
+    <div className="flex flex-col gap-0.5" style={{ minWidth: 300 }}>
       {/* UserInfo + DataStatistics area */}
-      <Flexbox gap={8} style={{ padding: '12px 16px' }}>
-        <Flexbox horizontal align="center" gap={12}>
+      <div className="flex flex-col gap-2" style={{ padding: '12px 16px' }}>
+        <div className="flex items-center gap-3">
           <Skeleton
             style={{
               borderRadius: cssVar.borderRadius,
@@ -19,7 +18,7 @@ const PanelContentSkeleton = memo(() => {
               width: 40,
             }}
           />
-          <Flexbox flex={1} gap={4}>
+          <div className="flex flex-col flex-1 gap-1">
             <Skeleton
               style={{
                 borderRadius: cssVar.borderRadius,
@@ -36,9 +35,9 @@ const PanelContentSkeleton = memo(() => {
                 opacity: 0.4,
               }}
             />
-          </Flexbox>
-        </Flexbox>
-        <Flexbox horizontal gap={4}>
+          </div>
+        </div>
+        <div className="flex gap-1">
           {[1, 2, 3].map((i) => (
             <Skeleton
               key={i}
@@ -50,14 +49,14 @@ const PanelContentSkeleton = memo(() => {
               }}
             />
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
       {/* Menu items */}
       {[1, 2].map((row) => (
-        <Flexbox gap={2} key={row} style={{ padding: '0 8px' }}>
+        <div className="flex flex-col gap-0.5" key={row} style={{ padding: '0 8px' }}>
           {[1, 2].map((i) => (
-            <Flexbox horizontal align="center" gap={8} key={i} style={{ height: 36 }}>
+            <div className="flex items-center gap-2" key={i} style={{ height: 36 }}>
               <Skeleton
                 style={{
                   borderRadius: cssVar.borderRadius,
@@ -73,17 +72,14 @@ const PanelContentSkeleton = memo(() => {
                   opacity: 0.5,
                 }}
               />
-            </Flexbox>
+            </div>
           ))}
-        </Flexbox>
+        </div>
       ))}
 
       {/* Footer: BrandWatermark + LangButton */}
-      <Flexbox
-        horizontal
-        align="center"
-        gap={4}
-        justify="space-between"
+      <div
+        className="flex items-center gap-1 justify-between"
         style={{ padding: '6px 8px 6px 16px' }}
       >
         <Skeleton
@@ -102,8 +98,8 @@ const PanelContentSkeleton = memo(() => {
             width: 28,
           }}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

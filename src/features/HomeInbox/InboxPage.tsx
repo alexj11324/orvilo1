@@ -1,10 +1,10 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import HomeInbox from '@/features/HomeInbox';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -46,7 +46,7 @@ const InboxPage = memo(() => {
   const { t: tHome } = useTranslation('home');
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1 h-full">
       <NavHeader
         left={
           <Text style={{ paddingInlineStart: 4 }} weight={500}>
@@ -59,13 +59,18 @@ const InboxPage = memo(() => {
           inlineRail
           variant={'main'}
           emptyState={
-            <Center paddingBlock={48}>
-              <Empty description={tHome('inbox.empty.desc')} title={tHome('inbox.empty.title')} />
-            </Center>
+            <div className="flex items-center justify-center py-12">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>{tHome('inbox.empty.title')}</EmptyTitle>
+                  <EmptyDescription>{tHome('inbox.empty.desc')}</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </div>
           }
         />
       </WideScreenContainer>
-    </Flexbox>
+    </div>
   );
 });
 

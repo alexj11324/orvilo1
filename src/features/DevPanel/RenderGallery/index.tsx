@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { useEffect, useState } from 'react';
 
 import { useAgentStore } from '@/store/agent';
@@ -76,16 +75,18 @@ const RenderGallery = () => {
   }, []);
 
   return (
-    <Flexbox horizontal className={styles.page}>
+    <div className={cx(styles.page, 'flex')}>
       <Sidebar items={menuItems} selectedKey={identifier} onSelect={setIdentifier} />
-      <Flexbox className={styles.main}>
+      <div className={cx(styles.main, 'flex flex-col')}>
         {toolset ? (
           <ToolPage toolset={toolset} />
         ) : (
-          <Flexbox className={styles.empty}>No builtin tool renders registered.</Flexbox>
+          <div className={cx(styles.empty, 'flex flex-col')}>
+            No builtin tool renders registered.
+          </div>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

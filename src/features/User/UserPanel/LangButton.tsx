@@ -1,11 +1,15 @@
-import { type DropdownMenuCheckboxItem, type DropdownMenuProps } from '@lobehub/ui';
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ChevronRight, GlobeIcon } from 'lucide-react';
-import { memo, type ReactNode, useMemo } from 'react';
+import { memo, type ReactElement, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { localeOptions } from '@/locales/resources';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
@@ -14,7 +18,18 @@ import { preloadLang } from '@/utils/client/preloadLang';
 
 import { getLanguageDisplayLabel } from './getLanguageDisplayLabel';
 
-const LangButton = memo<{ compact?: boolean; placement?: DropdownMenuProps['placement'] }>(
+type LangPlacement = 'top' | 'topLeft' | 'topRight' | 'bottom' | 'bottomLeft' | 'bottomRight';
+
+interface LangMenuItem {
+  checked: boolean;
+  closeOnClick?: boolean;
+  key: string;
+  label: ReactNode;
+  onCheckedChange: (checked: boolean) => void;
+  type?: 'checkbox';
+}
+
+const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
   ({ compact, placement }) => {
     const [language, currentLanguage, switchLocale] = useGlobalStore((s) => [
       globalGeneralSelectors.language(s),
@@ -29,18 +44,18 @@ const LangButton = memo<{ compact?: boolean; placement?: DropdownMenuProps['plac
       t('settingCommon.lang.autoMode'),
     );
 
-    const items = useMemo<DropdownMenuCheckboxItem[]>(() => {
-      const autoItem: DropdownMenuCheckboxItem = {
+    const items = useMemo<LangMenuItem[]>(() => {
+      const autoItem: LangMenuItem = {
         checked: language === 'auto',
         closeOnClick: true,
         key: 'auto',
         label: (
-          <Flexbox gap={4} onMouseEnter={() => preloadLang('auto')}>
+          <div className="flex flex-col gap-1" onMouseEnter={() => preloadLang('auto')}>
             <Text style={{ lineHeight: 1.2 }}>{t('settingCommon.lang.autoMode')}</Text>
             <Text fontSize={12} style={{ lineHeight: 1.2 }} type={'secondary'}>
               {t(`lang.auto` as any, { ns: 'common' })}
             </Text>
-          </Flexbox>
+          </div>
         ),
         onCheckedChange: (checked: boolean) => {
           if (checked) {
@@ -50,17 +65,21 @@ const LangButton = memo<{ compact?: boolean; placement?: DropdownMenuProps['plac
         type: 'checkbox',
       };
 
-      const localeItems = localeOptions.map<DropdownMenuCheckboxItem>((item) => ({
+      const localeItems = localeOptions.map<LangMenuItem>((item) => ({
         checked: language === item.value,
         closeOnClick: true,
         key: item.value,
         label: (
-          <Flexbox gap={4} key={item.value} onMouseEnter={() => preloadLang(item.value)}>
+          <div
+            className="flex flex-col gap-1"
+            key={item.value}
+            onMouseEnter={() => preloadLang(item.value)}
+          >
             <Text style={{ lineHeight: 1.2 }}>{item.label}</Text>
             <Text fontSize={12} style={{ lineHeight: 1.2 }} type={'secondary'}>
               {t(`lang.${item.value}` as any, { ns: 'common' })}
             </Text>
-          </Flexbox>
+          </div>
         ),
         onCheckedChange: (checked: boolean) => {
           if (checked) {
@@ -92,10 +111,8 @@ const LangButton = memo<{ compact?: boolean; placement?: DropdownMenuProps['plac
       );
     } else {
       trigger = (
-        <Flexbox
-          horizontal
-          align="center"
-          gap={12}
+        <div
+          className="flex items-center gap-3"
           style={{
             borderRadius: 8,
             boxSizing: 'content-box',
@@ -112,30 +129,55 @@ const LangButton = memo<{ compact?: boolean; placement?: DropdownMenuProps['plac
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <Flexbox flex={1}>{currentLabel}</Flexbox>
-          <Icon icon={GlobeIcon} size={'small'} style={{ color: cssVar.colorTextSecondary }} />
-          <Icon icon={ChevronRight} size={'small'} style={{ color: cssVar.colorTextSecondary }} />
-        </Flexbox>
+          <div className="flex flex-col flex-1">{currentLabel}</div>
+          <GlobeIcon size={'small'} style={{ color: cssVar.colorTextSecondary }} />
+          <ChevronRight size={'small'} style={{ color: cssVar.colorTextSecondary }} />
+        </div>
       );
     }
 
     return (
-      <DropdownMenu
-        items={items}
-        placement={placement}
-        trigger="hover"
-        popupProps={{
-          className: electronStylish.nodrag,
-          style: {
-            maxHeight: 360,
-            minWidth: 240,
-            overflow: 'auto',
-            transition: 'none',
-          },
-        }}
-      >
-        {trigger}
-      </DropdownMenu>
+      <div onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+          <DropdownMenuTrigger render={trigger as ReactElement} />
+          <DropdownMenuContent
+            className={electronStylish.nodrag}
+            align={
+              placement?.endsWith('Right')
+                ? 'end'
+                : placement?.endsWith('Left')
+                  ? 'start'
+                  : 'center'
+            }
+            side={
+              placement?.startsWith('top')
+                ? 'top'
+                : placement?.startsWith('left')
+                  ? 'left'
+                  : placement?.startsWith('right')
+                    ? 'right'
+                    : 'bottom'
+            }
+            style={{
+              maxHeight: 360,
+              minWidth: 240,
+              overflow: 'auto',
+              transition: 'none',
+            }}
+          >
+            {items.map((item) => (
+              <DropdownMenuCheckboxItem
+                checked={item.checked}
+                closeOnClick={item.closeOnClick}
+                key={item.key}
+                onCheckedChange={item.onCheckedChange}
+              >
+                {item.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     );
   },
 );

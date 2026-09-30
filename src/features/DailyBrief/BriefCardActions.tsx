@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { type BriefAction, DEFAULT_BRIEF_ACTIONS, type TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -7,6 +6,7 @@ import { lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBriefStore } from '@/store/brief';
 import { useTaskStore } from '@/store/task';
 
@@ -43,10 +43,10 @@ export interface BriefCardActionsProps {
 type CommentMode = { type: 'feedback' } | { key: string; type: 'comment' };
 
 const SuccessTag = memo<{ label: string }>(({ label }) => (
-  <Flexbox horizontal align={'center'} gap={4}>
-    <Icon color={cssVar.colorTextQuaternary} icon={Check} size={14} />
+  <div className="flex items-center gap-1">
+    <Check color={cssVar.colorTextQuaternary} size={14} />
     <Text className={styles.resolvedTag}>{label}</Text>
-  </Flexbox>
+  </div>
 ));
 
 const BriefCardActions = memo<BriefCardActionsProps>(
@@ -235,10 +235,10 @@ const BriefCardActions = memo<BriefCardActionsProps>(
     if (resolvedAction) {
       if (!showViewRun) return <SuccessTag label={t('brief.resolved')} />;
       return (
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+        <div className="flex items-center gap-2 justify-between">
           {viewRunButton}
           <SuccessTag label={t('brief.resolved')} />
-        </Flexbox>
+        </div>
       );
     }
     if (commentMode) {
@@ -263,21 +263,30 @@ const BriefCardActions = memo<BriefCardActionsProps>(
         : t('brief.addFeedback');
 
     return (
-      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
+      <div className="flex items-center gap-2 justify-between" style={{ flexWrap: 'wrap' }}>
         {viewRunButton ?? <span />}
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2">
           {showEditButton && (
-            <Tooltip title={editTooltip}>
-              <Button
-                className={'brief-comment-btn'}
-                icon={SquarePen}
-                shape={'round'}
-                style={{
-                  color: cssVar.colorTextSecondary,
-                }}
-                onClick={() => setCommentMode({ type: 'feedback' })}
-              />
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span className="inline-flex">
+                      <Button
+                        className={'brief-comment-btn'}
+                        icon={SquarePen}
+                        shape={'round'}
+                        style={{
+                          color: cssVar.colorTextSecondary,
+                        }}
+                        onClick={() => setCommentMode({ type: 'feedback' })}
+                      />
+                    </span>
+                  }
+                />
+                <TooltipContent>{editTooltip}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {otherActions.map((action) => {
             if (action.type === 'link') {
@@ -340,8 +349,8 @@ const BriefCardActions = memo<BriefCardActionsProps>(
                 {getActionLabel(primaryActions)}
               </Button>
             ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

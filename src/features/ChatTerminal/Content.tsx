@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -12,7 +11,7 @@ import {
   TabsTab,
   Text,
 } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import {
   CopyXIcon,
   PlusIcon,
@@ -156,8 +155,8 @@ const Content = memo(() => {
   ];
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox horizontal align={'center'} className={styles.tabBar} gap={4}>
+    <div className={cx(styles.container, 'flex flex-col')}>
+      <div className={cx(styles.tabBar, 'flex items-center gap-1')}>
         <TabsRoot
           className={styles.tabs}
           size={'small'}
@@ -194,7 +193,7 @@ const Content = memo(() => {
           title={t('terminalPanel.newTab')}
           onClick={() => createTab(topicKey, cwd)}
         />
-        <Flexbox flex={1} />
+        <div className="flex flex-col flex-1" />
         <ActionIcon
           disabled={!activeTab || creating}
           icon={SquareSplitHorizontalIcon}
@@ -208,7 +207,7 @@ const Content = memo(() => {
           title={t('terminalPanel.close')}
           onClick={() => toggleTerminalPanel(false)}
         />
-      </Flexbox>
+      </div>
       <div className={styles.view}>
         {activeTab ? (
           <SplitView
@@ -219,15 +218,15 @@ const Content = memo(() => {
             onResize={(flex) => setPaneFlex(topicKey, activeTab.id, flex)}
           />
         ) : createError ? (
-          <Flexbox align={'center'} flex={1} gap={8} height={'100%'} justify={'center'}>
+          <div className="flex flex-col items-center flex-1 gap-2 h-full justify-center">
             <Text type={'secondary'}>{t('terminalPanel.createFailed')}</Text>
             <Button size={'small'} onClick={() => createTab(topicKey, cwd)}>
               {t('retry', { ns: 'common' })}
             </Button>
-          </Flexbox>
+          </div>
         ) : null}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

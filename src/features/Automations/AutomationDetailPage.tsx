@@ -1,4 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -21,6 +20,7 @@ import { useParams, useSearchParams } from 'react-router';
 
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -73,19 +73,28 @@ const ProjectSelect = memo(() => {
   );
 
   return (
-    <Tooltip title={canEdit ? undefined : reason}>
-      <Select
-        disabled={!canEdit || !taskId}
-        options={options}
-        size={'small'}
-        style={{ maxWidth: 200 }}
-        value={projectId ?? ''}
-        onChange={(value) => {
-          if (!taskId || typeof value !== 'string') return;
-          void updateTask(taskId, { projectId: value || null });
-        }}
-      />
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              <Select
+                disabled={!canEdit || !taskId}
+                options={options}
+                size={'small'}
+                style={{ maxWidth: 200 }}
+                value={projectId ?? ''}
+                onChange={(value) => {
+                  if (!taskId || typeof value !== 'string') return;
+                  void updateTask(taskId, { projectId: value || null });
+                }}
+              />
+            </span>
+          }
+        />
+        <TooltipContent>{canEdit ? undefined : reason}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 
@@ -97,7 +106,7 @@ const AutomationStatusSwitch = memo(() => {
   const active = status ? automationStatusOf(status) === 'active' : true;
 
   return (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-center gap-2">
       <Switch
         checked={active}
         disabled={!canEdit || !taskId || status === 'running'}
@@ -108,7 +117,7 @@ const AutomationStatusSwitch = memo(() => {
         }}
       />
       {status ? <AutomationStatusBadge status={automationStatusOf(status)} /> : null}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -125,10 +134,8 @@ const AgentChip = memo(() => {
       taskIdentifier={taskIdentifier ?? undefined}
       taskVisibility={visibility}
     >
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
+      <div
+        className="flex items-center gap-2"
         style={{
           border: `1px solid ${cssVar.colorBorderSecondary}`,
           borderRadius: 8,
@@ -142,8 +149,8 @@ const AgentChip = memo(() => {
         <Text fontSize={13}>
           {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
         </Text>
-        <Icon color={cssVar.colorTextTertiary} icon={ChevronRightIcon} size={14} />
-      </Flexbox>
+        <ChevronRightIcon color={cssVar.colorTextTertiary} size={14} />
+      </div>
     </AssigneeAgentSelector>
   );
 });
@@ -190,13 +197,13 @@ const DetailHeaderActions = memo(() => {
   }, [taskId, name, navigate, remove, t]);
 
   return (
-    <Flexbox horizontal align={'center'} gap={6}>
+    <div className="flex items-center gap-1.5">
       <TaskDetailRunPauseAction />
       <DropdownMenu
         items={[
           {
             danger: true,
-            icon: <Icon icon={Trash2Icon} />,
+            icon: <Trash2Icon />,
             key: 'delete',
             label: t('actions.delete'),
             onClick: confirmDelete,
@@ -210,7 +217,7 @@ const DetailHeaderActions = memo(() => {
           title={t('detail.more_actions')}
         />
       </DropdownMenu>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -236,26 +243,26 @@ const AutomationDetailPage = memo(() => {
 
   if (error) {
     return (
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1 h-full">
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   if (isNotFound) {
     return (
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1 h-full">
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           styles={{ left: { paddingLeft: 4 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <NotFound
             desc={t('detail.not_found')}
             title={t('detail.not_found')}
@@ -265,32 +272,32 @@ const AutomationDetailPage = memo(() => {
               </WorkspaceLink>
             }
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
     <TaskDetailScope taskId={taskId}>
-      <Flexbox flex={1} height={'100%'}>
+      <div className="flex flex-col flex-1 h-full">
         <NavHeader
           left={<AutomationBreadcrumb taskId={taskId} />}
           right={<DetailHeaderActions />}
           styles={{ left: { paddingLeft: 4 } }}
         />
-        <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
           <WideScreenContainer>
             {isInitialLoading ? (
               <TaskDetailSkeleton chrome={'body'} />
             ) : (
-              <Flexbox gap={8} paddingBlock={16}>
+              <div className="flex flex-col gap-2 py-4">
                 <TaskDetailTitleInput />
-                <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
+                <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
                   <AutomationStatusSwitch />
                   <AgentChip />
                   <ProjectSelect />
                   <CreatedByLabel />
-                </Flexbox>
+                </div>
                 <Tabs
                   activeKey={tab}
                   items={[
@@ -300,12 +307,12 @@ const AutomationDetailPage = memo(() => {
                   onChange={setTab}
                 />
                 {tab === 'settings' ? <AutomationSettingsTab /> : <AutomationRunList />}
-              </Flexbox>
+              </div>
             )}
           </WideScreenContainer>
-        </Flexbox>
+        </div>
         <TopicChatDrawer />
-      </Flexbox>
+      </div>
     </TaskDetailScope>
   );
 });

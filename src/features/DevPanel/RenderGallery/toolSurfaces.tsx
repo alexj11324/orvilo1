@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { UIChatMessage } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -47,16 +46,19 @@ export class RenderBoundary extends Component<
     if (!this.state.error) return this.props.children;
 
     return (
-      <Block padding={16} variant={'outlined'}>
-        <Flexbox gap={8}>
+      <div
+        className="flex flex-col p-4 border"
+        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+      >
+        <div className="flex flex-col gap-2">
           <Text fontSize={14} type={'danger'} weight={500}>
             {this.props.label} crashed
           </Text>
           <Text fontSize={12} type={'secondary'}>
             {this.state.error.message}
           </Text>
-        </Flexbox>
-      </Block>
+        </div>
+      </div>
     );
   }
 }

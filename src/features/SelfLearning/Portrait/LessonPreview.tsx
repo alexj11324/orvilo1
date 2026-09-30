@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { SkeletonText, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -92,9 +91,9 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
   const evidence = data?.hits.slice(0, MAX_EVIDENCE) ?? [];
 
   return (
-    <Flexbox className={styles.root} gap={10} padding={4}>
-      <Flexbox gap={6}>
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+    <div className={cx(styles.root, 'flex flex-col gap-2.5 p-1')}>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-3 justify-between">
           <Text fontSize={12} type={'secondary'} weight={600}>
             {t('rules.detail.eyebrow', { code })}
           </Text>
@@ -109,11 +108,11 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
           >
             {t('preview.open')}
           </Link>
-        </Flexbox>
+        </div>
         <Text className={styles.title} fontSize={15} lineHeight={1.45} weight={600}>
           {title}
         </Text>
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
           <Text fontSize={12} type={'secondary'}>
             {data
               ? t('rules.detail.meta', {
@@ -125,8 +124,8 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
                 : t('preview.loading')}
           </Text>
           {layer && <Tag size={'small'}>{layer}</Tag>}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
       {isLoading && !data && <SkeletonText rows={3} />}
 
@@ -146,7 +145,7 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
       {sections.length > 0 && (
         <>
           <div className={styles.separator} />
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-2">
             {sections.map(({ label, ...section }) => (
               <div className={styles.section} key={section.key}>
                 <Text fontSize={12} type={'secondary'} weight={600}>
@@ -157,19 +156,19 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
                 </Text>
               </div>
             ))}
-          </Flexbox>
+          </div>
         </>
       )}
 
       {evidence.length > 0 && (
         <>
           <div className={styles.separator} />
-          <Flexbox gap={6}>
+          <div className="flex flex-col gap-1.5">
             <Text fontSize={12} type={'secondary'} weight={600}>
               {t('rules.detail.examples')}
             </Text>
             {evidence.map((hit, index) => (
-              <Flexbox horizontal align={'flex-start'} gap={8} key={`${hit.createdAt}-${index}`}>
+              <div className="flex items-start gap-2" key={`${hit.createdAt}-${index}`}>
                 <Text
                   fontSize={12}
                   style={{ flex: 'none' }}
@@ -180,17 +179,17 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
                 <Text fontSize={12} lineClamp={2} type={'secondary'}>
                   {hit.example}
                 </Text>
-              </Flexbox>
+              </div>
             ))}
             {data && data.hits.length > MAX_EVIDENCE && (
               <Text fontSize={12} type={'secondary'}>
                 {t('preview.moreEvidence', { count: data.hits.length - MAX_EVIDENCE })}
               </Text>
             )}
-          </Flexbox>
+          </div>
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

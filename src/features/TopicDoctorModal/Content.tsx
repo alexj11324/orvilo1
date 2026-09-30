@@ -1,9 +1,8 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Skeleton, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TopicIssue } from '@orvilo/conversation-flow';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleAlert, CircleCheck, EyeOff, Stethoscope } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,21 +41,21 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
   // but never produces `data`, so a `!data` skeleton has no way back.
   if (error || !data)
     return (
-      <Flexbox align={'center'} gap={12} paddingBlock={24}>
-        <Icon color={cssVar.colorError} icon={CircleAlert} size={32} />
+      <div className="flex flex-col items-center gap-3 py-6">
+        <CircleAlert color={cssVar.colorError} size={32} />
         <Text>{t('doctor.checkFailed')}</Text>
         <Button onClick={() => mutate()}>{t('retry', { ns: 'common' })}</Button>
-      </Flexbox>
+      </div>
     );
 
   const { hiddenCount, issues, patch } = data;
 
   if (issues.length === 0)
     return (
-      <Flexbox align={'center'} gap={12} paddingBlock={24}>
-        <Icon color={cssVar.colorSuccess} icon={CircleCheck} size={32} />
+      <div className="flex flex-col items-center gap-3 py-6">
+        <CircleCheck color={cssVar.colorSuccess} size={32} />
         <Text>{t('doctor.healthy')}</Text>
-      </Flexbox>
+      </div>
     );
 
   const describe = (issue: TopicIssue) => {
@@ -101,36 +100,29 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
   };
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       {hiddenCount > 0 && (
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon color={cssVar.colorWarning} icon={EyeOff} />
+        <div className="flex items-center gap-2">
+          <EyeOff color={cssVar.colorWarning} />
           <Text>{t('doctor.summary', { count: hiddenCount })}</Text>
-        </Flexbox>
+        </div>
       )}
 
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {issues.map((issue) => (
-          <Flexbox
-            horizontal
-            align={'flex-start'}
-            className={styles.issue}
-            gap={8}
-            key={issue.messageId}
-          >
-            <Icon
-              color={issue.repairable ? cssVar.colorWarning : cssVar.colorTextQuaternary}
-              icon={CircleAlert}
+          <div className={cx(styles.issue, 'flex items-start gap-2')} key={issue.messageId}>
+            <CircleAlert
+              style={{ color: issue.repairable ? cssVar.colorWarning : cssVar.colorTextQuaternary }}
             />
-            <Flexbox gap={2}>
+            <div className="flex flex-col gap-0.5">
               <Text>{describe(issue)}</Text>
               {!issue.repairable && <Text type={'secondary'}>{t('doctor.notRepairable')}</Text>}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ))}
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
         <Button
           disabled={patch.length === 0}
@@ -141,8 +133,8 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
         >
           {t('doctor.repair')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

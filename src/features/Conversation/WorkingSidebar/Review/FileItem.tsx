@@ -1,6 +1,6 @@
 'use client';
 
-import { copyToClipboard, PatchDiff } from '@lobehub/ui';
+import { PatchDiff } from '@lobehub/ui';
 import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { gitService } from '@/services/git';
 import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import type { ComposerTarget } from '../../types';
 import type { DiffSelectedLineRange } from './selection';

@@ -1,4 +1,3 @@
-import { copyToClipboard } from '@lobehub/ui';
 import { Button, toast } from '@lobehub/ui/base-ui';
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GITHUB_ISSUES } from '@/const/url';
 import BaseErrorForm from '@/features/Conversation/Error/BaseErrorForm';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useRetryParentMessage } from './useRetryParentMessage';
 

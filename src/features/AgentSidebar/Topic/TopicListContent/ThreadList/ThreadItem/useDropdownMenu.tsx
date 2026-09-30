@@ -1,9 +1,9 @@
-import { type MenuProps } from '@lobehub/ui';
 import { confirmModal } from '@lobehub/ui/base-ui';
 import { PanelRight, PencilLine, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { type DropdownItem } from '@/components/ItemsMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 
@@ -17,7 +17,7 @@ export const useThreadItemDropdownMenu = ({
   id,
   sourceMessageId,
   toggleEditing,
-}: ThreadItemDropdownMenuProps): (() => MenuProps['items']) => {
+}: ThreadItemDropdownMenuProps): (() => DropdownItem[]) => {
   const { t } = useTranslation(['thread', 'common']);
   const { allowed: canEditThread } = usePermission('edit_own_content');
 
@@ -72,6 +72,6 @@ export const useThreadItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as DropdownItem[];
   }, [id, sourceMessageId, canEditThread, removeThread, openThreadInPortal, toggleEditing, t]);
 };

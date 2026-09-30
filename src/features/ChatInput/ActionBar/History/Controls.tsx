@@ -1,9 +1,9 @@
 import { SliderWithInput, Switch } from '@lobehub/ui/base-ui';
-import { Form } from 'antd';
 import { debounce } from 'es-toolkit/compat';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { FieldLabel } from '@/components/ui/field';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';

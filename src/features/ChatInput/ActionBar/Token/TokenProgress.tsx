@@ -1,7 +1,8 @@
 import { formatUsageValue } from '@orvilo/utils';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Separator } from '@/components/ui/separator';
 
 interface TokenProgressItem {
   color: string;
@@ -59,7 +60,7 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) =
         ))}
         {showTotal && (
           <>
-            <Divider style={{ marginBlock: 8 }} />
+            <Separator style={{ marginBlock: 8 }} />
             <div className="flex flex-row items-center gap-1 justify-between">
               <div style={{ color: cssVar.colorTextSecondary }}>{showTotal}</div>
               <div style={{ fontWeight: 500 }}>{formatUsageValue(total)}</div>

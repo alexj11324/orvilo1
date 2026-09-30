@@ -1,4 +1,4 @@
-import { copyToClipboard, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { ActionIcon, Tag, toast } from '@lobehub/ui/base-ui';
 import { type ChatTranslate } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -7,6 +7,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BubblesLoading from '@/components/BubblesLoading';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useConversationStore } from '../../../store';
 

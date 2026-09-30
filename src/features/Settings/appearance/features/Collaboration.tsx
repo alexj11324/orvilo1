@@ -1,11 +1,10 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { memo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import { SettingsSectionSkeleton } from '@/components/Skeleton';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';

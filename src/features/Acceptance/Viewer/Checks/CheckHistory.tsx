@@ -1,6 +1,6 @@
 'use client';
 
-import { Image, Tooltip } from '@lobehub/ui';
+import { Image } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -9,6 +9,7 @@ import { BadgeCheck, Ban, MessageSquareX } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import AudioPlayer from '@/features/AudioPlayer';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 
@@ -229,7 +230,7 @@ export const IterationTimeline = memo<{
               style={{ minWidth: 0, paddingBlockEnd: isLast ? 0 : 20 }}
             >
               {onRound ? (
-                <Tooltip title={t('acceptance.history.jump', { round: step.roundIndex })}>
+                <SimpleTooltip title={t('acceptance.history.jump', { round: step.roundIndex })}>
                   <Text
                     strong
                     style={{ cursor: 'pointer', fontSize: 12, lineHeight: '19px' }}
@@ -237,7 +238,7 @@ export const IterationTimeline = memo<{
                   >
                     {t('acceptance.round', { round: step.roundIndex })}
                   </Text>
-                </Tooltip>
+                </SimpleTooltip>
               ) : (
                 <Text strong style={{ fontSize: 12, lineHeight: '19px' }}>
                   {t('acceptance.round', { round: step.roundIndex })}

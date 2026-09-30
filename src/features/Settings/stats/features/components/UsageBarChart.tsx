@@ -1,7 +1,7 @@
 import { type BarChartProps } from '@lobehub/charts';
 import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
-import { Divider } from 'antd';
 
+import { Separator } from '@/components/ui/separator';
 import { formatNumber, formatTokenNumber } from '@/utils/format';
 
 interface UsageBarChartProps extends BarChartProps {
@@ -39,7 +39,7 @@ export const UsageBarChart = ({ ...props }: UsageBarChartProps) => (
             </div>
             {sum !== 0 && (
               <>
-                <Divider style={{ margin: 0 }} />
+                <Separator style={{ margin: 0 }} />
                 <div
                   className={'flex min-w-0'}
                   style={{

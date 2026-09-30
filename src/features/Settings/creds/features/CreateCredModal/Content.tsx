@@ -2,9 +2,18 @@
 
 import { useModalContext } from '@lobehub/ui/base-ui';
 import { type CredType } from '@orvilo/types';
-import { Steps } from 'antd';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import {
+  Stepper,
+  StepperIndicator,
+  StepperItem,
+  StepperNav,
+  StepperSeparator,
+  StepperTitle,
+  StepperTrigger,
+} from '@/components/reui/stepper';
 
 import { type CredsApi } from '../useCredsApi';
 import CredTypeSelector from './CredTypeSelector';
@@ -72,15 +81,23 @@ const CreateCredModalContent: FC<CreateCredModalContentProps> = ({ credsApi, onS
 
   return (
     <>
-      <Steps
-        className="mb-6"
-        current={step}
-        size={'small'}
-        items={[
-          { title: t('creds.createModal.selectType') },
-          { title: t('creds.createModal.fillForm') },
-        ]}
-      />
+      <Stepper className="mb-6" value={step + 1}>
+        <StepperNav>
+          <StepperItem disabled step={1}>
+            <StepperTrigger>
+              <StepperIndicator>{1}</StepperIndicator>
+              <StepperTitle>{t('creds.createModal.selectType')}</StepperTitle>
+            </StepperTrigger>
+            <StepperSeparator />
+          </StepperItem>
+          <StepperItem disabled step={2}>
+            <StepperTrigger>
+              <StepperIndicator>{2}</StepperIndicator>
+              <StepperTitle>{t('creds.createModal.fillForm')}</StepperTitle>
+            </StepperTrigger>
+          </StepperItem>
+        </StepperNav>
+      </Stepper>
 
       {step === 0 ? <CredTypeSelector onSelect={handleTypeSelect} /> : renderForm()}
     </>

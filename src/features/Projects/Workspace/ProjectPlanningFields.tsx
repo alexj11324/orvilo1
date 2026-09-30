@@ -1,4 +1,3 @@
-import { DatePicker } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -15,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import DatePicker from '@/components/DatePicker';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
 import {
   Combobox,

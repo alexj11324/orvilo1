@@ -1,6 +1,5 @@
 'use client';
 
-import { ContextMenuTrigger } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
@@ -13,6 +12,7 @@ import { cx } from 'antd-style';
 import React, { memo, Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ContextMenuTrigger } from '@/components/ItemsMenu';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useFetchChatTopics } from '@/hooks/useFetchChatTopics';

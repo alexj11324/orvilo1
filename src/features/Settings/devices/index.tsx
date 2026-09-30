@@ -1,10 +1,10 @@
 'use client';
 
-import { Form } from '@lobehub/ui';
 import { MonitorUpIcon, RefreshCwIcon } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { FORM_STYLE } from '@/const/layoutTokens';

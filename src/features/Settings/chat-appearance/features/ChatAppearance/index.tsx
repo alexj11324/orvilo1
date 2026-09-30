@@ -1,11 +1,12 @@
 'use client';
 
-import { Form, FormGroup, highlighterThemes, mermaidThemes } from '@lobehub/ui';
+import { highlighterThemes, mermaidThemes } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import Form, { FormGroup } from '@/components/GroupForm';
 import { SettingsSectionSkeleton } from '@/components/Skeleton';
 import {
   Select,

@@ -1,6 +1,5 @@
 import { BrainOffIcon } from '@lobehub/ui/icons';
 import { type UserMemoryEffort } from '@orvilo/types';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { Brain } from 'lucide-react';
@@ -8,6 +7,7 @@ import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import LevelSlider from '@/components/LevelSlider';
+import { Separator } from '@/components/ui/separator';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
@@ -130,7 +130,7 @@ const Controls = memo(() => {
       ))}
       {isEnabled && (
         <>
-          <Divider style={{ margin: 0 }} />
+          <Separator style={{ margin: 0 }} />
           <div className="flex flex-row items-center gap-4 p-2">
             <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 100 }}>
               <div className={styles.title}>{t('memory.effort.title')}</div>

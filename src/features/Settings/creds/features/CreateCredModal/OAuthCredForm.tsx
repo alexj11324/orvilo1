@@ -1,10 +1,10 @@
 'use client';
 import { useMutation } from '@tanstack/react-query';
-import { Form } from 'antd';
 import { Loader2 } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {

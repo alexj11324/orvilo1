@@ -1,8 +1,8 @@
-import { DropdownMenu } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { useOverlayDropdownPortalProps } from '@/features/NavPanel/OverlayContainer';
 
 import { type TopicItemDropdownMenuProps, useTopicItemDropdownMenu } from './useDropdownMenu';

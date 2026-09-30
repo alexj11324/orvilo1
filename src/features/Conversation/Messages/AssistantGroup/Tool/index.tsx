@@ -2,11 +2,11 @@ import { Accordion, Skeleton } from '@lobehub/ui/base-ui';
 import { getBuiltinRender } from '@orvilo/builtin-tools/renders';
 import { getBuiltinStreaming } from '@orvilo/builtin-tools/streamings';
 import { LOADING_FLAT } from '@orvilo/const';
-import { Divider } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
 
 import SafeBoundary from '@/components/ErrorBoundary';
+import { Separator } from '@/components/ui/separator';
 import dynamic from '@/libs/next/dynamic';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
@@ -176,7 +176,7 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
                   type={type}
                 />
               </SafeBoundary>
-              <Divider dashed style={{ marginBottom: 0, marginTop: 8 }} />
+              <Separator dashed style={{ marginBottom: 0, marginTop: 8 }} />
             </div>
           ),
           key: id,

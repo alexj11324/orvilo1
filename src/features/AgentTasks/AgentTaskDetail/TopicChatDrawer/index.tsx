@@ -1,6 +1,6 @@
 'use client';
 
-import { copyToClipboard, Freeze } from '@lobehub/ui';
+import { Freeze } from '@lobehub/ui';
 import { ActionIcon, confirmModal, FloatingPanel, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
@@ -45,6 +45,7 @@ import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
+import { copyToClipboard } from '@/utils/clipboard';
 import { isForbiddenError } from '@/utils/forbiddenError';
 
 import AssigneeAvatar from '../../features/AssigneeAvatar';

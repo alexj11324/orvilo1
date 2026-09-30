@@ -1,4 +1,3 @@
-import { DatePicker } from '@lobehub/ui';
 import { ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { ProjectStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -18,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import DatePicker from '@/components/DatePicker';
 import EmojiPicker from '@/components/EmojiPicker';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
 import { Button } from '@/components/ui/button';

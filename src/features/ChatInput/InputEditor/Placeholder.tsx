@@ -1,8 +1,9 @@
-import { combineKeys, Hotkey } from '@lobehub/ui';
+import { combineKeys } from '@lobehub/ui';
 import { KeyEnum } from '@orvilo/const/hotkeys';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Kbd } from '@/components/ui/kbd';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
@@ -61,13 +62,13 @@ const Placeholder = memo<PlaceholderProps>(
                 ns={'chat'}
                 components={{
                   key: (
-                    <Hotkey
-                      as={'span'}
-                      keys={wrapperShortcut}
-                      style={{ color: 'inherit' }}
-                      styles={{ kbdStyle: { color: 'inhert' } }}
-                      variant={'borderless'}
-                    />
+                    <Kbd style={{ color: 'inherit' }}>
+                      {wrapperShortcut
+                        .split('+')
+                        .map((k) => (k === 'mod' ? '\u2318' : k))
+                        .join('+')
+                        .toUpperCase()}
+                    </Kbd>
                   ),
                 }}
               />

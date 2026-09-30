@@ -10,7 +10,6 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { Empty } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import type { WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -20,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
@@ -842,7 +842,10 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
   const emptyState = (
     <div className="flex h-[80vh] w-full items-center justify-center">
-      <Empty description={emptyDescription ?? t('taskList.empty')} icon={ClipboardCheckIcon} />
+      <SimpleEmpty
+        description={emptyDescription ?? t('taskList.empty')}
+        icon={ClipboardCheckIcon}
+      />
     </div>
   );
 

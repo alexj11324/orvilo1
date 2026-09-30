@@ -1,10 +1,11 @@
 import { Accordion, Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Separator } from '@/components/ui/separator';
 
 const PROCESS_KEY = 'process';
 
@@ -87,7 +88,7 @@ const ProcessFold = memo<ProcessFoldProps>(
           variant={'borderless'}
           onValueChange={(next) => setExpanded(next.includes(PROCESS_KEY))}
         />
-        <Divider style={{ marginBlock: 0 }} />
+        <Separator style={{ marginBlock: 0 }} />
       </>
     );
   },

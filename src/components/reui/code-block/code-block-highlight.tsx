@@ -1,13 +1,3 @@
-// Title: Code Block Highlight
-// Description: Isomorphic shiki engine and pure helpers for the code block.
-
-/**
- * No "use client" directive, deliberately: a server component awaits
- * `highlightCode` and passes `lines` down, costing the client nothing. The
- * contract test asserts the directive stays absent. shiki loads lazily inside
- * `loadHighlighter`, so importing a helper from here bundles no engine.
- */
-
 import type { ReactNode } from 'react';
 import type { ShikiTransformer } from 'shiki';
 
@@ -1065,10 +1055,10 @@ export function parseUnifiedDiff(patch: string): CodeBlockPatchFile[] {
   const pad = (value: number | null) => (value === null ? '' : String(value)).padStart(width);
 
   for (const raw of normalizeCode(patch).split('\n')) {
-    const fileHeader = raw.match(/^diff --git a\/.+ b\/(.+)$/);
+    const fileHeader = raw.match(/^diff --git a\/(.+) b\/(.+)$/);
     const plusHeader = raw.match(/^\+\+\+ (?:b\/)?(.+)$/);
     if (fileHeader || plusHeader) {
-      const name = fileHeader ? fileHeader[1] : plusHeader![1];
+      const name = fileHeader ? fileHeader[2] : plusHeader![1];
       if (name !== '/dev/null' && (!current || current.file !== name)) {
         current = { file: name, lines: [], added: 0, removed: 0, hunks: [] };
         files.push(current);

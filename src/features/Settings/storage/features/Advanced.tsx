@@ -1,7 +1,5 @@
 'use client';
 
-import type { FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { HardDriveDownload, HardDriveUpload } from 'lucide-react';
@@ -10,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 import AccountDeletion from '@/business/client/features/AccountDeletion';
 import { useTransferAgentsFormItem } from '@/business/client/hooks/useTransferAgentsFormItem';
+import type { FormGroupItemType } from '@/components/GroupForm';
+import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';

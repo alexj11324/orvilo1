@@ -1,5 +1,3 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { Button, Switch, Tabs } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type UIChatMessage } from '@orvilo/types';
 import { cn } from 'cn';
@@ -7,6 +5,7 @@ import { CopyIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormItemProps } from '@/components/GroupForm';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { useImgToClipboard } from '@/hooks/useImgToClipboard';
 import { useIsMobile } from '@/hooks/useIsMobile';

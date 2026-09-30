@@ -2,7 +2,6 @@
 
 import '@xyflow/react/dist/style.css';
 
-import { useAppElement } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Text } from '@lobehub/ui/base-ui';
 import { MarkerType, ReactFlowProvider } from '@xyflow/react';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
@@ -86,7 +85,10 @@ const nodeTypes = { state: FlowNode, flowGroup: FlowGroup };
 
 export function AcceptanceFlow() {
   const { t } = useTranslation('verify');
-  const appElement = useAppElement();
+  const [appElement, setAppElement] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setAppElement(document.querySelector('[data-lobe-portal-host]'));
+  }, []);
   const panelHost = use(FlowPanelHostContext);
   const { md = true } = useResponsive();
   const [display, setDisplay] = useState<'graph' | 'outline'>();

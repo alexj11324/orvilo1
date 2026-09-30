@@ -1,4 +1,3 @@
-import { Form } from '@lobehub/ui';
 import { Alert, Segmented, Slider } from '@lobehub/ui/base-ui';
 import {
   COMPLETION_BUILTIN_SOUNDS,
@@ -9,6 +8,7 @@ import { createElement, useCallback, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BusinessNotification from '@/business/client/BusinessSettingPages/Notification';
+import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import {
   Select,

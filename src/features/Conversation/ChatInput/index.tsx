@@ -2,7 +2,6 @@
 
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { type MenuProps } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { type VoiceMessageRecording } from '@orvilo/types';
 import { type ReactNode } from 'react';
@@ -15,6 +14,7 @@ import {
 } from '@/business/client/hooks/useBusinessChatInputSendAreaPrefix';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
+import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import {
   type SendButtonHandler,
   type SendButtonProps,
@@ -153,7 +153,7 @@ export interface ChatInputProps {
   /**
    * Send menu configuration (for send options like Enter/Cmd+Enter, Add AI/User message)
    */
-  sendMenu?: MenuProps;
+  sendMenu?: ActionDropdownMenu;
   /**
    * Whether to show the control bar (Local/Cloud/Auto Approve)
    */

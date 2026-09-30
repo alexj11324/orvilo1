@@ -1,13 +1,11 @@
 'use client';
 
-import { type FormGroupItemType } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { type NetworkProxySettings } from '@orvilo/electron-client-ipc';
-import { Form as AntdForm, Input as AntdInput } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormGroupItemType } from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -64,8 +62,8 @@ const ProxyForm = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const isEnableProxy = AntdForm.useWatch('enableProxy', form);
-  const proxyRequireAuth = AntdForm.useWatch('proxyRequireAuth', form);
+  const isEnableProxy = Form.useWatch('enableProxy', form);
+  const proxyRequireAuth = Form.useWatch('proxyRequireAuth', form);
 
   const [setProxySettings, useGetProxySettings] = useElectronStore((s) => [
     s.setProxySettings,
@@ -296,9 +294,10 @@ const ProxyForm = () => {
             },
             {
               children: (
-                <AntdInput.Password
+                <Input
                   autoComplete="new-password"
                   placeholder={t('proxy.password_placeholder')}
+                  type="password"
                 />
               ),
               label: t('proxy.password'),

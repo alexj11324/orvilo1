@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   messageSuccess: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', () => ({
+vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: mocks.copyToClipboard,
 }));
 

@@ -1,4 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
@@ -24,6 +23,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { type DropdownItem } from '@/components/ItemsMenu';
 import { openRenameModal } from '@/components/RenameModal';
 import { isDesktop } from '@/const/version';
 import { createTopicForwardModal } from '@/features/Conversation/MessageForward/TopicForwardModal';
@@ -302,7 +302,7 @@ export const useTopicItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as DropdownItem[];
   }, [
     id,
     fav,

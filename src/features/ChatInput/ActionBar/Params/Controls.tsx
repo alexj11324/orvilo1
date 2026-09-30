@@ -1,6 +1,5 @@
 import { Select, SliderWithInput, Switch } from '@lobehub/ui/base-ui';
 import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
-import { Form as AntdForm } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { debounce } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
@@ -11,6 +10,7 @@ import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState 
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
+import AntdForm from '@/components/GroupForm';
 import InfoTooltip from '@/components/InfoTooltip';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Textarea } from '@/components/ui/textarea';

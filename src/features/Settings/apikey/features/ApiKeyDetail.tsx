@@ -1,10 +1,20 @@
 'use client';
 import { Drawer } from '@lobehub/ui/base-ui';
-import { Popconfirm } from 'antd';
 import { Loader2, Pencil, Trash } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogConfirm,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -267,27 +277,45 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
           </div>
 
           <div className="flex justify-end">
-            <Popconfirm
-              cancelText={t('apikey.list.actions.deleteConfirm.actions.cancel')}
-              description={t('apikey.list.actions.deleteConfirm.content')}
-              okButtonProps={{ disabled: !canDelete }}
-              okText={t('apikey.list.actions.deleteConfirm.actions.ok')}
-              title={t('apikey.list.actions.deleteConfirm.title')}
-              onConfirm={async () => {
-                if (!canDelete) return;
-                await onDelete(apiKey.id);
-              }}
-            >
-              <Button
-                disabled={!canDelete}
-                title={canDelete ? t('apikey.list.actions.delete') : manageTooltip}
-                type="button"
-                variant="destructive"
-              >
-                <Trash />
-                {t('apikey.list.actions.delete')}
-              </Button>
-            </Popconfirm>
+            <AlertDialog>
+              <AlertDialogTrigger
+                render={
+                  <Button
+                    disabled={!canDelete}
+                    title={canDelete ? t('apikey.list.actions.delete') : manageTooltip}
+                    type="button"
+                    variant="destructive"
+                  >
+                    <Trash />
+                    {t('apikey.list.actions.delete')}
+                  </Button>
+                }
+              />
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {t('apikey.list.actions.deleteConfirm.title')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('apikey.list.actions.deleteConfirm.content')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    {t('apikey.list.actions.deleteConfirm.actions.cancel')}
+                  </AlertDialogCancel>
+                  <AlertDialogConfirm
+                    disabled={!canDelete}
+                    onClick={async () => {
+                      if (!canDelete) return;
+                      await onDelete(apiKey.id);
+                    }}
+                  >
+                    {t('apikey.list.actions.deleteConfirm.actions.ok')}
+                  </AlertDialogConfirm>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       )}

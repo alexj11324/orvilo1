@@ -1,11 +1,11 @@
 'use client';
 import { toast, UploadDragger } from '@lobehub/ui/base-ui';
 import { useMutation } from '@tanstack/react-query';
-import { Form } from 'antd';
 import { Inbox, Loader2, X } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

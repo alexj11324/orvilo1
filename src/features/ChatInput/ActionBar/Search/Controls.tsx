@@ -1,11 +1,11 @@
 import { GlobeOffIcon } from '@lobehub/ui/icons';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { SparkleIcon } from 'lucide-react';
 import { createElement, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
@@ -181,7 +181,7 @@ const Controls = memo(() => {
       {options.map((option) => (
         <Item {...option} key={option.value} />
       ))}
-      {showDivider && <Divider style={{ margin: 0 }} />}
+      {showDivider && <Separator style={{ margin: 0 }} />}
       {showModelBuiltinSearch && <ModelBuiltinSearch disabled={!canCreate} />}
       {showFCSearchModel && <FCSearchModel disabled={!canCreate} />}
     </div>

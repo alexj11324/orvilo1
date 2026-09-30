@@ -1,10 +1,10 @@
 'use client';
 
 import { type UIChatMessage } from '@orvilo/types';
-import { Divider } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { Fragment, memo } from 'react';
 
+import { Separator } from '@/components/ui/separator';
 import { CONVERSATION_MIN_WIDTH } from '@/const/layoutTokens';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useGlobalStore } from '@/store/global';
@@ -78,7 +78,7 @@ const CouncilList = memo<CouncilListProps>(({ members, displayMode, activeTab })
                     <CouncilMember index={idx} item={member} />
                   </div>
                   {idx < members?.length - 1 && (
-                    <Divider
+                    <Separator
                       dashed
                       orientation={'vertical'}
                       style={{ height: 'unset', marginInline: 16 }}

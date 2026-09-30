@@ -1,20 +1,18 @@
 'use client';
 
 import type { ContextMenu as ContextMenuPrimitive } from '@base-ui/react/context-menu';
-import type { MenuProps } from '@lobehub/ui';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { closeContextMenu, showContextMenuWithFallback } from '@/libs/contextMenu';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
 import { renderSidebarMenuItems } from './SidebarDropdownMenu';
 
 type SidebarContextMenuItems =
-  | MenuProps['items']
-  | NativeContextMenuItem[]
-  | (() => MenuProps['items'] | NativeContextMenuItem[]);
+  SidebarMenuItems | NativeContextMenuItem[] | (() => SidebarMenuItems | NativeContextMenuItem[]);
 
 export interface SidebarContextMenuProps {
   children: ReactElement;
@@ -29,7 +27,7 @@ export interface SidebarContextMenuProps {
   onMenuOpen?: (closeMenu: () => void) => void;
 }
 
-const resolveItems = (items: SidebarContextMenuProps['items']) =>
+const resolveItems = (items: SidebarContextSidebarMenuItems) =>
   (typeof items === 'function' ? items() : items) ?? [];
 
 export default function SidebarContextMenu({

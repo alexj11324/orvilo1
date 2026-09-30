@@ -1,6 +1,5 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon, PencilIcon, TrashIcon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import NavItem from '@/features/NavPanel/components/NavItem';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { openRenameProjectModal } from '@/features/Projects/RenameProjectModal';
@@ -41,7 +41,7 @@ const ProjectItem = memo<ProjectItemProps>(({ project }) => {
     }
   };
 
-  const menuItems: MenuProps['items'] = canManage
+  const menuItems: SidebarMenuItems = canManage
     ? [
         {
           icon: <PencilIcon size={16} />,

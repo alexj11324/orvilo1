@@ -1,6 +1,5 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import {
   EyeOffIcon,
@@ -41,6 +40,7 @@ import {
 } from '@/components/ui/sidebar';
 import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -120,7 +120,7 @@ const TeamItem = memo<TeamItemProps>(({ team, activeTab, open, onOpenChange }) =
     }
   }, [appOrigin, t, team.id, workspaceSlug]);
 
-  const menu = useMemo<MenuProps['items']>(
+  const menu = useMemo<SidebarMenuItems>(
     () =>
       buildTeamMenuEntries(pinned).map((entry) => ({
         icon: <entry.icon size={14} />,
@@ -268,10 +268,10 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
         sfSymbol: 'gearshape',
       },
     ];
-    return items as MenuProps['items'];
+    return items as SidebarMenuItems;
   }, [t, hiddenSections, itemKey, updateSystemStatus]);
 
-  const sectionMenu = useMemo<MenuProps['items']>(
+  const sectionMenu = useMemo<SidebarMenuItems>(
     () => [
       {
         icon: <Layers />,

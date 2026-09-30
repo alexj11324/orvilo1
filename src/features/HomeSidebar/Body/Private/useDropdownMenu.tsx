@@ -1,10 +1,10 @@
-import { type MenuProps } from '@lobehub/ui';
 import { ArrowDownIcon, ArrowUpIcon, Hash, LucideCheck, SlidersHorizontalIcon } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { openCustomizeSidebarModal } from '@/features/HomeSidebar/Body/CustomizeSidebarModal';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { reorderSidebarItems } from '@/store/global/selectors/systemStatus';
@@ -17,7 +17,7 @@ interface PrivateActionsDropdownMenuProps {
 
 export const usePrivateActionsDropdownMenu = ({
   openConfigGroupModal,
-}: PrivateActionsDropdownMenuProps): MenuProps['items'] => {
+}: PrivateActionsDropdownMenuProps): SidebarMenuItems => {
   const { t } = useTranslation('common');
 
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -92,7 +92,7 @@ export const usePrivateActionsDropdownMenu = ({
         label: t('navPanel.customizeSidebar'),
         onClick: () => openCustomizeSidebarModal(),
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItems;
   }, [
     privateAgentPageSize,
     updateSystemStatus,

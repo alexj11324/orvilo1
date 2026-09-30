@@ -1,6 +1,5 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
 import { EyeOffIcon, MoreHorizontalIcon, SlidersHorizontalIcon } from 'lucide-react';
 import type { Key, ReactElement } from 'react';
 import { memo, useCallback, useMemo } from 'react';
@@ -13,6 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuAction,
 } from '@/components/ui/sidebar';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -110,7 +110,7 @@ const Body = memo(() => {
   );
 
   const getContextMenuItems = useCallback(
-    (key: string): MenuProps['items'] => {
+    (key: string): SidebarMenuItems => {
       const items: NativeContextMenuItem[] = [
         // Core destinations are part of the fixed IA — no hide affordance.
         ...(CORE_KEYS.has(key)
@@ -133,7 +133,7 @@ const Body = memo(() => {
           sfSymbol: 'gearshape',
         },
       ];
-      return items as MenuProps['items'];
+      return items as SidebarMenuItems;
     },
     [t, hideSection],
   );

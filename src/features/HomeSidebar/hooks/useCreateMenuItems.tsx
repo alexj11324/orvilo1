@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text, toast } from '@lobehub/ui/base-ui';
 import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
@@ -224,7 +223,7 @@ export const useCreateMenuItems = () => {
    */
   const createAgentMenuItem = useCallback(
     (options?: CreateAgentOptions): MenuItem => ({
-      icon: <Icon icon={BotIcon} />,
+      icon: <BotIcon size={14} />,
       disabled: !canCreate,
       // Key needs to vary by visibility so the public and private "New
       // Agent" entries can coexist (e.g. if a future menu lists both).
@@ -254,7 +253,7 @@ export const useCreateMenuItems = () => {
    */
   const createAgentListMenuItem = useCallback(
     (options?: { visibility?: 'private' | 'public' }): MenuItem => ({
-      icon: <Icon icon={ListPlusIcon} />,
+      icon: <ListPlusIcon size={14} />,
       key: options?.visibility === 'private' ? 'addPrivateAgentFromList' : 'addAgentFromList',
       label: t('addAgentFromList'),
       sfSymbol: 'list.bullet',
@@ -274,16 +273,16 @@ export const useCreateMenuItems = () => {
   const createConnectAgentMenuItem = useCallback(
     (options?: CreateAgentOptions): MenuItem | null => {
       return {
-        icon: <Icon icon={MonitorSmartphone} />,
+        icon: <MonitorSmartphone size={14} />,
         disabled: !canCreate,
         key: 'newPlatformAgent',
         label: (
-          <Flexbox gap={1}>
+          <div className="flex flex-col gap-[1px]">
             <Text>{t('newPlatformAgent')}</Text>
             <Text fontSize={12} type={'secondary'}>
               {t('newPlatformAgentDesc')}
             </Text>
-          </Flexbox>
+          </div>
         ),
         sfSymbol: 'laptopcomputer.and.iphone',
         onClick: (info) => {
@@ -306,7 +305,7 @@ export const useCreateMenuItems = () => {
    */
   const createGroupChatMenuItem = useCallback(
     (options?: CreateAgentOptions): MenuItem => ({
-      icon: <Icon icon={GroupBotSquareIcon} />,
+      icon: <GroupBotSquareIcon size={14} />,
       disabled: !canCreate,
       key: options?.visibility === 'private' ? 'newPrivateGroupChat' : 'newGroupChat',
       label: t('newGroupChat'),
@@ -333,7 +332,7 @@ export const useCreateMenuItems = () => {
    */
   const createSessionGroupMenuItem = useCallback(
     (options?: { visibility?: 'private' | 'public' }): MenuItem => ({
-      icon: <Icon icon={FolderPlus} />,
+      icon: <FolderPlus size={14} />,
       disabled: !canCreate,
       key: options?.visibility === 'private' ? 'addPrivateSessionGroup' : 'addSessionGroup',
       label: t('sessionGroup.createGroup'),
@@ -361,7 +360,7 @@ export const useCreateMenuItems = () => {
    */
   const configMenuItem = useCallback(
     (onOpenConfig: () => void): MenuItem => ({
-      icon: <Icon icon={FolderCogIcon} />,
+      icon: <FolderCogIcon size={14} />,
       key: 'config',
       label: t('sessionGroup.manageCategory'),
       sfSymbol: 'folder.badge.gearshape',

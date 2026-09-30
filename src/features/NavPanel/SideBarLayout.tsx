@@ -1,8 +1,8 @@
-import { Flexbox, TooltipGroup } from '@lobehub/ui';
 import { ScrollArea } from '@lobehub/ui/base-ui';
 import { type ReactNode, type UIEvent } from 'react';
 import { memo, Suspense, useCallback, useLayoutEffect, useRef } from 'react';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { SideBarHeaderSkeleton } from '@/features/NavPanel/components/SideBarSkeleton';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 
@@ -38,7 +38,7 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
   }, [navKey]);
 
   return (
-    <Flexbox gap={1} style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="flex flex-col gap-[1px]" style={{ height: '100%', overflow: 'hidden' }}>
       <Suspense fallback={<SideBarHeaderSkeleton />}>{header}</Suspense>
       <ScrollArea
         disableContentFit
@@ -48,11 +48,11 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
         style={{ flex: 1, minHeight: 0 }}
         viewportProps={{ onScroll: handleScroll, ref: scrollerRef }}
       >
-        <TooltipGroup>
+        <TooltipProvider>
           <Suspense fallback={<SkeletonList paddingBlock={8} />}>{body}</Suspense>
-        </TooltipGroup>
+        </TooltipProvider>
       </ScrollArea>
-    </Flexbox>
+    </div>
   );
 });
 

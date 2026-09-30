@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { type ItemType } from 'antd/es/menu/interface';
@@ -39,7 +38,7 @@ export const useSessionGroupMenuItems = () => {
    */
   const renameGroupMenuItem = useCallback(
     (groupId: string, groupName: string, anchor: HTMLElement | null): MenuItem => {
-      const iconElement = <Icon icon={FolderPenIcon} />;
+      const iconElement = <FolderPenIcon size={14} />;
       return {
         disabled: !canEdit,
         icon: iconElement,
@@ -69,7 +68,7 @@ export const useSessionGroupMenuItems = () => {
    */
   const configGroupMenuItem = useCallback(
     (onOpenConfig: () => void): MenuItem => {
-      const iconElement = <Icon icon={FolderCogIcon} />;
+      const iconElement = <FolderCogIcon size={14} />;
       return {
         icon: iconElement,
         key: 'config',
@@ -90,7 +89,7 @@ export const useSessionGroupMenuItems = () => {
    */
   const deleteGroupMenuItem = useCallback(
     (groupId: string): MenuItem => {
-      const trashIcon = <Icon icon={Trash} />;
+      const trashIcon = <Trash size={14} />;
       return {
         danger: true,
         disabled: !canEdit,
@@ -123,7 +122,7 @@ export const useSessionGroupMenuItems = () => {
    */
   const createAgentInGroupMenuItem = useCallback(
     (groupId: string, _isPinned?: boolean): MenuItem => {
-      const iconElement = <Icon icon={FolderPenIcon} />;
+      const iconElement = <FolderPenIcon size={14} />;
       return {
         disabled: !canCreate,
         icon: iconElement,
@@ -168,7 +167,7 @@ export const useSessionGroupMenuItems = () => {
         onConfirm: (selectedAgents: string[]) => Promise<void>;
       }) => void,
     ): MenuItem => {
-      const iconElement = <Icon icon={FolderPenIcon} />;
+      const iconElement = <FolderPenIcon size={14} />;
       return {
         disabled: !canCreate,
         icon: iconElement,

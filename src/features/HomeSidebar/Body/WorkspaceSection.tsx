@@ -1,6 +1,5 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
 import type { LucideIcon } from 'lucide-react';
 import {
   AlarmClock,
@@ -29,6 +28,7 @@ import {
 } from '@/components/ui/sidebar';
 import SidebarCollapseIcon from '@/features/NavPanel/components/SidebarCollapseIcon';
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -76,7 +76,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey, open = true, on
         sfSymbol: 'gearshape',
       },
     ];
-    return items as MenuProps['items'];
+    return items as SidebarMenuItems;
   }, [t, hiddenSections, itemKey, updateSystemStatus]);
 
   const moreMenu = useMemo(
@@ -134,7 +134,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey, open = true, on
           label: t('navPanel.workspaceSettings'),
           onClick: () => navigate('/settings'),
         },
-      ] as MenuProps['items'],
+      ] as SidebarMenuItems,
     [navigate, t],
   );
 

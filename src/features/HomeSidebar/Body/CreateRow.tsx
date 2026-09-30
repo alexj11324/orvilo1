@@ -4,12 +4,9 @@ import { LayersIcon, PlusIcon, SquarePenIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SidebarMenuButton, SidebarMenuItemData } from '@/components/ui/sidebar';
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
-import {
-  type SidebarMenuItemData,
-  type SidebarMenuItems,
-} from '@/features/NavPanel/components/SidebarDropdownMenu';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -51,13 +48,13 @@ const CreateRow = memo(() => {
 
   return (
     <>
-      <SidebarMenuItemData>
+      <SidebarMenuItem>
         <SidebarDropdownMenu items={items}>
           <SidebarMenuButton aria-label={t('navPanel.create')} tooltip={t('navPanel.create')}>
             <PlusIcon />
           </SidebarMenuButton>
         </SidebarDropdownMenu>
-      </SidebarMenuItemData>
+      </SidebarMenuItem>
       <NewViewModal open={creatingView} onClose={() => setCreatingView(false)} />
     </>
   );

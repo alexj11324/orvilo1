@@ -29,24 +29,26 @@ import { connectorSelectors } from '@/store/tool/slices/connector/selectors';
 /**
  * Composio server icon component
  */
-const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, label }) => {
-  if (typeof icon === 'string') {
-    return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
+const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon: Icon, label }) => {
+  if (typeof Icon === 'string') {
+    return <img alt={label} height={16} src={Icon} style={{ flexShrink: 0 }} width={16} />;
   }
 
-  return <icon fill={cssVar.colorText} size={16} />;
+  return <Icon fill={cssVar.colorText} size={16} />;
 });
 
 /**
  * Orvilo Skill Provider icon component
  */
-const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(({ icon, label }) => {
-  if (typeof icon === 'string') {
-    return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
-  }
+const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(
+  ({ icon: Icon, label }) => {
+    if (typeof Icon === 'string') {
+      return <img alt={label} height={16} src={Icon} style={{ flexShrink: 0 }} width={16} />;
+    }
 
-  return <icon fill={cssVar.colorText} size={16} />;
-});
+    return <Icon fill={cssVar.colorText} size={16} />;
+  },
+);
 
 // Stable empty reference for the connector-list read when attribution is off,
 // so `showAuthor={false}` tags never subscribe to connector list changes.
@@ -393,7 +395,7 @@ const PluginTag = memo<PluginTagProps>(
         className={styles.tag}
         closeLabel={t('close', { ns: 'common' })}
         style={selectable ? { cursor: 'pointer' } : undefined}
-        variant={isDarkMode ? 'secondary' : 'outline'}
+        variant={showErrorState ? 'destructive-light' : isDarkMode ? 'secondary' : 'outline'}
         title={
           showErrorState
             ? t('tools.notInstalledWarning', { defaultValue: 'This tool is not installed' })
@@ -402,10 +404,10 @@ const PluginTag = memo<PluginTagProps>(
         onClick={selectable ? onSelect : undefined}
         onClose={
           removable && !disabled && !selectable
-            ? () => {
+            ? (e) => {
                 if (disabled) return;
 
-                onRemove?.();
+                onRemove?.(e);
               }
             : undefined
         }

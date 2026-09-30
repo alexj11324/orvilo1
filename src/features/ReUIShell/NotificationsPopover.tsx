@@ -95,10 +95,9 @@ function NotificationsPanel() {
             <TooltipTrigger
               render={
                 <Button
-                  aria={true}
+                  aria-label={t('reuiShell9.markAllRead')}
                   className="opacity-60 hover:opacity-100"
                   disabled={unreadCount === 0}
-                  label={t('reuiShell9.markAllRead')}
                   size="icon-xs"
                   variant="ghost"
                   onClick={() => void markAllRead()}
@@ -153,9 +152,8 @@ export function NotificationsPopover() {
   const { unreadCount } = useInboxUnreadCount();
   const trigger = (
     <Button
-      aria={true}
+      aria-label={t('reuiShell9.notifications')}
       className="relative"
-      label={t('reuiShell9.notifications')}
       size="icon-sm"
       variant="ghost"
     />

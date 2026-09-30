@@ -102,10 +102,9 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
 
         <div className="flex flex-row justify-end">
           <Button
+            className="rounded-full"
             disabled={disabled}
             loading={loading || pendingCreate}
-            shape={'round'}
-            variant="outline"
             onClick={handleAddTask}
           >
             {primaryButtonLabel}

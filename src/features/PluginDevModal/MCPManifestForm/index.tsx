@@ -1,5 +1,6 @@
 import { type FormInstance } from 'antd';
 import isEqual from 'fast-deep-equal';
+import { CircleAlert, X } from 'lucide-react';
 import {
   type ComponentProps,
   type CSSProperties,
@@ -12,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import Form from '@/components/GroupForm';
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,8 +50,8 @@ const AuthTypeRadioGroup = ({
   <RadioGroup className="flex flex-row gap-4" style={style} value={value} onValueChange={onChange}>
     {options.map((opt) => (
       <div className="flex items-center gap-2" key={opt.value}>
-        <RadioGroupItem value={opt.value} />
-        <Label>{opt.label}</Label>
+        <RadioGroupItem id={`auth-type-${opt.value}`} value={opt.value} />
+        <Label htmlFor={`auth-type-${opt.value}`}>{opt.label}</Label>
       </div>
     ))}
   </RadioGroup>
@@ -447,7 +448,7 @@ const MCPManifestForm = ({
             <div className="flex flex-row items-center gap-2 justify-end">
               <Button
                 loading={isTesting}
-                type={!!mcpType ? 'primary' : undefined}
+                type="button"
                 onClick={isOAuth ? onAuthorizeOAuth : handleTestConnection}
               >
                 {isOAuth ? t('dev.mcp.auth.oauth.authorize') : t('dev.mcp.testConnection')}
@@ -455,17 +456,28 @@ const MCPManifestForm = ({
             </div>
           </FormItem>
           {(connectionError || testState.error) && (
-            <Alert
-              closable
-              showIcon
-              extra={errorMetadata ? <ErrorDetails errorInfo={errorMetadata} /> : undefined}
-              title={connectionError || testState.error}
-              type="error"
-              onClose={() => {
-                setConnectionError(null);
-                setErrorMetadata(null);
-              }}
-            />
+            <Alert variant="destructive">
+              <CircleAlert aria-hidden className="size-4" />
+              <AlertTitle>{connectionError || testState.error}</AlertTitle>
+              {errorMetadata ? (
+                <AlertDescription>
+                  <ErrorDetails errorInfo={errorMetadata} />
+                </AlertDescription>
+              ) : null}
+              <AlertAction>
+                <Button
+                  aria-label={t('close', { ns: 'common' })}
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setConnectionError(null);
+                    setErrorMetadata(null);
+                  }}
+                >
+                  <X aria-hidden />
+                </Button>
+              </AlertAction>
+            </Alert>
           )}
           <FormItem noStyle name={'manifest'} />
           <Separator />

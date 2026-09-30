@@ -90,14 +90,13 @@ const UserToolsSection = memo<Props>(
               {t('settingAgent.agentTools.copyPick')}
             </div>
             <div className="flex gap-2">
-              <Button disabled={copying} size={'sm'} variant="outline" onClick={onCancelCopy}>
+              <Button disabled={copying} size={'sm'} variant="ghost" onClick={onCancelCopy}>
                 {t('cancel', { ns: 'common' })}
               </Button>
               <Button
                 disabled={selected.size === 0 || copying}
                 loading={copying}
                 size={'sm'}
-                variant="outline"
                 onClick={onConfirmCopy}
               >
                 {t('settingAgent.agentTools.copyConfirm', { count: selected.size })}

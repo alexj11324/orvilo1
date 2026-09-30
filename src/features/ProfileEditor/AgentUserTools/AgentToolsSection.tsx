@@ -58,14 +58,14 @@ const AgentToolsSection = memo<{ agentId: string; onStartCopy: () => void }>(
     const addMenuItems = [
       {
         desc: t('settingAgent.agentTools.connectNew.desc'),
-        icon: PlugZapIcon,
+        icon: <PlugZapIcon />,
         key: 'connectNew',
         label: t('settingAgent.agentTools.connectNew.title'),
         onClick: () => createAgentSkillStoreModal(agentId),
       },
       {
         desc: t('settingAgent.agentTools.copy.desc'),
-        icon: CopyIcon,
+        icon: <CopyIcon />,
         key: 'copy',
         label: t('settingAgent.agentTools.copy.title'),
         onClick: onStartCopy,
@@ -79,7 +79,7 @@ const AgentToolsSection = memo<{ agentId: string; onStartCopy: () => void }>(
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <DropdownMenu items={addMenuItems} placement={'bottomLeft'}>
-            <Button disabled={!canEdit} size={'sm'} variant="outline">
+            <Button disabled={!canEdit} size={'sm'} variant="ghost">
               <PlusIcon />
               {t('settingAgent.agentTools.add')}
             </Button>

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';
 
 const styles = createStaticStyles(({ css }) => ({

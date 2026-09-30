@@ -704,7 +704,7 @@ const AgentTool = memo<AgentToolProps>(
         loading={updating}
         size={'sm'}
         style={{ color: cssVar.colorTextSecondary }}
-        variant="outline"
+        variant="ghost"
       >
         <PlusIcon data-icon="inline-start" />
         {t('tools.add', { defaultValue: 'Add' })}

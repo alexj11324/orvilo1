@@ -1,8 +1,9 @@
 import { type FormInstance } from 'antd';
+import { CircleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { isDesktop } from '@/const/version';
@@ -97,16 +98,9 @@ const QuickImportSection = ({
     return (
       <div>
         <Button
-          Add={true}
-          Make={true}
-          button={true}
           className="w-full border-dashed"
-          full={true}
-          some={true}
-          spacing={true}
           style={{ marginBottom: 16 }}
           variant="outline"
-          width={true}
           onClick={() => {
             setImportError(null); // Clear previous errors when opening
             setIsImportModalVisible(true);
@@ -121,7 +115,10 @@ const QuickImportSection = ({
   return (
     <div className="flex flex-col gap-2">
       {importError && (
-        <Alert showIcon style={{ marginBottom: 8 }} title={importError} type="error" />
+        <Alert className="mb-2" variant="destructive">
+          <CircleAlert aria-hidden className="size-4" />
+          <AlertTitle>{importError}</AlertTitle>
+        </Alert>
       )}
       <Textarea
         rows={10}
@@ -155,7 +152,7 @@ const QuickImportSection = ({
         >
           {t('common:cancel')}
         </Button>
-        <Button size={'sm'} variant="outline" onClick={handleImportConfirm}>
+        <Button size={'sm'} onClick={handleImportConfirm}>
           {t('common:import')}
         </Button>
       </div>

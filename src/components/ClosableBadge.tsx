@@ -4,7 +4,7 @@ import { Badge, type BadgeProps } from '@/components/reui/badge';
 
 interface ClosableBadgeProps extends BadgeProps {
   closeLabel?: string;
-  onClose?: () => void;
+  onClose?: (e: React.MouseEvent) => void;
 }
 
 const ClosableBadge = ({ children, closeLabel, onClose, ...rest }: ClosableBadgeProps) => {
@@ -18,7 +18,7 @@ const ClosableBadge = ({ children, closeLabel, onClose, ...rest }: ClosableBadge
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onClose();
+            onClose(e);
           }}
         >
           <X className="size-3" />

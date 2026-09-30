@@ -63,7 +63,7 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
         disabled={disabled}
         loading={isConnecting}
         size={'sm'}
-        variant="outline"
+        variant="ghost"
         onClick={handleConnect}
       >
         {t('taskTemplate.action.connect.short')}

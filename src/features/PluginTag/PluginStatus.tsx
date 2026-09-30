@@ -57,12 +57,12 @@ const PluginStatus = memo<PluginStatusProps>(({ title, id, deprecated }) => {
   const tag =
     // Deprecated tag
     deprecated ? (
-      <Badge style={{ marginRight: 0 }} variant="secondary">
+      <Badge style={{ marginRight: 0 }} variant="destructive">
         {t('list.item.deprecated.title', { ns: 'plugin' })}
       </Badge>
     ) : // Custom tag
     isCustom ? (
-      <Badge variant="secondary">{t('list.item.local.title', { ns: 'plugin' })}</Badge>
+      <Badge variant="warning">{t('list.item.local.title', { ns: 'plugin' })}</Badge>
     ) : null;
 
   return (

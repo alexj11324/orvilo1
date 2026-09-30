@@ -1,7 +1,12 @@
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
-import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 import { styles } from './style';
 
@@ -12,14 +17,13 @@ interface SchemaListProps {
 }
 
 export const SchemaList = memo<SchemaListProps>(({ activeKey, setActiveKey, children }) => (
-  <AccordionRoot
+  <Accordion
     style={{ overflow: 'hidden' }}
     value={activeKey}
-    variant={'outlined'}
     onValueChange={(keys) => setActiveKey?.(keys as string[])}
   >
     {children}
-  </AccordionRoot>
+  </Accordion>
 ));
 
 interface SchemaItemProps {
@@ -33,22 +37,25 @@ interface SchemaItemProps {
 
 export const SchemaItem = memo<SchemaItemProps>(({ id, name, desc, meta, open, children }) => (
   <AccordionItem value={name}>
-    <AccordionHeader>
-      <AccordionTrigger style={{ paddingBlock: 12, paddingInline: 14 }}>
-        <div className="flex items-start flex-1 gap-3" style={{ minWidth: 0 }}>
-          <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-            <span className={styles.name} id={id}>
-              {name}
-            </span>
-            {desc && !open && <p className={styles.desc}>{desc}</p>}
-          </div>
-          {meta && <span className={styles.meta}>{meta}</span>}
+    <AccordionTrigger style={{ paddingBlock: 12, paddingInline: 14 }}>
+      <div className="flex items-start flex-1 gap-3" style={{ minWidth: 0 }}>
+        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+          <span className={styles.name} id={id}>
+            {name}
+          </span>
+          {desc && !open && <p className={styles.desc}>{desc}</p>}
         </div>
-      </AccordionTrigger>
-    </AccordionHeader>
-    <AccordionPanel contentStyle={{ overflowX: 'auto', padding: '0 14px 16px 36px' }}>
-      <div className="flex flex-col gap-3.5">{children}</div>
-    </AccordionPanel>
+        {meta && <span className={styles.meta}>{meta}</span>}
+      </div>
+    </AccordionTrigger>
+    <AccordionContent>
+      <div
+        className="flex flex-col gap-3.5"
+        style={{ overflowX: 'auto', padding: '0 14px 16px 36px' }}
+      >
+        {children}
+      </div>
+    </AccordionContent>
   </AccordionItem>
 ));
 

@@ -964,8 +964,7 @@ const MyWorkPage = memo(() => {
           <Badge variant="secondary">
             {t('myWork.noProject')}
             <Button
-              aria={true}
-              label={t('close')}
+              aria-label={t('close')}
               size="icon-xs"
               variant="ghost"
               onClick={() => writeParams({ noProject: false })}
@@ -978,8 +977,7 @@ const MyWorkPage = memo(() => {
           <Badge variant="secondary">
             {t('myWork.delegated')}
             <Button
-              aria={true}
-              label={t('close')}
+              aria-label={t('close')}
               size="icon-xs"
               variant="ghost"
               onClick={() => writeParams({ delegated: false })}
@@ -992,8 +990,7 @@ const MyWorkPage = memo(() => {
           <Badge variant="secondary">
             {t('myWork.filtersActive', { count: activeFilterCount })}
             <Button
-              aria={true}
-              label={t('close')}
+              aria-label={t('close')}
               size="icon-xs"
               variant="ghost"
               onClick={() => setBuilder(EMPTY_FILTER_BUILDER)}

@@ -1,7 +1,8 @@
+import { CircleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useToolStore } from '@/store/tool';
 import { type MCPErrorInfo } from '@/types/plugins';
@@ -20,26 +21,25 @@ const InstallError = memo<InstallErrorProps>(({ errorInfo, identifier }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <Alert
-        type="error"
-        variant={'borderless'}
-        action={
-          <div className="flex flex-col">
-            <Button
-              size={'sm'}
-              variant="outline"
-              onClick={() => {
-                cancelInstallMCPPlugin(identifier);
-              }}
-            >
-              {t('common:close')}
-            </Button>
-          </div>
-        }
-        title={t('mcpInstall.installError', {
-          detail: t(`mcpInstall.errorTypes.${errorInfo.type}`),
-        })}
-      />
+      <Alert variant="destructive">
+        <CircleAlert aria-hidden className="size-4" />
+        <AlertTitle>
+          {t('mcpInstall.installError', {
+            detail: t(`mcpInstall.errorTypes.${errorInfo.type}`),
+          })}
+        </AlertTitle>
+        <AlertAction>
+          <Button
+            size={'sm'}
+            variant="outline"
+            onClick={() => {
+              cancelInstallMCPPlugin(identifier);
+            }}
+          >
+            {t('common:close')}
+          </Button>
+        </AlertAction>
+      </Alert>
       {errorInfo.metadata && (
         <ErrorDetails errorInfo={errorInfo.metadata} errorMessage={errorInfo.message} />
       )}

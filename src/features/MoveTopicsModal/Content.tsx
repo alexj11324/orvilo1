@@ -173,9 +173,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
         <div>{t('moveModal.confirmContent', { count, title: target?.title })}</div>
         <div className="flex gap-2 justify-end">
           <Button onClick={() => setStep('pick')}>{t('moveModal.back')}</Button>
-          <Button variant="outline" onClick={handleConfirm}>
-            {t('moveModal.confirmOk')}
-          </Button>
+          <Button onClick={handleConfirm}>{t('moveModal.confirmOk')}</Button>
         </div>
       </div>
     );
@@ -201,7 +199,6 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
         <Button onClick={close}>{t('moveModal.doneOk')}</Button>
         {target && (
           <Button
-            variant="outline"
             onClick={() => {
               navigate(AGENT_CHAT_URL(target.id));
               close();

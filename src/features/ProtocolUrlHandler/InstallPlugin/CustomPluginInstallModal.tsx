@@ -1,5 +1,7 @@
 'use client';
 
+import { cssVar } from 'antd-style';
+import { CircleAlert, TriangleAlert, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -7,7 +9,8 @@ import ImperativeModal from '@/components/ImperativeModal';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
 import { toast } from '@/components/toast';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { useToolStore } from '@/store/tool';
@@ -41,6 +44,8 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
     const testMcpConnection = useToolStore((s) => s.testMcpConnection);
     const togglePlugin = useAgentStore((s) => s.togglePlugin);
 
+    const [errorDismissed, setErrorDismissed] = useState(false);
+
     // Generate a unique identifier for custom plugin connection testing
     const identifier = installRequest?.schema?.identifier || '';
     const testState = useToolStore(mcpStoreSelectors.getMCPConnectionTestState(identifier));
@@ -53,6 +58,7 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
       if (!installRequest) {
         setLoading(false);
         setUpdatedConfig({});
+        setErrorDismissed(false);
       }
     }, [installRequest]);
 
@@ -137,32 +143,28 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
     // Render different Alert components based on type
     const renderAlert = () => {
       const sourceAlert = !isMarketplace ? (
-        <Alert
-          showIcon
-          title={t('protocolInstall.custom.security.description')}
-          type="warning"
-          variant={'borderless'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertTitle>{t('protocolInstall.custom.security.description')}</AlertTitle>
+        </Alert>
       ) : (
-        <Alert
-          showIcon
-          title={t('protocolInstall.marketplace.unverified.warning')}
-          type="warning"
-          variant={'borderless'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert aria-hidden className="size-4" />
+          <AlertTitle>{t('protocolInstall.marketplace.unverified.warning')}</AlertTitle>
+        </Alert>
       );
 
       return (
         <div className="flex flex-col gap-2">
           {sourceAlert}
           {isStdioMcp && (
-            <Alert
-              showIcon
-              description={t('protocolInstall.stdio.commandExecution.description')}
-              title={t('protocolInstall.stdio.commandExecution.title')}
-              type="warning"
-              variant={'borderless'}
-            />
+            <Alert variant="warning">
+              <TriangleAlert aria-hidden className="size-4" />
+              <AlertTitle>{t('protocolInstall.stdio.commandExecution.title')}</AlertTitle>
+              <AlertDescription>
+                {t('protocolInstall.stdio.commandExecution.description')}
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       );
@@ -216,15 +218,22 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
           <div className="flex flex-col">
             <ConfigDisplay schema={schema} onConfigUpdate={setUpdatedConfig} />
             {/* Show connection test error */}
-            {testState.error && (
-              <Alert
-                closable
-                showIcon
-                description={testState.error}
-                title={t('protocolInstall.messages.connectionTestFailed')}
-                type="error"
-                variant={'filled'}
-              />
+            {testState.error && !errorDismissed && (
+              <Alert variant="destructive">
+                <CircleAlert aria-hidden className="size-4" />
+                <AlertTitle>{t('protocolInstall.messages.connectionTestFailed')}</AlertTitle>
+                <AlertDescription>{testState.error}</AlertDescription>
+                <AlertAction>
+                  <Button
+                    aria-label={t('close', { ns: 'common' })}
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={() => setErrorDismissed(true)}
+                  >
+                    <X aria-hidden />
+                  </Button>
+                </AlertAction>
+              </Alert>
             )}
           </div>
         </div>

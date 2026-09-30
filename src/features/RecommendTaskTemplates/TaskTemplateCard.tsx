@@ -5,6 +5,7 @@ import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
@@ -78,7 +79,7 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
           <Button
             className={styles.compactMain}
             disabled={loading || pendingCreate}
-            variant="outline"
+            variant="ghost"
             onClick={handleOpenDetail}
           >
             <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
@@ -102,10 +103,9 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     const primaryButton = (
       <Button
-        className={briefStyles.actionBtnPrimary}
+        className={cx(briefStyles.actionBtnPrimary, 'rounded-full')}
         disabled={disabled}
         loading={loading || pendingCreate}
-        shape={'round'}
         onClick={handlePrimaryClick}
       >
         {primaryButtonLabel}
@@ -114,7 +114,6 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     return (
       <div
-        className={cx(briefStyles.card, styles.card)}
         style={{ borderRadius: cssVar.borderRadiusLG, cursor: 'pointer' }}
         className={cx(
           briefStyles.card,

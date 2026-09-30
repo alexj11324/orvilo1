@@ -1,0 +1,5 @@
+{"launch":{"ok":true,"value":{"supervisorId":"prime-resume-probe","treeId":"ae22483c932fea9820088726959f06a40d23b050c0559d1e7296ed9b1c4cd81b","enforced":true,"filesystem":true,"network":true,"processes":true,"sanitizedEnvironment":true,"credentialsExcluded":true}}}
+{"phase":"saved","sessionId":"01a0f33e-16bb-745e-864e-5ab509d05e3a","sessionFile":"/tmp/.prime/agent/sessions/01a0f33e-16bb-745e-864e-5ab509d05e3a.jsonl","bytes":671,"messageCount":0}
+{"phase":"rpc-switch","restored":true,"sessionId":"01a0f33e-16bb-745e-864e-5ab509d05e3a"}
+{"phase":"cli-resume","restored":true,"sessionId":"01a0f33e-16bb-745e-864e-5ab509d05e3a","caveat":"RPC client restart; daemon may remain alive","providerCalls":0}
+{"quiescence":{"ok":true,"value":{"supervisorId":"prime-resume-probe","treeId":"ae22483c932fea9820088726959f06a40d23b050c0559d1e7296ed9b1c4cd81b","observedAt":1790787329066,"remainingProcesses":0,"pendingActions":0}}}

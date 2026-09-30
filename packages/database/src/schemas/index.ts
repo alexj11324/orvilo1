@@ -66,6 +66,7 @@ export * from './resourceTransferRequest';
 export * from './session';
 export * from './task';
 export * from './taskCommentDraft';
+export * from './taskExecutionControl';
 export * from './taskInput';
 export * from './taskLabel';
 export * from './taskWorkspace';

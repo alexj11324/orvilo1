@@ -8,7 +8,20 @@ import type {
   TaskTopicIntegration,
   VerificationPollStage,
 } from '@orvilo/types';
-import { and, count, desc, eq, exists, gte, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import type { TaskTopicItem } from '../schemas/task';
 import { tasks, taskTopics } from '../schemas/task';
@@ -184,7 +197,7 @@ export class TaskTopicModel {
       taskRevision: params.dispatch.taskRevision,
       trigger: params.trigger,
     };
-    await this.db
+    const registered = await this.db
       .insert(taskTopics)
       .values({
         ...run,
@@ -202,7 +215,11 @@ export class TaskTopicModel {
           ...(params.integration === undefined ? {} : { integration: params.integration }),
         },
         target: [taskTopics.taskId, taskTopics.topicId],
-      });
+        setWhere: isNull(taskTopics.executionControl),
+      })
+      .returning({ id: taskTopics.id });
+    if (!registered.length)
+      throw new Error('Core runtime registration cannot be overwritten by legacy startRun');
   }
 
   /**

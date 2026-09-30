@@ -147,6 +147,8 @@ export interface UpdateStatusResult {
 }
 
 interface UpdateStatusCommitOptions {
+  /** Trusted admission inside the execution-contract CAS transaction. */
+  beforeMutation?: (tx: OrviloDatabase) => Promise<boolean>;
   onStatusCommitted?: () => void;
 }
 
@@ -601,6 +603,12 @@ export class TaskService {
     options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult | null> {
     const { expectedContract, id, status, error: errorMsg } = input;
+    if (options?.beforeMutation && !expectedContract) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Atomic completion requires an execution contract',
+      });
+    }
 
     if (errorMsg && status !== 'failed') {
       throw new TRPCError({
@@ -714,6 +722,8 @@ export class TaskService {
             }),
           },
           extra,
+          {},
+          options?.beforeMutation,
         )
       : actor
         ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)

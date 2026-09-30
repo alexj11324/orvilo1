@@ -1,10 +1,11 @@
 'use client';
 
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Avatar from '@/components/Avatar';
 
 import type { InstallMarketplaceAgentSummary } from '../../../pickResult';
 import type { SubmitAgentPickArgs } from '../../../types';
@@ -101,11 +102,11 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <Text style={{ fontSize: 13 }} type="secondary">
+      <div className="text-[13px] text-muted-foreground">
         {t('agentMarketplace.inspector.pickCount', { count: installedCount })}
         {skippedCount > 0 &&
           ` · ${t('agentMarketplace.render.alreadyInLibrary', { count: skippedCount })}`}
-      </Text>
+      </div>
       <div className={styles.list}>
         {summaries.map((summary) => (
           <div

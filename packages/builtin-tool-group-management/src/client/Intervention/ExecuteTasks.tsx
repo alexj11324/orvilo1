@@ -1,6 +1,5 @@
 'use client';
 
-import { stopPropagation } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { createStaticStyles, useTheme } from 'antd-style';
@@ -138,7 +137,7 @@ const TaskEditor = memo<TaskEditorProps>(({ task, index, onChange, onDelete }) =
               value={task.title}
               onChange={handleTitleChange}
             />
-            <div className="flex items-center gap-2" onClick={stopPropagation}>
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <Tooltip>
                 <TooltipTrigger
                   render={

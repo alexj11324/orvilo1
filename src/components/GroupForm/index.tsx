@@ -43,7 +43,7 @@ const variantClassName: Record<FormVariant, string> = {
   outlined: 'border border-border rounded-2xl',
 };
 
-interface FormGroupProps {
+interface FormGroupProps extends React.HTMLAttributes<HTMLElement> {
   children?: ReactNode;
   className?: string;
   collapsible?: boolean;
@@ -129,6 +129,8 @@ export const FormGroup = memo<FormGroupProps>(
   ({
     children,
     className,
+    collapsible: _collapsible,
+    defaultActive: _defaultActive,
     desc,
     extra,
     gap = 16,
@@ -138,10 +140,12 @@ export const FormGroup = memo<FormGroupProps>(
     style,
     title,
     variant = 'borderless',
+    ...rest
   }) => (
     <section
       className={cx('flex flex-col', className)}
       style={{ gap: typeof gap === 'number' ? gap : gap, ...style }}
+      {...rest}
     >
       {title || extra ? (
         <div className="flex flex-row items-center justify-between gap-4">

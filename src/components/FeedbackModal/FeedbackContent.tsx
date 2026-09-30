@@ -1,14 +1,14 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, toast, Upload, useModalContext } from '@lobehub/ui/base-ui';
 import { BRANDING_EMAIL } from '@orvilo/business-const';
-import { Form, Input } from 'antd';
 import { ImagePlus, Send } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import TextArea from '@/components/TextArea';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useFileStore } from '@/store/file';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -20,16 +20,13 @@ interface FeedbackContentProps {
   initialValues?: FeedbackInitialValues;
 }
 
-interface FormValues {
-  message: string;
-  title: string;
-}
-
 const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
   const { t } = useTranslation('common');
 
   const { close } = useModalContext();
-  const [form] = Form.useForm<FormValues>();
+  const [title, setTitle] = useState(initialValues?.title ?? '');
+  const [message, setMessage] = useState(initialValues?.message ?? '');
+  const [errors, setErrors] = useState<{ message?: string; title?: string }>({});
 
   const [loading, setLoading] = useState(false);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
@@ -68,10 +65,14 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    try {
-      const values = await form.validateFields();
-      setLoading(true);
+    const nextErrors: { message?: string; title?: string } = {};
+    if (!title.trim()) nextErrors.title = t('feedback.fields.title.required');
+    if (!message.trim()) nextErrors.message = t('feedback.fields.message.required');
+    setErrors(nextErrors);
+    if (nextErrors.title || nextErrors.message) return;
 
+    setLoading(true);
+    try {
       await lambdaClient.market.submitFeedback.mutate({
         clientInfo: {
           language: navigator.language,
@@ -80,13 +81,14 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
           userAgent: navigator.userAgent,
         },
         email: userEmail || undefined,
-        message: values.message,
+        message,
         screenshotUrl: screenshotUrl || undefined,
-        title: values.title,
+        title,
       });
 
       toast.success(t('feedback.success'));
-      form.resetFields();
+      setTitle(initialValues?.title ?? '');
+      setMessage(initialValues?.message ?? '');
       setScreenshotUrl(null);
       close();
     } catch (error: any) {
@@ -95,16 +97,18 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
     } finally {
       setLoading(false);
     }
-  }, [close, form, screenshotUrl, t, userEmail]);
+  }, [close, initialValues, message, screenshotUrl, t, title, userEmail]);
 
   const handleCancel = useCallback(() => {
-    form.resetFields();
+    setTitle(initialValues?.title ?? '');
+    setMessage(initialValues?.message ?? '');
+    setErrors({});
     setScreenshotUrl(null);
     close();
-  }, [close, form]);
+  }, [close, initialValues]);
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       <p style={{ color: 'var(--colorTextSecondary)', fontSize: 14, margin: 0 }}>
         <Trans
           i18nKey="feedback.emailContact"
@@ -123,38 +127,37 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
         />
       </p>
 
-      <Form form={form} initialValues={initialValues} layout="vertical">
-        <Form.Item
-          label={t('feedback.fields.title.label')}
-          name="title"
-          rules={[
-            { message: t('feedback.fields.title.required'), required: true },
-            { max: 200, message: t('feedback.fields.title.maxLength') },
-          ]}
-        >
-          <Input showCount maxLength={200} placeholder={t('feedback.fields.title.placeholder')} />
-        </Form.Item>
+      <div className="flex flex-col gap-4">
+        <Field data-invalid={!!errors.title || undefined}>
+          <FieldLabel>{t('feedback.fields.title.label')}</FieldLabel>
+          <Input
+            aria-invalid={!!errors.title || undefined}
+            maxLength={200}
+            placeholder={t('feedback.fields.title.placeholder')}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          {errors.title ? <FieldError>{errors.title}</FieldError> : null}
+        </Field>
 
-        <Form.Item
-          label={t('feedback.fields.message.label')}
-          name="message"
-          rules={[
-            { message: t('feedback.fields.message.required'), required: true },
-            { max: 5000, message: t('feedback.fields.message.maxLength') },
-          ]}
-        >
+        <Field data-invalid={!!errors.message || undefined}>
+          <FieldLabel>{t('feedback.fields.message.label')}</FieldLabel>
           <TextArea
-            showCount
+            aria-invalid={!!errors.message || undefined}
             maxLength={5000}
             placeholder={t('feedback.fields.message.placeholder')}
             rows={6}
+            value={message}
+            onChange={(v) => setMessage(v)}
           />
-        </Form.Item>
+          {errors.message ? <FieldError>{errors.message}</FieldError> : null}
+        </Field>
 
-        <Form.Item label={t('feedback.fields.screenshot.label')} style={{ marginBottom: 0 }}>
-          <Flexbox gap={8}>
+        <Field style={{ marginBottom: 0 }}>
+          <FieldLabel>{t('feedback.fields.screenshot.label')}</FieldLabel>
+          <div className="flex flex-col gap-2">
             {screenshotUrl ? (
-              <Flexbox gap={8}>
+              <div className="flex flex-col gap-2">
                 <img
                   alt="Screenshot"
                   src={screenshotUrl}
@@ -163,7 +166,7 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
                 <Button danger disabled={uploadingScreenshot} onClick={handleRemoveScreenshot}>
                   {t('feedback.fields.screenshot.remove')}
                 </Button>
-              </Flexbox>
+              </div>
             ) : (
               <Upload
                 accept="image/*"
@@ -173,27 +176,27 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
                   return false;
                 }}
               >
-                <Button icon={<Icon icon={ImagePlus} />} loading={uploadingScreenshot}>
+                <Button icon={<ImagePlus size={16} />} loading={uploadingScreenshot}>
                   {uploadingScreenshot
                     ? t('feedback.fields.screenshot.uploading')
                     : t('feedback.fields.screenshot.upload')}
                 </Button>
               </Upload>
             )}
-          </Flexbox>
+          </div>
           <p style={{ color: 'var(--colorTextSecondary)', fontSize: 12, marginTop: 8 }}>
             {t('feedback.fields.screenshot.hint')}
           </p>
-        </Form.Item>
-      </Form>
+        </Field>
+      </div>
 
-      <Flexbox horizontal gap={8} justify="flex-end">
+      <div className="flex gap-2 justify-end">
         <Button onClick={handleCancel}>{t('cancel')}</Button>
-        <Button icon={<Icon icon={Send} />} loading={loading} type="primary" onClick={handleSubmit}>
+        <Button icon={<Send size={16} />} loading={loading} type="primary" onClick={handleSubmit}>
           {t('feedback.submit')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

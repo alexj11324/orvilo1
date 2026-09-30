@@ -1,9 +1,8 @@
-import { type TableColumnType } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import InlineTable from '@/components/InlineTable';
+import InlineTable, { type InlineTableColumn } from '@/components/InlineTable';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import SpendType, { type SpendTypeValue } from '@/components/SpendType';
 import TablePagination from '@/components/TablePagination';
@@ -91,7 +90,7 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
 
   // Column order mirrors the workspace spend breakdown: when it happened, what
   // it was, which model, how many tokens, what it cost, how fast.
-  const columns: TableColumnType<any>[] = [
+  const columns: InlineTableColumn<any>[] = [
     {
       dataIndex: 'createdAt',
       key: 'createdAt',

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Slider, type SliderProps, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import type { CSSProperties, ReactNode } from 'react';
@@ -118,7 +117,7 @@ const DiscreteSlider = memo<DiscreteSliderProps>(
     );
 
     return (
-      <Flexbox className={cx(styles.root, className)} gap={6} style={style}>
+      <div className={cx('flex flex-col gap-1.5', styles.root, className)} style={style}>
         {formatTooltip && currentOption ? (
           <Tooltip title={formatTooltip(currentOption.value)}>{slider}</Tooltip>
         ) : (
@@ -146,7 +145,7 @@ const DiscreteSlider = memo<DiscreteSliderProps>(
             );
           })}
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

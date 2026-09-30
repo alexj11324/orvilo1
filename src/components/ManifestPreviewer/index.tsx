@@ -11,9 +11,11 @@ interface PluginManifestPreviewerProps {
 }
 
 const ManifestPreviewer = memo<PluginManifestPreviewerProps>(
-  ({ manifest, children, trigger: _trigger = 'click' }) => (
+  ({ manifest, children, trigger = 'click' }) => (
     <Popover>
-      <PopoverTrigger render={<span />}>{children}</PopoverTrigger>
+      <PopoverTrigger openOnHover={trigger === 'hover'} render={<span />}>
+        {children}
+      </PopoverTrigger>
       <PopoverContent className={'w-[400px] p-0'} side={'right'}>
         <CodeBlock
           code={JSON.stringify(manifest, null, 2)}

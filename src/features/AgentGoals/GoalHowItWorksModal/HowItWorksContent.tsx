@@ -14,7 +14,6 @@ import {
   StepperNav,
   StepperSeparator,
   StepperTitle,
-  StepperTrigger,
 } from '@/components/reui/stepper';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -61,11 +60,11 @@ const HowItWorksContent = memo(() => {
 
   return (
     <div className="flex flex-col gap-3">
-      <Stepper className={styles.steps} defaultValue={0} orientation={'vertical'}>
+      <Stepper className={styles.steps} orientation={'vertical'} value={0}>
         <StepperNav>
           {[1, 2, 3].map((index) => (
             <StepperItem key={index} step={index}>
-              <StepperTrigger>
+              <div className="flex items-start gap-2">
                 <StepperIndicator>{index}</StepperIndicator>
                 <div className="flex flex-col">
                   <StepperTitle>{t(`goalEmpty.step${index}.title` as never)}</StepperTitle>
@@ -73,7 +72,7 @@ const HowItWorksContent = memo(() => {
                     {t(`goalEmpty.step${index}.desc` as never)}
                   </StepperDescription>
                 </div>
-              </StepperTrigger>
+              </div>
               {index < 3 && <StepperSeparator />}
             </StepperItem>
           ))}

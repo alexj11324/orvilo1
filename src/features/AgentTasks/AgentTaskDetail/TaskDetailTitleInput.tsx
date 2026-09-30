@@ -43,7 +43,7 @@ const TaskDetailTitleInput = memo(() => {
 
   return (
     <Textarea
-      className={styles.titleInput}
+      className={`${styles.titleInput} min-h-0`}
       disabled={!canEditTask}
       placeholder={t('taskDetail.titlePlaceholder')}
       rows={1}

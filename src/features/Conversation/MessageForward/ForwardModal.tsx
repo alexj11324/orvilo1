@@ -230,7 +230,7 @@ const ForwardModalContent = memo(() => {
             className={styles.note}
             placeholder={t('messageForward.modal.notePlaceholder')}
             rows={2}
-            style={{ resize: 'none' }}
+            style={{ maxHeight: '4lh', resize: 'none' }}
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />

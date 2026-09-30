@@ -116,7 +116,7 @@ const TitleSection = memo(() => {
         <Skeleton height={44} width={320} />
       ) : (
         <Textarea
-          className="rounded-none border-0 px-0 shadow-none focus-visible:ring-0"
+          className="rounded-none border-0 px-0 shadow-none focus-visible:ring-0 min-h-0"
           placeholder={t('pageEditor.titlePlaceholder')}
           rows={1}
           {...getTitleTextAreaInteractionProps(canEdit)}

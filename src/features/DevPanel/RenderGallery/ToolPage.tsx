@@ -224,7 +224,7 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
                   if (typeof key === 'string') setView(key as GalleryView);
                 }}
               >
-                <TabsList size="sm">
+                <TabsList>
                   <TabsTrigger value="api">By API</TabsTrigger>
                   <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
                 </TabsList>
@@ -248,7 +248,7 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
                   if (typeof key === 'string') setMode(key as LifecycleMode);
                 }}
               >
-                <TabsList size="sm">
+                <TabsList>
                   {LIFECYCLE_MODES.map((value) => (
                     <TabsTrigger key={value} value={value}>
                       {LIFECYCLE_MODE_LABEL[value]}

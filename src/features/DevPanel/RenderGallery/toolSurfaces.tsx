@@ -1,7 +1,7 @@
 'use client';
 
 import type { UIChatMessage } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { Component, memo, type ReactNode, useMemo } from 'react';
 
 import { type ConversationContext, ConversationProvider } from '@/features/Conversation';

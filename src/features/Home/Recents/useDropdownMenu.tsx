@@ -5,11 +5,15 @@ import { useTranslation } from 'react-i18next';
 
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import type { ItemType } from '@/components/Menu';
 import { confirmModal } from '@/components/Modal';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import { FAVORITE_MARK, FAVORITE_MARK_OFF } from '@/features/HomeSidebar/Body/favoriteIcons';
 import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';
-import type { SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import type {
+  SidebarMenuItemData,
+  SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
@@ -95,8 +99,8 @@ export const useRecentItemDropdownMenu = (
     });
   }, [item, refreshRecents, scope, t]);
 
-  const dropdownMenu = useCallback((): SidebarDropdownMenuProps['items'] => {
-    const items: NativeContextMenuItem[] = [
+  const dropdownMenu = useCallback((): SidebarMenuItems => {
+    const items: (NativeContextMenuItem | SidebarMenuItemData | ItemType)[] = [
       ...(pinType
         ? ([
             {
@@ -138,7 +142,7 @@ export const useRecentItemDropdownMenu = (
           ] satisfies NativeContextMenuItem[])
         : []),
     ];
-    return items as SidebarDropdownMenuProps['items'];
+    return items as SidebarMenuItems;
   }, [
     canEdit,
     handleDelete,

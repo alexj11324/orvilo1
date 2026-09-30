@@ -22,7 +22,7 @@ import { openRenameModal } from '@/components/RenameModal';
 import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
-import { type SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openShareModal } from '@/features/ShareModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -50,7 +50,7 @@ export const useDropdownMenu = ({
   status,
   topicId,
   topicTitle,
-}: UseDropdownMenuProps): (() => SidebarDropdownMenuProps['items']) => {
+}: UseDropdownMenuProps): (() => SidebarMenuItems) => {
   const { t } = useTranslation(['common', 'topic']);
 
   const appOrigin = useAppOrigin();
@@ -248,7 +248,7 @@ export const useDropdownMenu = ({
           },
           sfSymbol: 'trash',
         },
-      ].filter(Boolean) as SidebarDropdownMenuProps['items'],
+      ].filter(Boolean) as SidebarMenuItems,
     [
       addTab,
       activeWorkspaceSlug,

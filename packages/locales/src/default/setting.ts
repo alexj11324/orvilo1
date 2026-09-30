@@ -29,10 +29,20 @@ export default {
   'providerBindings.model': 'Model ID',
   'providerBindings.endpoint': 'HTTPS endpoint',
   'providerBindings.secretReference': 'Credential reference',
-  'providerBindings.referenceHint':
-    'Use credential:cred_\u2026 from your personal credentials. Do not enter an API key here.',
+  'providerBindings.referenceHint': 'Use credential:cred_\u2026 from personal credentials.',
   'providerBindings.configurationOnly':
     'Saving a configuration does not enable execution. Connection checks require the configured provider broker.',
+  'providerBindings.addBinding': 'Add binding',
+  'providerBindings.newBinding': 'New binding',
+  'providerBindings.editingBinding': 'Editing {{name}}',
+  'providerBindings.advanced': 'Advanced options',
+  'providerBindings.disableTitle': 'Remove {{name}} bindings?',
+  'providerBindings.disableContent':
+    'Delete all {{count}} saved bindings for {{name}}? Stored credentials are kept.',
+  'providerBindings.manageCredentials': 'Manage credentials',
+  'providerBindings.getApiKey': 'Get a {{name}} API key',
+  'providerBindings.namePlaceholder': 'e.g. Personal API key',
+  'providerBindings.secretPlaceholder': 'credential:cred_…',
 
   'completionSound.title': 'In-app completion sound',
   'completionSound.enabled': 'Play completion sound',

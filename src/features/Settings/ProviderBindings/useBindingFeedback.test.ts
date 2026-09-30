@@ -33,12 +33,12 @@ describe('Provider asynchronous feedback', () => {
         throw new Error('conflict');
       }, 'saved'),
     );
-    expect(result.current.feedback).toBe('failed');
+    expect(result.current.feedback).toEqual({ message: 'failed', tone: 'error' });
   });
   it('suppresses a late success after A → B → A', async () => {
     let finish!: () => void;
     const { result } = renderHook(() => useBindingFeedback(0, 'failed'));
-    let pending!: Promise<void>;
+    let pending!: Promise<boolean>;
     act(() => {
       pending = result.current.report(
         () =>
@@ -53,7 +53,7 @@ describe('Provider asynchronous feedback', () => {
       finish();
       await pending;
     });
-    expect(result.current.feedback).toBe('');
+    expect(result.current.feedback).toBeUndefined();
   });
   it('rejects unavailable broker status and clears pending check', async () => {
     vi.mocked(providerBindingService.checkConnection).mockResolvedValue({
@@ -61,7 +61,7 @@ describe('Provider asynchronous feedback', () => {
     } as any);
     const { result } = renderHook(() => useBindingFeedback(0, 'failed'));
     await act(() => result.current.check('binding', 1, 'verified'));
-    expect(result.current.feedback).toBe('failed');
+    expect(result.current.feedback).toEqual({ message: 'failed', tone: 'error' });
     expect(result.current.checking).toBeUndefined();
   });
   it('serializes checks and ignores late results after account change', async () => {
@@ -85,12 +85,12 @@ describe('Provider asynchronous feedback', () => {
       finish();
       await pending;
     });
-    expect(result.current.feedback).toBe('');
+    expect(result.current.feedback).toBeUndefined();
   });
   it('shows success only after a ready response', async () => {
     vi.mocked(providerBindingService.checkConnection).mockResolvedValue({ status: 'ready' } as any);
     const { result } = renderHook(() => useBindingFeedback(0, 'failed'));
     await act(() => result.current.check('binding', 1, 'verified'));
-    expect(result.current.feedback).toBe('verified');
+    expect(result.current.feedback).toEqual({ message: 'verified', tone: 'success' });
   });
 });

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import useBusinessMenuItems from '@/business/client/features/User/useBusinessMenuItems';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
-import type { ItemType, type MenuProps } from '@/components/Menu';
+import type { ItemType, MenuProps } from '@/components/Menu';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { DEFAULT_DESKTOP_HOTKEY_CONFIG } from '@/const/desktop';
 import { OFFICIAL_URL } from '@/const/url';

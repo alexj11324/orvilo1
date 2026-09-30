@@ -9,10 +9,8 @@ import ConversationSkeletonContainer from './Container';
 const ConversationListSkeleton = () => (
   <ConversationSkeletonContainer
     flex={1}
-    gap={36}
     height={'100%'}
-    padding={12}
-    style={{ marginTop: 24 }}
+    style={{ gap: 36, marginTop: 24, padding: 12 }}
   >
     <div className={'flex flex-col gap-2'} style={{ paddingLeft: '25%', width: '100%' }}>
       <div className={'flex flex-col gap-2'} style={{ alignItems: 'flex-end' }}>

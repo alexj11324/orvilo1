@@ -3,7 +3,7 @@
 import { LobeHub as Orvilo } from '@lobehub/ui/brand';
 import { ORG_NAME, UTM_SOURCE } from '@orvilo/business-const';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { memo } from 'react';
+import { type HTMLAttributes, memo } from 'react';
 
 import { OFFICIAL_SITE } from '@/const/url';
 import { isCustomORG } from '@/const/version';

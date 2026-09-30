@@ -166,7 +166,7 @@ const StatisticCard = memo<StatisticCardProps>(
               title
             )}
           </div>
-          {loading ? <Spin size={'small'} /> : extra}
+          {loading ? <Spin className={'size-3.5'} /> : extra}
         </div>
         {statistic && (
           <div className={'flex flex-col gap-4'} style={{ ...statistic.style }}>

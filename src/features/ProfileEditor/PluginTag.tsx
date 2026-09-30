@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
@@ -10,7 +9,9 @@ import { AlertCircle, Loader2, Square, SquareCheckBig, SquareMinus, X } from 'lu
 import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
+import { Badge } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useDiscoverStore } from '@/store/discover';
@@ -28,24 +29,26 @@ import { connectorSelectors } from '@/store/tool/slices/connector/selectors';
 /**
  * Composio server icon component
  */
-const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, label }) => {
-  if (typeof icon === 'string') {
-    return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
+const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon: Icon, label }) => {
+  if (typeof Icon === 'string') {
+    return <img alt={label} height={16} src={Icon} style={{ flexShrink: 0 }} width={16} />;
   }
 
-  return <icon fill={cssVar.colorText} size={16} />;
+  return <Icon fill={cssVar.colorText} size={16} />;
 });
 
 /**
  * Orvilo Skill Provider icon component
  */
-const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(({ icon, label }) => {
-  if (typeof icon === 'string') {
-    return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
-  }
+const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(
+  ({ icon: Icon, label }) => {
+    if (typeof Icon === 'string') {
+      return <img alt={label} height={16} src={Icon} style={{ flexShrink: 0 }} width={16} />;
+    }
 
-  return <icon fill={cssVar.colorText} size={16} />;
-});
+    return <Icon fill={cssVar.colorText} size={16} />;
+  },
+);
 
 // Stable empty reference for the connector-list read when attribution is off,
 // so `showAuthor={false}` tags never subscribe to connector list changes.
@@ -388,43 +391,33 @@ const PluginTag = memo<PluginTagProps>(
     const showErrorState = !meta.isInstalled && !isLoading;
 
     return (
-      <Tag
+      <Badge
         className={styles.tag}
-        closable={removable && !disabled && !selectable}
-        closeIcon={<X size={12} />}
-        color={showErrorState ? 'error' : undefined}
         style={selectable ? { cursor: 'pointer' } : undefined}
-        variant={isDarkMode ? 'filled' : 'outlined'}
-        icon={
-          selectable ? (
-            <div className="flex items-center gap-1.5">
-              {selected ? (
-                indeterminate ? (
-                  <SquareMinus size={14} style={{ color: cssVar.colorPrimary }} />
-                ) : (
-                  <SquareCheckBig size={14} style={{ color: cssVar.colorPrimary }} />
-                )
-              ) : (
-                <Square size={14} style={{ color: cssVar.colorTextQuaternary }} />
-              )}
-              {renderIcon()}
-            </div>
-          ) : (
-            renderIcon()
-          )
-        }
+        variant={showErrorState ? 'destructive' : isDarkMode ? 'secondary' : 'outline'}
         title={
           showErrorState
             ? t('tools.notInstalledWarning', { defaultValue: 'This tool is not installed' })
             : undefined
         }
         onClick={selectable ? onSelect : undefined}
-        onClose={(e) => {
-          if (disabled) return;
-
-          onRemove?.(e);
-        }}
       >
+        {selectable ? (
+          <div className="flex items-center gap-1.5">
+            {selected ? (
+              indeterminate ? (
+                <SquareMinus size={14} style={{ color: cssVar.colorPrimary }} />
+              ) : (
+                <SquareCheckBig size={14} style={{ color: cssVar.colorPrimary }} />
+              )
+            ) : (
+              <Square size={14} style={{ color: cssVar.colorTextQuaternary }} />
+            )}
+            {renderIcon()}
+          </div>
+        ) : (
+          renderIcon()
+        )}
         {author ? (
           <div className="flex items-center gap-1">
             {getDisplayText()}
@@ -445,7 +438,21 @@ const PluginTag = memo<PluginTagProps>(
         ) : (
           getDisplayText()
         )}
-      </Tag>
+        {removable && !disabled && !selectable && (
+          <button
+            aria-label={t('close', { ns: 'common' })}
+            className="text-muted-foreground hover:text-foreground"
+            type="button"
+            onClick={(e) => {
+              if (disabled) return;
+
+              onRemove?.(e);
+            }}
+          >
+            <X size={12} />
+          </button>
+        )}
+      </Badge>
     );
   },
 );

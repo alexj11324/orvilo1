@@ -13,7 +13,7 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
@@ -127,6 +127,16 @@ interface DeviceItemProps {
   isCurrent?: boolean;
   onSelect: () => void;
   selected?: boolean;
+}
+
+interface DeviceMenuItem {
+  danger?: boolean;
+  desc?: string;
+  disabled?: boolean;
+  icon: ReactNode;
+  key: string;
+  label: ReactNode;
+  onClick: () => void;
 }
 
 const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selected }) => {
@@ -262,6 +272,18 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
       title: t('devices.remove.confirm'),
     });
 
+  const deviceMenuItems: DeviceMenuItem[] = [
+    ...visibilityItems,
+    ...shareItems,
+    {
+      danger: true,
+      icon: <Trash2Icon />,
+      key: 'remove',
+      label: t('devices.actions.remove'),
+      onClick: handleRemove,
+    },
+  ];
+
   return (
     <div
       aria-pressed={selected}
@@ -353,17 +375,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align={'end'}>
-                {[
-                  ...visibilityItems,
-                  ...shareItems,
-                  {
-                    danger: true,
-                    icon: <Trash2Icon />,
-                    key: 'remove',
-                    label: t('devices.actions.remove'),
-                    onClick: handleRemove,
-                  },
-                ].map((item) => (
+                {deviceMenuItems.map((item) => (
                   <DropdownMenuItem
                     disabled={item.disabled}
                     key={item.key}

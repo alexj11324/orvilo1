@@ -138,7 +138,6 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
 
   return (
     <Modal
-      destroyOnHidden
       open={open}
       title={t('savedViews.newView')}
       width={640}

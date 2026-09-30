@@ -358,7 +358,7 @@ const FilterRowEditor = memo<{
         size="small"
         style={{ minWidth: 140 }}
         value={row.field}
-        onChange={changeField}
+        onChange={(value) => typeof value === 'string' && changeField(value)}
       />
       <Select
         size="small"
@@ -369,6 +369,7 @@ const FilterRowEditor = memo<{
           value: op,
         }))}
         onChange={(next) => {
+          if (typeof next !== 'string') return;
           const nextValue =
             next === 'in' || next === 'notIn'
               ? Array.isArray(row.value)

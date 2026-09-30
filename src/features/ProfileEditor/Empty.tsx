@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 
-const Empty = memo(() => {
+const EmptyState = memo(() => {
   const { t } = useTranslation('setting');
 
   return (
@@ -21,6 +21,6 @@ const Empty = memo(() => {
   );
 });
 
-Empty.displayName = 'ToolEmpty';
+EmptyState.displayName = 'ProfileEditorEmpty';
 
-export default Empty;
+export default EmptyState;

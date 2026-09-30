@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, confirmModal, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { upsertPluginMode } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { CopyIcon, PlugZapIcon, PlusIcon } from 'lucide-react';
@@ -9,6 +8,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useIsWorkspaceOwner } from '@/business/client/hooks/useIsWorkspaceOwner';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { createAgentSkillStoreModal } from '@/features/AgentSkillStore';
 import PluginTag from '@/features/ProfileEditor/PluginTag';
 import { usePermission } from '@/hooks/usePermission';
@@ -56,14 +58,14 @@ const AgentToolsSection = memo<{ agentId: string; onStartCopy: () => void }>(
     const addMenuItems = [
       {
         desc: t('settingAgent.agentTools.connectNew.desc'),
-        icon: PlugZapIcon,
+        icon: <PlugZapIcon />,
         key: 'connectNew',
         label: t('settingAgent.agentTools.connectNew.title'),
         onClick: () => createAgentSkillStoreModal(agentId),
       },
       {
         desc: t('settingAgent.agentTools.copy.desc'),
-        icon: CopyIcon,
+        icon: <CopyIcon />,
         key: 'copy',
         label: t('settingAgent.agentTools.copy.title'),
         onClick: onStartCopy,
@@ -72,20 +74,21 @@ const AgentToolsSection = memo<{ agentId: string; onStartCopy: () => void }>(
 
     return (
       <div className="flex flex-col gap-2">
-        <Text style={{ fontSize: 12, fontWeight: 500 }} type={'secondary'}>
+        <div className="text-[12px] font-medium text-muted-foreground">
           {t('settingAgent.agentTools.tabAgent')} · {agentConnectors.length}
-        </Text>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <DropdownMenu items={addMenuItems} placement={'bottomLeft'}>
-            <Button disabled={!canEdit} icon={<PlusIcon />} size={'small'} type={'text'}>
+            <Button disabled={!canEdit} size="sm" variant="ghost">
+              <PlusIcon data-icon="inline-start" />
               {t('settingAgent.agentTools.add')}
             </Button>
           </DropdownMenu>
 
           {agentConnectors.length === 0 && (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('settingAgent.agentTools.agentEmpty')}
-            </Text>
+            </div>
           )}
 
           {agentConnectors.map((connector) => {

@@ -27,7 +27,7 @@ import SimpleEmpty from '@/components/SimpleEmpty';
 import { toast } from '@/components/toast';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Popover } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
@@ -700,9 +700,9 @@ const SavedViewPage = memo(() => {
             <>
               <Popover
                 open={openControl === 'filters'}
-                placement="bottomRight"
-                trigger="click"
-                content={
+                onOpenChange={(open) => handleControlOpenChange('filters', open)}
+              >
+                <PopoverContent align="end" className="w-auto p-2" side="bottom">
                   <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
                     <div className="flex flex-row gap-2 justify-end">
@@ -719,22 +719,24 @@ const SavedViewPage = memo(() => {
                       </Button>
                     </div>
                   </div>
-                }
-                onOpenChange={(open) => handleControlOpenChange('filters', open)}
-              >
-                <ActionIcon
-                  aria-expanded={openControl === 'filters'}
-                  aria-label={t('savedViews.filters.add')}
-                  icon={FilterIcon}
-                  size="small"
-                  title={t('savedViews.filters.add')}
+                </PopoverContent>
+                <PopoverTrigger
+                  render={
+                    <ActionIcon
+                      aria-expanded={openControl === 'filters'}
+                      aria-label={t('savedViews.filters.add')}
+                      icon={FilterIcon}
+                      size="small"
+                      title={t('savedViews.filters.add')}
+                    />
+                  }
                 />
               </Popover>
               <Popover
                 open={openControl === 'display'}
-                placement="bottomRight"
-                trigger="click"
-                content={
+                onOpenChange={(open) => handleControlOpenChange('display', open)}
+              >
+                <PopoverContent align="end" className="w-auto p-2" side="bottom">
                   <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
                     <div className="flex flex-row gap-2 justify-end">
@@ -751,15 +753,17 @@ const SavedViewPage = memo(() => {
                       </Button>
                     </div>
                   </div>
-                }
-                onOpenChange={(open) => handleControlOpenChange('display', open)}
-              >
-                <ActionIcon
-                  aria-expanded={openControl === 'display'}
-                  aria-label={t('savedViews.displayOptions')}
-                  icon={Settings2Icon}
-                  size="small"
-                  title={t('savedViews.displayOptions')}
+                </PopoverContent>
+                <PopoverTrigger
+                  render={
+                    <ActionIcon
+                      aria-expanded={openControl === 'display'}
+                      aria-label={t('savedViews.displayOptions')}
+                      icon={Settings2Icon}
+                      size="small"
+                      title={t('savedViews.displayOptions')}
+                    />
+                  }
                 />
               </Popover>
             </>

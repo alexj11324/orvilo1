@@ -166,7 +166,7 @@ interface ConnectOptionProps {
   title: string;
 }
 
-const ConnectOption = memo<ConnectOptionProps>(({ icon, title, desc, badge, onClick }) => (
+const ConnectOption = memo<ConnectOptionProps>(({ icon: Icon, title, desc, badge, onClick }) => (
   <div
     className={`flex items-start gap-4 ${styles.option}`}
     role={'button'}
@@ -180,7 +180,7 @@ const ConnectOption = memo<ConnectOptionProps>(({ icon, title, desc, badge, onCl
     }}
   >
     <span className={styles.optionIcon}>
-      <icon size={20} />
+      <Icon size={20} />
     </span>
     <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
       <div className="flex items-center gap-2">

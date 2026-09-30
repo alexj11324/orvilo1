@@ -177,7 +177,6 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
       {/* Menu "Edit view" — the same editor state machine as the inline
           Filters/Display controls, presented modally for owners. */}
       <Modal
-        destroyOnHidden
         open={editing}
         title={t('savedViews.editView')}
         width={640}

@@ -3,7 +3,6 @@
 import 'antd/dist/reset.css';
 
 import { ConfigProvider, ThemeProvider } from '@lobehub/ui';
-import { ToastHost as BaseToastHost } from '@lobehub/ui/base-ui';
 import { App } from 'antd';
 import { domMax, LazyMotion } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -45,7 +44,6 @@ const AuthThemeLite = memo<AuthThemeLiteProps>(({ children, globalCDN }) => {
       >
         <App style={{ height: '100%' }}>
           <LazyMotion features={domMax}>{children}</LazyMotion>
-          <BaseToastHost />
           <ToastHost />
         </App>
       </ThemeProvider>

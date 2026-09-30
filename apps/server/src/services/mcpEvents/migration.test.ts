@@ -1,0 +1,66 @@
+// @vitest-environment node
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+import { PGlite } from '@electric-sql/pglite';
+import { expect, it } from 'vitest';
+
+import { SqlMcpEventBindingRepository, SqlMcpEventInbox } from './inbox';
+
+it('replays the generated migration and commits receipts using its real unique indexes', async () => {
+  const database = new PGlite();
+  try {
+    const migration = await readFile(
+      path.resolve('docs/development/mcp-events-migration.sql'),
+      'utf8',
+    );
+    await database.exec(migration);
+    await database.exec(migration);
+    const bindings = new SqlMcpEventBindingRepository(database);
+    const scope = { tenantId: 'tenant', connectorId: 'connector' };
+    await bindings.createPending({
+      ...scope,
+      id: 'binding',
+      revision: 0,
+      callbackToken: 'callback',
+      callbackUrl: 'https://receiver.example/callback',
+      schemaId: 'schema',
+      eventName: 'message',
+      eventArguments: {},
+      remoteSubscriptionId: null,
+      state: 'pending',
+      signingKeys: [],
+      expiresAt: null,
+      payloadSchema: {},
+      cursor: null,
+      truncated: false,
+    });
+    await bindings.verifyPending('callback', 'remote', 'verification', 'challenge', 1);
+    await bindings.update(scope, 'binding', 'pending', { state: 'active' }, 0);
+    const inbox = new SqlMcpEventInbox(database);
+    const event = {
+      eventId: 'event',
+      name: 'message',
+      timestamp: '2026-09-30T00:00:00Z',
+      data: {},
+      cursor: 'cursor',
+    };
+    const input = {
+      ...scope,
+      subscriptionId: 'binding',
+      schemaId: 'schema',
+      bindingRevision: 1,
+      event,
+      receivedAt: 2,
+      rawBody: Buffer.from(JSON.stringify(event)),
+    };
+    expect(await inbox.accept(input)).toBe('accepted');
+    expect(await inbox.accept(input)).toBe('duplicate');
+    expect((await bindings.get(scope, 'binding'))?.cursor).toBe('cursor');
+    expect(await database.query('SELECT id FROM mcp_event_inbox')).toMatchObject({
+      rows: [{ id: expect.any(String) }],
+    });
+  } finally {
+    await database.close();
+  }
+});

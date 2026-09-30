@@ -1,8 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
@@ -45,7 +44,7 @@ const TopicRow = memo<TopicRowProps>(({ topic, leading, trailing }) => {
   };
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.row} gap={10} onClick={open}>
+    <div className={cx(styles.row, 'flex items-center gap-2.5')} onClick={open}>
       {leading}
       {agent && (
         <Avatar
@@ -57,17 +56,17 @@ const TopicRow = memo<TopicRowProps>(({ topic, leading, trailing }) => {
           title={agentDisplayName(agent)}
         />
       )}
-      <Flexbox horizontal align={'center'} flex={1} gap={6} style={{ minWidth: 0 }}>
+      <div className="flex items-center flex-1 gap-1.5" style={{ minWidth: 0 }}>
         <Text ellipsis fontSize={13} style={{ minWidth: 0 }}>
           {topic.title}
         </Text>
         <RunningElapsedTime startTime={topic.runStartedAt} />
-      </Flexbox>
+      </div>
       {trailing}
       <Time
         date={resolveTopicTriggerTime(topic.runStartedAt, topic.updatedAt ?? topic.createdAt)}
       />
-    </Flexbox>
+    </div>
   );
 });
 

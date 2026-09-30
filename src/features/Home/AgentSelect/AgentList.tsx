@@ -1,8 +1,7 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { PinIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,11 +51,11 @@ interface AgentListProps {
 
 // Same spec as the agent-detail SwitchPanel's section header.
 const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
-  <Flexbox className={styles.sectionHeader}>
+  <div className={cx(styles.sectionHeader, 'flex flex-col')}>
     <Text fontSize={12} type={'secondary'} weight={500}>
       {children}
     </Text>
-  </Flexbox>
+  </div>
 ));
 
 const AgentList = memo<AgentListProps>(
@@ -72,14 +71,12 @@ const AgentList = memo<AgentListProps>(
       const isActive = row.id === activeAgentId;
 
       return (
-        <Block
-          clickable
-          horizontal
-          align={'center'}
-          className={`${styles.item} ${isActive ? styles.active : ''}`}
-          gap={8}
+        <div
           key={row.id}
-          variant={'borderless'}
+          className={cx(
+            `${styles.item} ${isActive ? styles.active : ''}`,
+            'flex items-center gap-2 cursor-pointer hover:bg-[var(--ant-color-fill-tertiary)]',
+          )}
           onClick={() => onSelect(row.id)}
         >
           <Avatar
@@ -100,7 +97,7 @@ const AgentList = memo<AgentListProps>(
           {row.pinned && (
             <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
           )}
-        </Block>
+        </div>
       );
     };
 
@@ -115,9 +112,8 @@ const AgentList = memo<AgentListProps>(
         loading={<SkeletonList rows={6} style={{ padding: 8 }} />}
         onRetry={onRetry}
       >
-        <Flexbox
-          className={styles.list}
-          gap={2}
+        <div
+          className={cx(styles.list, 'flex flex-col gap-0.5')}
           style={{ maxHeight: 360, overflowY: 'auto', width: '100%' }}
         >
           {showPrivateSection ? (
@@ -130,7 +126,7 @@ const AgentList = memo<AgentListProps>(
           ) : (
             [...workspaceRows, ...privateRows].map(renderRow)
           )}
-        </Flexbox>
+        </div>
       </AsyncBoundary>
     );
   },

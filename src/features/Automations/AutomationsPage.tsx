@@ -1,10 +1,10 @@
-import { Flexbox, Tooltip } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { HistoryIcon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -77,42 +77,51 @@ const AutomationsPage = memo(() => {
   const startBlank = useCallback(() => navigate('/automations/new'), [navigate]);
 
   const headerLeft = (
-    <Flexbox horizontal align={'center'} gap={12}>
+    <div className="flex items-center gap-3">
       <Text fontSize={15} weight={600}>
         {t('page.title')}
       </Text>
       <AutomationScopeSwitch scope={scope} onChange={setScope} />
-    </Flexbox>
+    </div>
   );
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1 h-full">
       <NavHeader
         left={headerLeft}
         styles={{ left: { gap: 12, paddingLeft: 8 } }}
         right={
-          <Flexbox horizontal align={'center'} gap={6}>
+          <div className="flex items-center gap-1.5">
             <AutomationStatusSelect value={statusFilter} onChange={setStatusFilter} />
             <WorkspaceLink to={'/automations/runs'}>
               <Button icon={HistoryIcon} size={'small'} type={'text'}>
                 {t('overview.all_runs')}
               </Button>
             </WorkspaceLink>
-            <Tooltip title={canCreate ? undefined : reason}>
-              <Button
-                disabled={!canCreate}
-                icon={PlusIcon}
-                size={'small'}
-                type={'primary'}
-                onClick={startBlank}
-              >
-                {t('page.new_automation')}
-              </Button>
-            </Tooltip>
-          </Flexbox>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span className="inline-flex">
+                      <Button
+                        disabled={!canCreate}
+                        icon={PlusIcon}
+                        size={'small'}
+                        type={'primary'}
+                        onClick={startBlank}
+                      >
+                        {t('page.new_automation')}
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>{canCreate ? undefined : reason}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         }
       />
-      <Flexbox flex={1} style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1" style={{ minHeight: 0, overflowY: 'auto' }}>
         <WideScreenContainer fullWidth paddingBlock={16} paddingInline={24}>
           <AutomationScheduleList
             error={error}
@@ -130,8 +139,8 @@ const AutomationsPage = memo(() => {
             onRefetch={() => mutate()}
           />
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

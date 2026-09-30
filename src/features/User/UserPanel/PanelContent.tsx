@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { type FC } from 'react';
 
 import BusinessPanelContent from '@/business/client/features/User/BusinessPanelContent';
@@ -35,7 +34,7 @@ const PanelContent: FC<{ closePopover: () => void }> = ({ closePopover }) => {
   };
 
   return (
-    <Flexbox gap={2} style={{ minWidth: 300 }}>
+    <div className="flex flex-col gap-0.5" style={{ minWidth: 300 }}>
       {isDesktop || isLoginWithAuth ? (
         <>
           <UserInfo avatarProps={{ clickable: false }} />
@@ -50,7 +49,7 @@ const PanelContent: FC<{ closePopover: () => void }> = ({ closePopover }) => {
       <Menu items={[...(mainItems ?? []), ...(logoutItems ?? [])]} onClick={handleMenuClick} />
 
       <UserPanelAccountSection onNavigate={closePopover} />
-    </Flexbox>
+    </div>
   );
 };
 

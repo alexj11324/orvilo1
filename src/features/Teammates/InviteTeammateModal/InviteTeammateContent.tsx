@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import {
   Alert,
   Button,
@@ -10,7 +9,7 @@ import {
   TextArea,
   useModalContext,
 } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckCircle2, TriangleAlert, XCircle } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -174,10 +173,10 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
   const canSubmit = emails.length > 0 && !submitting && capabilities.canInvite;
 
   return (
-    <Flexbox className={styles.body} gap={16}>
+    <div className={cx(styles.body, 'flex flex-col gap-4')}>
       <Alert showIcon={false} title={t('workspaceSetting.members.scopeExplainer')} type="info" />
 
-      <Flexbox className={styles.field}>
+      <div className={cx(styles.field, 'flex flex-col')}>
         <Text fontSize={13} weight={500}>
           {t('workspaceSetting.members.emailsLabel')}
         </Text>
@@ -198,9 +197,9 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
             {t('workspaceSetting.members.emailCount', { count: emails.length })}
           </Text>
         )}
-      </Flexbox>
+      </div>
 
-      <Flexbox className={styles.field}>
+      <div className={cx(styles.field, 'flex flex-col')}>
         <Text fontSize={13} weight={500}>
           {t('workspaceSetting.members.workspaceRoleLabel')}
         </Text>
@@ -209,9 +208,9 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
           value={role}
           onChange={(value) => setRole(value as WorkspaceRole)}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox className={styles.field}>
+      <div className={cx(styles.field, 'flex flex-col')}>
         <Text fontSize={13} weight={500}>
           {t('workspaceSetting.members.projectsLabel')}
         </Text>
@@ -226,7 +225,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
         {projectIds.map((projectId) => {
           const project = projects.find((item) => item.id === projectId);
           return (
-            <Flexbox horizontal align="center" gap={8} justify="space-between" key={projectId}>
+            <div className="flex items-center gap-2 justify-between" key={projectId}>
               <Text fontSize={13}>{project?.name ?? projectId}</Text>
               <Select
                 options={projectRoleOptions}
@@ -235,32 +234,29 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
                 value={projectRoles[projectId] ?? 'contributor'}
                 onChange={(value) => setProjectRole(projectId, value as ProjectRole)}
               />
-            </Flexbox>
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
 
       {submitError && <Alert title={submitError} type="error" />}
 
       {result && (
-        <Flexbox className={styles.resultList}>
+        <div className={cx(styles.resultList, 'flex flex-col')}>
           {result.results.map((entry) => {
             // `ok` + `emailed === false` = the row exists but nothing was sent —
             // distinct from both success and failure, so it needs its own look.
             const emailFailed = entry.ok && entry.emailed === false;
             return (
               <div className={styles.emailResult} key={entry.email}>
-                <Icon
-                  color={
-                    emailFailed
-                      ? cssVar.colorWarning
-                      : entry.ok
-                        ? cssVar.colorSuccess
-                        : cssVar.colorError
-                  }
-                  icon={emailFailed ? TriangleAlert : entry.ok ? CheckCircle2 : XCircle}
-                  size={14}
-                />
+                {createElement(emailFailed ? TriangleAlert : entry.ok ? CheckCircle2 : XCircle, {
+                  color: emailFailed
+                    ? cssVar.colorWarning
+                    : entry.ok
+                      ? cssVar.colorSuccess
+                      : cssVar.colorError,
+                  size: 14,
+                })}
                 <Text fontSize={12} type={entry.ok ? undefined : 'danger'}>
                   {emailFailed
                     ? t('workspaceSetting.members.inviteEmailFailed', { email: entry.email })
@@ -274,7 +270,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
               </div>
             );
           })}
-        </Flexbox>
+        </div>
       )}
 
       <ModalFooter>
@@ -283,7 +279,7 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
           {t('workspaceSetting.members.inviteAction', { count: emails.length })}
         </Button>
       </ModalFooter>
-    </Flexbox>
+    </div>
   );
 });
 

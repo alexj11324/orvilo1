@@ -1,7 +1,7 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
+import { cx } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,19 +24,19 @@ interface DomainListProps {
 const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
   const { t } = useTranslation('selfLearning');
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <Text fontSize={12} type={'secondary'}>
         {t('domains.title')} {domains.length}
       </Text>
-      <Block padding={0} variant={'outlined'}>
+      <div
+        className="flex flex-col p-0 border"
+        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+      >
         {domains.map((d) => (
-          <Flexbox
-            horizontal
-            align={'center'}
-            as={'button'}
-            className={styles.row}
-            gap={12}
+          <button
+            className={cx(styles.row, 'flex items-center gap-3')}
             key={d.id}
+            type={'button'}
             style={{
               background: 'transparent',
               color: 'inherit',
@@ -51,11 +51,11 @@ const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
             <Text fontSize={12.5} style={{ flex: 1 }} type={'secondary'}>
               {t('domains.meta', { habits: d.lessons.length, runs: d.runCount })}
             </Text>
-            <Icon icon={ChevronRightIcon} size={13} style={{ flex: 'none', opacity: 0.4 }} />
-          </Flexbox>
+            <ChevronRightIcon size={13} style={{ flex: 'none', opacity: 0.4 }} />
+          </button>
         ))}
-      </Block>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

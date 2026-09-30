@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Drawer } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
@@ -53,9 +52,9 @@ const AcceptancePortalDrawer = memo(() => {
       onClose={clearPortalStack}
     >
       {open && (
-        <Flexbox height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col h-full" style={{ minHeight: 0, overflow: 'hidden' }}>
           <PortalContent />
-        </Flexbox>
+        </div>
       )}
     </Drawer>
   );

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -96,7 +95,7 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   const compact = variant === 'rail';
 
   const body = (
-    <Flexbox gap={compact ? 2 : 8}>
+    <div className="flex flex-col" style={{ gap: compact ? 2 : 8 }}>
       {actions.map((action) => (
         <RecommendationCard
           compact={compact}
@@ -113,7 +112,7 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
       {showTaskTemplates ? (
         <DailyBriefRecommendations compact={compact} state={taskTemplatesState} />
       ) : null}
-    </Flexbox>
+    </div>
   );
 
   if (variant === 'rail')
@@ -133,8 +132,8 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
     );
 
   return (
-    <Flexbox gap={12}>
-      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 justify-between">
         <Text className={styles.subtitle} fontSize={12}>
           {t('recommendations.subtitle')}
         </Text>
@@ -148,9 +147,9 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
             {tCommon('taskTemplate.action.refresh.button')}
           </Button>
         )}
-      </Flexbox>
+      </div>
       {body}
-    </Flexbox>
+    </div>
   );
 });
 

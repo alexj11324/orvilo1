@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createModal, type ModalInstance, Tabs } from '@lobehub/ui/base-ui';
 import { type ConversationContext } from '@orvilo/types';
 import { t } from 'i18next';
@@ -75,10 +74,9 @@ const ShareModalContent = memo(() => {
   );
 
   return (
-    <Flexbox
-      gap={isMobile ? 8 : 24}
-      height={'100%'}
-      style={{ overflow: 'hidden', position: 'relative' }}
+    <div
+      className="flex flex-col h-full"
+      style={{ gap: isMobile ? 8 : 24, overflow: 'hidden', position: 'relative' }}
     >
       <Tabs
         activeKey={tab}
@@ -91,19 +89,19 @@ const ShareModalContent = memo(() => {
         onChange={(key) => setTab(key as ShareTab)}
       />
       {isLoading && dbMessages.length === 0 ? (
-        <Flexbox gap={12} paddingBlock={8}>
+        <div className="flex flex-col gap-3 py-2">
           <ArticleSkeleton rows={8} />
-        </Flexbox>
+        </div>
       ) : rendererState.status === 'error' && rendererState.tab === tab ? (
         <AsyncError error={rendererState.error} variant={'block'} onRetry={retryRenderer} />
       ) : rendererState.status === 'ready' && rendererState.tab === tab ? (
         rendererState.render({ mobile: isMobile })
       ) : (
-        <Flexbox gap={12} paddingBlock={8}>
+        <div className="flex flex-col gap-3 py-2">
           <ArticleSkeleton rows={8} />
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

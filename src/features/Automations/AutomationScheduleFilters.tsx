@@ -1,4 +1,3 @@
-import { Center, Flexbox } from '@lobehub/ui';
 import { Button, DropdownMenu } from '@lobehub/ui/base-ui';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -26,7 +25,7 @@ export const AutomationScopeSwitch = memo<AutomationScopeSwitchProps>(({ onChang
   const { t } = useTranslation('automation');
 
   return (
-    <Flexbox horizontal gap={2}>
+    <div className="flex gap-0.5">
       <Button
         size={'small'}
         type={scope === 'all' ? 'fill' : 'text'}
@@ -41,7 +40,7 @@ export const AutomationScopeSwitch = memo<AutomationScopeSwitchProps>(({ onChang
       >
         {t('overview.mine')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -67,7 +66,7 @@ export const AutomationStatusSelect = memo<AutomationStatusSelectProps>(({ onCha
       ).map(([option, label]) => ({
         icon:
           value === option ? (
-            <Center height={14} width={14}>
+            <div className="flex items-center justify-center h-[14px] w-[14px]">
               <span
                 style={{
                   background: 'currentColor',
@@ -77,7 +76,7 @@ export const AutomationStatusSelect = memo<AutomationStatusSelectProps>(({ onCha
                   width: 6,
                 }}
               />
-            </Center>
+            </div>
           ) : undefined,
         key: option,
         label,

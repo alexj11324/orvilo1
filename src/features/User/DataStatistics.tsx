@@ -1,14 +1,13 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox, Tooltip } from '@lobehub/ui';
 import { Badge } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { isUndefined } from 'es-toolkit/compat';
-import { memo } from 'react';
+import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
 import { agentService } from '@/services/agent';
@@ -44,7 +43,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-const DataStatistics = memo<Omit<FlexboxProps, 'children'>>(({ style, ...rest }) => {
+const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, ...rest }) => {
   const mobile = useServerConfigStore((s) => s.isMobile);
   // assistants (counted from the agents table — the sidebar list source of truth)
   const { data: agents, isLoading: agentsLoading } = useClientDataSWR(statsKeys.countAgents(), () =>
@@ -90,58 +89,59 @@ const DataStatistics = memo<Omit<FlexboxProps, 'children'>>(({ style, ...rest })
   ];
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={4}
-      paddingInline={8}
+    <div
+      className="flex items-center gap-1 px-2 w-full"
       style={{ marginBottom: 8, ...style }}
-      width={'100%'}
       {...rest}
     >
       {items.map((item) => {
         if (item.key === 'messages') {
           const showBadge = Boolean(item.countToady && item.countToady > 0);
           return (
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={styles.card}
-              flex={showBadge && !mobile ? 2 : 1}
-              gap={4}
-              justify={'space-between'}
+            <div
+              className={cx(styles.card, 'flex items-center gap-1 justify-between')}
               key={item.key}
+              style={{ flex: showBadge && !mobile ? 2 : 1 }}
             >
-              <Flexbox gap={2}>
+              <div className="flex flex-col gap-0.5">
                 <div className={styles.count}>{formatShortenNumber(item.count)}</div>
                 <div className={styles.title}>{item.title}</div>
-              </Flexbox>
+              </div>
               {showBadge && (
-                <Tooltip title={t('dataStatistics.today')}>
-                  <Badge
-                    count={`+${item.countToady}`}
-                    style={{
-                      background: cssVar.colorSuccess,
-                      color: cssVar.colorSuccessBg,
-                      cursor: 'pointer',
-                    }}
-                  />
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="inline-flex">
+                          <Badge
+                            count={`+${item.countToady}`}
+                            style={{
+                              background: cssVar.colorSuccess,
+                              color: cssVar.colorSuccessBg,
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{t('dataStatistics.today')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
-            </Flexbox>
+            </div>
           );
         }
 
         return (
-          <Flexbox className={styles.card} flex={1} gap={2} key={item.key}>
-            <Flexbox horizontal>
+          <div className={cx(styles.card, 'flex flex-col flex-1 gap-0.5')} key={item.key}>
+            <div className="flex">
               <div className={styles.count}>{formatShortenNumber(item.count)}</div>
-            </Flexbox>
+            </div>
             <div className={styles.title}>{item.title}</div>
-          </Flexbox>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

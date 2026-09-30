@@ -1,4 +1,3 @@
-import { Block, Center, Flexbox, Icon } from '@lobehub/ui';
 import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { AlarmClockIcon, PlusIcon } from 'lucide-react';
@@ -58,38 +57,42 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
       TEMPLATE_CATEGORIES.find((cat) => cat.id === category)?.templateIds ?? [];
 
     return (
-      <Flexbox
+      <div
+        className="flex flex-col gap-4"
         data-testid={'automation-template-gallery'}
-        gap={16}
-        paddingBlock={persistent ? 20 : 48}
-        style={{ marginInline: 'auto', maxWidth: 960, width: '100%' }}
+        style={{
+          paddingBlock: persistent ? 20 : 48,
+          marginInline: 'auto',
+          maxWidth: 960,
+          width: '100%',
+        }}
       >
         {persistent ? (
-          <Flexbox horizontal align={'flex-start'} gap={16} justify={'space-between'}>
-            <Flexbox gap={4}>
+          <div className="flex items-start gap-4 justify-between">
+            <div className="flex flex-col gap-1">
               <Text fontSize={14} weight={600}>
                 {t('templates.section')}
               </Text>
               <Text fontSize={12} type={'secondary'}>
                 {t('templates.gallery_cta')}
               </Text>
-            </Flexbox>
+            </div>
             <Button icon={PlusIcon} size={'small'} onClick={onStartBlank}>
               {t('templates.start_blank')}
             </Button>
-          </Flexbox>
+          </div>
         ) : (
-          <Flexbox align={'center'} gap={4} style={{ textAlign: 'center' }}>
-            <Center height={40} width={40}>
-              <Icon color={cssVar.colorTextQuaternary} icon={AlarmClockIcon} size={40} />
-            </Center>
+          <div className="flex flex-col items-center gap-1" style={{ textAlign: 'center' }}>
+            <div className="flex items-center justify-center h-[40px] w-[40px]">
+              <AlarmClockIcon color={cssVar.colorTextQuaternary} size={40} />
+            </div>
             <Text fontSize={16} weight={600}>
               {t('page.empty.title')}
             </Text>
             <Text fontSize={13} style={{ maxWidth: 480 }} type={'secondary'}>
               {t('page.empty.hint')}
             </Text>
-          </Flexbox>
+          </div>
         )}
 
         <TabsRoot
@@ -108,40 +111,41 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
         </TabsRoot>
 
         {categoryTemplates.length === 0 ? (
-          <Flexbox align={'center'} paddingBlock={24}>
+          <div className="flex flex-col items-center py-6">
             <Text type={'secondary'}>{t('templates.gallery_empty')}</Text>
-          </Flexbox>
+          </div>
         ) : (
           <div className={styles.cardGrid}>
             {categoryTemplates.map((id) => {
               const template = AUTOMATION_TEMPLATES[id];
               return (
-                <Block
-                  clickable
-                  gap={4}
+                <div
+                  className="flex flex-col gap-1 p-4 border cursor-pointer hover:bg-[var(--ant-color-fill-tertiary)]"
                   key={id}
-                  padding={16}
-                  variant={'outlined'}
+                  style={{
+                    borderColor: cssVar.colorBorderSecondary,
+                    background: cssVar.colorBgContainer,
+                  }}
                   onClick={() => selectTemplate(id)}
                 >
                   <span className={styles.cardTitle}>{t(`templates.${template.id}.title`)}</span>
                   <span className={styles.cardSummary}>
                     {t(`templates.${template.id}.summary`)}
                   </span>
-                </Block>
+                </div>
               );
             })}
           </div>
         )}
 
         {!persistent && (
-          <Flexbox horizontal justify={'center'}>
+          <div className="flex justify-center">
             <Button icon={PlusIcon} size={'small'} onClick={onStartBlank}>
               {t('templates.start_blank')}
             </Button>
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

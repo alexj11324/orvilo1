@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckCircle2, CirclePlay, FileEdit, XCircle } from 'lucide-react';
 import { memo, useSyncExternalStore } from 'react';
@@ -115,7 +114,7 @@ export const AgentActionCursor = memo<{ event: ServerActivityEvent }>(({ event }
         transform: `translate(${rect.left + rect.width}px, ${rect.top}px) translate(-50%, -50%)`,
       }}
     >
-      <Icon icon={PhaseIcon} size={11} />
+      <PhaseIcon size={11} />
       <span>{t('teammates.activity.bubble', { action: event.action, name })}</span>
     </div>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { createStaticStyles, keyframes } from 'antd-style';
 
 const size = 28;
@@ -114,9 +113,9 @@ const styles = createStaticStyles(({ css, cssVar }) => {
 
 const DataLoading = () => {
   return (
-    <Center style={{ height: 80 }}>
+    <div className="flex items-center justify-center" style={{ height: 80 }}>
       <div className={styles.loader} />
-    </Center>
+    </div>
   );
 };
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import {
   Alert,
   Button,
@@ -10,7 +9,7 @@ import {
   Text,
   useModalContext,
 } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { AlertTriangle } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,23 +79,23 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
       preview.sharedDeviceCount > 0);
 
   return (
-    <Flexbox className={styles.body} gap={16}>
+    <div className={cx(styles.body, 'flex flex-col gap-4')}>
       <Alert
-        icon={<Icon icon={AlertTriangle} size={16} />}
+        icon={<AlertTriangle size={16} />}
         title={t('workspaceSetting.members.removeWarning', { name: target.displayName })}
         type="warning"
       />
 
       {isLoading && (
-        <Flexbox gap={10}>
+        <div className="flex flex-col gap-2.5">
           <SkeletonText style={{ marginBottom: 0, width: '70%' }} />
           <SkeletonText style={{ marginBottom: 0, width: '55%' }} />
           <SkeletonText style={{ marginBottom: 0, width: '60%' }} />
-        </Flexbox>
+        </div>
       )}
       {error && <Alert title={t('workspaceSetting.members.previewFailed')} type="error" />}
       {preview && (
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           <Text fontSize={13} weight={500}>
             {t('workspaceSetting.members.previewTitle')}
           </Text>
@@ -126,11 +125,11 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
               })}
             </Text>
           </div>
-        </Flexbox>
+        </div>
       )}
 
       {preview && hasImpact && reassignOptions.length > 0 && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text fontSize={13} weight={500}>
             {t('workspaceSetting.members.reassignLabel')}
           </Text>
@@ -141,7 +140,7 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
             value={reassignTo}
             onChange={(value) => setReassignTo(value as string | undefined)}
           />
-        </Flexbox>
+        </div>
       )}
 
       <ModalFooter>
@@ -159,7 +158,7 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
           {t('workspaceSetting.members.removeAction')}
         </Button>
       </ModalFooter>
-    </Flexbox>
+    </div>
   );
 });
 

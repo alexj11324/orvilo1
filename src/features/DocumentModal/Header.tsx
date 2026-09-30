@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   ActionIcon,
   Avatar,
@@ -53,17 +52,11 @@ const DocumentModalHeader = memo<DocumentModalHeaderProps>(({ onDeleted }) => {
   });
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      flex={'none'}
-      gap={4}
-      height={HEADER_HEIGHT}
-      justify={'space-between'}
-      padding={8}
-      style={{ borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}` }}
+    <div
+      className="flex items-center flex-none gap-1 justify-between p-2"
+      style={{ height: HEADER_HEIGHT, borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}` }}
     >
-      <Flexbox allowShrink horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
+      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
         {emoji && <Avatar avatar={emoji} shape={'square'} size={24} />}
         {isDocumentLoading && !title ? (
           <Skeleton style={{ height: 14, minWidth: 120, width: 120 }} />
@@ -83,8 +76,8 @@ const DocumentModalHeader = memo<DocumentModalHeaderProps>(({ onDeleted }) => {
         >
           <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
         </DropdownMenu>
-      </Flexbox>
-      <Flexbox horizontal align={'center'} gap={4}>
+      </div>
+      <div className="flex items-center gap-1">
         {documentId && (
           <span className={styles.shareButton}>
             <ShareButton documentId={documentId} />
@@ -101,8 +94,8 @@ const DocumentModalHeader = memo<DocumentModalHeaderProps>(({ onDeleted }) => {
           title={t('close', { ns: 'common' })}
           onClick={close}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

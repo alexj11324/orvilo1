@@ -1,10 +1,11 @@
-import { Flexbox, Icon, InputNumber } from '@lobehub/ui';
 import { Select, Switch, Tabs, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { CalendarDays, Clock, RefreshCw } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { NumberField, NumberFieldGroup, NumberFieldInput } from '@/components/reui/number-field';
 
 import {
   formatIntervalLabel,
@@ -133,14 +134,14 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
   );
 
   return (
-    <Flexbox gap={16}>
-      <Flexbox horizontal align={'center'} gap={12}>
-        <Flexbox flex={1} gap={2}>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <div className="flex flex-col flex-1 gap-0.5">
           <Text weight={500}>{t('trigger.section', { ns: 'automation' })}</Text>
           <Text fontSize={12} type={'secondary'}>
             {summary ?? t('trigger.unconfigured', { ns: 'automation' })}
           </Text>
-        </Flexbox>
+        </div>
         <Switch
           checked={enabled}
           onChange={(checked) =>
@@ -151,16 +152,16 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
             )
           }
         />
-      </Flexbox>
+      </div>
 
       {enabled && nextRun && (
-        <Flexbox horizontal align={'center'} className={styles.preview} gap={10}>
-          <Icon color={cssVar.colorTextDescription} icon={Clock} size={16} />
+        <div className={cx(styles.preview, 'flex items-center gap-2.5')}>
+          <Clock color={cssVar.colorTextDescription} size={16} />
           <Text type={'secondary'}>{t('taskSchedule.nextRun', { ns: 'chat' })}</Text>
           <Text style={{ flex: 1, textAlign: 'right' }} weight={500}>
             {nextRun.toDate().toLocaleString()}
           </Text>
-        </Flexbox>
+        </div>
       )}
 
       {enabled && (
@@ -171,19 +172,19 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
               {
                 key: 'schedule',
                 label: (
-                  <Flexbox horizontal align={'center'} gap={6} justify={'center'}>
-                    <Icon icon={CalendarDays} size={14} />
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <CalendarDays size={14} />
                     <span>{t('taskSchedule.schedulerTab', { ns: 'chat' })}</span>
-                  </Flexbox>
+                  </div>
                 ),
               },
               {
                 key: 'heartbeat',
                 label: (
-                  <Flexbox horizontal align={'center'} gap={6} justify={'center'}>
-                    <Icon icon={RefreshCw} size={14} />
+                  <div className="flex items-center gap-1.5 justify-center">
+                    <RefreshCw size={14} />
                     <span>{t('taskSchedule.intervalTab', { ns: 'chat' })}</span>
-                  </Flexbox>
+                  </div>
                 ),
               },
             ]}
@@ -201,24 +202,27 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
               onChange={handleScheduleChange}
             />
           ) : (
-            <Flexbox gap={6}>
+            <div className="flex flex-col gap-1.5">
               <Text className={styles.fieldLabel}>
                 {t('taskSchedule.intervalLabel', { ns: 'chat' })}
               </Text>
-              <Flexbox horizontal align={'center'} gap={8}>
+              <div className="flex items-center gap-2">
                 <Text type={'secondary'}>{t('taskSchedule.every', { ns: 'chat' })}</Text>
-                <InputNumber
+                <NumberField
                   min={intervalUnit === 'minutes' ? MIN_MINUTES : 1}
                   style={{ width: 100 }}
                   value={intervalValue}
-                  variant={'filled'}
-                  onChange={(val) => {
+                  onValueChange={(val) => {
                     const n = typeof val === 'number' ? val : Number(val);
                     if (Number.isNaN(n) || n <= 0) return;
                     setIntervalValue(n);
                     handleHeartbeatChange(intervalUnit === 'hours' ? n * 3600 : n * 60);
                   }}
-                />
+                >
+                  <NumberFieldGroup>
+                    <NumberFieldInput />
+                  </NumberFieldGroup>
+                </NumberField>
                 <Select
                   style={{ flex: 1 }}
                   value={intervalUnit}
@@ -234,12 +238,12 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
                   }}
                 />
                 <Text type={'secondary'}>{t('taskSchedule.intervalSuffix', { ns: 'chat' })}</Text>
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           )}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

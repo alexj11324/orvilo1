@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { RefreshCw } from 'lucide-react';
@@ -27,8 +26,8 @@ const List = memo<ListProps>(({ mode, count = 3, disabled }) => {
   }
 
   return (
-    <Flexbox gap={12}>
-      <Flexbox gap={8}>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {questions.map((item) => {
           const prompt = t(item.promptKey as any);
           return (
@@ -41,11 +40,9 @@ const List = memo<ListProps>(({ mode, count = 3, disabled }) => {
             />
           );
         })}
-      </Flexbox>
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={4}
+      </div>
+      <div
+        className="flex items-center gap-1"
         style={{
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.65 : undefined,
@@ -60,8 +57,8 @@ const List = memo<ListProps>(({ mode, count = 3, disabled }) => {
         <Text color={cssVar.colorTextSecondary} fontSize={12}>
           {tCommon('switch')}
         </Text>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

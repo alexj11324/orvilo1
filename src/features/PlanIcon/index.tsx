@@ -1,7 +1,6 @@
-import { Center, Flexbox } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { Plans } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Atom, Box, CircleSlash, Sparkle, Zap } from 'lucide-react';
 import { type CSSProperties, type MouseEvent } from 'react';
 import { memo } from 'react';
@@ -113,23 +112,21 @@ const PlanIcon = memo<PlanIconProps>(
     } satisfies CSSProperties;
 
     const iconContent = (
-      <Center
-        className={styles.icon}
-        height={size}
-        style={iconStyle}
-        width={size}
+      <div
+        className={cx(styles.icon, 'flex items-center justify-center')}
+        style={{ height: size, width: size, ...iconStyle }}
         onClick={onClick}
       >
         <IconComponent color={mono ? undefined : theme.color} size={glyphSize} />
-      </Center>
+      </div>
     );
 
     if (isCombine) {
       return (
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2">
           {iconContent}
           <span>{t(`plans.plan.${plan}.title`)}</span>
-        </Flexbox>
+        </div>
       );
     }
 

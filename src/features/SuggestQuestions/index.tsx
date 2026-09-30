@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, Suspense } from 'react';
 
 import { usePermission } from '@/hooks/usePermission';
@@ -20,11 +19,11 @@ const SuggestQuestions = memo<SuggestQuestionsProps>(({ mode, count = 3, disable
   const isDisabled = disabled || !canCreateContent;
 
   return (
-    <Flexbox width={'100%'}>
+    <div className="flex flex-col w-full">
       <Suspense fallback={<Skeleton count={count} />}>
         <List count={count} disabled={isDisabled} mode={mode} />
       </Suspense>
-    </Flexbox>
+    </div>
   );
 });
 

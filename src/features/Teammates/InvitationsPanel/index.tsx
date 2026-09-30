@@ -1,6 +1,5 @@
 'use client';
 
-import { DropdownMenu, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Alert, Button, SkeletonText, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Ban, Mail } from 'lucide-react';
@@ -8,6 +7,8 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 import type { WorkspaceInvitationSummary } from '../api/contract';
 import { useTeammateActions, useWorkspaceInvitationsQuery } from '../api/hooks';
@@ -88,14 +89,14 @@ const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation, locale 
     if (!canManage || !pending) return [];
     return [
       {
-        icon: <Icon icon={Mail} />,
+        icon: <Mail />,
         key: 'resend',
         label: t('workspaceSetting.invitations.resend'),
         onClick: () => void resendInvitation(invitation.id),
       },
       {
         danger: true,
-        icon: <Icon icon={Ban} />,
+        icon: <Ban />,
         key: 'revoke',
         label: t('workspaceSetting.invitations.revoke'),
         onClick: () => void revokeInvitation(invitation.id),
@@ -128,11 +129,11 @@ const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation, locale 
       <div className={styles.meta}>{formatDate(invitation.expiresAt, locale)}</div>
       <div>
         {menuItems.length > 0 && (
-          <DropdownMenu items={menuItems}>
+          <SidebarDropdownMenu items={menuItems}>
             <Button size="small" type="text">
               ⋯
             </Button>
-          </DropdownMenu>
+          </SidebarDropdownMenu>
         )}
       </div>
     </div>
@@ -163,15 +164,15 @@ export const InvitationsPanel = memo(() => {
 
   if (isLoading) {
     return (
-      <Flexbox gap={16} style={{ paddingBlock: 8 }}>
+      <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
         {Array.from({ length: 3 }).map((_, i) => (
-          <Flexbox align="center" gap={10} horizontal key={i}>
+          <div className="flex items-center gap-2.5" key={i}>
             <SkeletonText style={{ marginBottom: 0, width: '45%' }} />
             <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
             <SkeletonText style={{ marginBottom: 0, width: '20%' }} />
-          </Flexbox>
+          </div>
         ))}
-      </Flexbox>
+      </div>
     );
   }
   if (error) {
@@ -189,7 +190,7 @@ export const InvitationsPanel = memo(() => {
   }
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <div className={styles.tableScroll}>
         <div className={styles.table}>
           <div className={styles.row}>
@@ -218,9 +219,13 @@ export const InvitationsPanel = memo(() => {
         </div>
       </div>
       {invitations.length === 0 && (
-        <Empty description={t('workspaceSetting.invitations.empty')} style={{ paddingBlock: 32 }} />
+        <Empty style={{ paddingBlock: 32 }}>
+          <EmptyHeader>
+            <EmptyDescription>{t('workspaceSetting.invitations.empty')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

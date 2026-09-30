@@ -1,9 +1,8 @@
 'use client';
 
-import { Menu, type MenuProps } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
-import { memo } from 'react';
+import { createStaticStyles, cx } from 'antd-style';
+import { memo, type ReactNode } from 'react';
 
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
 
@@ -18,6 +17,31 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       margin-inline: 0;
       border-radius: 0;
     }
+  `,
+  menuItem: css`
+    cursor: pointer;
+
+    display: block;
+
+    width: 100%;
+    padding-block: 6px;
+    padding-inline: 12px;
+    border: none;
+    border-radius: 0;
+
+    font-size: 13px;
+    color: ${cssVar.colorText};
+    text-align: start;
+
+    background: none;
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
+  menuItemActive: css`
+    color: ${cssVar.colorPrimary};
+    background: ${cssVar.colorPrimaryBg};
   `,
   sidebar: css`
     display: flex;
@@ -36,8 +60,13 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+export interface DevMenuItem {
+  key: string;
+  label?: ReactNode;
+}
+
 interface SidebarProps {
-  items: MenuProps['items'];
+  items: DevMenuItem[];
   onSelect: (key: string) => void;
   selectedKey?: string;
 }
@@ -50,13 +79,18 @@ const Sidebar = memo<SidebarProps>(({ items, selectedKey, onSelect }) => (
       </Text>
     </div>
     <div className={styles.scroll}>
-      <Menu
-        className={styles.menu}
-        items={items}
-        mode={'inline'}
-        selectedKeys={selectedKey ? [selectedKey] : []}
-        onClick={({ key }) => onSelect(key)}
-      />
+      <div className={styles.menu} role="menu">
+        {items.map((item) => (
+          <button
+            className={cx(styles.menuItem, item.key === selectedKey && styles.menuItemActive)}
+            key={item.key}
+            role="menuitem"
+            onClick={() => onSelect(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
     </div>
   </aside>
 ));

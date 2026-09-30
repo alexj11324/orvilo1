@@ -1,6 +1,5 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ChevronRightIcon, TimerIcon } from 'lucide-react';
@@ -33,10 +32,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 const Section = ({ children, title }: { children: React.ReactNode; title: string }) => (
-  <Flexbox gap={8}>
+  <div className="flex flex-col gap-2">
     <span className={styles.sectionTitle}>{title}</span>
     {children}
-  </Flexbox>
+  </div>
 );
 
 const TriggerCard = memo(() => {
@@ -49,16 +48,12 @@ const TriggerCard = memo(() => {
 
   return (
     <TaskScheduleConfig>
-      <Block
-        horizontal
-        align={'center'}
-        className={styles.triggerCard}
-        gap={12}
-        padding={12}
-        variant={'outlined'}
+      <div
+        className={cx(styles.triggerCard, 'flex items-center gap-3 p-3 border')}
+        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
       >
-        <Icon color={cssVar.colorTextTertiary} icon={TimerIcon} size={18} />
-        <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+        <TimerIcon color={cssVar.colorTextTertiary} size={18} />
+        <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
           <Text ellipsis fontSize={13} weight={500}>
             {summary || t('trigger.unconfigured')}
           </Text>
@@ -67,9 +62,9 @@ const TriggerCard = memo(() => {
               {t('trigger.next_run', { time: dayjs(nextRun.toDate()).fromNow() })}
             </Text>
           ) : null}
-        </Flexbox>
-        <Icon color={cssVar.colorTextTertiary} icon={ChevronRightIcon} size={14} />
-      </Block>
+        </div>
+        <ChevronRightIcon color={cssVar.colorTextTertiary} size={14} />
+      </div>
     </TaskScheduleConfig>
   );
 });
@@ -77,14 +72,14 @@ const TriggerCard = memo(() => {
 const AutomationSettingsTab = memo(() => {
   const { t } = useTranslation('automation');
   return (
-    <Flexbox gap={24} paddingBlock={16} style={{ maxWidth: 768 }}>
+    <div className="flex flex-col gap-6 py-4" style={{ maxWidth: 768 }}>
       <Section title={t('trigger.section')}>
         <TriggerCard />
       </Section>
       <Section title={t('instructions.section')}>
         <TaskInstruction />
       </Section>
-    </Flexbox>
+    </div>
   );
 });
 

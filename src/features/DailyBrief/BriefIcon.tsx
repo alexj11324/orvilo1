@@ -1,9 +1,8 @@
-import { Block, Icon } from '@lobehub/ui';
 import { type BriefType } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { CircleDot } from 'lucide-react';
 import { CheckCheckIcon, EyeIcon, HandIcon, Lightbulb, SirenIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 const BRIEF_TYPE_ICON: Record<BriefType, typeof CircleDot> = {
   decision: HandIcon,
@@ -38,9 +37,12 @@ const BriefIcon = memo<BriefIconProps>(({ size = 28, type, muted = false }) => {
   const background = muted ? cssVar.colorFillQuaternary : BRIEF_TYPE_COLOR_BG[type];
 
   return (
-    <Block align={'center'} height={size} justify={'center'} style={{ background }} width={size}>
-      <Icon color={color} icon={icon} size={size * 0.6} />
-    </Block>
+    <div
+      className="flex flex-col items-center justify-center"
+      style={{ borderRadius: cssVar.borderRadius, height: size, width: size, background }}
+    >
+      {createElement(icon, { color, size: size * 0.6 })}
+    </div>
   );
 });
 

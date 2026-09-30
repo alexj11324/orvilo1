@@ -1,4 +1,3 @@
-import { Empty, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -8,6 +7,7 @@ import { BotMessageSquare, MessageSquareIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors } from '@/store/task/selectors';
 
@@ -115,16 +115,19 @@ const AutomationRunList = memo(() => {
 
   if (runs.length === 0) {
     return (
-      <Empty
-        description={t('run_history.no_matches')}
-        icon={BotMessageSquare}
-        style={{ marginTop: 16 }}
-      />
+      <Empty style={{ marginTop: 16 }}>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <BotMessageSquare />
+          </EmptyMedia>
+          <EmptyDescription>{t('run_history.no_matches')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
   return (
-    <Flexbox paddingBlock={8}>
+    <div className="flex flex-col py-2">
       <div className={styles.headerRow}>
         <span>{t('run_history.automation')}</span>
         <span>{t('run_history.trigger')}</span>
@@ -136,7 +139,7 @@ const AutomationRunList = memo(() => {
       {runs.map((activity) => (
         <RunRow activity={activity} key={activity.id} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

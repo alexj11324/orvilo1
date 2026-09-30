@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Tabs, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { useEffect, useRef, useState } from 'react';
 
 import ApiList from './ApiList';
@@ -184,14 +183,14 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
   };
 
   return (
-    <Flexbox horizontal height={'100%'} style={{ overflow: 'hidden' }} width={'100%'}>
+    <div className="flex h-full w-full" style={{ overflow: 'hidden' }}>
       {view === 'api' && (
         <ApiList activeApiName={activeApi} apis={toolset.apis} onSelect={handleSelect} />
       )}
       <div className={styles.content} ref={scrollRef}>
-        <Flexbox className={styles.body}>
-          <Flexbox className={styles.header}>
-            <Flexbox horizontal align={'center'} gap={10} wrap={'wrap'}>
+        <div className={cx(styles.body, 'flex flex-col')}>
+          <div className={cx(styles.header, 'flex flex-col')}>
+            <div className="flex items-center gap-2.5" style={{ flexWrap: 'wrap' }}>
               <Text fontSize={22} weight={700}>
                 {toolset.toolsetName}
               </Text>
@@ -199,16 +198,16 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
               <Text fontSize={12} type={'secondary'}>
                 {toolset.apis.length} API{toolset.apis.length === 1 ? '' : 's'}
               </Text>
-            </Flexbox>
+            </div>
             {toolset.toolsetDescription && (
               <Text fontSize={13} type={'secondary'}>
                 {toolset.toolsetDescription}
               </Text>
             )}
-          </Flexbox>
+          </div>
 
-          <Flexbox horizontal className={styles.modeBar} wrap={'wrap'}>
-            <Flexbox horizontal className={styles.controlGroup}>
+          <div className={cx(styles.modeBar, 'flex')} style={{ flexWrap: 'wrap' }}>
+            <div className={cx(styles.controlGroup, 'flex')}>
               <Text className={styles.controlLabel} fontSize={12} type={'secondary'} weight={600}>
                 View
               </Text>
@@ -222,8 +221,8 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
                 ]}
                 onChange={(key) => setView(key as GalleryView)}
               />
-            </Flexbox>
-            <Flexbox horizontal className={styles.controlGroup}>
+            </div>
+            <div className={cx(styles.controlGroup, 'flex')}>
               <Text className={styles.controlLabel} fontSize={12} type={'secondary'} weight={600}>
                 Lifecycle
               </Text>
@@ -237,18 +236,18 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
                 }))}
                 onChange={(key) => setMode(key as LifecycleMode)}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
 
           {view === 'api' &&
             toolset.apis.map((api) => (
               <ToolPreview api={api} key={`${api.identifier}:${api.apiName}`} mode={mode} />
             ))}
-        </Flexbox>
+        </div>
 
         {view === 'aggregate' && <MessageList apis={toolset.apis} mode={mode} />}
       </div>
-    </Flexbox>
+    </div>
   );
 };
 

@@ -1,11 +1,11 @@
-import { Flexbox, Icon, stopPropagation } from '@lobehub/ui';
+import { stopPropagation } from '@lobehub/ui';
 import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext } from '@orvilo/types';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon, MessageSquarePlus } from 'lucide-react';
-import { lazy, memo, Suspense, useCallback, useState } from 'react';
+import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import UnreadDot from '@/components/UnreadDot';
@@ -172,12 +172,10 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
     );
 
     return (
-      <Flexbox className={bare ? undefined : styles.section}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={cx(styles.row, bare && styles.bareRow)}
-          gap={ROW_GAP}
+      <div className={cx(bare ? undefined : styles.section, 'flex flex-col')}>
+        <div
+          className={cx(cx(styles.row, bare && styles.bareRow), 'flex items-center')}
+          style={{ gap: ROW_GAP }}
           onClick={toggle}
         >
           {read ? <span className={styles.dotPlaceholder} /> : <UnreadDot />}
@@ -200,15 +198,14 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
           </Text>
           {showAuthor && <AuthorChip trigger={topic.trigger} userId={topic.userId} />}
           <Time date={topic.updatedAt ?? topic.createdAt} />
-          <Icon
-            color={cssVar.colorTextQuaternary}
-            icon={expanded ? ChevronDownIcon : ChevronRightIcon}
-            size={14}
-          />
-        </Flexbox>
+          {createElement(expanded ? ChevronDownIcon : ChevronRightIcon, {
+            color: cssVar.colorTextQuaternary,
+            size: 14,
+          })}
+        </div>
 
         {expanded && (
-          <Flexbox className={bare ? styles.bareBody : styles.body} gap={8}>
+          <div className={cx(bare ? styles.bareBody : styles.body, 'flex flex-col gap-2')}>
             {assistantPreview && (
               <Suspense fallback={null}>
                 <MarkdownMessage {...markdownProps} style={{ overflow: 'unset' }}>
@@ -218,7 +215,7 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
             )}
 
             {replying ? (
-              <Flexbox onClick={stopPropagation}>
+              <div className="flex flex-col" onClick={stopPropagation}>
                 <Suspense fallback={<div aria-hidden className={styles.replyEditorFallback} />}>
                   <RunReplyEditor
                     placeholder={t('inbox.unread.followUpPlaceholder')}
@@ -226,9 +223,9 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
                     onSubmit={submitFollowUp}
                   />
                 </Suspense>
-              </Flexbox>
+              </div>
             ) : (
-              <Flexbox horizontal align={'center'} justify={'space-between'}>
+              <div className="flex items-center justify-between">
                 <Button size={'small'} type={'text'} onClick={viewChat}>
                   {t('inbox.unread.viewChat')}
                 </Button>
@@ -243,11 +240,11 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
                 >
                   {t('inbox.unread.followUp')}
                 </Button>
-              </Flexbox>
+              </div>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -267,7 +264,7 @@ interface UnreadTopicListProps {
  */
 const UnreadTopicList = memo<UnreadTopicListProps>(
   ({ bare, topics, onFollowUpSent, showAuthor }) => (
-    <Flexbox className={bare ? styles.bareList : styles.list}>
+    <div className={cx(bare ? styles.bareList : styles.list, 'flex flex-col')}>
       {topics.map((topic) => (
         <UnreadTopicItem
           bare={bare}
@@ -277,7 +274,7 @@ const UnreadTopicList = memo<UnreadTopicListProps>(
           onFollowUpSent={onFollowUpSent}
         />
       ))}
-    </Flexbox>
+    </div>
   ),
 );
 

@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronRightIcon, TargetIcon } from 'lucide-react';
@@ -103,7 +102,7 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
       type={'text'}
       onClick={() => href && navigate(href)}
     >
-      <Flexbox horizontal align={'center'} gap={ROW_GAP} style={{ width: '100%' }}>
+      <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
         {/* The pile heading says which of the two states this is; the glyph
             carries the exact one (verifying, planning, waiting) on hover, where
             it costs the row nothing. */}
@@ -111,7 +110,7 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
           {entry.bucket === 'running' ? (
             <RunningGlyph />
           ) : (
-            <Icon color={cssVar.colorInfo} icon={TargetIcon} size={16} />
+            <TargetIcon color={cssVar.colorInfo} size={16} />
           )}
         </span>
         <Text ellipsis className={homeType.itemTitle} style={{ flex: 1, minWidth: 0 }}>
@@ -129,8 +128,8 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
                 total: entry.taskTotal,
               })}
         </span>
-        <Icon color={cssVar.colorTextQuaternary} icon={ChevronRightIcon} size={14} />
-      </Flexbox>
+        <ChevronRightIcon color={cssVar.colorTextQuaternary} size={14} />
+      </div>
     </Button>
   );
 });
@@ -157,24 +156,24 @@ const GoalsRailCard = memo<GoalsRailCardProps>(({ bare, entries }) => {
   const { buckets, collapsed } = resolveHomeGoalView(entries, expanded);
 
   return (
-    <Flexbox className={bare ? styles.bareList : styles.list}>
+    <div className={cx(bare ? styles.bareList : styles.list, 'flex flex-col')}>
       {buckets.map(({ bucket, entries: rows, total }) => (
-        <Flexbox key={bucket}>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(styles.groupLabel, bare && styles.bareGroupLabel)}
-            gap={6}
+        <div className="flex flex-col" key={bucket}>
+          <div
+            className={cx(
+              cx(styles.groupLabel, bare && styles.bareGroupLabel),
+              'flex items-center gap-1.5',
+            )}
           >
             <span className={homeType.sectionLabel}>
               {t(bucket === 'review' ? 'inbox.goals.review' : 'inbox.goals.running')}
             </span>
             <span className={homeType.badge}>{total}</span>
-          </Flexbox>
+          </div>
           {rows.map((entry) => (
             <GoalRow bare={bare} entry={entry} key={entry.id} />
           ))}
-        </Flexbox>
+        </div>
       ))}
       {collapsed && (
         <Button
@@ -185,7 +184,7 @@ const GoalsRailCard = memo<GoalsRailCardProps>(({ bare, entries }) => {
           {t('inbox.goals.showAll', { count: entries.length })}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

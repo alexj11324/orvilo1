@@ -1,5 +1,4 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Button, Checkbox, Tag, Text } from '@lobehub/ui/base-ui';
 import type { HeteroSessionDigest } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -9,6 +8,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { baseName, fmtTokens, type ImportRowState, selectable, type SessionStatus } from './utils';
 
@@ -34,11 +34,20 @@ const StatusTag = memo<{ status: SessionStatus }>(({ status }) => {
   switch (status) {
     case 'syncable': {
       return (
-        <Tooltip title={t('heteroImport.badge.syncableTip')}>
-          <Tag color="blue" size="small">
-            {t('heteroImport.badge.syncable')}
-          </Tag>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  <Tag color="blue" size="small">
+                    {t('heteroImport.badge.syncable')}
+                  </Tag>
+                </span>
+              }
+            />
+            <TooltipContent>{t('heteroImport.badge.syncableTip')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     }
     case 'imported': {
@@ -46,9 +55,18 @@ const StatusTag = memo<{ status: SessionStatus }>(({ status }) => {
     }
     case 'linked': {
       return (
-        <Tooltip title={t('heteroImport.badge.linkedTip')}>
-          <Tag size="small">{t('heteroImport.badge.linked')}</Tag>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  <Tag size="small">{t('heteroImport.badge.linked')}</Tag>
+                </span>
+              }
+            />
+            <TooltipContent>{t('heteroImport.badge.linkedTip')}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     }
     default: {
@@ -68,35 +86,35 @@ const ImportState = memo<{ onRetry: () => void; showRetry: boolean; state?: Impo
       );
     if (state === 'running')
       return (
-        <Flexbox horizontal align="center" gap={6}>
+        <div className="flex items-center gap-1.5">
           <NeuralNetworkLoading size={14} />
           <Text fontSize={12} type="secondary">
             {t('heteroImport.state.running')}
           </Text>
-        </Flexbox>
+        </div>
       );
     if (state.ok)
       return (
-        <Flexbox horizontal align="center" gap={4}>
-          <Icon icon={Check} size={14} style={{ color: 'var(--lobe-color-success, #52c41a)' }} />
+        <div className="flex items-center gap-1">
+          <Check size={14} style={{ color: 'var(--lobe-color-success, #52c41a)' }} />
           <Text fontSize={12} type="success">
             {t('heteroImport.state.inserted', { count: state.inserted })}
           </Text>
-        </Flexbox>
+        </div>
       );
     if (showRetry)
       return (
-        <Button icon={<Icon icon={RotateCcw} size={13} />} size="small" onClick={onRetry}>
+        <Button icon={<RotateCcw size={13} />} size="small" onClick={onRetry}>
           {t('heteroImport.retry')}
         </Button>
       );
     return (
-      <Flexbox horizontal align="center" gap={4}>
-        <Icon icon={X} size={14} style={{ color: 'var(--lobe-color-error, #ff4d4f)' }} />
+      <div className="flex items-center gap-1">
+        <X size={14} style={{ color: 'var(--lobe-color-error, #ff4d4f)' }} />
         <Text fontSize={12} type="danger">
           {t('heteroImport.state.failed')}
         </Text>
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -126,12 +144,9 @@ export const SessionRow = memo<SessionRowProps>(
     const Brand = BRAND[digest.source];
 
     return (
-      <Flexbox
-        horizontal
-        align="center"
-        className={cx(styles.row, dim && styles.rowDim)}
+      <div
+        className={cx(cx(styles.row, dim && styles.rowDim), 'flex items-center gap-3')}
         data-session-row={digest.sessionId}
-        gap={12}
         style={{ cursor: canPick ? 'pointer' : 'default' }}
         onClick={() => canPick && onToggle(digest.sessionId)}
       >
@@ -143,13 +158,13 @@ export const SessionRow = memo<SessionRowProps>(
             onClick={(e) => e.stopPropagation()}
           />
         )}
-        <Flexbox gap={2} style={{ flex: 1, minWidth: 0 }}>
-          <Flexbox horizontal align="center" gap={8}>
+        <div className="flex flex-col gap-0.5" style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex items-center gap-2">
             {showDir && <Brand size={13} style={{ flex: 'none', opacity: 0.75 }} />}
             <Text ellipsis>{digest.title || digest.firstPrompt || digest.sessionId}</Text>
             <StatusTag status={status} />
-          </Flexbox>
-          <Flexbox horizontal align="center" gap={10}>
+          </div>
+          <div className="flex items-center gap-2.5">
             {digest.endAt && (
               <Text fontSize={12} type="secondary">
                 {dayjs(digest.endAt).format('MM-DD HH:mm')}
@@ -173,8 +188,8 @@ export const SessionRow = memo<SessionRowProps>(
                 {baseName(digest.workingDirectory ?? '')}
               </Text>
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {importing && (
           <ImportState
             showRetry={showRetry}
@@ -182,7 +197,7 @@ export const SessionRow = memo<SessionRowProps>(
             onRetry={() => onRetry(digest.sessionId)}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

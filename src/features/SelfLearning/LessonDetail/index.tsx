@@ -1,8 +1,7 @@
 'use client';
 
-import { Block, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { MessagesSquare } from 'lucide-react';
@@ -13,6 +12,7 @@ import urlJoin from 'url-join';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import Loading from '@/components/Loading/BrandTextLoading';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -83,7 +83,7 @@ const LessonDetail = memo(() => {
   );
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <div className="flex flex-col h-full w-full">
       <NavHeader
         styles={{ left: { paddingInlineStart: 24 } }}
         left={
@@ -104,28 +104,34 @@ const LessonDetail = memo(() => {
           ) : null
         }
       />
-      <Flexbox className={styles.body} flex={1} width={'100%'}>
+      <div className={cx(styles.body, 'flex flex-col flex-1 w-full')}>
         <WideScreenContainer>
           <AsyncBoundary
             data={data}
-            empty={<Empty title={t('rules.detail.notFound')} />}
             error={error}
             errorVariant={'page'}
             isEmpty={!error && !isLoading && !data}
             isLoading={isLoading}
             loading={<Loading debugId={'SelfLearningLesson'} />}
+            empty={
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>{t('rules.detail.notFound')}</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            }
             onRetry={() => mutate()}
           >
             {data && (
-              <Flexbox gap={20} paddingBlock={'14px 64px'}>
-                <Flexbox gap={10}>
+              <div className="flex flex-col gap-5" style={{ paddingBlock: '14px 64px' }}>
+                <div className="flex flex-col gap-2.5">
                   <Text fontSize={12} type={'secondary'} weight={600}>
                     {t('rules.detail.eyebrow', { code: data.lesson.code })}
                   </Text>
                   <Text className={styles.title} fontSize={26} lineHeight={1.35} weight={700}>
                     {data.lesson.title}
                   </Text>
-                  <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+                  <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
                     <Text fontSize={12.5} type={'secondary'}>
                       {t('rules.detail.meta', {
                         hits: data.lesson.hitCount,
@@ -150,7 +156,7 @@ const LessonDetail = memo(() => {
                         time: dayjs(data.lesson.updatedAt).fromNow(),
                       })}
                     </Text>
-                  </Flexbox>
+                  </div>
                   {domainError && (
                     <Text fontSize={12.5} type={'danger'}>
                       {t('rules.detail.domainUnavailable')} ·{' '}
@@ -159,9 +165,15 @@ const LessonDetail = memo(() => {
                       </Text>
                     </Text>
                   )}
-                </Flexbox>
+                </div>
 
-                <Block className={styles.sections} padding={0} variant={'outlined'}>
+                <div
+                  className={cx(styles.sections, 'flex flex-col p-0 border')}
+                  style={{
+                    borderColor: cssVar.colorBorderSecondary,
+                    background: cssVar.colorBgContainer,
+                  }}
+                >
                   {sections?.map((section) => (
                     <div className={styles.sectionItem} key={section.key}>
                       <Text fontSize={12} type={'secondary'} weight={600}>
@@ -172,33 +184,37 @@ const LessonDetail = memo(() => {
                       </Text>
                     </div>
                   ))}
-                </Block>
+                </div>
 
-                <Flexbox gap={10}>
+                <div className="flex flex-col gap-2.5">
                   <Text fontSize={15} weight={600}>
                     {t('rules.detail.examples')}
                   </Text>
                   {data.hits.length === 0 ? (
-                    <Empty
-                      description={t('rules.detail.noExamplesDesc')}
-                      title={t('rules.detail.noExamples')}
-                    />
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyTitle>{t('rules.detail.noExamples')}</EmptyTitle>
+                        <EmptyDescription>{t('rules.detail.noExamplesDesc')}</EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   ) : (
                     data.hits.map((hit, index) => (
-                      <Block
-                        gap={6}
+                      <div
+                        className="flex flex-col gap-1.5 p-[14px] border"
                         key={`${hit.createdAt}-${index}`}
-                        padding={14}
-                        variant={'outlined'}
+                        style={{
+                          borderColor: cssVar.colorBorderSecondary,
+                          background: cssVar.colorBgContainer,
+                        }}
                       >
-                        <Flexbox horizontal align={'flex-start'} gap={12} justify={'space-between'}>
+                        <div className="flex items-start gap-3 justify-between">
                           <Text className={styles.hitTitle} fontSize={13} lineHeight={1.65}>
                             {hit.example}
                           </Text>
                           <Tag color={hit.outcome === 'pass' ? 'green' : 'red'}>
                             {t(`rules.detail.outcome.${hit.outcome}`)}
                           </Tag>
-                        </Flexbox>
+                        </div>
                         {hit.note && (
                           <Text fontSize={12} type={'secondary'}>
                             {hit.note}
@@ -206,32 +222,31 @@ const LessonDetail = memo(() => {
                         )}
                         {hit.subjectType === 'topic' && activeAgentId ? (
                           <Link to={urlJoin('/agent', activeAgentId, hit.subjectId)}>
-                            <Flexbox horizontal align={'center'} gap={5}>
-                              <Icon
-                                color={cssVar.colorTextSecondary}
-                                icon={MessagesSquare}
+                            <div className="flex items-center gap-[5px]">
+                              <MessagesSquare
                                 size={13}
+                                style={{ color: cssVar.colorTextSecondary }}
                               />
                               <Text fontSize={12} type={'secondary'}>
                                 {hit.runTitle ?? `#${hit.runIndex}`}
                               </Text>
-                            </Flexbox>
+                            </div>
                           </Link>
                         ) : (
                           <Text fontSize={11} type={'secondary'}>
                             {hit.runTitle ?? `#${hit.runIndex}`}
                           </Text>
                         )}
-                      </Block>
+                      </div>
                     ))
                   )}
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
             )}
           </AsyncBoundary>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

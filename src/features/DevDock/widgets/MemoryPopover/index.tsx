@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import type { MemoryDump } from '@orvilo/electron-client-ipc';
 import { cx } from 'antd-style';
@@ -177,7 +176,7 @@ const MemoryPopover = memo(() => {
   if (!samples) return null;
 
   return (
-    <Flexbox className={cx(devDockPanelStyles.root, styles.popover)}>
+    <div className={cx(cx(devDockPanelStyles.root, styles.popover), 'flex flex-col')}>
       <Overview residentMB={residentMB} sample={samples.latest} />
       <HistoryChart history={samples.history} />
       <div className={styles.scroll}>
@@ -194,7 +193,7 @@ const MemoryPopover = memo(() => {
         and buffers, web_cache keeps decoded script sources, blink_gc is the DOM and CSSOM, canvas
         and cc/tile_memory are raster backing stores.
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

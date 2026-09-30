@@ -1,4 +1,3 @@
-import { Block, Flexbox } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR, INBOX_SESSION_ID } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
@@ -72,11 +71,8 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
           left the meta row as an empty band with a lone timestamp. Drop the row
           entirely in that case and let the title line carry the time. */}
       {hasTaskMeta && (
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={canNavigate ? styles.meta : undefined}
-          gap={7}
+        <div
+          className={cx(canNavigate ? styles.meta : undefined, 'flex items-center gap-[7px]')}
           onClick={canNavigate ? openTask : undefined}
         >
           {/* On error the task glyph would render its paused/scheduled state
@@ -95,12 +91,12 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
           {brief.taskName && (
             <span className={cx(homeType.meta, styles.taskName)}>{brief.taskName}</span>
           )}
-          <Flexbox flex={1} />
+          <div className="flex flex-col flex-1" />
           <Time date={brief.createdAt} />
-        </Flexbox>
+        </div>
       )}
 
-      <Flexbox horizontal align={'flex-start'} gap={10}>
+      <div className="flex items-start gap-2.5">
         {agent && (
           <Avatar
             avatar={agent.avatar || (isInbox ? DEFAULT_INBOX_AVATAR : DEFAULT_AVATAR)}
@@ -114,17 +110,17 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
             )}
           />
         )}
-        <Flexbox flex={1} gap={6} style={{ minWidth: 0 }}>
-          <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex flex-col flex-1 gap-1.5" style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-2">
             <Text ellipsis className={homeType.itemTitle} style={{ flex: 1, minWidth: 0 }}>
               {brief.title}
             </Text>
             {!hasTaskMeta && <Time date={brief.createdAt} />}
-          </Flexbox>
+          </div>
           <BriefCardSummary summary={brief.summary} />
           <BriefCardArtifacts artifacts={brief.artifacts} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
       <BriefCardActions
         actions={brief.actions}
@@ -140,18 +136,19 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
     </>
   );
 
-  if (bare) return <Flexbox gap={10}>{content}</Flexbox>;
+  if (bare) return <div className="flex flex-col gap-2.5">{content}</div>;
 
   return (
-    <Block
-      className={briefStyles.card}
-      gap={10}
-      padding={12}
-      style={{ borderRadius: cssVar.borderRadiusLG }}
-      variant={'outlined'}
+    <div
+      className={cx(briefStyles.card, 'flex flex-col gap-2.5 p-3 border')}
+      style={{
+        borderColor: cssVar.colorBorderSecondary,
+        background: cssVar.colorBgContainer,
+        borderRadius: cssVar.borderRadiusLG,
+      }}
     >
       {content}
-    </Block>
+    </div>
   );
 });
 

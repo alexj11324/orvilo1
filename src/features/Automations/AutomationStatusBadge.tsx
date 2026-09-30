@@ -1,4 +1,3 @@
-import { Center } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -20,7 +19,7 @@ interface AutomationStatusBadgeProps {
 const AutomationStatusBadge = memo<AutomationStatusBadgeProps>(({ status }) => {
   const { t } = useTranslation('automation');
   return (
-    <Center horizontal gap={6}>
+    <div className="flex items-center justify-center gap-1.5">
       <span
         style={{
           background: STATUS_COLOR[status],
@@ -34,7 +33,7 @@ const AutomationStatusBadge = memo<AutomationStatusBadgeProps>(({ status }) => {
       <Text fontSize={12} type={'secondary'}>
         {t(`status.${status}`)}
       </Text>
-    </Center>
+    </div>
   );
 });
 

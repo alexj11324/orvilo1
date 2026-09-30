@@ -221,11 +221,11 @@ const HeterogeneousChatInput = memo(() => {
       {renderCloudConfigGuard()}
       {renderDeviceGuard()}
       <ChatInput
-        allowExpand={false}
         // Same composer parity as MainChatInput: the hetero control strip
         // renders inside the card footer, and the editor opens at one text
         // row (~24px) instead of the shared two-row default.
         controlBarInCard
+        allowExpand={false}
         controlBarSlot={<HeteroControlBar />}
         editorDefaultRows={1}
         extraActionItems={extraActionItems}

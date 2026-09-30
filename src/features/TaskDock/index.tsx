@@ -107,14 +107,18 @@ const useAutoDismiss = (tasks: DockTask[]) => {
   useEffect(() => {
     if (!ids) return;
 
-    const timers = ids.split('|').map((id) =>
-      setTimeout(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (const id of ids.split('|')) {
+      const timer = setTimeout(() => {
         const task = tasksRef.current.find((candidate) => candidate.id === id);
         if (task && shouldAutoDismiss(task)) task.dismiss?.();
-      }, AUTO_DISMISS_DELAY),
-    );
+      }, AUTO_DISMISS_DELAY);
+      timers.push(timer);
+    }
 
-    return () => timers.forEach((timer) => clearTimeout(timer));
+    return () => {
+      for (const timer of timers) clearTimeout(timer);
+    };
   }, [ids]);
 };
 

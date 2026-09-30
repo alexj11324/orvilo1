@@ -86,14 +86,14 @@ const ExecuteTaskIntervention = memo<BuiltinInterventionProps<ExecuteTaskParams>
 
     // Local state
     const [instruction, setInstruction] = useState(args?.instruction || '');
-    const [timeout, setTimeout] = useState(args?.timeout ?? DEFAULT_TIMEOUT);
+    const [timeout, setTimeoutMs] = useState(args?.timeout ?? DEFAULT_TIMEOUT);
     const [hasChanges, setHasChanges] = useState(false);
 
     // Sync local state when args change externally
     useEffect(() => {
       if (!hasChanges) {
         setInstruction(args?.instruction || '');
-        setTimeout(args?.timeout ?? DEFAULT_TIMEOUT);
+        setTimeoutMs(args?.timeout ?? DEFAULT_TIMEOUT);
       }
     }, [args?.instruction, args?.timeout, hasChanges]);
 
@@ -106,7 +106,7 @@ const ExecuteTaskIntervention = memo<BuiltinInterventionProps<ExecuteTaskParams>
     // Handle timeout change (minutes to milliseconds)
     const handleTimeoutChange = useCallback((value: number | null) => {
       if (value !== null) {
-        setTimeout(value * 60 * 1000); // Convert minutes to milliseconds
+        setTimeoutMs(value * 60 * 1000); // Convert minutes to milliseconds
         setHasChanges(true);
       }
     }, []);

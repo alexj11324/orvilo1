@@ -1,7 +1,6 @@
 import isEqual from 'fast-deep-equal';
 import { LucideToyBrick } from 'lucide-react';
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Plugins/PluginAvatar';
 import { pluginHelpers, useToolStore } from '@/store/tool';
@@ -13,8 +12,6 @@ interface PluginAvatarProps {
 }
 
 const PluginAvatar = memo<PluginAvatarProps>(({ identifier, size = 32 }) => {
-  const { t } = useTranslation('plugin');
-
   const pluginMeta = useToolStore(toolSelectors.getMetaById(identifier), isEqual);
   const pluginAvatar = pluginHelpers.getPluginAvatar(pluginMeta);
   const pluginTitle = pluginHelpers.getPluginTitle(pluginMeta) ?? identifier;

@@ -42,13 +42,13 @@ const Connection = () => {
         >
           <ActionIcon
             icon={XIcon}
-            onClick={handleClose}
             // Clears the Electron title bar, which only overlaps the drawer off macOS.
             style={{
               insetBlockStart: isMac ? 12 : 46,
               insetInlineEnd: 6,
               position: 'absolute',
             }}
+            onClick={handleClose}
           />
           <Suspense
             fallback={

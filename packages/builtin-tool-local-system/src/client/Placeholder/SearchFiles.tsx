@@ -29,7 +29,7 @@ const SearchFiles = memo<BuiltinPlaceholderProps<LocalSearchFilesParams>>(({ arg
           <span className="anticon" role="img">
             <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
           </span>
-          {args.keywords ? args.keywords : <Skeleton style={{ height: 20, width: 40 }} />}
+          {args.keywords || <Skeleton style={{ height: 20, width: 40 }} />}
         </div>
 
         <Skeleton style={{ height: 20, width: 40 }} />

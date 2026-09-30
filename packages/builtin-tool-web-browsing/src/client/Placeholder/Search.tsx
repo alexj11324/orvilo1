@@ -46,7 +46,7 @@ export const Search = memo<BuiltinPlaceholderProps<SearchQuery>>(({ args }) => {
           <span className="anticon" role="img">
             <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
           </span>
-          {query ? query : <Skeleton style={{ height: 20, width: 40 }} />}
+          {query || <Skeleton style={{ height: 20, width: 40 }} />}
         </div>
 
         <Skeleton style={{ height: 20, width: 40 }} />

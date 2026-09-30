@@ -1858,6 +1858,12 @@ function DataGridCellSelection<TData extends object>({
     // in-cell control changes nothing, and its click must go through).
     let dragStartedOnCell = false;
     let dragStartSelectionKey = '';
+    const squelchDragReleaseClick = (clickEvent: MouseEvent) => {
+      clickEvent.stopPropagation();
+      clickEvent.preventDefault();
+    };
+    let squelchRemoveTimer: ReturnType<typeof setTimeout> | undefined;
+    let deferredFocusTimer: ReturnType<typeof setTimeout> | undefined;
     const getSelectionKey = () => {
       const table = getTable();
       const bounds = table.getCellSelectionBounds();
@@ -1876,12 +1882,11 @@ function DataGridCellSelection<TData extends object>({
       dragStartedOnCell = false;
       viewport.removeAttribute('data-cell-selecting');
       if (!wasDrag) return;
-      const squelch = (clickEvent: MouseEvent) => {
-        clickEvent.stopPropagation();
-        clickEvent.preventDefault();
-      };
-      viewport.addEventListener('click', squelch, { capture: true });
-      setTimeout(() => viewport.removeEventListener('click', squelch, true), 0);
+      viewport.addEventListener('click', squelchDragReleaseClick, { capture: true });
+      squelchRemoveTimer = setTimeout(
+        () => viewport.removeEventListener('click', squelchDragReleaseClick, true),
+        0,
+      );
     };
 
     const handleMouseDown = (event: MouseEvent) => {
@@ -1903,7 +1908,7 @@ function DataGridCellSelection<TData extends object>({
         isRangeSelectionEnabled() &&
         target?.closest?.('td[data-col-id]')
       ) {
-        setTimeout(() => focusTarget.focus(), 0);
+        deferredFocusTimer = setTimeout(() => focusTarget.focus(), 0);
       }
       // Any td press can become a drag; the squelch only arms when the
       // range actually grew by release time. The attribute hides the fill
@@ -2026,6 +2031,9 @@ function DataGridCellSelection<TData extends object>({
       viewport.removeAttribute('data-cell-selecting');
       selectionSubscription?.unsubscribe();
       clearTimeout(focusRetryTimer);
+      clearTimeout(squelchRemoveTimer);
+      viewport.removeEventListener('click', squelchDragReleaseClick, true);
+      clearTimeout(deferredFocusTimer);
       if (apiRef) apiRef.current = null;
       setViewportEl(null);
       setEditorSession(null);

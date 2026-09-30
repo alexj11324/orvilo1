@@ -131,20 +131,6 @@ const MarketAuthCallbackPage = () => {
     }
   };
 
-  const getResultStatus = () => {
-    switch (status) {
-      case 'success': {
-        return 'success';
-      }
-      case 'error': {
-        return 'error';
-      }
-      default: {
-        return 'info';
-      }
-    }
-  };
-
   const getTitle = () => {
     switch (status) {
       case 'loading': {

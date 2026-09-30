@@ -95,13 +95,11 @@ interface UseFileItemDropdownReturn {
  * Shared with folder tree and explorer
  */
 export const useFileItemDropdown = ({
-  fileId,
   id,
   libraryId,
   url,
   filename,
   fileType,
-  size,
   sourceType,
   onDeleted,
   onRenameStart,

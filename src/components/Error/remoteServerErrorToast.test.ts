@@ -4,7 +4,7 @@ import { remoteServerErrorToast } from './remoteServerErrorToast';
 
 const toastError = vi.fn();
 
-vi.mock('@/components/toast', async (importOriginal) => ({
+vi.mock('@/components/toast', async () => ({
   toast: { error: (...args: unknown[]) => toastError(...args) },
 }));
 

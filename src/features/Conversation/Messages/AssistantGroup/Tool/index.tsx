@@ -125,7 +125,8 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
 
   useEffect(() => {
     if (needExpand) {
-      setTimeout(() => handleExpand(true), 100);
+      const timer = setTimeout(() => handleExpand(true), 100);
+      return () => clearTimeout(timer);
     }
   }, [needExpand]);
 

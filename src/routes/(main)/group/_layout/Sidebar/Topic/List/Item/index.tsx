@@ -92,7 +92,7 @@ interface TopicItemProps {
   userId?: string;
 }
 
-const TopicItem = memo<TopicItemProps>(({ id, title, fav, active, threadId, status, userId }) => {
+const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, userId }) => {
   const { t } = useTranslation('topic');
   const { isDarkMode } = useTheme();
   // Same live-running ring as the agent sidebar topic rows (see List/Item there).

@@ -45,6 +45,9 @@ const LIGHT_SIDEBAR_STYLE = {
   '--sidebar-muted': 'var(--color-zinc-700)',
   '--sidebar-group': 'var(--color-zinc-600)',
 };
+// Solid-background variant of the light palette for platforms without
+// macOS vibrancy (web, non-Mac desktop, mobile).
+const LIGHT_SOLID_SIDEBAR_STYLE = { ...LIGHT_SIDEBAR_STYLE, '--sidebar': 'var(--color-zinc-100)' };
 
 // The host's unlayered Ant Design link/reset rules otherwise override the source utilities.
 const hostStyles = createStaticStyles(({ css }) => ({
@@ -134,7 +137,9 @@ export function SidebarShell() {
     ? resolvedTheme === 'light'
       ? LIGHT_SIDEBAR_STYLE
       : DARK_NATIVE_SIDEBAR_STYLE
-    : SIDEBAR_STYLE;
+    : resolvedTheme === 'light'
+      ? LIGHT_SOLID_SIDEBAR_STYLE
+      : SIDEBAR_STYLE;
   const [open, setOpen] = useGlobalStore((state) => [
     systemStatusSelectors.showLeftPanel(state),
     state.toggleLeftPanel,

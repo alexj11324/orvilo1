@@ -310,7 +310,7 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
         operationId: setup.binding.operationId,
         userId: setup.binding.userId,
         workspaceId: setup.binding.workspaceId,
-        status: 'pending',
+        status: 'planned',
         planConfirmedAt: new Date(),
         plan: [
           {
@@ -467,7 +467,7 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
         if (change === 'decision')
           await db
             .update(schema.verifyRuns)
-            .set({ decisionDetail: { reason: 'new authoritative review' } })
+            .set({ decisionDetail: { comment: 'new authoritative review' } })
             .where(eq(schema.verifyRuns.id, setup.verify.id));
         if (change === 'deleted')
           await db

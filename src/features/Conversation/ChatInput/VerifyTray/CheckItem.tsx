@@ -101,7 +101,7 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
       {open && (
         <div className={cn('flex flex-col', styles.detail)} style={{ gap: 5 }}>
           <div className={styles.secLabel}>{t('acceptance.tray.section.method')}</div>
-          <div className="text-[12px] styles.method">
+          <div className={cn('text-[12px]', styles.method)}>
             {check.method || t('acceptance.tray.section.methodEmpty')}
           </div>
         </div>

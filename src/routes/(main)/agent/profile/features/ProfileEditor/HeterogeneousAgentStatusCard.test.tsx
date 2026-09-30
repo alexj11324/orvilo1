@@ -55,11 +55,7 @@ vi.mock('@orvilo/heterogeneous-agents/client', () => ({
   isRemoteHeterogeneousType: (type: string) => ['openclaw', 'hermes'].includes(type),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  CopyButton: () => <button type="button">Copy</button>,
-  Flexbox: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Icon: () => <span>Icon</span>,
+vi.mock('@/components/ui/input', () => ({
   Input: ({
     onBlur,
     onChange,
@@ -92,9 +88,8 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
   TooltipGroup: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ActionIcon: ({
+vi.mock('@/components/ActionIcon', () => ({
+  default: ({
     'aria-label': ariaLabel,
     className,
     onClick,
@@ -107,67 +102,6 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
       Refresh
     </button>
   ),
-  Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
-    <button type="button" onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Segmented: ({
-    disabled,
-    onChange,
-    options,
-  }: {
-    disabled?: boolean;
-    onChange?: (value: string) => void;
-    options: Array<{ disabled?: boolean; label: ReactNode; value: string }>;
-  }) => (
-    <div>
-      {options.map((option) => (
-        <button
-          disabled={disabled || option.disabled}
-          key={option.value}
-          type="button"
-          onClick={() => onChange?.(option.value)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  ),
-  Select: ({
-    onChange,
-    options,
-    value,
-  }: {
-    onChange?: (value: string) => void;
-    options?: Array<{
-      disabled?: boolean;
-      label?: ReactNode;
-      options?: Array<{ disabled?: boolean; label: ReactNode; value: string }>;
-      value?: string;
-    }>;
-    value?: string;
-  }) => (
-    <select value={value} onChange={(event) => onChange?.(event.target.value)}>
-      {options?.flatMap((option) =>
-        option.options
-          ? option.options.map((child) => (
-              <option disabled={child.disabled} key={child.value} value={child.value}>
-                {child.label}
-              </option>
-            ))
-          : option.value
-            ? [
-                <option disabled={option.disabled} key={option.value} value={option.value}>
-                  {option.label}
-                </option>,
-              ]
-            : [],
-      )}
-    </select>
-  ),
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
 }));
 
 vi.mock('react-i18next', () => ({

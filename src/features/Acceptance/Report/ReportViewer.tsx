@@ -1040,7 +1040,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
             <span className={styles.softTag}>{t('report.verdict.notExecuted')}</span>
           )}
           {!required && <span className={styles.softTag}>{t('report.check.optional')}</span>}
-          {hasBody && <ChevronRight className="styles.chev" data-open={open} size={14} />}
+          {hasBody && <ChevronRight className={styles.chev} data-open={open} size={14} />}
         </span>
       </button>
       {open && hasBody && (

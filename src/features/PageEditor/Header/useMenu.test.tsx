@@ -36,7 +36,7 @@ vi.mock('@orvilo/const', () => ({
   isDesktop: false,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
+vi.mock('@/components/Modal', () => ({
   confirmModal: vi.fn(),
 }));
 

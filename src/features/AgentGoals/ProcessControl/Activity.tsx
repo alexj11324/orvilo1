@@ -135,7 +135,7 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
           onClick={() => (hasDetail ? setOpen(!open) : onSelect(view.node.id))}
         >
           <ChevronRight
-            className="cx(styles.arrow, open && styles.arrowOpen)"
+            className={cx(styles.arrow, open && styles.arrowOpen)}
             size={14}
             style={{ opacity: hasDetail ? 1 : 0 }}
           />

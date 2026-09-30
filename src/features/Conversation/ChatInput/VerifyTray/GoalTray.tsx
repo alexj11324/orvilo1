@@ -193,7 +193,7 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="text-[13px] styles.goalText">{goal}</div>
+            <div className={cn('text-[13px]', styles.goalText)}>{goal}</div>
           </div>
 
           {checks.length > 0 && (

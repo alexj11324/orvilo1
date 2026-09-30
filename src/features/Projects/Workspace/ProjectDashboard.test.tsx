@@ -2,7 +2,7 @@ import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import dayjs from 'dayjs';
-import type { HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { act, useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -104,146 +104,121 @@ const mocks = vi.hoisted(() => ({
 
 // Only the dashboard/panel components are under test; shell components are
 // stand-ins so the assertions read the data, not markup details.
-vi.mock('@lobehub/ui', async (importOriginal) => {
-  const original = await importOriginal<Record<string, unknown>>();
-  // The real picker stays mounted — planning-field tests read `.ant-picker`
-  // classes off it — but its props are captured so a test can fire `onChange`
-  // with a dayjs directly instead of clicking through the calendar grid.
-  const CapturedDatePicker = Object.assign((props: Record<string, unknown>) => {
+vi.mock('@/components/DatePicker', () => ({
+  // The stub mirrors the adapter's trigger (a button with aria-label, prefix
+  // and the formatted value) so tests can read the value, fire `onChange`
+  // with a dayjs via the captured props, and diff the per-site className.
+  default: (props: Record<string, unknown>) => {
     mocks.datePickerProps.push(props);
-    const Real = original.DatePicker as unknown as (props: Record<string, unknown>) => ReactNode;
-    return <Real {...props} />;
-  }, original.DatePicker as object);
-  // dnd-kit pointer drags cannot be simulated in jsdom; the stub renders the
-  // same children and records `items`/`onChange` for the reorder test.
-  const StubSortableList = Object.assign(
-    (props: {
-      items: { id: string }[];
-      onChange: (items: { id: string }[]) => void;
-      renderItem: (item: { id: string }) => ReactNode;
-    }) => {
-      mocks.sortableProps = props;
-      return (
-        <ul>
-          {props.items.map((item) => (
-            <li key={item.id}>{props.renderItem(item)}</li>
-          ))}
-        </ul>
-      );
-    },
-    {
-      DragHandle: (props: Record<string, unknown>) => (
-        <button
-          aria-label={props['aria-label'] as string}
-          className={props.className as string}
-          type="button"
-        />
-      ),
-      Item: ({ children }: { children?: ReactNode }) => children,
-    },
-  );
-  return {
-    ...original,
-    Block: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-    Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-    DatePicker: CapturedDatePicker,
-    Empty: ({ title }: { title?: ReactNode }) => <div>{title}</div>,
-    Flexbox: (props: { children?: ReactNode } & HTMLAttributes<HTMLDivElement>) => {
-      const { children, ...rest } = props;
-      return (
-        <div
-          {...rest}
-          ref={(node) => {
-            if (node) mocks.flexboxProps.set(node, props as Record<string, unknown>);
-          }}
-        >
-          {children}
-        </div>
-      );
-    },
-    Icon: (props: Record<string, unknown>) => {
-      mocks.iconProps.push(props);
-      return null;
-    },
-    Input: (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
-    SortableList: StubSortableList,
-    TextArea: () => <textarea />,
-  };
-});
-
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Button: ({
-    children,
-    className,
-    disabled,
-    onClick,
-    'aria-label': ariaLabel,
-  }: {
-    'children'?: ReactNode;
-    'className'?: string;
-    'disabled'?: boolean;
-    'onClick'?: () => void;
-    'aria-label'?: string;
-  }) => (
-    <button aria-label={ariaLabel} className={className} disabled={disabled} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  confirmModal: mocks.confirmModal,
-  DropdownMenu: ({
-    children,
-    items,
-  }: {
-    children?: ReactNode;
-    items?: { key?: string; label?: ReactNode; onClick?: () => void; type?: string }[];
-  }) => {
-    const [open, setOpen] = useState(false);
+    const format = props.format as string | ((date: dayjs.Dayjs) => string) | undefined;
+    const value = props.value as dayjs.Dayjs | null | undefined;
+    const display = value
+      ? typeof format === 'function'
+        ? format(value)
+        : value.format(format ?? 'YYYY-MM-DD')
+      : '';
     return (
-      <div
-        role="presentation"
-        onClick={() => setOpen(true)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') setOpen(true);
-        }}
+      <button
+        data-datepicker
+        aria-label={props['aria-label'] as string}
+        className={props.className as string | undefined}
+        disabled={props.disabled as boolean | undefined}
+        type="button"
       >
-        {children}
-        {open && (
-          <div role="menu">
-            {items?.map((item, index) =>
-              (item as { type?: string }).type === 'divider' ? (
-                <hr key={index} role="separator" />
-              ) : (
-                <button
-                  key={item.key}
-                  role="menuitem"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    item.onClick?.();
-                    setOpen(false);
-                  }}
-                >
-                  {item.label}
-                </button>
-              ),
-            )}
-          </div>
-        )}
-      </div>
+        {props.prefix as ReactNode}
+        {display || (props.placeholder as string | undefined)}
+        {props.suffixIcon as ReactNode}
+      </button>
     );
   },
-  Tag: (props: { children?: ReactNode; icon?: ReactNode } & Record<string, unknown>) => {
-    mocks.tagProps.push(props);
-    return <span>{props.children}</span>;
+}));
+
+// dnd-kit pointer drags cannot be simulated in jsdom; the stub renders the
+// same children and records `value`/`onValueCommit` for the reorder test.
+vi.mock('@/components/reui/sortable', () => ({
+  Sortable: (props: {
+    children?: ReactNode;
+    getItemValue?: (item: { id: string }) => string;
+    onValueCommit?: (items: { id: string }[]) => void;
+    value?: { id: string }[];
+  }) => {
+    mocks.sortableProps = {
+      items: props.value ?? [],
+      onChange: (items: { id: string }[]) => props.onValueCommit?.(items),
+    };
+    return <>{props.children}</>;
   },
-  Text: (props: { children?: ReactNode } & Record<string, unknown>) => {
-    mocks.textProps.push(props);
-    return <span>{props.children}</span>;
-  },
+  SortableItem: ({ children }: { children?: ReactNode; value?: string }) => <>{children}</>,
+  SortableItemHandle: (props: Record<string, unknown>) => (
+    <button
+      aria-label={props['aria-label'] as string}
+      className={props.className as string}
+      type="button"
+    />
+  ),
+  SortableOverlay: ({ children }: { children?: ReactNode }) => <>{children}</>,
+}));
+vi.mock('@/components/Modal', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  confirmModal: mocks.confirmModal,
+}));
+
+vi.mock('@/components/toast', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   toast: {
     error: mocks.toastError,
     success: vi.fn(),
+    warning: vi.fn(),
   },
+}));
+
+const StubMenuItems = ({
+  children,
+  items,
+}: {
+  children?: ReactNode;
+  items?: { key?: string; label?: ReactNode; onClick?: () => void; type?: string }[];
+}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      role="presentation"
+      onClick={() => setOpen(true)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') setOpen(true);
+      }}
+    >
+      {children}
+      {open && (
+        <div role="menu">
+          {items?.map((item, index) =>
+            (item as { type?: string }).type === 'divider' ? (
+              <hr key={index} role="separator" />
+            ) : (
+              <button
+                key={item.key}
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  item.onClick?.();
+                  setOpen(false);
+                }}
+              >
+                {item.label}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: (props: {
+    children?: ReactNode;
+    items?: { key?: string; label?: ReactNode; onClick?: () => void; type?: string }[];
+  }) => <StubMenuItems {...props} />,
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -1281,7 +1256,7 @@ describe('project properties row geometry', () => {
 
   /** Every date control the page rendered, by class list. */
   const pickerClasses = () =>
-    [...document.querySelectorAll('.ant-picker')].map((el) => el.className);
+    [...document.querySelectorAll('[data-datepicker]')].map((el) => el.className);
 
   it('keeps the Dates row on one line instead of the fixed 120px boxes', () => {
     render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
@@ -1484,8 +1459,8 @@ describe('project properties planning metadata', () => {
     expect(screen.getByRole('combobox', { name: 'properties.priority' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'properties.labels' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'create.startDate' })).toHaveValue('Sep 2026');
-    expect(screen.getByRole('textbox', { name: 'create.targetDate' })).toHaveValue('2027 Q1');
+    expect(screen.getByRole('button', { name: 'create.startDate' })).toHaveTextContent('Sep 2026');
+    expect(screen.getByRole('button', { name: 'create.targetDate' })).toHaveTextContent('2027 Q1');
     expect(screen.getByText('UI parity')).toBeInTheDocument();
     expect(screen.getByText('orvilo')).toBeInTheDocument();
   });

@@ -91,7 +91,7 @@ const SelectionFooterBar = memo(() => {
 
   return (
     <div className={cn('flex items-center justify-center', styles.bar)}>
-      <div className="text-muted-foreground styles.count">
+      <div className={cn('text-muted-foreground', styles.count)}>
         {t('messageForward.bar.selected', { count: selectedCount })}
       </div>
       <div className="flex items-center gap-1">

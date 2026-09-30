@@ -157,8 +157,8 @@ const PortalResourceCard = memo<PortalResourceCardProps>(
             {icon ?? <FileText size={28} />}
           </div>
           <div className={cn('flex flex-col flex-1 gap-1 px-3', styles.content)}>
-            <div className="truncate styles.title">{title}</div>
-            {description && <div className="truncate styles.desc">{description}</div>}
+            <div className={cn('truncate', styles.title)}>{title}</div>
+            {description && <div className={cn('truncate', styles.desc)}>{description}</div>}
           </div>
           {onOpen && openLabel && (
             <div className="flex flex-col" style={{ flex: 'none', paddingInlineEnd: 10 }}>

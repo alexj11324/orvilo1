@@ -1,5 +1,4 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectDetail } from '@/store/project';
@@ -27,16 +26,6 @@ const mocks = vi.hoisted(() => ({
 // Spelled out rather than spread from `importOriginal`: the real `Button` needs
 // the app-level motion provider, so pulling it back in would trade one mock for
 // a provider this test never mounts.
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
-  Flexbox: ({ children, className }: { children?: ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  Icon: () => null,
-}));
-
 vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useModalContext: () => ({ close: mocks.close, setCanDismissByClickOutside: vi.fn() }),
